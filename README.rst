@@ -1,7 +1,7 @@
 Avocado Misc Tests
 ==================
 
-This repository is dedicated to host any tests written using the avocado
+This repository is dedicated to host any tests written using the avocado [1]
 API. It is being initially populated with tests ported from autotest
 client tests repository, but it's not limited by that.
 
@@ -18,3 +18,5 @@ Once you have the avocado installed, you can run the tests like below::
     RESULTS    : PASS 1 | ERROR 0 | FAIL 0 | SKIP 0 | WARN 0 | INTERRUPT 0
     JOB HTML   : $HOME/avocado/job-results/job-2016-01-18T15.32-0018adb/html/results.html
     TIME       : 62.67 s
+
+[1] https://github.com/avocado-framework/avocado
