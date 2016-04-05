@@ -26,11 +26,9 @@ class Stress(Test):
         Source:
          http://people.seas.harvard.edu/~apw/stress/stress-1.0.4.tar.gz
         """
-        stress_tarball = self.params.get('stress_tarball',
-                                         default='stress-1.0.4.tar.gz')
-        tarball_path = self.get_data_path(stress_tarball)
-        archive.extract(tarball_path, self.srcdir)
-        stress_version = stress_tarball.split('.tar.')[0]
+        tarball = self.fetch_asset('http://people.seas.harvard.edu/~apw/stress/stress-1.0.4.tar.gz')
+        archive.extract(tarball, self.srcdir)
+        stress_version = os.path.basename(tarball.split('.tar.')[0])
         self.srcdir = os.path.join(self.srcdir, stress_version)
         os.chdir(self.srcdir)
         process.run('./configure')

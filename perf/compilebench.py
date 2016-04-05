@@ -22,11 +22,9 @@ class Compilebench(Test):
         Source:
          https://oss.oracle.com/~mason/compilebench/compilebench-0.6.tar.bz2
         """
-        cb_tarball = self.params.get('cb_tarball',
-                                     default='compilebench-0.6.tar.bz2')
-        tarball_path = self.get_data_path(cb_tarball)
-        archive.extract(tarball_path, self.srcdir)
-        cb_version = cb_tarball.split('.tar.')[0]
+        tarball = self.fetch_asset('https://oss.oracle.com/~mason/compilebench/compilebench-0.6.tar.bz2')
+        archive.extract(tarball, self.srcdir)
+        cb_version = os.path.basename(tarball.split('.tar.')[0])
         self.srcdir = os.path.join(self.srcdir, cb_version)
 
     def test(self):
