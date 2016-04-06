@@ -22,12 +22,10 @@ class Bonnie(Test):
         Source:
          http://www.coker.com.au/bonnie++/experimental/bonnie++-1.96.tgz
         """
-        bonnie_tarball = self.params.get('bonnie_tarball',
-                                         default='bonnie++-1.96.tgz')
-        tarball_path = self.get_data_path(bonnie_tarball)
-        archive.extract(tarball_path, self.srcdir)
-        bonnie_version = bonnie_tarball.split('.tgz')[0]
-        self.srcdir = os.path.join(self.srcdir, bonnie_version)
+        tarball = self.fetch_asset('http://www.coker.com.au/bonnie++/experimental/bonnie++-1.96.tgz')
+        archive.extract(tarball, self.srcdir)
+        self.srcdir = os.path.join(self.srcdir,
+                                   os.path.basename(tarball.split('.tgz')[0]))
         os.chdir(self.srcdir)
         process.run('./configure')
         build.make(self.srcdir)

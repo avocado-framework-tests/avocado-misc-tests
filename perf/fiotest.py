@@ -25,11 +25,9 @@ class FioTest(Test):
         """
         Build 'fio'.
         """
-        fio_tarball = self.params.get('fio_tarball',
-                                      default='fio-2.1.10.tar.bz2')
-        tarball_path = self.get_data_path(fio_tarball)
-        archive.extract(tarball_path, self.srcdir)
-        fio_version = fio_tarball.split('.tar.')[0]
+        tarball = self.fetch_asset('http://brick.kernel.dk/snaps/fio-2.1.10.tar.gz')
+        archive.extract(tarball, self.srcdir)
+        fio_version = os.path.basename(tarball.split('.tar.')[0])
         self.srcdir = os.path.join(self.srcdir, fio_version)
         build.make(self.srcdir)
 
@@ -37,9 +35,9 @@ class FioTest(Test):
         """
         Execute 'fio' with appropriate parameters.
         """
-        os.chdir(self.srcdir)
         fio_job = self.params.get('fio_job', default='fio-mixed.job')
-        cmd = ('./fio %s' % self.get_data_path(fio_job))
+        cmd = '%s/fio %s' % (self.srcdir,
+                             os.path.join(self.datadir, fio_job))
         process.system(cmd)
 
 
