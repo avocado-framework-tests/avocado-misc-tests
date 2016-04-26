@@ -1,0 +1,15 @@
+setup:
+    duration: !mux
+        default:
+            seconds: 70
+        quick:
+            seconds: 60
+    workers: !mux
+        default:
+            nprocs: null
+        minimal:
+            nprocs: 1
+    location:
+        default:
+            dir = '.'
+
