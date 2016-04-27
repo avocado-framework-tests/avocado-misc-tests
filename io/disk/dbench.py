@@ -41,7 +41,7 @@ class Dbench(Test):
         self.srcdir = os.path.join(self.srcdir, cb_version)
         os.chdir(self.srcdir)
         patch = self.params.get('patch', default='dbench_startup.patch')
-        process.system('patch -p1 < %s' % data_dir + '/' + patch, shell=True)
+        process.run('patch -p1 < %s' % data_dir + '/' + patch, shell=True)
         process.run('./configure')
         build.make(self.srcdir)
 
