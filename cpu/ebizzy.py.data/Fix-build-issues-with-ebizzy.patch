@@ -1,0 +1,11 @@
+--- configure.org	2014-10-15 16:12:45.041001530 +0530
++++ configure	2014-10-15 16:13:01.303334814 +0530
+@@ -31,7 +31,7 @@ cat <<EOF > Makefile
+ all: ebizzy
+ 
+ ebizzy: ebizzy.c
+-	gcc -Wall -Wshadow ${LIBS} ${FLAGS} -o ebizzy ebizzy.c
++	gcc -Wall -Wshadow ${FLAGS} -o ebizzy ebizzy.c ${LIBS}
+ 
+ clean:
+ 	rm -f ebizzy Makefile 

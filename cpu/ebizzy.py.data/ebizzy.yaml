@@ -1,0 +1,16 @@
+setup:
+    duration: !mux
+        default:
+            seconds: 100
+        quick:
+            seconds: 60
+    workers: !mux
+        default:
+            num_chunks: 1000
+    threads:
+        default:
+            num_threads: 100
+    size: !mux
+        default:
+            chunk_size: 512000
+
