@@ -1,0 +1,3 @@
+PEER_IP=15.15.15.15
+DAPL_IF1=ofa-v2-ib0
+DAPL_IF2=ofa-v2-ib0

@@ -1,0 +1,15 @@
+!mux
+first:
+    HOST_PARAM: -T S -D $DAPL_IF1
+    PEER_PARAM: -T Q -s $PEER_IP -D $DAPL_IF2 -d
+second:
+    HOST_PARAM: -T S -D $DAPL_IF1 -d
+    PEER_PARAM: -T T -d -s $PEER_IP -D $DAPL_IF2 client SR 4096 2 server SR 4096 2
+third:
+    HOST_PARAM: -T S -D $DAPL_IF1
+    PEER_PARAM: -T T -V -d -t 2 -w 4 -i 5555 -s $PEER_IP -D $DAPL_IF2 client RW 4096 1 server RW 2048 4 client SR 1024 4 server SR 4096 2 client SR 1024 3 -f server SR 2048 1 -f
+fourth:
+    HOST_PARAM: -T S -D $DAPL_IF1
+    PEER_PARAM: -T P -d -s $PEER_IP -D $DAPL_IF2 -i 100 RW 4096 2 
+fifth:
+    HOST_PARAM: -T L -D $DAPL_IF1 -d -w 16 -m 1000
