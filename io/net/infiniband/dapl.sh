@@ -30,7 +30,11 @@ host_param=$(eval "echo $HOST_PARAM")
 peer_param=$(eval "echo $PEER_PARAM")
 
 # Timeout
+<<<<<<< HEAD
+timeout=2m
+=======
 to=2m
+>>>>>>> 3906e2696c14a3e053a283d4a8a60dcd393293e9
 
 # Runs dapltest on client and server
 dapl_exec()
@@ -38,20 +42,35 @@ dapl_exec()
     if [[ "$3" == "" ]]; then
         avocado_info "Client specific run for $1($2)"
         avocado_debug "$1 $2"
+<<<<<<< HEAD
+        timeout $timeout $1 $2 || { echo "Client specific run failed"; exit 1; }
+    else
+        avocado_info "Client data for $1($3)"
+        ssh $PEER_IP "timeout $timeout $1 $2  > /tmp/ib_log 2>&1 &" || \
+=======
         timeout $to $1 $2 || { echo "Client specific run failed"; exit 1; }
     else
         avocado_info "Client data for $1($3)"
         ssh $PEER_IP "timeout $to $1 $2  > /tmp/ib_log 2>&1 &" || \
+>>>>>>> 3906e2696c14a3e053a283d4a8a60dcd393293e9
             { echo "Peer run failed"; exit 1; }
 
         sleep 5
         avocado_debug "$1 $3 "
+<<<<<<< HEAD
+        timeout $timeout $1 $3 || { echo "Client run failed"; exit 1; }
+=======
         timeout $to $1 $3 || { echo "Client run failed"; exit 1; }
+>>>>>>> 3906e2696c14a3e053a283d4a8a60dcd393293e9
 
         sleep 5
         avocado_info "Server data for $1($2)"
         avocado_debug "$1 $2"
+<<<<<<< HEAD
+        ssh $PEER_IP "timeout $timeout cat /tmp/ib_log; rm -rf /tmp/ib_log"
+=======
         ssh $PEER_IP "timeout $to cat /tmp/ib_log; rm -rf /tmp/ib_log"
+>>>>>>> 3906e2696c14a3e053a283d4a8a60dcd393293e9
     fi
 }
 
