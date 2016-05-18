@@ -1,4 +1,19 @@
 #!/bin/bash -e
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+# See LICENSE for more details.
+#
+# Copyright: 2016 IBM
+# Author: Narasimhan V <sim@linux.vnet.ibm.com>
+
 # This Program runs dapltest tests on client and server for the interfaces
 # specified in config file in the data directory. It runs for 5 different
 # inputs, as specified in multiplexer file.
