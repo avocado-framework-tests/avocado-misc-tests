@@ -13,6 +13,7 @@
 #
 # Copyright: 2016 IBM
 # Author: Narasimhan V <sim@linux.vnet.ibm.com>
+# Author: Manvanthara B Puttashankar <manvanth@linux.vnet.ibm.com>
 
 # This Program runs dapltest tests on client and server for the interfaces
 # specified in config file in the data directory. It runs for 5 different
