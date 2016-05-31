@@ -1,0 +1,13 @@
+setup:
+    location: !mux
+        default:
+            directory: null
+    argument: !mux
+        default:
+            args: null
+    comparison: !mux
+        default:
+            previous_results: null
+iterations: !mux
+    1:
+    2:

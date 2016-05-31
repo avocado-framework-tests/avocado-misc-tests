@@ -1,0 +1,11 @@
+IOzone is a filesystem benchmark tool. The benchmark generates and measures
+a variety of file operations. Iozone has been ported to many machines and
+runs under many operating systems.
+
+Inputs Needed in yaml file:
+---------------------------
+args - Arguements with which iozone command is to be run.
+directory - Directory from which iozone test is executed.
+previous_results - Absolute path of raw_output file of any previously ran
+                   iozone test for comparison with new test results.
+iterations - Number of iterations, the test should be performed.
