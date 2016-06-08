@@ -1,0 +1,58 @@
+setup:
+    general: !mux
+        default:
+            script: 'runltplite.sh'
+            args: ' '
+        runltp: !mux
+            script: 'runltp'
+            syscalls:
+                args: '-f syscalls'
+            mm:
+                args: '-f mm'
+            fs:
+                args: '-f fs'
+            fs_perms_simple:
+                args: '-f fs_perms_simple'
+            fsx:
+                args: '-f fsx'
+            dio:
+                args: '-f dio'
+            io:
+                args: '-f io'
+            ipc:
+                args: '-f ipc'
+            sched:
+                args: '-f sched'
+            math:
+                args: '-f math'
+            nptl:
+                args: '-f nptl'
+            pty:
+                args: '-f pty'
+            filecaps:
+                args: '-f filecaps'
+            cap_bounds:
+                args: '-f cap_bounds'
+            fs_bind:
+                args: '-f fs_bind'
+            fcntl-locktests:
+                args: '-f fcntl-locktests'
+            connectors:
+                args: '-f connectors'
+            aadmin_tools:
+                args: '-f admin_tools'
+            timers:
+                args: '-f timers'
+            power_management_tests:
+                args: '-f power_management_tests'
+            hyperthreading:
+                args: '-f hyperthreading'
+            containers:
+                args: '-f containers'
+            controllers:
+                args: '-f controllers'
+            hugetlb:
+                args: '-f hugetlb'
+            numa:
+                args: '-f numa'
+
