@@ -31,6 +31,16 @@ from avocado.utils import distro
 
 
 class ltp(Test):
+
+    """
+    LTP (Linux Test Project) testsuite
+    :param script: Which ltp script to run (default is "runltplite.sh", which
+                   implies all LTP tests. You can use "runltp" + args to
+                   specify subset of tests).
+    :param args: Extra arguments (default "", with "runltp" you can use
+                 "-f $test")
+    """
+
     def setUp(self):
         sm = SoftwareManager()
         detected_distro = distro.detect()
@@ -53,15 +63,13 @@ class ltp(Test):
 
     def test(self):
         script = self.params.get('script', default='runltplite.sh')
-        args = self.params.get('args', default=' ')
+        args = self.params.get('args', default='')
         if script == 'runltp':
             logfile = os.path.join(self.logdir, 'ltp.log')
             failcmdfile = os.path.join(self.logdir, 'failcmdfile')
             skipfile = os.path.join(self.datadir, 'skipfile')
-            args2 = '-q -p -l %s -C %s -d %s -S %s' % (
-                logfile, failcmdfile, self.srcdir, skipfile)
-            args = args + ' ' + args2
-        ltpbin_dir = os.path.join(self.srcdir, 'bin')
+            args += (" -q -p -l %s -C %s -d %s -S %s"
+                     % (logfile, failcmdfile, self.srcdir, skipfile))
         cmd = os.path.join(ltpbin_dir, script) + ' ' + args
         result = process.run(cmd, ignore_status=True)
         failed_tests = []
@@ -72,7 +80,10 @@ class ltp(Test):
                     failed_tests.append(test_name)
 
         if failed_tests:
-            self.error("LTP tests failed: %s" % failed_tests)
+            self.fail("LTP tests failed: %s" % ", ".join(failed_tests))
+        elif result.exit_status != 0:
+            self.fail("No test failures detected, but LTP finished with %s"
+                      % (result.exit_status))
 
 if __name__ == "__main__":
     main()
