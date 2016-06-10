@@ -19,15 +19,13 @@
 # https://github.com/autotest/autotest-client-tests/tree/master/ltp
 
 
-import os
-import multiprocessing
 from avocado import Test
 from avocado import main
-from avocado.utils import process
 from avocado.utils import build
-from avocado.utils import git
+from avocado.utils import process, archive
+import os
+
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import distro
 
 
 class ltp(Test):
@@ -43,23 +41,21 @@ class ltp(Test):
 
     def setUp(self):
         sm = SoftwareManager()
-        detected_distro = distro.detect()
-        deps = ['gcc', 'git', 'make', 'automake', 'autoconf']
+        deps = ['gcc', 'make', 'automake', 'autoconf']
         for package in deps:
-            if package == 'git' and detected_distro.name == "SuSE":
-                package = 'git-core'
             if not sm.check_installed(package) and not sm.install(package):
                 self.error(package + ' is needed for the test to be run')
-        git.get_repo('https://github.com/linux-test-project/ltp.git',
-                     destination_dir=self.srcdir)
-        os.chdir(self.srcdir)
-        build.make(self.srcdir, extra_args='autotools')
-        ltpbin_dir = os.path.join(self.srcdir, 'bin')
+        url = "https://github.com/linux-test-project/ltp/archive/master.zip"
+        tarball = self.fetch_asset("ltp-master.zip", locations=[url])
+        archive.extract(tarball, self.srcdir)
+        ltp_dir = os.path.join(self.srcdir, "ltp-master")
+        os.chdir(ltp_dir)
+        build.make(ltp_dir, extra_args='autotools')
+        ltpbin_dir = os.path.join(ltp_dir, 'bin')
         os.mkdir(ltpbin_dir)
         process.system('./configure --prefix=%s' % ltpbin_dir)
-        build.make(self.srcdir, extra_args='-j %d' %
-                   multiprocessing.cpu_count())
-        build.make(self.srcdir, extra_args='install')
+        build.make(ltp_dir)
+        build.make(ltp_dir, extra_args='install')
 
     def test(self):
         script = self.params.get('script', default='runltplite.sh')
@@ -70,6 +66,7 @@ class ltp(Test):
             skipfile = os.path.join(self.datadir, 'skipfile')
             args += (" -q -p -l %s -C %s -d %s -S %s"
                      % (logfile, failcmdfile, self.srcdir, skipfile))
+        ltpbin_dir = os.path.join(self.srcdir, "ltp-master", 'bin')
         cmd = os.path.join(ltpbin_dir, script) + ' ' + args
         result = process.run(cmd, ignore_status=True)
         # Walk the stdout and try detect failed tests from lines like these:
