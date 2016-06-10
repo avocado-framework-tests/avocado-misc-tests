@@ -72,12 +72,15 @@ class ltp(Test):
                      % (logfile, failcmdfile, self.srcdir, skipfile))
         cmd = os.path.join(ltpbin_dir, script) + ' ' + args
         result = process.run(cmd, ignore_status=True)
-        failed_tests = []
-        for line in result.stdout.splitlines():
-            if set(('TFAIL', 'TBROK', 'TWARN')).intersection(line.split()):
-                test_name = line.strip().split(' ')[0]
-                if test_name not in failed_tests:
-                    failed_tests.append(test_name)
+        # Walk the stdout and try detect failed tests from lines like these:
+        # aio01       5  TPASS  :  Test 5: 10 reads and writes in  0.000022 sec
+        # vhangup02    1  TFAIL  :  vhangup02.c:88: vhangup() failed, errno:1
+        # and check for fail_statuses The first part contain test name
+        fail_statuses = ['TFAIL', 'TBROK', 'TWARN']
+        split_lines = (line.split(None, 3)
+                       for line in result.stdout.splitlines())
+        failed_tests = [items[0] for items in split_lines
+                        if len(items) == 4 and items[2] in fail_statuses]
 
         if failed_tests:
             self.fail("LTP tests failed: %s" % ", ".join(failed_tests))
