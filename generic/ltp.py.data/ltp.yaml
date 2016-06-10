@@ -2,7 +2,7 @@ setup:
     general: !mux
         default:
             script: 'runltplite.sh'
-            args: ' '
+            args: ''
         runltp: !mux
             script: 'runltp'
             syscalls:
