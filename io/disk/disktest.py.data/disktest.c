@@ -41,10 +41,11 @@ unsigned int sectors_per_block;
 unsigned int signature = 0;
 unsigned int stop_on_error = 0;
 unsigned int infinite_loop = 0;
+unsigned int pid = 0;
 
 void die(char *error)
 {
-	fprintf(stderr, "%s\n", error);
+	fprintf(stderr, "%d: %s\n", pid, error);
 	exit(1);
 }
 
@@ -71,7 +72,7 @@ void write_block(int fd, unsigned int block, struct pattern *buffer)
 	offset = block; offset *= blocksize;   // careful of overflow
 	lseek(fd, offset, SEEK_SET);
 	if (write(fd, buffer, blocksize) != blocksize) {
-		fprintf(stderr, "Write failed : file %s : block %d\n", filename, block);
+		fprintf(stderr, "%d: Write failed : file %s : block %d\n", pid, filename, block);
 		exit(1);
 	}
 }
@@ -93,7 +94,7 @@ int verify_block(int fd, unsigned int block, struct pattern *buffer, char *err)
 	offset = block; offset *= blocksize;   // careful of overflow
 	lseek(fd, offset, SEEK_SET);
 	if (read(fd, buffer, blocksize) != blocksize) {
-		fprintf(stderr, "read failed: block %d (errno: %d) filename %s %s\n", block, errno, filename, err);
+		fprintf(stderr, "%d: read failed: block %d (errno: %d) filename %s %s\n", pid, block, errno, filename, err);
 		exit(1);
 	}
 
@@ -117,14 +118,14 @@ int verify_block(int fd, unsigned int block, struct pattern *buffer, char *err)
 			}
 		}
 		if (sector_errors)
-			printf("Block %d (from %d to %d) sector %08x has wrong sector number %08x (%d/%lu) filename %s %s\n",
-					block, start_block, start_block+blocks,
+			printf("%d: Block %d (from %d to %d) sector %08x has wrong sector number %08x (%d/%lu) filename %s %s\n",
+					pid, block, start_block, start_block+blocks,
 					sector, read_sector,
 					sector_errors, PATTERN_PER_SECTOR,
 					filename, err);
 		if (signature_errors)
-			printf("Block %d (from %d to %d) sector %08x signature is %08x should be %08x (%d/%lu) filename %s %s\n",
-				block, start_block, start_block+blocks,
+			printf("%d: Block %d (from %d to %d) sector %08x signature is %08x should be %08x (%d/%lu) filename %s %s\n",
+				pid, block, start_block, start_block+blocks,
 				sector, read_signature, signature,
 				signature_errors, PATTERN_PER_SECTOR,
 				filename, err);
@@ -247,8 +248,10 @@ int main(int argc, char *argv[])
 {
 	unsigned int block;
 	time_t start_time, end_time;
-	int tasks, opt, retcode, pid;
+	int tasks, opt, retcode, child_pid;
 	void *init_buffer;
+
+    pid = getpid();
 
 	/* Parse all input options */
 	while ((opt = getopt(argc, argv, "vf:s:m:M:b:l:r:iSL")) != -1) {
@@ -305,7 +308,7 @@ int main(int argc, char *argv[])
 		if (verify_only) {
 			struct stat stat_buf;
 
-			printf("Verifying %s\n", filename);
+			printf("%d: Verifying %s\n", pid, filename);
 			int fd = open(filename, O_RDONLY);
 			if (fd < 0)
 				die("open failed");
@@ -315,14 +318,14 @@ int main(int argc, char *argv[])
 			megabytes = stat_buf.st_size / (1024 * 1024);
 			blocks = megabytes * (1024 * 1024 / blocksize);
 			if (read(fd, init_buffer, SECTOR_SIZE) != SECTOR_SIZE) {
-				fprintf(stderr, "read failed of initial sector (errno: %d) filename %s\n", errno, filename);
+				fprintf(stderr, "%d: read failed of initial sector (errno: %d) filename %s\n", pid, errno, filename);
 				exit(1);
 			}
 			lseek(fd, 0, SEEK_SET);
 			signature = ((struct pattern *)init_buffer)->signature;
 
-			printf("Checking %d megabytes using signature %08x\n",
-								megabytes, signature);
+			printf("%d: Checking %d megabytes using signature %08x\n",
+				   pid, megabytes, signature);
 			if (double_verify(fd, init_buffer, "init1"))
 				exit(1);
 			else
@@ -338,8 +341,8 @@ int main(int argc, char *argv[])
 
 		start_time = time(NULL);
 
-		printf("Ininitializing block %d to %d in file %s (signature %08x)\n",
-		       start_block, start_block + blocks, filename, signature);
+		printf("%d: Ininitializing block %d to %d in file %s (signature %08x)\n",
+		       pid, start_block, start_block + blocks, filename, signature);
 		/* Initialise all file data to correct blocks */
 		for (block = start_block; block < start_block + blocks; block++)
 			write_block(fd, block, init_buffer);
@@ -347,13 +350,13 @@ int main(int argc, char *argv[])
 			die("fsync failed");
 		if (double_verify(fd, init_buffer, "init1")) {
 			if (!stop_on_error) {
-				printf("First verify failed. Repeating for posterity\n");
+				printf("%d: First verify failed. Repeating for posterity\n", pid);
 				double_verify(fd, init_buffer, "init2");
 			}
 			exit(1);
 		}
 
-		printf("Wrote %d MB to %s (%d seconds)\n", megabytes, filename,
+		printf("%d: Wrote %d MB to %s (%d seconds)\n", pid, megabytes, filename,
 		        (int) (time(NULL) - start_time));
 
 		free(init_buffer);
@@ -377,9 +380,9 @@ int main(int argc, char *argv[])
 		verify_file(end_time, 1, 1);
 
 		for (tasks = 0; tasks < linear_tasks + random_tasks + 4; tasks++) {
-			pid = wait(&retcode);
+			child_pid = wait(&retcode);
 			if (retcode != 0) {
-				printf("pid %d exited with status %d\n", pid, retcode);
+				printf("%d: pid %d exited with status %d\n", pid, child_pid, retcode);
 				exit(1);
 			}
 		}
