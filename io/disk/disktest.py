@@ -17,6 +17,9 @@
 # Based on code by Martin Bligh (mbligh@google.com)
 #   Copyright: 2007 Google, Inc.
 #   https://github.com/autotest/autotest-client-tests/tree/master/disktest
+"""
+Disktest test
+"""
 
 import glob
 import os
@@ -109,18 +112,11 @@ class Disktest(Test):
         """
         Compiles the disktest
         """
-        source = self.params.get('source', default='disktest.c')
-        makefile = self.params.get('make', default='Makefile')
-        c_file = os.path.join(self.datadir, source)
-        c_file_name = os.path.basename(c_file)
-        make_file = os.path.join(self.datadir, makefile)
-        make_file_name = os.path.basename(make_file)
-        dest_c_file = os.path.join(self.srcdir, c_file_name)
-        dest_m_file = os.path.join(self.srcdir, make_file_name)
-        shutil.copy(c_file, dest_c_file)
-        shutil.copy(make_file, dest_m_file)
-        os.chdir(self.srcdir)
-        build.make(self.srcdir)
+        c_file = os.path.join(self.datadir, "disktest.c")
+        shutil.copy(c_file, self.srcdir)
+        build.make(self.srcdir, extra_args="disktest",
+                   env={"CFLAGS": "-O2 -Wall -D_FILE_OFFSET_BITS=64 "
+                                  "-D _GNU_SOURCE"})
 
     def one_disk_chunk(self, disk, chunk):
         """
@@ -141,7 +137,6 @@ class Disktest(Test):
         Runs one iteration of disktest.
 
         """
-        os.chdir(self.srcdir)
         procs = []
         errors = []
         for i in xrange(self.no_chunks):

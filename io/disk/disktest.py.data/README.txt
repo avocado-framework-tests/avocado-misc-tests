@@ -8,5 +8,3 @@ Available parameters
 disks - List of directories of used in test. In case only string is used it's split using ','. When the target is not directory, it's created.
 gigabyte - Disk space that will be used for the test to run.
 chunk_mb - Size of the portion of the disk used to run the test. Cannot be smaller than the total amount of RAM.
-source - name of the source file located in deps path
-make - name of makefile located in deps path
