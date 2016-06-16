@@ -1,0 +1,25 @@
+setup:
+    location: !mux
+        default:
+            target: '/mnt'
+    block: !mux
+        first:
+            blocks: 4096
+        second:
+            blocks: 8192
+    thread: !mux
+        default:
+            threads: 10
+    blocksize: !mux
+        default:
+            size: 1024
+    runs: !mux
+        default:
+            numruns: 2
+    iteration: !mux
+        default: !mux
+            1:
+            2:
+            3:
+            4:
+            5:
