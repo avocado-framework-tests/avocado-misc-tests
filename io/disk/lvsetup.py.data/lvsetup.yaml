@@ -1,0 +1,6 @@
+scenario: !mux
+    loopback:
+        lv_size: "10M"
+# Uncomment this to use real drive (warning: it'll be erased!)
+#   real:
+#       disk: /dev/vde
