@@ -1,0 +1,20 @@
+The lvm setup checks whether the provided volume group exists. If not,
+creates one from the ramdisk. It then creates a logical volume if there
+is no logical volume with given name. Takes a snapshot from the logical
+volume and merges snapshot with the logical volume.
+
+Inputs Needed in yaml file:
+---------------------------
+disk: Name of the disk on which volume groups, logical volumes,
+      snapshots are created. Created on loop device if not specified
+vg_name: Name of the volume group.
+lv_name: Name of the logical volume.
+lv_size: Size of the logical volume as string in the form "#G"
+         (for example 30G).
+ramdisk_vg_size: Size of the physical volume to be created.
+ramdisk_basedir: Base directory to place the sparse file
+ramdisk_sparse_filename: Name of the sparse file.
+lv_snapshot_name: Name of the snapshot with origin the logical
+                  volume.
+lv_snapshot_size: Size of the snapshot with origin the logical
+                  volume also as "#G".
