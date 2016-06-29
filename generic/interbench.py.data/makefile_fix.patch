@@ -1,0 +1,19 @@
+--- interbench-0.31/Makefile.orig	2016-06-29 13:03:04.850843860 -0400
++++ interbench-0.31/Makefile	2016-06-29 13:01:49.214255602 -0400
+@@ -1,9 +1,9 @@
+-CC=gcc
+-CFLAGS=-W -Wall -g -O2 -s -pipe
+-LDFLAGS=-lrt -lm -pthread
+-
+-interbench: interbench.o hackbench.o
+-interbench.o: interbench.c
+-hackbench.o: hackbench.c
++C ?= gcc
++CFLAGS=-W -Wall -g -lpthread -O2 -s -pipe
++LDFLAGS=-lrt -lm -lpthread
++default: 
++	$(CC) $(CFLAGS) -c -o interbench.o  interbench.c
++	$(CC) $(CFLAGS) -c -o hackbench.o  hackbench.c
++	$(CC) interbench.o hackbench.o -o interbench  ${LDFLAGS}
+ clean:
+ 	rm -f *.o interbench interbench.read interbench.write interbench.loops_per_ms *~
