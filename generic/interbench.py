@@ -44,7 +44,8 @@ class Interbench(Test):
         http://ck.kolivas.org/apps/interbench/interbench-0.31.tar.bz2
         '''
         sm_manager = SoftwareManager()
-        if not sm_manager.check_installed("gcc") and not sm.install("gcc"):
+        if (not sm_manager.check_installed("gcc") and not
+                sm_manager.install("gcc")):
             self.error("Gcc is needed for the test to be run")
         tarball = self.fetch_asset('http://ck.kolivas.org'
                                    '/apps/interbench/'
