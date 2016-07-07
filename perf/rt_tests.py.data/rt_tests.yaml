@@ -1,0 +1,11 @@
+setup:
+    general: !mux
+         signaltest:
+             test_to_run: signaltest
+             args: '-t 10 -l 100000 '
+         cyclictest: !mux
+             test_to_run: cyclictest
+             args: '-t 10 -l 100000 '  
+         pi_test:
+             test_to_run: pi_stress
+             args: "--duration=300"
