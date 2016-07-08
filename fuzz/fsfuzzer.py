@@ -77,8 +77,8 @@ class Fsfuzzer(Test):
         fs_sup = process.system_output('%s %s' % (
             os.path.join(self.srcdir, 'fsfuzz'), ' --help'))
 
-        matchObj = re.search(r'%s' % self.args, fs_sup, re.M | re.I)
-        if not matchObj:
+        match = re.search(r'%s' % self.args, fs_sup, re.M | re.I)
+        if not match:
             self.skip('File system ' + self.args +
                       ' is unsupported in ' + detected_distro.name)
 
