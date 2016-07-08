@@ -24,10 +24,7 @@ import re
 
 from avocado import Test
 from avocado import main
-from avocado.utils import process
-from avocado.utils import git
-from avocado.utils import distro
-from avocado.utils import build
+from avocado.utils import archive, build, distro, process
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -55,10 +52,11 @@ class Fsfuzzer(Test):
         if not smm.check_installed("gcc") and not smm.install("gcc"):
             self.error("Gcc is needed for the test to be run")
 
-        git.get_repo('https://github.com/stevegrubb/fsfuzzer.git',
-                     destination_dir=self.srcdir)
-
-        os.chdir(self.srcdir)
+        locations = ["https://github.com/stevegrubb/fsfuzzer/archive/"
+                     "master.zip"]
+        tarball = self.fetch_asset("fsfuzzer.zip", locations=locations)
+        archive.extract(tarball, self.srcdir)
+        os.chdir(os.path.join(self.srcdir, "fsfuzzer-master"))
 
         if detected_distro.name == "Ubuntu":
             # Patch for ubuntu
@@ -70,16 +68,14 @@ class Fsfuzzer(Test):
         process.run('./autogen.sh', shell=True)
         process.run('./configure', shell=True)
 
-        build.make(self.srcdir)
+        build.make('.')
 
-        self.args = self.params.get('fstype', default='')
-
-        fs_sup = process.system_output('%s %s' % (
-            os.path.join(self.srcdir, 'fsfuzz'), ' --help'))
-
-        match = re.search(r'%s' % self.args, fs_sup, re.M | re.I)
+        self._args = self.params.get('fstype', default='')
+        self._fsfuzz = os.path.abspath(os.path.join('.', "fsfuzz"))
+        fs_sup = process.system_output('%s %s' % (self._fsfuzz, ' --help'))
+        match = re.search(r'%s' % self._args, fs_sup, re.M | re.I)
         if not match:
-            self.skip('File system ' + self.args +
+            self.skip('File system ' + self._args +
                       ' is unsupported in ' + detected_distro.name)
 
     def test(self):
@@ -88,8 +84,7 @@ class Fsfuzzer(Test):
         Runs the fsfuzz test suite. By default uses all supported fstypes,
         but you can specify only one by `fstype` param.
         '''
-        process.system('%s %s' % (os.path.join(
-            self.srcdir, 'fsfuzz'), self.args), sudo=True)
+        process.system("%s %s" % (self._fsfuzz, self._args), sudo=True)
 
 if __name__ == "__main__":
     main()
