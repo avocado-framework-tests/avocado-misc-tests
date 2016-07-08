@@ -1,0 +1,8 @@
+--- fsfuzzer/fsfuzz.org	2016-07-01 10:02:22.193569811 -0400
++++ fsfuzzer/fsfuzz	2016-07-01 10:02:46.729760531 -0400
+@@ -1,4 +1,4 @@
+-#!/bin/sh
++#!/bin/bash
+ # (c) 2006-2009 Steve Grubb <sgrubb@redhat.com>
+ # (c) 2006, LMH <lmh@info-pull.com>
+ #
