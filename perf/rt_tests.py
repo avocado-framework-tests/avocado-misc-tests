@@ -51,10 +51,9 @@ class rt_tests(Test):
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
                 self.error(package + ' is needed for the test to be run')
-        tarball = self.fetch_asset("rt-tests.tar.gz", locations=["https://"
-                                   "kernel.googlesource.com/pub/scm/"
-                                   'utils/rt-tests/rt-tests/+archive/'
-                                   'master.tar.gz'])
+        locations = ["https://kernel.googlesource.com/pub/scm/utils/rt-tests/"
+                     "rt-tests/+archive/master.tar.gz"]
+        tarball = self.fetch_asset("rt-tests.tar.gz", locations=locations)
         archive.extract(tarball, self.srcdir)
         build.make(self.srcdir)
 
