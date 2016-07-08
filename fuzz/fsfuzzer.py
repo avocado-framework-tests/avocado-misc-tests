@@ -64,7 +64,8 @@ class Fsfuzzer(Test):
             # Patch for ubuntu
             fuzz_fix_patch = 'patch -p1 < %s' % (
                 os.path.join(self.datadir, 'fsfuzz_fix.patch'))
-            process.run(fuzz_fix_patch, shell=True)
+            if process.system(fuzz_fix_patch, shell=True, ignore_status=True):
+                self.log.warn("Unable to apply sh->bash patch!")
 
         process.run('./autogen.sh', shell=True)
         process.run('./configure', shell=True)
