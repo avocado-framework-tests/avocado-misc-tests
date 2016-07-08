@@ -1,0 +1,36 @@
+setup:
+ filesystem: !mux
+    default:
+        fstype: ''
+    cramfs:
+        fstype: cramfs
+    ext2:
+        fstype: ext2
+    ext3:
+        fstype: ext3
+    ext4:
+        fstype: ext4
+    swap:
+        fstype: swap
+    iso9660:
+        fstype: iso9660
+    msdos:
+        fstype: msdos
+    vfat:
+        fstype: vfat
+    xfs:
+        fstype: xfs
+    mksquashfs:
+        fstype: mksquashfs
+    hfs:
+        fstype: hfs
+    gfs2:
+        fstype: gfs2
+    jffs2:
+        fstype: jffs2
+    reiserfs:
+        fstype: reiserfs
+    romfs:
+        fstype: romfs
+    ecryptfs:
+        fstype: ecryptfs

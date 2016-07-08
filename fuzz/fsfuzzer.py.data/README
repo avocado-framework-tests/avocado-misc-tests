@@ -1,0 +1,9 @@
+WARNING: This program can cause your kernel to oops. ITS WHOLE
+PURPOSE IS TO PROVOKE THE COMPUTER TO DO BAD THINGS. If you are
+using a journalling file system for all your important data, for
+the most part you will be OK running this on your machine. But its
+impossible to know what hole in the OS you will trigger and what its
+consequences are. If you don't run with a journalled file system 
+and many processes are active and some writing to disk, there
+is a real good chance that you could screw up your computer. YOU
+HAVE BEEN WARNED!
