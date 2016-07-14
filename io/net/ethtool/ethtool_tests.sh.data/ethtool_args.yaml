@@ -1,0 +1,31 @@
+Interfaces: !mux
+    interface1:
+        interface: eth1
+    interface2:
+        interface: eth2
+Parameters: !mux
+    Information:
+        arg:
+    Driver:
+        arg: -i
+    Autonegotiation:
+        arg: -r
+    PauseParameter:
+        arg: -a
+    Coalescing:
+        arg: -c
+    RegisterDump:
+        arg: -d
+    EEPROMDump:
+        arg: -e
+    RingParameter:
+        arg: -g
+    ShowOffloadProtocolFeature:
+        arg: -k
+    AdapterInitiate:
+        arg: -p
+        action_elapse: 3
+    Statistics:
+        arg: -S
+    SelfTest:
+        arg: -t
