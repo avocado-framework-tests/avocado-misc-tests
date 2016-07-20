@@ -1,0 +1,12 @@
+--- lmbench3/scripts/gnu-os.orig	2014-10-08 14:40:32.376372883 +0530
++++ lmbench3/scripts/gnu-os	2014-10-08 14:42:36.860375848 +0530
+@@ -883,6 +883,9 @@
+     ppc64:Linux:*:*)
+ 	echo powerpc64-unknown-linux-gnu
+ 	exit 0 ;;
++    ppc64le:Linux:*:*)
++        echo powerpc64le-unknown-linux-gnu
++        exit 0 ;;
+     alpha:Linux:*:*)
+ 	case `sed -n '/^cpu model/s/^.*: \(.*\)/\1/p' < /proc/cpuinfo` in
+ 	  EV5)   UNAME_MACHINE=alphaev5 ;;
