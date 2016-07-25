@@ -1,0 +1,14 @@
+WARNINGS:
+* This program may seriously corrupt your files, including any
+  of those that may be writable on mounted network file shares.
+  It may create network packets that may cause disruption on your
+   local network.
+
+* Trinity may generate the right selection of syscalls to start
+  sending random network  packets to other hosts. While every effort
+   is made to restrict this to IP addresses  on local lans, multicast
+   & broadcast, care should be taken to not allow the  packets it generates
+   to go out onto the internet.
+
+there is a real good chance that you could screw up your computer. YOU
+HAVE BEEN WARNED!

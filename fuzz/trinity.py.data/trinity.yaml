@@ -1,0 +1,36 @@
+#./trinity
+# --arch, -a: selects syscalls for the specified architecture (32 or 64). Both by default.
+# --bdev, -b <node>:  Add /dev node to list of block devices to use for destructive tests..
+# --children,-C: specify number of child processes
+# --debug,-D: enable debug
+# --dropprivs, -X: if run as root, switch to nobody [EXPERIMENTAL]
+# --exclude,-x: don't call a specific syscall
+# --enable-fds/--disable-fds= {sockets,pipes,perf,epoll,eventfd,pseudo,timerfd,testfile,memfd,drm}
+# --group,-g = {vfs,vm}: only run syscalls from a certain group.
+# --ioctls,-I: list all ioctls.
+# --kernel_taint, -T: controls which kernel taint flags should be considered, for more details refer to README file. 
+# --list,-L: list all syscalls known on this architecture.
+# --logging,-l: (off=disable logging).
+# --monochrome,-m: don't output ANSI codes
+# --domain,-P: specify specific network domain for sockets.
+# --no_domain,-E: specify network domains to be excluded from testing.
+# --quiet,-q: less output.
+# --random,-r#: pick N syscalls at random and just fuzz those
+# --server_addr: supply an IPv4 or IPv6 address to connect, no need for server side.
+# --server_port: supply an server port to listen or connect, will fuzz between port to (port + 100)
+# --syslog,-S: log important info to syslog. (useful if syslog is remote)
+# --verbose,-v: increase output verbosity.
+# --victims,-V: path to victim files.
+
+# -c#,@: target specific syscall (takes syscall name as parameter and optionally 32 or 64 as bit-width. Default:both).
+# -N#: do # syscalls then exit.
+# -s#: use # as random seed.
+
+setup:
+ trinityrun : !mux
+  exclude:
+   runargs :  -x madvise
+  logging_off:
+   runargs :  -qq -l off -C16
+ 
+  
