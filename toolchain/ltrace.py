@@ -86,16 +86,27 @@ class Ltrace(Test):
         build.make(self.src_lt)
 
     def test(self):
-        build.make(self.src_lt, extra_args='check')
+        """
+        Run the `make check` on ltrace
+        """
+        ret = build.make(self.src_lt, extra_args='check', ignore_status=True)
 
-        for root, dirnames, filenames in os.walk('.'):
+        errors = 0
+        for root, _, filenames in os.walk('.'):
             for filename in fnmatch.filter(filenames, '*.log'):
                 filename = os.path.join(root, filename)
-                shutil.copy('filename', 'self.logdir')
-                with open(logfile) as result:
+                shutil.copy(filename, self.logdir)
+                with open(filename) as result:
                     for line in result.readlines():
                         if line.startswith('FAIL'):
+                            errors += 1
                             self.log.error(line)
+
+        if errors:
+            self.fail("%s test(s) failed, check the log for details." % errors)
+        elif ret:
+            self.fail("'make check' finished with %s, but no FAIL lines were "
+                      "found." % ret)
 
 
 if __name__ == "__main__":
