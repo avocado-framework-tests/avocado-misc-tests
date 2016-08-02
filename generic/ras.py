@@ -110,6 +110,7 @@ class RASTools(Test):
                                            "cut -d':' -f2",
                                            shell=True).strip()
         if lcpu_count:
+            lcpu_count = int(lcpu_count)
             if lcpu_count >= 2:
                 self.run_cmd("drmgr -c cpu -r 1")
                 self.run_cmd("lparstat")
