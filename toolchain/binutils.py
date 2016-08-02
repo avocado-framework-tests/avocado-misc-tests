@@ -68,8 +68,11 @@ class Binutils(Test):
 
         # Extract - binutils
         # Source: https://ftp.gnu.org/gnu/binutils/binutils-2.26.tar.bz2
-        source = 'https://ftp.gnu.org/gnu/binutils/binutils-2.26.tar.bz2'
-        tarball = self.fetch_asset(source)
+        locations = ['https://ftp.gnu.org/gnu/binutils/binutils-2.26.tar.bz2',
+                     "ftp://ftp.fi.muni.cz/pub/gnu/gnu/binutils/"
+                     "binutils-2.26.tar.bz2"]
+        tarball = self.fetch_asset("binutils-2.26.tar.bz2",
+                                   locations=locations)
         archive.extract(tarball, self.srcdir)
 
         bintools_version = os.path.basename(tarball.split('.tar.')[0])
