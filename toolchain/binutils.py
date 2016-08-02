@@ -78,11 +78,12 @@ class Binutils(Test):
         bintools_version = os.path.basename(tarball.split('.tar.')[0])
         self.src_dir = os.path.join(self.srcdir, bintools_version)
 
-    def test(self):
+        # Compile the binutils
         os.chdir(self.src_dir)
-
         process.run('./configure')
         build.make(self.src_dir)
+
+    def test(self):
         build.make(self.src_dir, extra_args='check')
 
         for root, dirnames, filenames in os.walk('.'):
