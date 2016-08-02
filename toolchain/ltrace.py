@@ -68,12 +68,12 @@ class Ltrace(Test):
             self.log.warn("Unsupported OS!")
 
         for pkg in pkgs:
-            if backend.check_installed(pkg):
+            if not backend.check_installed(pkg):
                 if backend.install(pkg):
                     self.log.warn("%s installed successfully", pkg)
-            else:
-                self.error(
-                    "Fail to install package- %s required for this test" % pkg)
+                else:
+                    self.error("Fail to install package- %s required for "
+                               "this test" % pkg)
 
         # Source: git clone git://git.debian.org/git/collab-maint/ltrace.git
         git.get_repo('git://git.debian.org/git/collab-maint/ltrace.git',
