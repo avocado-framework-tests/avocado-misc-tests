@@ -26,7 +26,6 @@ from avocado import main
 from avocado.utils import archive
 from avocado.utils import build
 from avocado.utils import process
-from avocado.utils import distro
 
 from avocado.utils.software_manager import SoftwareManager
 
@@ -39,17 +38,19 @@ class Binutils(Test):
     """
 
     def check_install(self, package):
-        if not self.sm.check_installed(package) \
-                and not self.sm.install(package):
-            self.needed_deps.append(package)
+        """
+        Appends package to `self._needed_deps` when not able to install it
+        """
+        if (not self._sm.check_installed(package) and
+                not self._sm.install(package)):
+            self._needed_deps.append(package)
 
     def setUp(self):
         # Check for basic utilities
-        ditected_distro = distro.detect()
-        self.sm = SoftwareManager()
+        self._sm = SoftwareManager()
 
         # Install required tools and resolve dependencies
-        self.needed_deps = []
+        self._needed_deps = []
 
         self.check_install('rpmbuild')
         self.check_install('elfutils')
@@ -62,9 +63,9 @@ class Binutils(Test):
         self.check_install('glibc-static')
         self.check_install('zlib-static')
 
-        if len(self.needed_deps) > 0:
+        if len(self._needed_deps) > 0:
             self.log.warn('Please install these dependencies %s'
-                          % self.needed_deps)
+                          % self._needed_deps)
 
         # Extract - binutils
         # Source: https://ftp.gnu.org/gnu/binutils/binutils-2.26.tar.bz2
@@ -84,9 +85,12 @@ class Binutils(Test):
         build.make(self.src_dir)
 
     def test(self):
+        """
+        Runs the binutils `make check`
+        """
         build.make(self.src_dir, extra_args='check')
 
-        for root, dirnames, filenames in os.walk('.'):
+        for root, _, filenames in os.walk(self.src_dir):
             for filename in fnmatch.filter(filenames, '*.log'):
                 filename = os.path.join(root, filename)
                 logfile = filename[:-4] + ".log"
