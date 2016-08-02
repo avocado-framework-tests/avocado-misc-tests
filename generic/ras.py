@@ -25,7 +25,7 @@ from avocado.utils.software_manager import SoftwareManager
 
 class RASTools(Test):
 
-    '''
+    """
     This test verifies below RAS tools:
     set_poweron_time - set_poweron_time schedules the power on time
     sys_ident - sys_ident provides unique system identification information
@@ -35,11 +35,13 @@ class RASTools(Test):
     lsslot - lsslot lists the slots based on the option provided
     lsvio - lsvio lists the virtual I/O adopters and devices
     nvram - nvram command retrieves and displays NVRAM data
-    ofpathname - ofpathname translates the device name between logical name and Open Firmware name
+    ofpathname - ofpathname translates the device name between logical name and
+                 Open Firmware name
     ppc64_cpu - ppc64_cpu is used to set cpu options
     rtas_ibm_get_vpd - rtas_ibm_get_vpd gives vpd data
-    rtas_errd and rtas_dump - rtas_errd adds RTAS events to /var/log/platform and rtas_dump dumps RTAS events
-    '''
+    rtas_errd and rtas_dump - rtas_errd adds RTAS events to /var/log/platform
+                              and rtas_dump dumps RTAS events
+    """
     is_fail = 0
 
     def run_cmd(self, cmd):
@@ -59,41 +61,50 @@ class RASTools(Test):
                            " test." % package)
 
     def test1_set_poweron_time(self):
-        self.log.info("===============Executing set_poweron_time tool test===============")
+        self.log.info("===============Executing set_poweron_time tool test===="
+                      "===========")
         self.run_cmd("set_poweron_time -m")
         self.run_cmd("set_poweron_time -h")
         self.run_cmd("set_poweron_time -d m2")
         self.run_cmd("set_poweron_time -t M6D15h12")
         if self.is_fail >= 1:
-            self.fail("%s command(s) failed in set_poweron_time tool verification" % self.is_fail)
+            self.fail("%s command(s) failed in set_poweron_time tool "
+                      "verification" % self.is_fail)
 
     def test2_sys_ident_tool(self):
-        self.log.info("===============Executing sys_ident_tool test===============")
+        self.log.info("===============Executing sys_ident_tool test==========="
+                      "====")
         self.run_cmd("sys_ident -p")
         self.run_cmd("sys_ident -s")
         if self.is_fail >= 1:
-            self.fail("%s command(s) failed in sys_ident tool verification" % self.is_fail)
+            self.fail("%s command(s) failed in sys_ident tool verification"
+                      % self.is_fail)
 
     def test3_lsmcode(self):
-        self.log.info("===============Executing lsmcode tool test===============")
+        self.log.info("===============Executing lsmcode tool test============="
+                      "==")
         self.run_cmd("lsmcode")
         self.run_cmd("lsmcode -A")
         self.run_cmd("lsmcode -v")
         self.run_cmd("lsmcode -D")
         self.run_cmd("vpdupdate")
-        path_db = commands.getoutput("find /var/lib/lsvpd/ -iname vpd.db | head -1")
+        path_db = commands.getoutput("find /var/lib/lsvpd/ -iname vpd.db | "
+                                     "head -1")
         if path_db:
             copyfile_path = os.path.join(self.outputdir, 'vpd.db')
             copyfile(path_db, copyfile_path)
             self.run_cmd("lsmcode --path=%s" % copyfile_path)
-        path_tar = commands.getoutput("find /var/lib/lsvpd/ -iname vpd.*.gz | head -1")
+        path_tar = commands.getoutput("find /var/lib/lsvpd/ -iname vpd.*.gz | "
+                                      "head -1")
         if path_tar:
             self.run_cmd("lsmcode --zip=%s" % path_tar)
         if self.is_fail >= 1:
-            self.fail("%s command(s) failed in lsmcode tool verification" % self.is_fail)
+            self.fail("%s command(s) failed in lsmcode tool verification"
+                      % self.is_fail)
 
     def test4_drmgr(self):
-        self.log.info("===============Executing drmgr tool test===============")
+        self.log.info("===============Executing drmgr tool test============="
+                      "==")
         self.run_cmd("drmgr -h")
         self.run_cmd("drmgr -C")
         lcpu_count = commands.getoutput(
@@ -105,16 +116,20 @@ class RASTools(Test):
                 self.run_cmd("drmgr -c cpu -a 1")
                 self.run_cmd("lparstat")
         if self.is_fail >= 1:
-            self.fail("%s command(s) failed in drmgr tool verification" % self.is_fail)
+            self.fail("%s command(s) failed in drmgr tool verification"
+                      % self.is_fail)
 
     def test5_lsprop(self):
-        self.log.info("===============Executing lsprop tool test===============")
+        self.log.info("===============Executing lsprop tool test============="
+                      "==")
         self.run_cmd("lsprop")
         if self.is_fail >= 1:
-            self.fail("%s command(s) failed in lsprop tool verification" % self.is_fail)
+            self.fail("%s command(s) failed in lsprop tool verification"
+                      % self.is_fail)
 
     def test6_lsslot(self):
-        self.log.info("===============Executing lsslot tool test===============")
+        self.log.info("===============Executing lsslot tool test============="
+                      "==")
         self.run_cmd("lsslot")
         self.run_cmd("lsslot -c mem")
         self.run_cmd("lsslot -ac pci")
@@ -124,29 +139,35 @@ class RASTools(Test):
         if slot:
             self.run_cmd("lsslot -s %s" % slot)
         if self.is_fail >= 1:
-            self.fail("%s command(s) failed in lsslot tool verification" % self.is_fail)
+            self.fail("%s command(s) failed in lsslot tool verification"
+                      % self.is_fail)
 
     def test7_lsvio(self):
-        self.log.info("===============Executing lsvio tool test===============")
+        self.log.info("===============Executing lsvio tool test============="
+                      "==")
         self.run_cmd("lsvio -h")
         self.run_cmd("lsvio -v")
         self.run_cmd("lsvio -s")
         self.run_cmd("lsvio -e")
         self.run_cmd("lsvio -d")
         if self.is_fail >= 1:
-            self.fail("%s command(s) failed in lsvio tool verification" % self.is_fail)
+            self.fail("%s command(s) failed in lsvio tool verification"
+                      % self.is_fail)
 
     def test8_nvram(self):
-        self.log.info("===============Executing nvram tool test===============")
+        self.log.info("===============Executing nvram tool test============="
+                      "==")
         self.run_cmd("nvram --help")
         self.run_cmd("nvram --partitions")
         self.run_cmd("nvram --print-config -p common")
         self.run_cmd("nvram --dump common --verbose")
         if self.is_fail >= 1:
-            self.fail("%s command(s) failed in nvram tool verification" % self.is_fail)
+            self.fail("%s command(s) failed in nvram tool verification"
+                      % self.is_fail)
 
     def test9_ofpathname(self):
-        self.log.info("===============Executing ofpathname tool test===============")
+        self.log.info("===============Executing ofpathname tool test=========="
+                      "=====")
         self.run_cmd("ofpathname -h")
         self.run_cmd("ofpathname -V")
         disk_name = commands.getoutput(
@@ -156,10 +177,12 @@ class RASTools(Test):
             of_name = commands.getoutput("ofpathname %s" % disk_name)
             self.run_cmd("ofpathname -l %s" % of_name)
         if self.is_fail >= 1:
-            self.fail("%s command(s) failed in ofpathname tool verification" % self.is_fail)
+            self.fail("%s command(s) failed in ofpathname tool verification"
+                      % self.is_fail)
 
     def test10_ppc64_cpu(self):
-        self.log.info("===============Executing ppc64_cpu tool test===============")
+        self.log.info("===============Executing ppc64_cpu tool test==========="
+                      "====")
         self.run_cmd("ppc64_cpu --smt")
         self.run_cmd("ppc64_cpu --smt=8")
         self.run_cmd("ppc64_cpu --smt")
@@ -182,21 +205,26 @@ class RASTools(Test):
         self.run_cmd("ppc64_cpu --run-mode")
         self.run_cmd("ppc64_cpu --subcores-per-core")
         if self.is_fail >= 1:
-            self.fail("%s command(s) failed in ppc64_cpu tool verification" % self.is_fail)
+            self.fail("%s command(s) failed in ppc64_cpu tool verification"
+                      % self.is_fail)
 
     def test11_rtas_ibm_get_vpd(self):
-        self.log.info("===============Executing rtas_ibm_get_vpd tool test===============")
+        self.log.info("===============Executing rtas_ibm_get_vpd tool test===="
+                      "===========")
         output_file = os.path.join(self.outputdir, 'output')
         self.run_cmd("rtas_ibm_get_vpd >> %s 2>&1" % output_file)
         if self.is_fail >= 1:
-            self.fail("%s command(s) failed in rtas_ibm_get_vpd tool verification" % self.is_fail)
+            self.fail("%s command(s) failed in rtas_ibm_get_vpd tool "
+                      "verification" % self.is_fail)
 
     def test12_rtas_errd_and_rtas_dump(self):
-        self.log.info("===============Executing rtas_errd and rtas_dump tools test===============")
+        self.log.info("===============Executing rtas_errd and rtas_dump tools"
+                      " test===============")
         self.log.info("1 - Injecting event")
         rtas_file = os.path.join(self.datadir, 'rtas')
         self.run_cmd("/usr/sbin/rtas_errd -d -f %s" % rtas_file)
-        self.log.info("2 - Checking if the event was dumped to /var/log/platform")
+        self.log.info("2 - Checking if the event was dumped to /var/log/"
+                      "platform")
         self.run_cmd("cat /var/log/platform")
         myplatform_file = os.path.join(self.outputdir, 'myplatformfile')
         my_log = os.path.join(self.outputdir, 'mylog')
@@ -213,7 +241,8 @@ class RASTools(Test):
         self.log.info("6 - Verifying rtas_dump with width 20")
         self.run_cmd("rtas_dump -f %s -w 20" % rtas_file)
         if self.is_fail >= 1:
-            self.fail("%s command(s) failed in rtas_errd and rtas_dump tools verification" % self.is_fail)
+            self.fail("%s command(s) failed in rtas_errd and rtas_dump tools "
+                      "verification" % self.is_fail)
 
 
 if __name__ == "__main__":
