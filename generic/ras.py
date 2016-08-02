@@ -26,21 +26,7 @@ from avocado.utils.software_manager import SoftwareManager
 class RASTools(Test):
 
     """
-    This test verifies below RAS tools:
-    set_poweron_time - set_poweron_time schedules the power on time
-    sys_ident - sys_ident provides unique system identification information
-    lsmcode - lsmcode provides FW version information
-    drmgr - drmgr can be used for pci, cpu or memory hotplug
-    lsprop - lsprop provides device tree information
-    lsslot - lsslot lists the slots based on the option provided
-    lsvio - lsvio lists the virtual I/O adopters and devices
-    nvram - nvram command retrieves and displays NVRAM data
-    ofpathname - ofpathname translates the device name between logical name and
-                 Open Firmware name
-    ppc64_cpu - ppc64_cpu is used to set cpu options
-    rtas_ibm_get_vpd - rtas_ibm_get_vpd gives vpd data
-    rtas_errd and rtas_dump - rtas_errd adds RTAS events to /var/log/platform
-                              and rtas_dump dumps RTAS events
+    This test checks various RAS tools:
     """
     is_fail = 0
 
@@ -61,6 +47,9 @@ class RASTools(Test):
                            " test." % package)
 
     def test1_set_poweron_time(self):
+        """
+        set_poweron_time schedules the power on time
+        """
         self.log.info("===============Executing set_poweron_time tool test===="
                       "===========")
         self.run_cmd("set_poweron_time -m")
@@ -72,6 +61,9 @@ class RASTools(Test):
                       "verification" % self.is_fail)
 
     def test2_sys_ident_tool(self):
+        """
+        sys_ident provides unique system identification information
+        """
         self.log.info("===============Executing sys_ident_tool test==========="
                       "====")
         self.run_cmd("sys_ident -p")
@@ -81,6 +73,9 @@ class RASTools(Test):
                       % self.is_fail)
 
     def test3_lsmcode(self):
+        """
+        lsmcode provides FW version information
+        """
         self.log.info("===============Executing lsmcode tool test============="
                       "==")
         self.run_cmd("lsmcode")
@@ -103,6 +98,9 @@ class RASTools(Test):
                       % self.is_fail)
 
     def test4_drmgr(self):
+        """
+        drmgr can be used for pci, cpu or memory hotplug
+        """
         self.log.info("===============Executing drmgr tool test============="
                       "==")
         self.run_cmd("drmgr -h")
@@ -120,6 +118,9 @@ class RASTools(Test):
                       % self.is_fail)
 
     def test5_lsprop(self):
+        """
+        lsprop provides device tree information
+        """
         self.log.info("===============Executing lsprop tool test============="
                       "==")
         self.run_cmd("lsprop")
@@ -128,6 +129,9 @@ class RASTools(Test):
                       % self.is_fail)
 
     def test6_lsslot(self):
+        """
+        lsslot lists the slots based on the option provided
+        """
         self.log.info("===============Executing lsslot tool test============="
                       "==")
         self.run_cmd("lsslot")
@@ -143,6 +147,9 @@ class RASTools(Test):
                       % self.is_fail)
 
     def test7_lsvio(self):
+        """
+        lsvio lists the virtual I/O adopters and devices
+        """
         self.log.info("===============Executing lsvio tool test============="
                       "==")
         self.run_cmd("lsvio -h")
@@ -155,6 +162,9 @@ class RASTools(Test):
                       % self.is_fail)
 
     def test8_nvram(self):
+        """
+        nvram command retrieves and displays NVRAM data
+        """
         self.log.info("===============Executing nvram tool test============="
                       "==")
         self.run_cmd("nvram --help")
@@ -166,6 +176,10 @@ class RASTools(Test):
                       % self.is_fail)
 
     def test9_ofpathname(self):
+        """
+        ofpathname translates the device name between logical name and Open
+        Firmware name
+        """
         self.log.info("===============Executing ofpathname tool test=========="
                       "=====")
         self.run_cmd("ofpathname -h")
@@ -181,6 +195,9 @@ class RASTools(Test):
                       % self.is_fail)
 
     def test10_ppc64_cpu(self):
+        """
+        ppc64_cpu is used to set cpu options
+        """
         self.log.info("===============Executing ppc64_cpu tool test==========="
                       "====")
         self.run_cmd("ppc64_cpu --smt")
@@ -209,6 +226,9 @@ class RASTools(Test):
                       % self.is_fail)
 
     def test11_rtas_ibm_get_vpd(self):
+        """
+        rtas_ibm_get_vpd gives vpd data
+        """
         self.log.info("===============Executing rtas_ibm_get_vpd tool test===="
                       "===========")
         output_file = os.path.join(self.outputdir, 'output')
@@ -218,6 +238,10 @@ class RASTools(Test):
                       "verification" % self.is_fail)
 
     def test12_rtas_errd_and_rtas_dump(self):
+        """
+        rtas_errd adds RTAS events to /var/log/platform and rtas_dump dumps
+        RTAS events
+        """
         self.log.info("===============Executing rtas_errd and rtas_dump tools"
                       " test===============")
         self.log.info("1 - Injecting event")
