@@ -15,7 +15,6 @@
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 
 import os
-import commands
 from shutil import copyfile
 from avocado import Test
 from avocado import main
@@ -84,14 +83,14 @@ class RASTools(Test):
         self.run_cmd("lsmcode -v")
         self.run_cmd("lsmcode -D")
         self.run_cmd("vpdupdate")
-        path_db = commands.getoutput("find /var/lib/lsvpd/ -iname vpd.db | "
-                                     "head -1")
+        path_db = process.system_output("find /var/lib/lsvpd/ -iname vpd.db | "
+                                        "head -1", shell=True).strip()
         if path_db:
             copyfile_path = os.path.join(self.outputdir, 'vpd.db')
             copyfile(path_db, copyfile_path)
             self.run_cmd("lsmcode --path=%s" % copyfile_path)
-        path_tar = commands.getoutput("find /var/lib/lsvpd/ -iname vpd.*.gz | "
-                                      "head -1")
+        path_tar = process.system_output("find /var/lib/lsvpd/ -iname vpd.*.gz"
+                                         " | head -1", shell=True).strip()
         if path_tar:
             self.run_cmd("lsmcode --zip=%s" % path_tar)
         if self.is_fail >= 1:
@@ -106,8 +105,10 @@ class RASTools(Test):
                       "==")
         self.run_cmd("drmgr -h")
         self.run_cmd("drmgr -C")
-        lcpu_count = commands.getoutput(
-            "lparstat -i | grep \"Online Virtual CPUs\" | cut -d':' -f2")
+        lcpu_count = process.system_output("lparstat -i | "
+                                           "grep \"Online Virtual CPUs\" | "
+                                           "cut -d':' -f2",
+                                           shell=True).strip()
         if lcpu_count:
             if lcpu_count >= 2:
                 self.run_cmd("drmgr -c cpu -r 1")
@@ -140,7 +141,8 @@ class RASTools(Test):
         self.run_cmd("lsslot -ac pci")
         self.run_cmd("lsslot -c cpu -b")
         self.run_cmd("lsslot -c pci -o")
-        slot = commands.getoutput("lsslot | cut -d' ' -f1 | head -2 | tail -1")
+        slot = process.system_output("lsslot | cut -d' ' -f1 | head -2 | "
+                                     "tail -1", shell=True).strip()
         if slot:
             self.run_cmd("lsslot -s %s" % slot)
         if self.is_fail >= 1:
@@ -185,11 +187,13 @@ class RASTools(Test):
                       "=====")
         self.run_cmd("ofpathname -h")
         self.run_cmd("ofpathname -V")
-        disk_name = commands.getoutput(
-            "df -h | egrep '(s|v)da[1-8]' | tail -1 | cut -d' ' -f1")
+        disk_name = process.system_output("df -h | egrep '(s|v)da[1-8]' | "
+                                          "tail -1 | cut -d' ' -f1",
+                                          shell=True).strip()
         if disk_name:
             self.run_cmd("ofpathname %s" % disk_name)
-            of_name = commands.getoutput("ofpathname %s" % disk_name)
+            of_name = process.system_output("ofpathname %s"
+                                            % disk_name).strip()
             self.run_cmd("ofpathname -l %s" % of_name)
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in ofpathname tool verification"
