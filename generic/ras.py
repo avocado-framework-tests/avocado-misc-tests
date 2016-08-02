@@ -31,7 +31,8 @@ class RASTools(Test):
     is_fail = 0
 
     def run_cmd(self, cmd):
-        cmd_result = process.run(cmd, ignore_status=True, sudo=True)
+        cmd_result = process.run(cmd, ignore_status=True, sudo=True,
+                                 shell=True)
         if cmd_result.exit_status != 0:
             self.is_fail += 1
         return
