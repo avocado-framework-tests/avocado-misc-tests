@@ -1,0 +1,6 @@
+setup:
+ runargs : !mux
+  default :
+    num_groups: 10
+  threshold:
+    time_val : '0.183'
