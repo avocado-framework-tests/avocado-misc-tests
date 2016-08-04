@@ -89,8 +89,8 @@ class Hostname(Test):
         process.system("hostname -F %s" % myhostname_file,
                        sudo=True)
         self.restore_hostname = True
-        if myhostname not in process.system_output(
-                "hostname", env={"LANG": "C"}):
+        if myhostname not in process.system_output("hostname",
+                                                   env={"LANG": "C"}):
             self.fail("unexpected response from hostname -F command and " +
                       "hostname -F didn't set hostname")
 
@@ -99,8 +99,8 @@ class Hostname(Test):
             # Restore hostname
             process.system("hostname %s" % self.hostname,
                            sudo=True)
-            if self.hostname not in process.system_output(
-                    "hostname", env={"LANG": "C"}):
+            if self.hostname not in process.system_output("hostname",
+                                                          env={"LANG": "C"}):
                 self.error("Failed to restore Hostname")
 
 
@@ -189,8 +189,8 @@ class Arp(Test):
         if "default via" not in interface_out:
             self.skip("No active interface with deafult gateway configured")
         install_dependencies()
-        search_obj = re.search(
-            "^default via\s+(\S+)\s+dev\s+(\w+)", interface_out)
+        search_obj = re.search(r"^default via\s+(\S+)\s+dev\s+(\w+)",
+                               interface_out)
         self.default_router = search_obj.group(1)
 
     @avocado.fail_on(process.CmdError)
@@ -230,9 +230,8 @@ class NetworkUtilities(Test):
         """
         ret = process.run(cmd="traceroute localhost",
                           env={"LANG": "C"})
-        no_of_hops = re.search(
-            "(\d+)\s+\S+\s*\(127.0.0.1\)",
-            ret.stdout).group(1)
+        no_of_hops = re.search(r"(\d+)\s+\S+\s*\(127.0.0.1\)",
+                               ret.stdout).group(1)
         # Only one hop is required to get to localhost.
         if str(no_of_hops) != '1':
             self.fail("traceroute did not show 1 hop for localhost")
@@ -245,13 +244,11 @@ class NetworkUtilities(Test):
             else:
                 ret = process.run(cmd="traceroute6 localhost6",
                                   env={"LANG": "C"})
-            no_of_hops = re.search(
-                "(\d+)\s+\S+\s*\(::1\)",
-                ret.stdout).group(1)
+            no_of_hops = re.search(r"(\d+)\s+\S+\s*\(::1\)",
+                                   ret.stdout).group(1)
             if str(no_of_hops) != '1':
-                self.fail(
-                    "traceroute6 did not show 1 hop for " +
-                    "localhost6/ipv6-localhost")
+                self.fail("traceroute6 did not show 1 hop for "
+                          "localhost6/ipv6-localhost")
 
     @avocado.fail_on(process.CmdError)
     def test_netstat(self):
@@ -264,11 +261,8 @@ class NetworkUtilities(Test):
             ret = process.run("netstat -%s" % option, verbose=False,
                               ignore_status=True)
             if ret.exit_status:
-                self.fail(
-                    "Netstat command reported non-zero status %s " %
-                    ret.exit_status +
-                    "for option %s" %
-                    option)
+                self.fail("Netstat command reported non-zero status %s "
+                          "for option %s" % (ret.exit_status, option))
 
     @avocado.fail_on(process.CmdError)
     def test_route(self):
@@ -277,16 +271,14 @@ class NetworkUtilities(Test):
         """
         ret = process.run(cmd="route -n", ignore_status=True)
         if ret.exit_status:
-            self.fail(
-                "route command reported non-zero %s exit status" %
-                ret.exit_status)
+            self.fail("route command reported non-zero %s exit status" %
+                      ret.exit_status)
         if self.ipv6:
             ret = process.run(cmd="route -A inet6 -n", ignore_status=True)
             if ret.exit_status:
-                self.fail(
-                    "route command reported non-zero %s exit status " %
-                    ret.exit_status +
-                    "while displaying ipv6 route table")
+                self.fail("route command reported non-zero %s exit status "
+                          "while displaying ipv6 route table"
+                          % ret.exit_status)
 
     @avocado.fail_on(process.CmdError)
     def test_ipmaddr(self):
@@ -347,9 +339,8 @@ class Iptunnel(Test):
         process.system("iptunnel del %s" % name, sudo=True)
         ret = process.run("iptunnel show")
         if name in ret.stdout:
-            raise AssertionError(
-                "Unable to clear tunnel %s\n %s still in the list:\n%s" %
-                (name, name, ret.stdout))
+            raise AssertionError("Unable to clear tunnel %s\n %s still in the"
+                                 " list:\n%s" % (name, name, ret.stdout))
 
     def tearDown(self):
         if self.tunnel:
