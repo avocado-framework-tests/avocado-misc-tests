@@ -1,0 +1,5 @@
+test_hostname:
+    hostname_opt: ["s","f","d"]
+
+test_netstat:
+    netstat_opt: ["s","rn","gn","i","apn"]
