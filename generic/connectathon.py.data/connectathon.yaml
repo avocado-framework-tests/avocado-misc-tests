@@ -1,0 +1,30 @@
+#runtests [-a|-b|-g|-s|-l] [-f|-n|-t] [-N numpasses] [test-directory]
+#
+#-a   	       - Run the basic, general, special, and lock tests.  This
+#                is the default.
+#-b          - Run the basic tests.
+#-g          - Run the general tests.
+#-s          - Run the special tests.
+#-l          - Run the lock tests.
+#-f          - Set parameters for a quick functional test.  It
+#              applies only to basic tests.
+#-n          - Suppress directory operations (mkdir and rmdir) on the
+#              test-directory.  See descriptions of basic tests for
+#               more details.
+#-t          - Run full-length test with running time statistics. It
+#              only applies to basic tests.  This is the default mode
+#              for the basic tests.
+#-N numpasses   - Run the tests "numpasses" times.
+#test-directory - The name of test directory that the test programs
+#                  create on the client
+# SAMPLE RUN
+# A typical run of the program would look like this:
+# ./runtests -N 1 -b -t /mnt 
+
+setup:
+    arg:
+      arg: ''
+    cthon_iterations:
+      cthon_iterations: 1
+    testdir:
+       testdir: None 
