@@ -1,0 +1,15 @@
+scenario:
+    disk:  
+raidlevel: !mux
+    raidlinear:
+        raid: linear
+    raid0:
+        raid: 0
+    raid1:
+        raid: 1
+    raid5:
+        raid: 5
+    raid10:
+        raid: 10
+    raid6:
+        raid: 6
