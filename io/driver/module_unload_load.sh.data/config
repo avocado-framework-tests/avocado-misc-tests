@@ -1,0 +1,2 @@
+mlx4_core=mlx4_en mlx4_ib
+mlx5_core=mlx5_ib
