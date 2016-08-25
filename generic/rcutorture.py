@@ -23,6 +23,7 @@ import multiprocessing
 from avocado import Test
 from avocado import main
 from avocado.utils import process
+from avocado.utils import linux_modules
 
 
 class Rcutorture(Test):
@@ -39,16 +40,13 @@ class Rcutorture(Test):
         """
         self.results = []
         self.log.info("Check if CONFIG_RCU_TORTURE_TEST is enabled\n")
-        ret = os.system(
-            'cat /boot/config* | grep CONFIG_RCU_TORTURE_TEST=m')
-        if ret != 0:
+        ret = linux_modules.check_kernel_config('CONFIG_RCU_TORTURE_TEST')
+        if ret == 0:
             self.log.info("CONFIG_RCU_TORTURE_TEST is not set in .config !!\n")
             sys.exit(0)
-        self.log.info("Check rcutorture module is loaded\n")
-        cmd = os.system('lsmod | grep rcutorture')
-        if cmd == 0:
-            self.log.info("module already loaded\n")
-            process.system('rmmod rcutorture')
+        self.log.info("Check rcutorture module is already  loaded\n")
+        if linux_modules.module_is_loaded('rcutorture'):
+            linux_modules.unload_module('rcutorture')
 
     def cpus_toggle(self):
         """
@@ -101,13 +99,12 @@ class Rcutorture(Test):
         """
         seconds = 15
         os.chdir(self.logdir)
-        process.system('modprobe rcutorture')
-        self.cpus_toggle()
-        time.sleep(seconds)
-        self.cpus_toggle()
-        process.system('rmmod rcutorture')
-        cmd = 'dmesg | grep "rcu-torture: Reader"'
-        res = os.system(cmd)
+        if linux_modules.load_module('rcutorture'):
+            self.cpus_toggle()
+            time.sleep(seconds)
+            self.cpus_toggle()
+        linux_modules.unload_module('rcutorture')
+        res = process.system_output('dmesg | grep "rcu-torture: Reader"')
         self.results = str(res).splitlines()
 
         """
