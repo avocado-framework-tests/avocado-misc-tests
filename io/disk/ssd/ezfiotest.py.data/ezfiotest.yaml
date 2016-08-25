@@ -1,0 +1,4 @@
+Devices: !mux
+    device1:
+        device: /dev/nvme0n1
+        utilization: 10
