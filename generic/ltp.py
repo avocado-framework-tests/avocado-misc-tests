@@ -19,60 +19,71 @@
 # https://github.com/autotest/autotest-client-tests/tree/master/ltp
 
 
-import os
-import multiprocessing
 from avocado import Test
 from avocado import main
-from avocado.utils import process
 from avocado.utils import build
-from avocado.utils import git
+from avocado.utils import process, archive
+import os
+
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import distro
 
 
 class ltp(Test):
+
+    """
+    LTP (Linux Test Project) testsuite
+    :param script: Which ltp script to run (default is "runltplite.sh", which
+                   implies all LTP tests. You can use "runltp" + args to
+                   specify subset of tests).
+    :param args: Extra arguments (default "", with "runltp" you can use
+                 "-f $test")
+    """
+
     def setUp(self):
         sm = SoftwareManager()
-        detected_distro = distro.detect()
-        deps = ['gcc', 'git', 'make', 'automake', 'autoconf']
+        deps = ['gcc', 'make', 'automake', 'autoconf']
         for package in deps:
-            if package == 'git' and detected_distro.name == "SuSE":
-                package = 'git-core'
             if not sm.check_installed(package) and not sm.install(package):
                 self.error(package + ' is needed for the test to be run')
-        git.get_repo('https://github.com/linux-test-project/ltp.git',
-                     destination_dir=self.srcdir)
-        os.chdir(self.srcdir)
-        build.make(self.srcdir, extra_args='autotools')
-        ltpbin_dir = os.path.join(self.srcdir, 'bin')
+        url = "https://github.com/linux-test-project/ltp/archive/master.zip"
+        tarball = self.fetch_asset("ltp-master.zip", locations=[url])
+        archive.extract(tarball, self.srcdir)
+        ltp_dir = os.path.join(self.srcdir, "ltp-master")
+        os.chdir(ltp_dir)
+        build.make(ltp_dir, extra_args='autotools')
+        ltpbin_dir = os.path.join(ltp_dir, 'bin')
         os.mkdir(ltpbin_dir)
         process.system('./configure --prefix=%s' % ltpbin_dir)
-        build.make(self.srcdir, extra_args='-j %d' %
-                   multiprocessing.cpu_count())
-        build.make(self.srcdir, extra_args='install')
+        build.make(ltp_dir)
+        build.make(ltp_dir, extra_args='install')
 
     def test(self):
         script = self.params.get('script', default='runltplite.sh')
-        args = self.params.get('args', default=' ')
+        args = self.params.get('args', default='')
         if script == 'runltp':
             logfile = os.path.join(self.logdir, 'ltp.log')
             failcmdfile = os.path.join(self.logdir, 'failcmdfile')
             skipfile = os.path.join(self.datadir, 'skipfile')
-            args2 = '-q -p -l %s -C %s -d %s -S %s' % (
-                logfile, failcmdfile, self.srcdir, skipfile)
-            args = args + ' ' + args2
-        ltpbin_dir = os.path.join(self.srcdir, 'bin')
+            args += (" -q -p -l %s -C %s -d %s -S %s"
+                     % (logfile, failcmdfile, self.srcdir, skipfile))
+        ltpbin_dir = os.path.join(self.srcdir, "ltp-master", 'bin')
         cmd = os.path.join(ltpbin_dir, script) + ' ' + args
         result = process.run(cmd, ignore_status=True)
-        failed_tests = []
-        for line in result.stdout.splitlines():
-            if set(('TFAIL', 'TBROK', 'TWARN')).intersection(line.split()):
-                test_name = line.strip().split(' ')[0]
-                if test_name not in failed_tests:
-                    failed_tests.append(test_name)
+        # Walk the stdout and try detect failed tests from lines like these:
+        # aio01       5  TPASS  :  Test 5: 10 reads and writes in  0.000022 sec
+        # vhangup02    1  TFAIL  :  vhangup02.c:88: vhangup() failed, errno:1
+        # and check for fail_statuses The first part contain test name
+        fail_statuses = ['TFAIL', 'TBROK', 'TWARN']
+        split_lines = (line.split(None, 3)
+                       for line in result.stdout.splitlines())
+        failed_tests = [items[0] for items in split_lines
+                        if len(items) == 4 and items[2] in fail_statuses]
 
         if failed_tests:
-            self.error("LTP tests failed: %s" % failed_tests)
+            self.fail("LTP tests failed: %s" % ", ".join(failed_tests))
+        elif result.exit_status != 0:
+            self.fail("No test failures detected, but LTP finished with %s"
+                      % (result.exit_status))
 
 if __name__ == "__main__":
     main()
