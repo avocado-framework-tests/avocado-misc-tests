@@ -24,7 +24,7 @@ Some RAID levels include redundancy and so can survive some degree of device
 failure.
 """
 
-import re
+import time
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
@@ -45,69 +45,93 @@ class SoftwareRaid(Test):
         """
 
         smm = SoftwareManager()
-        if smm.check_installed("mdadm") is False:
-            print("Mdadm is not installed")
+        if not smm.check_installed("mdadm"):
+            self.skip("Mdadm must be installed before continuing the test")
             if SoftwareManager().install("mdadm") is False:
                 self.skip("Unable to install mdadm")
         cmd = "mdadm -V"
-        if process.system(cmd, ignore_status=True, shell=True) != 0:
-            self.fail("Unable to get the mdadm Version")
-        self.loop = ''
-        for _ in range(0, 4):
-            cmd = "losetup --find"
-            varstr = process.system_output(cmd, ignore_status=True, shell=True)
-            var = int(re.match(r'(/dev/loop)(\d+)', varstr).group(2))
-            cmd = "dd if=/dev/zero of=/file%d bs=1k count=100" % var
-            process.system(cmd, ignore_status=True, shell=True)
-            cmd = "losetup /dev/loop%d /file%d" % (var, var)
-            process.system(cmd, ignore_status=True, shell=True)
-            self.loop += "/dev/loop%d " % var
-        self.disk = self.params.get('disk', default=self.loop).strip(" ")
+        self.check_pass(cmd, "Unable to get mdadm version")
+        self.disk = self.params.get('disk', default='').strip(" ")
+        self.disk = self.disk.split(" ")
+        self.sparedisk = self.disk.pop()
+        self.remadd = self.disk[-1:]
+        self.remadd = ''.join(self.remadd)
         self.raidlevel = str(self.params.get('raid', default='0'))
-        self.disk_count = len(self.disk.split(' '))
-        if self.raidlevel == '5' or self.raidlevel == '10':
-            if self.disk_count < 2:
-                self.skip("Minimum of two disk are required \
-                          to create Raid5/10")
-        if self.raidlevel == '6':
-            if self.disk_count < 3:
-                self.skip("Minimum of three disk are required to create Raid6")
+        self.disk_count = len(self.disk)
+        self.disk = ' '.join(self.disk)
 
-    def test_createraid(self):
+    def test_run(self):
+        """
+        Decides which functions to be run for a perticular raid level
+        """
+        if self.raidlevel == 'linear' or self.raidlevel == '0':
+            self.basictest()
+        else:
+            self.extensivetest()
 
+    def basictest(self):
         """
-        Creates, stops and assemble's softwareraid on the disk
+        Only basic operations are run viz create and delete
         """
-        cmd = "echo 'yes' | mdadm --create --verbose /dev/md/mdsraid \
-             --level=%s " "--raid-devices=%d %s --force" \
-              % (self.raidlevel, self.disk_count, self.disk)
-        if process.system(cmd, ignore_status=True,
-                          shell=True) != 0:
-            self.fail("Failed to create a MD device")
+        cmd = "echo 'yes' | mdadm --create --verbose --assume-clean \
+            /dev/md/mdsraid --level=%s --raid-devices=%d %s \
+            --force" \
+            % (self.raidlevel, self.disk_count, self.disk)
+        self.check_pass(cmd, "Failed to create a MD device")
+        cmd = "mdadm --detail /dev/md/mdsraid"
+        self.check_pass(cmd, "Failed to display MD device details")
+
+    def extensivetest(self):
+        """
+        Extensive software raid options are run viz create, delete, assemble,
+        create spares, remove and add drives
+        """
+        cmd = "echo 'yes' | mdadm --create --verbose --assume-clean \
+            /dev/md/mdsraid --level=%s --raid-devices=%d %s \
+            --spare-devices=1 %s --force" \
+            % (self.raidlevel, self.disk_count, self.disk, self.sparedisk)
+        self.check_pass(cmd, "Failed to create a MD device")
+        cmd = "mdadm --detail /dev/md/mdsraid"
+        self.check_pass(cmd, "Failed to display MD device details")
+        cmd = "mdadm --fail /dev/md/mdsraid %s" % (self.remadd)
+        self.check_pass(cmd, "Unable to fail a drive from MD device")
+        cmd = "mdadm --detail /dev/md/mdsraid"
+        self.check_pass(cmd, "Failed to display MD device details")
+        cmd = "mdadm --manage /dev/md/mdsraid --remove %s" % (self.remadd)
+        self.check_pass(cmd, "Failed to remove a drive from MD device")
+        cmd = "mdadm --detail /dev/md/mdsraid"
+        self.check_pass(cmd, "Failed to display MD device details")
+        cmd = "mdadm --manage /dev/md/mdsraid --add %s" % (self.remadd)
+        self.check_pass(cmd, "Failed to add back the drive to MD device")
+        cmd = "mdadm --detail /dev/md/mdsraid"
+        self.check_pass(cmd, "Failed to display MD device details")
         cmd = "mdadm --manage /dev/md/mdsraid --stop"
-        if process.system(cmd, ignore_status=True,
-                          shell=True) != 0:
-            self.fail("Failed to stop/remove the MD device")
-        cmd = "mdadm --assemble /dev/md/mdsraid %s" % self.disk
-        if process.system(cmd, ignore_status=True,
-                          shell=True) != 0:
-            self.fail("Failed to assemble back the MD device")
-        cmd = "mdadm --manage /dev/md/mdsraid --stop"
-        if process.system(cmd, ignore_status=True,
-                          shell=True) != 0:
-            self.fail("Failed to stop/remove the MD device")
+        self.check_pass(cmd, "Failed to stop/remove the MD device")
+        cmd = "mdadm --assemble /dev/md/mdsraid %s %s" \
+              % (self.disk, self.sparedisk)
+        self.check_pass(cmd, "Failed to assemble back the MD device")
+        cmd = "mdadm --detail /dev/md/mdsraid | grep State | grep recovering"
+        while process.system(cmd, ignore_status=True, shell=True) == 0:
+            print "hi"
+            time.sleep(30)
+        process.system(cmd, ignore_status=True, shell=True)
+        cmd = "mdadm --detail /dev/md/mdsraid"
+        self.check_pass(cmd, "Failed to display the MD device details")
+
+    def check_pass(self, cmd, errmsg):
+        """
+        Function to check if the cmd is successful or not, if not display
+        appropriate message
+        """
+        if process.system(cmd, ignore_status=True, shell=True) != 0:
+            self.fail(errmsg)
 
     def tearDown(self):
-
         """
-        Cleaning all the loop devices created
+        Stop/Remove the MD device
         """
-        print "Clean all the loop devices"
-        self.loop = self.loop.strip(' ')
-        for i in self.loop.split(' '):
-            print i
-            cmd = "losetup -d %s" % i
-            process.system(cmd, ignore_status=True, shell=True)
+        cmd = "mdadm --manage /dev/md/mdsraid --stop"
+        self.check_pass(cmd, "Failed to stop/remove the MD device")
 
 if __name__ == "__main__":
     main()
