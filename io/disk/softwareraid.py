@@ -46,16 +46,14 @@ class SoftwareRaid(Test):
 
         smm = SoftwareManager()
         if not smm.check_installed("mdadm"):
-            self.skip("Mdadm must be installed before continuing the test")
+            print("Mdadm must be installed before continuing the test")
             if SoftwareManager().install("mdadm") is False:
                 self.skip("Unable to install mdadm")
         cmd = "mdadm -V"
         self.check_pass(cmd, "Unable to get mdadm version")
-        self.disk = self.params.get('disk', default='').strip(" ")
-        self.disk = self.disk.split(" ")
+        self.disk = self.params.get('disk', default='').strip(" ").split(" ")
         self.sparedisk = self.disk.pop()
-        self.remadd = self.disk[-1:]
-        self.remadd = ''.join(self.remadd)
+        self.remadd = ''.join(self.disk[-1:])
         self.raidlevel = str(self.params.get('raid', default='0'))
         self.disk_count = len(self.disk)
         self.disk = ' '.join(self.disk)
@@ -112,7 +110,6 @@ class SoftwareRaid(Test):
         self.check_pass(cmd, "Failed to assemble back the MD device")
         cmd = "mdadm --detail /dev/md/mdsraid | grep State | grep recovering"
         while process.system(cmd, ignore_status=True, shell=True) == 0:
-            print "hi"
             time.sleep(30)
         process.system(cmd, ignore_status=True, shell=True)
         cmd = "mdadm --detail /dev/md/mdsraid"
