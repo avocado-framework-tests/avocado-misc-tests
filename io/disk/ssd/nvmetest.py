@@ -102,7 +102,7 @@ class NVMeTest(Test):
         """
         Write to the namespace on the device.
         """
-        cmd = 'nvme write %s -z %d -t' % (self.id_ns, self.format_size)
+        cmd = 'echo 1|nvme write %s -z %d -t' % (self.id_ns, self.format_size)
         if process.system(cmd, timeout=300, ignore_status=True, shell=True):
             self.fail("Write failed")
 
