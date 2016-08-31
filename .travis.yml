@@ -20,3 +20,29 @@ script:
     - inspekt lint
     - inspekt indent
     - inspekt style
+    - |
+        error=""
+        for COMMIT in $(git rev-list $TRAVIS_COMMIT_RANGE); do
+            echo
+            echo "-----< $(git log -1 --oneline $COMMIT) >-----"
+            msg=$(git show -s --format=%B $COMMIT)
+            if [ $(echo "$msg" | wc -l) -ge 5 ]
+            then
+                echo "OK: Commit message size."
+            else
+                echo "ERR: Commit message is too short (less than 5 lines)."
+                error=true
+            fi
+            if echo "$msg" | grep -q 'Signed-off-by:'
+            then
+                echo "OK: 'Signed-off-by:' present."
+            else
+                echo "ERR: 'Signed-off-by:' not found (use '-s' in 'git commit')."
+                error=true
+            fi
+        done
+        if [ "$error" ]; then
+            echo
+            echo "Incremental smokecheck failed."
+            exit -1
+        fi
