@@ -26,6 +26,12 @@ script:
             echo
             echo "-----< $(git log -1 --oneline $COMMIT) >-----"
             msg=$(git show -s --format=%B $COMMIT)
+            # Skip merge commits
+            if [ $(echo "${msg::4}") == 'Merg' ]
+            then
+                continue
+            fi
+            # Test commit message size
             if [ $(echo "$msg" | wc -l) -ge 5 ]
             then
                 echo "OK: Commit message size."
@@ -41,6 +47,7 @@ script:
                 echo "     ------------------------------------"
                 error=true
             fi
+            # Test commit message signature
             if echo "$msg" | grep -q 'Signed-off-by:'
             then
                 echo "OK: 'Signed-off-by:' present."
@@ -49,8 +56,9 @@ script:
                 error=true
             fi
         done
+        # Look for errors
         if [ "$error" ]; then
             echo
             echo "Incremental smokecheck failed."
-            exit -1
+            exit 1
         fi
