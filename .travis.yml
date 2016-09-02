@@ -31,6 +31,14 @@ script:
                 echo "OK: Commit message size."
             else
                 echo "ERR: Commit message is too short (less than 5 lines)."
+                echo "     Here a minimal template:"
+                echo "     ------------------------------------"
+                echo "     header          <- Limited to 50 characters. No period."
+                echo "                     <- Blank line"
+                echo "     message         <- Any number of lines, limited to 72 characters per line."
+                echo "                     <- Blank line"
+                echo "     Signed-off-by:  <- Signature (created by git commit -s)"
+                echo "     ------------------------------------"
                 error=true
             fi
             if echo "$msg" | grep -q 'Signed-off-by:'
