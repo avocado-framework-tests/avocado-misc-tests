@@ -57,6 +57,8 @@ class SoftwareRaid(Test):
         self.raidlevel = str(self.params.get('raid', default='0'))
         self.disk_count = len(self.disk)
         self.disk = ' '.join(self.disk)
+        if self.disk_count < 5:
+            self.skip("Please give minimum of 5 disk to execute this test case")
 
     def test_run(self):
         """
