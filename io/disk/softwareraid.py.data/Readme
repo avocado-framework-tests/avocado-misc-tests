@@ -3,3 +3,8 @@ mdadm - manage MD devices aka Linux Software RAID
 Values to be passed in ymal file:
 
 * Name of the devices on which this scripts should be run.
+
+* Raid levels to be created
+
+Note: Please specify minimum of 5 disks, if 5 disks are not available,
+create 5 partitions, and specify those partitions in the yaml file.
