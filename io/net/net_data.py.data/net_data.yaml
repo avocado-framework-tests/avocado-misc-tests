@@ -1,0 +1,7 @@
+Interfaces:
+    Interface1:
+        peerip: "10.10.10.11"
+        iface: "enP2p1s0f4"
+
+MTU:
+    size_val: 2000 3000 4000 5000 6000 7000 8000 9000 1500
