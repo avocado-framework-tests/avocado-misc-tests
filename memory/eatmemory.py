@@ -17,7 +17,6 @@
 import os
 from avocado import Test
 from avocado.utils import build
-from avocado.utils import git
 from avocado.utils import memory
 from avocado.utils import process
 from avocado.utils import distro
@@ -30,10 +29,8 @@ class eatmemory(Test):
     def setUp(self):
         sm = SoftwareManager()
         detected_distro = distro.detect()
-        deps = ['gcc', 'make', 'git']
+        deps = ['gcc', 'make']
         for package in deps:
-            if package == 'git' and detected_distro.name == "SuSE":
-                package = 'git-core'
             if not sm.check_installed(package) and not sm.install(package):
                 self.error(package + ' is needed for the test to be run')
         url = 'https://github.com/julman99/eatmemory/archive/master.zip'
