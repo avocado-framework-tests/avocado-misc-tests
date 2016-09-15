@@ -1,0 +1,4 @@
+setup:
+    memory_to_test: !mux
+        default:
+            memory_to_test: '1G'
