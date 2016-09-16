@@ -38,29 +38,41 @@ class eatmemory(Test):
         archive.extract(tarball, self.srcdir)
         self.srcdir = os.path.join(self.srcdir, "eatmemory-master")
         build.make(self.srcdir)
-        self.total_mem_in_units = self.mem_in_units(int(memory.memtotal())
-                                                    * 1024)
-        unit = self.total_mem_in_units[-1]
-        if unit == 'B' or unit == 'K':
-            self.total_mem_in_units = self.total_mem_in_units[0:-1]
+        mem = self.params.get('memory_to_test', default=memory.memtotal())
+        self.mem_to_eat = self._mem_to_mbytes(mem)
+        if self.mem_to_eat is None:
+            self.error("Memory '%s' not valid." % mem)
 
-    def mem_in_units(self, memory):
-        for x in ['B', 'K', 'M', 'G']:
-            if memory < 1024.0:
-                return "%3.1f%s" % (memory, x)
-            memory /= 1024.0
-        # since Tb is invalid  option unit G is returned in eatmemory
-        return "%3.1f%s" % (memory, 'G')
+    @staticmethod
+    def _mem_to_mbytes(mem):
+        """
+        Converts memory from bytes, Kbytes, Gbytes or Tbytes to Mbytes.
+        If no unit is provided, we consider it's in Kbytes, which is the
+        unit of /proc/meminfo.
+        """
+        multiplier = {'b': 2**0,
+                      'k': 2**10,
+                      'm': 2**20,
+                      'g': 2**30,
+                      't': 2**40}
+        try:
+            mem_in_bytes = int(mem) * multiplier['k']
+        except ValueError:
+            value = int(mem[:-1])
+            unit = mem[-1].lower()
+            if unit not in multiplier:
+                return None
+            mem_in_bytes = value * multiplier[unit]
+
+        return mem_in_bytes / multiplier['m']
 
     def test(self):
-        memory_to_test = self.params.get('memory_to_test',
-                                         default=self.total_mem_in_units)
         os.chdir(self.srcdir)
-        output = process.system_output('./eatmemory %s' % memory_to_test,
-                                       ignore_status=True)
-        self.log.info(output)
-        if 'Done, press any key to free the memory' in output:
-            self.log.info('The Given memory Has been Eaten Successfully')
+        mem_unit = 'M'
+        cmd = './eatmemory %s%s' % (self.mem_to_eat, mem_unit)
+        if process.system(cmd, ignore_status=True) == 0:
+            self.log.info('Success eating %s%s of memory.',
+                          self.mem_to_eat, mem_unit)
         else:
-            self.fail('Given memory not eaten properly !!! \n'
-                      'Please Check Logs')
+            self.fail('Not able to eat %s%s of memory.' %
+                      (self.mem_to_eat, mem_unit))
