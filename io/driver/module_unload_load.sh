@@ -15,6 +15,7 @@
 # Author: Harsha Thyagaraja <harshkid@linux.vnet.ibm.com>
 
 CONFIG_FILE="$AVOCADO_TEST_DATADIR"/config
+BUILT_IN_DRIVERS=`cat /lib/modules/$(uname -r)/modules.builtin |grep drivers|awk -F"/" '{print $NF}'|sed 's/\.ko//g'`
 DRIVERS=`lspci -k | grep -iw "Kernel driver in use" | cut -d ':' -f2 | sort | uniq`
 ERR=""
 PASS=""
@@ -54,6 +55,12 @@ for driver in $DRIVERS; do
     echo "Starting driver module load/unload test for $driver"
     echo
     for j in $(seq 1 $ITERATIONS); do
+        echo $BUILT_IN_DRIVERS | grep $driver > /dev/null
+        if [[ $? == "0" ]]; then
+            echo $driver" is builtin and it cannot be unloaded"
+            ERR="$ERR,unload-$driver"
+            break ;
+        fi
         module_unload $driver
         # Sleep for 5s to allow the module unload to complete
         sleep 5
