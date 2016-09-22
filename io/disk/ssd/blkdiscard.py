@@ -40,6 +40,9 @@ class Blkdiscard(Test):
         if not smm.check_installed("util-linux"):
             self.skip("blkdiscard is needed for the test to be run")
         self.disk = self.params.get('disk', default='/dev/nvme0n1')
+        cmd = 'ls %s' % self.disk
+        if process.system(cmd, ignore_status=True) is not 0:
+            self.skip("%s does not exist" % self.disk)
         cmd = "blkdiscard -V"
         process.run(cmd)
 
@@ -49,14 +52,13 @@ class Blkdiscard(Test):
         Sectors are dicarded for the different values of OFFSET and LENGTH.
         """
         cmd = "fdisk -l | grep %s | awk '{print $5}' | sed 1q;" % self.disk
-        size = process.system_output(cmd, shell=True)
-        cmd = "blkdiscard %s -o 0 -v -l %s" % (self.disk, size)
+        size = int(process.system_output(cmd, shell=True).strip(""))
+        cmd = "blkdiscard %s -o 0 -v -l %d" % (self.disk, size)
         process.run(cmd, shell=True)
-        cmd = "blkdiscard %s -o %s -v -l %s" % (self.disk, size, size)
+        cmd = "blkdiscard %s -o %d \
+               -v -l %d" % (self.disk, size, size)
         process.run(cmd, shell=True)
-        cmd = "blkdiscard %s -o 0 -v -l %s" % (self.disk, size)
-        process.run(cmd, shell=True)
-        cmd = "blkdiscard %s -o %s -v -l 0" % (self.disk, size)
+        cmd = "blkdiscard %s -o %d -v -l 0" % (self.disk, size)
         process.run(cmd, shell=True)
         for i in xrange(2, 10, 2):
             for j in xrange(2, 10, 2):
