@@ -1,0 +1,31 @@
+Through avocado yaml file workload file can be passed as param testfile 
+it can lies in two category
+
+1: User-defined workloads
+First step is to create the description of the workload (so called workload
+personality) in WML language. Typically, workload personalities are stored in
+files with '.f' extension. In this example we describe a very simple workload
+consisting of two processes with three threads each. Every thread continuously
+picks a file among many, reads it, and then closes the file. Here is the
+corresponding workload personality:
+
+01  define fileset name="testF",entries=10000,filesize=16k,prealloc,path="/tmp"
+02
+03  define process name="readerP",instances=2 {
+04    thread name="readerT",instances=3 {
+05      flowop openfile name="openOP",filesetname="testF"
+06      flowop readwholefile name="readOP",filesetname="testF"
+07      flowop closefile name="closeOP"
+08    }
+09  }
+10
+11  run 60
+2- There is multiple workload available by default in test suite
+
+Filebench comes with several predefined micro- and macro-workloads (e.g.,
+webserver, fileserver, mailserver) which are also described in WML, not
+differently than the workload in Example 1 above. In the source code tree,
+workloads are located in the workloads/ directory and are typically installed in
+/usr/local/share/filebench/workloads/ during 'make install' (though this can
+differ from one installation to another).
+can be find in /usr/local/share/filebench/workloads/
