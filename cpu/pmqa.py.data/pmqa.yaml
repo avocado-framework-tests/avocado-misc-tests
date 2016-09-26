@@ -1,0 +1,7 @@
+#Usage: run_arg can  any of one from below list
+#	cpufreq, cpuhotplug, cputopology, cpuidle
+#	thermal
+#	or can be pass all
+setup:
+ pmqatest: 
+  run_arg : 'cpufreq'
