@@ -58,7 +58,6 @@ for driver in $DRIVERS; do
         echo $BUILT_IN_DRIVERS | grep $driver > /dev/null
         if [[ $? == "0" ]]; then
             echo $driver" is builtin and it cannot be unloaded"
-            ERR="$ERR,unload-$driver"
             break ;
         fi
         module_unload $driver
