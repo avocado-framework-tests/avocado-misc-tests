@@ -1,0 +1,3 @@
+setup:
+ filebenchrun:
+   testfile : 'mywebserver.f'
