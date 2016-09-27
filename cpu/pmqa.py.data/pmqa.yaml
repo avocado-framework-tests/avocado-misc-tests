@@ -1,0 +1,12 @@
+setup:
+ pmqatest: !mux
+  cpufreq:
+    run_arg: cpufreq
+  cpuhotplug:
+    run_arg: cpuhotplug
+  cputopology:
+    run_arg: cputopology
+  cpuidle:
+    run_arg: cpuidle
+  thermal:
+    run_arg: thermal
