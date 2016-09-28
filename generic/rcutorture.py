@@ -42,8 +42,8 @@ class Rcutorture(Test):
         self.log.info("Check if CONFIG_RCU_TORTURE_TEST is enabled\n")
         ret = linux_modules.check_kernel_config('CONFIG_RCU_TORTURE_TEST')
         if ret == 0:
-            self.log.info("CONFIG_RCU_TORTURE_TEST is not set in .config !!\n")
-            sys.exit(0)
+            self.fail("CONFIG_RCU_TORTURE_TEST is not set in .config !!\n")
+
         self.log.info("Check rcutorture module is already  loaded\n")
         if linux_modules.module_is_loaded('rcutorture'):
             linux_modules.unload_module('rcutorture')
@@ -114,7 +114,6 @@ class Rcutorture(Test):
         pipe1 = [r for r in self.results if "!!! Reader Pipe:" in r]
         if len(pipe1) != 0:
             self.error('\nBUG: grace-period failure !')
-            sys.exit(0)
 
         pipe2 = [r for r in self.results if "Reader Pipe" in r]
         for p in pipe2:
