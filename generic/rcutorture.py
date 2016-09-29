@@ -17,6 +17,7 @@
 #
 
 import os
+import re
 import time
 import multiprocessing
 
@@ -104,7 +105,11 @@ class Rcutorture(Test):
             time.sleep(seconds)
             self.cpus_toggle()
         linux_modules.unload_module('rcutorture')
-        res = process.system_output('dmesg | grep "rcu-torture: Reader"')
+
+        dmesg = process.system_output('dmesg')
+
+        res = re.search(r'rcu-torture: Reader', dmesg, re.M | re.I)
+
         self.results = str(res).splitlines()
 
         """
