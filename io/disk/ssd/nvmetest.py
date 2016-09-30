@@ -90,11 +90,13 @@ class NVMeTest(Test):
         cmd = 'nvme format %s -l %s' % (self.id_ns, self.lba)
         process.run(cmd, shell=True)
 
-    def testread(self):
+    def testread(self, data=None):
         """
         Reads from the namespace on the device.
         """
         cmd = 'nvme read %s -z %d -t' % (self.id_ns, self.format_size)
+        if data != None:
+            cmd += ' | grep -w %s' % data
         if process.system(cmd, timeout=300, ignore_status=True, shell=True):
             self.fail("Read failed")
 
@@ -105,6 +107,8 @@ class NVMeTest(Test):
         cmd = 'echo 1|nvme write %s -z %d -t' % (self.id_ns, self.format_size)
         if process.system(cmd, timeout=300, ignore_status=True, shell=True):
             self.fail("Write failed")
+        self.testread()
+        self.testread(data="1")
 
     def tearDown(self):
         """
