@@ -1,0 +1,37 @@
+Issue:
+The Test Fails in some systems and passes in some systems.
+Initially the problem is thought to be in avocado framework, but it even fails when it is run with pure python.
+So, the test fails due to some issues in python subprocess which needs to be fixed.
+
+Sample Failure logs:
+2016-09-14 09:41:02,521 process          L0410 DEBUG| [stdout] 8 x Pipe-based Context Switching  1
+2016-09-14 09:41:02,521 stacktrace       L0038 ERROR|
+2016-09-14 09:41:02,521 stacktrace       L0041 ERROR| Reproduced traceback from: /home/medic/Work/Projekty/avocado/avocado/avocado/core/test.py:451
+2016-09-14 09:41:02,522 stacktrace       L0044 ERROR| Traceback (most recent call last):
+2016-09-14 09:41:02,522 stacktrace       L0044 ERROR|   File "/home/medic/Work/Projekty/avocado-tests/avocado-misc-tests/perf/unixbench.py", line 65, in test
+2016-09-14 09:41:02,522 stacktrace       L0044 ERROR|     process.system(vars + ' ./Run ' + args, shell=True, sudo=True)
+2016-09-14 09:41:02,522 stacktrace       L0044 ERROR|   File "/home/medic/Work/Projekty/avocado/avocado/avocado/utils/process.py", line 1093, in system
+2016-09-14 09:41:02,522 stacktrace       L0044 ERROR|     sudo=sudo)
+2016-09-14 09:41:02,522 stacktrace       L0044 ERROR|   File "/home/medic/Work/Projekty/avocado/avocado/avocado/utils/process.py", line 1046, in run
+2016-09-14 09:41:02,522 stacktrace       L0044 ERROR|     raise CmdError(cmd, sp.result)
+2016-09-14 09:41:02,522 stacktrace       L0044 ERROR| CmdError: Command ' ./Run ' failed (rc=1)
+2016-09-14 09:41:02,522 stacktrace       L0045 ERROR|
+2016-09-14 09:41:02,522 stacktrace       L0038 ERROR|
+2016-09-14 09:41:02,522 stacktrace       L0041 ERROR| Reproduced traceback from: /home/medic/Work/Projekty/avocado/avocado/avocado/core/test.py:467
+2016-09-14 09:41:02,523 stacktrace       L0044 ERROR| Traceback (most recent call last):
+2016-09-14 09:41:02,523 stacktrace       L0044 ERROR|   File "/home/medic/Work/Projekty/avocado-tests/avocado-misc-tests/perf/unixbench.py", line 87, in tearDown
+2016-09-14 09:41:02,523 stacktrace       L0044 ERROR|     for line in self.report_data:
+2016-09-14 09:41:02,523 stacktrace       L0044 ERROR| AttributeError: 'unixbench' object has no attribute 'report_data'
+2016-09-14 09:41:02,523 stacktrace       L0045 ERROR|
+2016-09-14 09:41:02,523 test             L0568 ERROR| Traceback (most recent call last):
+
+2016-09-14 09:41:02,523 test             L0568 ERROR|   File "/home/medic/Work/Projekty/avocado/avocado/avocado/core/test.py", line 506, in _run_avocado
+    raise test_exception
+
+2016-09-14 09:41:02,524 test             L0568 ERROR| CmdError: Command ' ./Run ' failed (rc=1)
+
+2016-09-14 09:41:02,524 test             L0585 ERROR| ERROR 1-perf/unixbench.py:unixbench.test -> CmdError: Command ' ./Run ' failed (rc=1)
+2016-09-14 09:41:02,524 test             L0572 INFO |
+2016-09-14 09:41:02,657 sysinfo          L0107 DEBUG| Not logging /proc/pci (file does not exist)
+2016-09-14 09:41:02,667 sysinfo          L0105 DEBUG| Not logging /proc/slabinfo (lack of permissions)
+2016-09-14 09:41:02,672 sysinfo          L0107 DEBUG| Not logging /sys/kernel/debug/sched_features (file does not exist)
