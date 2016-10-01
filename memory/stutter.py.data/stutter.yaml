@@ -1,0 +1,5 @@
+setup:
+ memory: '1048576'
+ iteration: '100'
+ logdir: '/roo/logdir'
+ rundir: '/tmp'
