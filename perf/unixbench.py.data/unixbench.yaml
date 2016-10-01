@@ -1,4 +1,4 @@
 setup:
-    args: !mux
-        default:
-            args: '-v -c 1'
+ args: !mux
+  default:
+   args: '-v -c 1'
