@@ -51,14 +51,8 @@ class SoftwareRaid(Test):
                 self.skip("Unable to install mdadm")
         cmd = "mdadm -V"
         self.check_pass(cmd, "Unable to get mdadm version")
-        self.disk = self.params.get('disk', default='').strip(" ").split(" ")
-        self.sparedisk = self.disk.pop()
-        self.remadd = ''.join(self.disk[-1:])
+        self.disk = self.params.get('disk', default='').strip(" ")
         self.raidlevel = str(self.params.get('raid', default='0'))
-        self.disk_count = len(self.disk)
-        self.disk = ' '.join(self.disk)
-        if self.disk_count < 4:
-            self.skip("Please give minimum of 5 disk to execute this test case")
 
     def test_run(self):
         """
@@ -73,6 +67,7 @@ class SoftwareRaid(Test):
         """
         Only basic operations are run viz create and delete
         """
+        self.disk_count = len(self.disk.split(" "))
         cmd = "echo 'yes' | mdadm --create --verbose --assume-clean \
             /dev/md/mdsraid --level=%s --raid-devices=%d %s \
             --force" \
@@ -86,6 +81,11 @@ class SoftwareRaid(Test):
         Extensive software raid options are run viz create, delete, assemble,
         create spares, remove and add drives
         """
+        self.disk = self.disk.split(" ")
+        self.sparedisk = self.disk.pop()
+        self.remadd = ''.join(self.disk[-1:])
+        self.disk_count = len(self.disk)
+        self.disk = ' '.join(self.disk)
         cmd = "echo 'yes' | mdadm --create --verbose --assume-clean \
             /dev/md/mdsraid --level=%s --raid-devices=%d %s \
             --spare-devices=1 %s --force" \
