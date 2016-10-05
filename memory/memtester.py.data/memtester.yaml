@@ -1,0 +1,5 @@
+test_memster:
+    memtest_opt:
+        runs: 1 
+        memory: null
+        physaddr: null 
