@@ -1,0 +1,24 @@
+Test: !mux
+    first:
+        tool: ib_send_lat
+        ext_opt: -b,-N,-c UC,-c RC,-Q 5,-w 100M,-x 1,-y 10G,-z,-D 10s,-F 15s,-l 4,-a,-c XRC,-c UD,-e,-g,-R,-R -a,-R -c RC,-R -D 30s,-R -f 5s,-R -l 2,-R -m 2048,-R -n 100000,-R -p 18600,-R -q 1,-R -Q 10,-R -s 9000,-R -S 1,-R -t 2048,-R -T 128,-R -w 10M,-R -x 1,-R -y 4G,-R -z 
+    second:
+        tool: ib_write_lat
+        ext_opt: -D 10s,-l 4,-Q 5,-w 100M,-x 1,-y 10G,-z,--burst_size=2G,-R --reversed,-R,-R -a,-R -b,-R -c RC,-R -D 30s,-R -f 5s,-R -l 2,-R -m 2048,-R -n 100000,-R -p 18600,-R -q 1,-R -Q 10,-R -s 9000,-R -S 1,-R -t 2048,-R -T 128,-R -w 10M,-R -x 1,-R -y 4G,-R -z
+    third:
+        tool: ib_read_lat
+        ext_opt: -b,-N,-c UC,-c RC,-D 10s,-l 4,-Q 5,-w 100M,-x 1,-y 10G,-z,--burst_size=2G,-R --reversed,-R,-R -a,-R -b,-R -c RC,-R -D 30s,-R -f 5s,-R -l 2,-R -m 2048,-R -n 100000,-R -N,-R -p 18600,-R -Q 10,-R -s 9000,-R -S 1,-R -t 2048,-R -T 128,-R -w 10M,-R -x 1,-R -y 4G,-R -z
+    fourth:
+        tool: ib_atomic_lat
+        ext_opt: --burst_size=2G,-R --reversed
+
+parameters:
+    test_opt: -F,-m 1024,-n 10000,-S 2,-t 1024,-p 18200
+    ext_flag: "0"
+    Iface: "ib0"
+    PEERIP: "13.13.13.15"
+    CA_NAME: "mlx4_0"
+    PORT_NUM: "1"
+    PEERCA: "mlx4_0"
+    PEERPORT: "1"
+    timeout: "600"
