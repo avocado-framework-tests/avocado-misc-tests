@@ -1,0 +1,23 @@
+Test: !mux
+    options: !mux
+        first:
+            basic_option: ' '
+        second:
+            basic_option: -c 50 -C 30 -S 1024
+        third:
+            basic_option: -m
+        fourth:
+            basic_option: -t tcp
+        fifth:
+            ext_option: -f ip
+        sixth:
+            ext_option: -f ipv6
+        seventh:
+            ext_option: -P tcp
+        eighth:
+            ext_option: -P ib
+
+parameters:
+    ext_flag: "1"
+    Iface: "ib0"
+    PEERIP: "13.13.13.15"
