@@ -52,7 +52,7 @@ class SmartctlTest(Test):
         disk_list = self.params.get('disk').strip(" ")
         self.disk_list = disk_list.split()
         self.to = self.params.get("timeout", default="2400")
-        if self.disk_list is '' or self.option is '':
+        if self.disk_list is [] or self.option is '':
             self.skip(" Test skipped!!, please ensure Block device and options are specified in yaml file")
 
     def test(self):
