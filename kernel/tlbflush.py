@@ -43,7 +43,7 @@ class Tlbflush(Test):
 
         if not smm.check_installed("gcc") and not smm.install("gcc"):
             self.error(
-                "Fail to install %s required for this test." % package)
+                "Fail to install  required for this test.")
 
         data_dir = os.path.abspath(self.datadir)
 

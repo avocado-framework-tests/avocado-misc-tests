@@ -92,7 +92,7 @@ class Connectathon(Test):
 
         except:
             self.nfail += 1
-            logging.error("Test failed: ")
+            self.log.info("Test failed: ")
         if self.nfail != 0:
             raise self.fail('Connectathon test suite failed.')
 
