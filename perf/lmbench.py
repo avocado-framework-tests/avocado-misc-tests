@@ -85,7 +85,7 @@ class Lmbench(Test):
         output = os.popen('ls -1 bin/*/CONFIG*').read()
         config_files = output.splitlines()
         if len(config_files) != 1:
-            raise error.TestError('Config not found : % s' % config_files)
+            self.error('Config not found : % s' % config_files)
         config_file = config_files[0]
         if not fsdir:
             fsdir = self.tmpdir

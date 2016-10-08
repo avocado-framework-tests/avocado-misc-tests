@@ -64,7 +64,7 @@ class service_check(Test):
             if not service_obj.status() is original_status:
                 self.log.info("Fail to restore original status of the %s"
                               "service" % service)
-                services_failed.append(services)
+                services_failed.append(service)
 
         if services_failed:
             self.fail("List of services failed: %s" % services_failed)
