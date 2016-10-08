@@ -18,7 +18,7 @@ install:
 
 script:
     - inspekt lint
-    - inspekt indent
+    - inspekt indent --enable W0611,E0602
     - inspekt style
     - |
         error=""
