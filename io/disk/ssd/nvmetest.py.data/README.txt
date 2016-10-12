@@ -11,9 +11,7 @@ This Suite creates namespace, and performs the following tests:
 * dsm
 * reset
 * subsystem reset
-
 This test needs to be run as root.
-
 Inputs Needed (in multiplexer file):
 ------------------------------------
 Devices -       NVMe devices
