@@ -47,8 +47,13 @@ class NVMeTest(Test):
         nvme_path = os.path.join(self.srcdir, 'nvme')
         nvme_link = 'https://github.com/linux-nvme/nvme-cli.git'
         git.get_repo(nvme_link, destination_dir=nvme_path)
-        build.make(nvme_path)
-        build.make(nvme_path, extra_args='install')
+        os.chdir(nvme_path)
+        process.system("./NVME-VERSION-GEN", ignore_status=True)
+        if process.system_output("cat NVME-VERSION-FILE").strip("\n").\
+            split()[-1] != process.system_output("nvme version").\
+                strip("\n").split()[-1]:
+            build.make(nvme_path)
+            build.make(nvme_path, extra_args='install')
         self.id_ns = self.create_namespace()
         self.log.info(self.id_ns)
         cmd = "nvme id-ns %s | grep 'in use' | awk '{print $5}' | \
@@ -57,7 +62,6 @@ class NVMeTest(Test):
         self.format_size = pow(2, int(self.format_size))
         cmd = "nvme id-ns %s | grep 'in use' | awk '{print $2}'" % self.id_ns
         self.lba = process.system_output(cmd, shell=True).strip('\n')
-        self.format_namespace()
 
     def create_namespace(self):
         """
@@ -83,7 +87,7 @@ class NVMeTest(Test):
         cmd = 'nvme delete-ns %s' % self.device
         process.run(cmd, shell=True)
 
-    def format_namespace(self):
+    def testformatnamespace(self):
         """
         Formats the namespace on the device.
         """
@@ -105,6 +109,63 @@ class NVMeTest(Test):
         cmd = 'echo 1|nvme write %s -z %d -t' % (self.id_ns, self.format_size)
         if process.system(cmd, timeout=300, ignore_status=True, shell=True):
             self.fail("Write failed")
+
+    def testcompare(self):
+        """
+        Compares data written on the device with given data.
+        """
+        self.testwrite()
+        cmd = 'echo 1|nvme compare %s -z %d' % (self.id_ns, self.format_size)
+        if process.system(cmd, timeout=300, ignore_status=True, shell=True):
+            self.fail("Compare failed")
+
+    def testflush(self):
+        """
+        flush data on controller.
+        """
+        cmd = 'nvme flush %s -n 1' % self.device
+        if process.system(cmd, ignore_status=True, shell=True):
+            self.fail("Flush failed")
+
+    def testwritezeroes(self):
+        """
+        Write zeroes command to the device.
+        """
+        cmd = 'nvme write-zeroes %s -n 1' % self.device
+        if process.system(cmd, ignore_status=True, shell=True):
+            self.fail("Writing Zeroes failed")
+
+    def testwriteuncorrectable(self):
+        """
+        Write uncorrectable command to the device.
+        """
+        cmd = 'nvme write-uncor %s -n 1' % self.device
+        if process.system(cmd, ignore_status=True, shell=True):
+            self.fail("Writing Uncorrectable failed")
+
+    def testdsm(self):
+        """
+        The Dataset Management command test.
+        """
+        cmd = 'nvme dsm %s -n 1 -a 1 -b 1 -s 1 -d -w -r' % self.device
+        if process.system(cmd, ignore_status=True, shell=True):
+            self.fail("Subsystem reset failed")
+
+    def testreset(self):
+        """
+        resets the controller.
+        """
+        cmd = 'nvme reset %s' % self.device
+        if process.system(cmd, ignore_status=True, shell=True):
+            self.fail("Reset failed")
+
+    def testsubsystemreset(self):
+        """
+        resets the controller subsystem.
+        """
+        cmd = 'nvme subsystem-reset %s' % self.device
+        if process.system(cmd, ignore_status=True, shell=True):
+            self.fail("Subsystem reset failed")
 
     def tearDown(self):
         """
