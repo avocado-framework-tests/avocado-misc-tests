@@ -1,0 +1,11 @@
+Test: !mux
+    options: !mux
+        first:
+            basic_option: -m 224.0.0.IPVAL -b PEERIP -c 100 -C 300 -S 2048 , -m 224.0.0.IPVAL -b LOCALIP -c 100 -C 300 -S 2048 -s 
+# Placeholder for exended option
+#        fourth:
+#            ext_option:
+Parameters:
+    ext_flag: "1"
+    Iface: "ib0"
+    PEERIP: "13.13.13.15"
