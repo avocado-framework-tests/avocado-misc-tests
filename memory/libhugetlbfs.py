@@ -19,6 +19,7 @@
 
 import os
 import glob
+
 from avocado import Test
 from avocado import main
 from avocado.utils import process
@@ -31,6 +32,7 @@ from avocado.utils import distro
 
 
 class libhugetlbfs(Test):
+
     def setUp(self):
         # Check for root permission
         if os.geteuid() != 0:
@@ -98,11 +100,37 @@ class libhugetlbfs(Test):
         os.chdir(self.srcdir)
         patch = self.params.get('patch', default='elflink.patch')
         process.run('patch -p1 < %s' % data_dir + '/' + patch, shell=True)
+
+        if (detected_distro.name == "redhat" or
+                detected_distro.name == "fedora"):
+            falloc_patch = 'patch -p1 < %s ' % (
+                os.path.join(data_dir, 'falloc.patch'))
+            process.run(falloc_patch, shell=True)
+
         build.make(self.srcdir, extra_args='BUILDTYPE=NATIVEONLY')
+
+    def fail_check(self, log, check):
+
+        if check == 1:
+            env = "32"
+        else:
+            env = "64"
+
+        for line in log.splitlines():
+            if ('FAIL:' in line) and ('Expected' not in line):
+                if (line.split('FAIL:')[1].split('   ')[check].strip()) > 0:
+                    self.fail(" hugpage page " + env + " bit test failed")
 
     def test(self):
         os.chdir(self.srcdir)
-        build.make(self.srcdir, extra_args='BUILDTYPE=NATIVEONLY check')
+        result = build.run_make(
+            self.srcdir, extra_args='BUILDTYPE=NATIVEONLY check')
+
+        # 64 bit hugepage test check
+        self.fail_check(result.stdout, 3)
+
+        # 32 bit hugepage test check
+        self.fail_check(result.stdout, 1)
 
     def tearDown(self):
         if self.hugetlbfs_dir:
