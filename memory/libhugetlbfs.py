@@ -19,6 +19,7 @@
 
 import os
 import glob
+
 from avocado import Test
 from avocado import main
 from avocado.utils import process
@@ -31,6 +32,7 @@ from avocado.utils import distro
 
 
 class libhugetlbfs(Test):
+
     def setUp(self):
         # Check for root permission
         if os.geteuid() != 0:
@@ -98,6 +100,13 @@ class libhugetlbfs(Test):
         os.chdir(self.srcdir)
         patch = self.params.get('patch', default='elflink.patch')
         process.run('patch -p1 < %s' % data_dir + '/' + patch, shell=True)
+
+        if (detected_distro.name == "redhat" or
+                detected_distro.name == "fedora"):
+            falloc_patch = 'patch -p1 < %s ' % (
+                os.path.join(data_dir, 'falloc.patch'))
+            process.run(falloc_patch, shell=True)
+
         build.make(self.srcdir, extra_args='BUILDTYPE=NATIVEONLY')
 
     def test(self):
