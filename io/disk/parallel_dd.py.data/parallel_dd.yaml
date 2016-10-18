@@ -1,0 +1,24 @@
+setup:
+    filesystem: !mux
+        default:
+            disk:
+    mb: !mux
+        default:
+            megabytes: 100
+    blocks: !mux
+        first:
+            blocks:
+    blocksize: !mux
+        default:
+            blocks_per_file:
+    file_system_type: !mux
+        default:
+           fstype:
+    seqread: !mux
+        default:
+           seq_read: True
+    dd_woptions:
+    dd_roptions:
+    fs_dd_woptions:
+    fs_dd_roptions:
+
