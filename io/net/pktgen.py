@@ -14,11 +14,13 @@
 # Copyright: 2016 IBM
 # Author: Sandeep K <sandeep@linux.vnet.ibm.com>
 #
-# Based on code by Lucas Meneghel Rodrigues
+# Based on code by Lucas Martin Bligh<mbligh@google.com>
+# Copyright: 2008 Google
 # https://github.com/autotest/autotest-client-tests/tree/master/pktgen
 
 import os
 import re
+import shutil
 from avocado import Test
 from avocado import main
 from avocado.utils import process
@@ -37,10 +39,9 @@ class Pktgen(Test):
         self.clone_skb = self.params.get("clone_skb", default="1")
         self.dst_ip = self.params.get("dst_ip", default="")
         self.dst_mac = self.params.get("dst_mac", default="")
-        self.resultsdir = self.params.get("resultsdir", default="/root/")
-
+        self.results = self.params.get("resultsdir", default="/tmp/")
         if not os.path.exists('/proc/net/pktgen'):
-            process.system("modprobe pktgen", shell=True)
+            process.system("modprobe pktgen", ignore_status=True, shell=True)
         if not os.path.exists('/proc/net/pktgen'):
             self.error("pktgen not loaded")
 
@@ -52,35 +53,34 @@ class Pktgen(Test):
         self.log.info("Adding devices")
         self.pgdev = '/proc/net/pktgen/kpktgend_0'
         self.pgset('rem_device_all')
-        self.pgset('add_device ' + self.eth)
+        self.pgset('add_device %s' % self.eth)
         self.pgset('max_before_softirq 10000')
 
         # configure the individual devices
         self.log.info("Configuring the individual devices")
-        self.ethdev = '/proc/net/pktgen/' + self.eth
-        self.pgdev = self.ethdev
+        self.pgdev = '/proc/net/pktgen/%s' % self.eth
         if self.clone_skb:
             self.pgset('clone_skb %s' % (self.count))
         self.pgset('min_pkt_size 60')
         self.pgset('max_pkt_size 60')
-        self.pgset('dst ' + self.dst_ip)
-        self.pgset('dst_mac ' + self.dst_mac)
+        self.pgset('dst %s' % self.dst_ip)
+        self.pgset('dst_mac %s' % self.dst_mac)
         self.pgset('count %s' % (self.count))
 
     def test_pktgen(self):
         self.pgdev = '/proc/net/pktgen/pgctrl'
         self.pgset('start')
-        output = os.path.join(self.resultsdir, self.eth)
-        process.system("cp %s %s" % (self.ethdev, output), shell=True)
+        output = os.path.join(self.results, self.eth)
+        shutil.copyfile(self.pgdev, output)
 
     def pgset(self, command):
         file_name = open(self.pgdev, 'w')
         file_name.write(command + '\n')
         file_name.close()
-
         if not self.match_string('Result: OK', self.pgdev):
             if not self.match_string('Result: NA', self.pgdev):
-                process.system("cat " + self.pgdev, shell=True)
+                process.system("cat %s" % self.pgdev,
+                               ignore_status=True, shell=True)
 
     def match_string(self, pattern, file_name):
         with open(file_name) as f:

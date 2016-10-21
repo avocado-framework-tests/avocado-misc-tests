@@ -4,4 +4,4 @@ Parameters:
     clone_skb: "1"
     dst_mac: "22:82:8e:e6:94:02"
     dst_ip: "9.40.192.213"
-    resultsdir: "/root/"
+    resultsdir: "/tmp/"
