@@ -1,0 +1,11 @@
+Test: !mux
+    first:
+        tool: datagram
+    second:
+        tool: connected
+parameters:
+    Iface: "ib0"
+    PEERIP: "13.13.13.15"
+    timeout: "600"
+    NETSERVER_RUN: 0
+    IPERF_RUN: 0
