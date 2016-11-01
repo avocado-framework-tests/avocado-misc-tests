@@ -33,6 +33,7 @@ class ScpTest(Test):
     check the ssh into peer
     check the scp into peer
     '''
+
     def setUp(self):
         '''
         To check and install dependencies for the test
@@ -55,7 +56,8 @@ class ScpTest(Test):
         ping to peer machine
         '''
         cmd = "ping -I %s %s -c 5" % (self.iface, self.peer)
-        if process.system(cmd, shell=True, verbose=True) != 0:
+        if process.system(cmd, shell=True, verbose=True,
+                          ignore_status=True) != 0:
             self.fail("ping test failed")
 
     def test_scpandssh(self):
@@ -72,13 +74,13 @@ class ScpTest(Test):
         time.sleep(5)
         cmd = "timeout 600 scp /tmp/tempfile %s@%s:/tmp" %\
               (self.user, self.peer)
-        ret = process.system(cmd, shell=True, verbose=True)
+        ret = process.system(cmd, shell=True, verbose=True, ignore_status=True)
         time.sleep(15)
         if ret != 0:
             self.fail("unable to copy into peer machine")
         cmd = "timeout 600 scp %s@%s:/tmp/tempfile /tmp" %\
               (self.user, self.peer)
-        ret = process.system(cmd, shell=True, verbose=True)
+        ret = process.system(cmd, shell=True, verbose=True, ignore_status=True)
         time.sleep(15)
         if ret != 0:
             self.fail("unable to copy from peer machine")
