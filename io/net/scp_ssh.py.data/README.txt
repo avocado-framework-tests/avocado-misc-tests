@@ -11,5 +11,5 @@ interface --> interface through which ping test run
 Requirements:
 -----------------------
 1. Generate sshkey for your test partner to run the test uninterrupted.(have a connection less ssh between the peers)
-2. install nteifaces using pip
+2. install netifaces using pip
 command: pip install netifaces
