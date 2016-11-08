@@ -104,5 +104,6 @@ class Stress(Test):
         cmd = ('./src/stress %s' % args)
         process.run(cmd)
 
+
 if __name__ == "__main__":
     main()

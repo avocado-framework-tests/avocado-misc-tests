@@ -92,5 +92,6 @@ class Ebizzy(Test):
         output_path = os.path.join(self.outputdir, "perf.json")
         json.dump(perf_json, open(output_path, "w"))
 
+
 if __name__ == "__main__":
     main()

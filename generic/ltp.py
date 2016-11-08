@@ -85,5 +85,6 @@ class ltp(Test):
             self.fail("No test failures detected, but LTP finished with %s"
                       % (result.exit_status))
 
+
 if __name__ == "__main__":
     main()

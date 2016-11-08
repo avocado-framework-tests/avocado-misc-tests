@@ -72,5 +72,6 @@ class Stutter(Test):
         if process.system('./run.sh', shell=True, ignore_status=True) != 0:
             self.fail("Test failed")
 
+
 if __name__ == "__main__":
     main()

@@ -58,5 +58,6 @@ class CRIU(Test):
         if failed_tests:
             self.fail("test failed, Please check debug log for failed test cases")
 
+
 if __name__ == "__main__":
     main()

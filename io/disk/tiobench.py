@@ -75,5 +75,7 @@ class Tiobench(Test):
                                                 .format(target, blocks,
                                                         threads, size,
                                                         num_runs))
+
+
 if __name__ == "__main__":
     main()

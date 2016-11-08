@@ -107,5 +107,6 @@ class Pktgen(Test):
         if ping_response != 0:
             self.skip("Host not reachable")
 
+
 if __name__ == "__main__":
     main()

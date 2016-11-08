@@ -82,5 +82,6 @@ class Rmaptest(Test):
             cmd = '%s/%s  %s' % (self.srcdir, test[0], test[1])
             process.system(cmd)
 
+
 if __name__ == "__main__":
     main()

@@ -112,5 +112,6 @@ class Sensors(Test):
         if len(error_list) > 0:
             self.fail('sensors -u command failed with %s' % error_list)
 
+
 if __name__ == "__main__":
     main()

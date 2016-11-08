@@ -63,5 +63,6 @@ class fs_mark(Test):
         cmd = ('./fs_mark -d %s -s %s -n %s' % (dir, size, num_files))
         process.run(cmd)
 
+
 if __name__ == "__main__":
     main()
