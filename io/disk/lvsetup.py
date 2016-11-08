@@ -110,5 +110,6 @@ class Lvsetup(Test):
             self.error("\n".join(errs))
         os.removedirs(self.mount_loc)
 
+
 if __name__ == "__main__":
     main()

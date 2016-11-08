@@ -69,5 +69,6 @@ class Interbench(Test):
         process.system("%s ' run ' %s" % (os.path.join(
             self.srcdir, 'interbench'), args), sudo=True)
 
+
 if __name__ == "__main__":
     main()

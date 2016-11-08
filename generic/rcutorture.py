@@ -132,5 +132,6 @@ class Rcutorture(Test):
             if int(nmiss):
                 self.log.info("\nWarning: near mis failure !!")
 
+
 if __name__ == "__main__":
     main()

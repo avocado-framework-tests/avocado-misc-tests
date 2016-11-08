@@ -61,5 +61,6 @@ class Perftool(Test):
         if self.count > 0:
             self.fail("%s Test failed" % self.count)
 
+
 if __name__ == "__main__":
     main()

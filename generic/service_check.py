@@ -71,5 +71,6 @@ class service_check(Test):
         else:
             self.log.info("All Services Passed the ON/OFF test")
 
+
 if __name__ == "__main__":
     main()

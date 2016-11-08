@@ -86,5 +86,6 @@ class Fsfuzzer(Test):
         '''
         process.system("%s %s" % (self._fsfuzz, self._args), sudo=True)
 
+
 if __name__ == "__main__":
     main()

@@ -96,5 +96,6 @@ class Trinity(Test):
 
         process.system('userdel -r  trinity', sudo=True)
 
+
 if __name__ == "__main__":
     main()
