@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+
+from avocado import Test
+from avocado import main
+from avocado.utils.software_manager import SoftwareManager
+
+
+class Pylint(Test):
+
+    def setUp(self):
+        sm = SoftwareManager()
+        print "in setup"
+
+    def test(self):
+        print "in test"
+if __name__ == "__main__":
+    main()
