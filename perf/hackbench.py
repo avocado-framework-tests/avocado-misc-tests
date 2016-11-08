@@ -79,5 +79,6 @@ class Hackbench(Test):
                 self.error("Test failed: Time Taken "
                            "grater or eqaul to threshold")
 
+
 if __name__ == "__main__":
     main()

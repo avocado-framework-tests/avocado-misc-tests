@@ -67,5 +67,6 @@ class Pmqa(Test):
             self.log.info(result.stdout)
             self.fail("few tests cases failed please check log")
 
+
 if __name__ == "__main__":
     main()

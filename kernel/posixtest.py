@@ -64,5 +64,6 @@ class Posixtest(Test):
         os.chdir(self.srcdir)
         process.system('./run_tests THR')
 
+
 if __name__ == "__main__":
     main()

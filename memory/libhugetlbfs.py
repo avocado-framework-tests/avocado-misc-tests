@@ -186,5 +186,6 @@ class libhugetlbfs(Test):
         if self.hugetlbfs_dir:
             process.system('umount %s' % self.hugetlbfs_dir)
 
+
 if __name__ == "__main__":
     main()

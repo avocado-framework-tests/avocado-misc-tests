@@ -61,8 +61,8 @@ class unixbench(Test):
         self.report_data = open(report_path).readlines()
 
     def check_for_error(self, words):
-        l = len(words)
-        if l >= 3 and words[-3:l] == ['no', 'measured', 'results']:
+        length = len(words)
+        if length >= 3 and words[-3:length] == ['no', 'measured', 'results']:
             # found a problem so record it in err string
             key = '_'.join(words[1:-3])
             if self.err is None:

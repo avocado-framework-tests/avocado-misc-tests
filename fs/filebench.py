@@ -80,5 +80,6 @@ class Filebench(Test):
         # un install file bench
         build.make(self.srcdir, extra_args='uninstall')
 
+
 if __name__ == "__main__":
     main()

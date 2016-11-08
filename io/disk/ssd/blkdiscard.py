@@ -74,5 +74,6 @@ class Blkdiscard(Test):
                         self.fail("Blkdiscard passed for the values which is, \
                             not aligned to 4096 but actually it should fail")
 
+
 if __name__ == "__main__":
     main()

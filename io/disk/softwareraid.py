@@ -134,5 +134,6 @@ class SoftwareRaid(Test):
         cmd = "mdadm --manage /dev/md/mdsraid --stop"
         self.check_pass(cmd, "Failed to stop/remove the MD device")
 
+
 if __name__ == "__main__":
     main()
