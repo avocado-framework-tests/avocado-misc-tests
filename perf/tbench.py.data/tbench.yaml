@@ -1,0 +1,5 @@
+setup:
+ runargs : !mux
+  default :
+    nprocs: 10
+    args: ''
