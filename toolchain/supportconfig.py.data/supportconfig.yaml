@@ -1,0 +1,5 @@
+test_supportconfig_options:
+    supportconfig_opt:
+        ["A", "l", "F", "R", "i"]
+    feature:
+        "AUTOFS"
