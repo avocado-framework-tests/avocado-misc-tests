@@ -1,0 +1,9 @@
+Test: !mux
+    option:
+        bonding_mode: "0 1 2 3 4 5 6"
+Parameters:
+    Iface1: "enP3p1s0f0"
+    Iface2: "enP3p1s0f1"
+    peerip: "85.85.85.85"
+    peerif2: "eth3"
+    bondname: "bond13"
