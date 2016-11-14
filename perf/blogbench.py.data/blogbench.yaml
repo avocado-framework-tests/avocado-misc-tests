@@ -1,0 +1,3 @@
+blogbench_url: 'https://download.pureftpd.org/blogbench/blogbench-1.1.tar.bz2'
+test_dir: '/tmp'
+args: ''
