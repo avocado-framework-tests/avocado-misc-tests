@@ -1,0 +1,12 @@
+--- config.guess	2016-11-10 14:45:40.619602134 +0100
++++ config_new.guess	2016-11-10 14:47:55.100149190 +0100
+@@ -886,6 +886,9 @@
+     ppc64:Linux:*:*)
+ 	echo powerpc64-unknown-linux-gnu
+ 	exit 0 ;;
++    ppc64le:Linux:*:*)
++	echo powerpc64-unknown-linux-gnu
++	exit 0 ;;
+     alpha:Linux:*:*)
+ 	case `sed -n '/^cpu model/s/^.*: \(.*\)/\1/p' < /proc/cpuinfo` in
+ 	  EV5)   UNAME_MACHINE=alphaev5 ;;
