@@ -20,6 +20,7 @@ from avocado import Test
 from avocado import main
 from avocado.utils import process
 from avocado.utils.software_manager import SoftwareManager
+from avocado.core import exceptions
 
 
 class RASTools(Test):
@@ -279,9 +280,10 @@ class RASTools(Test):
         lscfg lists the installed devices
         """
         self.log.info("===============Executing lscfg tool test=============")
-        cpu_output=process.system_output('cat /proc/cpuinfo')
+        cpu_output = process.system_output('cat /proc/cpuinfo')
         if "emulated by qemu" in cpu_output:
-             raise exceptions.TestWarn("Not supported on the pSeries KVM Guest platform")
+            raise exceptions.TestWarn(
+                "Not supported on the pSeries KVM Guest platform")
 
         self.run_cmd("lscfg -h")
         self.run_cmd("lscfg -V")
@@ -291,23 +293,26 @@ class RASTools(Test):
         path_db = process.system_output("find /var/lib/lsvpd/ -iname vpd.db | "
                                         "head -1", shell=True).strip()
         if path_db:
-                copyfile_path = os.path.join(self.outputdir, 'vpd.db')
-                copyfile(path_db, copyfile_path)
-                self.run_cmd("lscfg --data=%s" % copyfile_path)
-        path_tar = process.system_output("find /var/lib/lsvpd/ -iname vpd.*.gz" " | head -1", shell=True).strip()
-        if path_tar:
-                self.run_cmd("lscfg --zip=%s" % path_tar)
+            copyfile_path = os.path.join(self.outputdir, 'vpd.db')
+            copyfile(path_db, copyfile_path)
+            self.run_cmd("lscfg --data=%s" % copyfile_path)
+        path_zip = process.system_output("find /var/lib/lsvpd/ -iname vpd.*.gz"
+                                         " | head -1", shell=True).strip()
+        if path_zip:
+            self.run_cmd("lscfg --zip=%s" % path_zip)
         if self.is_fail >= 1:
-                self.fail("%s command(s) failed in lscfg tool verification"
+            self.fail("%s command(s) failed in lscfg tool verification"
                       % self.is_fail)
 
-
     def test14_lsvpd(self):
-        self.log.info("===============Executing lsvpd tool test============="
-                      "==")
-        cpu_output=process.system_output('cat /proc/cpuinfo')
+        """
+        lsvpd lists device Vital Product Data
+        """
+        self.log.info("===============Executing lsvpd tool test=============")
+        cpu_output = process.system_output('cat /proc/cpuinfo')
         if "emulated by qemu" in cpu_output:
-             raise exceptions.TestWarn("Not supported on the pSeries KVM Guest platform")
+            raise exceptions.TestWarn(
+                "Not supported on the pSeries KVM Guest platform")
 
         self.run_cmd("lsvpd -h")
         self.run_cmd("lsvpd -D")
@@ -317,13 +322,18 @@ class RASTools(Test):
         path_db = process.system_output("find /var/lib/lsvpd/ -iname vpd.db | "
                                         "head -1", shell=True).strip()
         if path_db:
-                copyfile_path = os.path.join(self.outputdir, 'vpd.db')
-                copyfile(path_db, copyfile_path)
+            copyfile_path = os.path.join(self.outputdir, 'vpd.db')
+            copyfile(path_db, copyfile_path)
+            self.run_cmd("lsvpd --path=%s" % copyfile_path)
+
+        path_zip = process.system_output("find /var/lib/lsvpd/ -iname vpd.*.gz"
+                                         " | head -1", shell=True).strip()
+        if path_zip:
+            self.run_cmd("lsvpd --zip=%s" % path_zip)
 
         if self.is_fail >= 1:
-                self.fail("%s command(s) failed in lscfg tool verification"
+            self.fail("%s command(s) failed in lscfg tool verification"
                       % self.is_fail)
-    
 
 if __name__ == "__main__":
     main()
