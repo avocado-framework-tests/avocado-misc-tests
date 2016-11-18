@@ -1,0 +1,3 @@
+This program runs the selftest available with the linux kernel source,
+the script takes input as tarball url with version or a git repository link
+of linux source, compile and run the tests available at / tools / testing / selftests
