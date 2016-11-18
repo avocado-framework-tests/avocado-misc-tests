@@ -1,0 +1,11 @@
+This scripts runs basic sanity test for the LSI-3008 adapter.
+
+Values to be passed in YMAL file:
+
+Controller ID of the adapter, for which these tests will be executed.
+
+Disks bay ID. i.e., both enclosure ID and slot ID, as shown below.
+en:sn, where en --> enclosure ID, sn --> slot ID
+
+Please make sure that you place the Avago tool(SAS3IRCU) in the same location,
+from where you are planning to run this script.
