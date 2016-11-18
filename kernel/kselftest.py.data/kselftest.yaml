@@ -1,0 +1,7 @@
+setup:
+    url: !mux
+        default:
+            url: 'https://www.kernel.org/pub/linux/kernel'
+    version: !mux
+        default:
+            version: '4.8.6'
