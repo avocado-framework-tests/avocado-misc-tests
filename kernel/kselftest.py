@@ -98,5 +98,6 @@ class kselftest(Test):
             if 'FAIL' in line:
                 self.fail("Selftest testcase failed, please check the test logs")
 
+
 if __name__ == "__main__":
     main()
