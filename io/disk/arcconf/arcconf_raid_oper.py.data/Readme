@@ -1,0 +1,11 @@
+arcconf - Command line interface to configure PMC-Sierra
+(Microsemi) Controllers.
+
+arcconf_raid_oper.py covers functionality like RAID creation,
+deletion, Physical disk & logical disk format, and gather
+controller status using getconfig.
+ 
+Note:
+    1. Tool handles only one channel type currently. 
+    2. supported controllers pci_ids can be entered 
+       seperated by ",".
