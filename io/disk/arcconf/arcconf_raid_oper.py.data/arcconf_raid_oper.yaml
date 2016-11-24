@@ -1,0 +1,58 @@
+Test: !mux
+   Stripe_16:
+        option: "Stripesize 16"
+   Stripe_32:
+        option: "Stripesize 32"
+   Stripe_64:
+        option: "Stripesize 64"
+   Stripe_128:
+        option: "Stripesize 128"
+   Stripe_256:
+        option: "Stripesize 256"
+   Stripe_512:
+        option: "Stripesize 512"
+   Stripe_1024:
+        option: "Stripesize 1024"
+   Priority_low:
+        option: "Priority LOW"
+   Priority_medium:
+        option: "Priority MED"
+   Priority_high:
+        option: "Priority HIGH"
+   Method_Build:
+        option: "Method BUILD"
+   Method_clear:
+        option: "Method CLEAR"
+   Method_quick:
+        option: "Method QUICK"
+   Method_skip:
+        option: "Method SKIP"
+   Rcache_RON:
+        option: "Rcache RON"
+   Rcache_ROFF:
+        option: "Rcache ROFF"
+   Wcache_ROFF:
+        option: "Wcache WT"
+   Wcache_ROFF:
+        option: "Wcache WB"
+   Wcache_ROFF:
+        option: "Wcache WBB"
+   MaxCacheReadCache_ION:
+        option: "MaxCacheReadCache ION"
+   MaxCacheReadCache_IOFF:
+        option: "MaxCacheReadCache IOFF"
+   MaxCacheWriteCache_ION:
+        option: "MaxCacheWriteCache ION"
+   MaxCacheWriteCache_IOFF:
+        option: "MaxCacheWriteCache IOFF"
+parameters:
+    crtl_no: "1"
+    channel_no: "0"
+    disk_no: "0, 1, 2, 3"
+    pci_id: "9005:028d:9005:0557"
+    logicaldrive: "0"
+    diskoverwrite: "Y"
+    fs_type: "ext4"
+    mount_point: "/mnt"
+    http_path: "http://9.47.67.137/repo/firmware/RAID/arcconf/tool/"
+    tool_name: "Arcconf-2.02-22404.ppc64el"
