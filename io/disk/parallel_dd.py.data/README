@@ -1,0 +1,6 @@
+The disk for which performance of read write operation over a file system has to be measured should be specified in yaml file.
+The disk can either be physical disk partition or loop device.
+Loop device can be created using dd and losetup commands.
+ex:
+ dd if=/dev/zero of=/home/image1.img bs=4k count=800000
+ losetup /dev/loop1 /home/image1.img
