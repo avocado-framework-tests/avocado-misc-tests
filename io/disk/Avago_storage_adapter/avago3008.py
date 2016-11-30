@@ -79,18 +79,6 @@ class Avago3008(Test):
         else:
             self.extensivetest()
 
-    def basictest(self):
-
-        """
-        This function does only create and delete Raid
-        """
-        self.adapterdetails()
-        self.createraid()
-        self.adapter_status()
-        self.adapterdetails()
-        self.deleteraid()
-        print self.adapter_status()
-
     def extensivetest(self):
 
         """
@@ -101,8 +89,9 @@ class Avago3008(Test):
         self.adapterlist()
         self.adapterdetails()
         self.createraid()
+        self.backgroundinit()
         self.adapterdetails()
-        print self.adapter_status()
+        self.adapter_status()
         self.set_online_offline("offline")
         self.set_online_offline("online")
         for _ in range(0, 5):
@@ -111,9 +100,12 @@ class Avago3008(Test):
                 time.sleep(10)
         if self.spare:
             self.hotspare()
+        self.rebuild()
+        self.consistcheck()
         self.deleteraid()
+        self.logir()
         self.adapterdetails()
-        print self.adapter_status()
+        self.adapter_status()
 
     def hotspare(self):
 
@@ -124,6 +116,64 @@ class Avago3008(Test):
             % (self.controller, self.spare)
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Failed to set hotspare drive")
+
+    def backgroundinit(self):
+
+        """
+        Checks if BGI starts automatically, and if so waits
+        till it is completed
+        """
+        self.sleepfunction("Background")
+
+    def logir(self):
+
+        """
+        This function stores all the IR logs
+        """
+        cmd = "./sas3ircu %d logir upload" % self.controller
+        if process.system(cmd, ignore_status=True, shell=True) != 0:
+            self.fail("Failed to upload the logs")
+        cmd = "./sas3ircu %d logir clear noprompt" % self.controller
+        if process.system(cmd, ignore_status=True, shell=True) != 0:
+            self.fail("Failed to clear the logs on controller")
+
+    def sleepfunction(self, current_operation):
+
+        """
+        This function waits, till the current operation is complete
+        """
+        while current_operation != 'None':
+            time.sleep(10)
+            self.adapter_status()
+            cmd = "./sas3ircu 0 status | grep 'Current operation' | \
+                 awk '{print $4}'"
+            current_operation = process.system_output(cmd, shell=True) \
+                .strip("\n")
+
+    def consistcheck(self):
+
+        """
+        This function starts CC on a Raid array
+        """
+        cmd = "./sas3ircu %d display | grep 'vr1' -B 2 | grep 'Volume ID' | \
+                   awk '{print $4}'" % self.controller
+        volume_id = int(process.system_output(cmd, shell=True))
+        cmd = "./sas3ircu %d constchk %d noprompt" \
+            % (self.controller, volume_id)
+        if process.system(cmd, ignore_status=True, shell=True) != 0:
+            self.fail("Failed to start CC on raid array VR1")
+        self.sleepfunction("Consistancy")
+
+    def rebuild(self):
+
+        """
+        This functions waits for the rebuild to complete on a Raid
+        """
+        self.set_online_offline("offline")
+        self.status = "degraded"
+        while self.status != 'Optimal':
+            time.sleep(30)
+            self.status = self.adapter_status().strip("\n")
 
     def set_online_offline(self, state):
 
@@ -144,7 +194,7 @@ class Avago3008(Test):
         output = process.run(cmd, shell=True, ignore_status=True)
         if output.exit_status != 0:
             self.fail("Failed to display the status of the adapter")
-        for i in output.stdout:
+        for i in output.stdout.splitlines():
             if 'Volume state' in i:
                 return i.split()[-1]
 
@@ -190,6 +240,19 @@ class Avago3008(Test):
               % (self.controller, volume_id)
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Failed to delete raid array VR1")
+
+    def basictest(self):
+
+        """
+        This function does only create and delete Raid
+        """
+        self.adapterdetails()
+        self.createraid()
+        self.adapter_status()
+        self.adapterdetails()
+        self.deleteraid()
+        self.adapter_status()
+        self.logir()
 
 
 if __name__ == "__main__":
