@@ -1,0 +1,171 @@
+Test: !mux
+   Backupunit:
+        option: "arcconf BACKUPUNIT"
+        option_args: "RESET"
+   Consistencycheck1:
+        option: "arcconf CONSISTENCYCHECK"
+        option_args: "off"
+   Consistencycheck2:
+        option: "arcconf CONSISTENCYCHECK"
+        option_args: "on"
+   Consistencycheck3:
+        option: "echo y | arcconf CONSISTENCYCHECK"
+        option_args: "PERIOD 10"
+   Copyback1:
+        option: "arcconf COPYBACK"
+        option_args: "OFF"
+   Copyback2:
+        option: "arcconf COPYBACK"
+        option_args: "ON"
+   Errortunable1:
+        option: "arcconf ERRORTUNABLE"
+        option_args: "SETPROFILE 2"
+   Errortunable2:
+        option: "arcconf ERRORTUNABLE"
+        option_args: "CONFIGPARAMS CRC_ERROR_DURATION_SEC 10"
+   Errortunable3:
+        option: "arcconf ERRORTUNABLE"
+        option_args: "GETPARAMS"
+   Errortunable4:
+        option: "echo y | arcconf ERRORTUNABLE"
+        option_args: "GETPARAMS 2 SAVE /tmp/arcconf_cntl.cfg"
+   Expanderlist:
+        option: "arcconf EXPANDERLIST"
+        option_args: ""
+   Failover1:
+        option: "arcconf FAILOVER"
+        option_args: "off"
+   Failover2:
+        option: "arcconf FAILOVER"
+        option_args: "on"
+   Getexception:
+        option: "arcconf GETEXCEPTION"
+        option_args: "AL"
+   Getlogs:
+        option: "arcconf GETLOGS"
+        option_args: "STATS tabular"
+   Getperform1:
+        option: "arcconf GETPERFORM"
+        option_args: "1"
+   Getperform2:
+        option: "arcconf GETPERFORM"
+        option_args: "1 save /tmp/arcconf_cntl.cfg"
+   Getsmartstats1:
+        option: "arcconf GETSMARTSTATS"
+        option_args: ""
+   Getsmartstats2:
+        option: "arcconf GETSMARTSTATS"
+        option_args: "tabular"
+   Getstatus:
+        option: "arcconf GETSTATUS"
+        option_args: ""
+   Getversion:
+        option: "arcconf GETVERSION"
+        option_args: ""
+   List:
+        option: "arcconf LIST"
+        option_args: ""
+   Saveconfig:
+        option: "arcconf SAVECONFIG"
+        option_args: "/tmp/abc.xml /tmp/arcconf_cntl.log"
+   Playconfig:
+        option: "arcconf PLAYCONFIG"
+        option_args: "/tmp/abc.xml /tmp/arcconf_cntl.log"
+   Preservecache:
+        option: "arcconf PRESERVECACHE"
+        option_args: "ENABLE"
+   Rescan:
+        option: "arcconf RESCAN"
+        option_args: ""
+   Resetstatisticscounters:
+        option: "arcconf RESETSTATISTICSCOUNTERS"
+        option_args: ""
+   Seeprom:
+        option: "arcconf SEEPROM"
+        option_args: "UPDATE"
+   Setalarm1:
+        option: "arcconf SETALARM"
+        option_args: "off"
+   Setalarm2:
+        option: "arcconf SETALARM"
+        option_args: "on"
+   Setalarm3:
+        option: "arcconf SETALARM"
+        option_args: "test"
+   Setbiosparams1:
+        option: "echo y | arcconf SETBIOSPARAMS"
+        option_args: "BIOSHALTONMISSINGDRIVECOUNT 3"
+   Setbiosparams2:
+        option: "echo y | arcconf SETBIOSPARAMS"
+        option_args: "DISPLAYPDONPOST enable"
+   Setbiosparams3:
+        option: "echo y | arcconf SETBIOSPARAMS"
+        option_args: "RUNTIMEBIOS enable"
+   Setbiosparams4:
+        option: "echo y | arcconf SETBIOSPARAMS"
+        option_args: "ARRAYBBSSUPPORT disable"
+   Setbiosparams5:
+        option: "echo y | arcconf SETBIOSPARAMS"
+        option_args: "BACKPLANEMODE 0"
+   Setboot:
+        option: "arcconf setboot"
+        option_args: "enable"
+   Setcontrollermode1:
+        option: "arcconf SETCONTROLLERMODE"
+        option_args: "1"
+   Setcontrollermode2:
+        option: "arcconf SETCONTROLLERMODE"
+        option_args: "2"
+   Setcontrollermode3:
+        option: "arcconf SETCONTROLLERMODE"
+        option_args: "3"
+   Setcontrollermode4:
+        option: "arcconf SETCONTROLLERMODE"
+        option_args: "4"
+   Setcontrollermode5:
+        option: "arcconf SETCONTROLLERMODE"
+        option_args: "5"
+   Setcontrollermode6:
+        option: "arcconf SETCONTROLLERMODE"
+        option_args: "0"
+   Setcustommode:
+        option: "arcconf setcustommode"
+        option_args: "ENABLE IOSORT DISABLE INSLRU"
+   Setncq1:
+        option: "arcconf setncq"
+        option_args: "disable"
+   Setncq2:
+        option: "arcconf setncq"
+        option_args: "enable"
+   Setncq3:
+        option: "arcconf setncq"
+        option_args: "disable"
+   Setperform1:
+        option: "arcconf setperform"
+        option_args: "2"
+   Setperform2:
+        option: "arcconf setperform"
+        option_args: "3"
+   Setperform3:
+        option: "arcconf setperform"
+        option_args: "4"
+   Setperform4:
+        option: "arcconf setperform"
+        option_args: "1"
+   Setstatdatacollection1:
+        option: "arcconf SETSTATSDATACOLLECTION"
+        option_args: "disable"
+   Setstatdatacollection2:
+        option: "arcconf SETSTATSDATACOLLECTION"
+        option_args: "enable"
+   verifywrite1:
+        option: "arcconf verifywrite"
+        option_args: "disable"
+   verifywrite2:
+        option: "arcconf verifywrite"
+        option_args: "enable"
+parameters:
+    crtl_no: "1"
+    pci_id: "9005:028d:9005:0557"
+    http_path: "http://9.47.67.137/repo/firmware/RAID/arcconf/tool/"
+    tool_name: "Arcconf-2.02-22404.ppc64el"
