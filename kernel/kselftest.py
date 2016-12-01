@@ -54,11 +54,11 @@ class kselftest(Test):
                  'glibc-static', 'libcap-ng', 'libcap-ng-devel', 'libcap1', 'libcap1-devel']
         cdeps = ['git', 'popt', 'popt-static', 'glibc', 'glibc-devel',
                  'glibc-static', 'libcap-ng', 'libcap-ng-devel', 'libcap', 'libcap-devel']
-        if 'ubuntu' in detected_distro.name:
+        if 'Ubuntu' in detected_distro.name:
             deps = deps + udeps
         elif 'redhat' in detected_distro.name:
             deps = deps + rdeps
-        elif 'sles' in detected_distro.name:
+        elif 'SuSE' in detected_distro.name:
             deps = deps + sdeps
         elif 'centos' in detected_distro.name:
             deps = deps + cdeps
