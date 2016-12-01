@@ -139,7 +139,6 @@ class Arcconftest(Test):
     def raid_create(self, disk_data, cnt, type_name1, pair):
         """
         function which decides on RAID level
-        TODO 50, 60 and 5EE
         """
         self.log.info(" Raid creation with %s Drives, option %s"
                       % (cnt, type_name1))
@@ -149,6 +148,10 @@ class Arcconftest(Test):
             raid_level = ["1E"]
         elif cnt == 4:
             raid_level = ["10", "5", "6"]
+        elif cnt == 6:
+            raid_level = ["50"]
+        elif cnt == 8:
+            raid_level = ["60"]
 
         for raid_type in raid_level:
             self.raid_exec(type_name1, disk_data, cnt, raid_type, pair)
