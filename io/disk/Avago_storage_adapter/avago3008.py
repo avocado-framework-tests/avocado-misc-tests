@@ -40,15 +40,87 @@ class Avago3008(Test):
         """
 
         self.controller = int(self.params.get('controller', default='0'))
-        self.disk = str(self.params.get('disk'))
+        self.raidlevel = str(self.params.get('raidlevel', default='0'))
+        self.disk = str(self.params.get('disk')).split(" ")
+        self.spare = str(self.params.get('spare'))
+        self.size = int(self.params.get('size', default='max'))
         if not self.disk:
             self.skip("Please provide disks to run the tests")
-        self.disk = self.disk.strip(" ").split(" ")
         self.number_of_disk = len(self.disk)
-        if self.number_of_disk < 2:
-            self.skip("Not enough drives to perform the test")
 
-    def test_adapterlist(self):
+        self.dict_raid = {'raid0': [2, None, None], 'raid1': [2, 2, None],
+                          'raid1e': [3, None, None],
+                          'raid10': [4, None, 'Even']}
+
+        self.value = self.dict_raid[self.raidlevel]
+        if self.number_of_disk < self.value[0]:
+            self.skip("please give enough drives to perform the test")
+
+        if self.value[1] is not None:
+            self.disk = self.disk[0:self.value[1]]
+
+        if self.value[2] == 'Even':
+            if self.number_of_disk % 2 != 0:
+                self.disk = self.disk[:-1]
+        self.raid_disk = " ".join(self.disk).strip(" ")
+
+    def test_run(self):
+
+        """
+        Decides which functions to run for given raid_level
+        """
+
+        cmd = "echo -e 'YES\nNO' | ./sas3ircu %d delete" \
+              % (self.controller)
+        if process.system(cmd, ignore_status=True, shell=True) != 0:
+            self.fail("Unable to clear entire configuration before starting")
+        if self.raidlevel == 'raid0':
+            self.basictest()
+        else:
+            self.extensivetest()
+
+    def basictest(self):
+
+        """
+        This function does only create and delete Raid
+        """
+        self.adapterdetails()
+        self.createraid()
+        self.adapter_status("Volume state")
+        self.adapterdetails()
+        self.deleteraid()
+        self.adapter_status("Volume state")
+        self.logir()
+
+    def extensivetest(self):
+
+        """
+        Lists all the LSI adapters attached to the mahcine
+        :return:
+        """
+
+        self.adapterlist()
+        self.adapterdetails()
+        self.createraid()
+        self.backgroundinit()
+        self.adapterdetails()
+        self.adapter_status("Volume state")
+        self.set_online_offline("offline")
+        self.set_online_offline("online")
+        for _ in range(0, 5):
+            for state in ['offline', 'online']:
+                self.set_online_offline(state)
+                time.sleep(10)
+        if self.spare:
+            self.hotspare()
+        self.rebuild()
+        self.consistcheck()
+        self.deleteraid()
+        self.logir()
+        self.adapterdetails()
+        self.adapter_status("Volume state")
+
+    def adapterlist(self):
 
         """
         Lists all the LSI adapters attached to the mahcine
@@ -58,7 +130,7 @@ class Avago3008(Test):
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Failed to list all the Avogo adapters")
 
-    def test_adapterdetails(self):
+    def adapterdetails(self):
 
         """
         Display controller, volume and physical device info
@@ -68,19 +140,65 @@ class Avago3008(Test):
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Failed to display details of drives and VR vloumes")
 
-    def test_createraid(self):
+    def createraid(self):
 
         """
-        This function creates raid1 array
+        This function creates raid array
         """
+        cmd = "./sas3ircu %d create %s %s %s vr1 noprompt" \
+              % (self.controller, self.raidlevel, self.size, self.raid_disk)
+        if process.system(cmd, ignore_status=True, shell=True) != 0:
+            self.fail("Failed to create raid on the drives")
 
-        if self.number_of_disk >= 2:
-            cmd = "./sas3ircu %d create RAID1 max %s %s vr1 noprompt" \
-                 % (self.controller, self.disk[0], self.disk[1])
-            if process.system(cmd, ignore_status=True, shell=True) != 0:
-                self.fail("Failed to create RAID1 on the drives")
-        else:
-            self.skip("Please provide minimum of two drives")
+    def hotspare(self):
+
+        """
+        This is a helper function to create hot-spare
+        """
+        cmd = "echo -e 'YES\nNO' | ./sas3ircu %d hotspare %s" \
+            % (self.controller, self.spare)
+        if process.system(cmd, ignore_status=True, shell=True) != 0:
+            self.fail("Failed to set hotspare drive")
+
+    def backgroundinit(self):
+
+        """
+        Checks if BGI starts automatically, and if so waits
+        till it is completed
+        """
+        self.sleepfunction()
+
+    def consistcheck(self):
+
+        """
+        This function starts CC on a Raid array
+        """
+        cmd = "./sas3ircu %d constchk %d noprompt" \
+            % (self.controller, self.volumeid())
+        if process.system(cmd, ignore_status=True, shell=True) != 0:
+            self.fail("Failed to start CC on raid array VR1")
+        self.sleepfunction()
+
+    def logir(self):
+
+        """
+        This function stores all the IR logs
+        """
+        cmd = "./sas3ircu %d logir upload" % self.controller
+        if process.system(cmd, ignore_status=True, shell=True) != 0:
+            self.fail("Failed to upload the logs")
+        cmd = "./sas3ircu %d logir clear noprompt" % self.controller
+        if process.system(cmd, ignore_status=True, shell=True) != 0:
+            self.fail("Failed to clear the logs on controller")
+
+    def rebuild(self):
+
+        """
+        This functions waits for the rebuild to complete on a Raid
+        """
+        self.set_online_offline("offline")
+        while self.adapter_status("Volume state").strip("\n") != 'Optimal':
+            time.sleep(30)
 
     def set_online_offline(self, state):
 
@@ -92,42 +210,46 @@ class Avago3008(Test):
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Failed to set drive to %s" % state)
 
-    def test_setoffline(self):
+    def adapter_status(self, var):
 
         """
-        This function set's a drive to offline
+        This is a helper function, to check the status of the adapter
         """
-        self.set_online_offline("offline")
+        cmd = "./sas3ircu %d status" % self.controller
+        output = process.run(cmd, shell=True, ignore_status=True)
+        if output.exit_status != 0:
+            self.fail("Failed to display the status of the adapter")
+        for i in output.stdout.splitlines():
+            if var in i:
+                return i.split(":")[-1].strip(" ").strip("\n")
 
-    def test_setonline(self):
-
-        """
-        This function set's a drive to online
-        """
-        self.set_online_offline("online")
-
-    def test_toggle_online_offline(self):
-
-        """
-        This function, toggles the state of the drive b/w online/offline
-        """
-        for _ in range(0, 5):
-            for state in ['offline', 'online']:
-                self.set_online_offline(state)
-                time.sleep(10)
-
-    def test_hotspare(self):
+    def deleteraid(self):
 
         """
-        This function creates a HotSpare
+        This function deletes raid array
         """
-        if self.number_of_disk > 2:
-            cmd = "echo -e 'YES\nNO' | ./sas3ircu %d hotspare %s" \
-                 % (self.controller, self.disk[2])
-            if process.system(cmd, ignore_status=True, shell=True) != 0:
-                self.fail("Failed to set hotspare drive")
-        else:
-            self.fail("Insufficient number of disk")
+        cmd = "echo -e 'YES\nNO' | ./sas3ircu %d deletevolume %d" \
+              % (self.controller, self.volumeid())
+        if process.system(cmd, ignore_status=True, shell=True) != 0:
+            self.fail("Failed to delete raid array VR1")
+
+    def volumeid(self):
+
+        """
+        This function returns volume ID of the IR volume
+        """
+        cmd = "./sas3ircu %d display | grep 'vr1' -B 2 | grep 'Volume ID' | \
+               awk '{print $4}'" % self.controller
+        volume_id = int(process.system_output(cmd, shell=True))
+        return volume_id
+
+    def sleepfunction(self):
+
+        """
+        This function waits, till the current operation is complete
+        """
+        while self.adapter_status("Current operation") != 'None':
+            time.sleep(10)
 
 
 if __name__ == "__main__":
