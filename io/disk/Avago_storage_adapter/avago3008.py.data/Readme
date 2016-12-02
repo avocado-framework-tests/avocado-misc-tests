@@ -1,15 +1,11 @@
 This scripts runs most of the test for the LSI-3008 adapter.
-
 Values to be passed in YMAL file:
 
 Controller ID of the adapter, for which these tests will be executed.
-
 Disks bay ID. i.e., both enclosure ID and slot ID, as shown below.
 en:sn, where en --> enclosure ID, sn --> slot ID
-
 Spare: Give the enclosureID:slotID of the disk, which you want to be as,
 hot-spare.
-
 Size: Size of the raid array you want to create, default it will be max
 
 Please make sure that you place the Avago tool(SAS3IRCU) in the same location,
