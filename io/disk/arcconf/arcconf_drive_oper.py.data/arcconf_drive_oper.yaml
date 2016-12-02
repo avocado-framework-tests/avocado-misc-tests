@@ -1,0 +1,54 @@
+Test: !mux
+   Atapassword1:
+        option: "arcconf ATAPASSWORD"
+        option_args: "SET password"
+        option_args2: ""
+   Atapassword2:
+        option: "arcconf ATAPASSWORD"
+        option_args: "ERASE password"
+        option_args2: ""
+   Identify:
+        option: "arcconf IDENTIFY"
+        option_args: "device"
+        option_args2: ""
+   Phyerrorlog:
+        option: "arcconf PHYERRORLOG"
+        option_args: "device"
+        option_args2: ""
+   Setcache:
+        option: "echo y | arcconf setcache"
+        option_args: "device"
+        option_args2: "wt"
+   Setphy1:
+        option: "arcconf setphy"
+        option_args: "MAXSASPHYLINKRATE 12"
+        option_args2: ""
+   Setphy2:
+        option: "arcconf setphy"
+        option_args: "MAXSASPHYLINKRATE 6"
+        option_args2: ""
+   Setname:
+        option: "arcconf setname"
+        option_args: "logicaldrive"
+        option_args2: "arcconf_drive"
+   Setboot:
+        option: "arcconf setboot"
+        option_args: "logicaldrive"
+        option_args2: ""
+   Setstate1:
+        option: "arcconf setstate"
+        option_args: "device"
+        option_args2: "DDD"
+   Setstate2:
+        option: "arcconf setstate"
+        option_args: "device"
+        option_args2: "RDY"
+parameters:
+    crtl_no: "1"
+    channel_no: "0"
+    disk_no: "1, 2, 3"
+    pci_id: "9005:028d:9005:0557"
+    logicaldrive: "0"
+    diskoverwrite: "Y"
+    http_path: "http://9.47.67.137/repo/firmware/RAID/arcconf/tool/"
+    tool_name: "Arcconf-2.02-22404.ppc64el"
