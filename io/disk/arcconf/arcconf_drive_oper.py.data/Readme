@@ -1,0 +1,13 @@
+arcconf - Command line interface to configure PMC-Sierra
+(Microsemi) Controllers.
+
+arcconf_drive_oper.py covers arcconf functionality 
+specific to physical and logical drive settings.
+ 
+Note:
+    1. supported controllers pci_ids can be entered 
+       seperated by ",".
+    2. TODO: IMAGEUPDATE, SETPOWER, UNINIT 
+    3. Irrepsective of number of disks specified at yaml,
+       Script picks only the first two disks for test 
+       optimization.
