@@ -1,0 +1,6 @@
+This scripts set values for different adapter features.
+
+Values to be provided in yaml file:
+
+contorller ID: Specify the controller ID for which you want
+run this script
