@@ -1,0 +1,20 @@
+Test: !mux
+    first:
+        bonding_mode: "0"
+    second:
+        bonding_mode: "1"
+    third:
+        bonding_mode: "2"
+    fourth:
+        bonding_mode: "3"
+    fifth:
+        bonding_mode: "4"
+    sixth:
+        bonding_mode: "5"
+    seventh:
+        bonding_mode: "6"
+host_interfaces: ""
+peerip: ""
+peer_interfaces: ""
+bondname: "bond13"
+username: "root"
