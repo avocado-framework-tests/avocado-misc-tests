@@ -88,7 +88,18 @@ class Arcconftest(Test):
         cmd = "arcconf getconfig %s AD" % self.crtl_no
         self.check_pass(cmd, "Failed to display PMC controller details")
 
-        if "CONFIG" in self.option:
+        if "SETCONFIG" in self.option:
+            # reset the config only if no OS drive found
+            cmd = "lsscsi  | grep LogicalDrv | awk \'{print $7}\'"
+            drive = self.cmdop_list(cmd)
+            if drive != "":
+                cmd = "df -h /boot | grep %s" % drive
+                if process.system(cmd, timeout=300, ignore_status=True,
+                                  shell=True) != 0:
+                    self.log.info("Hello")
+                    cmd = "%s %s %s" % (self.option, self.crtl_no,
+                                        self.option_args)
+        elif "CONFIG" in self.option or "SAVESUPPORTARCHIVE" in self.option:
             cmd = "%s %s" % (self.option, self.option_args)
         else:
             cmd = "%s %s %s" % (self.option, self.crtl_no, self.option_args)
@@ -98,7 +109,8 @@ class Arcconftest(Test):
         """
         Function returns the output of a command
         """
-        val = process.run(cmd, shell=True, allow_output_check='stdout')
+        val = process.run(cmd, shell=True, ignore_status=True,
+                          allow_output_check='stdout')
         if val.exit_status:
             self.fail("cmd %s Failed" % (cmd))
         return val.stdout.rstrip()
