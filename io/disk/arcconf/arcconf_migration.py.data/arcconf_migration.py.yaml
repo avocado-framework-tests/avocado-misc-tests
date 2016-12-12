@@ -1,0 +1,42 @@
+Test: !mux
+   Migrating5:
+        initial_raid: "5"
+        migrate_raid: "6"
+        disk_initial: "3"
+        disk_migrated: "4"
+        spare_drive: ""
+   Migrating6:
+        initial_raid: "6"
+        migrate_raid: "5"
+        disk_initial: "4"
+        disk_migrated: "4"
+        spare_drive: ""
+   Migration0:
+        initial_raid: "0"
+        migrate_raid: "5"
+        disk_initial: "2"
+        disk_migrated: "3"
+        spare_drive: ""
+   Migration1:
+        initial_raid: "1"
+        migrate_raid: "5"
+        disk_initial: "2"
+        disk_migrated: "3"
+        spare_drive: "3"
+   Spare_rebuild:
+        initial_raid: "1"
+        migrate_raid: "5"
+        disk_initial: "2"
+        disk_migrated: "3"
+        spare_drive: "3"
+parameters:
+    crtl_no: "1"
+    channel_no: "0"
+    disk_no: "0, 1, 2, 3"
+    pci_id: "9005:028d:9005:0557"
+    logicaldrive: "0"
+    diskoverwrite: "Y"
+    disk_size: "100"
+    migration_sleep: "60"
+    http_path: "http://9.47.67.137/repo/firmware/RAID/arcconf/tool/"
+    tool_name: "Arcconf-2.02-22404.ppc64el"
