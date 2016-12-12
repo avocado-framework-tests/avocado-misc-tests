@@ -1,4 +1,10 @@
 Test: !mux
+   setconfig:
+        option: "echo y | arcconf SETCONFIG"
+        option_args: "Default"
+   CPLD:
+        option: "echo y | arcconf CPLD"
+        option_args: "FLASHUPDATE"
    Backupunit:
         option: "arcconf BACKUPUNIT"
         option_args: "RESET"
@@ -71,6 +77,9 @@ Test: !mux
    Playconfig:
         option: "arcconf PLAYCONFIG"
         option_args: "/tmp/abc.xml /tmp/arcconf_cntl.log"
+   savesupportconfig:
+        option: "echo y | arcconf SAVESUPPORTARCHIVE"
+        option_args: "/tmp/"
    Preservecache:
         option: "arcconf PRESERVECACHE"
         option_args: "ENABLE"
@@ -164,6 +173,9 @@ Test: !mux
    verifywrite2:
         option: "arcconf verifywrite"
         option_args: "enable"
+   setpower:
+        option: "arcconf setpower"
+        option_args: "spinup 5 11"
 parameters:
     crtl_no: "1"
     pci_id: "9005:028d:9005:0557"
