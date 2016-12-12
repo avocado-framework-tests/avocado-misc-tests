@@ -129,5 +129,6 @@ class MultipathTest(Test):
             shutil.copyfile("%s.bkp" % self.mpath_file, self.mpath_file)
         self.mpath_svc.restart()
 
+
 if __name__ == "__main__":
     main()
