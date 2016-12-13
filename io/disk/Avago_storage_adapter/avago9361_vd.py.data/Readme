@@ -1,0 +1,12 @@
+This scripts all types of raid array supported by this adapter.
+
+This script also creates max-vd(64) and runs all CC related operations.
+
+Values to be provided in yaml file:
+
+contorller ID: Specify the controller ID for which you want
+run this script
+
+raid_level: Specify the raid level that you want run test cases.
+
+disk: specify the disk on which tests need to be run.
