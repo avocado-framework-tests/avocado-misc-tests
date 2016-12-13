@@ -1,0 +1,11 @@
+This scripts creates all possible Raid arrays supported by the adapter.
+It creates max VD supported per drive group(16 Vd), aslo create max
+VD supported per adapter(64). All CC scenario will be run for applicable
+Raid levels.
+
+Values to be provided in yaml file:
+contorller ID: Specify the controller ID for which you want
+run this script
+raid_level: Specify the raid level that you want run test cases.
+disk: specify the disk on which tests need to be run.
+size: size of the raid array you want create.

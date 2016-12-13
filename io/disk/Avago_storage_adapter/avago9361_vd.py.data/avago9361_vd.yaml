@@ -1,0 +1,21 @@
+cenario:
+    contorller: 0
+    disk: 16:0 16:1 16:2 16:3 16:4 16:5 16:6 16:7
+    size: 10000 
+raid_level: !mux
+    r0:
+        raid_level: r0
+    r1:
+        raid_level: r1
+    r5:
+        raid_level: r5
+    r6:
+        raid_level: r6
+    r00:
+        raid_level: r00
+    r10:
+        raid_level: r10
+    r50:
+        raid_level: r50
+    r60:
+        raid_level: r60
