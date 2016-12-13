@@ -7,5 +7,5 @@ specific to controller settings.
 Note:
     1. supported controllers pci_ids can be entered 
        seperated by ",".
-    2. TODO: ROMPUPDATE, KEY, EXPANDERUPGRADE, 
-       SETMAXCACHE, SETPRIORITY, SMP, UARTLOG
+    2. TODO: KEY, EXPANDERUPGRADE, SETMAXCACHE,
+       SETPRIORITY, SMP, UARTLOG.
