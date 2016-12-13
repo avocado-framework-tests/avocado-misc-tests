@@ -45,8 +45,10 @@ class Arcconftest(Test):
             self.skip("Unable to install lsscsi")
         self.crtl_no = self.params.get('crtl_no')
         self.pci_id = self.params.get('pci_id', default="").split(",")
-        self.http_path = self.params.get('http_path')
+        self.tool_path = self.params.get('tool_path')
         self.tool_name = self.params.get('tool_name')
+        self.firmware_path = self.params.get('firmware_path')
+        self.firmware_name = self.params.get('firmware_name')
         self.option = self.params.get("option")
         self.option_args = self.params.get("option_args")
 
@@ -61,19 +63,24 @@ class Arcconftest(Test):
 
         # check if all the yaml parameters are entered
         if self.crtl_no is '' or self.pci_id is '' or self.tool_name \
-           is '' or self.http_path is '':
+           is '' or self.tool_path is '' or self.firmware_path\
+           is '' or self.firmware_name is '':
             self.skip(" please ensure yaml parameters are not empty")
         elif self.comp(self.pci_id, pci_id_formatted) == 1:
             self.skip(" Test skipped!!, PMC controller not available")
 
+        http_repo1 = "%s%s" % (self.firmware_path, self.firmware_name)
+        self.repo1 = self.fetch_asset(http_repo1, expire='10d')
+        self.repo1 = "%s.ufi" % self.repo1
+
         detected_distro = distro.detect()
         if not smm.check_installed("arcconf"):
             if detected_distro.name == "Ubuntu":
-                http_repo = "%s%s.deb" % (self.http_path, self.tool_name)
+                http_repo = "%s%s.deb" % (self.tool_path, self.tool_name)
                 self.repo = self.fetch_asset(http_repo, expire='10d')
                 cmd = "dpkg -i %s" % self.repo
             else:
-                http_repo = "%s%s.rpm" % (self.http_path, self.tool_name)
+                http_repo = "%s%s.rpm" % (self.tool_path, self.tool_name)
                 self.repo = self.fetch_asset(http_repo, expire='10d')
                 cmd = "rpm -ivh %s" % self.repo
             if process.system(cmd, ignore_status=True, shell=True) == 0:
@@ -96,11 +103,13 @@ class Arcconftest(Test):
                 cmd = "df -h /boot | grep %s" % drive
                 if process.system(cmd, timeout=300, ignore_status=True,
                                   shell=True) != 0:
-                    self.log.info("Hello")
                     cmd = "%s %s %s" % (self.option, self.crtl_no,
                                         self.option_args)
         elif "CONFIG" in self.option or "SAVESUPPORTARCHIVE" in self.option:
             cmd = "%s %s" % (self.option, self.option_args)
+        elif "ROMUPDATE" in self.option:
+            cmd = "%s %s %s %s" % (self.option, self.option_args,
+                                   self.crtl_no, self.repo1)
         else:
             cmd = "%s %s %s" % (self.option, self.crtl_no, self.option_args)
         self.check_pass(cmd, "Failed to run %s" % cmd)
