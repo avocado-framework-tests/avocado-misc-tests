@@ -45,7 +45,7 @@ class Arcconftest(Test):
             self.skip("Unable to install lsscsi")
         self.crtl_no = self.params.get('crtl_no')
         self.pci_id = self.params.get('pci_id', default="").split(",")
-        self.tool_path = self.params.get('tool_path')
+        self.http_path = self.params.get('http_path')
         self.tool_name = self.params.get('tool_name')
         self.firmware_path = self.params.get('firmware_path')
         self.firmware_name = self.params.get('firmware_name')
@@ -63,7 +63,7 @@ class Arcconftest(Test):
 
         # check if all the yaml parameters are entered
         if self.crtl_no is '' or self.pci_id is '' or self.tool_name \
-           is '' or self.tool_path is '' or self.firmware_path\
+           is '' or self.http_path is '' or self.firmware_path\
            is '' or self.firmware_name is '':
             self.skip(" please ensure yaml parameters are not empty")
         elif self.comp(self.pci_id, pci_id_formatted) == 1:
@@ -76,11 +76,11 @@ class Arcconftest(Test):
         detected_distro = distro.detect()
         if not smm.check_installed("arcconf"):
             if detected_distro.name == "Ubuntu":
-                http_repo = "%s%s.deb" % (self.tool_path, self.tool_name)
+                http_repo = "%s%s.deb" % (self.http_path, self.tool_name)
                 self.repo = self.fetch_asset(http_repo, expire='10d')
                 cmd = "dpkg -i %s" % self.repo
             else:
-                http_repo = "%s%s.rpm" % (self.tool_path, self.tool_name)
+                http_repo = "%s%s.rpm" % (self.http_path, self.tool_name)
                 self.repo = self.fetch_asset(http_repo, expire='10d')
                 cmd = "rpm -ivh %s" % self.repo
             if process.system(cmd, ignore_status=True, shell=True) == 0:
