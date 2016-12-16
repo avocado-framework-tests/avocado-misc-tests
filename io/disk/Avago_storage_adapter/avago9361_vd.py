@@ -40,6 +40,9 @@ class Avago9361(Test):
         self.disk = str(self.params.get('disk')).split(" ")
         self.raid_level = str(self.params.get('raid_level', default='0'))
         self.size = str(self.params.get('size', default='all'))
+        self.on_off = str(self.params.get('on_off'))
+        if not self.on_off:
+            self.skip("Online/Offline test needs a drive to operate on")
         if not self.disk:
             self.skip("Please provide disk to perform VD operations")
         self.dict_raid = {'r0': [1, None], 'r1': [2, 'Multiple2'],
@@ -61,24 +64,23 @@ class Avago9361(Test):
         elif self.raid_level == 'r50' or self.raid_level == 'r60':
             self.pdperarray = 3
         if self.raid_level == 'r0':
-            if 'cc' in str(self.name):
-                self.skip("CC not applicable for Raid0")
+            if 'cc' in str(self.name) or 'offline' in str(self.name):
+                self.skip("Test not applicable for Raid0")
+        self.write_policy = ['WT', 'WB', 'AWB']
+        self.read_policy = ['nora', 'ra']
+        self.io_policy = ['direct', 'cached']
+        self.stripe = [64, 128, 256, 512, 1024]
 
     def test_createall(self):
 
         """
         Function to create different raid level
         """
-        write_policy = ['WT', 'WB', 'AWB']
-        read_policy = ['nora', 'ra']
-        io_policy = ['direct', 'cached']
-        strip = [64, 128, 256, 512, 1024]
-        for write in write_policy:
-            for read in read_policy:
-                for iopolicy in io_policy:
-                    for stripe in strip:
+        for write in self.write_policy:
+            for read in self.read_policy:
+                for iopolicy in self.io_policy:
+                    for stripe in self.stripe:
                         self.vd_create(write, read, iopolicy, stripe)
-                        self.vd_details()
                         self.vd_delete()
 
     def test_maxvd(self):
@@ -88,7 +90,10 @@ class Avago9361(Test):
         """
         for _ in range(1, 17):
             self.vd_create('WT', 'nora', 'direct', 1024)
-        self.vd_details()
+        for write in self.write_policy:
+            for read in self.read_policy:
+                for iopolicy in self.io_policy:
+                    self.change_vdpolicy(write, read, iopolicy)
         self.vd_delete()
         if self.raid_level == 'r0':
             for disk in range(0, 3):
@@ -96,8 +101,16 @@ class Avago9361(Test):
                     self.raid_disk = self.disk[disk]
                     for _ in range(1, 17):
                         self.vd_create('WT', 'nora', 'direct', 512)
-                    self.vd_details()
                 self.vd_delete()
+
+    def test_init(self):
+
+        """
+        Test case to start Fast and Full init on VD
+        """
+        self.vd_create('WB', 'ra', 'cached', 256)
+        self.full_init()
+        self.vd_delete()
 
     def test_cc(self):
 
@@ -105,9 +118,54 @@ class Avago9361(Test):
         Function to do consistency operations on VD
         """
         self.vd_create('WT', 'nora', 'direct', 256)
-        self.vd_details()
+        self.full_init()
         self.cc_operations()
         self.vd_delete()
+
+    def test_jbod(self):
+
+        """
+        Function to format a drive to JBOD
+        """
+        cmd = "./storcli64 /c%d set jbod=on" % self.controller
+        self.check_pass(cmd, "Failed to set JBOD on")
+        cmd = "./storcli64 /c%d show jbod" % self.controller
+        self.check_pass(cmd, "Failed to show the JBOD status")
+        cmd = "./storcli64 /c%d/eall/sall set jbod" % self.controller
+        self.check_pass(cmd, "Failed to convert the drives to JBOD")
+        cmd = "./storcli64 /c%d show " % self.controller
+        self.check_pass(cmd, "Failed to show the adapter details")
+        cmd = "./storcli64 /c0/eall/sall set good force"
+        self.check_pass(cmd, "Failed to set JBOD drives to good")
+
+    def test_online_offline(self):
+
+        """
+        Test to run drive Online/Offline
+        """
+        self.vd_create('WT', 'nora', 'direct', 256)
+        for _ in range(0, 5):
+            for state in ['offline', 'online']:
+                self.set_online_offline(state)
+                time.sleep(10)
+        self.vd_delete()
+
+    def set_online_offline(self, state):
+
+        """
+        Helper function to set drives online and offline
+        """
+        cmd = "./storcli64 /c%d/%s set %s" % (self.controller, self.on_off,
+                                              state)
+        self.check_pass(cmd, "Failed to set drive to %s state" % state)
+
+    def jbod_show(self):
+
+        """
+        Helper function to show JBOD details
+        """
+        cmd = "./storcli64 /c%d show jbod" % self.controller
+        self.check_pass(cmd, "Failed to show the JBOD status")
 
     def vd_details(self):
 
@@ -142,6 +200,7 @@ class Avago9361(Test):
                    strip=%d" % (self.controller, self.raid_level, self.size,
                                 self.raid_disk, write, read, iopolicy, stripe)
             self.check_pass(cmd, "Failed to create raid")
+        self.vd_details()
 
     def check_pass(self, cmd, errmsg):
 
@@ -151,12 +210,11 @@ class Avago9361(Test):
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail(errmsg)
 
-    def cc_showprogress(self):
+    def showprogress(self, cmd):
 
         """
-        Helper function to see the CC progress
+        Helper function to see progress of a given/specified operation
         """
-        cmd = "./storcli64 /c%d/v0 show cc" % self.controller
         output = process.run(cmd, ignore_status=True, shell=True)
         if output.exit_status != 0:
             self.fail("Failed to display the CC progress")
@@ -172,8 +230,9 @@ class Avago9361(Test):
         """
         for state in ['start', 'stop', 'start', 'pause', 'resume']:
             self.cc_state(state)
-            self.cc_showprogress()
-        while self.cc_showprogress() is True:
+            cmd = "./storcli64 /c%d/v0 show cc" % self.controller
+            self.showprogress(cmd)
+        while self.showprogress(cmd) is True:
             time.sleep(30)
 
     def cc_state(self, state):
@@ -181,9 +240,37 @@ class Avago9361(Test):
         """
         Helper function for all CC operations
         """
-        cmd = "./storcli64 /c%d/v0 %s cc force" % (self.controller, state)
+        if state == 'start':
+            cmd = "./storcli64 /c%d/v0 %s cc force" % (self.controller, state)
+        else:
+            cmd = "./storcli64 /c%d/v0 %s cc" % (self.controller, state)
         self.check_pass(cmd, "Failed to %s CC" % state)
         time.sleep(10)
+
+    def full_init(self):
+
+        """
+        Helper function to start Fast/Full init
+        """
+        cmd = "./storcli64 /c%d/vall start init full" % self.controller
+        self.check_pass(cmd, "Failed to start init")
+        cmd = "./storcli64 /c%d/vall show init" % self.controller
+        self.showprogress(cmd)
+        while self.showprogress(cmd) is True:
+            time.sleep(30)
+
+    def change_vdpolicy(self, write, read, iopolicy):
+
+        """
+        Helper function to change the VD policy
+        """
+        cmd = "./storcli64 /c%d/vall set wrcache=%s" % (self.controller, write)
+        self.check_pass(cmd, "Failed to change the write policy")
+        cmd = "./storcli64 /c%d/vall set rdcache=%s" % (self.controller, read)
+        self.check_pass(cmd, "Failed to change the read policy")
+        cmd = "./storcli64 /c%d/vall set iopolicy=%s" % (self.controller,
+                                                         iopolicy)
+        self.check_pass(cmd, "Failed to change the IO policy")
 
 
 if __name__ == "__main__":

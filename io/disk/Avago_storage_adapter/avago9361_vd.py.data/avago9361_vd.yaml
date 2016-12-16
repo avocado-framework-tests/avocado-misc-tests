@@ -2,6 +2,7 @@ cenario:
     contorller: 0
     disk: 16:0 16:1 16:2 16:3 16:4 16:5 16:6 16:7
     size: 10000 
+    on_off: e16/s0
 raid_level: !mux
     r0:
         raid_level: r0
