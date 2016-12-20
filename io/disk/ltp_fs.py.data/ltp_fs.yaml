@@ -1,0 +1,16 @@
+general:
+    disk: ''
+    script: 'runltp'
+    mount_point: ''
+    args: !mux
+        test1:
+            args: '-s fs_di'
+        test2:
+            args: '-s fs_inod'
+    fs: !mux
+        ext4:
+            fs: 'ext4'
+        ext3:
+           fs: 'ext3'
+        ext2:
+            fs: 'ext2'
