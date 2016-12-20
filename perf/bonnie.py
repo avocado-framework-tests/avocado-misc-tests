@@ -18,9 +18,11 @@
 #   copyright 2006 Google
 #   https://github.com/autotest/autotest-client-tests/tree/master/bonnie
 
+"""
+Bonnie test
+"""
 
 import os
-
 from avocado import Test
 from avocado import main
 from avocado.utils import archive
@@ -36,12 +38,20 @@ class Bonnie(Test):
     """
 
     def setUp(self):
+
         """
         Build bonnie++
         Source:
-         http://www.coker.com.au/bonnie++/experimental/bonnie++-1.96.tgz
+         http://www.coker.com.au/bonnie++/experimental/bonnie++-1.03e.tgz
         """
-        tarball = self.fetch_asset('http://www.coker.com.au/bonnie++/experimental/bonnie++-1.96.tgz')
+
+        self.scratch_dir = self.params.get('scratch-dir', default=self.srcdir)
+        self.uid_to_use = self.params.get('uid-to-use', default=None)
+        self.number_to_stat = self.params.get('number-to-stat', default=2048)
+        self.data_size = self.params.get('data_size_to_pass', default=0)
+
+        tarball = self.fetch_asset('http://www.coker.com.au/bonnie++/'
+                                   'bonnie++-1.03e.tgz', expire='7d')
         archive.extract(tarball, self.srcdir)
         self.srcdir = os.path.join(self.srcdir,
                                    os.path.basename(tarball.split('.tgz')[0]))
@@ -50,21 +60,20 @@ class Bonnie(Test):
         build.make(self.srcdir)
 
     def test(self):
+
         """
         Run 'bonnie' with its arguments
         """
-        scratch_dir = self.params.get('scratch-dir', default=self.srcdir)
-        uid_to_use = self.params.get('uid-to-use', default=None)
-        number_to_stat = self.params.get('number-to-stat', default=2048)
-
         args = []
-        args.append('-d %s' % scratch_dir)
-        args.append('-n %s' % number_to_stat)
-        if uid_to_use is not None:
-            args.append('-u %s' % uid_to_use)
+        args.append('-d %s' % self.scratch_dir)
+        args.append('-n %s' % self.number_to_stat)
+        args.append('-s %s' % self.data_size)
+        if self.uid_to_use:
+            args.append('-u %s' % self.uid_to_use)
 
         cmd = ('%s/bonnie++ %s' % (self.srcdir, " ".join(args)))
-        process.run(cmd)
+        if process.system(cmd, shell=True, ignore_status=True):
+            self.fail("test failed")
 
 
 if __name__ == "__main__":
