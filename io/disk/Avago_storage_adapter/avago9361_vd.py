@@ -41,6 +41,11 @@ class Avago9361(Test):
         self.raid_level = str(self.params.get('raid_level', default='0'))
         self.size = str(self.params.get('size', default='all'))
         self.on_off = str(self.params.get('on_off'))
+        self.hotspare = str(self.params.get('hotspare'))
+        self.copyback = self.on_off.replace("e", "").replace("s", "").replace(
+            "/", ":")
+        if not self.hotspare:
+            self.skip("Hotspare test needs a drive to create/test hotspare")
         if not self.on_off:
             self.skip("Online/Offline test needs a drive to operate on")
         if not self.disk:
@@ -64,12 +69,13 @@ class Avago9361(Test):
         elif self.raid_level == 'r50' or self.raid_level == 'r60':
             self.pdperarray = 3
         if self.raid_level == 'r0':
-            if 'cc' in str(self.name) or 'offline' in str(self.name):
+            if str(self.name) in ['cc', 'offline', 'rebuild']:
                 self.skip("Test not applicable for Raid0")
         self.write_policy = ['WT', 'WB', 'AWB']
         self.read_policy = ['nora', 'ra']
         self.io_policy = ['direct', 'cached']
         self.stripe = [64, 128, 256, 512, 1024]
+        self.state = ['start', 'stop', 'start', 'pause', 'resume']
 
     def test_createall(self):
 
@@ -150,6 +156,96 @@ class Avago9361(Test):
                 time.sleep(10)
         self.vd_delete()
 
+    def test_ghs_dhs(self):
+
+        """
+        Test to create Global hot spare and Dedicated hot spare
+        """
+        self.vd_create('WT', 'nora', 'direct', 512)
+        for spare in ['', 'DGs=0']:
+            cmd = "./storcli64 /c%d/%s add hotsparedrive %s" % (
+                self.controller, self.hotspare, spare)
+            self.check_pass(cmd, "Failed to create")
+            self.set_online_offline('offline')
+            self.rebuild('progress', self.hotspare)
+            self.copyback_operation()
+            cmd = "./storcli64 /c%d/%s delete hotsparedrive" % (
+                self.controller, self.hotspare)
+            self.check_pass(cmd, "Failed to delete hotsparedrive")
+        self.vd_delete()
+
+    def copyback_state(self, state):
+
+        """
+        Helper function to run copyback test
+        """
+        if state == 'start':
+            cmd = "./storcli64 /c%d/%s start copyback target=%s" \
+                   % (self.controller, self.hotspare, self.copyback)
+        else:
+            cmd = "./storcli64 /c%d/%s %s copyback" % (self.controller,
+                                                       self.on_off, state)
+        self.check_pass(cmd, "Failed to %s copyback" % state)
+
+    def copyback_operation(self):
+
+        """
+        Function to run copyback operations
+        """
+        for state in self.state:
+            self.copyback_state(state)
+            cmd = "./storcli64 /c%d/%s show copyback" % (self.controller,
+                                                         self.on_off)
+            self.showprogress(cmd)
+        self.sleep_function(cmd)
+
+    def test_rebuild(self):
+
+        """
+        Function to handle rebuild scenario
+        """
+        self.vd_create('WB', 'nora', 'direct', 256)
+        self.set_online_offline('offline')
+        self.rebuild('operations')
+        self.vd_delete()
+
+    def rebuild(self, perform, disk=None):
+
+        """
+        Helper function of all types of rebuild operations
+        """
+        if perform.lower() == "operations":
+            for state in self.state:
+                self.rebuild_state(state)
+                cmd = "./storcli64 /c%d/%s show rebuild" % (self.controller,
+                                                            self.on_off)
+                self.showprogress(cmd)
+            self.sleep_function(cmd)
+        elif perform.lower() == "progress":
+            cmd = "./storcli64 /c%d/%s show rebuild" % (self.controller,
+                                                        disk)
+            self.showprogress(cmd)
+            self.sleep_function(cmd)
+
+    def sleep_function(self, cmd):
+
+        """
+        Helper function for scrit to wait, till the background operation is
+        complete
+        """
+        while self.showprogress(cmd):
+            time.sleep(30)
+
+    def rebuild_state(self, state):
+
+        """
+        Helper function for all CC operations
+        """
+        cmd = "./storcli64 /c%d/%s %s rebuild" % (self.controller,
+                                                  self.on_off, state)
+        self.check_pass(cmd, "Failed to %s Rebuild" % state)
+        time.sleep(10)
+
     def set_online_offline(self, state):
 
         """
@@ -217,7 +313,7 @@ class Avago9361(Test):
         """
         output = process.run(cmd, ignore_status=True, shell=True)
         if output.exit_status != 0:
-            self.fail("Failed to display the CC progress")
+            self.fail("Failed to display the progress")
         for lines in output.stdout.splitlines():
             for times in ['Hour', 'Minute', 'Second']:
                 if times in lines:
@@ -228,12 +324,11 @@ class Avago9361(Test):
         """
         Helper function CC operations
         """
-        for state in ['start', 'stop', 'start', 'pause', 'resume']:
+        for state in self.state:
             self.cc_state(state)
             cmd = "./storcli64 /c%d/v0 show cc" % self.controller
             self.showprogress(cmd)
-        while self.showprogress(cmd) is True:
-            time.sleep(30)
+        self.sleep_function(cmd)
 
     def cc_state(self, state):
 
@@ -256,8 +351,7 @@ class Avago9361(Test):
         self.check_pass(cmd, "Failed to start init")
         cmd = "./storcli64 /c%d/vall show init" % self.controller
         self.showprogress(cmd)
-        while self.showprogress(cmd) is True:
-            time.sleep(30)
+        self.sleep_function(cmd)
 
     def change_vdpolicy(self, write, read, iopolicy):
 
