@@ -2,7 +2,7 @@ This scripts creates all possible Raid arrays supported by the adapter.
 It creates max VD supported per drive group(16 Vd), also create max
 VD supported per adapter(64). All CC scenario will be run for applicable
 Raid levels. This script is enhanced to run JBOD and Online and offline,
-GHS, DHS, Rebuild and copyback scenarios. Also this script is capable 
+GHS, DHS, Rebuild, PR and copyback scenarios. Also this script is capable 
 of changing VD policies.
 
 Values to be provided in yaml file:
