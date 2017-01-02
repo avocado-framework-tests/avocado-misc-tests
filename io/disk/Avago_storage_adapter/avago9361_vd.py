@@ -209,6 +209,15 @@ class Avago9361(Test):
         self.rebuild('operations')
         self.vd_delete()
 
+    def test_patrolread(self):
+
+        """
+        Function to handle PR operations
+        """
+        self.vd_create('WT', 'nora', 'direct', 256)
+        self.pr_operations()
+        self.vd_delete()
+
     def rebuild(self, perform, disk=None):
 
         """
@@ -340,6 +349,25 @@ class Avago9361(Test):
         else:
             cmd = "./storcli64 /c%d/v0 %s cc" % (self.controller, state)
         self.check_pass(cmd, "Failed to %s CC" % state)
+        time.sleep(10)
+
+    def pr_operations(self):
+
+        """
+        Helper function for PR operations
+        """
+        for state in self.state:
+            self.pr_state(state)
+            cmd = "./storcli64 /c%d show patrolread" % self.controller
+            self.check_pass(cmd, "Failed to show the PR progress")
+
+    def pr_state(self, state):
+
+        """
+        Helper function for all PR operatoins
+        """
+        cmd = "./storcli64 /c%d %s patrolread" % (self.controller, state)
+        self.check_pass(cmd, "Failed to %s PR" % state)
         time.sleep(10)
 
     def full_init(self):
