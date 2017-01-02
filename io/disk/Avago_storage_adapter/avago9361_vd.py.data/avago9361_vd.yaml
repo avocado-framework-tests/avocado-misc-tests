@@ -1,9 +1,10 @@
 cenario:
     controller: 0
-    disk: 16:5 16:6
+    disk: 16:5
     size: 10000 
     on_off: e16/s6
     hotspare: e16/s7
+    disk_add: 16:6 16:7 16:4
 raid_level: !mux
     r0:
         raid_level: r0

@@ -44,6 +44,7 @@ class Avago9361(Test):
         self.hotspare = str(self.params.get('hotspare'))
         self.copyback = self.on_off.replace("e", "").replace("s", "").replace(
             "/", ":")
+        self.add_disk = str(self.params.get('add_disk')).split(" ")
         if not self.hotspare:
             self.skip("Hotspare test needs a drive to create/test hotspare")
         if not self.on_off:
@@ -71,6 +72,9 @@ class Avago9361(Test):
         if self.raid_level == 'r0':
             if str(self.name) in ['cc', 'offline', 'rebuild']:
                 self.skip("Test not applicable for Raid0")
+        if str(self.name) in 'migrate':
+            if self.raid_level != 'r0':
+                self.skip("Script runs for raid0")
         self.write_policy = ['WT', 'WB', 'AWB']
         self.read_policy = ['nora', 'ra']
         self.io_policy = ['direct', 'cached']
@@ -216,6 +220,22 @@ class Avago9361(Test):
         """
         self.vd_create('WT', 'nora', 'direct', 256)
         self.pr_operations()
+        self.vd_delete()
+
+    def test_migrate(self):
+
+        """
+        Test case to execute Raid Migration
+        """
+        self.vd_create('WT', 'NORA', 'direct', 256)
+        for level in [1, 5, 6]:
+            cmd = "./storcli64 /c%d/v0 start migrate type=raid%s \
+                   option=add drives=%s" % (self.controller, level,
+                                            self.add_disk.pop())
+            self.check_pass(cmd, "Failed to migrate")
+            cmd = "./storcli64 /c%d/v0 show migrate" % self.controller
+            self.showprogress(cmd)
+            self.sleep_function(cmd)
         self.vd_delete()
 
     def rebuild(self, perform, disk=None):
