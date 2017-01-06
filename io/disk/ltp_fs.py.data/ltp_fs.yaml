@@ -1,0 +1,6 @@
+general:
+    disk: ''
+    script: 'runltp'
+    args: '-s fs_di,-s fs_inod'
+    mount_point: ''
+    fs: ''
