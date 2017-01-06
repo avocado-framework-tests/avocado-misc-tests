@@ -56,7 +56,7 @@ class cpupower(Test):
         initial_governor = self.cpu_freq_path('scaling_governor', self.cpu)
         return (min, max, cur, initial_governor)
 
-    def cpu_freq_path(self, file, cpu_num, path=None):
+    def cpu_freq_path(self, file, cpu_num):
         """
         get cpu_freq values
         :param: file: is filename which data needs to be fetched
