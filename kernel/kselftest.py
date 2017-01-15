@@ -60,7 +60,7 @@ class kselftest(Test):
             deps = deps + rdeps
         elif 'SuSE' in detected_distro.name:
             deps = deps + sdeps
-        elif 'centos' in detected_distro.name:
+        elif detected_distro.name in ['centos', 'fedora']:
             deps = deps + cdeps
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
@@ -74,7 +74,7 @@ class kselftest(Test):
             tarball_base = 'linux-%s.tar.gz' % (version)
             tarball_url = '%s/v%s.x/%s' % (url, version[:1], tarball_base)
             self.log.info('Downloading linux kernel tarball')
-            self.tarball = self.fetch_asset(tarball_url)
+            self.tarball = self.fetch_asset(tarball_url, expire='7d')
             archive.extract(self.tarball, self.srcdir)
             linux_src = 'linux-%s' % (version)
             self.buldir = os.path.join(self.srcdir, linux_src)
