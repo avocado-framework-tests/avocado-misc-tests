@@ -14,6 +14,7 @@
 # Author: Abdul Haleem <abdhalee@linux.vnet.ibm.com>
 
 import os
+import re
 
 from avocado import Test
 from avocado import main
@@ -60,7 +61,7 @@ class kselftest(Test):
             deps = deps + rdeps
         elif 'SuSE' in detected_distro.name:
             deps = deps + sdeps
-        elif 'centos' in detected_distro.name:
+        elif detected_distro.name in ['centos', 'fedora']:
             deps = deps + cdeps
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
@@ -74,7 +75,7 @@ class kselftest(Test):
             tarball_base = 'linux-%s.tar.gz' % (version)
             tarball_url = '%s/v%s.x/%s' % (url, version[:1], tarball_base)
             self.log.info('Downloading linux kernel tarball')
-            self.tarball = self.fetch_asset(tarball_url)
+            self.tarball = self.fetch_asset(tarball_url, expire='7d')
             archive.extract(self.tarball, self.srcdir)
             linux_src = 'linux-%s' % (version)
             self.buldir = os.path.join(self.srcdir, linux_src)
@@ -92,10 +93,19 @@ class kselftest(Test):
         """
         Execute the kernel selftest
         """
+        self.count = 0
         result = build.make(self.srcdir, extra_args='run_tests')
         for line in str(result).splitlines():
             if '[FAIL]' in line:
-                self.fail("Selftest testcase failed, please check the test logs")
+                self.count += 1
+                self.log.info("testcase failed log from build log %s" % line)
+        for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
+            match = re.search(r'selftests:\s+\w+\s+\[FAIL]', line)
+            if match:
+                self.count += 1
+                self.log.info("fail from debug log%s" % match.group(0))
+        if self.count > 0:
+            self.fail("Selftest testcase failed")
 
 
 if __name__ == "__main__":
