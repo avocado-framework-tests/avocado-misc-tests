@@ -14,6 +14,7 @@
 # Author: Abdul Haleem <abdhalee@linux.vnet.ibm.com>
 
 import os
+import re
 
 from avocado import Test
 from avocado import main
@@ -46,22 +47,20 @@ class kselftest(Test):
         smg = SoftwareManager()
         detected_distro = distro.detect()
         deps = ['gcc', 'make', 'automake', 'autoconf']
-        sdeps = ['git-core', 'popt', 'glibc', 'glibc-devel', 'popt-devel',
-                 'libcap1', 'libcap1-devel', 'libcap-ng', 'libcap-ng-devel']
-        udeps = ['git', 'popt', 'build-essential',
-                 'libpopt-dev', 'libpopt0', 'libcap-dev', 'libcap-ng-dev']
-        rdeps = ['git', 'popt', 'popt-static', 'glibc', 'glibc-devel',
-                 'glibc-static', 'libcap-ng', 'libcap-ng-devel', 'libcap1', 'libcap1-devel']
-        cdeps = ['git', 'popt', 'popt-static', 'glibc', 'glibc-devel',
-                 'glibc-static', 'libcap-ng', 'libcap-ng-devel', 'libcap', 'libcap-devel']
+
         if 'Ubuntu' in detected_distro.name:
-            deps = deps + udeps
+            deps.extend(['git-core', 'popt', 'glibc', 'glibc-devel', 'popt-devel',
+                         'libcap1', 'libcap1-devel', 'libcap-ng', 'libcap-ng-devel'])
         elif 'redhat' in detected_distro.name:
-            deps = deps + rdeps
+            deps.extend(['git', 'popt', 'popt-static', 'glibc', 'glibc-devel', 'glibc-static',
+                         'libcap-ng', 'libcap-ng-devel', 'libcap1', 'libcap1-devel'])
         elif 'SuSE' in detected_distro.name:
-            deps = deps + sdeps
-        elif 'centos' in detected_distro.name:
-            deps = deps + cdeps
+            deps.extend(['git-core', 'popt', 'glibc', 'glibc-devel', 'popt-devel',
+                         'libcap1', 'libcap1-devel', 'libcap-ng', 'libcap-ng-devel'])
+        elif detected_distro.name in ['centos', 'fedora']:
+            deps.extend(['git', 'popt', 'popt-static', 'glibc', 'glibc-devel', 'glibc-static',
+                         'libcap-ng', 'libcap-ng-devel', 'libcap', 'libcap-devel'])
+
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
                 self.error(
@@ -74,7 +73,7 @@ class kselftest(Test):
             tarball_base = 'linux-%s.tar.gz' % (version)
             tarball_url = '%s/v%s.x/%s' % (url, version[:1], tarball_base)
             self.log.info('Downloading linux kernel tarball')
-            self.tarball = self.fetch_asset(tarball_url)
+            self.tarball = self.fetch_asset(tarball_url, expire='7d')
             archive.extract(self.tarball, self.srcdir)
             linux_src = 'linux-%s' % (version)
             self.buldir = os.path.join(self.srcdir, linux_src)
@@ -92,10 +91,21 @@ class kselftest(Test):
         """
         Execute the kernel selftest
         """
+        error = False
         result = build.make(self.srcdir, extra_args='run_tests')
         for line in str(result).splitlines():
             if '[FAIL]' in line:
-                self.fail("Selftest testcase failed, please check the test logs")
+                error = True
+                self.log.info("Testcase failed. Log from build: %s" % line)
+        for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
+            match = re.search(r'selftests:\s+\w+\s+\[FAIL]', line)
+            if match:
+                error = True
+                self.log.info("Testcase failed. Log from debug: %s" %
+                              match.group(0))
+
+        if error:
+            self.fail("Testcase failed during selftests")
 
 
 if __name__ == "__main__":
