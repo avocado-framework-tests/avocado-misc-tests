@@ -14,6 +14,7 @@
 # Author: Abdul Haleem <abdhalee@linux.vnet.ibm.com>
 
 import os
+import re
 
 from avocado import Test
 from avocado import main
@@ -90,10 +91,21 @@ class kselftest(Test):
         """
         Execute the kernel selftest
         """
+        error = False
         result = build.make(self.srcdir, extra_args='run_tests')
         for line in str(result).splitlines():
             if '[FAIL]' in line:
-                self.fail("Selftest testcase failed, please check the test logs")
+                error = True
+                self.log.info("Testcase failed. Log from build: %s" % line)
+        for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
+            match = re.search(r'selftests:\s+\w+\s+\[FAIL]', line)
+            if match:
+                error = True
+                self.log.info("Testcase failed. Log from debug: %s" %
+                              match.group(0))
+
+        if error:
+            self.fail("Testcase failed during selftests")
 
 
 if __name__ == "__main__":
