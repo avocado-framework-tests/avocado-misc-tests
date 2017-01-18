@@ -51,13 +51,10 @@ class kselftest(Test):
         if 'Ubuntu' in detected_distro.name:
             deps.extend(['git-core', 'popt', 'glibc', 'glibc-devel', 'popt-devel',
                          'libcap1', 'libcap1-devel', 'libcap-ng', 'libcap-ng-devel'])
-        elif 'redhat' in detected_distro.name:
-            deps.extend(['git', 'popt', 'popt-static', 'glibc', 'glibc-devel', 'glibc-static',
-                         'libcap-ng', 'libcap-ng-devel', 'libcap1', 'libcap1-devel'])
         elif 'SuSE' in detected_distro.name:
             deps.extend(['git-core', 'popt', 'glibc', 'glibc-devel', 'popt-devel',
                          'libcap1', 'libcap1-devel', 'libcap-ng', 'libcap-ng-devel'])
-        elif detected_distro.name in ['centos', 'fedora']:
+        elif detected_distro.name in ['centos', 'fedora', 'redhat']:
             deps.extend(['git', 'popt', 'popt-static', 'glibc', 'glibc-devel', 'glibc-static',
                          'libcap-ng', 'libcap-ng-devel', 'libcap', 'libcap-devel'])
 
