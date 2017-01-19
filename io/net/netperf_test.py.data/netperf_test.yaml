@@ -1,0 +1,5 @@
+Iface: "net0"
+PEERIP: "10.10.10.10"
+PEERUSER: "root"
+timeout: "600"
+NETSERVER_RUN: 0
