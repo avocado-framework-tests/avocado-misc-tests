@@ -15,8 +15,10 @@
 # Author: Prudhvi Miryala<mprudhvi@linux.vnet.ibm.com>
 #
 
-# check the statistics of interface, test big ping
-# test lro and gro and interface
+"""
+check the statistics of interface, test big ping
+test lro and gro and interface
+"""
 
 import time
 import netifaces
@@ -25,6 +27,7 @@ from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
+from avocado.utils import distro
 
 
 class NetDataTest(Test):
@@ -36,10 +39,15 @@ class NetDataTest(Test):
         '''
             To check and install dependencies for the test
         '''
-        sm = SoftwareManager()
-        network_tools = ("iputils", "ethtool", "net-tools", "openssh-clients")
-        for pkg in network_tools:
-            if not sm.check_installed(pkg) and not sm.install(pkg):
+        smm = SoftwareManager()
+        pkgs = ["iputils", "ethtool", "net-tools"]
+        detected_distro = distro.detect()
+        if detected_distro.name == "Ubuntu":
+            pkgs.append('openssh-client')
+        else:
+            pkgs.append('openssh-clients')
+        for pkg in pkgs:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.skip("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
         interface = self.params.get("iface")
@@ -75,14 +83,12 @@ class NetDataTest(Test):
         '''
         check with different maximum transfer unit values
         '''
-        tmp = "grep -w -B 1 %s" % self.peer
-        cmd = "\`ifconfig | %s | head -1 | cut -f1 -d' '\`" % tmp
+        cmd = "grep -w -B 1 %s" % self.peer
+        cmd = "`ifconfig | %s | head -1 | cut -f1 -d' '`" % cmd
         for mtu in self.mtu_list:
             self.log.info("trying with mtu %s" % (mtu))
-            '''
-             ping the peer machine with different maximum transfers unit sizes
-             and finally set maximum transfer unit size to 1500 Bytes
-            '''
+            # ping the peer machine with different maximum transfers unit sizes
+            # and finally set maximum transfer unit size to 1500 Bytes
             msg = "ssh %s \"ifconfig %s mtu %s\"" % (self.peer, cmd, mtu)
             process.system(msg, shell=True)
             con_msg = "ifconfig %s mtu %s" % (self.interface, mtu)

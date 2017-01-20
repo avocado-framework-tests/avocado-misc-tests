@@ -13,11 +13,13 @@
 #
 # Copyright: 2016 IBM
 # Author: Prudhvi Miryala<mprudhvi@linux.vnet.ibm.com>
-#
-# ping to peer machine with 5 ICMP packets
-# Secure Shell (SSH) is a cryptographic network protocol for operating
-# network services securely over an unsecured network.
-# Scp allows files to be copied to, from, or between different hosts.
+
+"""
+ping to peer machine with 5 ICMP packets
+Secure Shell (SSH) is a cryptographic network protocol for operating
+network services securely over an unsecured network
+Scp allows files to be copied to, from, or between different hosts.
+"""
 
 import time
 import hashlib
@@ -26,6 +28,7 @@ from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
+from avocado.utils import distro
 
 
 class ScpTest(Test):
@@ -38,9 +41,15 @@ class ScpTest(Test):
         '''
         To check and install dependencies for the test
         '''
-        sm = SoftwareManager()
-        for pkg in ["openssh-clients", "net-tools"]:
-            if not sm.check_installed(pkg) and not sm.install(pkg):
+        smm = SoftwareManager()
+        pkgs = ["net-tools"]
+        detected_distro = distro.detect()
+        if detected_distro.name == "Ubuntu":
+            pkgs.append('openssh-client')
+        else:
+            pkgs.append('openssh-clients')
+        for pkg in pkgs:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.skip("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface")
