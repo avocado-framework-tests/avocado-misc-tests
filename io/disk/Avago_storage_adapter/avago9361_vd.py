@@ -70,9 +70,11 @@ class Avago9361(Test):
         elif self.raid_level == 'r50' or self.raid_level == 'r60':
             self.pdperarray = 3
         if self.raid_level == 'r0':
-            if str(self.name) in ['cc', 'offline', 'rebuild']:
-                self.skip("Test not applicable for Raid0")
-        if str(self.name) in 'migrate':
+            for test in ['cc', 'offline', 'rebuild', 'ghs_dhs']:
+                if test in str(self.name):
+                    self.skip("Test not applicable for Raid0")
+        if 'migrate' in str(self.name):
+            self.raid_disk = self.disk.pop()
             if self.raid_level != 'r0':
                 self.skip("Script runs for raid0")
         self.write_policy = ['WT', 'WB', 'AWB']
@@ -106,12 +108,12 @@ class Avago9361(Test):
                     self.change_vdpolicy(write, read, iopolicy)
         self.vd_delete()
         if self.raid_level == 'r0':
-            for disk in range(0, 3):
-                if disk > len(self.disk):
+            for disk in range(0, 4):
+                if disk < len(self.disk):
                     self.raid_disk = self.disk[disk]
                     for _ in range(1, 17):
                         self.vd_create('WT', 'nora', 'direct', 512)
-                self.vd_delete()
+            self.vd_delete()
 
     def test_init(self):
 
