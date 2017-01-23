@@ -49,8 +49,8 @@ class kselftest(Test):
         deps = ['gcc', 'make', 'automake', 'autoconf']
 
         if 'Ubuntu' in detected_distro.name:
-            deps.extend(['git-core', 'popt', 'glibc', 'glibc-devel', 'popt-devel',
-                         'libcap1', 'libcap1-devel', 'libcap-ng', 'libcap-ng-devel'])
+            deps.extend(['git', 'libpopt0', 'libc6', 'libc6-dev', 'libpopt-dev',
+                         'libcap-ng0', 'libcap-ng-dev'])
         elif 'SuSE' in detected_distro.name:
             deps.extend(['git-core', 'popt', 'glibc', 'glibc-devel', 'popt-devel',
                          'libcap1', 'libcap1-devel', 'libcap-ng', 'libcap-ng-devel'])
