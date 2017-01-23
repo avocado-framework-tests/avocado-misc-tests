@@ -31,6 +31,7 @@ from avocado.utils import distro
 from avocado.utils import build
 from avocado.utils import archive
 from avocado.utils import process
+from avocado.utils.genio import read_file
 
 
 class Netperf(Test):
@@ -79,6 +80,7 @@ class Netperf(Test):
         process.system('./configure ppc64le', shell=True)
         build.make(self.neperf)
         self.perf = os.path.join(self.neperf, 'src', 'netperf')
+        self.expected_tp = self.params.get("EXPECTED_THROUGHPUT", default="90")
 
     def test(self):
         """
@@ -101,8 +103,15 @@ class Netperf(Test):
                                            self.peer_ip)
             if option != "":
                 cmd = "%s -t %s" % (cmd, option)
-            if process.system(cmd, shell=True, ignore_status=True) != 0:
+            result = process.run(cmd, shell=True, ignore_status=True)
+            if result.exit_status != 0:
                 self.fail("test failed when run with %s" % option)
+            speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
+            if 'Throughput' in result.stdout:
+                throughput = int(result.stdout.split()[-1].split('.')[0])
+                if throughput * 100 < self.expected_tp * speed:
+                    self.fail("Throughput %d is lower than expected %d"
+                              % (throughput, self.expected_tp * speed / 100))
 
     def tearDown(self):
         """
