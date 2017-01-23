@@ -60,6 +60,10 @@ for driver in $DRIVERS; do
             echo $driver" is builtin and it cannot be unloaded"
             break ;
         fi
+        if [[ $(lsmod | grep -w ^$driver | awk '{print $NF}') != '0' ]]; then
+            echo $driver" has dependencies and it cannot be unloaded"
+            break;
+        fi
         module_unload $driver
         # Sleep for 5s to allow the module unload to complete
         sleep 5
@@ -76,11 +80,10 @@ for driver in $DRIVERS; do
     echo
 done
 echo
-if [[  "$PASS"  ]]; then
-    echo "Successfully loaded/unloaded: ${PASS:1}"
-    exit 0
-fi
 if [[  "$ERR"  ]]; then
     echo "Some modules failed to load/unload: ${ERR:1}"
     exit 1
+fi
+if [[  "$PASS"  ]]; then
+    echo "Successfully loaded/unloaded: ${PASS:1}"
 fi
