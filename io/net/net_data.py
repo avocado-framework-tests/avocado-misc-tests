@@ -40,12 +40,16 @@ class NetDataTest(Test):
             To check and install dependencies for the test
         '''
         smm = SoftwareManager()
-        pkgs = ["iputils", "ethtool", "net-tools"]
+        pkgs = ["ethtool", "net-tools"]
         detected_distro = distro.detect()
         if detected_distro.name == "Ubuntu":
             pkgs.append('openssh-client')
         else:
             pkgs.append('openssh-clients')
+        if detected_distro.name == "Ubuntu":
+            pkgs.append('iputils-ping')
+        else:
+            pkgs.append('iputils')
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.skip("%s package is need to test" % pkg)
@@ -83,13 +87,17 @@ class NetDataTest(Test):
         '''
         check with different maximum transfer unit values
         '''
-        cmd = "grep -w -B 1 %s" % self.peer
-        cmd = "`ifconfig | %s | head -1 | cut -f1 -d' '`" % cmd
+        msg = "ip addr show  | grep %s | grep -oE '[^ ]+$'"\
+               % self.peer
+        cmd = "ssh %s %s" % (self.peer, msg)
+        self.peer_interface = process.system_output(cmd, shell=True
+                                                    ).strip()
         for mtu in self.mtu_list:
             self.log.info("trying with mtu %s" % (mtu))
             # ping the peer machine with different maximum transfers unit sizes
             # and finally set maximum transfer unit size to 1500 Bytes
-            msg = "ssh %s \"ifconfig %s mtu %s\"" % (self.peer, cmd, mtu)
+            msg = "ssh %s \"ifconfig %s mtu %s\"" % (self.peer,
+                                                     self.peer_interface, mtu)
             process.system(msg, shell=True)
             con_msg = "ifconfig %s mtu %s" % (self.interface, mtu)
             process.system(con_msg, shell=True)
@@ -125,13 +133,13 @@ class NetDataTest(Test):
         '''
         self.log.info("Largest Receive Offload")
         tmp = "ethtool -K %s lro off" % self.interface
-        if not process.system(tmp, shell=True):
+        if process.system(tmp, shell=True) != 0:
             self.fail("LRO Test failed")
         ret = process.system("ping -c 1 %s" % self.peer, shell=True)
         if ret != 0:
             self.fail("lro test failed")
             msg = "ethtool -K %s lro on" % self.interface
-            if not process.system(msg, shell=True):
+            if process.system(msg, shell=True) != 0:
                 self.fail("LRO Test failed")
                 ret = process.system("ping -c 1 %s" % self.peer, shell=True)
                 if ret != 0:

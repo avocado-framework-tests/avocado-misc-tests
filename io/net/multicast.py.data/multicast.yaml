@@ -1,4 +1,4 @@
 Parameters:
-    peerip: ""
+    peerip: "103.1.1.60"
     user_name: "root"
-    interface: ""
+    interface: "enP5p1s0f1"

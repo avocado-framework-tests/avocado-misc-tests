@@ -23,6 +23,7 @@ from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
+from avocado.utils import distro
 
 
 class ReceiveMulticastTest(Test):
@@ -36,7 +37,13 @@ class ReceiveMulticastTest(Test):
         To check and install dependencies for the test
         '''
         sm = SoftwareManager()
-        for pkg in ["openssh-clients", "net-tools"]:
+        pkgs = ["net-tools"]
+        detected_distro = distro.detect()
+        if detected_distro.name == "Ubuntu":
+            pkgs.append('openssh-client')
+        else:
+            pkgs.append('openssh-clients')
+        for pkg in pkgs:
             if not sm.check_installed(pkg) and not sm.install(pkg):
                 self.skip("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
