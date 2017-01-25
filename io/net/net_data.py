@@ -96,7 +96,8 @@ class NetDataTest(Test):
             self.log.info("trying with mtu %s" % (mtu))
             # ping the peer machine with different maximum transfers unit sizes
             # and finally set maximum transfer unit size to 1500 Bytes
-            msg = "ssh %s \"ifconfig %s mtu %s\"" % (self.peer, self.peer_interface, mtu)
+            msg = "ssh %s \"ifconfig %s mtu %s\"" % (self.peer,
+                                                     self.peer_interface, mtu)
             process.system(msg, shell=True)
             con_msg = "ifconfig %s mtu %s" % (self.interface, mtu)
             process.system(con_msg, shell=True)
@@ -132,13 +133,13 @@ class NetDataTest(Test):
         '''
         self.log.info("Largest Receive Offload")
         tmp = "ethtool -K %s lro off" % self.interface
-        if process.system(tmp, shell=True)!= 0:
+        if process.system(tmp, shell=True) != 0:
             self.fail("LRO Test failed")
         ret = process.system("ping -c 1 %s" % self.peer, shell=True)
         if ret != 0:
             self.fail("lro test failed")
             msg = "ethtool -K %s lro on" % self.interface
-            if process.system(msg, shell=True)!= 0:
+            if process.system(msg, shell=True) != 0:
                 self.fail("LRO Test failed")
                 ret = process.system("ping -c 1 %s" % self.peer, shell=True)
                 if ret != 0:
