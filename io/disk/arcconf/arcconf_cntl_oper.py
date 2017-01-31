@@ -83,7 +83,7 @@ class Arcconftest(Test):
                 http_repo = "%s%s.rpm" % (self.http_path, self.tool_name)
                 self.repo = self.fetch_asset(http_repo, expire='10d')
                 cmd = "rpm -ivh %s" % self.repo
-            if process.system(cmd, ignore_status=True, shell=True) == 0:
+            if process.system(cmd, ignore_status=True, shell=True) != 0:
                 self.skip("Unable to install arcconf")
 
     def test(self):
