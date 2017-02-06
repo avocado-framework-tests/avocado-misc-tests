@@ -1,0 +1,13 @@
+values:
+    result: '/tmp/result'
+    num_times: 1024
+    variants: !mux
+        min:
+            file_ub: 1000
+            op_ub: 1000
+        mid:
+            file_ub: 1000000
+            op_ub: 10000000
+        max:
+            file_ub: 2147483647
+            op_ub: 2147483647
