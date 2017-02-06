@@ -121,7 +121,7 @@ class pingpong(Test):
         for val in test_op:
             try:
                 val1, val2 = val.split()
-            except:
+            except ValueError:
                 pass
             self.pingpong_exec(tool_name, val1, val2)
         ext_test_op = self.params.get("ext_test_opt", default="").split(",")
