@@ -49,8 +49,10 @@ class Fsfuzzer(Test):
 
         smm = SoftwareManager()
 
-        if not smm.check_installed("gcc") and not smm.install("gcc"):
-            self.error("Gcc is needed for the test to be run")
+        for package in ('gcc', 'libattr-devel'):
+            if not smm.check_installed(package) and not smm.install(package):
+                self.error("Fail to install/check %s, which is needed for"
+                           "fsfuzz to run" % package)
 
         locations = ["https://github.com/stevegrubb/fsfuzzer/archive/"
                      "master.zip"]
