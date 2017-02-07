@@ -15,11 +15,11 @@
 # Author: Harsha Thyagaraja <harshkid@linux.vnet.ibm.com>
 
 CONFIG_FILE="$AVOCADO_TEST_DATADIR"/config
-BUILT_IN_DRIVERS=`cat /lib/modules/$(uname -r)/modules.builtin |grep drivers|awk -F"/" '{print $NF}'|sed 's/\.ko//g'`
-DRIVERS=`lspci -k | grep -iw "Kernel driver in use" | cut -d ':' -f2 | sort | uniq`
+BUILT_IN_DRIVERS=`cat /lib/modules/$(uname -r)/modules.builtin |awk -F"/" '{print $NF}'|sed 's/\.ko//g'`
+DRIVERS=`find /lib/modules/$(uname -r)/ -name \*.ko | awk -F"/" '{print $NF}'|sed 's/\.ko//g'`
 ERR=""
 PASS=""
-ITERATIONS=100
+[[ -z $ITERATIONS ]] && ITERATIONS=10
 
 
 module_load() {
@@ -58,7 +58,11 @@ for driver in $DRIVERS; do
         echo $BUILT_IN_DRIVERS | grep $driver > /dev/null
         if [[ $? == "0" ]]; then
             echo $driver" is builtin and it cannot be unloaded"
-            break ;
+            break;
+        fi
+        if [[ $(lsmod | grep -w ^$driver | awk '{print $NF}') != '0' ]]; then
+            echo $driver" has dependencies and it cannot be unloaded"
+            break;
         fi
         module_unload $driver
         # Sleep for 5s to allow the module unload to complete
@@ -76,11 +80,10 @@ for driver in $DRIVERS; do
     echo
 done
 echo
-if [[  "$PASS"  ]]; then
-    echo "Successfully loaded/unloaded: ${PASS:1}"
-    exit 0
-fi
 if [[  "$ERR"  ]]; then
     echo "Some modules failed to load/unload: ${ERR:1}"
     exit 1
+fi
+if [[  "$PASS"  ]]; then
+    echo "Successfully loaded/unloaded: ${PASS:1}"
 fi
