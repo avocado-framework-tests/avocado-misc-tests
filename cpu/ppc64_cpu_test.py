@@ -18,6 +18,7 @@
 Test to verify ppc64_cpu command.
 """
 
+import os
 from avocado import Test
 from avocado import main
 from avocado.utils import process
@@ -43,6 +44,9 @@ class PPC64Test(Test):
             self.skip("Machine is not SMT capable")
         self.curr_smt = process.system_output("ppc64_cpu --smt | awk -F'=' \
                 '{print $NF}' | awk '{print $NF}'", shell=True)
+        self.smt_subcores = 0
+        if os.path.exists("/sys/devices/system/cpu/subcores_per_core"):
+            self.smt_subcores = 1
         self.failures = 0
         self.failure_message = "\n"
         self.smt_values = {1: "off"}
@@ -76,7 +80,8 @@ class PPC64Test(Test):
             process.system_output("ppc64_cpu --info")
             self.smt()
             self.core()
-            self.subcore()
+            if self.smt_subcores == 1:
+                self.subcore()
             self.threads_per_core()
             self.smt_snoozedelay()
             self.dscr()
