@@ -32,3 +32,5 @@ setup:
         fstype: romfs
     ecryptfs:
         fstype: ecryptfs
+    btrfs:
+        fstype: btrfs
