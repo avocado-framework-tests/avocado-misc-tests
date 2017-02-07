@@ -47,7 +47,7 @@ class Posixtest(Test):
                                    '/sourceforge/posixtest/posixtestsuite-1.5.2.tar.gz')
         data_dir = os.path.abspath(self.datadir)
         archive.extract(tarball, self.srcdir)
-        version = os.path.basename(tarball.split('-')[0])
+        version = os.path.basename(tarball.split('-1.')[0])
         self.srcdir = os.path.join(self.srcdir, version)
 
         patch = self.params.get(
