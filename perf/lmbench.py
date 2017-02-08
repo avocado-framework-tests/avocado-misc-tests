@@ -79,7 +79,7 @@ class Lmbench(Test):
         # configure lmbench
         os.chdir(self.srcdir)
 
-        os.system('yes "" | make config')
+        process.system('yes "" | make config', shell=True, ignore_status=True)
 
         # find the lmbench config file
         output = os.popen('ls -1 bin/*/CONFIG*').read()
