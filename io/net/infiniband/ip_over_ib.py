@@ -44,8 +44,8 @@ class ip_over_ib(Test):
             if not sm.check_installed(pkg) and not sm.install(pkg):
                 self.skip("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
-        self.IF = self.params.get("Iface", default="")
-        self.PEER_IP = self.params.get("PEERIP", default="")
+        self.IF = self.params.get("interface", default="")
+        self.PEER_IP = self.params.get("peer_ip", default="")
         if self.IF not in interfaces:
             self.skip("%s interface is not available" % self.IF)
         if self.PEER_IP == "":

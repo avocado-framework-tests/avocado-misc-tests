@@ -55,10 +55,10 @@ class Ping6(Test):
                 if not smm.install(package):
                     self.skip("Not able to install %s" % package)
         interfaces = netifaces.interfaces()
-        self.iface = self.params.get("Iface", default="")
-        self.peer_iface = self.params.get("PEER_Iface", default="")
-        self.peer_ip = self.params.get("PEERIP", default="")
-        self.ipv6_peer = self.params.get("IPV6_PEER", default="")
+        self.iface = self.params.get("interface", default="")
+        self.peer_iface = self.params.get("peer_interface", default="")
+        self.peer_ip = self.params.get("peer_ip", default="")
+        self.ipv6_peer = self.params.get("peer_ipv6", default="")
         if self.iface not in interfaces:
             self.skip("%s interface is not available" % self.iface)
         if self.peer_ip == "":
@@ -69,12 +69,12 @@ class Ping6(Test):
             self.l_v6 = netifaces.ifaddresses(self.iface)[AF_INET6][0]['addr']
         else:
             self.l_v6 = ""
-        self.option = self.option.replace("PEER_Iface", self.peer_iface)
-        self.option = self.option.replace("Iface", self.iface)
-        self.option = self.option.replace("PEERIP", self.peer_ip)
-        self.option = self.option.replace("LOCALIP", self.local_ip)
-        self.option = self.option.replace("IPV6_PEER", self.ipv6_peer)
-        self.option = self.option.replace("IPV6_LOCAL", self.l_v6)
+        self.option = self.option.replace("peer_interface", self.peer_iface)
+        self.option = self.option.replace("interface", self.iface)
+        self.option = self.option.replace("peer_ip", self.peer_ip)
+        self.option = self.option.replace("local_ip", self.local_ip)
+        self.option = self.option.replace("peer_ipv6", self.ipv6_peer)
+        self.option = self.option.replace("local_ipv6", self.l_v6)
         self.option_list = self.option.split(",")
 
     def test(self):

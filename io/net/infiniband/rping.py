@@ -55,18 +55,18 @@ class Rping(Test):
                 if not smm.install(package):
                     self.skip("Not able to install %s" % package)
         interfaces = netifaces.interfaces()
-        self.iface = self.params.get("Iface", default="")
-        self.peer_ip = self.params.get("PEERIP", default="")
-        self.ipv6_peer = self.params.get("IPV6_PEER", default="")
+        self.iface = self.params.get("interface", default="")
+        self.peer_ip = self.params.get("peer_ip", default="")
+        self.ipv6_peer = self.params.get("peer_ipv6", default="")
         if self.iface not in interfaces:
             self.skip("%s interface is not available" % self.iface)
         if self.peer_ip == "":
             self.skip("%s peer machine is not available" % self.peer_ip)
         self.timeout = "2m"
         self.local_ip = netifaces.ifaddresses(self.iface)[AF_INET][0]['addr']
-        self.option = self.option.replace("PEERIP", self.peer_ip)
-        self.option = self.option.replace("LOCALIP", self.local_ip)
-        self.option = self.option.replace("IPV6_PEER", self.ipv6_peer)
+        self.option = self.option.replace("peer_ip", self.peer_ip)
+        self.option = self.option.replace("local_ip", self.local_ip)
+        self.option = self.option.replace("peer_ipv6", self.ipv6_peer)
         self.option_list = self.option.split(",")
 
     def test(self):

@@ -55,7 +55,7 @@ class ScpTest(Test):
         self.iface = self.params.get("interface")
         if self.iface not in interfaces:
             self.skip("%s interface is not available" % self.iface)
-        self.peer = self.params.get("peerip", default="")
+        self.peer = self.params.get("peer_ip", default="")
         if self.peer == "":
             self.skip("peer ip should specify in input")
         self.user = self.params.get("user_name", default="root")

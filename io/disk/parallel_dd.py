@@ -46,7 +46,7 @@ class ParallelDd(Test):
         :params blocks: The blocksize in bytes to use.
         :params streams: Number of streams. Defaults to 2.
         :params blocks_per_file: The number of blocks per file.
-        :params fstype: The file system type of the disk.
+        :params fs: The file system type of the disk.
         :params seq_read: Perform sequential operations. Defaults to true.
         :params dd_woptions: dd write options.
         :params dd_roptions: dd read options.
@@ -63,7 +63,7 @@ class ParallelDd(Test):
         self.streams = self.params.get('streams', default=2)
         self.blocks_per_file = self.params.get(
             'blocks_per_file', default=None)
-        self.fstype = self.params.get('fstype', default=None)
+        self.fstype = self.params.get('fs', default=None)
         self.seq_read = self.params.get('seq_read', default=True)
         self.dd_woptions = self.params.get('dd_woptions', default='')
         self.dd_roptions = self.params.get('dd_roptions', default='')

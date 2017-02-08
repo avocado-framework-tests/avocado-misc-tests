@@ -45,8 +45,8 @@ class Latency_Perf(Test):
                 self.skip("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
         self.flag = self.params.get("ext_flag", default="0")
-        self.IF = self.params.get("Iface", default="")
-        self.PEER_IP = self.params.get("PEERIP", default="")
+        self.IF = self.params.get("interface", default="")
+        self.PEER_IP = self.params.get("peer_ip", default="")
         if self.IF not in interfaces:
             self.skip("%s interface is not available" % self.IF)
         if self.PEER_IP == "":

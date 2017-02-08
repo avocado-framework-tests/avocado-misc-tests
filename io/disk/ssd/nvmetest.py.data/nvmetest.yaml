@@ -1,5 +1,3 @@
 Devices: !mux
     device1:
         device: /dev/nvme0
-    device2:
-        device: /dev/nvme1

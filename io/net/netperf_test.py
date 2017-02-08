@@ -53,13 +53,13 @@ class Netperf(Test):
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.skip("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
-        self.iface = self.params.get("Iface", default="")
-        self.peer_ip = self.params.get("PEERIP", default="")
+        self.iface = self.params.get("interface", default="")
+        self.peer_ip = self.params.get("peer_ip", default="")
         if self.iface not in interfaces:
             self.skip("%s interface is not available" % self.iface)
         if self.peer_ip == "":
             self.skip("%s peer machine is not available" % self.peer_ip)
-        self.peer_user = self.params.get("PEERUSER", default="root")
+        self.peer_user = self.params.get("peer_user_name", default="root")
         self.timeout = self.params.get("timeout", default="600")
         self.netperf_run = self.params.get("NETSERVER_RUN", default="0")
         self.netperf = os.path.join(self.srcdir, 'netperf')
