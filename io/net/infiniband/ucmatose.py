@@ -56,8 +56,8 @@ class Ucmatose(Test):
                     self.skip("Not able to install %s" % package)
         interfaces = netifaces.interfaces()
         self.flag = self.params.get("ext_flag", default="0")
-        self.iface = self.params.get("Iface", default="")
-        self.peer_ip = self.params.get("PEERIP", default="")
+        self.iface = self.params.get("interface", default="")
+        self.peer_ip = self.params.get("peer_ip", default="")
         if self.iface not in interfaces:
             self.skip("%s interface is not available" % self.iface)
         if self.peer_ip == "":

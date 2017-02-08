@@ -13,7 +13,7 @@ setup:
             blocks_per_file: 12800
     file_system_type: !mux
         default:
-           fstype: 'ext4'
+           fs: 'ext4'
     seqread: !mux
         default:
            seq_read: True

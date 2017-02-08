@@ -14,7 +14,7 @@ Test: !mux
     seventh:
         bonding_mode: "6"
 host_interfaces: "enP3p1s0f0,enP3p1s0f1"
-peerip: "85.85.85.85"
+peer_ip: "85.85.85.85"
 peer_interfaces: "eth3"
-bondname: "bond13"
-username: "root"
+bond_name: "bond13"
+user_name: "root"

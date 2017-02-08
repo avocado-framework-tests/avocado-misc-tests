@@ -55,15 +55,15 @@ class Tiobench(Test):
     def test(self):
         """
         Test execution with necessary arguments.
-        :params target: The directory in which to test.
-                        Defaults to ., the current directory.
+        :params dir: The directory in which to test.
+                     Defaults to ., the current directory.
         :params blocks: The blocksize in Bytes to use. Defaults to 4096.
         :params threads: The number of concurrent test threads.
         :params size: The total size in MBytes of the files may use together.
         :params num_runs: This number specifies over how many runs
                           each test should be averaged.
         """
-        target = self.params.get('target', default=self.workdir)
+        target = self.params.get('dir', default=self.workdir)
         blocks = self.params.get('blocks', default=4096)
         threads = self.params.get('threads', default=10)
         size = self.params.get('size', default=1024)

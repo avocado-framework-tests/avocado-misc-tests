@@ -1,7 +1,7 @@
 setup:
     location: !mux
         default:
-            directory: null
+            dir: null
     argument: !mux
         default:
             args: null

@@ -45,7 +45,7 @@ class Bonnie(Test):
          http://www.coker.com.au/bonnie++/experimental/bonnie++-1.03e.tgz
         """
 
-        self.scratch_dir = self.params.get('scratch-dir', default=self.srcdir)
+        self.scratch_dir = self.params.get('dir', default=self.srcdir)
         self.uid_to_use = self.params.get('uid-to-use', default=None)
         self.number_to_stat = self.params.get('number-to-stat', default=2048)
         self.data_size = self.params.get('data_size_to_pass', default=0)

@@ -17,8 +17,8 @@ Test: !mux
         ext_test_opt: -s 524288,-s 524288 -n 10000,-s 524288 -n 100000,-q 32,-e -s 524288 -n 10000 -q 32
 parameters:
     ext_flag: "1"
-    Iface: "ib0"
-    PEERIP: "13.13.13.15"
+    interface: "ib0"
+    peer_ip: "13.13.13.15"
     CA_NAME: "mlx4_0"
     GID_NUM: "0"
     PORT_NUM: "1"
