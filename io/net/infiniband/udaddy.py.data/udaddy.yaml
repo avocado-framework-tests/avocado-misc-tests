@@ -14,5 +14,5 @@ Test: !mux
             ext_option: -P udp
 parameters:
     ext_flag: "1"
-    Iface: "ib0"
-    PEERIP: "13.13.13.15"
+    interface: "ib0"
+    peer_ip: "13.13.13.15"

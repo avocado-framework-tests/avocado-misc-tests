@@ -1,4 +1,4 @@
-Devices: !mux
-    device1:
-        device: /dev/nvme0n1
+Disks: !mux
+    disk1:
+        disk: /dev/nvme0n1
         utilization: 10

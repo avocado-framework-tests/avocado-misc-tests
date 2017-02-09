@@ -53,7 +53,7 @@ class Bonding(Test):
             if not sm.check_installed(pkg) and not sm.install(pkg):
                 self.skip("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
-        self.user = self.params.get("username", default="root")
+        self.user = self.params.get("user_name", default="root")
         self.host_interfaces = self.params.get("host_interfaces",
                                                default="").split(",")
         if not self.host_interfaces:
@@ -63,7 +63,7 @@ class Bonding(Test):
         for self.host_interface in self.host_interfaces:
             if self.host_interface not in interfaces:
                 self.skip("interface is not available")
-        self.peer_first_ipinterface = self.params.get("peerip", default="")
+        self.peer_first_ipinterface = self.params.get("peer_ip", default="")
         if not self.peer_interfaces or self.peer_first_ipinterface == "":
             self.skip("peer machine should available")
         msg = "ip addr show  | grep %s | grep -oE '[^ ]+$'"\
@@ -73,7 +73,7 @@ class Bonding(Test):
                                                           ).strip()
         if self.peer_first_interface == "":
             self.fail("test failed because peer interface can not retrieved")
-        self.bond_name = self.params.get("bondname", default="tempbond")
+        self.bond_name = self.params.get("bond_name", default="tempbond")
         self.mode = self.params.get("bonding_mode", default="")
         if self.mode == "":
             self.skip("test skipped because mode not specified")

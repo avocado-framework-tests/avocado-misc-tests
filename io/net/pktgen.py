@@ -35,11 +35,11 @@ class Pktgen(Test):
     def setUp(self):
 
         self.start_flag = False
-        self.eth = self.params.get("eth", default="eth0")
+        self.eth = self.params.get("interface", default="eth0")
         self.count = self.params.get("count", default="50000")
         self.clone_skb = self.params.get("clone_skb", default="1")
-        self.dst_ip = self.params.get("dst_ip", default="")
-        self.dst_mac = self.params.get("dst_mac", default="")
+        self.dst_ip = self.params.get("peer_ip", default="")
+        self.dst_mac = self.params.get("peer_mac", default="")
         self.results = self.params.get("resultsdir", default="/tmp/")
         if not os.path.exists('/proc/net/pktgen'):
             process.system("modprobe pktgen", ignore_status=True, shell=True)

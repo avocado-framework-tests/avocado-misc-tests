@@ -1,7 +1,7 @@
 general:
-    disk: ''
+    disk:
     script: 'runltp'
-    mount_point: ''
+    dir:
     args: !mux
         test1:
             args: '-s fs_di'
@@ -14,3 +14,7 @@ general:
             fs: 'ext3'
         ext2:
             fs: 'ext2'
+        xfs:
+            fs: 'xfs'
+        btrfs:
+            fs: 'btrfs'

@@ -49,7 +49,7 @@ class Lvsetup(Test):
         vg_name = self.params.get('vg_name', default='avocado_vg')
         lv_name = self.params.get('lv_name', default='avocado_lv')
         self.lv_size = self.params.get('lv_size', default='1G')
-        self.fs_name = self.params.get('fs_name', default='ext4')
+        self.fs_name = self.params.get('fs', default='ext4')
         lv_snapshot_name = self.params.get(
             'lv_snapshot_name', default='avocado_sn')
         self.lv_snapshot_size = self.params.get(

@@ -1,18 +1,16 @@
 scenario: !mux
-    loopback:
-        lv_size: "641M"
 # btrfs needs minimum LV size of 641M
-# Uncomment this to use real drive (warning: it'll be erased!)
-#   real:
-#       disk: /dev/vde
+    real:
+        disk: /dev/vde
+        lv_size: "641M"
 filesystem: !mux
     ext2:
-        fs_name: ext2
+        fs: ext2
     ext3:
-        fs_name: ext3
+        fs: ext3
     ext4:
-        fs_name: ext4
+        fs: ext4
     xfs:
-        fs_name: xfs
+        fs: xfs
     btrfs:
-        fs_name: btrfs
+        fs: btrfs

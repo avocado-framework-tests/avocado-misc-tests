@@ -70,7 +70,7 @@ class Disktest(Test):
         """
         Retrieves and checks the test params
         """
-        disks = self.params.get('disks', default=None)
+        disks = self.params.get('disk', default=None)
         if disks is None:   # Avocado does not accept lists in params.get()
             disks = [self.workdir]
         elif isinstance(disks, basestring):  # Allow specifying disks as str

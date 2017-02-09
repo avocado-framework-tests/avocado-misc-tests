@@ -534,7 +534,7 @@ class IOZone(Test):
         '''
         Test method for performing IOZone test and analysis.
         '''
-        directory = self.params.get('directory', default=None)
+        directory = self.params.get('dir', default=None)
         args = self.params.get('args', default=None)
         previous_results = self.params.get('previous_results', default=None)
 

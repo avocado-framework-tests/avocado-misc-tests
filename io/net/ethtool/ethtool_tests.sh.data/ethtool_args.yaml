@@ -1,8 +1,6 @@
 Interfaces: !mux
     interface1:
         interface: eth1
-    interface2:
-        interface: eth2
 Parameters: !mux
     Information:
         arg:

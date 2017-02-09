@@ -50,13 +50,13 @@ class NetDataTest(Test):
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.skip("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
-        interface = self.params.get("iface")
+        interface = self.params.get("interface")
         if interface not in interfaces:
             self.skip("%s interface is not available" % interface)
         mtu_list = self.params.get("size_val", default=1500)
         self.mtu_list = mtu_list.split()
         self.interface = interface
-        self.peer = self.params.get("peerip")
+        self.peer = self.params.get("peer_ip")
         self.eth = "ethtool %s | grep 'Link detected:'" % self.interface
         self.eth_state = process.system_output(self.eth, shell=True)
 

@@ -1,6 +1,6 @@
-Iface: "net0"
-PEERIP: "10.10.10.10"
-PEERUSER: "root"
+interface: "net0"
+peer_ip: "10.10.10.10"
+peer_user_name: "root"
 timeout: "600"
 NETSERVER_RUN: 0
 EXPECTED_THROUGHPUT: 90

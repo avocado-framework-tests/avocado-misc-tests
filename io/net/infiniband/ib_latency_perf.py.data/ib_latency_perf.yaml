@@ -14,8 +14,8 @@ Test: !mux
 parameters:
     test_opt: -F,-m 1024,-n 10000,-S 2,-t 1024,-p 18200
     ext_flag: "0"
-    Iface: "ib0"
-    PEERIP: "13.13.13.15"
+    interface: "ib0"
+    peer_ip: "13.13.13.15"
     CA_NAME: "mlx4_0"
     PORT_NUM: "1"
     PEERCA: "mlx4_0"

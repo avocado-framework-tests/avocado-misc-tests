@@ -44,7 +44,7 @@ class Ltp_Fs(Test):
         self.disk = self.params.get('disk', default="")
         if self.disk == "":
             self.skip("Please provide a disk for test")
-        self.mount_point = self.params.get('mount_point', default=self.srcdir)
+        self.mount_point = self.params.get('dir', default=self.srcdir)
         self.script = self.params.get('script')
         self.fs = self.params.get('fs', default='ext4')
         self.args = self.params.get('args', default='')
