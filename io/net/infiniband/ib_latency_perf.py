@@ -62,7 +62,6 @@ class Latency_Perf(Test):
         self.log.info("test with %s" % (self.tool_name))
         self.test_op = self.params.get("test_opt", default="").split(",")
         self.ext_test_op = self.params.get("ext_opt", default="").split(",")
-
         detected_distro = distro.detect()
         if detected_distro.name == "Ubuntu":
             cmd = "service ufw stop"

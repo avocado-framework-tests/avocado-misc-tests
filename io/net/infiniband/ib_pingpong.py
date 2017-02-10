@@ -75,11 +75,10 @@ class pingpong(Test):
                           ignore_status=True,
                           shell=True) != 0:
             self.skip("Unable to disable firewall")
-
         for package in depends:
             if not sm.check_installed(package):
                 self.error("%s package is need to test" % package)
-        if process.system("ibstat", shell=True) != 0:
+        if process.system("ibstat", shell=True, ignore_status=True) != 0:
             self.skip("infiniband adaptors not available")
 
     def pingpong_exec(self, arg1, arg2, arg3):
