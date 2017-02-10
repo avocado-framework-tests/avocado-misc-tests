@@ -55,7 +55,6 @@ class ip_over_ib(Test):
         self.NETSERVER_RUN = self.params.get("NETSERVER_RUN", default="0")
         self.iper = os.path.join(self.srcdir, 'iperf')
         self.netperf = os.path.join(self.srcdir, 'netperf')
-
         detected_distro = distro.detect()
         if detected_distro.name == "Ubuntu":
             cmd = "service ufw stop"
