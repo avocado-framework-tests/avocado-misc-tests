@@ -25,7 +25,7 @@ from netifaces import AF_INET, AF_INET6
 from avocado import Test
 from avocado import main
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import process
+from avocado.utils import process, distro
 
 
 class Ping6(Test):
@@ -57,8 +57,8 @@ class Ping6(Test):
         interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface", default="")
         self.peer_iface = self.params.get("peer_interface", default="")
-        self.peer_ip = self.params.get("peer_ip", default="")
         self.ipv6_peer = self.params.get("peer_ipv6", default="")
+        self.peer_ip = self.params.get("peer_ip", default="")
         if self.iface not in interfaces:
             self.skip("%s interface is not available" % self.iface)
         if self.peer_ip == "":
@@ -71,32 +71,49 @@ class Ping6(Test):
             self.l_v6 = ""
         self.option = self.option.replace("peer_interface", self.peer_iface)
         self.option = self.option.replace("interface", self.iface)
-        self.option = self.option.replace("peer_ip", self.peer_ip)
-        self.option = self.option.replace("local_ip", self.local_ip)
-        self.option = self.option.replace("peer_ipv6", self.ipv6_peer)
         self.option = self.option.replace("local_ipv6", self.l_v6)
+        self.option = self.option.replace("peer_ipv6", self.ipv6_peer)
+        self.option = self.option.replace("local_ip", self.local_ip)
+        self.option = self.option.replace("peer_ip", self.peer_ip)
         self.option_list = self.option.split(",")
+
+        detected_distro = distro.detect()
+        if detected_distro.name == "Ubuntu":
+            cmd = "service ufw stop"
+        elif detected_distro.name in ['redhat', 'fedora']:
+            cmd = "systemctl stop firewalld"
+        elif detected_distro.name == "Suse":
+            cmd = "rcSuSEfirewall2 stop"
+        elif detected_distro.name == "centos":
+            cmd = "service iptables stop"
+        else:
+            self.skip("Distro not supported")
+        if process.system("%s && ssh %s %s" % (cmd, self.peer_ip, cmd),
+                          ignore_status=True, shell=True) != 0:
+            self.skip("Unable to disable firewall")
 
     def test(self):
         """
         Test ping6
         """
         self.log.info(self.test_name)
-        self.log.info("Client data - %s(%s)" % (self.test_name, self.option))
         logs = "> /tmp/ib_log 2>&1 &"
-        cmd = "ssh %s timeout %s %s %s %s %s %s" \
+        cmd = "ssh %s \" timeout %s %s %s %s\" " \
             % (self.peer_ip, self.timeout, self.test_name,
-               self.option_list[0], self.option_list[1], self.option, logs)
+               self.option_list[0], logs)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("SSH connection (or) Server command failed")
         time.sleep(5)
+        self.log.info("Client data - %s(%s)" %
+                      (self.test_name, self.option_list[0]))
         cmd = "timeout %s %s %s" \
             % (self.timeout, self.test_name, self.option_list[1])
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("Client command failed")
         time.sleep(5)
-        self.log.info("Server data - %s(%s)" % (self.test_name, self.option))
-        cmd = "ssh %s timeout %s cat /tmp/ib_log; rm -rf /tmp/ib_log" \
+        self.log.info("Server data - %s(%s)" %
+                      (self.test_name, self.option_list[1]))
+        cmd = "ssh %s \"timeout %s cat /tmp/ib_log && rm -rf /tmp/ib_log\" " \
             % (self.peer_ip, self.timeout)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("Server output retrieval failed")

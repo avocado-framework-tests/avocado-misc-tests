@@ -25,7 +25,7 @@ from avocado import main
 import netifaces
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import process
+from avocado.utils import process, distro
 
 
 class Latency_Perf(Test):
@@ -63,14 +63,29 @@ class Latency_Perf(Test):
         self.test_op = self.params.get("test_opt", default="").split(",")
         self.ext_test_op = self.params.get("ext_opt", default="").split(",")
 
+        detected_distro = distro.detect()
+        if detected_distro.name == "Ubuntu":
+            cmd = "service ufw stop"
+        elif detected_distro.name in ['redhat', 'fedora']:
+            cmd = "systemctl stop firewalld"
+        elif detected_distro.name == "Suse":
+            cmd = "rcSuSEfirewall2 stop"
+        elif detected_distro.name == "centos":
+            cmd = "service iptables stop"
+        else:
+            self.skip("Distro not supported")
+        if process.system("%s && ssh %s %s" % (cmd, self.PEER_IP, cmd),
+                          ignore_status=True, shell=True) != 0:
+            self.skip("Unable to disable firewall")
+
     def latencyperf_exec(self, arg1, arg2, arg3):
         '''
         latency performance exec function
         '''
         logs = "> /tmp/ib_log 2>&1 &"
-        cmd = "ssh %s timeout %s %s -d %s -i %s %s %s %s" \
+        cmd = "ssh %s \" timeout %s %s -d %s -i %s %s %s %s \" " \
             % (self.PEER_IP, self.to, arg1, self.PEER_CA, self.PEER_PORT,
-                arg2, arg3, logs)
+               arg2, arg3, logs)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("ssh failed to remote machine\
                       or  faing data from remote machine failed")
@@ -78,12 +93,12 @@ class Latency_Perf(Test):
         self.log.info("client data for %s(%s)" % (arg1, arg2))
         cmd = "timeout %s %s -d %s -i %s %s %s %s" \
             % (self.to, arg1, self.CA, self.PORT, self.PEER_IP,
-                arg2, arg3)
+               arg2, arg3)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("client command failed for the tool %s" % self.tool_name)
         self.log.info("server data for %s(%s)" % (arg1, arg2))
-        cmd = "ssh %s timeout %s cat /tmp/ib_log; rm -rf /tmp/ib_log" %\
-              (self.PEER_IP, self.to)
+        cmd = "ssh %s \" timeout %s cat /tmp/ib_log && rm -rf /tmp/ib_log\" \
+              " % (self.PEER_IP, self.to)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("ssh failed to remote machine\
                       or fetching data from remote machine failed")

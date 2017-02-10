@@ -26,7 +26,7 @@ from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import build
 from avocado.utils import archive
-from avocado.utils import process
+from avocado.utils import process, distro
 
 
 class ip_over_ib(Test):
@@ -55,6 +55,22 @@ class ip_over_ib(Test):
         self.NETSERVER_RUN = self.params.get("NETSERVER_RUN", default="0")
         self.iper = os.path.join(self.srcdir, 'iperf')
         self.netperf = os.path.join(self.srcdir, 'netperf')
+
+        detected_distro = distro.detect()
+        if detected_distro.name == "Ubuntu":
+            cmd = "service ufw stop"
+        elif detected_distro.name in ['redhat', 'fedora']:
+            cmd = "systemctl stop firewalld"
+        elif detected_distro.name == "Suse":
+            cmd = "rcSuSEfirewall2 stop"
+        elif detected_distro.name == "centos":
+            cmd = "service iptables stop"
+        else:
+            self.skip("Distro not supported")
+        if process.system("%s && ssh %s %s" % (cmd, self.PEER_IP, cmd),
+                          ignore_status=True, shell=True) != 0:
+            self.skip("Unable to disable firewall")
+
         tarball = self.fetch_asset('ftp://ftp.netperf.org/netperf/'
                                    'netperf-2.7.0.tar.bz2', expire='7d')
         archive.extract(tarball, self.netperf)
@@ -127,7 +143,7 @@ class ip_over_ib(Test):
                 self.NETSERVER_RUN = 1
         time.sleep(5)
         msg = "timeout %s %s -H %s %s" % (
-              self.to, self.perf+'/netperf', self.PEER_IP, arg2)
+            self.to, self.perf+'/netperf', self.PEER_IP, arg2)
         if process.system(msg, shell=True, ignore_status=True) != 0:
             self.fail("test failed because netperf not working")
         if arg1 == "datagram" and arg2 != "":
@@ -159,7 +175,7 @@ class ip_over_ib(Test):
             cmd = "ssh %s \"%s\"" % (self.PEER_IP, tmp)
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.fail("test failed because connect to peer sys failed")
-            tmp = "/root/iperf-master/src/iperf3 -s %s" % logs
+            tmp = " /root/iperf-master/src/iperf3 -s %s " % logs
             cmd = "ssh %s \"%s\"" % (self.PEER_IP, tmp)
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.fail("test failed because connect to peer sys failed")
