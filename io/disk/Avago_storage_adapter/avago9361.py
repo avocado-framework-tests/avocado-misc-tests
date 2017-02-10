@@ -37,19 +37,20 @@ class Avago9361(Test):
         """
 
         self.controller = int(self.params.get('controller', default='0'))
+        self.tool_location = str(self.params.get('tool_location'))
 
     def test_display(self):
 
         """
         Displays entire adapter configuration
         """
-        cmd = "./storcli64 -v"
+        cmd = "%s -v" % self.tool_location
         self.check_pass(cmd, "Failed to display the version of the tool")
-        cmd = "./storcli64 show ctrlcount"
+        cmd = "%s show ctrlcount" % self.tool_location
         self.check_pass(cmd, "Failed to show the controleer count")
-        cmd = "./storcli64 /c%d show" % self.controller
+        cmd = "%s /c%d show" % (self.tool_location, self.controller)
         self.check_pass(cmd, "Fail to display the adapter details")
-        cmd = "./storcli64 /c%d show all" % self.controller
+        cmd = "%s /c%d show all" % (self.tool_location, self.controller)
         self.check_pass(cmd, "Fail to display 'show all' o/p of the adapter")
 
     def test_adjustablerates(self):
@@ -61,9 +62,11 @@ class Avago9361(Test):
                            'bgirate', 'prrate']
         for i in adjustable_rate:
             for j in [0, 10, 30, 60, 100]:
-                cmd = "./storcli64 /c%d show %s" % (self.controller, i)
+                cmd = "%s /c%d show %s" % (self.tool_location,
+                                           self.controller, i)
                 self.check_pass(cmd, "Failed to show the rate")
-                cmd = "./storcli64 /c%d set %s=%d" % (self.controller, i, j)
+                cmd = "%s /c%d set %s=%d" % (self.tool_location,
+                                             self.controller, i, j)
                 self.check_pass(cmd, "Failed to set the rate")
 
     def test_set_on_off(self):
@@ -76,9 +79,11 @@ class Avago9361(Test):
                          'ocr']
         for i in adjust_on_off:
             for j in ['off', 'on']:
-                cmd = "./storcli64 /c%d show %s" % (self.controller, i)
+                cmd = "%s /c%d show %s" % (self.tool_location,
+                                           self.controller, i)
                 self.check_pass(cmd, "Failed to show the deatils of {0}" + i)
-                cmd = "./storcli64 /c%d set %s=%s" % (self.controller, i, j)
+                cmd = "%s /c%d set %s=%s" % (self.tool_location,
+                                             self.controller, i, j)
                 self.check_pass(cmd, "Failed to set to %s for %s" % (j, i))
 
     def check_pass(self, cmd, errmsg):
