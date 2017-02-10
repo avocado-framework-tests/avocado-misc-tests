@@ -25,7 +25,7 @@ from netifaces import AF_INET
 from avocado import Test
 from avocado import main
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import process
+from avocado.utils import process, distro
 
 
 class Ucmatose(Test):
@@ -65,19 +65,34 @@ class Ucmatose(Test):
         self.timeout = "2m"
         self.local_ip = netifaces.ifaddresses(self.iface)[AF_INET][0]['addr']
 
+        detected_distro = distro.detect()
+        if detected_distro.name == "Ubuntu":
+            cmd = "service ufw stop"
+        elif detected_distro.name in ['redhat', 'fedora']:
+            cmd = "systemctl stop firewalld"
+        elif detected_distro.name == "Suse":
+            cmd = "rcSuSEfirewall2 stop"
+        elif detected_distro.name == "centos":
+            cmd = "service iptables stop"
+        else:
+            self.skip("Distro not supported")
+        if process.system("%s && ssh %s %s" % (cmd, self.peer_ip, cmd),
+                          ignore_status=True, shell=True) != 0:
+            self.skip("Unable to disable firewall")
+
     def test(self):
         """
         Test ucmatose
         """
         self.log.info(self.test_name)
-        self.log.info("Client data - %s(%s)" % (self.test_name, self.option))
         logs = "> /tmp/ib_log 2>&1 &"
-        cmd = "ssh %s timeout %s %s -b %s %s %s" \
+        cmd = "ssh %s \" timeout %s %s -b %s %s %s\" " \
             % (self.peer_ip, self.timeout, self.test_name,
                self.peer_ip, self.option, logs)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("SSH connection (or) Server command failed")
         time.sleep(5)
+        self.log.info("Client data - %s(%s)" % (self.test_name, self.option))
         cmd = "timeout %s %s -s %s -b %s %s" \
             % (self.timeout, self.test_name, self.peer_ip,
                self.local_ip, self.option)
@@ -85,7 +100,7 @@ class Ucmatose(Test):
             self.fail("Client command failed")
         time.sleep(5)
         self.log.info("Server data - %s(%s)" % (self.test_name, self.option))
-        cmd = "ssh %s timeout %s cat /tmp/ib_log; rm -rf /tmp/ib_log" \
+        cmd = " ssh %s \"timeout %s cat /tmp/ib_log && rm -rf /tmp/ib_log\" " \
             % (self.peer_ip, self.timeout)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("Server output retrieval failed")
