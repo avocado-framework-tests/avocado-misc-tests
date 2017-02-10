@@ -39,18 +39,6 @@ class pingpong(Test):
         '''
         To check and install dependencies for the test
         '''
-        sm = SoftwareManager()
-        detected_distro = distro.detect()
-        depends = ["openssh-clients"]
-        if detected_distro.name == "Ubuntu":
-            depends.append("ibverbs")
-        elif detected_distro.name == "redhat":
-            depends.append("libibverbs")
-        for package in depends:
-            if not sm.check_installed(package):
-                self.error("%s package is need to test" % package)
-        if process.system("ibstat", shell=True) != 0:
-            self.skip("infiniband adaptors not available")
         interfaces = netifaces.interfaces()
         self.flag = self.params.get("ext_flag", default="0")
         self.IF = self.params.get("interface", default="")
@@ -67,6 +55,33 @@ class pingpong(Test):
         self.PEER_PORT = int(self.params.get("PEERPORT", default="1"))
         self.to = self.params.get("timeout", default="120")
 
+        sm = SoftwareManager()
+        detected_distro = distro.detect()
+        depends = ["openssh-clients"]
+        if detected_distro.name == "Ubuntu":
+            depends.append("ibverbs")
+            cmd = "service ufw stop"
+        elif detected_distro.name in ['redhat', 'fedora']:
+            depends.append("libibverbs")
+            cmd = "systemctl stop firewalld"
+        elif detected_distro.name == "Suse":
+            cmd = "rcSuSEfirewall2 stop"
+        elif detected_distro.name == "centos":
+            cmd = "service iptables stop"
+        else:
+            self.skip("Distro not supported")
+        if process.system("%s && ssh %s %s" %
+                          (cmd, self.PEER_IP, cmd),
+                          ignore_status=True,
+                          shell=True) != 0:
+            self.skip("Unable to disable firewall")
+
+        for package in depends:
+            if not sm.check_installed(package):
+                self.error("%s package is need to test" % package)
+        if process.system("ibstat", shell=True) != 0:
+            self.skip("infiniband adaptors not available")
+
     def pingpong_exec(self, arg1, arg2, arg3):
         '''
         ping pong exec function
@@ -75,9 +90,9 @@ class pingpong(Test):
         logs = "> /tmp/ib_log 2>&1 &"
         if test == "basic":
             test = ""
-        msg = "timeout %s %s -d %s -g %d -i %d %s %s %s" \
+        msg = " \"timeout %s %s -d %s -g %d -i %d %s %s %s\" " \
             % (self.to, arg1, self.PEER_CA, self.PEER_GID, self.PEER_PORT,
-                test, arg3, logs)
+               test, arg3, logs)
         cmd = "ssh %s %s" % (self.PEER_IP, msg)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("ssh failed to remote machine")
@@ -88,14 +103,15 @@ class pingpong(Test):
                          test, arg3))
         tmp = "timeout %s %s -d %s -g %d -i %d %s %s %s" \
             % (self.to, arg1, self.CA, self.GID, self.PORT, self.PEER_IP,
-                test, arg3)
+               test, arg3)
         if process.system(tmp, shell=True, ignore_status=True) != 0:
             self.fail("test failed")
         self.log.info("server data for %s(%s)" % (arg1, arg2))
         self.log.info("%s -d %s -g %d -i %d %s %s"
                       % (arg1, self.PEER_CA, self.PEER_GID, self.PEER_PORT,
                          test, arg3))
-        msg = "timeout %s cat /tmp/ib_log; rm -rf /tmp/ib_log" % self.to
+        msg = " \"timeout %s cat /tmp/ib_log && rm -rf /tmp/ib_log\" " \
+            % self.to
         cmd = "ssh %s %s" % (self.PEER_IP, msg)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("test failed")
@@ -109,7 +125,7 @@ class pingpong(Test):
         self.log.info("test with %s" % (tool_name))
         if "ib" not in self.IF and tool_name == "ibv_ud_pingpong":
             tmp = "grep -w -B 1 %s" % self.PEER_IP
-            cmd = "\`ifconfig | %s | head -1 | cut -f1 -d' '\`" % tmp
+            cmd = " \` ifconfig | %s | head -1 | cut -f1 -d ' ' \` " % tmp
             msg = "ssh %s \"ifconfig %s mtu 9000\"" % (self.PEER_IP, cmd)
             process.system(msg, shell=True)
             con_msg = "ifconfig %s mtu 9000" % (self.IF)
