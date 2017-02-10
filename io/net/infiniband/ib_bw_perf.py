@@ -20,9 +20,6 @@
 # ib_atomic_bw test
 #
 #
-# Based on code by Manvanthara Puttashankar <manvanth@linux.vnet.ibm.com>
-# Copyright: 2015 IBM
-# https://github.ibm.com/ltctest/eio_src/blob/master/bin/infiniband/ib_fvt_test.sh
 
 
 import time
