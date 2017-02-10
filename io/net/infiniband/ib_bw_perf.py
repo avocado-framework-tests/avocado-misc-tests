@@ -18,6 +18,11 @@
 # ib_write_bw test
 # ib_read_bw test
 # ib_atomic_bw test
+#
+#
+# Based on code by Manvanthara Puttashankar <manvanth@linux.vnet.ibm.com>
+# Copyright: 2015 IBM
+# https://github.ibm.com/ltctest/eio_src/blob/master/bin/infiniband/ib_fvt_test.sh
 
 
 import time
@@ -25,7 +30,7 @@ from avocado import main
 import netifaces
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import process
+from avocado.utils import process, distro
 
 
 class Bandwidth_Perf(Test):
@@ -46,11 +51,11 @@ class Bandwidth_Perf(Test):
         interfaces = netifaces.interfaces()
         self.flag = self.params.get("ext_flag", default="0")
         self.IF = self.params.get("interface", default="")
-        self.PEER_IP = self.params.get("peer_ip", default="")
+        self.peer_ip = self.params.get("peer_ip", default="")
         if self.IF not in interfaces:
             self.skip("%s interface is not available" % self.IF)
-        if self.PEER_IP == "":
-            self.skip("%s peer machine is not available" % self.PEER_IP)
+        if self.peer_ip == "":
+            self.skip("%s peer machine is not available" % self.peer_ip)
         self.CA = self.params.get("CA_NAME", default="mlx4_0")
         self.PORT = self.params.get("PORT_NUM", default="1")
         self.PEER_CA = self.params.get("PEERCA", default="mlx4_0")
@@ -63,27 +68,42 @@ class Bandwidth_Perf(Test):
         self.test_op = self.params.get("test_opt", default="").split(",")
         self.ext_test_op = self.params.get("ext_opt", default="").split(",")
 
+        detected_distro = distro.detect()
+        if detected_distro.name == "Ubuntu":
+            cmd = "service ufw stop"
+        elif detected_distro.name in ['redhat', 'fedora']:
+            cmd = "systemctl stop firewalld"
+        elif detected_distro.name == "Suse":
+            cmd = "rcSuSEfirewall2 stop"
+        elif detected_distro.name == "centos":
+            cmd = "service iptables stop"
+        else:
+            self.skip("Distro not supported")
+        if process.system("%s && ssh %s %s" % (cmd, self.peer_ip, cmd),
+                          ignore_status=True, shell=True) != 0:
+            self.skip("Unable to disable firewall")
+
     def bandwidthperf_exec(self, arg1, arg2, arg3):
         '''
         bandwidth performance exec function
         '''
         logs = "> /tmp/ib_log 2>&1 &"
-        cmd = "ssh %s timeout %s %s -d %s -i %s %s %s %s" \
-            % (self.PEER_IP, self.to, arg1, self.PEER_CA, self.PEER_PORT,
-                arg2, arg3, logs)
+        cmd = "ssh %s \" timeout %s %s -d %s -i %s %s %s %s\" " \
+            % (self.peer_ip, self.to, arg1, self.PEER_CA, self.PEER_PORT,
+               arg2, arg3, logs)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("ssh failed to remote machine\
                       or  faing data from remote machine failed")
         time.sleep(2)
         self.log.info("client data for %s(%s)" % (arg1, arg2))
         cmd = "timeout %s %s -d %s -i %s %s %s %s" \
-            % (self.to, arg1, self.CA, self.PORT, self.PEER_IP,
-                arg2, arg3)
+            % (self.to, arg1, self.CA, self.PORT, self.peer_ip,
+               arg2, arg3)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("client command failed for the tool %s" % self.tool_name)
         self.log.info("server data for %s(%s)" % (arg1, arg2))
-        cmd = "ssh %s timeout %s cat /tmp/ib_log; rm -rf /tmp/ib_log" %\
-              (self.PEER_IP, self.to)
+        cmd = "ssh %s \"timeout %s cat /tmp/ib_log && rm -rf /tmp/ib_log\" " %\
+              (self.peer_ip, self.to)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("ssh failed to remote machine\
                       or fetching data from remote machine failed")
