@@ -13,3 +13,4 @@ Inputs Needed (in multiplexer file):
 ------------------------------------
 iso_location -  HTTP location of MOFED ISO (Available from Mellanox website)
 option -        installation parameters
+uninstall -     Indicate whether to uninstall or not (True/False, default=True)
