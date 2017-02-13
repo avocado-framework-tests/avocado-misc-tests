@@ -40,6 +40,7 @@ class MOFEDInstallTest(Test):
         if self.iso_location is '':
             self.skip("No ISO location given")
         self.option = self.params.get('option', default='')
+        self.uninstall_flag = self.params.get('uninstall', default=True)
         self.iso = self.fetch_asset(self.iso_location, expire='10d')
         cmd = "mount -o loop %s %s" % (self.iso, self.srcdir)
         process.run(cmd, shell=True)
@@ -49,6 +50,7 @@ class MOFEDInstallTest(Test):
         """
         Installs MOFED with given options.
         """
+        self.log.info("Starting installation")
         os.chdir(self.srcdir)
         cmd = './mlnxofedinstall %s --force' % self.option
         if process.system(cmd, ignore_status=True, shell=True):
@@ -58,6 +60,7 @@ class MOFEDInstallTest(Test):
         """
         Uninstalls MOFED, if installed fine.
         """
+        self.log.info("Starting uninstallation")
         cmd = "/etc/init.d/openibd restart"
         if not process.system(cmd, ignore_status=True, shell=True):
             return
@@ -73,7 +76,8 @@ class MOFEDInstallTest(Test):
         Tests install and uninstall of MOFED.
         """
         self.install()
-        self.uninstall()
+        if self.uninstall_flag:
+            self.uninstall()
 
     def tearDown(self):
         """
