@@ -24,6 +24,7 @@ import shutil
 import re
 from avocado import Test
 from avocado.utils import process
+from avocado.utils import disk
 from avocado.utils import archive
 from avocado.core import data_dir
 
@@ -46,6 +47,8 @@ class DmaMemtest(Test):
         copies of the linux kernel that will be uncompressed.
         """
         self.nfail = 0
+        self.tmpdir = data_dir.get_tmp_dir()
+        self.tmpdir = self.params.get('dir_to_extract', default=self.tmpdir)
         tarball_base = self.params.get('tarball_base',
                                        default='linux-2.6.18.tar.bz2')
         kernel_repo = self.params.get('kernel_repo',
@@ -73,6 +76,13 @@ class DmaMemtest(Test):
         self.log.info('Number of copies: %s', self.sim_cps)
         self.log.info('Parallel: %s', parallel)
 
+        # Verify if space is available in disk
+        disk_free_mb = (disk.freespace(self.tmpdir) / 1024) / 1024
+        if (disk_free_mb < est_size * self.sim_cps):
+            self.skip("Space not available to extract the %s linux tars\n"
+                      "Mount and Use other partitions in dir_to_extract arg "
+                      "to run the test" % self.sim_cps)
+
     @staticmethod
     def get_sim_cps(est_size):
         '''
@@ -96,7 +106,6 @@ class DmaMemtest(Test):
 
     def test(self):
         parallel_procs = []
-        self.tmpdir = data_dir.get_tmp_dir()
         os.chdir(self.tmpdir)
         # This is the reference copy of the linux tarball
         # that will be used for subsequent comparisons
@@ -150,7 +159,8 @@ class DmaMemtest(Test):
             proc.wait()
             if out_buf != "":
                 self.nfail += 1
-                self.log.error('Error comparing trees: %s', out_buf)
+                self.log.error('Error when comparing test with base copies in'
+                               'parallel')
 
         # Clean up for the next iteration
         parallel_procs = []

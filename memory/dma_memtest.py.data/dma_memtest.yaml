@@ -7,3 +7,4 @@ setup:
     parallel:
         default:
             parallel: True
+dir_to_extract: '/tmp/'
