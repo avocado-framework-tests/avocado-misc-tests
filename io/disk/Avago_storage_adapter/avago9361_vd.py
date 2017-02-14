@@ -37,6 +37,7 @@ class Avago9361(Test):
         All basic set up is done here
         """
         self.controller = int(self.params.get('controller', default='0'))
+        self.tool = str(self.params.get('tool_location'))
         self.disk = str(self.params.get('disk')).split(" ")
         self.raid_level = str(self.params.get('raid_level', default='0'))
         self.size = str(self.params.get('size', default='all'))
@@ -139,15 +140,15 @@ class Avago9361(Test):
         """
         Function to format a drive to JBOD
         """
-        cmd = "./storcli64 /c%d set jbod=on" % self.controller
+        cmd = "%s /c%d set jbod=on" % (self.tool, self.controller)
         self.check_pass(cmd, "Failed to set JBOD on")
-        cmd = "./storcli64 /c%d show jbod" % self.controller
+        cmd = "%s /c%d show jbod" % (self.tool, self.controller)
         self.check_pass(cmd, "Failed to show the JBOD status")
-        cmd = "./storcli64 /c%d/eall/sall set jbod" % self.controller
+        cmd = "%s /c%d/eall/sall set jbod" % (self.tool, self.controller)
         self.check_pass(cmd, "Failed to convert the drives to JBOD")
-        cmd = "./storcli64 /c%d show " % self.controller
+        cmd = "%s /c%d show " % (self.tool, self.controller)
         self.check_pass(cmd, "Failed to show the adapter details")
-        cmd = "./storcli64 /c0/eall/sall set good force"
+        cmd = "%s /c0/eall/sall set good force" % self.tool
         self.check_pass(cmd, "Failed to set JBOD drives to good")
 
     def test_online_offline(self):
@@ -169,14 +170,16 @@ class Avago9361(Test):
         """
         self.vd_create('WT', 'nora', 'direct', 512)
         for spare in ['', 'DGs=0']:
-            cmd = "./storcli64 /c%d/%s add hotsparedrive %s" % (
-                self.controller, self.hotspare, spare)
+            cmd = "%s /c%d/%s add hotsparedrive %s" % (self.tool,
+                                                       self.controller,
+                                                       self.hotspare, spare)
             self.check_pass(cmd, "Failed to create")
             self.set_online_offline('offline')
             self.rebuild('progress', self.hotspare)
             self.copyback_operation()
-            cmd = "./storcli64 /c%d/%s delete hotsparedrive" % (
-                self.controller, self.hotspare)
+            cmd = "%s /c%d/%s delete hotsparedrive" % (self.tool,
+                                                       self.controller,
+                                                       self.hotspare)
             self.check_pass(cmd, "Failed to delete hotsparedrive")
         self.vd_delete()
 
@@ -186,11 +189,13 @@ class Avago9361(Test):
         Helper function to run copyback test
         """
         if state == 'start':
-            cmd = "./storcli64 /c%d/%s start copyback target=%s" \
-                   % (self.controller, self.hotspare, self.copyback)
+            cmd = "%s /c%d/%s start copyback target=%s" % (self.tool,
+                                                           self.controller,
+                                                           self.hotspare,
+                                                           self.copyback)
         else:
-            cmd = "./storcli64 /c%d/%s %s copyback" % (self.controller,
-                                                       self.on_off, state)
+            cmd = "%s /c%d/%s %s copyback" % (self.tool, self.controller,
+                                              self.on_off, state)
         self.check_pass(cmd, "Failed to %s copyback" % state)
 
     def copyback_operation(self):
@@ -200,8 +205,8 @@ class Avago9361(Test):
         """
         for state in self.state:
             self.copyback_state(state)
-            cmd = "./storcli64 /c%d/%s show copyback" % (self.controller,
-                                                         self.on_off)
+            cmd = "%s /c%d/%s show copyback" % (self.tool, self.controller,
+                                                self.on_off)
             self.showprogress(cmd)
         self.sleep_function(cmd)
 
@@ -231,11 +236,11 @@ class Avago9361(Test):
         """
         self.vd_create('WT', 'NORA', 'direct', 256)
         for level in [1, 5, 6]:
-            cmd = "./storcli64 /c%d/v0 start migrate type=raid%s \
-                   option=add drives=%s" % (self.controller, level,
+            cmd = "%s /c%d/v0 start migrate type=raid%s \
+                   option=add drives=%s" % (self.tool, self.controller, level,
                                             self.add_disk.pop())
             self.check_pass(cmd, "Failed to migrate")
-            cmd = "./storcli64 /c%d/v0 show migrate" % self.controller
+            cmd = "%s /c%d/v0 show migrate" % (self.tool, self.controller)
             self.showprogress(cmd)
             self.sleep_function(cmd)
         self.vd_delete()
@@ -248,13 +253,13 @@ class Avago9361(Test):
         if perform.lower() == "operations":
             for state in self.state:
                 self.rebuild_state(state)
-                cmd = "./storcli64 /c%d/%s show rebuild" % (self.controller,
-                                                            self.on_off)
+                cmd = "%s /c%d/%s show rebuild" % (self.tool, self.controller,
+                                                   self.on_off)
                 self.showprogress(cmd)
             self.sleep_function(cmd)
         elif perform.lower() == "progress":
-            cmd = "./storcli64 /c%d/%s show rebuild" % (self.controller,
-                                                        disk)
+            cmd = "%s /c%d/%s show rebuild" % (self.tool, self.controller,
+                                               disk)
             self.showprogress(cmd)
             self.sleep_function(cmd)
 
@@ -272,8 +277,8 @@ class Avago9361(Test):
         """
         Helper function for all CC operations
         """
-        cmd = "./storcli64 /c%d/%s %s rebuild" % (self.controller,
-                                                  self.on_off, state)
+        cmd = "%s /c%d/%s %s rebuild" % (self.tool, self.controller,
+                                         self.on_off, state)
         self.check_pass(cmd, "Failed to %s Rebuild" % state)
         time.sleep(10)
 
@@ -282,8 +287,8 @@ class Avago9361(Test):
         """
         Helper function to set drives online and offline
         """
-        cmd = "./storcli64 /c%d/%s set %s" % (self.controller, self.on_off,
-                                              state)
+        cmd = "%s /c%d/%s set %s" % (self.tool, self.controller,
+                                     self.on_off, state)
         self.check_pass(cmd, "Failed to set drive to %s state" % state)
 
     def jbod_show(self):
@@ -291,7 +296,7 @@ class Avago9361(Test):
         """
         Helper function to show JBOD details
         """
-        cmd = "./storcli64 /c%d show jbod" % self.controller
+        cmd = "%s /c%d show jbod" % (self.tool, self.controller)
         self.check_pass(cmd, "Failed to show the JBOD status")
 
     def vd_details(self):
@@ -299,7 +304,7 @@ class Avago9361(Test):
         """
         Function to display the VD details
         """
-        cmd = "./storcli64 /c%d/vall show" % self.controller
+        cmd = "%s /c%d/vall show" % (self.tool, self.controller)
         self.check_pass(cmd, "Failed to display VD configuration")
 
     def vd_delete(self):
@@ -307,7 +312,7 @@ class Avago9361(Test):
         """
         Function to delete the VD
         """
-        cmd = "./storcli64 /c%d/vall delete force" % self.controller
+        cmd = "%s /c%d/vall delete force" % (self.tool, self.controller)
         self.check_pass(cmd, "Failed to delete VD")
 
     def vd_create(self, write, read, iopolicy, stripe):
@@ -316,16 +321,17 @@ class Avago9361(Test):
         Function to create a VD
         """
         if self.raid_level in ['r00', 'r10', 'r50', 'r60']:
-            cmd = "./storcli64 /c%d add vd %s size=%s drives=%s PDperArray=%d %s %s %s \
-                   strip=%d" % (self.controller, self.raid_level, self.size,
-                                self.raid_disk, self.pdperarray, write, read,
-                                iopolicy, stripe)
+            cmd = "%s /c%d add vd %s size=%s drives=%s PDperArray=%d %s %s %s \
+                   strip=%d" % (self.tool, self.controller, self.raid_level,
+                                self.size, self.raid_disk, self.pdperarray,
+                                write, read, iopolicy, stripe)
             self.check_pass(cmd, "Failed to create raid")
 
         else:
-            cmd = "./storcli64 /c%d add vd %s size=%s drives=%s %s %s %s \
-                   strip=%d" % (self.controller, self.raid_level, self.size,
-                                self.raid_disk, write, read, iopolicy, stripe)
+            cmd = "%s /c%d add vd %s size=%s drives=%s %s %s %s \
+                   strip=%d" % (self.tool, self.controller, self.raid_level,
+                                self.size, self.raid_disk, write, read,
+                                iopolicy, stripe)
             self.check_pass(cmd, "Failed to create raid")
         self.vd_details()
 
@@ -357,7 +363,7 @@ class Avago9361(Test):
         """
         for state in self.state:
             self.cc_state(state)
-            cmd = "./storcli64 /c%d/v0 show cc" % self.controller
+            cmd = "%s /c%d/v0 show cc" % (self.tool, self.controller)
             self.showprogress(cmd)
         self.sleep_function(cmd)
 
@@ -367,9 +373,10 @@ class Avago9361(Test):
         Helper function for all CC operations
         """
         if state == 'start':
-            cmd = "./storcli64 /c%d/v0 %s cc force" % (self.controller, state)
+            cmd = "%s /c%d/v0 %s cc force" % (self.tool, self.controller,
+                                              state)
         else:
-            cmd = "./storcli64 /c%d/v0 %s cc" % (self.controller, state)
+            cmd = "%s /c%d/v0 %s cc" % (self.tool, self.controller, state)
         self.check_pass(cmd, "Failed to %s CC" % state)
         time.sleep(10)
 
@@ -380,7 +387,7 @@ class Avago9361(Test):
         """
         for state in self.state:
             self.pr_state(state)
-            cmd = "./storcli64 /c%d show patrolread" % self.controller
+            cmd = "%s /c%d show patrolread" % (self.tool, self.controller)
             self.check_pass(cmd, "Failed to show the PR progress")
 
     def pr_state(self, state):
@@ -388,7 +395,7 @@ class Avago9361(Test):
         """
         Helper function for all PR operatoins
         """
-        cmd = "./storcli64 /c%d %s patrolread" % (self.controller, state)
+        cmd = "%s /c%d %s patrolread" % (self.tool, self.controller, state)
         self.check_pass(cmd, "Failed to %s PR" % state)
         time.sleep(10)
 
@@ -397,9 +404,9 @@ class Avago9361(Test):
         """
         Helper function to start Fast/Full init
         """
-        cmd = "./storcli64 /c%d/vall start init full" % self.controller
+        cmd = "%s /c%d/vall start init full" % (self.tool, self.controller)
         self.check_pass(cmd, "Failed to start init")
-        cmd = "./storcli64 /c%d/vall show init" % self.controller
+        cmd = "%s /c%d/vall show init" % (self.tool, self.controller)
         self.showprogress(cmd)
         self.sleep_function(cmd)
 
@@ -408,12 +415,14 @@ class Avago9361(Test):
         """
         Helper function to change the VD policy
         """
-        cmd = "./storcli64 /c%d/vall set wrcache=%s" % (self.controller, write)
+        cmd = "%s /c%d/vall set wrcache=%s" % (self.tool, self.controller,
+                                               write)
         self.check_pass(cmd, "Failed to change the write policy")
-        cmd = "./storcli64 /c%d/vall set rdcache=%s" % (self.controller, read)
+        cmd = "%s /c%d/vall set rdcache=%s" % (self.tool, self.controller,
+                                               read)
         self.check_pass(cmd, "Failed to change the read policy")
-        cmd = "./storcli64 /c%d/vall set iopolicy=%s" % (self.controller,
-                                                         iopolicy)
+        cmd = "%s /c%d/vall set iopolicy=%s" % (self.tool, self.controller,
+                                                iopolicy)
         self.check_pass(cmd, "Failed to change the IO policy")
 
 
