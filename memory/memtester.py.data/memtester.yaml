@@ -1,0 +1,7 @@
+test_memster:
+    memtest_opt:
+        runs: 1
+        memory: '1G'
+        # NOTE: Provide page boundary address
+        physaddr: 0x100000
+        device: '/dev/mem'
