@@ -2,9 +2,9 @@ This Program runs Direct Access Programming Library (DAPL) tests on client and s
 
 Inputs Needed in config file:
 -----------------------------
-PEER_IP	    - IP of the Peer interface to be tested
-DAPL_IF1    - RDMA Interface on the Host. Can be taken from the file dat.conf (dat.conf location differs based on OS)
-DAPL_IF2    - RDMA Interface on the Host. Can be taken from the file dat.conf (dat.conf location differs based on OS)
+peer_ip             - IP of the Peer interface to be tested
+dapl_interface      - RDMA Interface on the Host. Can be taken from the file dat.conf (dat.conf location differs based on OS)
+dapl_peer_interface - RDMA Interface on the Host. Can be taken from the file dat.conf (dat.conf location differs based on OS)
 
 Note:
 -----

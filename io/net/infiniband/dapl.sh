@@ -33,15 +33,10 @@ fi
 modules=(ib_uverbs ib_ucm ib_cm ib_mad ib_sa ib_umad ib_addr rdma_cm rdma_ucm \
     ib_core mlx4_core mlx5_core mlx5_ib ib_ipoib mlx4_en mlx4_ib)
 for i in "${modules[@]}"; do
-    modprobe $i
+    modprobe $i || avocado_debug 'not able to load module'$i
 done
 
 # Parsing Input
-CONFIG_FILE="$AVOCADO_TEST_DATADIR"/config
-params=(DAPL_IF1 DAPL_IF2 PEER_IP)
-for i in "${params[@]}"; do
-    eval $(cat $CONFIG_FILE | grep -w $i)
-done
 host_param=$(eval "echo $HOST_PARAM")
 peer_param=$(eval "echo $PEER_PARAM")
 
@@ -54,10 +49,10 @@ dapl_exec()
     if [[ "$3" == "" ]]; then
         avocado_info "Client specific run for $1($2)"
         avocado_debug "$1 $2"
-        timeout $timeout $1 $2 || { echo "Client specific run failed"; exit 1; }
+        timeout $timeout $1 $2 || { echo "Client specific run failed"; exit 1;}
     else
         avocado_info "Client data for $1($3)"
-        ssh $PEER_IP "timeout $timeout $1 $2  > /tmp/ib_log 2>&1 &" || \
+        ssh $peer_ip "timeout $timeout $1 $2  > /tmp/ib_log 2>&1 &" || \
             { echo "Peer run failed"; exit 1; }
 
         sleep 5
@@ -67,14 +62,14 @@ dapl_exec()
         sleep 5
         avocado_info "Server data for $1($2)"
         avocado_debug "$1 $2"
-        ssh $PEER_IP "timeout $timeout cat /tmp/ib_log; rm -rf /tmp/ib_log"
+        ssh $peer_ip "timeout $timeout cat /tmp/ib_log; rm -rf /tmp/ib_log"
     fi
 }
 
 # Parses the input values and calls dapl_exec() to execute dapltest
 testdapl()
 {
-    if [[ $DAPL_IF1 != "" ]] && [[ $DAPL_IF2 != "" ]]; then
+    if [[ $dapl_interface != "" ]] && [[ $dapl_peer_interface != "" ]]; then
         if type "dapltest" > /dev/null
         then
             dapl_exec dapltest "$host_param" "$peer_param"
@@ -88,6 +83,4 @@ testdapl()
 }
 
 # MAIN
-
 testdapl
-exit 0
