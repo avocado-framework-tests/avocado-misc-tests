@@ -38,11 +38,6 @@ class MultipathTest(Test):
         """
         Set up.
         """
-        # Check if multipath devices are present in system
-        self.wwids = multipath.get_multipath_wwids()
-        if self.wwids == ['']:
-            self.skip("No Multipath Devices")
-
         # Install needed packages
         dist = distro.detect()
         pkg_name = ""
@@ -59,6 +54,12 @@ class MultipathTest(Test):
 
         # Create service object
         self.mpath_svc = service.SpecificServiceManager(svc_name)
+        self.mpath_svc.restart()
+
+        # Check if multipath devices are present in system
+        self.wwids = multipath.get_multipath_wwids()
+        if self.wwids == ['']:
+            self.skip("No Multipath Devices")
 
         # Take a backup of current config file
         self.mpath_file = "/etc/multipath.conf"
