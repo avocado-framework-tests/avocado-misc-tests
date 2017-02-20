@@ -31,6 +31,8 @@ import os
 import avocado
 from avocado import Test
 from avocado import main
+from avocado.utils.software_manager import SoftwareManager
+from avocado.utils import distro
 from avocado.utils import lv_utils
 
 
@@ -45,6 +47,11 @@ class Lvsetup(Test):
         """
         Check existence of input PV,VG, LV and snapshots prior to Test.
         """
+        smm = SoftwareManager()
+        pkgs = ['xfsprogs', 'btrfs-progs']
+        for pkg in pkgs:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
+                self.skip("%s package is need to test" % pkg)
         self.disk = self.params.get('disk', default=None)
         vg_name = self.params.get('vg_name', default='avocado_vg')
         lv_name = self.params.get('lv_name', default='avocado_lv')
