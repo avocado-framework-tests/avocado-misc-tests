@@ -54,9 +54,10 @@ class FioTest(Test):
         """
         Execute 'fio' with appropriate parameters.
         """
+        disk = self.params.get('disk', default='')
         fio_job = self.params.get('fio_job', default='fio-mixed.job')
-        cmd = '%s/fio %s' % (self.srcdir,
-                             os.path.join(self.datadir, fio_job))
+        cmd = '%s/fio %s %s' % (self.srcdir,
+                             os.path.join(self.datadir, fio_job), disk)
         process.system(cmd)
 
 
