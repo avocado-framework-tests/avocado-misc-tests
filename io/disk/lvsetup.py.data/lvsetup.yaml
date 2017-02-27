@@ -1,7 +1,7 @@
 scenario: !mux
 # btrfs needs minimum LV size of 641M
     real:
-        disk: /dev/vde
+        disk: /dev/mapper/mpathb
         lv_size: "641M"
 filesystem: !mux
     ext2:
