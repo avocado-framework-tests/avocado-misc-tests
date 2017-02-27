@@ -54,7 +54,7 @@ class FioTest(Test):
         """
         Execute 'fio' with appropriate parameters.
         """
-        fio_job = self.params.get('fio_job', default='fio-mixed.job')
+        fio_job = self.params.get('fio_job', default='fio-simple.job')
         cmd = '%s/fio %s' % (self.srcdir,
                              os.path.join(self.datadir, fio_job))
         process.system(cmd)
