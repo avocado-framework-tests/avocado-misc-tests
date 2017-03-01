@@ -23,6 +23,7 @@ Bonnie test
 """
 
 import os
+import getpass
 from avocado import Test
 from avocado import main
 from avocado.utils import archive
@@ -46,7 +47,7 @@ class Bonnie(Test):
         """
 
         self.scratch_dir = self.params.get('dir', default=self.srcdir)
-        self.uid_to_use = self.params.get('uid-to-use', default=None)
+        self.uid_to_use = self.params.get('uid-to-use', default=getpass.getuser())
         self.number_to_stat = self.params.get('number-to-stat', default=2048)
         self.data_size = self.params.get('data_size_to_pass', default=0)
 
@@ -68,8 +69,7 @@ class Bonnie(Test):
         args.append('-d %s' % self.scratch_dir)
         args.append('-n %s' % self.number_to_stat)
         args.append('-s %s' % self.data_size)
-        if self.uid_to_use:
-            args.append('-u %s' % self.uid_to_use)
+        args.append('-u %s' % self.uid_to_use)
 
         cmd = ('%s/bonnie++ %s' % (self.srcdir, " ".join(args)))
         if process.system(cmd, shell=True, ignore_status=True):
