@@ -43,24 +43,24 @@ class Ltrace(Test):
 
         backend = SoftwareManager()
         dist = distro.detect()
-
+        dist_name = dist.name.lower()
         if not backend.check_installed("gcc") and not backend.install("gcc"):
             self.error("gcc is needed for the test to be run")
 
         pkgs = ['git', 'wget', 'autoconf', 'automake',
                 'dejagnu', 'binutils']
 
-        if dist.name == 'sles':
+        if dist_name == 'suse':
             sles_deps = ['build', 'libdw-devel', 'libelf-devel',
                          'elfutils', 'binutils-devel', 'libtool', 'gcc-c++']
             pkgs += sles_deps
 
-        elif dist.name in ("redhat", "fedora"):
+        elif dist_name in ("redhat", "fedora"):
             rhel_deps = ['elfutils-devel', 'elfutils-libelf-devel',
                          'elfutils-libelf', 'elfutils-libs', 'libtool-ltdl']
             pkgs += rhel_deps
 
-        elif dist.name == 'ubuntu':
+        elif dist_name == 'ubuntu':
             ubuntu_deps = ['elfutils', 'libelf-dev', 'libtool',
                            'libelf1', 'librpmbuild3', 'binutils-dev']
             pkgs += ubuntu_deps
