@@ -1,7 +1,15 @@
 setup:
     location: !mux
         default:
+            disk: '/dev/sdd'
             dir: '/mnt'
+    filesystem: !mux
+        ext4:
+            fs: 'ext4'
+        xfs:
+            fs: 'xfs'
+        btrfs:
+            fs: 'btrfs'
     block: !mux
         first:
             blocks: 4096
