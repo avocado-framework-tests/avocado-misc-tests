@@ -49,8 +49,8 @@ class Filebench(Test):
         self._testfile = self.params.get('testfile', default='fileserver.f')
 
         tarball = self.fetch_asset('https://github.com/filebench/'
-                                   'filebench/releases/ownload/1.5-alpha3/'
-                                   'filebench-1.5-alpha3.tar.gz', expire='7d')
+                                   'filebench/releases/download/1.5-alpha3/'
+                                   'filebench-1.5-alpha3.tar.gz')
 
         archive.extract(tarball, self.srcdir)
         version = os.path.basename(tarball.split('.tar.')[0])
