@@ -51,7 +51,6 @@ class Tlbflush(Test):
                         os.path.join(self.srcdir, 'tlbflush.c'))
 
         os.chdir(self.srcdir)
-        os.system('cp tlbflush.c /root/pp/tlbflush.c')
         tlbflush_patch = 'patch -p1 < %s' % (
             os.path.join(data_dir, 'tlbflush.patch'))
 
