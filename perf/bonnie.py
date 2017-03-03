@@ -29,6 +29,7 @@ from avocado import main
 from avocado.utils import archive
 from avocado.utils import build
 from avocado.utils import process
+from avocado.utils.partition import Partition
 
 
 class Bonnie(Test):
@@ -46,8 +47,11 @@ class Bonnie(Test):
          http://www.coker.com.au/bonnie++/experimental/bonnie++-1.03e.tgz
         """
 
+        self.disk = self.params.get('disk', default=None)
+        self.fstype = self.params.get('fs', default='ext4')
         self.scratch_dir = self.params.get('dir', default=self.srcdir)
-        self.uid_to_use = self.params.get('uid-to-use', default=getpass.getuser())
+        self.uid_to_use = self.params.get('uid-to-use',
+                                          default=getpass.getuser())
         self.number_to_stat = self.params.get('number-to-stat', default=2048)
         self.data_size = self.params.get('data_size_to_pass', default=0)
 
@@ -59,6 +63,16 @@ class Bonnie(Test):
         os.chdir(self.srcdir)
         process.run('./configure')
         build.make(self.srcdir)
+
+        part_obj = Partition(self.disk, mountpoint=self.scratch_dir)
+        self.log.info("Test will run on %s" % self.scratch_dir)
+        self.log.info("Unmounting the disk/dir before creating file system")
+        part_obj.unmount()
+        self.log.info("creating file system")
+        part_obj.mkfs(self.fstype)
+        self.log.info("Mounting disk %s on directory %s",
+                      self.disk, self.scratch_dir)
+        part_obj.mount()
 
     def test(self):
 
