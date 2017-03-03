@@ -25,6 +25,7 @@ from avocado import main
 from avocado.utils import build
 from avocado.utils import process, archive
 from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.partition import Partition
 
 
 class Ltp_Fs(Test):
@@ -50,15 +51,13 @@ class Ltp_Fs(Test):
         self.args = self.params.get('args', default='')
         self.log.info("creating %s filesystem on"
                       "disk %s" % (self.fs, self.disk))
-        cmd = "mkfs.%s %s" % (self.fs, self.disk)
-        if process.system(cmd, shell=True, ignore_status=True):
-            self.fail("Creating filesystem %s on"
-                      "%s failed" % (self.fs, self.disk))
-        self.log.info("Mounting disk %s to mount point %s"
-                      % (self.disk, self.mount_point))
-        cmd = "mount %s %s" % (self.disk, self.mount_point)
-        if process.system(cmd, shell=True, ignore_status=True):
-            self.fail("Unable to mount to location  %s" % self.mount_point)
+        part_obj = Partition(self.disk, mountpoint=self.mount_point)
+        self.log.info("Unmounting the disk or dir if it is already mounted")
+        part_obj.unmount()
+        self.log.info("creating %s file system on %s", self.fs, self.disk)
+        part_obj.mkfs(self.fs)
+        self.log.info("mounting %s on %s", self.disk, self.mount_point)
+        part_obj.mount()
         url = "https://github.com/linux-test-project/ltp/"
         url += "archive/master.zip"
         tarball = self.fetch_asset("ltp-master.zip",
@@ -116,9 +115,8 @@ class Ltp_Fs(Test):
         if process.system(delete_fs, shell=True, ignore_status=True):
             self.fail("Failed to delete filesystem on %s" % self.disk)
         self.log.info("Unmounting directory %s" % self.mount_point)
-        cmd = "umount %s" % self.mount_point
-        if process.system(cmd, shell=True, ignore_status=True):
-            self.fail("Unable to unmount %s" % self.mount_point)
+        part_obj = Partition(self.disk, mountpoint=self.mount_point)
+        part_obj.unmount()
 
 
 if __name__ == "__main__":
