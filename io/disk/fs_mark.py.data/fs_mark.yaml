@@ -19,5 +19,13 @@ setup:
     size:
         size: 10240
     dir:
-        dir: /var/tmp
-
+        dir: '/mnt'
+    disk:
+        disk: '/dev/sdd'
+filesystem: !mux
+    ext4:
+        fs: 'ext4'
+    xfs:
+        fs: 'xfs'
+    btrfs:
+        fs: 'btrfs'
