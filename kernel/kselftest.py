@@ -55,8 +55,8 @@ class kselftest(Test):
             deps.extend(['git-core', 'popt', 'glibc', 'glibc-devel', 'popt-devel',
                          'libcap1', 'libcap1-devel', 'libcap-ng', 'libcap-ng-devel'])
         elif detected_distro.name in ['centos', 'fedora', 'redhat']:
-            deps.extend(['git', 'popt', 'popt-static', 'glibc', 'glibc-devel', 'glibc-static',
-                         'libcap-ng', 'libcap-ng-devel', 'libcap', 'libcap-devel'])
+            deps.extend(['git', 'popt', 'glibc', 'glibc-devel', 'glibc-static',
+                         'libcap-ng', 'libcap', 'libcap-devel'])
 
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
