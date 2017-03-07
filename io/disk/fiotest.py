@@ -26,6 +26,7 @@ from avocado import main
 from avocado.utils import archive
 from avocado.utils import build
 from avocado.utils import process
+from avocado.utils.partition import Partition
 
 
 class FioTest(Test):
@@ -44,11 +45,25 @@ class FioTest(Test):
         """
         Build 'fio'.
         """
-        tarball = self.fetch_asset('http://brick.kernel.dk/snaps/fio-2.1.10.tar.gz')
+        url = "http://brick.kernel.dk/snaps/fio-2.1.10.tar.gz"
+        tarball = self.fetch_asset(url)
         archive.extract(tarball, self.srcdir)
         fio_version = os.path.basename(tarball.split('.tar.')[0])
         self.srcdir = os.path.join(self.srcdir, fio_version)
         build.make(self.srcdir)
+        self.disk = self.params.get('disk', default=None)
+        self.dir = self.params.get('dir', default=self.srcdir)
+        self.fstype = self.params.get('fs', default='ext4')
+
+        self.part_obj = Partition(self.disk, mountpoint=self.dir)
+        self.log.info("Test will run on %s", self.dir)
+        self.log.info("Unmounting the disk/dir before creating file system")
+        self.part_obj.unmount()
+        self.log.info("creating file system")
+        self.part_obj.mkfs(self.fstype)
+        self.log.info("Mounting disk %s on directory %s",
+                      self.disk, self.dir)
+        self.part_obj.mount()
 
     def test(self):
         """
@@ -58,6 +73,14 @@ class FioTest(Test):
         cmd = '%s/fio %s' % (self.srcdir,
                              os.path.join(self.datadir, fio_job))
         process.system(cmd)
+
+    def tearDown(self):
+
+        '''
+        Cleanup of disk used to perform this test
+        '''
+        self.log.info("Unmounting directory %s", self.dir)
+        self.part_obj.unmount()
 
 
 if __name__ == "__main__":
