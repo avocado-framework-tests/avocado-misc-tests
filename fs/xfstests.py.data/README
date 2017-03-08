@@ -5,9 +5,11 @@ started are really simple:
 1.1) The variables 'TEST_DEV' and 'TEST_DIR' are mandatory and should be set to
      a block device path and mount point path, respectively, that will be used
      *exclusively* for xfstests. It must have the filesystem of your choice
-     previously created.
-     ex : export TEST_DEV =/dev/vda1 , export TEST_DIR=/mnt
-
+     previously created .Please refer local.config and edit local.config 
+     as ex:  create  entry TEST_DEV =/dev/vda1
+		     	   TEST_DIR=/mnt
+     for xfs test SCRATCH_DEV and SCRATCH_MNT can also be set 
+	but that can be optional 
      DO NOT USE A BLOCK DEVICE WITH IMPORTANT DATA!!!
 
 1.2) In yaml file set test_number which test need to run  and skip_dangerous
@@ -39,3 +41,8 @@ virtual partition depends on the following programs to be available:
      * kpartx
 Make sure you have them or a real spare device to test things.
 """
+TODO:
+1- Device will be given as yaml input
+2- creating FS, mounting the disk/loop device
+3- Write local.cofig dynamic way 
+4- test will able to run only specfic file system type test case
