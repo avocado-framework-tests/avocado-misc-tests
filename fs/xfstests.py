@@ -73,6 +73,9 @@ class Xfstests(Test):
 
         shutil.copyfile(os.path.join(data_dir, 'group'),
                         os.path.join(self.srcdir, 'group'))
+        shutil.copyfile(os.path.join(data_dir, 'local.config'),
+                        os.path.join(self.srcdir, 'local.config'))
+
         build.make(self.srcdir)
         self.available_tests = self._get_available_tests()
 
