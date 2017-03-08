@@ -27,7 +27,7 @@ import shutil
 
 from avocado import Test
 from avocado import main
-from avocado.utils import process, build, git
+from avocado.utils import process, build, git, distro
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -39,14 +39,27 @@ class Xfstests(Test):
         Source: git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git
         """
         sm = SoftwareManager()
-        packages = ['xfslibs-dev', 'uuid-dev', 'libtool-bin', 'e2fsprogs',
-                    'automake', 'gcc', 'libuuid1', 'quota', 'attr',
-                    'libattr1-dev', 'make', 'libacl1-dev', 'xfsprogs',
-                    'libgdbm-dev', 'gawk', 'fio', 'dbench', 'uuid-runtime']
+        detected_distro = distro.detect()
+
+        packages = ['e2fsprogs', 'automake', 'gcc', 'quota', 'attr',
+                    'make',  'xfsprogs',  'gawk', 'fio', 'dbench']
+
+        if 'Ubuntu' in detected_distro.name:
+            packages.extend(['xfslibs-dev', 'uuid-dev', 'libtool-bin', 'libuuid1',
+                             'libattr1-dev', 'libacl1-dev', 'libgdbm-dev', 'uuid-runtime'])
+
+        elif detected_distro.name in ['centos', 'fedora', 'redhat']:
+            packages.extend(['acl', 'bc', 'dump', 'indent', 'libtool', 'lvm2',
+                             'xfsdump', 'psmisc', 'sed', 'libacl-devel', 'libattr-devel',
+                             'libaio-devel', 'libuuid-devel', 'openssl-devel', 'xfsprogs-devel',
+                             'btrfs-progs-devel'])
+        else:
+            self.skip("test not supported in %s" % detected_distro.name)
+
         for package in packages:
             if not sm.check_installed(package) and not sm.install(package):
-                self.error("Fail to install %s required for this test." %
-                           package)
+                self.skip("Fail to install %s required for this test." %
+                          package)
 
         self.test_range = self.params.get('test_range', default=None)
         if self.test_range is None:
