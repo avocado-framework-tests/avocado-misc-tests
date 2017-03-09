@@ -92,7 +92,7 @@ class Disktest(Test):
 
         gigabytes = self.params.get('gigabytes', default=None)
         if gigabytes is None:
-            free = 100  # cap it at 100GB by default
+            free = 107374182400  # cap it at 100GB by default
             for disk in self.disks:
                 free = min(utils_disk.freespace(disk) / 1073741824, free)
             gigabytes = free
