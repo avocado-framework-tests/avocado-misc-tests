@@ -1,3 +1,0 @@
-parameters:
-    disk: '/mnt/'
-    fio_job: 'fio-simple.job'
