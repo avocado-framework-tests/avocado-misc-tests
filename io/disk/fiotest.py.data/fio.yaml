@@ -1,0 +1,11 @@
+parameters:
+    disk: '/dev/sdd'
+    dir: '/mnt'
+    fio_job: 'fio-simple.job'
+filesystem: !mux
+    ext4:
+        fs: 'ext4'
+    xfs:
+        fs: 'xfs'
+    btrfs:
+        fs: 'btrfs'
