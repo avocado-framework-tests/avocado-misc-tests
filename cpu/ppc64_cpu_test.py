@@ -22,6 +22,7 @@ import os
 from avocado import Test
 from avocado import main
 from avocado.utils import process
+from avocado.utils import cpu
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -52,6 +53,9 @@ class PPC64Test(Test):
         self.smt_values = {1: "off"}
         self.key = 0
         self.value = ""
+        self.max_smt_value = 4
+        if cpu.get_cpu_arch().lower() == 'power8':
+            self.max_smt_value = 8
 
     def equality_check(self, test_name, cmd1, cmd2):
         """
@@ -73,7 +77,7 @@ class PPC64Test(Test):
         """
         Sets the SMT value, and calls each of the test, for each value.
         """
-        for i in range(2, 9):
+        for i in range(2, self.max_smt_value + 1):
             self.smt_values[i] = str(i)
         for self.key, self.value in self.smt_values.iteritems():
             process.system_output("ppc64_cpu --smt=%s" % self.key, shell=True)
