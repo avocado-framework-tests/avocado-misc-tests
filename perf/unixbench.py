@@ -33,7 +33,7 @@ class unixbench(Test):
         sm = SoftwareManager()
         detected_distro = distro.detect()
         # Check for basic utilities
-        deps = ['gcc', 'make']
+        deps = ['gcc', 'make', 'patch']
         self.tmpdir = data_dir.get_tmp_dir()
         self.build_dir = self.params.get('build_dir', default=self.tmpdir)
         for package in deps:
