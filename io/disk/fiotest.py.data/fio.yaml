@@ -1,0 +1,12 @@
+parameters:
+    disk: '/dev/sdd'  
+    dir: '/mnt'
+    fio_job: 'fio-simple.job'
+    fio_tool_url: 'http://brick.kernel.dk/snaps/fio-2.1.10.tar.gz'
+filesystem: !mux
+    ext4:
+        fs: 'ext4'
+    xfs:
+        fs: 'xfs'
+    btrfs:
+        fs: 'btrfs'
