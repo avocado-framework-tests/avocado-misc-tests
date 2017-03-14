@@ -19,7 +19,10 @@ from shutil import copyfile
 from avocado import Test
 from avocado import main
 from avocado.utils import process
+from avocado import skipIf
 from avocado.utils.software_manager import SoftwareManager
+
+IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 
 
 class RASTools(Test):
@@ -46,6 +49,7 @@ class RASTools(Test):
                 self.error("Fail to install %s required for this"
                            " test." % package)
 
+    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
     def test1_set_poweron_time(self):
         """
         set_poweron_time schedules the power on time
@@ -60,6 +64,7 @@ class RASTools(Test):
             self.fail("%s command(s) failed in set_poweron_time tool "
                       "verification" % self.is_fail)
 
+    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
     def test2_sys_ident_tool(self):
         """
         sys_ident provides unique system identification information
@@ -97,6 +102,7 @@ class RASTools(Test):
             self.fail("%s command(s) failed in lsmcode tool verification"
                       % self.is_fail)
 
+    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
     def test4_drmgr(self):
         """
         drmgr can be used for pci, cpu or memory hotplug
@@ -131,6 +137,7 @@ class RASTools(Test):
             self.fail("%s command(s) failed in lsprop tool verification"
                       % self.is_fail)
 
+    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
     def test6_lsslot(self):
         """
         lsslot lists the slots based on the option provided
@@ -150,6 +157,7 @@ class RASTools(Test):
             self.fail("%s command(s) failed in lsslot tool verification"
                       % self.is_fail)
 
+    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
     def test7_lsvio(self):
         """
         lsvio lists the virtual I/O adopters and devices
@@ -179,6 +187,7 @@ class RASTools(Test):
             self.fail("%s command(s) failed in nvram tool verification"
                       % self.is_fail)
 
+    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
     def test9_ofpathname(self):
         """
         ofpathname translates the device name between logical name and Open
@@ -231,6 +240,7 @@ class RASTools(Test):
             self.fail("%s command(s) failed in ppc64_cpu tool verification"
                       % self.is_fail)
 
+    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
     def test11_rtas_ibm_get_vpd(self):
         """
         rtas_ibm_get_vpd gives vpd data
@@ -243,6 +253,7 @@ class RASTools(Test):
             self.fail("%s command(s) failed in rtas_ibm_get_vpd tool "
                       "verification" % self.is_fail)
 
+    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
     def test12_rtas_errd_and_rtas_dump(self):
         """
         rtas_errd adds RTAS events to /var/log/platform and rtas_dump dumps
