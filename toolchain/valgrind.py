@@ -18,6 +18,7 @@ from avocado import main
 from avocado.utils import process
 from avocado.utils import build
 from avocado.utils import archive
+from avocado.utils import distro
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -34,7 +35,13 @@ class Valgrind(Test):
         smm = SoftwareManager()
         self.failures = []
 
-        for package in ['gcc', 'make']:
+        dist = distro.detect()
+        deps = ['gcc', 'make']
+        if dist.name == 'Ubuntu':
+            deps.extend(['g++'])
+        elif dist.name in ['SuSe', 'redhat', 'fedora', 'centos']:
+            deps.extend(['gcc-c++'])
+        for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.skip('%s is needed for the test to be run' % package)
         tarball = self.fetch_asset(
