@@ -41,23 +41,22 @@ class Ltp_Fs(Test):
         sm = SoftwareManager()
         for package in ['gcc', 'make', 'automake', 'autoconf']:
             if not sm.check_installed(package) and not sm.install(package):
-                self.error(package + ' is needed for the test to be run')
-        self.disk = self.params.get('disk', default="")
-        if self.disk == "":
-            self.skip("Please provide a disk for test")
+                self.error("%s is needed for the test to be run", package)
+        self.disk = self.params.get('disk', default=None)
         self.mount_point = self.params.get('dir', default=self.srcdir)
         self.script = self.params.get('script')
-        self.fs = self.params.get('fs', default='ext4')
+        fstype = self.params.get('fs', default='ext4')
         self.args = self.params.get('args', default='')
-        self.log.info("creating %s filesystem on"
-                      "disk %s" % (self.fs, self.disk))
-        part_obj = Partition(self.disk, mountpoint=self.mount_point)
-        self.log.info("Unmounting the disk or dir if it is already mounted")
-        part_obj.unmount()
-        self.log.info("creating %s file system on %s", self.fs, self.disk)
-        part_obj.mkfs(self.fs)
-        self.log.info("mounting %s on %s", self.disk, self.mount_point)
-        part_obj.mount()
+
+        if self.disk is not None:
+            self.part_obj = Partition(self.disk, mountpoint=self.mount_point)
+            self.log.info("Unmounting the disk/dir if it is already mounted")
+            self.part_obj.unmount()
+            self.log.info("creating %s file system on %s", fstype, self.disk)
+            self.part_obj.mkfs(fstype)
+            self.log.info("mounting %s on %s", self.disk, self.mount_point)
+            self.part_obj.mount()
+
         url = "https://github.com/linux-test-project/ltp/"
         url += "archive/master.zip"
         tarball = self.fetch_asset("ltp-master.zip",
@@ -83,7 +82,7 @@ class Ltp_Fs(Test):
             failcmdfile = os.path.join(self.logdir, 'failcmdfile')
             self.args += (" -q -p -l %s -C %s -d %s"
                           % (logfile, failcmdfile, self.mount_point))
-            self.log.info("Args = %s" % self.args)
+            self.log.info("Args = %s", self.args)
             ltpbin_dir = os.path.join(self.srcdir, "ltp-master", 'bin')
             cmd = '%s %s' % (os.path.join(ltpbin_dir, self.script), self.args)
             result = process.run(cmd, ignore_status=True)
@@ -110,13 +109,14 @@ class Ltp_Fs(Test):
         '''
         Cleanup of disk used to perform this test
         '''
-        self.log.info("Removing the filesystem created on %s" % self.disk)
+        self.log.info("Removing the filesystem created on %s", self.disk)
         delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk
         if process.system(delete_fs, shell=True, ignore_status=True):
-            self.fail("Failed to delete filesystem on %s" % self.disk)
-        self.log.info("Unmounting directory %s" % self.mount_point)
-        part_obj = Partition(self.disk, mountpoint=self.mount_point)
-        part_obj.unmount()
+            self.fail("Failed to delete filesystem on %s", self.disk)
+        if self.disk is not None:
+            self.log.info("Unmounting disk %s on directory %s",
+                          self.disk, self.mount_point)
+            self.part_obj.unmount()
 
 
 if __name__ == "__main__":
