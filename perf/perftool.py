@@ -20,7 +20,7 @@ import os
 
 from avocado import Test
 from avocado import main
-from avocado.utils import archive, build
+from avocado.utils import archive, build, process
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -77,8 +77,7 @@ class Perftool(Test):
         self.srcdir = os.path.join(self.srcdir, 'perf_event_tests-master')
         build.make(self.srcdir)
         os.chdir(self.srcdir)
-        process.system_output("echo -1 >/proc/sys/kernel/"
-                              "perf_event_paranoid")
+        os.system("echo -1 >/proc/sys/kernel/perf_event_paranoid")
         process.system_output("./run_tests.sh")
 
 
