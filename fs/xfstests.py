@@ -27,7 +27,7 @@ import shutil
 
 from avocado import Test
 from avocado import main
-from avocado.utils import process, build, git, distro
+from avocado.utils import process, build, git, distro, partition
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -43,17 +43,20 @@ class Xfstests(Test):
         detected_distro = distro.detect()
 
         packages = ['e2fsprogs', 'automake', 'gcc', 'quota', 'attr',
-                    'make',  'xfsprogs',  'gawk', 'fio', 'dbench']
+                    'make',  'xfsprogs',  'gawk']
 
         if 'Ubuntu' in detected_distro.name:
             packages.extend(['xfslibs-dev', 'uuid-dev', 'libtool-bin', 'libuuid1',
-                             'libattr1-dev', 'libacl1-dev', 'libgdbm-dev', 'uuid-runtime'])
+                             'libattr1-dev', 'libacl1-dev', 'libgdbm-dev',
+                             'uuid-runtime', 'libaio-dev', 'fio', 'dbench'])
 
         elif detected_distro.name in ['centos', 'fedora', 'redhat']:
             packages.extend(['acl', 'bc', 'dump', 'indent', 'libtool', 'lvm2',
-                             'xfsdump', 'psmisc', 'sed', 'libacl-devel', 'libattr-devel',
-                             'libaio-devel', 'libuuid-devel', 'openssl-devel', 'xfsprogs-devel',
-                             'btrfs-progs-devel'])
+                             'xfsdump', 'psmisc', 'sed', 'libacl-devel',
+                             'libattr-devel', 'libaio-devel', 'libuuid-devel',
+                             'openssl-devel', 'xfsprogs-devel', 'btrfs-progs-devel'])
+            if detected_distro.name != 'redhat':
+                packages.extend(['fio', 'dbench'])
         else:
             self.skip("test not supported in %s" % detected_distro.name)
 
@@ -62,10 +65,19 @@ class Xfstests(Test):
                 self.skip("Fail to install %s required for this test." %
                           package)
         self.test_range = self.params.get('test_range', default=None)
-        if self.test_range is None:
-            self.fail('Please provide a test_range.')
 
         self.skip_dangerous = self.params.get('skip_dangerous', default=True)
+        self.dev_type = self.params.get('type', default='loop')
+        self.fs_to_test = self.params.get('file_system', default='ext4')
+        if self.dev_type == 'loop':
+            base_disk = self.params.get('base_disk', default=None)
+            if not base_disk:
+                self.skip('Please provide a base disk to create loop device')
+            self._create_loop_device(base_disk)
+        else:
+            self.test_dev = self.params.get('test_dev', default=None)
+            self.scratch_dev = self.params.get('scratch_dev', default=None)
+            # TODO: Overwirte the disk in local.config
 
         git.get_repo('git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
                      destination_dir=self.srcdir)
@@ -84,42 +96,90 @@ class Xfstests(Test):
                       ", ".join(self.available_tests))
         process.run('useradd fsgqa', sudo=True)
         process.run('useradd 123456-fsgqa', sudo=True)
+        self.scratch_mnt = '/mnt/scratch'
+        self.test_mnt = '/mnt/test'
+        if not os.path.exists(self.scratch_mnt):
+            os.makedirs(self.scratch_mnt)
+        if not os.path.exists(self.test_mnt):
+            os.makedirs(self.test_mnt)
 
     def test(self):
         failures = False
         os.chdir(self.srcdir)
-        for test in self.test_list:
-            test = '*/' + test
-            cmd = './check %s' % test
-            result = process.run(cmd, ignore_status=True)
+        if not self.test_list:
+            self.log.info('Running all tests')
+            cmd = './check -g auto'
+            result = process.run(cmd, ignore_status=True, verbose=True)
             if result.exit_status == 0:
-                self.log.info('OK: Test %s passed.', test)
+                self.log.info('OK: All Tests passed.')
             else:
                 msg = self._parse_error_message(result.stdout)
-                self.log.info('ERR: %s failed. Message: %s', test, msg)
+                self.log.info('ERR: Test(s) failed. Message: %s', msg)
                 failures = True
+
+        else:
+            self.log.info('Running only specified tests')
+            for test in self.test_list:
+                test = '%s/%s' % (self.fs_to_test, test)
+                cmd = './check %s' % test
+                result = process.run(cmd, ignore_status=True, verbose=True)
+                if result.exit_status == 0:
+                    self.log.info('OK: Test %s passed.', test)
+                else:
+                    msg = self._parse_error_message(result.stdout)
+                    self.log.info('ERR: %s failed. Message: %s', test, msg)
+                    failures = True
         if failures:
             self.fail('One or more tests failed. Please check the logs.')
 
     def tearDown(self):
         process.system('userdel fsgqa', sudo=True)
         process.system('userdel 123456-fsgqa', sudo=True)
+        # In case if any test has been interrupted
+        process.system('umount self.scratch_mnt self.test_mnt',
+                       sudo=True, ignore_status=True)
+        if os.path.exists(self.scratch_mnt):
+            os.rmdir(self.scratch_mnt)
+        if os.path.exists(self.test_mnt):
+            os.rmdir(self.test_mnt)
+        if self.dev_type == 'loop':
+            process.system(
+                'for i in $(seq 0 1); do losetup -d '
+                '/dev/loop$i; done', shell=True, sudo=True)
+        self.part.unmount()
+
+    def _create_loop_device(self, base_disk):
+        self.part = partition.Partition(
+            base_disk, mountpoint='/mnt/loop-device')
+        self.part.mount()
+        # Creating two loop devices
+        process.run(
+            'for i in $(seq 0 1); do fallocate -o 0 -l 9GiB '
+            '/mnt/loop-device/file-$i.img; done', shell=True, sudo=True)
+        process.run(
+            'for i in $(seq 0 1); do losetup /dev/loop$i '
+            '/mnt/loop-device/file-$i.img; done', shell=True, sudo=True)
+        if process.system('which mkfs.%s' % self.fs_to_test):
+            self.skip('Unknown filesystem %s' % self.fs_to_test)
+        # mkfs for two loop device
+        for i in range(2):
+            loop_dev = partition.Partition('/dev/loop%s' % i)
+            loop_dev.mkfs(fstype=self.fs_to_test)
 
     def _create_test_list(self):
         test_list = []
         dangerous_tests = []
         if self.skip_dangerous:
             dangerous_tests = self._get_tests_for_group('dangerous')
-
-        for test in self._parse_test_range(self.test_range):
-            if test in dangerous_tests:
-                self.log.debug('Test %s is dangerous. Skipping.', test)
-                continue
-            if not self._is_test_valid(test):
-                self.log.debug('Test %s invalid. Skipping.', test)
-                continue
-
-            test_list.append(test)
+        if self.test_range:
+            for test in self._parse_test_range(self.test_range):
+                if test in dangerous_tests:
+                    self.log.debug('Test %s is dangerous. Skipping.', test)
+                    continue
+                if not self._is_test_valid(test):
+                    self.log.debug('Test %s invalid. Skipping.', test)
+                    continue
+                test_list.append(test)
 
         return test_list
 
@@ -194,7 +254,7 @@ class Xfstests(Test):
             else:
                 error_msg = 'Test dependency failed, test will not run.'
         elif failed_re.match(result_line):
-            error_msg = 'Test error. Please check the logs.'
+            error_msg = 'Test error. %s.' % result_line
         else:
             error_msg = 'Could not verify test result. Please check the logs.'
 
