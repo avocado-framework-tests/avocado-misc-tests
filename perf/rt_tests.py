@@ -32,14 +32,14 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import distro
 
 
-class rt_tests(Test):
+class RtTest(Test):
 
     def setUp(self):
         # Check for basic utilities
-        sm = SoftwareManager()
+        smm = SoftwareManager()
         detected_distro = distro.detect()
         deps = ["gcc", "make"]
-        if detected_distro.name == "Suse":
+        if detected_distro.name == "SuSE":
             deps.append("git-core")
         else:
             deps.append("git")
@@ -49,19 +49,22 @@ class rt_tests(Test):
         elif detected_distro.name == "redhat":
             deps.append("numactl-devel")
         for package in deps:
-            if not sm.check_installed(package) and not sm.install(package):
+            if not smm.check_installed(package) and not smm.install(package):
                 self.error(package + ' is needed for the test to be run')
-        locations = ["https://kernel.googlesource.com/pub/scm/utils/rt-tests/"
-                     "rt-tests/+archive/master.tar.gz"]
-        tarball = self.fetch_asset("rt-tests.tar.gz", locations=locations)
+        tarball = self.fetch_asset("https://www.kernel.org/pub/linux/utils/"
+                                   "rt-tests/rt-tests-1.0.tar.gz", expire='7d')
         archive.extract(tarball, self.srcdir)
+        version = os.path.basename(tarball.split('.tar.')[0])
+        self.srcdir = os.path.join(self.srcdir, version)
+        os.chdir(self.srcdir)
+        process.run("ls")
         build.make(self.srcdir)
 
     def test(self):
         test_to_run = self.params.get('test_to_run', default='signaltest')
         args = self.params.get('args', default=' -t 10 -l 100000')
-        process.system("%s %s" % (os.path.join(self.srcdir, test_to_run), args),
-                       sudo=True)
+        process.system("%s %s" % (os.path.join(self.srcdir, test_to_run),
+                                  args), sudo=True)
 
 
 if __name__ == "__main__":
