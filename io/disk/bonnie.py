@@ -48,8 +48,8 @@ class Bonnie(Test):
         """
 
         self.disk = self.params.get('disk', default=None)
-        self.fstype = self.params.get('fs', default='ext4')
-        self.scratch_dir = self.params.get('dir', default=self.srcdir)
+        fstype = self.params.get('fs', default='ext4')
+        self.scratch_dir = self.params.get('dir', default=self.teststmpdir)
         self.uid_to_use = self.params.get('uid-to-use',
                                           default=getpass.getuser())
         self.number_to_stat = self.params.get('number-to-stat', default=2048)
@@ -64,15 +64,17 @@ class Bonnie(Test):
         process.run('./configure')
         build.make(self.srcdir)
 
-        self.part_obj = Partition(self.disk, mountpoint=self.scratch_dir)
-        self.log.info("Test will run on %s", self.scratch_dir)
-        self.log.info("Unmounting the disk/dir before creating file system")
-        self.part_obj.unmount()
-        self.log.info("creating file system")
-        self.part_obj.mkfs(self.fstype)
-        self.log.info("Mounting disk %s on directory %s",
-                      self.disk, self.scratch_dir)
-        self.part_obj.mount()
+        if self.disk is not None:
+            self.part_obj = Partition(self.disk, mountpoint=self.scratch_dir)
+            self.log.info("Test will run on %s", self.scratch_dir)
+            self.log.info("Unmounting disk/dir before creating file system")
+            self.part_obj.unmount()
+            self.log.info("creating %s file system on %s disk",
+                          fstype, self.disk)
+            self.part_obj.mkfs(fstype)
+            self.log.info("Mounting disk %s on directory %s",
+                          self.disk, self.scratch_dir)
+            self.part_obj.mount()
 
     def test(self):
 
@@ -94,8 +96,10 @@ class Bonnie(Test):
         '''
         Cleanup of disk used to perform this test
         '''
-        self.log.info("Unmounting directory %s", self.scratch_dir)
-        self.part_obj.unmount()
+        if self.disk is not None:
+            self.log.info("Unmounting disk %s on directory %s", self.disk,
+                          self.scratch_dir)
+            self.part_obj.unmount()
 
 
 if __name__ == "__main__":
