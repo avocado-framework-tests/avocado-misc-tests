@@ -18,7 +18,6 @@ import re
 
 from avocado import Test
 from avocado import main
-from avocado.utils import git
 from avocado.utils import build
 from avocado.utils import distro
 from avocado.utils import archive
@@ -28,14 +27,11 @@ from avocado.utils.software_manager import SoftwareManager
 class kselftest(Test):
 
     """
-    Linux Kernel Selftest available with the source tar ball.
-    Download linux source repository for the given git/http/tar location
+    Linux Kernel Selftest available as a part of kernel source code.
     run the selftest available at tools/testing/selftest
 
     :see: https://www.kernel.org/doc/Documentation/kselftest.txt
-
-    :param url: git/http link to the linux source repository or tar ball
-    :param version: linux kernel version to download the tar file
+    :source: https://github.com/torvalds/linux/archive/master.zip
     """
 
     testdir = 'tools/testing/selftests'
@@ -49,13 +45,14 @@ class kselftest(Test):
         deps = ['gcc', 'make', 'automake', 'autoconf']
 
         if 'Ubuntu' in detected_distro.name:
-            deps.extend(['git', 'libpopt0', 'libc6', 'libc6-dev', 'libpopt-dev',
-                         'libcap-ng0', 'libcap-ng-dev'])
+            deps.extend(['libpopt0', 'libc6', 'libc6-dev',
+                        'libpopt-dev', 'libcap-ng0', 'libcap-ng-dev'])
         elif 'SuSE' in detected_distro.name:
-            deps.extend(['git-core', 'popt', 'glibc', 'glibc-devel', 'popt-devel',
-                         'libcap1', 'libcap1-devel', 'libcap-ng', 'libcap-ng-devel'])
+            deps.extend(['popt', 'glibc', 'glibc-devel',
+                         'popt-devel', 'libcap1', 'libcap1-devel',
+                         'libcap-ng', 'libcap-ng-devel'])
         elif detected_distro.name in ['centos', 'fedora', 'redhat']:
-            deps.extend(['git', 'popt', 'glibc', 'glibc-devel', 'glibc-static',
+            deps.extend(['popt', 'glibc', 'glibc-devel', 'glibc-static',
                          'libcap-ng', 'libcap', 'libcap-devel'])
 
         for package in deps:
@@ -63,21 +60,11 @@ class kselftest(Test):
                 self.error(
                     '%s is needed for the test to be run !!' % (package))
 
-        url = self.params.get(
-            'url', default='https://www.kernel.org/pub/linux/kernel')
-        if 'git' not in url:
-            version = self.params.get('version', default='4.8.6')
-            tarball_base = 'linux-%s.tar.gz' % (version)
-            tarball_url = '%s/v%s.x/%s' % (url, version[:1], tarball_base)
-            self.log.info('Downloading linux kernel tarball')
-            self.tarball = self.fetch_asset(tarball_url, expire='7d')
-            archive.extract(self.tarball, self.srcdir)
-            linux_src = 'linux-%s' % (version)
-            self.buldir = os.path.join(self.srcdir, linux_src)
-        else:
-            self.log.info('Cloning linux kernel source')
-            git.get_repo(url, destination_dir=self.srcdir)
-
+        location = ["https://github.com/torvalds/linux/archive/master.zip"]
+        tarball = self.fetch_asset("master.zip", locations=location,
+                                   expire='1d')
+        archive.extract(tarball, self.srcdir)
+        self.buldir = os.path.join(self.srcdir, 'linux-master')
         self.srcdir = os.path.join(self.buldir, self.testdir)
         result = build.run_make(self.srcdir)
         for line in str(result).splitlines():
