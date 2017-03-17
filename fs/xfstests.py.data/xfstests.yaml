@@ -1,4 +1,16 @@
 setup:
-    runargs : !mux
-        skip_dangerous: True
-        test_range: '2,12,34-87,91,99-112'
+    skip_dangerous: True
+    file_system: 'ext4'
+
+    # Uncomment and edit test_range for running specific tests
+    # test_range: '73,217-415'
+
+    # Run with either loop_type (or) disk_type
+    loop_type: !mux
+        type: 'loop'
+        base_disk: /dev/sdj2
+    # TODO: Support for real disks
+    # disk_type: !mux
+    #    type: 'disk'
+    #    test_dev: /dev/sdx1
+    #    scrath_dev: /dev/sdx2
