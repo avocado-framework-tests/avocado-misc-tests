@@ -64,29 +64,42 @@ class Tiobench(Test):
         :params num_runs: This number specifies over how many runs
                           each test should be averaged.
         """
-        target = self.params.get('dir', default=self.workdir)
-        disk = self.params.get('disk', default=None)
+        self.target = self.params.get('dir', default=self.workdir)
+        self.disk = self.params.get('disk', default=None)
         fstype = self.params.get('fs', default='ext4')
         blocks = self.params.get('blocks', default=4096)
         threads = self.params.get('threads', default=10)
         size = self.params.get('size', default=1024)
         num_runs = self.params.get('numruns', default=2)
 
-        part_obj = Partition(disk, mountpoint=target)
-        self.log.info("Test will run on %s" % target)
-        self.log.info("Unmounting the disk/dir before creating file system")
-        part_obj.unmount()
-        self.log.info("creating file system")
-        part_obj.mkfs(fstype)
-        self.log.info("Mounting disk %s on directory %s", disk, target)
-        part_obj.mount()
+        if self.disk is not None:
+            self.part_obj = Partition(self.disk, mountpoint=self.target)
+            self.log.info("Unmounting disk/dir before creating file system")
+            self.part_obj.unmount()
+            self.log.info("creating %s file system", fstype)
+            self.part_obj.mkfs(fstype)
+            self.log.info("Mounting disk %s on directory %s", self.disk,
+                          self.target)
+            self.part_obj.mount()
+
+        self.log.info("Test will run on %s" % self.target)
         self.whiteboard = process.system_output('perl ./tiobench.pl '
                                                 '--target {} --block={} '
                                                 '--threads={} --size={} '
                                                 '--numruns={}'
-                                                .format(target, blocks,
+                                                .format(self.target, blocks,
                                                         threads, size,
                                                         num_runs))
+
+    def tearDown(self):
+
+        '''
+        Cleanup of disk used to perform this test
+        '''
+        if self.disk is not None:
+            self.log.info("Unmounting disk %s on directory %s", self.disk,
+                          self.target)
+            self.part_obj.unmount()
 
 
 if __name__ == "__main__":
