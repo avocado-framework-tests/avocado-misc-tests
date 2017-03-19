@@ -39,7 +39,7 @@ class rt_tests(Test):
         sm = SoftwareManager()
         detected_distro = distro.detect()
         deps = ["gcc", "make"]
-        if detected_distro.name == "Suse":
+        if detected_distro.name == "SuSE":
             deps.append("git-core")
         else:
             deps.append("git")
