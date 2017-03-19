@@ -39,7 +39,7 @@ class Valgrind(Test):
         deps = ['gcc', 'make']
         if dist.name == 'Ubuntu':
             deps.extend(['g++'])
-        elif dist.name in ['SuSe', 'redhat', 'fedora', 'centos']:
+        elif dist.name in ['SuSE', 'redhat', 'fedora', 'centos']:
             deps.extend(['gcc-c++'])
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):

@@ -64,7 +64,7 @@ class pingpong(Test):
         elif detected_distro.name in ['redhat', 'fedora']:
             depends.append("libibverbs")
             cmd = "systemctl stop firewalld"
-        elif detected_distro.name == "Suse":
+        elif detected_distro.name == "SuSE":
             cmd = "rcSuSEfirewall2 stop"
         elif detected_distro.name == "centos":
             cmd = "service iptables stop"
