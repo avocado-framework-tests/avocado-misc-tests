@@ -47,7 +47,7 @@ class Bonding(Test):
             depends.append("openssh-client")
         if detected_distro.name in ["redhat", "fedora", "centos"]:
             depends.append("openssh-clients")
-        if detected_distro.name == "Suse":
+        if detected_distro.name == "SuSE":
             depends.append("openssh")
         for pkg in depends:
             if not sm.check_installed(pkg) and not sm.install(pkg):
