@@ -44,7 +44,7 @@ class Xfstests(Test):
         detected_distro = distro.detect()
 
         packages = ['e2fsprogs', 'automake', 'gcc', 'quota', 'attr',
-                    'make',  'xfsprogs',  'gawk']
+                    'make', 'xfsprogs', 'gawk']
 
         if 'Ubuntu' in detected_distro.name:
             packages.extend(['xfslibs-dev', 'uuid-dev', 'libtool-bin', 'libuuid1',
@@ -73,8 +73,13 @@ class Xfstests(Test):
         self.disk_mnt = self.params.get('disk_mnt', default='/mnt/loop_device')
         self.dev_type = self.params.get('type', default='loop')
         self.fs_to_test = self.params.get('fs', default='ext4')
+        self.devices = []
+        shutil.copyfile(os.path.join(self.datadir, 'local.config'),
+                        os.path.join(self.srcdir, 'local.config'))
+        shutil.copyfile(os.path.join(self.datadir, 'group'),
+                        os.path.join(self.srcdir, 'group'))
+
         if self.dev_type == 'loop':
-            self.loop_devices = []
             base_disk = self.params.get('disk', default=None)
             loop_size = self.params.get('loop_size', default='9GiB')
             if not base_disk:
@@ -83,16 +88,22 @@ class Xfstests(Test):
         else:
             self.test_dev = self.params.get('disk_test', default=None)
             self.scratch_dev = self.params.get('disk_scratch', default=None)
-            # TODO: Overwirte the disk in local.config
+            self.devices.extend([self.test_dev, self.scratch_dev])
+            line = ('export TEST_DEV=%s' % self.test_dev).replace('/', '\/')
+            process.system('sed -i "s/export TEST_DEV=.*/%s/g" %s' %
+                           (line, os.path.join(self.srcdir, 'local.config')), shell=True)
+            line = ('export SCRATCH_DEV=%s' %
+                    self.scratch_dev).replace('/', '\/')
+            process.system('sed -i "s/export SCRATCH_DEV=.*/%s/g" %s' %
+                           (line, os.path.join(self.srcdir, 'local.config')), shell=True)
+        # mkfs for devices
+        if self.devices:
+            for dev in self.devices:
+                dev_obj = partition.Partition(dev)
+                dev_obj.mkfs(fstype=self.fs_to_test)
 
         git.get_repo('git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
                      destination_dir=self.srcdir)
-        data_dir = os.path.abspath(self.datadir)
-
-        shutil.copyfile(os.path.join(data_dir, 'group'),
-                        os.path.join(self.srcdir, 'group'))
-        shutil.copyfile(os.path.join(data_dir, 'local.config'),
-                        os.path.join(self.srcdir, 'local.config'))
 
         build.make(self.srcdir)
         self.available_tests = self._get_available_tests()
@@ -147,10 +158,10 @@ class Xfstests(Test):
         if os.path.exists(self.test_mnt):
             os.rmdir(self.test_mnt)
         if self.dev_type == 'loop':
-            for dev in self.loop_devices:
+            for dev in self.devices:
                 process.system('losetup -d %s' % dev, shell=True,
                                sudo=True, ignore_status=True)
-        self.part.unmount()
+            self.part.unmount()
 
     def _create_loop_device(self, base_disk, loop_size):
         self.part = partition.Partition(
@@ -163,12 +174,9 @@ class Xfstests(Test):
             process.run('fallocate -o 0 -l %s %s/file-%s.img' %
                         (loop_size, self.disk_mnt, i), shell=True, sudo=True)
             dev = process.system_output('losetup -f').strip()
-            self.loop_devices.append(dev)
+            self.devices.append(dev)
             process.run('losetup %s %s/file-%s.img' %
                         (dev, self.disk_mnt, i), shell=True, sudo=True)
-            # mkfs for two loop device
-            loop_dev = partition.Partition(dev)
-            loop_dev.mkfs(fstype=self.fs_to_test)
 
     def _create_test_list(self):
         test_list = []
