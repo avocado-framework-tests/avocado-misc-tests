@@ -51,7 +51,8 @@ class NVMeTest(Test):
         archive.extract(tarball, self.srcdir)
         os.chdir("%s/nvme-cli-master" % self.srcdir)
         process.system("./NVME-VERSION-GEN", ignore_status=True)
-        if process.system_output("cat NVME-VERSION-FILE").strip("\n").\
+        if process.system("which nvme", ignore_status=True) != 0 or \
+            process.system_output("cat NVME-VERSION-FILE").strip("\n").\
             split()[-1] != process.system_output("nvme version").\
                 strip("\n").split()[-1]:
             build.make(".")
