@@ -43,5 +43,3 @@ virtual partition depends on the following programs to be available:
      * kpartx
 Make sure you have them or a real spare device to test things.
 """
-TODO:
-1- Replace local.cofig for real disks
