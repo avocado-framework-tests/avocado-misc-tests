@@ -43,7 +43,8 @@ class Hwinfo(Test):
             self.error("Fail to install hwinfo required for this test.")
 
     def test(self):
-        self.log.info("===============Executing hwinfo tool test===============")
+        self.log.info(
+            "===============Executing hwinfo tool test===============")
         list = self.params.get('list', default=['--all', '--cpu', '--disk'])
         for list_item in list:
             cmd = "hwinfo %s" % list_item
@@ -60,7 +61,7 @@ class Hwinfo(Test):
         self.run_cmd("hwinfo --verbose --map")
         self.run_cmd("hwinfo --all --log FILE")
         if (not os.path.exists('./FILE')) or (os.stat("FILE").st_size == 0):
-            print "--log option failed"
+            self.log.info("--log option failed")
             self.is_fail += 1
         self.run_cmd("hwinfo --dump-db 0")
         self.run_cmd("hwinfo --dump-db 1")
@@ -72,9 +73,10 @@ class Hwinfo(Test):
         if "failed" in process.system_output("hwinfo --disk --save-config=all | "
                                              "grep failed | tail -1", shell=True):
             self.is_fail += 1
-            print "--save-config option failed"
+            self.log.info("--save-config option failed")
         if self.is_fail >= 1:
-            self.fail("%s command(s) failed in hwinfo tool verification" % self.is_fail)
+            self.fail("%s command(s) failed in hwinfo tool verification" %
+                      self.is_fail)
 
 
 if __name__ == "__main__":
