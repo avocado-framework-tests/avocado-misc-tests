@@ -1,0 +1,9 @@
+list: ['--all', '--arch', '--bios', '--block', '--bluetooth', '--braille', 
+       '--bridge', '--camera', '--cdrom', '--chipcard', '--cpu', '--disk', 
+       '--dsl', '--dvb', '--fingerprint', '--floppy', '--usb-ctrl', '--vbe', 
+       '--framebuffer', '--gfxcard', '--hub', '--ide', '--isapnp', '--isdn', 
+       '--joystick', '--memory', '--modem', '--monitor', '--mouse', '--netcard', 
+       '--network', '--partition', '--pci', '--pcmcia', '--pcmcia-ctrl', '--pppoe', 
+       '--printer', '--redasd', '--reallyall', '--scanner', '--scsi', '--smp', 
+       '--sound', '--storage-ctrl', '--sys', '--tape', '--tv', '--uml', '--usb', '
+       --wlan', '--xen', '--zip', '--short', '--listmd']
