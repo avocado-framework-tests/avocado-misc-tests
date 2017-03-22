@@ -11,7 +11,6 @@ setup:
         type: 'loop'
         loop_size: '5GiB'
         disk: /dev/sdj2
-    # TODO: Support for real disks
     # disk_type: !mux
     #    type: 'disk'
     #    disk_test: /dev/sdx1
