@@ -48,9 +48,9 @@ class Sensors(Test):
                 errs.append(error)
         return errs
 
-    def test(self):
+    def setUp(self):
         """
-        Test for sensors command
+        Check pre-requisites before running sensors command
         """
         s_mg = SoftwareManager()
         d_distro = distro.detect()
@@ -101,6 +101,11 @@ class Sensors(Test):
         det_op = process.run('yes | sudo sensors-detect', shell=True, ignore_status=True).stdout
         if 'no sensors were detected' in det_op:
             self.skip('No sensors found to test !')
+
+    def test(self):
+        """
+        Test for sensors command
+        """
 
         error_list = self.check_errors('sensors')
         if len(error_list) > 0:
