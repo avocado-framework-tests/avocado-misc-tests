@@ -51,7 +51,9 @@ class PciLsvpdInfo(Test):
                 Slot Match
                 '''
                 if vpd_output.has_key('slot'):
-                    sys_slot = pci.get_slot_from_sysfs(pci_adres).strip('\0')
+                    sys_slot = pci.get_slot_from_sysfs(pci_adres)
+                    if sys_slot:
+                        sys_slot = sys_slot.strip('\0')
                     vpd_slot = vpd_output['slot']
                     self.log.info("Slot from sysfs:%s", sys_slot)
                     self.log.info("Slot from lsvpd:%s", vpd_slot)
