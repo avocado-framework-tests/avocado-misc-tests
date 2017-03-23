@@ -23,6 +23,7 @@ from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado import main
 from avocado.utils import pci
+from avocado.utils import process
 
 
 class PciLsvpdInfo(Test):
@@ -37,6 +38,8 @@ class PciLsvpdInfo(Test):
         for pkg in ["lsvpd"]:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.skip("%s package is need to test" % pkg)
+        if process.system("vpdupdate", ignore_status=True, shell=True):
+            self.fail("VPD Update fails")
 
     def test(self):
         '''
