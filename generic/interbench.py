@@ -47,9 +47,9 @@ class Interbench(Test):
         if (not sm_manager.check_installed("gcc") and not
                 sm_manager.install("gcc")):
             self.error("Gcc is needed for the test to be run")
-        tarball = self.fetch_asset('http://ck.kolivas.org'
-                                   '/apps/interbench/'
-                                   'interbench-0.31.tar.bz2')
+        tarball = self.fetch_asset('http://slackware.cs.utah.edu/pub/kernel'
+                                   '.org/pub/linux/kernel/people/ck/apps/'
+                                   'interbench/interbench-0.31.tar.gz')
         data_dir = os.path.abspath(self.datadir)
         archive.extract(tarball, self.srcdir)
         version = os.path.basename(tarball.split('.tar.')[0])
