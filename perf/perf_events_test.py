@@ -34,19 +34,22 @@ class Perf_subsystem(Test):
         '''
         Install the packages
         '''
-
-        # Check for basic utilities
+        #Check for basic utilities
         smm = SoftwareManager()
         detected_distro = distro.detect()
         kernel_ver = platform.uname()[2]
+        deps = ['gcc', 'make']
         if 'Ubuntu' in detected_distro.name:
-            deps = ['gcc', 'make', 'linux-tools-common',
-                    'linux-tools-' + kernel_ver + '']
+            deps.extend(['linux-tools-common', 'linux-tools-%s'
+                         % kernel_ver])
+        elif detected_distro.name in ['redhat', 'SuSE', 'fedora']:
+            deps.extend(['perf'])
         else:
-            deps = ['gcc', 'make', 'perf']
+            self.skip("Install the package for perf supported by %s"
+                      % detected_distro.name)
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
-                self.error('%s is needed for the test to be run' % package)
+                self.skip('%s is needed for the test to be run' % package)
 
     def test(self):
         '''
@@ -64,10 +67,10 @@ class Perf_subsystem(Test):
                               shell=True)
         cmd = "cat /proc/sys/kernel/perf_event_paranoid"
         if process.system_output(cmd, shell=True) != '-1':
-            self.log.info("Unable to set perf_event_paranoid to -1 ")
-        out = process.system_output("./run_tests.sh", ignore_status=True)
-        if 'FAILED' in out:
-            print 'Test cases have failed'
+            self.error("Unable to set perf_event_paranoid to -1 ")
+        if 'FAILED' in process.system_output("./run_tests.sh",
+                                             ignore_status=True):
+            self.fail('Test cases have failed,please check the logs')
 
 
 if __name__ == "__main__":
