@@ -41,19 +41,21 @@ class libhugetlbfs(Test):
         # Check for basic utilities
         sm = SoftwareManager()
         detected_distro = distro.detect()
-        if not sm.check_installed("gcc") and not sm.install("gcc"):
-            self.error('Gcc is needed for the test to be run')
-        if not sm.check_installed("make") and not sm.install("make"):
-            self.error('make is needed for the test to be run')
-        if detected_distro.name == "SuSE":
-            if not sm.check_installed("git-core") and not sm.install("git-"
-                                                                     "core"):
-                self.error('git is needed for the test to be run')
+        deps = ['gcc', 'make', 'git']
+
+        if detected_distro.name == "Ubuntu":
+            deps += ['libpthread-stubs0-dev', 'git']
+        elif detected_distro.name == "SuSE":
+            deps += ['glibc-devel-static', 'git-core']
         else:
-            if not sm.check_installed("git") and not sm.install("git"):
-                self.error('git is needed for the test to be run')
+            deps += ['glibc-static', 'git']
+
+        for package in deps:
+            if not sm.check_installed(package) and not sm.install(package):
+                self.skip(' %s is needed for the test to be run' % package)
 
         kernel.check_version("2.6.16")
+
         if detected_distro.name == "Ubuntu":
             op = glob.glob("/usr/lib/*/libpthread.a")
         else:
