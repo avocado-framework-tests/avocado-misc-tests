@@ -112,8 +112,8 @@ class Thp(Test):
 
         if self.mem_path:
             self.log.info('Cleaning Up!!!')
-            process.system('rm -rf %s/*' % self.mem_path, ignore_status=True)
             self.device.unmount()
+            process.system('rm -rf %s' % self.mem_path, ignore_status=True)
 
 
 if __name__ == "__main__":
