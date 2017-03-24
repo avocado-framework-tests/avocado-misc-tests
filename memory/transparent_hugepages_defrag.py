@@ -121,8 +121,8 @@ class Thp_Defrag(Test):
         if self.mem_path:
             self.log.info('Cleaning Up!!!')
             memory.set_num_huge_pages(0)
-            process.system('rm -rf %s/*' % self.mem_path, ignore_status=True)
             self.device.unmount()
+            process.system('rm -rf %s' % self.mem_path, ignore_status=True)
 
 
 if __name__ == "__main__":
