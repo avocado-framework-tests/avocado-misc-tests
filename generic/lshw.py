@@ -31,8 +31,7 @@ class Lshwrun(Test):
     machines (PowerMac G4 is known to work).
     """
     interface = process.system_output("ip route show")
-    active_interface = re.search(
-        r"default via\s+\S+\s+dev\s+(\w+)\s+proto", interface).group(1)
+    active_interface = process.system_output("ifconfig | head -1 | cut -d':' -f1", shell=True).strip()
     fail_cmd = list()
 
     def run_cmd(self, cmd):
@@ -98,15 +97,13 @@ class Lshwrun(Test):
         which produces similar info of hardware.
         """
         # verifying mac address
-        get_mac = process.system_output(
-            " ip link show %s " % self.active_interface)
-        mac = re.search(r'link\/\ether (.*) brd', get_mac).group(1)
+        mac = process.system_output("ifconfig | grep 'ether' | "
+                                    "head -1 | cut -d' ' -f10", shell=True).strip()
         if mac not in process.system_output("lshw"):
             self.fail("lshw failed to show correct mac address")
 
         # verify network
-        if self.active_interface not in process.system_output(
-                "lshw -class network"):
+        if self.active_interface not in process.system_output("lshw -class network"):
             self.fail("lshw failed to show correct active network interface")
 
     def test_gen_rep(self):
@@ -131,11 +128,13 @@ class Lshwrun(Test):
             self.fail(" lshw  failed to execute lshw -businfo  ")
 
         # verifying the bus info for active network
+        if_present = 0
+        lspci_out = process.system_output("lspci -v ")
         for line in (bus_info.stdout).splitlines():
-            if self.active_interface in line:
-                get_bus_info_act_inter = line.split(' ')[0].split(':', 1)[1]
-
-        if get_bus_info_act_inter not in process.system_output("lspci -v "):
+            get_bus_info_act_inter = line.split(' ')[0]
+            if get_bus_info_act_inter in lspci_out:
+                if_present = 1
+        if not if_present:
             self.fail("Verification of network bus info failed ")
 
     def test_sanitize(self):
