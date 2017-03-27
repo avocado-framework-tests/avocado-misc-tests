@@ -15,9 +15,11 @@
 # Author: Pavithra D P <pavithra@linux.vnet.ibm.com>
 
 import random
+import platform
 from avocado import Test
 from avocado import main
-from avocado.utils import process
+from avocado.utils import process, distro
+from avocado.utils.software_manager import SoftwareManager
 
 
 class cpupower(Test):
@@ -25,6 +27,18 @@ class cpupower(Test):
     """
     Testing cpupower command
     """
+    def setUp(self):
+        smm = SoftwareManager()
+        detected_distro = distro.detect()
+        kernel_ver = platform.uname()[2]
+        if 'Ubuntu' in detected_distro.name:
+            deps = ['linux-tools-common', 'linux-tools-%s' % kernel_ver]
+        else:
+            deps = ['powerpc-utils']
+
+        for package in deps:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.skip('%s is needed for the test to be run' % package)
 
     def test(self):
         self.error_count = 0
@@ -33,7 +47,7 @@ class cpupower(Test):
         (min, max, cur, initial_governor) = self.get_initial_values()
         governors = self.get_list_governors()
         for governor in governors:
-            if governor in ["ondemand", "conservative", "schedutils"]:
+            if governor in ["ondemand", "conservative", "schedutil"]:
                 self.log.info("Dynamic governors,need manual verification")
             else:
                 self.log.info("Checking %s governor" % governor)
@@ -69,7 +83,8 @@ class cpupower(Test):
         """
         Get the list of governors available on the system
         """
-        return self.cpu_freq_path('scaling_available_governors', self.cpu).split()
+        return self.cpu_freq_path('scaling_available_governors',
+                                  self.cpu).split()
 
     def check_governor(self, governor, min, max, cur):
         """
@@ -109,7 +124,9 @@ class cpupower(Test):
         """
         Get random frequency from list
         """
-        return random.choice(self.cpu_freq_path('scaling_available_frequencies', self.cpu).split(' '))
+        return random.choice(self.cpu_freq_path('scaling_available
+                                                _frequencies',
+                                                self.cpu).split(' '))
 
     def set_freq_val(self, freq):
         """
@@ -119,7 +136,8 @@ class cpupower(Test):
         output = process.run(cmd)
         cur_freq = self.get_cur_freq()
         if (output.exit_status == 0) and (cur_freq == freq):
-            self.log.info("the userspace governor working as expected and freeq set correctly")
+            self.log.info("the userspace governor working
+                          as expected and freq set correctly")
         else:
             self.log.error("Userspace governor failed")
             self.error_count += 1
@@ -133,7 +151,8 @@ class cpupower(Test):
             if cur_freq == max:
                 self.log.info("%s governor working as expected" % governor)
             else:
-                self.log.error("%s governor not working as expected" % governor)
+                self.log.error("%s governor not working as expected"
+                               % governor)
                 self.error_count += 1
 
     def check_powersave_governor(self, governor, min):
@@ -145,7 +164,8 @@ class cpupower(Test):
             if cur_freq == min:
                 self.log.info("%s governor working as expected" % governor)
             else:
-                self.log.error("%s governor not working as expected" % governor)
+                self.log.error("%s governor not working as expected"
+                               % governor)
                 self.error_count += 1
 
     def check_userspace_governor(self, governor):
