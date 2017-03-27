@@ -13,7 +13,6 @@
 # Copyright: 2016 IBM.
 # Author: Ramya BS <ramya@linux.vnet.ibm.com>
 
-import re
 from avocado import Test
 from avocado import main
 from avocado.utils import process
