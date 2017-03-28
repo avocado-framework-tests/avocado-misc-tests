@@ -50,7 +50,7 @@ class RASTools(Test):
                 self.error("Fail to install %s required for this"
                            " test." % package)
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest and PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
     def test1_set_poweron_time(self):
         """
         set_poweron_time schedules the power on time
@@ -65,7 +65,7 @@ class RASTools(Test):
             self.fail("%s command(s) failed in set_poweron_time tool "
                       "verification" % self.is_fail)
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest and PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
     def test2_sys_ident_tool(self):
         """
         sys_ident provides unique system identification information
@@ -211,7 +211,7 @@ class RASTools(Test):
             self.fail("%s command(s) failed in ofpathname tool verification"
                       % self.is_fail)
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest and PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
     def test10_rtas_ibm_get_vpd(self):
         """
         rtas_ibm_get_vpd gives vpd data
