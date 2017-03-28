@@ -23,6 +23,7 @@ from avocado import skipIf
 from avocado.utils.software_manager import SoftwareManager
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
+IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
 
 
 class RASTools(Test):
@@ -44,12 +45,12 @@ class RASTools(Test):
         if "ppc" not in architecture:
             self.skip("supported only on Power platform")
         sm = SoftwareManager()
-        for package in ("ppc64-diag", "powerpc-utils", "lsvpd"):
+        for package in ("ppc64-diag", "powerpc-utils", "lsvpd", "ipmitool"):
             if not sm.check_installed(package) and not sm.install(package):
                 self.error("Fail to install %s required for this"
                            " test." % package)
 
-    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
     def test1_set_poweron_time(self):
         """
         set_poweron_time schedules the power on time
@@ -64,7 +65,7 @@ class RASTools(Test):
             self.fail("%s command(s) failed in set_poweron_time tool "
                       "verification" % self.is_fail)
 
-    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
     def test2_sys_ident_tool(self):
         """
         sys_ident provides unique system identification information
@@ -83,11 +84,11 @@ class RASTools(Test):
         """
         self.log.info("===============Executing lsmcode tool test============="
                       "==")
+        self.run_cmd("vpdupdate")
         self.run_cmd("lsmcode")
         self.run_cmd("lsmcode -A")
         self.run_cmd("lsmcode -v")
         self.run_cmd("lsmcode -D")
-        self.run_cmd("vpdupdate")
         path_db = process.system_output("find /var/lib/lsvpd/ -iname vpd.db | "
                                         "head -1", shell=True).strip()
         if path_db:
@@ -147,7 +148,8 @@ class RASTools(Test):
         self.run_cmd("lsslot")
         self.run_cmd("lsslot -c mem")
         self.run_cmd("lsslot -ac pci")
-        self.run_cmd("lsslot -c cpu -b")
+        if not IS_KVM_GUEST:
+            self.run_cmd("lsslot -c cpu -b")
         self.run_cmd("lsslot -c pci -o")
         slot = process.system_output("lsslot | cut -d' ' -f1 | head -2 | "
                                      "tail -1", shell=True).strip()
@@ -209,38 +211,7 @@ class RASTools(Test):
             self.fail("%s command(s) failed in ofpathname tool verification"
                       % self.is_fail)
 
-    def test10_ppc64_cpu(self):
-        """
-        ppc64_cpu is used to set cpu options
-        """
-        self.log.info("===============Executing ppc64_cpu tool test==========="
-                      "====")
-        self.run_cmd("ppc64_cpu --smt")
-        self.run_cmd("ppc64_cpu --smt=8")
-        self.run_cmd("ppc64_cpu --smt")
-        self.run_cmd("ppc64_cpu --smt=4")
-        self.run_cmd("ppc64_cpu --smt")
-        self.run_cmd("ppc64_cpu --smt=off")
-        self.run_cmd("ppc64_cpu --smt")
-        self.run_cmd("ppc64_cpu --smt=on")
-        self.run_cmd("ppc64_cpu --smt")
-        self.run_cmd("ppc64_cpu --cores-present")
-        self.run_cmd("ppc64_cpu --cores-on")
-        self.run_cmd("ppc64_cpu --dscr")
-        self.run_cmd("ppc64_cpu --dscr=1")
-        self.run_cmd("ppc64_cpu --dscr")
-        self.run_cmd("ppc64_cpu --dscr=0")
-        self.run_cmd("ppc64_cpu --smt-snooze-delay")
-        self.run_cmd("ppc64_cpu --smt-snooze-delay=200")
-        self.run_cmd("ppc64_cpu --smt-snooze-delay")
-        self.run_cmd("ppc64_cpu --smt-snooze-delay=100")
-        self.run_cmd("ppc64_cpu --run-mode")
-        self.run_cmd("ppc64_cpu --subcores-per-core")
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in ppc64_cpu tool verification"
-                      % self.is_fail)
-
-    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
     def test11_rtas_ibm_get_vpd(self):
         """
         rtas_ibm_get_vpd gives vpd data
