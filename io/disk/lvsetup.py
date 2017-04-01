@@ -46,7 +46,7 @@ class Lvsetup(Test):
         """
         Check existence of input PV,VG, LV and snapshots prior to Test.
         """
-        pkg = " "
+        pkg = ""
         smm = SoftwareManager()
         self.disk = self.params.get('disk', default=None)
         vg_name = self.params.get('vg_name', default='avocado_vg')
@@ -57,7 +57,7 @@ class Lvsetup(Test):
             pkg = 'xfsprogs'
         if self.fs_name == 'btrfs':
             pkg = 'btrfs-progs'
-        if not smm.check_installed(pkg) and not smm.install(pkg):
+        if pkg and not smm.check_installed(pkg) and not smm.install(pkg):
             self.skip("Package %s is missing and could not be installed" % pkg)
         lv_snapshot_name = self.params.get(
             'lv_snapshot_name', default='avocado_sn')
