@@ -118,8 +118,7 @@ class MultipathTest(Test):
 
         # Print errors
         if msg:
-            msg = "Following Tests Failed\n" + msg
-            self.fail("Some tests failed. Find details below:\n%s", msg)
+            self.fail("Some tests failed. Find details below:\n%s" % msg)
 
     def tearDown(self):
         """
