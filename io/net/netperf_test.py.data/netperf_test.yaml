@@ -1,5 +1,5 @@
-interface: "net0"
-peer_ip: "10.10.10.10"
+interface: "enP40p1s0f2"
+peer_ip: "90.90.90.201"
 peer_user_name: "root"
 timeout: "600"
 NETSERVER_RUN: 0

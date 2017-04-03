@@ -1,4 +1,4 @@
 Parameters:
-    peer_ip: ""
+    peer_ip: "90.90.90.201"
     user_name: "root"
-    interface: ""
+    interface: "enP40p1s0f2"
