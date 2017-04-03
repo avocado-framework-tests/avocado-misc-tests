@@ -14,6 +14,7 @@
 # Copyright: 2016 IBM
 # Author: Pavithra D P <pavithra@linux.vnet.ibm.com>
 
+import os
 import random
 import platform
 from avocado import Test
@@ -28,6 +29,8 @@ class cpupower(Test):
     Testing cpupower command
     """
     def setUp(self):
+        if not os.path.exists('/sys/devices/system/cpu/cpu0/cpufreq'):
+            self.skip('sysfs directory for cpufreq is unavailable.')
         smm = SoftwareManager()
         detected_distro = distro.detect()
         kernel_ver = platform.uname()[2]
