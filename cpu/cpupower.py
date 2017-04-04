@@ -14,6 +14,7 @@
 # Copyright: 2016 IBM
 # Author: Pavithra D P <pavithra@linux.vnet.ibm.com>
 
+import os
 import random
 import platform
 from avocado import Test
@@ -28,6 +29,8 @@ class cpupower(Test):
     Testing cpupower command
     """
     def setUp(self):
+        if not os.path.exists('/sys/devices/system/cpu/cpu0/cpufreq'):
+            self.skip('sysfs directory for cpufreq is unavailable.')
         smm = SoftwareManager()
         detected_distro = distro.detect()
         kernel_ver = platform.uname()[2]
@@ -124,9 +127,8 @@ class cpupower(Test):
         """
         Get random frequency from list
         """
-        return random.choice(self.cpu_freq_path('scaling_available
-                                                _frequencies',
-                                                self.cpu).split(' '))
+        cmd = "scaling_available_frequencies"
+        return random.choice(self.cpu_freq_path(cmd, self.cpu).split(' '))
 
     def set_freq_val(self, freq):
         """
@@ -136,8 +138,7 @@ class cpupower(Test):
         output = process.run(cmd)
         cur_freq = self.get_cur_freq()
         if (output.exit_status == 0) and (cur_freq == freq):
-            self.log.info("the userspace governor working
-                          as expected and freq set correctly")
+            self.log.info("The userspace governor is working as expected")
         else:
             self.log.error("Userspace governor failed")
             self.error_count += 1
