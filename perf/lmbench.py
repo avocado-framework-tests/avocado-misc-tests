@@ -47,8 +47,9 @@ class Lmbench(Test):
         temp_file = self.params.get('temp_file', default=None)
         self.tmpdir = tempfile.mkdtemp(prefix='avocado_' + __name__)
         smm = SoftwareManager()
-        if not smm.check_installed("gcc") and not smm.install("gcc"):
-            self.error("Gcc is needed for the test to be run")
+        for package in ['gcc', 'make', 'patch']:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel("%s is needed for the test to be run" % package)
         tarball = self.fetch_asset('http://www.bitmover.com'
                                    '/lmbench/lmbench3.tar.gz')
         data_dir = os.path.abspath(self.datadir)

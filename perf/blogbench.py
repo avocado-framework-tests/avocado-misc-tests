@@ -31,9 +31,9 @@ class Blogbench(Test):
     def setUp(self):
         sm = SoftwareManager()
         # Check for basic utilities
-        for package in ['gcc', 'make']:
+        for package in ['gcc', 'make', 'patch']:
             if not sm.check_installed(package) and not sm.install(package):
-                self.error(package + ' is needed for the test to be run')
+                self.cancel('%s is needed for the test to be run' % package)
         url = 'https://download.pureftpd.org/blogbench/blogbench-1.1.tar.bz2'
         blogbench_url = self.params.get('blogbench_url',
                                         default=url)
