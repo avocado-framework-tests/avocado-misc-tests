@@ -102,7 +102,8 @@ class Sensors(Test):
             except process.CmdError:
                 self.error(
                     'Starting Service Failed. Make sure module is loaded')
-        det_op = process.run('yes | sudo sensors-detect', shell=True, ignore_status=True).stdout
+        cmd = "yes | sudo sensors-detect"
+        det_op = process.run(cmd, shell=True, ignore_status=True).stdout
         if 'no sensors were detected' in det_op:
             self.skip('No sensors found to test !')
 
