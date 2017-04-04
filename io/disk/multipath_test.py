@@ -21,10 +21,11 @@ Needs to be run as root.
 
 import os
 import shutil
+import time
 from pprint import pprint
 from avocado import Test
 from avocado import main
-from avocado.utils import distro
+from avocado.utils import distro, process
 from avocado.utils import multipath
 from avocado.utils import service
 from avocado.utils.software_manager import SoftwareManager
@@ -119,7 +120,8 @@ class MultipathTest(Test):
         # Print errors
         if msg:
             msg = "Following Tests Failed\n" + msg
-            self.fail("Some tests failed. Find details below:\n%s", msg)
+            self.log.debug(msg)
+            self.fail("Some tests failed")
 
     def tearDown(self):
         """
@@ -128,6 +130,8 @@ class MultipathTest(Test):
         if os.path.isfile(self.mpath_file):
             shutil.copyfile("%s.bkp" % self.mpath_file, self.mpath_file)
         self.mpath_svc.restart()
+        time.sleep(5)
+        process.run('multipath -F')
 
 
 if __name__ == "__main__":
