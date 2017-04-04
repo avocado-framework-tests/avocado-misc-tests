@@ -416,7 +416,10 @@ class IOZone(Test):
         '''
 
         self.base_dir = os.path.abspath(self.basedir)
-
+        smm = SoftwareManager()
+        for package in ['gcc', 'make', 'patch']:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel("%s is needed for the test to be run" % package)
         tarball = self.fetch_asset(
             'http://www.iozone.org/src/current/iozone3_434.tar')
         archive.extract(tarball, self.srcdir)

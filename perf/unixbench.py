@@ -29,16 +29,16 @@ from avocado.core import data_dir
 
 
 class unixbench(Test):
+
     def setUp(self):
         sm = SoftwareManager()
         detected_distro = distro.detect()
         # Check for basic utilities
-        deps = ['gcc', 'make', 'patch']
         self.tmpdir = data_dir.get_tmp_dir()
         self.build_dir = self.params.get('build_dir', default=self.tmpdir)
-        for package in deps:
+        for package in ['gcc', 'make', 'patch']:
             if not sm.check_installed(package) and not sm.install(package):
-                self.error(package + ' is needed for the test to be run')
+                self.cancel('%s is needed for the test to be run' % package)
         url = 'https://github.com/kdlucas/byte-unixbench/archive/master.zip'
         tarball = self.fetch_asset("byte-unixbench.zip", locations=[url],
                                    expire='7d')
@@ -53,7 +53,7 @@ class unixbench(Test):
 
     def test(self):
         self.tmpdir = data_dir.get_tmp_dir()
-        #Read USAGE in Unixbench directory in src to give the args
+        # Read USAGE in Unixbench directory in src to give the args
         args = self.params.get('args', default='-v -c 1')
         os.chdir(self.srcdir)
         process.system(' ./Run ' + args, shell=True, sudo=True)
