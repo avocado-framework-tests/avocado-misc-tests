@@ -1,0 +1,4 @@
+parameters:
+    block_devices: 'mpatha mpathb'
+    time_limit: 240
+    mdt_file: 'mdt.hd'
