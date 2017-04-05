@@ -41,7 +41,7 @@ class libhugetlbfs(Test):
         # Check for basic utilities
         sm = SoftwareManager()
         detected_distro = distro.detect()
-        deps = ['gcc', 'make', 'git']
+        deps = ['gcc', 'make', 'git', 'patch']
 
         if detected_distro.name == "Ubuntu":
             deps += ['libpthread-stubs0-dev', 'git']
@@ -52,7 +52,7 @@ class libhugetlbfs(Test):
 
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
-                self.skip(' %s is needed for the test to be run' % package)
+                self.cancel(' %s is needed for the test to be run' % package)
 
         kernel.check_version("2.6.16")
 

@@ -49,7 +49,7 @@ class Fsfuzzer(Test):
         d_name = detected_distro.name.lower()
 
         smm = SoftwareManager()
-        deps = ['gcc']
+        deps = ['gcc', 'patch']
         if d_name == 'ubuntu':
             deps.extend(['libattr1-dev'])
         else:
@@ -57,8 +57,8 @@ class Fsfuzzer(Test):
 
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
-                self.error("Fail to install/check %s, which is needed for"
-                           "fsfuzz to run" % package)
+                self.cancel("Fail to install/check %s, which is needed for"
+                            "fsfuzz to run" % package)
 
         locations = ["https://github.com/stevegrubb/fsfuzzer/archive/"
                      "master.zip"]
