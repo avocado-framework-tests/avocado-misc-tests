@@ -54,8 +54,6 @@ class Sensors(Test):
         Check pre-requisites before running sensors command
         Testcase should be executed only on bare-metal environment.
         """
-        if 'platform\t: PowerNV\n' not in cpu._get_cpu_info():
-            self.skip('sensors test is applicable to bare-metal environment.')
         s_mg = SoftwareManager()
         d_distro = distro.detect()
         if d_distro.name == "Ubuntu":
@@ -67,6 +65,8 @@ class Sensors(Test):
                     "lm_sensors"):
                 self.error('Need sensors to run the test')
         if d_distro.arch in ["ppc64", "ppc64le"]:
+            if 'platform\t: PowerNV\n' not in cpu._get_cpu_info():
+                self.skip('sensors test is applicable to bare-metal environment.')
             kernel_ver = platform.uname()[2]
             l_config = "CONFIG_SENSORS_IBMPOWERNV"
             config_op = process.system_output(
