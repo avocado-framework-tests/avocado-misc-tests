@@ -42,8 +42,10 @@ class Pmqa(Test):
             self.cancel('sysfs directory for cpufreq is unavailable.')
         # Check for basic utilities
         smm = SoftwareManager()
-        if not smm.check_installed("gcc") and not smm.install("gcc"):
-            self.error('Gcc is needed for the test to be run')
+        for package in ['gcc', 'make']:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel(
+                    "Fail to install %s required for this test." % package)
 
         git.get_repo('git://git.linaro.org/power/pm-qa.git',
                      destination_dir=self.srcdir)
