@@ -60,6 +60,10 @@ class Sensors(Test):
             if not s_mg.check_installed("lm-sensors") and not s_mg.install(
                     "lm-sensors"):
                 self.error('Need sensors to run the test')
+        elif d_distro.name == "SuSE":
+            if not s_mg.check_installed("sensors") and not s_mg.install(
+                    "sensors"):
+                self.skip('Need sensors to run the test')
         else:
             if not s_mg.check_installed("lm_sensors") and not s_mg.install(
                     "lm_sensors"):
