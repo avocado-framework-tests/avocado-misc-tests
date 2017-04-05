@@ -38,7 +38,8 @@ class Pmqa(Test):
         Source:
         git://git.linaro.org/power/pm-qa.git
         '''
-
+        if not os.path.exists('/sys/devices/system/cpu/cpu0/cpufreq'):
+            self.cancel('sysfs directory for cpufreq is unavailable.')
         # Check for basic utilities
         smm = SoftwareManager()
         if not smm.check_installed("gcc") and not smm.install("gcc"):
