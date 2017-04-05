@@ -79,25 +79,17 @@ class Sensors(Test):
             if "=" not in config_op:
                 self.error('Config is not set')
             c_val = (config_op.split("=")[1]).replace('\n', '')
-            if "powerkvm" in d_distro.name:
-                if not c_val == "y":
-                    self.error('Config is not set properly')
-                else:
-                    self.log.info("Driver will be part of distro")
+            if not c_val == "m":
+                self.error('Config is not set correctly')
             else:
-                if not c_val == "m":
-                    self.error('Config is not set correctly')
+                self.log.info("Driver will be built as module")
+                mod_op = process.run('modprobe ibmpowernv')
+                if mod_op.exit_status == 0:
+                    lsmod_op = process.system_output("lsmod | grep -i ibmpowernv", shell=True)
+                if "ibmpowernv" not in lsmod_op:
+                        self.error('Module Loading Failed')
                 else:
-                    self.log.info("Driver will be built as module")
-                    mod_op = process.run(
-                        'modprobe ibmpowernv')
-                    if mod_op.exit_status == 0:
-                        lsmod_op = process.system_output(
-                            "lsmod | grep -i ibmpowernv", shell=True)
-                        if "ibmpowernv" not in lsmod_op:
-                            self.error('Module Loading Failed')
-                        else:
-                            self.log.info('Module Loaded Successfully')
+                        self.log.info('Module Loaded Successfully')
         if not d_distro.name == "Ubuntu":
             try:
                 process.run('service lm_sensors stop', sudo=True)
