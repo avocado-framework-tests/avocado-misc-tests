@@ -117,6 +117,9 @@ class MultipathTest(Test):
                 if disk in multipath.get_paths(path_dic["wwid"]):
                     msg += "Blacklist of %s fails\n" % disk
 
+        # Need to give time for the multipath service to get stable
+        time.sleep(5)
+
         # Print errors
         if msg:
             self.fail("Some tests failed. Find details below:\n%s" % msg)
