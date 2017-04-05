@@ -61,7 +61,7 @@ class Sensors(Test):
         if d_distro.name == "Ubuntu":
             if not s_mg.check_installed("lm-sensors") and not s_mg.install(
                     "lm-sensors"):
-                self.error('Need sensors to run the test')
+                self.skip('Need sensors to run the test')
         elif d_distro.name == "SuSE":
             if not s_mg.check_installed("sensors") and not s_mg.install(
                     "sensors"):
@@ -69,7 +69,7 @@ class Sensors(Test):
         else:
             if not s_mg.check_installed("lm_sensors") and not s_mg.install(
                     "lm_sensors"):
-                self.error('Need sensors to run the test')
+                self.skip('Need sensors to run the test')
         if d_distro.arch in ["ppc64", "ppc64le"]:
             kernel_ver = platform.uname()[2]
             l_config = "CONFIG_SENSORS_IBMPOWERNV"
@@ -77,16 +77,16 @@ class Sensors(Test):
                 'cat /boot/config-' + kernel_ver +
                 '| grep -i --color=never ' + l_config, shell=True)
             if "=" not in config_op:
-                self.error('Config is not set')
+                self.skip('Config is not set')
             c_val = (config_op.split("=")[1]).replace('\n', '')
             if "powerkvm" in d_distro.name:
                 if not c_val == "y":
-                    self.error('Config is not set properly')
+                    self.skip('Config is not set properly')
                 else:
                     self.log.info("Driver will be part of distro")
             else:
                 if not c_val == "m":
-                    self.error('Config is not set correctly')
+                    self.skip('Config is not set correctly')
                 else:
                     self.log.info("Driver will be built as module")
                     mod_op = process.run(
@@ -95,7 +95,7 @@ class Sensors(Test):
                         lsmod_op = process.system_output(
                             "lsmod | grep -i ibmpowernv", shell=True)
                         if "ibmpowernv" not in lsmod_op:
-                            self.error('Module Loading Failed')
+                            self.skip('Module Loading Failed')
                         else:
                             self.log.info('Module Loaded Successfully')
         if not d_distro.name == "Ubuntu":
@@ -104,7 +104,7 @@ class Sensors(Test):
                 process.run('service lm_sensors start', sudo=True)
                 process.run('service lm_sensors status', sudo=True)
             except process.CmdError:
-                self.error(
+                self.skip(
                     'Starting Service Failed. Make sure module is loaded')
         cmd = "yes | sudo sensors-detect"
         det_op = process.run(cmd, shell=True, ignore_status=True).stdout
