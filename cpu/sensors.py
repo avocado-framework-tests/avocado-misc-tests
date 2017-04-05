@@ -59,7 +59,7 @@ class Sensors(Test):
         if d_distro.name == "Ubuntu":
             if not s_mg.check_installed("lm-sensors") and not s_mg.install(
                     "lm-sensors"):
-                self.error('Need sensors to run the test')
+                self.skip('Need sensors to run the test')
         elif d_distro.name == "SuSE":
             if not s_mg.check_installed("sensors") and not s_mg.install(
                     "sensors"):
@@ -67,7 +67,7 @@ class Sensors(Test):
         else:
             if not s_mg.check_installed("lm_sensors") and not s_mg.install(
                     "lm_sensors"):
-                self.error('Need sensors to run the test')
+                self.skip('Need sensors to run the test')
         if d_distro.arch in ["ppc64", "ppc64le"]:
             if 'platform\t: PowerNV\n' not in cpu._get_cpu_info():
                 self.skip('sensors test is applicable to bare-metal environment.')
