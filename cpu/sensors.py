@@ -18,11 +18,9 @@
 """
 Test for sensors command
 """
-import platform
-
 from avocado import Test
 from avocado import main
-from avocado.utils import process
+from avocado.utils import process, linux_modules
 from avocado.utils import distro
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import cpu
@@ -70,26 +68,22 @@ class Sensors(Test):
                 self.skip('Need sensors to run the test')
         if d_distro.arch in ["ppc64", "ppc64le"]:
             if 'platform\t: PowerNV\n' not in cpu._get_cpu_info():
-                self.skip('sensors test is applicable to bare-metal environment.')
-            kernel_ver = platform.uname()[2]
-            l_config = "CONFIG_SENSORS_IBMPOWERNV"
-            config_op = process.system_output(
-                'cat /boot/config-' + kernel_ver +
-                '| grep -i --color=never ' + l_config, shell=True)
-            if "=" not in config_op:
-                self.error('Config is not set')
-            c_val = (config_op.split("=")[1]).replace('\n', '')
-            if not c_val == "m":
-                self.error('Config is not set correctly')
-            else:
-                self.log.info("Driver will be built as module")
-                mod_op = process.run('modprobe ibmpowernv')
-                if mod_op.exit_status == 0:
-                    lsmod_op = process.system_output("lsmod | grep -i ibmpowernv", shell=True)
-                if "ibmpowernv" not in lsmod_op:
-                        self.error('Module Loading Failed')
-                else:
+                self.skip(
+                    'sensors test is applicable to bare-metal environment.')
+
+            config_check = linux_modules.check_kernel_config(
+                'CONFIG_SENSORS_IBMPOWERNV')
+            if config_check == 0:
+                self.skip('Config is not set')
+            elif config_check == 1:
+                if linux_modules.load_module('ibmpowernv'):
+                    if linux_modules.module_is_loaded('ibmpowernv'):
                         self.log.info('Module Loaded Successfully')
+                    else:
+                        self.skip('Module Loading Failed')
+            else:
+                self.log.info('Module is Built In')
+
         if not d_distro.name == "Ubuntu":
             try:
                 process.run('service lm_sensors stop', sudo=True)
