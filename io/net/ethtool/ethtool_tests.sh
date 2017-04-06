@@ -64,3 +64,5 @@ for command in ifdown ifup; do
         exit $error
     fi
 done
+ifup $interface
+sleep 5
