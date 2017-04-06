@@ -91,10 +91,15 @@ class PPC64Test(Test):
             self.threads_per_core()
             self.smt_snoozedelay()
             self.dscr()
+
+        self.smt_loop()
+
         if self.failures > 0:
             self.log.debug("Number of failures is %s" % self.failures)
             self.log.debug(self.failure_message)
             self.fail()
+
+        process.system_output("dmesg")
 
     def smt(self):
         """
@@ -146,6 +151,14 @@ class PPC64Test(Test):
         command1 = "ppc64_cpu --dscr | awk '{print $NF}'"
         command2 = "cat /sys/devices/system/cpu/dscr_default"
         self.equality_check("DSCR", command1, command2)
+
+    def smt_loop(self):
+        """
+        Tests smt on/off in a loop
+        """
+        for _ in range(1, 100):
+            process.run("ppc64_cpu --smt=off && ppc64_cpu --smt=on",
+                        shell=True)
 
     def tearDown(self):
         """
