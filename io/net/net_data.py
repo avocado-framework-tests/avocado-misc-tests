@@ -158,12 +158,14 @@ class NetDataTest(Test):
             self.fail("interface test failed")
         # up the interface
         process.system(if_up, shell=True)
-        time.sleep(4)
         # check the status of interface through ethtool
-        ret = process.system_output(self.eth, shell=True)
-        if 'no' in ret:
+        for i in range (0, 600, 60):
+            if 'yes' in process.system_output(self.eth, shell=True):
+                break
+            time.sleep(60)
+        if 'no' in process.system_output(self.eth, shell=True):
             self.fail("interface test failed")
-        # check the status of interface through ip link show
+            # check the status of interface through ip link show
         ret = process.system_output(ip_link, shell=True)
         if 'DOWN' in ret:
             self.fail("interface test failed")
