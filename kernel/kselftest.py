@@ -61,7 +61,7 @@ class kselftest(Test):
                     '%s is needed for the test to be run !!' % (package))
 
         location = ["https://github.com/torvalds/linux/archive/master.zip"]
-        tarball = self.fetch_asset("master.zip", locations=location,
+        tarball = self.fetch_asset("kselftest.zip", locations=location,
                                    expire='1d')
         archive.extract(tarball, self.srcdir)
         self.buldir = os.path.join(self.srcdir, 'linux-master')
