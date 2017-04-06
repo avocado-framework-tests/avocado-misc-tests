@@ -55,7 +55,7 @@ class HtxTest(Test):
                 self.skip("Can not install %s" % pkg)
 
         url = "https://github.com/open-power/HTX/archive/master.zip"
-        tarball = self.fetch_asset("master.zip", locations=[url], expire='7d')
+        tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')
         archive.extract(tarball, self.teststmpdir)
         htx_path = os.path.join(self.teststmpdir, "HTX-master")
         os.chdir(htx_path)
