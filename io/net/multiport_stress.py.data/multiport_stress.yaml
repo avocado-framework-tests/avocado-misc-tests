@@ -1,0 +1,4 @@
+Parameters:
+host_interfaces: "enP40p1s0f3,enP40p1s0f2"
+peer_ips: "10.68.68.21,90.90.90.101"
+packet_size: 10
