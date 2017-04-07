@@ -40,9 +40,10 @@ class Trinity(Test):
         """
         Add not root user
         """
-        process.run('groupadd trinity', sudo=True)
+        process.run('groupadd trinity', sudo=True, ignore_status=True)
         process.run(
-            'useradd -g trinity  -m -d /home/trinity  trinity', sudo=True)
+            'useradd -g trinity  -m -d /home/trinity  trinity',
+            ignore_status=True, sudo=True)
         process.run('usermod -a -G trinity  trinity', sudo=True)
 
         smm = SoftwareManager()
