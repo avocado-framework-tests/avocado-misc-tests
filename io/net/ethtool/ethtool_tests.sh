@@ -64,3 +64,10 @@ for command in ifdown ifup; do
         exit $error
     fi
 done
+for i in {1..20};
+do
+    ip link show ${interface} | grep "state UP"
+    if [[ $? == 0 ]]; then
+        break;
+    fi
+done
