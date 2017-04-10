@@ -33,6 +33,7 @@ from avocado import Test
 from avocado import main
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import lv_utils
+from avocado.utils import distro
 
 
 class Lvsetup(Test):
@@ -56,7 +57,10 @@ class Lvsetup(Test):
         if self.fs_name == 'xfs':
             pkg = 'xfsprogs'
         if self.fs_name == 'btrfs':
-            pkg = 'btrfs-progs'
+            if distro.detect().name == 'SuSE':
+                pkg = 'btrfsprogs'
+            else:
+                pkg = 'btrfs-progs'
         if pkg and not smm.check_installed(pkg) and not smm.install(pkg):
             self.skip("Package %s is missing and could not be installed" % pkg)
         lv_snapshot_name = self.params.get(
