@@ -43,7 +43,7 @@ class Ltp_Fs(Test):
             if not sm.check_installed(package) and not sm.install(package):
                 self.error("%s is needed for the test to be run", package)
         self.disk = self.params.get('disk', default=None)
-        self.mount_point = self.params.get('dir', default=self.srcdir)
+        self.mount_point = self.params.get('dir', default=self.teststmpdir)
         self.script = self.params.get('script')
         fstype = self.params.get('fs', default='ext4')
         self.args = self.params.get('args', default='')

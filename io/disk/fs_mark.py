@@ -62,7 +62,7 @@ class fs_mark(Test):
         # Just provide a sample run parameters
         num_files = self.params.get('num_files', default='1024')
         size = self.params.get('size', default='1000')
-        self.dir = self.params.get('dir', default='/var/tmp')
+        self.dir = self.params.get('dir', default=self.teststmpdir)
 
         self.part_obj = Partition(self.disk, mountpoint=self.dir)
         self.log.info("Test will run on %s", self.dir)
