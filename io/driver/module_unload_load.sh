@@ -16,7 +16,11 @@
 
 CONFIG_FILE="$AVOCADO_TEST_DATADIR"/config
 BUILT_IN_DRIVERS=`cat /lib/modules/$(uname -r)/modules.builtin |awk -F"/" '{print $NF}'|sed 's/\.ko//g'`
-DRIVERS=`find /lib/modules/$(uname -r)/ -name \*.ko | awk -F"/" '{print $NF}'|sed 's/\.ko//g'`
+if [[ $ONLY_IO == True ]]; then
+    DRIVERS=`lspci -k | grep -iw "Kernel driver in use" | cut -d ':' -f2 | sort | uniq`
+else
+    DRIVERS=`find /lib/modules/$(uname -r)/ -name \*.ko | awk -F"/" '{print $NF}'|sed 's/\.ko//g'`
+fi
 ERR=""
 PASS=""
 [[ -z $ITERATIONS ]] && ITERATIONS=10
