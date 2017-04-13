@@ -41,7 +41,7 @@ class libhugetlbfs(Test):
         # Check for basic utilities
         sm = SoftwareManager()
         detected_distro = distro.detect()
-        deps = ['gcc', 'make', 'git', 'patch']
+        deps = ['gcc', 'make', 'patch']
 
         if detected_distro.name == "Ubuntu":
             deps += ['libpthread-stubs0-dev', 'git']
