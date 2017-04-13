@@ -110,7 +110,8 @@ class NetworkconfigTest(Test):
                     self.fail("mismatch in mtu")
             if 'MTU' in val:
                 cmd, mtu_val = val.split('MTU:')
-                mtu_val, cmd = mtu_val.split(' ')
+                mtu_val, cmd = mtu_val.split(' M')
+                mtu_val = mtu_val.strip()
                 self.log.info("through ifconfig mtu value is %s" % mtu_val)
                 if mtu != mtu_val:
                     self.fail("mismatch in mtu")
