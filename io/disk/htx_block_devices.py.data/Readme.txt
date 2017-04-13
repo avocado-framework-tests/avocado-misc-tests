@@ -7,3 +7,13 @@ any hardware design flaws and hardware hardware or hardware-software
 interaction issues. HTX runs on AIX, Bare Metal Linux(BML) and distribution
 Linux. HTX offers a light weight HTX daemon (HTXD) which support command line
 interface and menu based user interactive interface.
+
+The test also changes SMT values while HTX is running, based on input from the
+user in yaml file.
+
+Inputs:
+------
+disk: '/dev/sdb /dev/sdc'
+time_limit: 240
+mdt_file: 'mdt.io'
+smt_change: True or False

@@ -1,4 +1,4 @@
-parameters:
-    disk: 'mpatha mpathb'
-    time_limit: 240
-    mdt_file: 'mdt.hd'
+disk: '/dev/sdb'
+time_limit: 240
+mdt_file: 'mdt.hd'
+smt_change: True
