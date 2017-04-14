@@ -72,18 +72,22 @@ class FioTest(Test):
         """
         self.log.info("Test will run on %s", self.dir)
         fio_job = self.params.get('fio_job', default='fio-simple.job')
-        cmd = '%s/fio %s %s' % (self.srcdir,
-                                os.path.join(self.datadir, fio_job), self.dir)
+        self.fio_file = 'fiotest-image'
+        cmd = '%s/fio %s %s --filename=%s' % (self.srcdir,
+                                              os.path.join(
+                                                  self.datadir, fio_job),
+                                              self.dir, self.fio_file)
         process.system(cmd)
 
     def tearDown(self):
-
         '''
         Cleanup of disk used to perform this test
         '''
         if self.disk is not None:
             self.log.info("Unmounting directory %s", self.dir)
             self.part_obj.unmount()
+        if os.path.exists(self.fio_file):
+            os.remove(self.fio_file)
 
 
 if __name__ == "__main__":
