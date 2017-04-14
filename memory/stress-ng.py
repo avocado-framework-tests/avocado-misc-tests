@@ -69,6 +69,7 @@ class stressng(Test):
                 if 'error:' in line:
                     self.cancel(
                         "Unsupported OS, Please check the build logs !!")
+            process.run("make install")
         clear_dmesg()
 
     def test(self):
