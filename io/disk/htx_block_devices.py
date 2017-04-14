@@ -76,6 +76,8 @@ class HtxTest(Test):
         process.run('dpkg -r htxubuntu')
         process.run('dpkg --purge htxubuntu')
         process.run('dpkg -i htxubuntu.deb')
+        if not os.path.exists("/usr/lpp/htx/mdt/%s" % self.mdt_file):
+            self.skip("MDT file %s not found" % self.mdt_file)
         self.smt = self.params.get('smt_change', default=False)
         if self.smt:
             self.max_smt_value = 8
