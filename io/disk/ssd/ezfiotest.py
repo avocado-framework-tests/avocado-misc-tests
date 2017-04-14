@@ -63,7 +63,7 @@ class EzfioTest(Test):
         Performs ezfio test on the block device'.
         """
         os.chdir(self.ezfio_path)
-        cmd = './ezfio.py -d %s -o %s -u %s --yes' \
+        cmd = './ezfio.py -d %s -o "%s" -u %s --yes' \
             % (self.disk, self.outputdir, self.utilization)
         process.run(cmd, shell=True)
 
