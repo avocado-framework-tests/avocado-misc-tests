@@ -1,0 +1,3 @@
+list: ['-o dlm -k dlm.lockdump', '-k filesys.dumpe2fs=on', '--log-size=2000', 
+       '-a', '--all-logs', '--build', '--chroot=always', '--chroot=auto', 
+       '--chroot=never', '-n memory,samba']
