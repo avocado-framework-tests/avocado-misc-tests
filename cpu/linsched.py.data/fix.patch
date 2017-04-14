@@ -1,0 +1,59 @@
+diff --git a/pi-rw-sched.c b/pi-rw-sched.c
+index 76c5173..ca60d0e 100644
+--- a/pi-rw-sched.c
++++ b/pi-rw-sched.c
+@@ -24,14 +24,13 @@
+ #define DEFAULT_ITERATIONS 1000000
+ #define RADIUS (RAND_MAX / 2)
+ 
+-inline double dist(double x0, double y0, double x1, double y1){
++inline static double dist(double x0, double y0, double x1, double y1){
+     return sqrt(pow((x1-x0),2) + pow((y1-y0),2));
+ }
+ 
+-inline double zeroDist(double x, double y){
++inline static double zeroDist(double x, double y){
+     return dist(0, 0, x, y);
+ }
+-
+ int calculatePi(long iter){
+ 
+     long i;
+diff --git a/pi-sched.c b/pi-sched.c
+index 670c1b2..8ba8ff5 100644
+--- a/pi-sched.c
++++ b/pi-sched.c
+@@ -9,11 +9,11 @@
+ #define DEFAULT_ITERATIONS 1000000
+ #define RADIUS (RAND_MAX / 2)
+ 
+-inline double dist(double x0, double y0, double x1, double y1){
++inline static double dist(double x0, double y0, double x1, double y1){
+     return sqrt(pow((x1-x0),2) + pow((y1-y0),2));
+ }
+ 
+-inline double zeroDist(double x, double y){
++inline static double zeroDist(double x, double y){
+     return dist(0, 0, x, y);
+ }
+ 
+diff --git a/pi.c b/pi.c
+index 4f97c14..b5ab96a 100644
+--- a/pi.c
++++ b/pi.c
+@@ -8,12 +8,13 @@
+ #define DEFAULT_ITERATIONS 100000000
+ #define RADIUS (RAND_MAX / 2)
+ 
++
+ /* Local Functions */
+-inline double dist(double x0, double y0, double x1, double y1){
++inline static double dist(double x0, double y0, double x1, double y1){
+     return sqrt(pow((x1-x0),2) + pow((y1-y0),2));
+ }
+ 
+-inline double zeroDist(double x, double y){
++inline static double zeroDist(double x, double y){
+     return dist(0, 0, x, y);
+ }
+ 
