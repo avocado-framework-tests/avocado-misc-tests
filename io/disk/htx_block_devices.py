@@ -22,6 +22,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import build
 from avocado.utils import process, archive
 from avocado.utils import distro
+from avocado.utils import cpu
 
 
 class HtxTest(Test):
@@ -47,6 +48,16 @@ class HtxTest(Test):
         if distro.detect().name != 'Ubuntu':
             self.skip("Distro does not support")
 
+        self.mdt_file = self.params.get('mdt_file', default='mdt.hd')
+        self.time_limit = self.params.get('time_limit', default=600)
+        self.block_devices = self.params.get('disk', default=None)
+        if self.block_devices is None:
+            self.skip("Needs the block devices to run the HTX")
+        self.block_device = []
+        for disk in self.block_devices.split():
+            self.block_device.append(disk.rsplit("/")[-1])
+        self.block_device = " ".join(self.block_device)
+
         packages = ['git', 'gcc', 'make', 'libncurses5', 'g++', 'libdapl-dev',
                     'ncurses-dev', 'libncurses-dev', 'libcxl-dev']
         smm = SoftwareManager()
@@ -65,11 +76,18 @@ class HtxTest(Test):
         process.run('dpkg -r htxubuntu')
         process.run('dpkg --purge htxubuntu')
         process.run('dpkg -i htxubuntu.deb')
-        self.mdt_file = self.params.get('mdt_file', default='mdt.hd')
-        self.time_limit = self.params.get('time_limit', default=600)
-        self.block_device = self.params.get('disk', default=None)
-        if self.block_device is None:
-            self.skip("Needs the block devices to run the HTX")
+        self.smt = self.params.get('smt_change', default=False)
+        if self.smt:
+            self.max_smt_value = 8
+            if cpu.get_cpu_arch().lower() == 'power7':
+                self.max_smt_value = 4
+            if cpu.get_cpu_arch().lower() == 'power6':
+                self.max_smt_value = 2
+            self.smt_values = ["off", "on"]
+            for i in range(2, self.max_smt_value + 1):
+                self.smt_values.append(str(i))
+            self.curr_smt = process.system_output("ppc64_cpu --smt | awk -F'=' \
+                '{print $NF}' | awk '{print $NF}'", shell=True)
 
     def test(self):
         """
@@ -99,7 +117,8 @@ class HtxTest(Test):
         cmd = "htxcmdline -run %s -mdt %s" % (self.block_device, self.mdt_file)
         process.system(cmd, ignore_status=True)
         for _ in range(0, self.time_limit, 60):
-            self.log.info("Error logs")
+            self.run_smt()
+            self.log.info("HTX Error logs")
             process.run('htxcmdline -geterrlog')
             if os.stat('/tmp/htxerr').st_size != 0:
                 self.fail("check errorlogs for exact error and failure")
@@ -108,6 +127,15 @@ class HtxTest(Test):
                                                     self.mdt_file)
             process.system(cmd, ignore_status=True)
             time.sleep(60)
+
+    def run_smt(self):
+        """
+        Sets each of the supported SMT value.
+        """
+        for value in self.smt_values:
+            process.system_output("ppc64_cpu --smt=%s" % value, shell=True)
+            process.system_output("ppc64_cpu --smt" % value, shell=True)
+            process.system_output("ppc64_cpu --info")
 
     def is_block_device_in_mdt(self):
         '''
@@ -161,7 +189,7 @@ class HtxTest(Test):
 
     def tearDown(self):
         '''
-        Shutdown the mdt file and the htx daemon
+        Shutdown the mdt file and the htx daemon and set SMT to original value
         '''
         if self.is_block_device_active() is True:
             self.log.info("suspending active block_devices")
@@ -173,6 +201,7 @@ class HtxTest(Test):
         daemon_state = process.system_output('/etc/init.d/htx.d status')
         if daemon_state.split(" ")[-1] == 'running':
             process.system('/usr/lpp/htx/etc/scripts/htxd_shutdown')
+        process.system_output("ppc64_cpu --smt=%s" % self.curr_smt, shell=True)
 
 
 if __name__ == "__main__":
