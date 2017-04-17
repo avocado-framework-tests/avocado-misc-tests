@@ -25,6 +25,8 @@ from avocado import Test
 from avocado import main
 from avocado.utils import build
 from avocado.utils import process
+from avocado.utils import genio
+from avocado.utils.software_manager import SoftwareManager
 import avocado.utils.git as git
 
 
@@ -56,6 +58,12 @@ class EzfioTest(Test):
         ezfio_link = 'https://github.com/earlephilhower/ezfio.git'
         git.get_repo(ezfio_link, destination_dir=self.ezfio_path)
         self.utilization = self.params.get('utilization', default='100')
+        # aio-max-nr is 65536 by default, and test fails if QD is 256 or above
+        genio.write_file("/proc/sys/fs/aio-max-nr", "1048576")
+        smm = SoftwareManager()
+        # Not a package that must be installed, so not skipping.
+        if not smm.check_installed("sdparm") and not smm.install("sdparm"):
+            self.log.debug("Can not install sdparm")
         self.cwd = os.getcwd()
 
     def test(self):
