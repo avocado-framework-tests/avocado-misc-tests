@@ -41,9 +41,10 @@ class Memtester(Test):
         for pkg in ['gcc', 'make']:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.skip('%s is needed for the test to be run' % pkg)
-        tarball = self.fetch_asset(
-            'https://github.com/jnavila/memtester/archive/master.zip',
-            expire='7d')
+        tarball = self.fetch_asset('memtester.zip', locations=[
+                                   'https://github.com/jnavila/'
+                                   'memtester/archive/master.zip'],
+                                   expire='7d')
         archive.extract(tarball, self.srcdir)
         self.srcdir = os.path.join(self.srcdir, 'memtester-master')
         os.chdir(self.srcdir)

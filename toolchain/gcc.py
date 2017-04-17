@@ -63,8 +63,9 @@ class GCC(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.skip(
                     "Failed to install %s required for this test." % package)
-        tarball = self.fetch_asset(
-            "https://github.com/gcc-mirror/gcc/archive/master.zip", expire='7d')
+        tarball = self.fetch_asset('gcc.zip', locations=[
+                                   'https://github.com/gcc-mirror/gcc/archive'
+                                   '/master.zip'], expire='7d')
         archive.extract(tarball, self.srcdir)
         self.srcdir = os.path.join(self.srcdir, 'gcc-master')
 
