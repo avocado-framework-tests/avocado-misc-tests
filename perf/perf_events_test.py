@@ -34,7 +34,7 @@ class Perf_subsystem(Test):
         '''
         Install the packages
         '''
-        #Check for basic utilities
+        # Check for basic utilities
         smm = SoftwareManager()
         detected_distro = distro.detect()
         kernel_ver = platform.uname()[2]
@@ -56,9 +56,10 @@ class Perf_subsystem(Test):
         Execute the perf tests
         Source : https://github.com/deater/perf_event_tests
         '''
-        tarball = self.fetch_asset('https://github.com/deater/'
+        tarball = self.fetch_asset('perf-event.zip', locations=[
+                                   'https://github.com/deater/'
                                    'perf_event_tests/archive/'
-                                   'master.zip', expire='7d')
+                                   'master.zip'], expire='7d')
         archive.extract(tarball, self.srcdir)
         self.srcdir = os.path.join(self.srcdir, 'perf_event_tests-master')
         build.make(self.srcdir)

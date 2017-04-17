@@ -88,8 +88,9 @@ class ip_over_ib(Test):
         build.make(self.neperf)
         self.perf = os.path.join(self.neperf, 'src')
         time.sleep(5)
-        tarball = self.fetch_asset('https://github.com/esnet/'
-                                   'iperf/archive/master.zip', expire='7d')
+        tarball = self.fetch_asset('iperf.zip', locations=[
+                                   'https://github.com/esnet/'
+                                   'iperf/archive/master.zip'], expire='7d')
         archive.extract(tarball, self.iper)
         self.ipe = os.path.join(self.iper, 'iperf-master')
         tmp = "scp -r %s root@%s:" % (self.ipe, self.PEER_IP)

@@ -59,8 +59,10 @@ class stressng(Test):
                     '%s is needed, get the source and build' % package)
 
         if 'Ubuntu' not in detected_distro.name:
-            tarball = self.fetch_asset(
-                'https://github.com/ColinIanKing/stress-ng/archive/master.zip', expire='7d')
+            tarball = self.fetch_asset('stressng.zip', locations=[
+                                       'https://github.com/ColinIanKing/'
+                                       'stress-ng/archive/master.zip'],
+                                       expire='7d')
             archive.extract(tarball, self.srcdir)
             self.srcdir = os.path.join(self.srcdir, 'stress-ng-master')
             os.chdir(self.srcdir)
