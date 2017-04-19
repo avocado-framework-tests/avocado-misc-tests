@@ -100,20 +100,11 @@ class NetworkconfigTest(Test):
         hw_addr = hw_addr[0]['addr']
         if hw_addr != address:
             self.fail("mismatch in hardware address")
-        cmd = "ifconfig %s" % self.iface
-        mtuval = process.system_output(cmd, shell=True).strip().split('\n')
-        for val in mtuval:
-            if 'mtu' in val:
-                cmd, mtu_val = val.split('mtu ')
-                self.log.info("through ifconfig mtu value is %s" % mtu_val)
-                if mtu != mtu_val:
-                    self.fail("mismatch in mtu")
-            if 'MTU' in val:
-                cmd, mtu_val = val.split('MTU:')
-                mtu_val, cmd = mtu_val.split(' ')
-                self.log.info("through ifconfig mtu value is %s" % mtu_val)
-                if mtu != mtu_val:
-                    self.fail("mismatch in mtu")
+        mtuval = process.system_output("ip link show %s" % self.iface,
+                                       shell=True).split()[4]
+        self.log.info("through ip link show, mtu value is %s" % mtuval)
+        if mtu != mtuval:
+            self.fail("mismatch in mtu")
         eth_state = process.system_output("ethtool %s | grep 'Link detected:'\
                                           " % self.iface, shell=True)
         if 'yes' in eth_state and operstate == 'down':
