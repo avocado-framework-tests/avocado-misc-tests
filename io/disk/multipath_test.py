@@ -46,9 +46,13 @@ class MultipathTest(Test):
         if dist.name == 'Ubuntu':
             pkg_name += "multipath-tools"
             svc_name = "multipath-tools"
-        else:
+        elif dist.name == 'redhat':
             pkg_name += "device-mapper-multipath"
             svc_name = "multipathd"
+        elif dist.name == 'SuSE':
+            pkg_name += "multipath-tools"
+            svc_name = "multipathd"
+
         smm = SoftwareManager()
         if not smm.check_installed(pkg_name) and not smm.install(pkg_name):
             self.skip("Can not install %s" % pkg_name)
