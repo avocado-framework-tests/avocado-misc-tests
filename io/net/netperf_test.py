@@ -47,6 +47,8 @@ class Netperf(Test):
         pkgs = ['gcc']
         if detected_distro.name == "Ubuntu":
             pkgs.append('openssh-client')
+        elif detected_distro.name == "SuSE":
+            pkgs.append('openssh')
         else:
             pkgs.append('openssh-clients')
         for pkg in pkgs:
