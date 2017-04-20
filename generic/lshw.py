@@ -38,6 +38,9 @@ class Lshwrun(Test):
             self.is_fail += 1
             self.fail_cmd.append(cmd)
 
+    def run_cmd_out(self, cmd):
+        return process.system_output(cmd, shell=True, ignore_status=True, sudo=True)
+
     def setUp(self):
         sm = SoftwareManager()
         for package in ("lshw", "net-tools", "iproute", "pciutils"):
@@ -144,6 +147,55 @@ class Lshwrun(Test):
         for line in process.system_output("lshw").strip('\t\n\r').splitlines():
             if ("serial:" in line) and (line in out_with_sanitize):
                 self.fail("Sensitive data is present in output")
+
+    def test_prod_id_serial(self):
+        """
+        Test verifies the product id and serial number in lshw output.
+        """
+        self.log.info("===============Validating product id and serial number ===="
+                      "===========")
+        self.is_fail = 0
+        if 'KVM' in self.run_cmd_out("pseries_platform"):
+            product_path = '/proc/device-tree/host-model'
+            serial_path = '/proc/device-tree/host-serial'
+        else:
+            product_path = '/proc/device-tree/model'
+            serial_path = '/proc/device-tree/system-id'
+        product_name = self.run_cmd_out("cat %s" % product_path).rstrip(' \t\r\n\0')
+        serial_num = self.run_cmd_out("cat %s" % serial_path).rstrip(' \t\r\n\0')
+        if product_name not in self.run_cmd_out("lshw | grep product | head -1"):
+            self.is_fail += 1
+        if serial_num not in self.run_cmd_out("lshw | grep serial | head -1"):
+            self.is_fail += 1
+        if self.is_fail >= 1:
+            self.fail("%s command(s) failed to execute "
+                      % self.fail_cmd)
+
+    def test_lshw_options(self):
+        """
+        -disable -> Disables a test.
+        -enable -> Enables a test.
+        -quiet -> Don't display status.
+        -numeric -> Also display numeric IDs.
+        -notime -> exclude volatile attributes (timestamps) from output.
+        """
+        self.log.info("===============Verifying -disable, -enable, -quiet, -numeric and -notime options ===="
+                      "===========")
+        self.is_fail = 0
+        if self.run_cmd_out("lshw -disable scsi | grep SCSI"):
+            self.is_fail += 1
+        if "description" not in self.run_cmd_out("lshw -enable scsi | grep SCSI"):
+            self.is_fail += 1
+        if self.run_cmd_out("lshw -class -quiet"):
+            self.is_fail += 1
+        if 'PowerVM' not in self.run_cmd_out("pseries_platform"):
+            if not self.run_cmd_out("lshw -numeric | grep HCI | cut -d':' -f3"):
+                self.is_fail += 1
+        if self.run_cmd_out("lshw -notime | grep modified"):
+            self.is_fail += 1
+        if self.is_fail >= 1:
+            self.fail("%s command(s) failed to execute "
+                      % self.fail_cmd)
 
 
 if __name__ == "__main__":
