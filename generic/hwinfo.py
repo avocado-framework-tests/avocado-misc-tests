@@ -34,8 +34,6 @@ class Hwinfo(Test):
         return
 
     def setUp(self):
-        if "ppc" not in os.uname()[4]:
-            self.skip("supported only on Power platform")
         if distro.detect().name == 'redhat':
             self.skip('Hwinfo not supported on RHEL')
         sm = SoftwareManager()
