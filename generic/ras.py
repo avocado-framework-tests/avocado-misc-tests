@@ -21,6 +21,7 @@ from avocado import main
 from avocado.utils import process
 from avocado import skipIf
 from avocado.utils.software_manager import SoftwareManager
+from avocado.core import exceptions
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
@@ -256,6 +257,65 @@ class RASTools(Test):
             self.fail("%s command(s) failed in rtas_errd and rtas_dump tools "
                       "verification" % self.is_fail)
 
+    def test13_lscfg(self):
+        """
+        lscfg lists the installed devices
+        """
+        self.log.info("===============Executing lscfg tool test=============")
+        cpu_output = process.system_output('cat /proc/cpuinfo')
+        if "emulated by qemu" in cpu_output:
+            raise exceptions.TestWarn(
+                "Not supported on the pSeries KVM Guest platform")
+
+        self.run_cmd("lscfg -h")
+        self.run_cmd("lscfg -V")
+        self.run_cmd("lscfg -v")
+        self.run_cmd("lscfg -D")
+        self.run_cmd("lscfg -p")
+        path_db = process.system_output("find /var/lib/lsvpd/ -iname vpd.db | "
+                                        "head -1", shell=True).strip()
+        if path_db:
+            copyfile_path = os.path.join(self.outputdir, 'vpd.db')
+            copyfile(path_db, copyfile_path)
+            self.run_cmd("lscfg --data=%s" % copyfile_path)
+        path_zip = process.system_output("find /var/lib/lsvpd/ -iname vpd.*.gz"
+                                         " | head -1", shell=True).strip()
+        if path_zip:
+            self.run_cmd("lscfg --zip=%s" % path_zip)
+        if self.is_fail >= 1:
+            self.fail("%s command(s) failed in lscfg tool verification"
+                      % self.is_fail)
+
+    def test14_lsvpd(self):
+        """
+        lsvpd lists device Vital Product Data
+        """
+        self.log.info("===============Executing lsvpd tool test=============")
+        cpu_output = process.system_output('cat /proc/cpuinfo')
+        if "emulated by qemu" in cpu_output:
+            raise exceptions.TestWarn(
+                "Not supported on the pSeries KVM Guest platform")
+
+        self.run_cmd("lsvpd -h")
+        self.run_cmd("lsvpd -D")
+        self.run_cmd("lsvpd -v")
+        self.run_cmd("lsvpd --serial")
+        self.run_cmd("lsvpd --type")
+        path_db = process.system_output("find /var/lib/lsvpd/ -iname vpd.db | "
+                                        "head -1", shell=True).strip()
+        if path_db:
+            copyfile_path = os.path.join(self.outputdir, 'vpd.db')
+            copyfile(path_db, copyfile_path)
+            self.run_cmd("lsvpd --path=%s" % copyfile_path)
+
+        path_zip = process.system_output("find /var/lib/lsvpd/ -iname vpd.*.gz"
+                                         " | head -1", shell=True).strip()
+        if path_zip:
+            self.run_cmd("lsvpd --zip=%s" % path_zip)
+
+        if self.is_fail >= 1:
+            self.fail("%s command(s) failed in lscfg tool verification"
+                      % self.is_fail)
 
 if __name__ == "__main__":
     main()
