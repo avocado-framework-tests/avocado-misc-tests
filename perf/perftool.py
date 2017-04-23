@@ -17,10 +17,10 @@
 
 
 import os
-
+import platform
 from avocado import Test
 from avocado import main
-from avocado.utils import archive, build
+from avocado.utils import archive, build, distro, process
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -39,7 +39,15 @@ class Perftool(Test):
 
         # Check for basic utilities
         smm = SoftwareManager()
-        for package in ['gcc', 'make', 'perf']:
+        detected_distro = distro.detect()
+        kernel_ver = platform.uname()[2]
+        if 'Ubuntu' in detected_distro.name:
+            deps = ['gcc', 'make', 'linux-tools-common',
+                    'linux-tools-' + kernel_ver + '']
+        else:
+            deps = ['gcc', 'make', 'perf']
+
+        for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.error('%s is needed for the test to be run' % package)
 
@@ -51,6 +59,19 @@ class Perftool(Test):
         self.srcdir = os.path.join(self.srcdir, 'perftool-testsuite-master')
 
     def test(self):
+        '''
+        perf test :Does sanity tests and
+        execute the tests by calling each module
+        '''
+        # Built in perf test
+        result = process.run("perf test")
+        x = result.stderr.splitlines()
+        for string in x:
+            y = str(string.splitlines())
+            if 'FAILED' in y:
+                self.log.info("Test case failed is %s", y.strip("[]"))
+
+        # perf testsuite
         self.count = 0
         for line in build.run_make(self.srcdir, extra_args='check',
                                    ignore_status=True).stdout.splitlines():
