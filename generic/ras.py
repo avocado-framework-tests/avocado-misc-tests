@@ -44,6 +44,14 @@ class RASTools(Test):
         architecture = os.uname()[4]
         if "ppc" not in architecture:
             self.skip("supported only on Power platform")
+        if 'PowerNV' in process.system_output('grep ^platform /proc/cpuinfo'):
+            nv_flag = False
+            for cmd in ['lsmcode', 'lsprop', 'nvram', 'ppc64_cpu']:
+                if cmd in self.name.name:
+                    nv_flag = True
+            if not nv_flag:
+                self.skip('Test not supported in PowerNV platform')
+
         sm = SoftwareManager()
         for package in ("ppc64-diag", "powerpc-utils", "lsvpd", "ipmitool"):
             if not sm.check_installed(package) and not sm.install(package):
