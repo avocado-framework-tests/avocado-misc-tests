@@ -28,7 +28,7 @@ import shutil
 
 from avocado import Test
 from avocado import main
-from avocado.utils import process, build, git, distro, partition
+from avocado.utils import process, build, git, distro, partition, disk
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -73,6 +73,9 @@ class Xfstests(Test):
         self.disk_mnt = self.params.get('disk_mnt', default='/mnt/loop_device')
         self.dev_type = self.params.get('type', default='loop')
         self.fs_to_test = self.params.get('fs', default='ext4')
+        if process.system('which mkfs.%s' % self.fs_to_test, ignore_status=True):
+            self.skip('Unknown filesystem %s' % self.fs_to_test)
+        mount = True
         self.devices = []
         shutil.copyfile(os.path.join(self.datadir, 'local.config'),
                         os.path.join(self.srcdir, 'local.config'))
@@ -83,8 +86,13 @@ class Xfstests(Test):
             base_disk = self.params.get('disk', default=None)
             loop_size = self.params.get('loop_size', default='9GiB')
             if not base_disk:
-                self.skip('Please provide a base disk to create loop device')
-            self._create_loop_device(base_disk, loop_size)
+                # Using root for file creation by default
+                if disk.freespace('/')/1073741824 > 15:
+                    self.disk_mnt = ''
+                    mount = False
+                else:
+                    self.skip('Need 15 GB to create loop devices')
+            self._create_loop_device(base_disk, loop_size, mount)
         else:
             self.test_dev = self.params.get('disk_test', default=None)
             self.scratch_dev = self.params.get('disk_scratch', default=None)
@@ -161,14 +169,14 @@ class Xfstests(Test):
             for dev in self.devices:
                 process.system('losetup -d %s' % dev, shell=True,
                                sudo=True, ignore_status=True)
-            self.part.unmount()
+            if not self.disk_mnt:
+                self.part.unmount()
 
-    def _create_loop_device(self, base_disk, loop_size):
-        self.part = partition.Partition(
-            base_disk, mountpoint=self.disk_mnt)
-        self.part.mount()
-        if process.system('which mkfs.%s' % self.fs_to_test, ignore_status=True):
-            self.skip('Unknown filesystem %s' % self.fs_to_test)
+    def _create_loop_device(self, base_disk, loop_size, mount=True):
+        if mount:
+            self.part = partition.Partition(
+                base_disk, mountpoint=self.disk_mnt)
+            self.part.mount()
         # Creating two loop devices
         for i in range(2):
             process.run('fallocate -o 0 -l %s %s/file-%s.img' %
