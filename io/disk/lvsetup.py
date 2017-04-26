@@ -27,7 +27,6 @@ using a given policy.
 
 For details about the policy see README.
 """
-import os
 import avocado
 from avocado import Test
 from avocado import main
@@ -82,8 +81,7 @@ class Lvsetup(Test):
         self.lv_name = lv_name
         if lv_utils.lv_check(vg_name, lv_snapshot_name):
             self.skip('Snapshot %s already exists' % lv_snapshot_name)
-        self.mount_loc = 'avocado_%s' % self.fs_name
-        os.mkdir(self.mount_loc)
+        self.mount_loc = self.srcdir
         self.lv_snapshot_name = lv_snapshot_name
 
     @avocado.fail_on(lv_utils.LVException)
@@ -121,7 +119,6 @@ class Lvsetup(Test):
                 errs.append("Fail to cleanup ramdisk %s: %s" % (ramdisk, exc))
         if errs:
             self.error("\n".join(errs))
-        os.removedirs(self.mount_loc)
 
 
 if __name__ == "__main__":
