@@ -48,8 +48,8 @@ class NVMeTest(Test):
                      "master.zip"]
         tarball = self.fetch_asset("nvme-cli.zip", locations=locations,
                                    expire='15d')
-        archive.extract(tarball, self.srcdir)
-        os.chdir("%s/nvme-cli-master" % self.srcdir)
+        archive.extract(tarball, self.teststmpdir)
+        os.chdir("%s/nvme-cli-master" % self.teststmpdir)
         process.system("./NVME-VERSION-GEN", ignore_status=True)
         if process.system("which nvme", ignore_status=True) != 0 or \
             process.system_output("cat NVME-VERSION-FILE").strip("\n").\
