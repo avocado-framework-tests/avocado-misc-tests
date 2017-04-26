@@ -43,7 +43,7 @@ class Ltp_Fs(Test):
             if not sm.check_installed(package) and not sm.install(package):
                 self.error("%s is needed for the test to be run", package)
         self.disk = self.params.get('disk', default=None)
-        self.mount_point = self.params.get('dir', default=self.teststmpdir)
+        self.mount_point = self.params.get('dir', default=self.srcdir)
         self.script = self.params.get('script')
         fstype = self.params.get('fs', default='ext4')
         self.args = self.params.get('args', default='')
@@ -61,8 +61,8 @@ class Ltp_Fs(Test):
         url += "archive/master.zip"
         tarball = self.fetch_asset("ltp-master.zip",
                                    locations=[url], expire='7d')
-        archive.extract(tarball, self.srcdir)
-        ltp_dir = os.path.join(self.srcdir, "ltp-master")
+        archive.extract(tarball, self.teststmpdir)
+        ltp_dir = os.path.join(self.teststmpdir, "ltp-master")
         os.chdir(ltp_dir)
         build.make(ltp_dir, extra_args='autotools')
         ltpbin_dir = os.path.join(ltp_dir, 'bin')
@@ -83,7 +83,7 @@ class Ltp_Fs(Test):
             self.args += (" -q -p -l %s -C %s -d %s"
                           % (logfile, failcmdfile, self.mount_point))
             self.log.info("Args = %s", self.args)
-            ltpbin_dir = os.path.join(self.srcdir, "ltp-master", 'bin')
+            ltpbin_dir = os.path.join(self.teststmpdir, "ltp-master", 'bin')
             cmd = '%s %s' % (os.path.join(ltpbin_dir, self.script), self.args)
             result = process.run(cmd, ignore_status=True)
             # Walk the stdout and try detect failed tests from lines

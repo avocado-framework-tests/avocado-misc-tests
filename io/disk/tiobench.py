@@ -64,7 +64,7 @@ class Tiobench(Test):
         :params num_runs: This number specifies over how many runs
                           each test should be averaged.
         """
-        self.target = self.params.get('dir', default=self.teststmpdir)
+        self.target = self.params.get('dir', default=self.srcdirdir)
         self.disk = self.params.get('disk', default=None)
         fstype = self.params.get('fs', default='ext4')
         blocks = self.params.get('blocks', default=4096)

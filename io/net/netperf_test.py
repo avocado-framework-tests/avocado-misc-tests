@@ -64,7 +64,7 @@ class Netperf(Test):
         self.peer_user = self.params.get("peer_user_name", default="root")
         self.timeout = self.params.get("timeout", default="600")
         self.netperf_run = self.params.get("NETSERVER_RUN", default="0")
-        self.netperf = os.path.join(self.srcdir, 'netperf')
+        self.netperf = os.path.join(self.teststmpdir, 'netperf')
         tarball = self.fetch_asset('ftp://ftp.netperf.org/netperf/'
                                    'netperf-2.7.0.tar.bz2', expire='7d')
         archive.extract(tarball, self.netperf)
