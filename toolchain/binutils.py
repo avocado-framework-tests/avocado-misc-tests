@@ -52,23 +52,25 @@ class Binutils(Test):
         self._sm = SoftwareManager()
 
         # Install required tools and resolve dependencies
-        needed_deps = ['make', 'gcc', 'dejagnu', 'elfutils', 'autoconf', 'automake']
+        needed_deps = ['make', 'gcc', 'dejagnu',
+                       'elfutils', 'autoconf', 'automake']
         dist = distro.detect()
-        dist_name = dist.name.lower()
-        if dist_name == 'ubuntu':
+        if dist.name.lower() == 'ubuntu':
             needed_deps.extend(['build-essential'])
         for pkg in needed_deps:
             self.check_install(pkg)
 
         # Extract - binutils
         # Source: https://ftp.gnu.org/gnu/binutils/binutils-2.26.tar.bz2
-        locations = ['https://ftp.gnu.org/gnu/binutils/binutils-2.26.tar.bz2',
-                     "ftp://ftp.fi.muni.cz/pub/gnu/gnu/binutils/"
-                     "binutils-2.26.tar.bz2"]
-        tarball = self.fetch_asset("binutils-2.26.tar.bz2",
+        version = self.params.get('binutils_version', default='2.27')
+        locations = [
+            "https://www.mirrorservice.org/sites/sourceware.org"
+            "/pub/binutils/releases/binutils-%s.tar.bz2" % version]
+        tarball = self.fetch_asset("binutils-%s.tar.bz2" % version,
                                    locations=locations)
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(self.srcdir, os.path.basename(tarball.split('.tar.')[0]))
+        self.srcdir = os.path.join(
+            self.srcdir, os.path.basename(tarball.split('.tar.')[0]))
 
         # Compile the binutils
         os.chdir(self.srcdir)
