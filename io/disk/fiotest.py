@@ -25,8 +25,9 @@ from avocado import Test
 from avocado import main
 from avocado.utils import archive
 from avocado.utils import build
-from avocado.utils import process
+from avocado.utils import process, distro
 from avocado.utils.partition import Partition
+from avocado.utils.software_manager import SoftwareManager
 
 
 class FioTest(Test):
@@ -45,6 +46,12 @@ class FioTest(Test):
         """
         Build 'fio'.
         """
+        if distro.detect().name == 'Ubuntu':
+            smm = SoftwareManager()
+            if not smm.check_installed("btrfs-tools") and not \
+                    smm.install("btrfs-tools"):
+                self.skip("btrfs-tools is needed for the test to be run")
+
         default_url = "http://brick.kernel.dk/snaps/fio-2.1.10.tar.gz"
         url = self.params.get('fio_tool_url', default=default_url)
         self.disk = self.params.get('disk', default=None)

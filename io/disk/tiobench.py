@@ -29,7 +29,7 @@ from avocado import Test
 from avocado import main
 from avocado.utils import archive
 from avocado.utils import build
-from avocado.utils import process
+from avocado.utils import process, distro
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.partition import Partition
 
@@ -44,9 +44,13 @@ class Tiobench(Test):
         Source:
         https://github.com/mkuoppal/tiobench.git
         """
-        s_mngr = SoftwareManager()
-        if not s_mngr.check_installed("gcc") and not s_mngr.install("gcc"):
-            self.error('Gcc is needed for the test to be run')
+        smm = SoftwareManager()
+        if distro.detect().name == 'Ubuntu':
+            if not smm.check_installed("btrfs-tools") and not \
+                    smm.install("btrfs-tools"):
+                self.skip('btrfs-tools is needed for the test to be run')
+        if not smm.check_installed("gcc") and not smm.install("gcc"):
+            self.skip('Gcc is needed for the test to be run')
         locations = ["https://github.com/mkuoppal/tiobench/archive/master.zip"]
         tarball = self.fetch_asset("tiobench.zip", locations=locations)
         archive.extract(tarball, self.srcdir)
@@ -64,7 +68,7 @@ class Tiobench(Test):
         :params num_runs: This number specifies over how many runs
                           each test should be averaged.
         """
-        self.target = self.params.get('dir', default=self.srcdirdir)
+        self.target = self.params.get('dir', default=self.srcdir)
         self.disk = self.params.get('disk', default=None)
         fstype = self.params.get('fs', default='ext4')
         blocks = self.params.get('blocks', default=4096)
