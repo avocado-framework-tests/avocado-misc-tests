@@ -1,0 +1,23 @@
+# Kernbench configuration file
+# By default, compile the kernel only once with '2 * number of cups'
+# using the default 'config' file in the data directory. 
+# Valid options in avocado test are bellow.
+setup:
+    iteration: !mux
+        default:
+            runs: 1
+        quick:
+            runs: 5
+        long:
+            runs: 10
+    threads: !mux
+        default:
+            cpus: null #2 * number of cpus
+        custom:
+            cpus: 1
+    linux_version: !mux
+        default:
+            version: 4.6
+    configuration: !mux
+        default:
+            config_file: config
