@@ -25,8 +25,9 @@ from avocado import Test
 from avocado import main
 from avocado.utils import archive
 from avocado.utils import build
-from avocado.utils import process
+from avocado.utils import process, distro
 from avocado.utils.partition import Partition
+from avocado.utils.software_manager import SoftwareManager
 
 
 class fs_mark(Test):
@@ -42,6 +43,7 @@ class fs_mark(Test):
         fs_mark
         """
 
+        smm = SoftwareManager()
         tarball = self.fetch_asset('http://prdownloads.source'
                                    'forge.net/fsmark/fs_mark-3.3.tar.gz')
         archive.extract(tarball, self.srcdir)
@@ -52,6 +54,12 @@ class fs_mark(Test):
         build.make(self.srcdir)
         self.disk = self.params.get('disk', default=None)
         self.fstype = self.params.get('fs', default='ext4')
+
+        if self.fstype == 'btrfs':
+            if distro.detect().name == 'Ubuntu':
+                if not smm.check_installed("btrfs-tools") and not \
+                        smm.install("btrfs-tools"):
+                    self.skip('btrfs-tools is needed for the test to be run')
 
     def test(self):
         """

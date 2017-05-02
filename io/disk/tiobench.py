@@ -13,7 +13,6 @@
 #
 # Copyright: 2016 IBM.
 # Author: Rajashree Rajendran<rajashr7@linux.vnet.ibm.com>
-
 # Based on code by Yao Fei Zhu <walkinair@cn.ibm.com>
 #   Copyright: 2006 IBM
 #   https://github.com/autotest/autotest-client-tests/tree/master/tiobench
@@ -29,7 +28,7 @@ from avocado import Test
 from avocado import main
 from avocado.utils import archive
 from avocado.utils import build
-from avocado.utils import process
+from avocado.utils import process, distro
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.partition import Partition
 
@@ -44,9 +43,15 @@ class Tiobench(Test):
         Source:
         https://github.com/mkuoppal/tiobench.git
         """
-        s_mngr = SoftwareManager()
-        if not s_mngr.check_installed("gcc") and not s_mngr.install("gcc"):
-            self.error('Gcc is needed for the test to be run')
+        self.fstype = self.params.get('fs', default='ext4')
+        smm = SoftwareManager()
+        packages = ['gcc']
+        if self.fstype == 'btrfs':
+            if distro.detect().name == 'Ubuntu':
+                packages.extend(['btrfs-tools'])
+        for package in packages:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.skip("%s package required for this test." % package)
         locations = ["https://github.com/mkuoppal/tiobench/archive/master.zip"]
         tarball = self.fetch_asset("tiobench.zip", locations=locations)
         archive.extract(tarball, self.srcdir)
@@ -64,9 +69,8 @@ class Tiobench(Test):
         :params num_runs: This number specifies over how many runs
                           each test should be averaged.
         """
-        self.target = self.params.get('dir', default=self.srcdirdir)
+        self.target = self.params.get('dir', default=self.srcdir)
         self.disk = self.params.get('disk', default=None)
-        fstype = self.params.get('fs', default='ext4')
         blocks = self.params.get('blocks', default=4096)
         threads = self.params.get('threads', default=10)
         size = self.params.get('size', default=1024)
@@ -76,8 +80,8 @@ class Tiobench(Test):
             self.part_obj = Partition(self.disk, mountpoint=self.target)
             self.log.info("Unmounting disk/dir before creating file system")
             self.part_obj.unmount()
-            self.log.info("creating %s file system", fstype)
-            self.part_obj.mkfs(fstype)
+            self.log.info("creating %s file system", self.fstype)
+            self.part_obj.mkfs(self.fstype)
             self.log.info("Mounting disk %s on directory %s", self.disk,
                           self.target)
             self.part_obj.mount()
@@ -92,7 +96,6 @@ class Tiobench(Test):
                                                         num_runs))
 
     def tearDown(self):
-
         '''
         Cleanup of disk used to perform this test
         '''
