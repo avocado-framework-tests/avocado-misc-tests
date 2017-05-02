@@ -53,7 +53,8 @@ class Atlas(Test):
         lapack_tarball = self.fetch_asset(lapack_url, expire='7d')
         os.chdir(self.atlas_build_dir)
         config_args = '--shared -b 64 '\
-                      '--with-netlib-lapack-tarfile=%s' % lapack_tarball
+                      '--with-netlib-lapack-tarfile=%s '\
+                      '--cripple-atlas-performance' % lapack_tarball
         config_args = self.params.get('config_args', default=config_args)
         process.system('../configure %s' % config_args)
         # Tune and compile library
