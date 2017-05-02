@@ -1,0 +1,9 @@
+This script injects one EEH errors on all the adapters present in the machine.
+It takes two parameters. One is the value to set max_eeh_frezze bit, and other
+is the EEH function number, which user wishes to use.
+
+Function can take values from 0-17, each value indicates different type of error.
+e.g.,   # 0 : MMIO read
+        # 4 : CFG read
+        # 6 : MMIO write
+        # 10: CFG write
