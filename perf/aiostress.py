@@ -45,7 +45,10 @@ class Aiostress(Test):
         dist_name = distro.detect().name.lower()
         if dist_name == 'ubuntu':
             packages.extend(['libaio1', 'libaio-dev'])
-        elif dist_name in ['centos', 'fedora', 'redhat']:
+        # FIXME: "redhat" as the distro name for RHEL is deprecated
+        # on Avocado versions >= 50.0.  This is a temporary compatibility
+        # enabler for older runners, but should be removed soon
+        elif dist_name in ['centos', 'fedora', 'rhel', 'redhat']:
             packages.extend(['libaio', 'libaio-devel'])
         elif dist_name == 'suse':
             self.skip("Test currently does not support distro %s" % dist_name)

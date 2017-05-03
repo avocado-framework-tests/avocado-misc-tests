@@ -51,7 +51,10 @@ class kselftest(Test):
             deps.extend(['popt', 'glibc', 'glibc-devel',
                          'popt-devel', 'libcap1', 'libcap1-devel',
                          'libcap-ng', 'libcap-ng-devel'])
-        elif detected_distro.name in ['centos', 'fedora', 'redhat']:
+        # FIXME: "redhat" as the distro name for RHEL is deprecated
+        # on Avocado versions >= 50.0.  This is a temporary compatibility
+        # enabler for older runners, but should be removed soon
+        elif detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
             deps.extend(['popt', 'glibc', 'glibc-devel', 'glibc-static',
                          'libcap-ng', 'libcap', 'libcap-devel'])
 

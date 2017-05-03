@@ -32,7 +32,10 @@ class CRIU(Test):
         packages = ['gcc', 'make', 'protobuf', 'protobuf-c', 'protobuf-c-devel',
                     'protobuf-compiler', 'protobuf-devel', 'protobuf-python',
                     'libnl3-devel', 'libcap-devel', 'libaio-devel']
-        if dist.name != 'redhat':
+        # FIXME: "redhat" as the distro name for RHEL is deprecated
+        # on Avocado versions >= 50.0.  This is a temporary compatibility
+        # enabler for older runners, but should be removed soon
+        if dist.name not in ['rhel', 'redhat']:
             self.skip('Currently test is supported only on RHEL')
         for package in packages:
             if not sm.check_installed(package) and not sm.install(package):

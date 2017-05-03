@@ -55,7 +55,10 @@ class Ltrace(Test):
                          'elfutils', 'binutils-devel', 'libtool', 'gcc-c++']
             pkgs += sles_deps
 
-        elif dist_name in ("redhat", "fedora"):
+        # FIXME: "redhat" as the distro name for RHEL is deprecated
+        # on Avocado versions >= 50.0.  This is a temporary compatibility
+        # enabler for older runners, but should be removed soon
+        elif dist_name in ("rhel", "fedora", "redhat"):
             rhel_deps = ['elfutils-devel', 'elfutils-libelf-devel',
                          'elfutils-libelf', 'elfutils-libs', 'libtool-ltdl']
             pkgs += rhel_deps
