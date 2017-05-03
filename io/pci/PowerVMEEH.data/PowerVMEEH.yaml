@@ -1,0 +1,3 @@
+scenario:
+    maxFreeze: 1
+    function: 4
