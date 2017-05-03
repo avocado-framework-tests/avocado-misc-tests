@@ -25,8 +25,9 @@ from avocado import Test
 from avocado import main
 from avocado.utils import archive
 from avocado.utils import build
-from avocado.utils import process
+from avocado.utils import process, distro
 from avocado.utils.partition import Partition
+from avocado.utils.software_manager import SoftwareManager
 
 
 class fs_mark(Test):
@@ -41,6 +42,11 @@ class fs_mark(Test):
         """
         fs_mark
         """
+        if distro.detect().name == 'Ubuntu':
+            smm = SoftwareManager()
+            if not smm.check_installed("btrfs-tools") and not \
+                    smm.install("btrfs-tools"):
+                self.skip("btrfs-tools is needed for the test to be run")
 
         tarball = self.fetch_asset('http://prdownloads.source'
                                    'forge.net/fsmark/fs_mark-3.3.tar.gz')
@@ -64,14 +70,16 @@ class fs_mark(Test):
         size = self.params.get('size', default='1000')
         self.dir = self.params.get('dir', default=self.teststmpdir)
 
-        self.part_obj = Partition(self.disk, mountpoint=self.dir)
-        self.log.info("Test will run on %s", self.dir)
-        self.log.info("Unmounting the disk/dir before creating file system")
-        self.part_obj.unmount()
-        self.log.info("creating file system")
-        self.part_obj.mkfs(self.fstype)
-        self.log.info("Mounting disk %s on directory %s", self.disk, self.dir)
-        self.part_obj.mount()
+        if self.disk is not None:
+            self.part_obj = Partition(self.disk, mountpoint=self.dir)
+            self.log.info("Test will run on %s", self.dir)
+            self.log.info("Unmounting disk/dir before creating file system")
+            self.part_obj.unmount()
+            self.log.info("creating file system")
+            self.part_obj.mkfs(self.fstype)
+            self.log.info("Mounting disk %s on directory %s",
+                          self.disk, self.dir)
+            self.part_obj.mount()
 
         cmd = ('./fs_mark -d %s -s %s -n %s' % (self.dir, size, num_files))
         process.run(cmd)
@@ -81,8 +89,9 @@ class fs_mark(Test):
         '''
         Cleanup of disk used to perform this test
         '''
-        self.log.info("Unmounting directory %s", self.dir)
-        self.part_obj.unmount()
+        if self.disk is not None:
+            self.log.info("Unmounting directory %s", self.dir)
+            self.part_obj.unmount()
 
 
 if __name__ == "__main__":
