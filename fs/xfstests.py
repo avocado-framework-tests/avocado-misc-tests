@@ -169,7 +169,7 @@ class Xfstests(Test):
             for dev in self.devices:
                 process.system('losetup -d %s' % dev, shell=True,
                                sudo=True, ignore_status=True)
-            if not self.disk_mnt:
+            if self.disk_mnt:
                 self.part.unmount()
 
     def _create_loop_device(self, base_disk, loop_size, mount=True):
