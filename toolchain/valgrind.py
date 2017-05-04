@@ -39,7 +39,10 @@ class Valgrind(Test):
         deps = ['gcc', 'make']
         if dist.name == 'Ubuntu':
             deps.extend(['g++'])
-        elif dist.name in ['SuSE', 'redhat', 'fedora', 'centos']:
+        # FIXME: "redhat" as the distro name for RHEL is deprecated
+        # on Avocado versions >= 50.0.  This is a temporary compatibility
+        # enabler for older runners, but should be removed soon
+        elif dist.name in ['SuSE', 'rhel', 'fedora', 'centos', 'redhat']:
             deps.extend(['gcc-c++'])
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):

@@ -36,7 +36,10 @@ class Atlas(Test):
         for package in ['gcc', 'make', 'gfortran']:
             if detected_distro.name == "SuSE" and package == "gfortran":
                 package = 'gcc-fortran'
-            if detected_distro.name == "redhat" and package == "gfortran":
+            # FIXME: "redhat" as the distro name for RHEL is deprecated
+            # on Avocado versions >= 50.0.  This is a temporary compatibility
+            # enabler for older runners, but should be removed soon
+            if detected_distro.name in ["rhel", "redhat"] and package == "gfortran":
                 package = 'gcc-gfortran'
             if not sm.check_installed(package) and not sm.install(package):
                 self.error(package + ' is needed for the test to be run')

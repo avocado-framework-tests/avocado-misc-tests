@@ -34,7 +34,10 @@ class Hwinfo(Test):
         return
 
     def setUp(self):
-        if distro.detect().name == 'redhat':
+        # FIXME: "redhat" as the distro name for RHEL is deprecated
+        # on Avocado versions >= 50.0.  This is a temporary compatibility
+        # enabler for older runners, but should be removed soon
+        if distro.detect().name in ['rhel', 'redhat']:
             self.skip('Hwinfo not supported on RHEL')
         sm = SoftwareManager()
         if not sm.check_installed("hwinfo") and not sm.install("hwinfo"):

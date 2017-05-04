@@ -51,12 +51,18 @@ class Xfstests(Test):
                              'libattr1-dev', 'libacl1-dev', 'libgdbm-dev',
                              'uuid-runtime', 'libaio-dev', 'fio', 'dbench'])
 
-        elif detected_distro.name in ['centos', 'fedora', 'redhat']:
+        # FIXME: "redhat" as the distro name for RHEL is deprecated
+        # on Avocado versions >= 50.0.  This is a temporary compatibility
+        # enabler for older runners, but should be removed soon
+        elif detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
             packages.extend(['acl', 'bc', 'dump', 'indent', 'libtool', 'lvm2',
                              'xfsdump', 'psmisc', 'sed', 'libacl-devel',
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
                              'openssl-devel', 'xfsprogs-devel', 'btrfs-progs-devel'])
-            if detected_distro.name != 'redhat':
+            # FIXME: "redhat" as the distro name for RHEL is deprecated
+            # on Avocado versions >= 50.0.  This is a temporary compatibility
+            # enabler for older runners, but should be removed soon
+            if detected_distro.name not in ['rhel', 'redhat']:
                 packages.extend(['fio', 'dbench'])
         else:
             self.skip("test not supported in %s" % detected_distro.name)

@@ -80,7 +80,10 @@ class Ping6(Test):
         detected_distro = distro.detect()
         if detected_distro.name == "Ubuntu":
             cmd = "service ufw stop"
-        elif detected_distro.name in ['redhat', 'fedora']:
+        # FIXME: "redhat" as the distro name for RHEL is deprecated
+        # on Avocado versions >= 50.0.  This is a temporary compatibility
+        # enabler for older runners, but should be removed soon
+        elif detected_distro.name in ['rhel', 'fedora', 'redhat']:
             cmd = "systemctl stop firewalld"
         elif detected_distro.name == "SuSE":
             cmd = "rcSuSEfirewall2 stop"

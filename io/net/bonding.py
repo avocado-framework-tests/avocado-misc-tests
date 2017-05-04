@@ -45,7 +45,10 @@ class Bonding(Test):
         depends = []
         if detected_distro.name == "Ubuntu":
             depends.append("openssh-client")
-        if detected_distro.name in ["redhat", "fedora", "centos"]:
+        # FIXME: "redhat" as the distro name for RHEL is deprecated
+        # on Avocado versions >= 50.0.  This is a temporary compatibility
+        # enabler for older runners, but should be removed soon
+        if detected_distro.name in ["rhel", "fedora", "centos", "redhat"]:
             depends.append("openssh-clients")
         if detected_distro.name == "SuSE":
             depends.append("openssh")
