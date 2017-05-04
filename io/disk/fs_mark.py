@@ -26,6 +26,7 @@ from avocado import main
 from avocado.utils import archive
 from avocado.utils import build
 from avocado.utils import process
+from avocado.utils.partition import Partition
 
 
 class fs_mark(Test):
@@ -49,6 +50,8 @@ class fs_mark(Test):
         os.chdir(self.srcdir)
         process.run('make')
         build.make(self.srcdir)
+        self.disk = self.params.get('disk', default=None)
+        self.fstype = self.params.get('fs', default='ext4')
 
     def test(self):
         """
@@ -59,9 +62,28 @@ class fs_mark(Test):
         # Just provide a sample run parameters
         num_files = self.params.get('num_files', default='1024')
         size = self.params.get('size', default='1000')
-        dir = self.params.get('dir', default='/var/tmp')
-        cmd = ('./fs_mark -d %s -s %s -n %s' % (dir, size, num_files))
+        self.dir = self.params.get('dir', default=self.teststmpdir)
+
+        self.part_obj = Partition(self.disk, mountpoint=self.dir)
+        self.log.info("Test will run on %s", self.dir)
+        self.log.info("Unmounting the disk/dir before creating file system")
+        self.part_obj.unmount()
+        self.log.info("creating file system")
+        self.part_obj.mkfs(self.fstype)
+        self.log.info("Mounting disk %s on directory %s", self.disk, self.dir)
+        self.part_obj.mount()
+
+        cmd = ('./fs_mark -d %s -s %s -n %s' % (self.dir, size, num_files))
         process.run(cmd)
+
+    def tearDown(self):
+
+        '''
+        Cleanup of disk used to perform this test
+        '''
+        self.log.info("Unmounting directory %s", self.dir)
+        self.part_obj.unmount()
+
 
 if __name__ == "__main__":
     main()

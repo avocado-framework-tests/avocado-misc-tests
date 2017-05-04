@@ -46,11 +46,19 @@ class Fsfuzzer(Test):
         https://github.com/stevegrubb/fsfuzzer.git
         '''
         detected_distro = distro.detect()
+        d_name = detected_distro.name.lower()
 
         smm = SoftwareManager()
+        deps = ['gcc', 'patch']
+        if d_name == 'ubuntu':
+            deps.extend(['libattr1-dev'])
+        else:
+            deps.extend(['libattr-devel'])
 
-        if not smm.check_installed("gcc") and not smm.install("gcc"):
-            self.error("Gcc is needed for the test to be run")
+        for package in deps:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel("Fail to install/check %s, which is needed for"
+                            "fsfuzz to run" % package)
 
         locations = ["https://github.com/stevegrubb/fsfuzzer/archive/"
                      "master.zip"]
@@ -58,7 +66,7 @@ class Fsfuzzer(Test):
         archive.extract(tarball, self.srcdir)
         os.chdir(os.path.join(self.srcdir, "fsfuzzer-master"))
 
-        if detected_distro.name == "Ubuntu":
+        if d_name == "ubuntu":
             # Patch for ubuntu
             fuzz_fix_patch = 'patch -p1 < %s' % (
                 os.path.join(self.datadir, 'fsfuzz_fix.patch'))
@@ -79,12 +87,12 @@ class Fsfuzzer(Test):
                       ' is unsupported in ' + detected_distro.name)
 
     def test(self):
-
         '''
         Runs the fsfuzz test suite. By default uses all supported fstypes,
         but you can specify only one by `fstype` param.
         '''
         process.system("%s %s" % (self._fsfuzz, self._args), sudo=True)
+
 
 if __name__ == "__main__":
     main()

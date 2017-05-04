@@ -1,0 +1,16 @@
+This scripts creates all possible Raid arrays supported by the adapter.
+It creates max VD supported per drive group(16 Vd), also create max
+VD supported per adapter(64). All CC scenario will be run for applicable
+Raid levels. This script is enhanced to run JBOD and Online and offline,
+GHS, DHS, Rebuild, Migrate, PR and copyback scenarios. Also this script
+is capable of changing VD policies.
+
+Values to be provided in yaml file:
+controller ID: Specify the controller ID for which you want
+run this script
+raid_level: Specify the raid level that you want run test cases.
+disk: specify the disk on which tests need to be run.
+size: size of the raid array you want create
+on_off: Format should be in ex/sx.
+hotspare: Format should be in ex/sx
+where ex is enclosure ID and sx is slot ID of the drive for operation.

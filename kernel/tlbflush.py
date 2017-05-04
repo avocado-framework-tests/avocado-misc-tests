@@ -40,10 +40,9 @@ class Tlbflush(Test):
         # Check for basic utilities
 
         smm = SoftwareManager()
-
-        if not smm.check_installed("gcc") and not smm.install("gcc"):
-            self.error(
-                "Fail to install %s required for this test." % package)
+        for package in ['gcc', 'make', 'patch']:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel("%s is needed for this test." % package)
 
         data_dir = os.path.abspath(self.datadir)
 
@@ -51,7 +50,6 @@ class Tlbflush(Test):
                         os.path.join(self.srcdir, 'tlbflush.c'))
 
         os.chdir(self.srcdir)
-        os.system('cp tlbflush.c /root/pp/tlbflush.c')
         tlbflush_patch = 'patch -p1 < %s' % (
             os.path.join(data_dir, 'tlbflush.patch'))
 

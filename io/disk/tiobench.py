@@ -31,6 +31,7 @@ from avocado.utils import archive
 from avocado.utils import build
 from avocado.utils import process
 from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.partition import Partition
 
 
 class Tiobench(Test):
@@ -55,25 +56,51 @@ class Tiobench(Test):
     def test(self):
         """
         Test execution with necessary arguments.
-        :params target: The directory in which to test.
-                        Defaults to ., the current directory.
+        :params dir: The directory in which to test.
+                     Defaults to ., the current directory.
         :params blocks: The blocksize in Bytes to use. Defaults to 4096.
         :params threads: The number of concurrent test threads.
         :params size: The total size in MBytes of the files may use together.
         :params num_runs: This number specifies over how many runs
                           each test should be averaged.
         """
-        target = self.params.get('target', default=self.workdir)
+        self.target = self.params.get('dir', default=self.srcdirdir)
+        self.disk = self.params.get('disk', default=None)
+        fstype = self.params.get('fs', default='ext4')
         blocks = self.params.get('blocks', default=4096)
         threads = self.params.get('threads', default=10)
         size = self.params.get('size', default=1024)
         num_runs = self.params.get('numruns', default=2)
+
+        if self.disk is not None:
+            self.part_obj = Partition(self.disk, mountpoint=self.target)
+            self.log.info("Unmounting disk/dir before creating file system")
+            self.part_obj.unmount()
+            self.log.info("creating %s file system", fstype)
+            self.part_obj.mkfs(fstype)
+            self.log.info("Mounting disk %s on directory %s", self.disk,
+                          self.target)
+            self.part_obj.mount()
+
+        self.log.info("Test will run on %s" % self.target)
         self.whiteboard = process.system_output('perl ./tiobench.pl '
                                                 '--target {} --block={} '
                                                 '--threads={} --size={} '
                                                 '--numruns={}'
-                                                .format(target, blocks,
+                                                .format(self.target, blocks,
                                                         threads, size,
                                                         num_runs))
+
+    def tearDown(self):
+
+        '''
+        Cleanup of disk used to perform this test
+        '''
+        if self.disk is not None:
+            self.log.info("Unmounting disk %s on directory %s", self.disk,
+                          self.target)
+            self.part_obj.unmount()
+
+
 if __name__ == "__main__":
     main()

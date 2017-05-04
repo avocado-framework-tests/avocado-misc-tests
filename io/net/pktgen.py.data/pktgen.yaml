@@ -1,0 +1,7 @@
+Parameters:
+    interface: "net0"
+    count: "50000"
+    clone_skb: "1"
+    peer_mac: "22:82:8e:e6:94:02"
+    peer_ip: "9.40.192.213"
+    resultsdir: "/tmp/"

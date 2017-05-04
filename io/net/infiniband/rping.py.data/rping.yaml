@@ -1,0 +1,16 @@
+Test: !mux
+    options: !mux
+        first:
+            basic_option: -v -C 5 -S 1024 -d , -a peer_ip -v -C 5 -S 1024 -d
+        second:
+            basic_option: -v -C 100 -S 2048 , -a peer_ip -v -C 100 -S 2048
+        third:
+            basic_option: -a ::0 , -C300 -a peer_ipv6%interface -v
+# Placeholder for exended option
+#        fourth:
+#            ext_option:
+Parameters:
+    ext_flag: "1"
+    interface: "ib0"
+    peer_ip: "13.13.13.15"
+    peer_ipv6: "fe80::5265:7bd:840a:31bf"

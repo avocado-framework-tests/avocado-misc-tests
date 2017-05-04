@@ -90,9 +90,9 @@ class Connectathon(Test):
             process.system('./runtests -N %s %s %s' %
                            (cthon_iterations, args, testdir), shell=True)
 
-        except:
+        except Exception:
             self.nfail += 1
-            logging.error("Test failed: ")
+            self.log.info("Test failed: ")
         if self.nfail != 0:
             raise self.fail('Connectathon test suite failed.')
 

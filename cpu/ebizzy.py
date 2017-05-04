@@ -46,8 +46,9 @@ class Ebizzy(Test):
         /ebizzy-0.3.tar.gz
         '''
         sm = SoftwareManager()
-        if not sm.check_installed("gcc") and not sm.install("gcc"):
-            self.error("Gcc is needed for the test to be run")
+        for package in ['gcc', 'make', 'patch']:
+            if not sm.check_installed(package) and not sm.install(package):
+                self.cancel("%s is needed for the test to be run" % package)
         tarball = self.fetch_asset('http://liquidtelecom.dl.sourceforge.net'
                                    '/project/ebizzy/ebizzy/0.3'
                                    '/ebizzy-0.3.tar.gz')
@@ -91,6 +92,7 @@ class Ebizzy(Test):
                      real, 'user': usr_time, 'sys': sys_time}
         output_path = os.path.join(self.outputdir, "perf.json")
         json.dump(perf_json, open(output_path, "w"))
+
 
 if __name__ == "__main__":
     main()

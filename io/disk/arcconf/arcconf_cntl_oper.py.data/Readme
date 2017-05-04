@@ -1,0 +1,11 @@
+arcconf - Command line interface to configure PMC-Sierra
+(Microsemi) Controllers.
+
+arcconf_cntl_oper.py covers arcconf functionality 
+specific to controller settings.
+ 
+Note:
+    1. supported controllers pci_ids can be entered 
+       seperated by ",".
+    2. TODO: KEY, EXPANDERUPGRADE, SETMAXCACHE,
+       SETPRIORITY, SMP, UARTLOG.

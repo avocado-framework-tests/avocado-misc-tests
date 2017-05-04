@@ -1,4 +1,23 @@
 setup:
-    runargs : !mux
-        skip_dangerous: True
-        test_range: '2,12,34-87,91,99-112'
+    skip_dangerous: True
+    scratch_mnt: '/mnt/scratch'
+    test_mnt: '/mnt/test'
+    disk_mnt: '/mnt/loop-device'
+    # Uncomment and edit test_range for running specific tests
+    # test_range: '73,217-415'
+    # Run with either loop_type (or) disk_type
+    loop_type: !mux
+        type: 'loop'
+        loop_size: '7GiB'
+        # Option to provide disk for loop device creation,
+        # Uses '/' by default for file creation
+        disk:
+    fs_type: !mux
+        fs_ext4:
+            fs: 'ext4'
+        fs_xfs:
+            fs: 'xfs'
+    # disk_type: !mux
+    #    type: 'disk'
+    #    disk_test: /dev/sdx1
+    #    disk_scratch: /dev/sdx2

@@ -346,5 +346,6 @@ class Iptunnel(Test):
         if self.tunnel:
             self._remove_tunnel(self.tunnel)
 
+
 if __name__ == "__main__":
     main()

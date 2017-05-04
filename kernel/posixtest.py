@@ -41,13 +41,14 @@ class Posixtest(Test):
             http://ufpr.dl.sourceforge.net/sourceforge/posixtest/posixtestsuite-1.5.2.tar.gz
         '''
         sm = SoftwareManager()
-        if not sm.check_installed("gcc") and not sm.install("gcc"):
-            self.error("Gcc is needed for the test to be run")
+        for package in ['gcc', 'make', 'patch']:
+            if not sm.check_installed(package) and not sm.install(package):
+                self.cancel("%s is needed for the test to be run" % package)
         tarball = self.fetch_asset('http://ufpr.dl.sourceforge.net'
                                    '/sourceforge/posixtest/posixtestsuite-1.5.2.tar.gz')
         data_dir = os.path.abspath(self.datadir)
         archive.extract(tarball, self.srcdir)
-        version = os.path.basename(tarball.split('-')[0])
+        version = os.path.basename(tarball.split('-1.')[0])
         self.srcdir = os.path.join(self.srcdir, version)
 
         patch = self.params.get(
@@ -63,6 +64,7 @@ class Posixtest(Test):
 
         os.chdir(self.srcdir)
         process.system('./run_tests THR')
+
 
 if __name__ == "__main__":
     main()

@@ -15,14 +15,19 @@
 # Author: Prudhvi Miryala<mprudhvi@linux.vnet.ibm.com>
 #
 
-# check the statistics of interface, test big ping
-# test lro and gro and interface
+"""
+check the statistics of interface, test big ping
+test lro and gro and interface
+"""
 
 import time
 import netifaces
+
+from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
+from avocado.utils import distro
 
 
 class NetDataTest(Test):
@@ -34,19 +39,26 @@ class NetDataTest(Test):
         '''
             To check and install dependencies for the test
         '''
-        sm = SoftwareManager()
-        network_tools = ("iputils", "ethtool", "net-tools", "openssh-clients")
-        for pkg in network_tools:
-            if not sm.check_installed(pkg) and not sm.install(pkg):
+        smm = SoftwareManager()
+        pkgs = ["ethtool", "net-tools"]
+        detected_distro = distro.detect()
+        if detected_distro.name == "Ubuntu":
+            pkgs.append('openssh-client')
+        elif detected_distro.name == "SuSE":
+            pkgs.append('openssh')
+        else:
+            pkgs.append('openssh-clients')
+        for pkg in pkgs:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.skip("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
-        interface = self.params.get("iface")
+        interface = self.params.get("interface")
         if interface not in interfaces:
             self.skip("%s interface is not available" % interface)
         mtu_list = self.params.get("size_val", default=1500)
         self.mtu_list = mtu_list.split()
         self.interface = interface
-        self.peer = self.params.get("peerip")
+        self.peer = self.params.get("peer_ip")
         self.eth = "ethtool %s | grep 'Link detected:'" % self.interface
         self.eth_state = process.system_output(self.eth, shell=True)
 
@@ -73,15 +85,15 @@ class NetDataTest(Test):
         '''
         check with different maximum transfer unit values
         '''
-        tmp = "grep -w -B 1 %s" % self.peer
-        cmd = "\`ifconfig | %s | head -1 | cut -f1 -d' '\`" % tmp
+        msg = "ip addr show  | grep %s | grep -oE '[^ ]+$'" % self.peer
+        cmd = "ssh %s %s" % (self.peer, msg)
+        self.peer_interface = process.system_output(cmd, shell=True).strip()
         for mtu in self.mtu_list:
             self.log.info("trying with mtu %s" % (mtu))
-            '''
-             ping the peer machine with different maximum transfers unit sizes
-             and finally set maximum transfer unit size to 1500 Bytes
-            '''
-            msg = "ssh %s \"ifconfig %s mtu %s\"" % (self.peer, cmd, mtu)
+            # ping the peer machine with different maximum transfers unit sizes
+            # and finally set maximum transfer unit size to 1500 Bytes
+            msg = "ssh %s \"ifconfig %s mtu %s\"" % (self.peer,
+                                                     self.peer_interface, mtu)
             process.system(msg, shell=True)
             con_msg = "ifconfig %s mtu %s" % (self.interface, mtu)
             process.system(con_msg, shell=True)
@@ -117,13 +129,13 @@ class NetDataTest(Test):
         '''
         self.log.info("Largest Receive Offload")
         tmp = "ethtool -K %s lro off" % self.interface
-        if not process.system(tmp, shell=True):
+        if process.system(tmp, shell=True) != 0:
             self.fail("LRO Test failed")
         ret = process.system("ping -c 1 %s" % self.peer, shell=True)
         if ret != 0:
             self.fail("lro test failed")
             msg = "ethtool -K %s lro on" % self.interface
-            if not process.system(msg, shell=True):
+            if process.system(msg, shell=True) != 0:
                 self.fail("LRO Test failed")
                 ret = process.system("ping -c 1 %s" % self.peer, shell=True)
                 if ret != 0:
@@ -148,10 +160,13 @@ class NetDataTest(Test):
             self.fail("interface test failed")
         # up the interface
         process.system(if_up, shell=True)
-        time.sleep(4)
         # check the status of interface through ethtool
-        ret = process.system_output(self.eth, shell=True)
-        if 'no' in ret:
+        # Waiting for interface to come up, with a timeout
+        for i in range(0, 600, 60):
+            if 'yes' in process.system_output(self.eth, shell=True):
+                break
+            time.sleep(60)
+        if 'no' in process.system_output(self.eth, shell=True):
             self.fail("interface test failed")
         # check the status of interface through ip link show
         ret = process.system_output(ip_link, shell=True)

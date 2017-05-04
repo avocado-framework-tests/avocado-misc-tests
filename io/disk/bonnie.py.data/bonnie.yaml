@@ -1,0 +1,22 @@
+# Bonnie options:
+# bonnie++ [-d scratch-dir] [-c concurrency] [-s size(MiB)[:chunk-size(b)]]
+#       [-n number-to-stat[:max-size[:min-size][:num-directories[:chunk-size]]]]
+#       [-m machine-name] [-r ram-size-in-MiB]
+#       [-x number-of-tests] [-u uid-to-use:gid-to-use] [-g gid-to-use]
+#       [-q] [-f] [-b] [-p processes | -y] [-z seed | -Z random-file]
+#       [-D]
+
+# Valid options in avocado test are below:
+setup:
+    disk: '/dev/sdd'
+    dir: /mnt/
+    uid-to-use: root
+    number-to-stat: 10:100:10:1000
+    data_size_to_pass: 0
+filesystem: !mux
+    ext4:
+        fs: 'ext4'
+    xfs:
+        fs: 'xfs'
+    btrfs:
+        fs: 'btrfs'

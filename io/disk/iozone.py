@@ -416,7 +416,10 @@ class IOZone(Test):
         '''
 
         self.base_dir = os.path.abspath(self.basedir)
-
+        smm = SoftwareManager()
+        for package in ['gcc', 'make', 'patch']:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel("%s is needed for the test to be run" % package)
         tarball = self.fetch_asset(
             'http://www.iozone.org/src/current/iozone3_434.tar')
         archive.extract(tarball, self.srcdir)
@@ -534,7 +537,7 @@ class IOZone(Test):
         '''
         Test method for performing IOZone test and analysis.
         '''
-        directory = self.params.get('directory', default=None)
+        directory = self.params.get('dir', default=None)
         args = self.params.get('args', default=None)
         previous_results = self.params.get('previous_results', default=None)
 

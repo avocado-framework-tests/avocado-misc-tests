@@ -1,0 +1,20 @@
+general:
+    disk:
+    script: 'runltp'
+    dir:
+    args: !mux
+        test1:
+            args: '-s fs_di'
+        test2:
+            args: '-s fs_inod'
+    fs: !mux
+        ext4:
+            fs: 'ext4'
+        ext3:
+            fs: 'ext3'
+        ext2:
+            fs: 'ext2'
+        xfs:
+            fs: 'xfs'
+        btrfs:
+            fs: 'btrfs'

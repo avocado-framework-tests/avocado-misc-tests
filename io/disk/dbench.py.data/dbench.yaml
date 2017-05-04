@@ -11,5 +11,5 @@ setup:
             nprocs: 1
     location:
         default:
-            dir = '.'
+            dir: '.'
 

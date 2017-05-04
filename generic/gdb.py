@@ -60,5 +60,6 @@ class GDB(Test):
                     self.log.info(line)
                     self.fail("Few gdb tests have failed")
 
+
 if __name__ == "__main__":
     main()

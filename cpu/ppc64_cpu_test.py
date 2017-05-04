@@ -18,9 +18,11 @@
 Test to verify ppc64_cpu command.
 """
 
+import os
 from avocado import Test
 from avocado import main
 from avocado.utils import process
+from avocado.utils import cpu
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -43,11 +45,19 @@ class PPC64Test(Test):
             self.skip("Machine is not SMT capable")
         self.curr_smt = process.system_output("ppc64_cpu --smt | awk -F'=' \
                 '{print $NF}' | awk '{print $NF}'", shell=True)
+        self.smt_subcores = 0
+        if os.path.exists("/sys/devices/system/cpu/subcores_per_core"):
+            self.smt_subcores = 1
         self.failures = 0
         self.failure_message = "\n"
         self.smt_values = {1: "off"}
         self.key = 0
         self.value = ""
+        self.max_smt_value = 8
+        if cpu.get_cpu_arch().lower() == 'power7':
+            self.max_smt_value = 4
+        if cpu.get_cpu_arch().lower() == 'power6':
+            self.max_smt_value = 2
 
     def equality_check(self, test_name, cmd1, cmd2):
         """
@@ -69,21 +79,27 @@ class PPC64Test(Test):
         """
         Sets the SMT value, and calls each of the test, for each value.
         """
-        for i in range(2, 9):
+        for i in range(2, self.max_smt_value + 1):
             self.smt_values[i] = str(i)
         for self.key, self.value in self.smt_values.iteritems():
             process.system_output("ppc64_cpu --smt=%s" % self.key, shell=True)
             process.system_output("ppc64_cpu --info")
             self.smt()
             self.core()
-            self.subcore()
+            if self.smt_subcores == 1:
+                self.subcore()
             self.threads_per_core()
             self.smt_snoozedelay()
             self.dscr()
+
+        self.smt_loop()
+
         if self.failures > 0:
             self.log.debug("Number of failures is %s" % self.failures)
             self.log.debug(self.failure_message)
             self.fail()
+
+        process.system_output("dmesg")
 
     def smt(self):
         """
@@ -135,6 +151,14 @@ class PPC64Test(Test):
         command1 = "ppc64_cpu --dscr | awk '{print $NF}'"
         command2 = "cat /sys/devices/system/cpu/dscr_default"
         self.equality_check("DSCR", command1, command2)
+
+    def smt_loop(self):
+        """
+        Tests smt on/off in a loop
+        """
+        for _ in range(1, 100):
+            process.run("ppc64_cpu --smt=off && ppc64_cpu --smt=on",
+                        shell=True)
 
     def tearDown(self):
         """

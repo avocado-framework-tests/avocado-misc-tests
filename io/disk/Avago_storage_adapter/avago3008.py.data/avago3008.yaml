@@ -1,0 +1,14 @@
+cenario:
+    contorller: 0
+    disk: 1:4 1:5 1:6
+    spare: "1:7"
+    size: 10000
+raidlevel: !mux
+    raid1:
+        raidlevel: raid1
+    raid1E:
+        raidlevel: raid1e
+    raid0:
+        raidlevel: raid0
+    raid10:
+        raidlevel: raid10

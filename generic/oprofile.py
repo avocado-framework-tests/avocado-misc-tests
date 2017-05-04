@@ -55,5 +55,6 @@ class Oprofile(Test):
             self.log.info(failed_tests)
             self.fail("few tests failed")
 
+
 if __name__ == "__main__":
     main()

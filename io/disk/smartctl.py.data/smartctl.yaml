@@ -1,0 +1,68 @@
+scenario: !mux
+    test1:
+        disk: /dev/sda
+    test2:
+        disk: /dev/sdb
+Options: !mux
+    self_test:
+        option: --test=long
+    info:
+        option: -i
+    device_setting:
+        option: -g all
+    scan_drives:
+        option: --scan
+    scan_drives_open:
+        option: --scan-open
+    quietmode:
+        option: -q errorsonly
+    quietmode:
+        option: -q silent
+    bad_checksum:
+        option: -b warn
+    report_transaction:
+        option: -r ioctl
+    check_mode:
+        option: -n sleep
+    automatic_offline_off:
+        option: -o off
+    automatic_offline_on:
+        option: -o on
+    autosave_attribute_off:
+        option: -S off
+    autosave_attribute_on:
+        option: -S on
+    device_setting:
+        option: -s on
+    tolerance_opt1:
+        option: --smart=off -T verypermissive
+    tolerance_opt2:
+        option: --smart=on -T permissive
+    tolerance_opt3:
+        option: --smart=on -T normal 
+    tolerance_opt4:
+        option: --smart=on -T conservative
+    print_selftest_quietmode:
+        option: --attributes --log=selftest --quietmode=errorsonly
+    captive_mode:
+        option: --captive
+    offlineautotests:
+        option: --smart=on --offlineauto=on --saveauto=on
+    format_opt1:
+        option: -f old 
+    print_format_opt1:
+        option: --all
+    format_opt2:
+        option: -f brief
+    print_format_opt2:
+        option: -x
+    Health:
+        option: -H
+    capabilities:
+        option: -c
+    device_log:
+        option: -l error
+    presets:
+        option: -P showall
+    print_alldata:
+        option: -A

@@ -40,9 +40,11 @@ class Trinity(Test):
         """
         Add not root user
         """
-        process.run('groupadd trinity', sudo=True)
-        process.run(
-            'useradd -g trinity  -m -d /home/trinity  trinity', sudo=True)
+        if process.system('getent group trinity', ignore_status=True):
+            process.run('groupadd trinity', sudo=True)
+        if process.system('getent passwd trinity', ignore_status=True):
+            process.run(
+                'useradd -g trinity  -m -d /home/trinity  trinity', sudo=True)
         process.run('usermod -a -G trinity  trinity', sudo=True)
 
         smm = SoftwareManager()
@@ -95,6 +97,7 @@ class Trinity(Test):
     def tearDown(self):
 
         process.system('userdel -r  trinity', sudo=True)
+
 
 if __name__ == "__main__":
     main()

@@ -5,15 +5,19 @@ started are really simple:
 1.1) The variables 'TEST_DEV' and 'TEST_DIR' are mandatory and should be set to
      a block device path and mount point path, respectively, that will be used
      *exclusively* for xfstests. It must have the filesystem of your choice
-     previously created.
-     ex : export TEST_DEV =/dev/vda1 , export TEST_DIR=/mnt
-
+     previously created .Please refer local.config and edit local.config 
+     as ex:  create  entry TEST_DEV =/dev/vda1
+		     	   TEST_DIR=/mnt
+     for xfs test SCRATCH_DEV and SCRATCH_MNT can also be set 
+	but that can be optional 
      DO NOT USE A BLOCK DEVICE WITH IMPORTANT DATA!!!
 
 1.2) In yaml file set test_number which test need to run  and skip_dangerous
      (it will check with group ) and    will skip all the test .
 
-1.3) In Yaml file test range also can be set like test_range='12-89' 
+1.3) In Yaml file test range also can be set like test_range='4,12-89'
+Note that range is optional. If not provided, complete generic and specified
+file systems tests would execute
 
 General notes
 -------------

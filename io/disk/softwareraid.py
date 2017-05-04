@@ -46,19 +46,21 @@ class SoftwareRaid(Test):
 
         smm = SoftwareManager()
         if not smm.check_installed("mdadm"):
-            print("Mdadm must be installed before continuing the test")
+            print "Mdadm must be installed before continuing the test"
             if SoftwareManager().install("mdadm") is False:
                 self.skip("Unable to install mdadm")
         cmd = "mdadm -V"
         self.check_pass(cmd, "Unable to get mdadm version")
-        self.disk = self.params.get('disk', default='').strip(" ").split(" ")
-        self.sparedisk = self.disk.pop()
-        self.remadd = ''.join(self.disk[-1:])
+        self.disk = self.params.get('disk', default='').strip(" ")
         self.raidlevel = str(self.params.get('raid', default='0'))
-        self.disk_count = len(self.disk)
-        self.disk = ' '.join(self.disk)
-        if self.disk_count < 4:
-            self.skip("Please give minimum of 5 disk to execute this test case")
+        if self.raidlevel == 'linear' or self.raidlevel == '0':
+            self.disk_count = len(self.disk.split(" "))
+        else:
+            self.disk = self.disk.split(" ")
+            self.sparedisk = self.disk.pop()
+            self.remadd = ''.join(self.disk[-1:])
+            self.disk_count = len(self.disk)
+            self.disk = ' '.join(self.disk)
 
     def test_run(self):
         """
@@ -131,6 +133,7 @@ class SoftwareRaid(Test):
         """
         cmd = "mdadm --manage /dev/md/mdsraid --stop"
         self.check_pass(cmd, "Failed to stop/remove the MD device")
+
 
 if __name__ == "__main__":
     main()

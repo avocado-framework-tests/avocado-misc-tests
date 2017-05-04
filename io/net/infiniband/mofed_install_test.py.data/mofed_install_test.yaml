@@ -1,0 +1,49 @@
+ISO_Location:
+    location:
+        iso_location: http://www.mellanox.com/downloads/ofed/MLNX_OFED-3.3-1.0.4.0/MLNX_OFED_LINUX-3.3-1.0.4.0-rhel7.2-ppc64le.iso
+Options: !mux
+    all:
+        option: --all --post-start-delay 15 --pre-install-opensm "echo pre" --post-install-mstflint "echo post"
+    32-bit:
+        option: --with-32bit
+    without_32-bit:
+        option: --without-32bit  --with-fabric-collector -vv --vma-eth
+    skip-distro-check:
+        option: --skip-distro-check -q
+    skip-kmp-verify:
+        option: --skip-kmp-verify --disable-affinity
+    force-fw-update:
+        option: --vma --force-fw-update --tmpdir /tmp 
+    disable-kmp_skip-distro-check:
+        option: --disable-kmp --skip-distro-check -vvv --disable-affinity --add-kernel-support --skip-repo
+    dpdk:
+        option: --dpdk
+    hpc:
+        option: --hpc
+    basic:
+        option: --basic
+    msm:
+        option: --msm
+    p:
+        option: -p
+    kernel:
+        option: -s /lib/modules/`uname -r`/build -k `uname -r`  --umad-dev-na  --enable-affinity
+    umad-dev-rw:
+        option: --umad-dev-rw
+    distro:
+        option: -U --distro rhel7.2 --with-vma
+    fw-update-only:
+        option: --fw-update-only
+    check-deps-only:
+        option: --check-deps-only
+    guest:
+        option: --guest
+    hypervisor:
+        option: --hypervisor
+    kernel-only_without-fw-update:
+        option: --kernel-only   --without-fw-update  -v  --enable-mlnx_tune
+    ofed-conf:
+        option: -c docs/conf/ofed-basic.conf -n docs/conf/ofed_net.conf-example
+    add-kernel-support:
+        option: --add-kernel-support --skip-repo --force --kmp
+        uninstall: False

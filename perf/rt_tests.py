@@ -39,7 +39,7 @@ class rt_tests(Test):
         sm = SoftwareManager()
         detected_distro = distro.detect()
         deps = ["gcc", "make"]
-        if detected_distro.name == "Suse":
+        if detected_distro.name == "SuSE":
             deps.append("git-core")
         else:
             deps.append("git")
@@ -51,10 +51,12 @@ class rt_tests(Test):
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
                 self.error(package + ' is needed for the test to be run')
-        locations = ["https://kernel.googlesource.com/pub/scm/utils/rt-tests/"
-                     "rt-tests/+archive/master.tar.gz"]
-        tarball = self.fetch_asset("rt-tests.tar.gz", locations=locations)
+        tarball = self.fetch_asset(
+            "https://www.kernel.org/pub/linux/utils/rt-tests/"
+            "rt-tests-1.0.tar.gz")
         archive.extract(tarball, self.srcdir)
+        self.srcdir = os.path.join(
+            self.srcdir, os.path.basename(tarball.split('.tar.')[0]))
         build.make(self.srcdir)
 
     def test(self):
@@ -62,6 +64,7 @@ class rt_tests(Test):
         args = self.params.get('args', default=' -t 10 -l 100000')
         process.system("%s %s" % (os.path.join(self.srcdir, test_to_run), args),
                        sudo=True)
+
 
 if __name__ == "__main__":
     main()

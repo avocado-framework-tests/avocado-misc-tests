@@ -47,8 +47,9 @@ class Lmbench(Test):
         temp_file = self.params.get('temp_file', default=None)
         self.tmpdir = tempfile.mkdtemp(prefix='avocado_' + __name__)
         smm = SoftwareManager()
-        if not smm.check_installed("gcc") and not smm.install("gcc"):
-            self.error("Gcc is needed for the test to be run")
+        for package in ['gcc', 'make', 'patch']:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel("%s is needed for the test to be run" % package)
         tarball = self.fetch_asset('http://www.bitmover.com'
                                    '/lmbench/lmbench3.tar.gz')
         data_dir = os.path.abspath(self.datadir)
@@ -79,13 +80,13 @@ class Lmbench(Test):
         # configure lmbench
         os.chdir(self.srcdir)
 
-        os.system('yes "" | make config')
+        process.system('yes "" | make config', shell=True, ignore_status=True)
 
         # find the lmbench config file
         output = os.popen('ls -1 bin/*/CONFIG*').read()
         config_files = output.splitlines()
         if len(config_files) != 1:
-            raise error.TestError('Config not found : % s' % config_files)
+            self.error('Config not found : % s' % config_files)
         config_file = config_files[0]
         if not fsdir:
             fsdir = self.tmpdir
@@ -105,6 +106,7 @@ class Lmbench(Test):
 
         os.chdir(self.srcdir)
         build.make(self.srcdir, extra_args='rerun')
+
 
 if __name__ == "__main__":
     main()

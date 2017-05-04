@@ -1,0 +1,2 @@
+This program runs the selftest available with the linux kernel source.
+Compile and run the tests available at /tools/testing/selftests

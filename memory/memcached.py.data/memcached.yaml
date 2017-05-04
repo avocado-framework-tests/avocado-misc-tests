@@ -1,0 +1,25 @@
+setup:
+    general: !mux
+        default:
+            memory_to_use: 1024
+            port_no: '12111'
+            memcached_args: ''
+            system_ip: '127.0.0.1'
+            test_to_run: !mux
+                set:
+                    test_to_run: 'set'
+                get:
+                    test_to_run: 'get'
+            concurrency: '100'
+            stress_tool_args: ''
+        stress:
+            port_no: '12111'
+            memcached_args: ' -c 10000 '
+            system_ip: '127.0.0.1'
+            test_to_run: !mux
+                set:
+                    test_to_run: 'set'
+                get:
+                    test_to_run: 'get'
+            concurrency: '512'
+            stress_tool_args: ' --execute-number 512 '
