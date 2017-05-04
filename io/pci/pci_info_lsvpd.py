@@ -53,7 +53,7 @@ class PciLsvpdInfo(Test):
                 '''
                 Slot Match
                 '''
-                if vpd_output.has_key('slot'):
+                if 'slot' in vpd_output:
                     sys_slot = pci.get_slot_from_sysfs(pci_adres)
                     if sys_slot:
                         sys_slot = sys_slot.strip('\0')
@@ -107,8 +107,7 @@ class PciLsvpdInfo(Test):
                     error.append(pci_adres + "->pci_id")
 
         if error:
-            self.log.error("failed pci addresses:%s", error)
-            self.fail("Data mismatched for above pci addresses:")
+            self.fail("Data mismatched for above pci addresses: %s" % error)
 
 
 if __name__ == "__main__":
