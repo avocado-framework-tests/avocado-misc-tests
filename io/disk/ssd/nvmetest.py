@@ -20,12 +20,10 @@ This Suite creates and formats a namespace, reads and writes on it
 using nvme cli.
 """
 
-import os
 from avocado import Test
 from avocado import main
-from avocado.utils import build
 from avocado.utils import process
-from avocado.utils import archive
+from avocado.utils.software_manager import SoftwareManager
 
 
 class NVMeTest(Test):
@@ -44,19 +42,10 @@ class NVMeTest(Test):
         cmd = 'ls %s' % self.device
         if process.system(cmd, ignore_status=True) is not 0:
             self.skip("%s does not exist" % self.device)
-        locations = ["https://github.com/linux-nvme/nvme-cli/archive/"
-                     "master.zip"]
-        tarball = self.fetch_asset("nvme-cli.zip", locations=locations,
-                                   expire='15d')
-        archive.extract(tarball, self.teststmpdir)
-        os.chdir("%s/nvme-cli-master" % self.teststmpdir)
-        process.system("./NVME-VERSION-GEN", ignore_status=True)
-        if process.system("which nvme", ignore_status=True) != 0 or \
-            process.system_output("cat NVME-VERSION-FILE").strip("\n").\
-            split()[-1] != process.system_output("nvme version").\
-                strip("\n").split()[-1]:
-            build.make(".")
-            build.make(".", extra_args='install')
+        smm = SoftwareManager()
+        if not smm.check_installed("nvme-cli") and not \
+                smm.install("nvme-cli"):
+            self.skip('nvme-cli is needed for the test to be run')
         self.id_ns = self.create_namespace()
         self.log.info(self.id_ns)
         cmd = "nvme id-ns %s | grep 'in use' | awk '{print $5}' | \
