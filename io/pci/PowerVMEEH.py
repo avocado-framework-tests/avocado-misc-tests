@@ -60,7 +60,7 @@ class PowerVMEEH(Test):
         if output != '0x1':
             self.skip("EEH is not enabled, please enable via FSP")
             sys.exit(1)
-        self.max_freeze = int(self.params.get('max_Freeze', default='1'))
+        self.max_freeze = int(self.params.get('max_freeze', default='1'))
         cmd = "echo %d > /sys/kernel/debug/powerpc/eeh_max_freezes"\
             % self.max_freeze
         process.system(cmd, ignore_status=True, shell=True)
@@ -73,6 +73,9 @@ class PowerVMEEH(Test):
         Test to execute basic error injection on PE
         """
         for self.addr in pci.get_pci_addresses():
+            enter_loop = True
+            num_of_miss = 0
+            num_of_hit = 0
             self.pci_mem_addr = pci.get_memory_address(self.addr)
             self.pci_mask = pci.get_mask(self.addr)
             self.pci_class_name = pci.get_pci_class_name(self.addr)
@@ -83,21 +86,45 @@ class PowerVMEEH(Test):
             self.log.info("PCI mask = %s" % self.pci_mask)
             self.log.info("PCI class name = %s" % self.pci_class_name)
             self.log.info("PCI interface = %s" % self.pci_interface)
-            for func in self.function:
-                self.log.info("Running error injection on pe %s function %s"
-                              % (self.addr, func))
-                self.return_code = self.basic_eeh(func, self.pci_class_name,
-                                                  self.pci_interface,
-                                                  self.pci_mem_addr,
-                                                  self.pci_mask)
-                if self.return_code == EEH_MISS:
-                    continue
-                else:
-                    if not self.check_eeh_pe_recovery(self.addr):
-                        self.fail("PE %s recovery failed after first EEH"
-                                  % self.addr)
+            while num_of_hit <= self.max_freeze:
+                for func in self.function:
+                    self.log.info("Running error inject on pe %s function %s"
+                                  % (self.addr, func))
+                    if num_of_miss < 5:
+                        return_code = self.basic_eeh(func,
+                                                     self.pci_class_name,
+                                                     self.pci_interface,
+                                                     self.pci_mem_addr,
+                                                     self.pci_mask)
+                        if return_code == EEH_MISS:
+                            num_of_miss += 1
+                            self.log.info("number of miss is %d"
+                                          % num_of_miss)
+                            continue
+                        else:
+                            num_of_hit += 1
+                            self.log.info("number of hit is %d"
+                                          % num_of_hit)
+                            if num_of_hit <= self.max_freeze:
+                                if not self.check_eeh_pe_recovery(self.addr):
+                                    self.fail("PE %s recovery failed after"
+                                              "%d EEH" % (self.addr,
+                                                          num_of_hit))
+                                    break
+                                else:
+                                    self.log.info("PE recovered successfully")
+                    else:
+                        self.log.warning("EEH inject failed for 5 times with\
+                                   function %s" % func)
+                        enter_loop = False
                         break
-                    self.log.info("PE recovered successfully")
+                if not enter_loop:
+                    break
+            else:
+                if self.check_eeh_removed():
+                    self.log.info("PE %s removed successfully" % self.addr)
+                else:
+                    self.fail("PE %s not removed after max hit" % self.addr)
 
     def basic_eeh(self, func, pci_class_name, pci_interface,
                   pci_mem_addr, pci_mask):
@@ -106,12 +133,14 @@ class PowerVMEEH(Test):
         Injects Error, and checks for PE recovery
         returns True, if recovery is success, else Flase
         """
-        self.return_code = self.error_inject(func, pci_class_name,
-                                             pci_interface, pci_mem_addr,
-                                             pci_mask)
-        if self.return_code != EEH_HIT:
+        self.clear_dmesg_logs()
+        return_code = self.error_inject(func, pci_class_name,
+                                        pci_interface, pci_mem_addr,
+                                        pci_mask)
+        if return_code != EEH_HIT:
             self.log.info("Skipping verification, as command failed")
         if not self.check_eeh_hit():
+            self.log.info("PE %s EEH hit failed" % self.addr)
             return EEH_MISS
         else:
             self.log.info("PE %s EEH hit success" % self.addr)
@@ -154,6 +183,16 @@ class PowerVMEEH(Test):
             return False
 
     @classmethod
+    def clear_dmesg_logs(cls):
+
+        """
+        Clears dmesg logs, so that functions which uses dmesg
+        gets the latest logs
+        """
+        cmd = "dmesg -C"
+        process.system(cmd, ignore_status=True, shell=True)
+
+    @classmethod
     def check_eeh_hit(cls):
 
         """
@@ -179,6 +218,7 @@ class PowerVMEEH(Test):
             cmd = "(dmesg | grep 'permanently disabled'; echo $?)"
             res = process.system_output(cmd, ignore_status=True, shell=True)
             if int(res[-1]) == 0:
+                time.sleep(10)
                 return True
             time.sleep(1)
         return False
