@@ -39,6 +39,8 @@ class Xfstests(Test):
         Build xfstest
         Source: git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git
         """
+        if process.system_output("df -T / | awk 'END {print $2}'", shell=True) == 'ext3':
+            self.skip('Test does not support ext3 root file system')
         sm = SoftwareManager()
 
         detected_distro = distro.detect()
@@ -71,6 +73,7 @@ class Xfstests(Test):
             if not sm.check_installed(package) and not sm.install(package):
                 self.skip("Fail to install %s required for this test." %
                           package)
+
         self.skip_dangerous = self.params.get('skip_dangerous', default=True)
         self.test_range = self.params.get('test_range', default=None)
         self.scratch_mnt = self.params.get(
@@ -175,7 +178,7 @@ class Xfstests(Test):
             for dev in self.devices:
                 process.system('losetup -d %s' % dev, shell=True,
                                sudo=True, ignore_status=True)
-            if not self.disk_mnt:
+            if self.disk_mnt:
                 self.part.unmount()
 
     def _create_loop_device(self, base_disk, loop_size, mount=True):
