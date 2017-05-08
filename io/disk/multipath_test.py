@@ -75,6 +75,10 @@ class MultipathTest(Test):
 
         # Find all details of multipath devices
         for wwid in self.wwids:
+            if wwid not in process.system_output('multipath -ll',
+                                                 ignore_status=True,
+                                                 shell=True):
+                continue
             self.mpath_dic = {}
             self.mpath_dic["wwid"] = wwid
             self.mpath_dic["name"] = multipath.get_mpath_name(wwid)
