@@ -76,7 +76,16 @@ class Avago9361(Test):
         """
         adjust_on_off = ['restorehotspare', 'autorebuild', 'copyback', 'eghs',
                          'alarm', 'foreignautoimport', 'maintainpdfailhistory',
-                         'ocr']
+                         'ocr', 'immediateio', 'largeQD',
+                         'driveactivityled', 'flushwriteverify',
+                         'limitMaxRateSATA', 'supportssdpatrolread',
+                         'sgpioforce', 'dpm', 'loadbalancemode',
+                         'directpdmapping', 'restorehotspare',
+                         'configautobalance', 'ncq', 'abortcconerror',
+                         'batterywarning', 'prcorrectunconfiguredareas',
+                         'usefdeonlyencrypt', 'cachebypass',
+                         'activityforlocate', 'bootwithpinnedcache',
+                         'sesmonitoring', 'failpdonsmarterror']
         for i in adjust_on_off:
             for j in ['off', 'on']:
                 cmd = "%s /c%d show %s" % (self.tool_location,
