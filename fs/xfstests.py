@@ -43,12 +43,11 @@ class Xfstests(Test):
             self.skip('Test does not support ext3 root file system')
         sm = SoftwareManager()
 
-        detected_distro = distro.detect()
+        self.detected_distro = distro.detect()
 
         packages = ['e2fsprogs', 'automake', 'gcc', 'quota', 'attr',
                     'make', 'xfsprogs', 'gawk']
-
-        if 'Ubuntu' in detected_distro.name:
+        if 'Ubuntu' in self.detected_distro.name:
             packages.extend(['xfslibs-dev', 'uuid-dev', 'libtool-bin', 'libuuid1',
                              'libattr1-dev', 'libacl1-dev', 'libgdbm-dev',
                              'uuid-runtime', 'libaio-dev', 'fio', 'dbench'])
@@ -56,18 +55,20 @@ class Xfstests(Test):
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
-        elif detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
+        elif self.detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat', 'SuSE']:
             packages.extend(['acl', 'bc', 'dump', 'indent', 'libtool', 'lvm2',
                              'xfsdump', 'psmisc', 'sed', 'libacl-devel',
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
-                             'openssl-devel', 'xfsprogs-devel', 'btrfs-progs-devel'])
-            # FIXME: "redhat" as the distro name for RHEL is deprecated
-            # on Avocado versions >= 50.0.  This is a temporary compatibility
-            # enabler for older runners, but should be removed soon
-            if detected_distro.name not in ['rhel', 'redhat']:
+                             'openssl-devel', 'xfsprogs-devel'])
+            if self.detected_distro.name == 'SuSE':
+                packages.extend(['libbtrfs-devel'])
+            else:
+                packages.extend(['btrfs-progs-devel'])
+
+            if self.detected_distro.name in ['centos', 'fedora']:
                 packages.extend(['fio', 'dbench'])
         else:
-            self.skip("test not supported in %s" % detected_distro.name)
+            self.skip("test not supported in %s" % self.detected_distro.name)
 
         for package in packages:
             if not sm.check_installed(package) and not sm.install(package):
@@ -129,7 +130,8 @@ class Xfstests(Test):
         self.log.info("Tests available in srcdir: %s",
                       ", ".join(self.available_tests))
         process.run('useradd fsgqa', sudo=True)
-        process.run('useradd 123456-fsgqa', sudo=True)
+        if self.detected_distro.name is not 'SuSE':
+            process.run('useradd 123456-fsgqa', sudo=True)
         if not os.path.exists(self.scratch_mnt):
             os.makedirs(self.scratch_mnt)
         if not os.path.exists(self.test_mnt):
@@ -166,7 +168,8 @@ class Xfstests(Test):
 
     def tearDown(self):
         process.system('userdel fsgqa', sudo=True)
-        process.system('userdel 123456-fsgqa', sudo=True)
+        if self.detected_distro.name is not 'SuSE':
+            process.system('userdel 123456-fsgqa', sudo=True)
         # In case if any test has been interrupted
         process.system('umount %s %s' % (self.scratch_mnt, self.test_mnt),
                        sudo=True, ignore_status=True)
