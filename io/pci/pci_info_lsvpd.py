@@ -46,15 +46,14 @@ class PciLsvpdInfo(Test):
         Test
         '''
         error = []
-        for pci_adres in pci.get_pci_addresses():
-            print "Comparing for PCI Adress : ", pci_adres, "\n\n"
-            vpd_output = pci.get_vpd(pci_adres)
+        for pci_addr in pci.get_pci_addresses():
+            print "Checking for PCI Adress : ", pci_addr, "\n\n"
+            vpd_output = pci.get_vpd(pci_addr)
             if vpd_output:
-                '''
-                Slot Match
-                '''
+
+                # Slot Match
                 if 'slot' in vpd_output:
-                    sys_slot = pci.get_slot_from_sysfs(pci_adres)
+                    sys_slot = pci.get_slot_from_sysfs(pci_addr)
                     if sys_slot:
                         sys_slot = sys_slot.strip('\0')
                     vpd_slot = vpd_output['slot']
@@ -63,14 +62,13 @@ class PciLsvpdInfo(Test):
                     if sys_slot in [sys_slot, vpd_slot[:vpd_slot.rfind('-')]]:
                         self.log.info("=======>>> slot matches perfectly\n\n")
                     else:
-                        error.append(pci_adres + "->slot")
+                        error.append(pci_addr + "->slot")
                         self.log.info("--->>Slot Numbers not Matched\n\n")
                 else:
                     self.log.error("Slot info not available in vpd output\n")
-                '''
-                Device ID match
-                '''
-                sys_pci_id_output = pci.get_pci_id_from_sysfs(pci_adres)
+
+                # Device ID match
+                sys_pci_id_output = pci.get_pci_id_from_sysfs(pci_addr)
                 vpd_device_id = vpd_output['pci_id'][4:]
                 sysfs_device_id = sys_pci_id_output[5:-10]
                 self.log.info("Device ID from sysfs :%s", sysfs_device_id)
@@ -79,10 +77,9 @@ class PciLsvpdInfo(Test):
                     self.log.info("=======>>Device ID Match Success\n\n")
                 else:
                     self.log.error("----->>Device ID did not Match\n\n")
-                    error.append(pci_adres + "->Device_id")
-                '''
-                Subvendor ID Match
-                '''
+                    error.append(pci_addr + "->Device_id")
+
+                # Subvendor ID Match
                 sysfs_subvendor_id = sys_pci_id_output[10:-5]
                 vpd_subvendor_id = vpd_output['pci_id'][:4]
                 self.log.info("Subvendor ID frm sysfs:%s", sysfs_subvendor_id)
@@ -91,12 +88,10 @@ class PciLsvpdInfo(Test):
                     self.log.info("======>>>Subvendor ID Match Success\n\n")
                 else:
                     self.log.error("---->>Subvendor_id Not Matched\n\n")
-                    error.append(pci_adres + "->Subvendor_id")
+                    error.append(pci_addr + "->Subvendor_id")
 
-                '''
-                PCI ID Match
-                '''
-                lspci_pci_id = pci.get_pci_id(pci_adres)
+                # PCI ID Match
+                lspci_pci_id = pci.get_pci_id(pci_addr)
                 self.log.info(" PCI ID from Sysfs:%s", sys_pci_id_output)
                 self.log.info("PCI ID from Vpd :%s", lspci_pci_id)
 
@@ -104,10 +99,15 @@ class PciLsvpdInfo(Test):
                     self.log.info("======>>>> All PCI ID match Success\n\n")
                 else:
                     self.log.error("---->>>PCI info Did not Matches\n\n")
-                    error.append(pci_adres + "->pci_id")
+                    error.append(pci_addr + "->pci_id")
+
+                # PCI Config Space Check
+                if process.system("lspci -xxxx -s %s" % pci_addr,
+                                  ignore_status=True, sudo=True):
+                    error.append(pci_addr + "->pci_config_space")
 
         if error:
-            self.fail("Data mismatched for above pci addresses: %s" % error)
+            self.fail("Errors for above pci addresses: %s" % error)
 
 
 if __name__ == "__main__":
