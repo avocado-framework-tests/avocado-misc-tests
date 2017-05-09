@@ -101,6 +101,11 @@ class PciLsvpdInfo(Test):
                     self.log.error("---->>>PCI info Did not Matches\n\n")
                     error.append(pci_addr + "-> pci_id")
 
+                # PCI Config Space Check
+                if process.system("lspci -xxxx -s %s" % pci_addr,
+                                  ignore_status=True, sudo=True):
+                    error.append(pci_addr + "->pci_config_space")
+
         if error:
             self.fail("Errors for above pci addresses: %s" % error)
 
