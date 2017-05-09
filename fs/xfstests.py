@@ -106,15 +106,14 @@ class Xfstests(Test):
             self.test_dev = self.params.get('disk_test', default=None)
             self.scratch_dev = self.params.get('disk_scratch', default=None)
             self.devices.extend([self.test_dev, self.scratch_dev])
-            line = ('export TEST_DEV=%s' % self.test_dev).replace('/', '\/')
-            process.system('sed -i "s/export TEST_DEV=.*/%s/g" %s' %
-                           (line, os.path.join(self.srcdir, 'local.config')), shell=True)
-            line = ('export SCRATCH_DEV=%s' %
-                    self.scratch_dev).replace('/', '\/')
-            process.system('sed -i "s/export SCRATCH_DEV=.*/%s/g" %s' %
-                           (line, os.path.join(self.srcdir, 'local.config')), shell=True)
         # mkfs for devices
         if self.devices:
+            line = ('export TEST_DEV=%s' % self.devices[0]).replace('/', '\/')
+            process.system('sed -i "s/export TEST_DEV=.*/%s/g" %s' %
+                           (line, os.path.join(self.srcdir, 'local.config')), shell=True)
+            line = ('export SCRATCH_DEV=%s' % self.devices[1]).replace('/', '\/')
+            process.system('sed -i "s/export SCRATCH_DEV=.*/%s/g" %s' %
+                           (line, os.path.join(self.srcdir, 'local.config')), shell=True)
             for dev in self.devices:
                 dev_obj = partition.Partition(dev)
                 dev_obj.mkfs(fstype=self.fs_to_test)
