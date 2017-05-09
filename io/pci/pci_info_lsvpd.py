@@ -47,7 +47,7 @@ class PciLsvpdInfo(Test):
         '''
         error = []
         for pci_addr in pci.get_pci_addresses():
-            print "Checking for PCI Address : ", pci_addr, "\n\n"
+            self.log.info("Checking for PCI Address: %s\n\n", pci_addr)
             vpd_output = pci.get_vpd(pci_addr)
             if vpd_output:
 
