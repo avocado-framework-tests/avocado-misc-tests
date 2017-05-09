@@ -14,6 +14,6 @@ user in yaml file.
 Inputs:
 ------
 disk: '/dev/sdb /dev/sdc'
-time_limit: 240
+time_limit: 2 (In hours)
 mdt_file: 'mdt.io'
 smt_change: True or False

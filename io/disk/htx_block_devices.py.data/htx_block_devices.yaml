@@ -1,4 +1,4 @@
 disk: '/dev/sdb'
-time_limit: 240
+time_limit: 2
 mdt_file: 'mdt.hd'
 smt_change: True
