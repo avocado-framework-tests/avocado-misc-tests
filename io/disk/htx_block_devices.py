@@ -35,7 +35,7 @@ class HtxTest(Test):
     :see:https://github.com/open-power/HTX.git
     :param block_devices: names of block_devices on which you want to run HTX
     :param mdt_file: mdt file used to trigger HTX
-    :params time_limit: how much time you want to run this stress.
+    :params time_limit: how much time(hours) you want to run this stress.
     """
 
     def setUp(self):
@@ -49,7 +49,7 @@ class HtxTest(Test):
             self.skip("Distro does not support")
 
         self.mdt_file = self.params.get('mdt_file', default='mdt.hd')
-        self.time_limit = self.params.get('time_limit', default=600)
+        self.time_limit = int(self.params.get('time_limit', default=2)) * 3600
         self.block_devices = self.params.get('disk', default=None)
         if self.block_devices is None:
             self.skip("Needs the block devices to run the HTX")
@@ -118,8 +118,10 @@ class HtxTest(Test):
         self.log.info("Running the HTX on %s", self.block_device)
         cmd = "htxcmdline -run %s -mdt %s" % (self.block_device, self.mdt_file)
         process.system(cmd, ignore_status=True)
-        for _ in range(0, self.time_limit, 60):
-            self.run_smt()
+        for time_loop in range(0, self.time_limit, 60):
+            # Running SMT changes every hour
+            if time_loop % 3600 == 0:
+                self.run_smt()
             self.log.info("HTX Error logs")
             process.run('htxcmdline -geterrlog')
             if os.stat('/tmp/htxerr').st_size != 0:
