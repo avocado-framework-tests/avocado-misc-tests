@@ -1,20 +1,22 @@
 Test: !mux
     first:
         bonding_mode: "0"
-    second:
-        bonding_mode: "1"
-    third:
-        bonding_mode: "2"
-    fourth:
-        bonding_mode: "3"
-    fifth:
-        bonding_mode: "4"
-    sixth:
-        bonding_mode: "5"
-    seventh:
-        bonding_mode: "6"
-host_interfaces: "enP3p1s0f0,enP3p1s0f1"
-peer_ip: "85.85.85.85"
-peer_interfaces: "eth3"
+#    second:
+#        bonding_mode: "1"
+#    third:
+#        bonding_mode: "2"
+#    fourth:
+#        bonding_mode: "3"
+#    fifth:
+#        bonding_mode: "4"
+#    sixth:
+#        bonding_mode: "5"
+#    seventh:
+#        bonding_mode: "6"
+host_interfaces: "enp96s0f0"
+peer_ip: "10.68.68.41"
+peer_interfaces: "enP30p128s0f4d2"
 bond_name: "bond13"
 user_name: "root"
+peer_bond_needed: False
+peer_wait_time: "10"
