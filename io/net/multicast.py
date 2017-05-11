@@ -41,10 +41,13 @@ class ReceiveMulticastTest(Test):
         detected_distro = distro.detect()
         if detected_distro.name == "Ubuntu":
             pkgs.append('openssh-client')
+            pkgs.append('iputils-ping')
         elif detected_distro.name == "SuSE":
             pkgs.append('openssh')
+            pkgs.append('iputils')
         else:
             pkgs.append('openssh-clients')
+            pkgs.append('iputils')
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.skip("%s package is need to test" % pkg)
