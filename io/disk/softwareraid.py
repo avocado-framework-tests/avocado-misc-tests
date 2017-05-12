@@ -53,6 +53,7 @@ class SoftwareRaid(Test):
         self.check_pass(cmd, "Unable to get mdadm version")
         self.disk = self.params.get('disk', default='').strip(" ")
         self.raidlevel = str(self.params.get('raid', default='0'))
+        self.sparedisk = ""
         if self.raidlevel == 'linear' or self.raidlevel == '0':
             self.disk_count = len(self.disk.split(" "))
         else:
@@ -132,7 +133,9 @@ class SoftwareRaid(Test):
         Stop/Remove the MD device
         """
         cmd = "mdadm --manage /dev/md/mdsraid --stop"
-        self.check_pass(cmd, "Failed to stop/remove the MD device")
+        self.check_pass(cmd, "Failed to stop the MD device")
+        cmd = "mdadm --zero-superblock %s %s" % (self.disk, self.sparedisk)
+        self.check_pass(cmd, "Failed to remove the MD device")
 
 
 if __name__ == "__main__":
