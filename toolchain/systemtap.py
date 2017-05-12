@@ -42,7 +42,10 @@ class Systemtap(Test):
                       "added in packages")
         packages = ['make', 'gcc', 'systemtap', 'systemtap-runtime',
                     'elfutils', 'kernel-devel', 'dejagnu']
-        if detected_distro.name == "redhat":
+        # FIXME: "redhat" as the distro name for RHEL is deprecated
+        # on Avocado versions >= 50.0.  This is a temporary compatibility
+        # enabler for older runners, but should be removed soon
+        if detected_distro.name in ["redhat", "rhel"]:
             packages.extend(['git', 'kernel-debug', 'kernel-debuginfo',
                              'kernel-debug-debuginfo', 'elfutils-devel'])
         if detected_distro.name == "SuSE":
