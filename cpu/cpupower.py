@@ -27,6 +27,8 @@ class cpupower(Test):
 
     """
     Testing cpupower command
+
+    :avocado: tags=cpu,power,privileged
     """
     def setUp(self):
         if not os.path.exists('/sys/devices/system/cpu/cpu0/cpufreq'):

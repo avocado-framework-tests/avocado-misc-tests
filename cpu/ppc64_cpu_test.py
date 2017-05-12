@@ -29,6 +29,8 @@ from avocado.utils.software_manager import SoftwareManager
 class PPC64Test(Test):
     """
     Test to verify ppc64_cpu command for different supported values.
+
+    :avocado: tags=cpu,power,privileged
     """
 
     def setUp(self):
