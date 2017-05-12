@@ -48,12 +48,18 @@ class Ping6(Test):
             self.option = self.basic
         if process.system("ibstat", shell=True, ignore_status=True) != 0:
             self.skip("MOFED is not installed. Skipping")
-        depends = ["openssh-clients", "iputils*"]
+        pkgs = []
+        detected_distro = distro.detect()
+        if detected_distro.name == "Ubuntu":
+            pkgs.extend(["openssh-client", "iputils-ping"])
+        elif detected_distro.name == "SuSE":
+            pkgs.extend(["openssh", "iputils"])
+        else:
+            pkgs.extend(["openssh-clients", "iputils"])
         smm = SoftwareManager()
-        for package in depends:
-            if not smm.check_installed(package):
-                if not smm.install(package):
-                    self.skip("Not able to install %s" % package)
+        for pkg in pkgs:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
+                self.skip("Not able to install %s" % pkg)
         interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface", default="")
         self.peer_iface = self.params.get("peer_interface", default="")
@@ -77,7 +83,6 @@ class Ping6(Test):
         self.option = self.option.replace("peer_ip", self.peer_ip)
         self.option_list = self.option.split(",")
 
-        detected_distro = distro.detect()
         if detected_distro.name == "Ubuntu":
             cmd = "service ufw stop"
         # FIXME: "redhat" as the distro name for RHEL is deprecated

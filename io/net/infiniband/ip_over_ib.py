@@ -39,9 +39,17 @@ class ip_over_ib(Test):
         '''
         To check and install dependencies for the test
         '''
-        sm = SoftwareManager()
-        for pkg in ["openssh-clients", "gcc"]:
-            if not sm.check_installed(pkg) and not sm.install(pkg):
+        smm = SoftwareManager()
+        detected_distro = distro.detect()
+        pkgs = ["gcc"]
+        if detected_distro.name == "Ubuntu":
+            pkgs.append('openssh-client')
+        elif detected_distro.name == "SuSE":
+            pkgs.append('openssh')
+        else:
+            pkgs.append('openssh-clients')
+        for pkg in pkgs:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.skip("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
         self.IF = self.params.get("interface", default="")
@@ -55,7 +63,6 @@ class ip_over_ib(Test):
         self.NETSERVER_RUN = self.params.get("NETSERVER_RUN", default="0")
         self.iper = os.path.join(self.teststmpdir, 'iperf')
         self.netperf = os.path.join(self.teststmpdir, 'netperf')
-        detected_distro = distro.detect()
         if detected_distro.name == "Ubuntu":
             cmd = "service ufw stop"
         # FIXME: "redhat" as the distro name for RHEL is deprecated

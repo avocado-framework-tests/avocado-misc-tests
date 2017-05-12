@@ -22,7 +22,6 @@
 
 import time
 import netifaces
-
 from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
@@ -55,21 +54,23 @@ class pingpong(Test):
         self.PEER_PORT = int(self.params.get("PEERPORT", default="1"))
         self.to = self.params.get("timeout", default="120")
 
-        sm = SoftwareManager()
+        smm = SoftwareManager()
         detected_distro = distro.detect()
-        depends = ["openssh-clients"]
+        pkgs = []
         if detected_distro.name == "Ubuntu":
-            depends.append("ibverbs")
+            pkgs.extend(["ibverbs", 'openssh-client'])
             cmd = "service ufw stop"
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
         elif detected_distro.name in ['rhel', 'fedora', 'redhat']:
-            depends.append("libibverbs")
+            pkgs.extend(["libibverbs", 'openssh-clients'])
             cmd = "systemctl stop firewalld"
         elif detected_distro.name == "SuSE":
+            pkgs.append('openssh')
             cmd = "rcSuSEfirewall2 stop"
         elif detected_distro.name == "centos":
+            pkgs.extend(['libibverbs', 'openssh-clients'])
             cmd = "service iptables stop"
         else:
             self.skip("Distro not supported")
@@ -78,9 +79,9 @@ class pingpong(Test):
                           ignore_status=True,
                           shell=True) != 0:
             self.skip("Unable to disable firewall")
-        for package in depends:
-            if not sm.check_installed(package):
-                self.error("%s package is need to test" % package)
+        for pkg in pkgs:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
+                self.skip("%s package is need to test" % pkg)
         if process.system("ibstat", shell=True, ignore_status=True) != 0:
             self.skip("infiniband adaptors not available")
 
