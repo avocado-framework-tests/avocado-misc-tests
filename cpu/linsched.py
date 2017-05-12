@@ -28,6 +28,8 @@ class Linsched(Test):
 
     """
     linux-scheduler-testing Testsuite
+
+    :avocado: tags=cpu
     """
 
     def setUp(self):

@@ -30,6 +30,8 @@ class Pmqa(Test):
     pmqa Testsuite these cpu test
     cpufreq, cpuhotplug, cputopology
     cpuidlee, thermal
+
+    :avocado: tags=cpu,privileged
     """
 
     def setUp(self):
