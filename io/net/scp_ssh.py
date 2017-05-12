@@ -45,11 +45,11 @@ class ScpTest(Test):
         pkgs = ["net-tools"]
         detected_distro = distro.detect()
         if detected_distro.name == "Ubuntu":
-            pkgs.append('openssh-client')
+            pkgs.extend(["openssh-client", "iputils-ping"])
         elif detected_distro.name == "SuSE":
-            pkgs.append('openssh')
+            pkgs.extend(["openssh", "iputils"])
         else:
-            pkgs.append('openssh-clients')
+            pkgs.extend(["openssh-clients", "iputils"])
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.skip("%s package is need to test" % pkg)
