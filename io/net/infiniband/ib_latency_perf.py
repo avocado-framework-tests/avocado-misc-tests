@@ -21,8 +21,8 @@
 
 
 import time
-from avocado import main
 import netifaces
+from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process, distro
@@ -38,10 +38,17 @@ class Latency_Perf(Test):
         check the availability of perftest package installed
         perftest package should be installed
         '''
-        sm = SoftwareManager()
-        depends = ["openssh-clients", "perftest"]
-        for pkg in depends:
-            if not sm.check_installed(pkg) and not sm.install(pkg):
+        smm = SoftwareManager()
+        detected_distro = distro.detect()
+        pkgs = ["perftest"]
+        if detected_distro.name == "Ubuntu":
+            pkgs.append('openssh-client')
+        elif detected_distro.name == "SuSE":
+            pkgs.append('openssh')
+        else:
+            pkgs.append('openssh-clients')
+        for pkg in pkgs:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.skip("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
         self.flag = self.params.get("ext_flag", default="0")
@@ -62,7 +69,6 @@ class Latency_Perf(Test):
         self.log.info("test with %s" % (self.tool_name))
         self.test_op = self.params.get("test_opt", default="").split(",")
         self.ext_test_op = self.params.get("ext_opt", default="").split(",")
-        detected_distro = distro.detect()
         if detected_distro.name == "Ubuntu":
             cmd = "service ufw stop"
         # FIXME: "redhat" as the distro name for RHEL is deprecated
