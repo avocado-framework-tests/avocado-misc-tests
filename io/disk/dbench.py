@@ -81,9 +81,8 @@ class Dbench(Test):
         self.results = process.system_output(cmd)
         pattern = re.compile(r"Throughput (.*?) MB/sec (.*?) procs")
         (throughput, procs) = pattern.findall(self.results)[0]
-        perf_json = {'throughput': throughput, 'procs': procs}
-        output_path = os.path.join(self.outputdir, "perf.json")
-        json.dump(perf_json, open(output_path, "w"))
+        self.whiteboard = json.dumps({'throughput': throughput,
+                                      'procs': procs})
 
 
 if __name__ == "__main__":
