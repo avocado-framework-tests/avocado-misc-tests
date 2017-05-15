@@ -530,8 +530,7 @@ class IOZone(Test):
                             result = match.group(1)
                             key_name = "%s-%d-%s" % (section, w_count, basekey)
                             keylist[key_name] = result
-        output_path = os.path.join(self.outputdir, "perf.json")
-        json.dump(keylist, open(output_path, "w"), indent=1)
+        self.whiteboard = json.dumps(keylist, indent=1)
 
     def test(self):
         '''
