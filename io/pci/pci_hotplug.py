@@ -25,6 +25,8 @@ import re
 from avocado import Test
 from avocado import main
 from avocado.utils import process
+from avocado.utils import cpu
+from avocado.utils import linux_modules
 
 
 class PCIHotPlugTest(Test):
@@ -43,6 +45,14 @@ class PCIHotPlugTest(Test):
         cmd = "uname -p"
         if 'ppc' not in process.system_output(cmd, ignore_status=True):
             self.skip("Processor is not ppc64")
+        cpu_info = cpu._get_cpu_info()
+        if cpu._list_matches(cpu._get_cpu_info(), 'architected'):
+            if not linux_modules.load_module("rpaphp"):
+                cmd = "modprobe rpaphp"
+                process.system_output(cmd, ignore_status=True, shell=True)
+            if not linux_modules.load_module("rpadlpar_io"):
+                cmd = "modprobe rpadlpar_io"
+                process.system_output(cmd, ignore_status=True, shell=True)
         self.return_code = 0
         self.device = self.params.get('pci_device', default=' ')
         if not os.path.isdir('/sys/bus/pci/devices/%s' % self.device):
