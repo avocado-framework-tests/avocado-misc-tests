@@ -62,7 +62,10 @@ class Pmqa(Test):
 
         cmd = '%s %s run_tests' % (self.test_type, ext_opt)
 
-        process.system('make -C %s' % cmd, ignore_status=True, shell=True)
+        ret = process.run('make -C %s' %
+                          cmd, ignore_status=True, shell=True, sudo=True)
+        if ret.exit_status:
+            self.fail('Test failed with %s' % ret.stderr)
 
         result = process.run("grep -wF 'fail' %s" % log, ignore_status=True)
 
