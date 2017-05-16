@@ -202,14 +202,10 @@ class ParallelDd(Test):
         self.fs_read()
         self.fs_read_rate = operation
 
-        result_json = ({
-            'raw_write': self.raw_write_rate,
-            'raw_read': self.raw_read_rate,
-            'fs_write': self.fs_write_rate,
-            'fs_read': self.fs_read_rate})
-
-        output_path = os.path.join(self.logdir, "results.json")
-        json.dump(result_json, open(output_path, "w"))
+        self.whiteboard = json.dumps({'raw_write': self.raw_write_rate,
+                                      'raw_read': self.raw_read_rate,
+                                      'fs_write': self.fs_write_rate,
+                                      'fs_read': self.fs_read_rate})
 
     def cleanup(self):
         """
