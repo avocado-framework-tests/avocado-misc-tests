@@ -38,5 +38,5 @@ parameters:
     diskoverwrite: "Y"
     disk_size: "100"
     migration_sleep: "60"
-    http_path: "http://9.47.67.137/repo/firmware/RAID/arcconf/tool/"
+    http_path: ""
     tool_name: "Arcconf-2.02-22404.ppc64el"
