@@ -80,7 +80,7 @@ class cpupower(Test):
         :param: cpu_num is value for cpu
         """
         filename = "/sys/devices/system/cpu/cpu%s/cpufreq/%s" % (cpu_num, file)
-        return open(filename, 'r').readline().strip('\n')
+        return open(filename, 'r').readline().strip('\n').strip(' ')
 
     def get_list_governors(self):
         """
