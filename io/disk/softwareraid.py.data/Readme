@@ -6,7 +6,9 @@ Values to be passed in ymal file:
 
 * Raid levels to be created
 
-Note: Please specify minimum of 5 disks, for creating all levels of soltware
+Note: Please specify minimum of 5 disks, for creating all levels of software
 raid. If 5 disks are not available, create 5 partitions, and specify those
 partitions in the yaml file.
+For testing RAID 1 minimum 3 disks or 3 partitions are required so that
+the third disk/partition can be added as spare to test failover.
 Test fails, if number of disks are not applicable for a certain raid level.
