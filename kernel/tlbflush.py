@@ -77,9 +77,7 @@ class Tlbflush(Test):
 
             out = self.run()
             self.perf_json.append({'Test time' + str(ite): out})
-
-        output_path = os.path.join(self.outputdir, "perf.json")
-        json.dump(self.perf_json, open(output_path, "w"))
+        self.whiteboard = json.dumps(self.perf_json)
 
     def run(self):
 

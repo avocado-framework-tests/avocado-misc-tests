@@ -49,7 +49,7 @@ class Fsfuzzer(Test):
         d_name = detected_distro.name.lower()
 
         smm = SoftwareManager()
-        deps = ['gcc', 'patch']
+        deps = ['gcc', 'patch', 'libtool', 'autoconf', 'automake', 'make']
         if d_name == 'ubuntu':
             deps.extend(['libattr1-dev'])
         else:

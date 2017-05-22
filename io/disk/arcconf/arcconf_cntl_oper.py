@@ -73,7 +73,7 @@ class Arcconftest(Test):
         self.repo1 = "%s.ufi" % self.repo1
 
         detected_distro = distro.detect()
-        if not smm.check_installed("arcconf"):
+        if not smm.check_installed("Arcconf"):
             if detected_distro.name == "Ubuntu":
                 http_repo = "%s%s.deb" % (self.http_path, self.tool_name)
                 self.repo = self.fetch_asset(http_repo, expire='10d')

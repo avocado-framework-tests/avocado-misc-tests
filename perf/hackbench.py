@@ -71,8 +71,7 @@ class Hackbench(Test):
             if line.startswith('Time:'):
                 time_spent = line.split()[1]
                 perf_json = {'time': time_spent}
-        output_path = os.path.join(self.outputdir, "perf.json")
-        json.dump(perf_json, open(output_path, "w"))
+        self.whiteboard = json.dumps(perf_json)
         self.log.info("Time Taken:" + time_spent)
         if self._threshold_time:
             if self._threshold_time <= time_spent:

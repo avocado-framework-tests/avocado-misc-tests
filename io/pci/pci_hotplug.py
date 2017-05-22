@@ -24,7 +24,7 @@ import time
 import re
 from avocado import Test
 from avocado import main
-from avocado.utils import process
+from avocado.utils import process, cpu, linux_modules, genio
 
 
 class PCIHotPlugTest(Test):
@@ -43,14 +43,21 @@ class PCIHotPlugTest(Test):
         cmd = "uname -p"
         if 'ppc' not in process.system_output(cmd, ignore_status=True):
             self.skip("Processor is not ppc64")
+        if cpu._list_matches(cpu._get_cpu_info(), 'pSeries'):
+            for mdl in ['rpaphp', 'rpadlpar_io']:
+                if not linux_modules.module_is_loaded(mdl):
+                    linux_modules.load_module(mdl)
+        elif cpu._list_matches(cpu._get_cpuinfo(), 'PowerNV'):
+            if not linux_modules.module_is_loaded("pnv_php"):
+                linux_modules.load_module("pnv_php")
         self.return_code = 0
         self.device = self.params.get('pci_device', default=' ')
         if not os.path.isdir('/sys/bus/pci/devices/%s' % self.device):
             self.skip("PCI device given does not exist")
-        cmd = "cat /sys/bus/pci/devices/%s/devspec ; echo" % self.device
-        self.devspec = process.system_output(cmd, shell=True).strip('\n')
-        cmd = "cat /proc/device-tree/%s/ibm,loc-code ; echo" % self.devspec
-        self.slot = process.system_output(cmd, shell=True).strip('\0\n')
+        devspec = genio.read_file("/sys/bus/pci/devices/%s/devspec"
+                                  % self.device)
+        self.slot = genio.read_file("/proc/device-tree/%s/ibm,loc-code"
+                                    % devspec)
         self.slot = re.match(r'((\w+)[\.])+(\w+)-P(\d+)-C(\d+)|Slot(\d+)',
                              self.slot).group()
         if not os.path.isdir('/sys/bus/pci/slots/%s' % self.slot):
@@ -62,14 +69,12 @@ class PCIHotPlugTest(Test):
         """
         Creates namespace on the device.
         """
-        cmd = "echo 0 > /sys/bus/pci/slots/%s/power" % self.slot
-        process.run(cmd, shell=True, sudo=True)
+        genio.write_file("/sys/bus/pci/slots/%s/power" % self.slot, "0")
         time.sleep(5)
         cmd = "lspci -k -s %s" % self.device
         if process.system_output(cmd, shell=True).strip('\n') is not '':
             self.return_code = 1
-        cmd = "echo 1 > /sys/bus/pci/slots/%s/power" % self.slot
-        process.run(cmd, shell=True, sudo=True)
+        genio.write_file("/sys/bus/pci/slots/%s/power" % self.slot, "1")
         time.sleep(5)
         cmd = "lspci -k -s %s" % self.device
         if process.system_output(cmd, shell=True).strip('\n') is '':
