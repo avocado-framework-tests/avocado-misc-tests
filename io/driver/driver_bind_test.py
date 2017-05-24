@@ -24,6 +24,7 @@ import time
 from avocado import Test
 from avocado import main
 from avocado.utils import process
+from avocado.utils import pci
 
 
 class DriverBindTest(Test):
@@ -41,9 +42,7 @@ class DriverBindTest(Test):
         """
         self.return_code = 0
         self.slot = self.params.get('pci_device', default='0001:01:00.0')
-        cmd = "lspci -ks %s | awk 'END{print $NF}'" % self.slot
-        self.driver = process.system_output(cmd, shell=True,
-                                            ignore_status=True).strip('\n')
+        self.driver = pci.get_driver(self.slot)
         if not self.driver:
             self.skip("%s does not exist" % self.slot)
 
@@ -70,9 +69,9 @@ class DriverBindTest(Test):
                               % (self.driver, self.slot)):
             self.return_code = 2
         if self.return_code == 1:
-            self.fail('%s not unbound' % self.device)
+            self.fail('%s not unbound' % self.slot)
         if self.return_code == 2:
-            self.fail('%s not bound back' % self.device)
+            self.fail('%s not bound back' % self.slot)
 
 
 if __name__ == "__main__":
