@@ -97,7 +97,7 @@ class Xfstests(Test):
             loop_size = self.params.get('loop_size', default='9GiB')
             if not base_disk:
                 # Using root for file creation by default
-                if disk.freespace('/')/1073741824 > 15:
+                if disk.freespace('/') / 1073741824 > 15:
                     self.disk_mnt = ''
                     mount = False
                 else:
@@ -112,7 +112,8 @@ class Xfstests(Test):
             line = ('export TEST_DEV=%s' % self.devices[0]).replace('/', '\/')
             process.system('sed -i "s/export TEST_DEV=.*/%s/g" %s' %
                            (line, os.path.join(self.srcdir, 'local.config')), shell=True)
-            line = ('export SCRATCH_DEV=%s' % self.devices[1]).replace('/', '\/')
+            line = ('export SCRATCH_DEV=%s' %
+                    self.devices[1]).replace('/', '\/')
             process.system('sed -i "s/export SCRATCH_DEV=.*/%s/g" %s' %
                            (line, os.path.join(self.srcdir, 'local.config')), shell=True)
             for dev in self.devices:
@@ -125,9 +126,26 @@ class Xfstests(Test):
         build.make(self.srcdir)
         self.available_tests = self._get_available_tests()
 
-        self.test_list = self._create_test_list()
+        self.test_list = self._create_test_list(self.test_range)
         self.log.info("Tests available in srcdir: %s",
                       ", ".join(self.available_tests))
+        if not self.test_range:
+            self.exclude = self.params.get('exclude', default=None)
+            self.gen_exclude = self.params.get('gen_exclude', default=None)
+            if self.exclude or self.gen_exclude:
+                self.exclude_file = os.path.join(self.srcdir, 'exclude')
+                with open(self.exclude_file, 'w') as fp:
+                    if self.exclude:
+                        self.exclude_tests = self._create_test_list(
+                            self.exclude, dangerous=False)
+                        for test in self.exclude_tests:
+                            fp.write('%s/%s\n' % (self.fs_to_test, test))
+                    if self.gen_exclude:
+                        self.gen_exclude_tests = self._create_test_list(
+                            self.gen_exclude, dangerous=False)
+                        for test in self.gen_exclude_tests:
+                            fp.write('generic/%s\n' % test)
+
         process.run('useradd fsgqa', sudo=True)
         if self.detected_distro.name is not 'SuSE':
             process.run('useradd 123456-fsgqa', sudo=True)
@@ -141,7 +159,9 @@ class Xfstests(Test):
         os.chdir(self.srcdir)
         if not self.test_list:
             self.log.info('Running all tests')
-            cmd = './check -g auto'
+            if self.exclude or self.gen_exclude:
+                args = ' -E %s' % self.exclude_file
+            cmd = './check %s -g auto' % args
             result = process.run(cmd, ignore_status=True, verbose=True)
             if result.exit_status == 0:
                 self.log.info('OK: All Tests passed.')
@@ -197,16 +217,17 @@ class Xfstests(Test):
             process.run('losetup %s %s/file-%s.img' %
                         (dev, self.disk_mnt, i), shell=True, sudo=True)
 
-    def _create_test_list(self):
+    def _create_test_list(self, test_range, dangerous=True):
         test_list = []
         dangerous_tests = []
         if self.skip_dangerous:
             dangerous_tests = self._get_tests_for_group('dangerous')
-        if self.test_range:
-            for test in self._parse_test_range(self.test_range):
-                if test in dangerous_tests:
-                    self.log.debug('Test %s is dangerous. Skipping.', test)
-                    continue
+        if test_range:
+            for test in self._parse_test_range(test_range):
+                if dangerous:
+                    if test in dangerous_tests:
+                        self.log.debug('Test %s is dangerous. Skipping.', test)
+                        continue
                 if not self._is_test_valid(test):
                     self.log.debug('Test %s invalid. Skipping.', test)
                     continue
