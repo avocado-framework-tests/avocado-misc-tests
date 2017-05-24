@@ -47,7 +47,7 @@ class PCIHotPlugTest(Test):
             for mdl in ['rpaphp', 'rpadlpar_io']:
                 if not linux_modules.module_is_loaded(mdl):
                     linux_modules.load_module(mdl)
-        elif cpu._list_matches(cpu._get_cpuinfo(), 'PowerNV'):
+        elif cpu._list_matches(cpu._get_cpu_info(), 'PowerNV'):
             if not linux_modules.module_is_loaded("pnv_php"):
                 linux_modules.load_module("pnv_php")
         self.return_code = 0
