@@ -50,7 +50,7 @@ class Xfstests(Test):
         if 'Ubuntu' in self.detected_distro.name:
             packages.extend(['xfslibs-dev', 'uuid-dev', 'libtool-bin', 'libuuid1',
                              'libattr1-dev', 'libacl1-dev', 'libgdbm-dev',
-                             'uuid-runtime', 'libaio-dev', 'fio', 'dbench'])
+                             'uuid-runtime', 'libaio-dev', 'fio', 'dbench', 'btrfs-tools'])
 
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
@@ -159,6 +159,7 @@ class Xfstests(Test):
         os.chdir(self.srcdir)
         if not self.test_list:
             self.log.info('Running all tests')
+            args = ''
             if self.exclude or self.gen_exclude:
                 args = ' -E %s' % self.exclude_file
             cmd = './check %s -g auto' % args
