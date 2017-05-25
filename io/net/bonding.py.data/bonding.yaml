@@ -13,8 +13,11 @@ Test: !mux
         bonding_mode: "5"
     seventh:
         bonding_mode: "6"
-host_interfaces: "enP3p1s0f0,enP3p1s0f1"
-peer_ip: "85.85.85.85"
-peer_interfaces: "eth3"
+host_interfaces: ""
+peer_ip: ""
+peer_interfaces: ""
 bond_name: "bond13"
 user_name: "root"
+peer_bond_needed: True 
+peer_wait_time: "10"
+sleep_time: "5"
