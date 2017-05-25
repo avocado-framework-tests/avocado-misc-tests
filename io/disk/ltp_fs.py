@@ -65,9 +65,10 @@ class Ltp_Fs(Test):
         ltp_dir = os.path.join(self.teststmpdir, "ltp-master")
         os.chdir(ltp_dir)
         build.make(ltp_dir, extra_args='autotools')
-        ltpbin_dir = os.path.join(ltp_dir, 'bin')
-        os.mkdir(ltpbin_dir)
-        process.system('./configure --prefix=%s' % ltpbin_dir)
+        self.ltpbin_dir = os.path.join(ltp_dir, 'bin')
+        if not os.path.isdir(self.ltpbin_dir):
+            os.mkdir(self.ltpbin_dir)
+        process.system('./configure --prefix=%s' % self.ltpbin_dir)
         build.make(ltp_dir)
         build.make(ltp_dir, extra_args='install')
 
@@ -83,8 +84,8 @@ class Ltp_Fs(Test):
             self.args += (" -q -p -l %s -C %s -d %s"
                           % (logfile, failcmdfile, self.mount_point))
             self.log.info("Args = %s", self.args)
-            ltpbin_dir = os.path.join(self.teststmpdir, "ltp-master", 'bin')
-            cmd = '%s %s' % (os.path.join(ltpbin_dir, self.script), self.args)
+            cmd = '%s %s' % (os.path.join(self.ltpbin_dir, self.script),
+                             self.args)
             result = process.run(cmd, ignore_status=True)
             # Walk the stdout and try detect failed tests from lines
             # like these:
