@@ -18,3 +18,5 @@ peer_ip: "85.85.85.85"
 peer_interfaces: "eth3"
 bond_name: "bond13"
 user_name: "root"
+peer_bond_needed: False
+wait_time: "10"
