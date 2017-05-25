@@ -13,15 +13,17 @@ In this test we enable mode 0 in peer machine and enable all modes in host machi
 -----------------------------
 Inputs Needed To Run Tests:
 ------------------------------
-host_interfaces --> host interfaces to perform test
+host_interfaces --> Interfaces in the Host machine requird for Bonding
 peerip --> peer ip address
-peer_interfaces --> peer interfaces to perform test
-bondname --> to create bond
-bonding_mode --> bonding mode
-username: --> user name
+peer_interfaces --> This is needed only if a Bond interface is to be created in the Peer machine.
+bond_name --> to create bond
+username --> user name
+peer_bond_needed --> If bond interface is needed to be created in Peer machine
+peer_wait_time --> Time required for the interfaces in Peer machine to come up
+sleep_time --> Generic Sleep time used in the test
 -----------------------
 Requirements:
 -----------------------
 1. install netifaces using pip
 command: pip install netifaces
-2. Generate sshkey for your test partner to run the test uninterrupted.(have a passwordless ssh between the peers)
+2. Generate sshkey for your test partner to run the test uninterrupted.(Have a passwordless ssh between the peers)
