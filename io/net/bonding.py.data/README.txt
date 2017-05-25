@@ -14,11 +14,14 @@ In this test we enable mode 0 in peer machine and enable all modes in host machi
 Inputs Needed To Run Tests:
 ------------------------------
 host_interfaces --> host interfaces to perform test
-peerip --> peer ip address
-peer_interfaces --> peer interfaces to perform test
-bondname --> to create bond
-bonding_mode --> bonding mode
-username: --> user name
+peerip --> peer ip address.
+peer_interfaces --> This is needed only if a Bond interface is to be created in the Peer machine.
+bond_name --> to create bond
+username --> user name
+peer_bond_needed --> If bond interface is needed to be created in Peer
+peer_wait_time --> Time for the Bond interface in Peer to come up
+bond_status --> Check bond status while performing bonding
+
 -----------------------
 Requirements:
 -----------------------
