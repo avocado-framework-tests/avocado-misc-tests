@@ -159,6 +159,7 @@ class Xfstests(Test):
         os.chdir(self.srcdir)
         if not self.test_list:
             self.log.info('Running all tests')
+            args = ''
             if self.exclude or self.gen_exclude:
                 args = ' -E %s' % self.exclude_file
             cmd = './check %s -g auto' % args
