@@ -1,0 +1,10 @@
+cenario:
+    disk: ''
+    dir: '/mnt'
+filesystem: !mux
+    ext4:
+        fs: 'ext4'
+    xfs:
+        fs: 'xfs'
+    btrfs:
+        fs: 'btrfs'
