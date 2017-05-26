@@ -19,10 +19,14 @@
 import os
 from avocado import Test
 from avocado import main
+from avocado import skipIf
 from avocado.utils import process
 from avocado.utils import memory
 from avocado.core import data_dir
 from avocado.utils.partition import Partition
+
+
+PAGESIZE = '4096' in str(memory.get_page_size())
 
 
 class Thp_Swapping(Test):
@@ -31,8 +35,8 @@ class Thp_Swapping(Test):
     The test fills out the total avl memory and tries to swap the thp out.
     '''
 
+    @skipIf(PAGESIZE, "No THP support for kernel with 4K PAGESIZE")
     def setUp(self):
-
         '''
         Sets the Required params for dd and mounts the tmpfs dir
         '''
@@ -65,7 +69,6 @@ class Thp_Swapping(Test):
                               args="-o size=%sM" % tmpfs_size)
 
     def test(self):
-
         '''
         Enables THP Runs dd, fills out the available memory and checks whether
         THP is swapped out.
@@ -92,7 +95,6 @@ class Thp_Swapping(Test):
             self.fail("Swap Space remains untouched")
 
     def tearDown(self):
-
         '''
         Removes directories in tmpfs and unmounts it.
         '''

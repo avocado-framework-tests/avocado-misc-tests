@@ -18,10 +18,14 @@
 import os
 from avocado import Test
 from avocado import main
+from avocado import skipIf
 from avocado.utils import process
 from avocado.utils import memory
 from avocado.core import data_dir
 from avocado.utils.partition import Partition
+
+
+PAGESIZE = '4096' in str(memory.get_page_size())
 
 
 class Thp(Test):
@@ -31,8 +35,8 @@ class Thp(Test):
     and verifies whether THP has been allocated for usage or not
     '''
 
+    @skipIf(PAGESIZE, "No THP support for kernel with 4K PAGESIZE")
     def setUp(self):
-
         '''
         Sets all the reqd parameter and also
         mounts the tmpfs to be used in test.
@@ -54,7 +58,6 @@ class Thp(Test):
                           args='-o size=%dM' % free_mem)
 
     def test(self):
-
         '''
         Enables THP , Runs the dd workload and checks whether THP
         has been allocated.
@@ -105,7 +108,6 @@ class Thp(Test):
                           thp_fault_alloc, thp_split, thp_collapse_alloc)
 
     def tearDown(self):
-
         '''
         Removes the files created and unmounts the tmpfs.
         '''
