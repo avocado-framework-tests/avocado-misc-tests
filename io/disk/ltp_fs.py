@@ -20,6 +20,7 @@
 
 
 import os
+import shutil
 from avocado import Test
 from avocado import main
 from avocado.utils import build
@@ -38,9 +39,9 @@ class Ltp_Fs(Test):
         '''
         To check and install dependencies for the test
         '''
-        sm = SoftwareManager()
+        smm = SoftwareManager()
         for package in ['gcc', 'make', 'automake', 'autoconf']:
-            if not sm.check_installed(package) and not sm.install(package):
+            if not smm.check_installed(package) and not smm.install(package):
                 self.error("%s is needed for the test to be run", package)
         self.disk = self.params.get('disk', default=None)
         self.mount_point = self.params.get('dir', default=self.srcdir)
@@ -62,15 +63,17 @@ class Ltp_Fs(Test):
         tarball = self.fetch_asset("ltp-master.zip",
                                    locations=[url], expire='7d')
         archive.extract(tarball, self.teststmpdir)
-        ltp_dir = os.path.join(self.teststmpdir, "ltp-master")
-        os.chdir(ltp_dir)
-        build.make(ltp_dir, extra_args='autotools')
-        self.ltpbin_dir = os.path.join(ltp_dir, 'bin')
-        if not os.path.isdir(self.ltpbin_dir):
-            os.mkdir(self.ltpbin_dir)
+        self.ltp_dir = os.path.join(self.teststmpdir, "ltp-master")
+        self.cwd = os.getcwd()
+        os.chdir(self.ltp_dir)
+        build.make(self.ltp_dir, extra_args='autotools')
+        self.ltpbin_dir = os.path.join(self.ltp_dir, 'bin')
+        os.listdir(self.teststmpdir)
+        os.mkdir(self.ltpbin_dir)
+        os.listdir(self.teststmpdir)
         process.system('./configure --prefix=%s' % self.ltpbin_dir)
-        build.make(ltp_dir)
-        build.make(ltp_dir, extra_args='install')
+        build.make(self.ltp_dir)
+        build.make(self.ltp_dir, extra_args='install')
 
     def test_fs_run(self):
 
@@ -118,6 +121,7 @@ class Ltp_Fs(Test):
             self.log.info("Unmounting disk %s on directory %s",
                           self.disk, self.mount_point)
             self.part_obj.unmount()
+        shutil.rmtree(self.ltp_dir)
 
 
 if __name__ == "__main__":
