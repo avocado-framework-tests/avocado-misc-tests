@@ -21,11 +21,15 @@ import mmap
 import avocado
 from avocado import Test
 from avocado import main
+from avocado import skipIf
 from avocado.utils import process
 from avocado.utils import memory
 from avocado.utils import disk
 from avocado.core import data_dir
 from avocado.utils.partition import Partition
+
+
+PAGESIZE = '4096' in str(memory.get_page_size())
 
 
 class Thp_Defrag(Test):
@@ -35,8 +39,8 @@ class Thp_Defrag(Test):
     and turns on THP defrag and checks whether defrag occured.
     '''
 
+    @skipIf(PAGESIZE, "No THP support for kernel with 4K PAGESIZE")
     def setUp(self):
-
         '''
         Sets required params for dd workload and mounts the tmpfs
         '''
@@ -54,7 +58,6 @@ class Thp_Defrag(Test):
 
     @avocado.fail_on
     def test(self):
-
         '''
         Enables THP, Turns off the defrag and fragments the memory.
         Once the memory gets fragmented turns on the defrag and checks
@@ -78,7 +81,7 @@ class Thp_Defrag(Test):
 
         total = memory.memtotal()
         hugepagesize = memory.get_huge_page_size()
-        nr_full = int(0.8 * (total/hugepagesize))
+        nr_full = int(0.8 * (total / hugepagesize))
 
         # Sets max possible hugepages before defrag on
         nr_hp_before = self.set_max_hugepages(nr_full)
@@ -103,7 +106,6 @@ class Thp_Defrag(Test):
 
     @staticmethod
     def set_max_hugepages(nr_full):
-
         '''
         Tries to set the hugepages to the nr_full value and returns the
         max possible value set.
@@ -113,7 +115,6 @@ class Thp_Defrag(Test):
         return memory.get_num_huge_pages()
 
     def tearDown(self):
-
         '''
         Removes files and unmounts the tmpfs.
         '''
