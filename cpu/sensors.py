@@ -33,6 +33,8 @@ class Sensors(Test):
 
     """
     Run sensors command on ppc architectures.
+
+    :avocado: tags=cpu,power,privileged
     """
 
     @staticmethod
