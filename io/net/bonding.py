@@ -43,15 +43,15 @@ class Bonding(Test):
         detected_distro = distro.detect()
         sm = SoftwareManager()
         depends = []
-        if detected_distro.name == "Ubuntu":
-            depends.append("openssh-client")
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
-        if detected_distro.name in ["rhel", "fedora", "centos", "redhat"]:
-            depends.append("openssh-clients")
-        if detected_distro.name == "SuSE":
-            depends.append("openssh")
+        if detected_distro.name == "Ubuntu":
+            depends.extend(["openssh-client", "iputils-ping"])
+        elif detected_distro.name in ["rhel", "fedora", "centos", "redhat"]:
+            depends.extend(["openssh-clients", "iputils"])
+        else:
+            depends.extend(["openssh", "iputils"])
         for pkg in depends:
             if not sm.check_installed(pkg) and not sm.install(pkg):
                 self.skip("%s package is need to test" % pkg)
@@ -77,6 +77,7 @@ class Bonding(Test):
         if self.peer_first_interface == "":
             self.fail("test failed because peer interface can not retrieved")
         self.bond_name = self.params.get("bond_name", default="tempbond")
+        self.bond_status = "cat /proc/net/bonding/%s" % self.bond_name
         self.mode = self.params.get("bonding_mode", default="")
         if self.mode == "":
             self.skip("test skipped because mode not specified")
@@ -110,13 +111,17 @@ class Bonding(Test):
             self.net_mask.append(mask)
         self.bonding_slave_file = "/sys/class/net/%s/bonding/slaves"\
                                   % self.bond_name
+        self.peer_bond_needed = self.params.get("peer_bond_needed",
+                                                default=False)
+        self.peer_wait_time = self.params.get("peer_wait_time", default=5)
+        self.sleep_time = int(self.params.get("sleep_time", default=5))
 
     def bond_remove(self, arg1):
         '''
         bond_remove
         '''
         if arg1 == "local":
-            self.log.info("Bonding configuration removed on laocal")
+            self.log.info("Removing Bonding configuration on local machine")
             self.log.info("------------------------------------------------")
             for ifs in self.host_interfaces:
                 cmd = "ifconfig %s down" % ifs
@@ -128,9 +133,9 @@ class Bonding(Test):
             cmd = "echo -%s > /sys/class/net/bonding_masters" % self.bond_name
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.log.info("bond removing command failed in local machine")
-            time.sleep(5)
+            time.sleep(self.sleep_time)
         else:
-            self.log.info("Bonding configuration removed on Peer machine")
+            self.log.info("Removing Bonding configuration on Peer machine")
             self.log.info("------------------------------------------------")
             cmd = ''
             cmd += 'ifconfig %s down;' % self.bond_name
@@ -157,29 +162,57 @@ class Bonding(Test):
         cmd = "ping -I %s %s -c 5"\
               % (self.bond_name, self.peer_first_ipinterface)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
-            self.fail("ping failed in Mode %s, check bonding configuration"
-                      % arg1)
+            return False
+        return True
 
     def bond_fail(self, arg1):
         '''
         bond fail
         '''
+        if len(self.host_interfaces) > 1:
+            for interface in self.host_interfaces:
+                self.log.info("Failing interface %s for mode %s"
+                              % (interface, arg1))
+                cmd = "ifconfig %s down" % interface
+                if process.system(cmd, shell=True, ignore_status=True) != 0:
+                    self.fail("bonding not working when trying to down the\
+                               interface %s " % interface)
+                time.sleep(self.sleep_time)
+                if self.ping_check(arg1):
+                    self.log.info("Ping passed for Mode %s" % arg1)
+                else:
+                    self.fail("ping failed in Mode %s, check \
+                               bonding configuration" % arg1)
+                process.system_output(self.bond_status, shell=True,
+                                      verbose=True)
+                cmd = "ifconfig %s up" % interface
+                time.sleep(self.sleep_time)
+                if process.system(cmd, shell=True, ignore_status=True) != 0:
+                    self.fail("Not able to bring up the slave\
+                                    interface %s" % interface)
+                time.sleep(self.sleep_time)
+        else:
+            self.log.debug("Need a min of 2 host interfaces to test\
+                         slave failover in Bonding")
+
+        self.log.info("\n----------------------------------------")
+        self.log.info("Failing all interfaces for mode %s" % arg1)
+        self.log.info("----------------------------------------")
         for interface in self.host_interfaces:
-            self.log.info("Failing interface %s for mode %s"
-                          % (interface, arg1))
             cmd = "ifconfig %s down" % interface
             if process.system(cmd, shell=True, ignore_status=True) != 0:
-                self.fail("bonding not working when trying to down the\
-                          interface %s " % interface)
-            time.sleep(5)
-            self.ping_check(arg1)
-            cmd = "cat /proc/net/bonding/%s" % self.bond_name
-            process.system_output(cmd, shell=True, verbose=True)
+                self.fail("Could not bring down the interface %s " % interface)
+            time.sleep(self.sleep_time)
+        if not self.ping_check(arg1):
+            self.log.info("Ping to Bond interface failed. This is expected")
+        process.system_output(self.bond_status, shell=True, verbose=True)
+        for interface in self.host_interfaces:
             cmd = "ifconfig %s up" % interface
+            time.sleep(self.sleep_time)
             if process.system(cmd, shell=True, ignore_status=True) != 0:
-                self.fail("bonding not working when trying to up the\
-                          interface %s" % interface)
-            time.sleep(5)
+                self.fail("Not able to bring up the slave\
+                                interface %s" % interface)
+            time.sleep(self.sleep_time)
 
     def bond_setup(self, arg1, arg2):
         '''
@@ -210,8 +243,7 @@ class Bonding(Test):
                 if process.system(cmd, shell=True, ignore_status=True) != 0:
                     self.fail("Mode %s FAIL while bonding setup" % arg2)
                 time.sleep(2)
-            cmd = "cat /proc/net/bonding/%s | grep 'Bonding Mode' |\
-                  cut -d ':' -f 2" % self.bond_name
+            cmd = "%s | grep 'Bonding Mode'|cut -d ':' -f 2" % self.bond_status
             bond_name_val = process.system_output(cmd, shell=True).strip('\n')
             self.log.info("Trying bond mode %s [ %s ]"
                           % (arg2, bond_name_val))
@@ -221,9 +253,16 @@ class Bonding(Test):
                     self.fail("unable to interface up")
             cmd = "ifconfig %s %s netmask %s up"\
                   % (self.bond_name, self.host_ips[0], self.net_mask[0])
-            if process.system(cmd, shell=True, ignore_status=True) != 0:
-                self.fail("bond setup command failed in local machine")
-            time.sleep(5)
+            process.system(cmd, shell=True, ignore_status=True)
+            for i in range(0, 600, 60):
+                if 'state UP' in process.system_output("ip link \
+                     show %s" % self.bond_name, shell=True):
+                    self.log.info("Bonding setup is successful on\
+                                  local machine")
+                    break
+                time.sleep(60)
+            else:
+                self.fail("Bonding setup on local machine has failed")
         else:
             self.log.info("Configuring Bonding on Peer machine")
             self.log.info("------------------------------------------")
@@ -244,10 +283,11 @@ class Bonding(Test):
             for val in self.peer_interfaces:
                 cmd += 'ifconfig %s up;' % val
             cmd += 'ifconfig %s %s netmask %s up;sleep 5;'\
-                   % (self.bond_name,
-                      self.peer_first_ipinterface, self.net_mask[0])
-            peer_cmd = "ssh %s@%s \"%s\""\
-                       % (self.user, self.peer_first_ipinterface, cmd)
+                   % (self.bond_name, self.peer_first_ipinterface,
+                      self.net_mask[0])
+            peer_cmd = "timeout %s ssh %s@%s \"%s\""\
+                       % (self.peer_wait_time, self.user,
+                          self.peer_first_ipinterface, cmd)
             if process.system(peer_cmd, shell=True, ignore_status=True) != 0:
                 self.fail("bond setup command failed in peer machine")
 
@@ -266,10 +306,10 @@ class Bonding(Test):
             self.fail("bond name already exists on local machine")
         self.log.info("TESTING FOR MODE %s" % self.mode)
         self.log.info("-------------------------------------------------")
-        self.bond_setup("peer", "")
+        if self.peer_bond_needed:
+            self.bond_setup("peer", "")
         self.bond_setup("local", self.mode)
-        cmd = "cat /proc/net/bonding/%s" % self.bond_name
-        process.run(cmd, shell=True, verbose=True)
+        process.run(self.bond_status, shell=True, verbose=True)
         self.ping_check(self.mode)
         self.bond_fail(self.mode)
         self.log.info("Mode %s OK" % self.mode)
@@ -283,19 +323,27 @@ class Bonding(Test):
                                     self.host_ips, self.net_mask):
             cmd = "ifconfig %s %s netmask %s up"\
                   % (val1, val2, val3)
-            if process.system(cmd, shell=True, ignore_status=True) != 0:
-                self.log.info("unable to bring up to original state in host")
-            time.sleep(5)
-        self.bond_remove("peer")
-        for val1, val2, val3 in map(None, self.peer_interfaces,
-                                    self.peer_ips, self.net_mask):
-            msg = "ifconfig %s %s netmask %s up;"\
-                  % (val1, val2, val3)
-            cmd = "ssh %s@%s \"%s\""\
-                  % (self.user, self.peer_first_ipinterface, msg)
-            if process.system(cmd, shell=True, ignore_status=True) != 0:
-                self.log.info("unable to bring up to original state in host")
-            time.sleep(5)
+            process.system(cmd, shell=True, ignore_status=True)
+            for i in range(0, 600, 60):
+                if 'state UP' in process.system_output("ip link \
+                     show %s" % val1, shell=True):
+                    self.log.info("Interface %s is up" % val1)
+                    break
+                time.sleep(60)
+            else:
+                self.log.info("Interface %s in not up\
+                                   in the host machine" % val1)
+        if self.peer_bond_needed:
+            self.bond_remove("peer")
+            for val1, val2, val3 in map(None, self.peer_interfaces,
+                                        self.peer_ips, self.net_mask):
+                msg = "ifconfig %s %s netmask %s up;sleep %s"\
+                      % (val1, val2, val3, self.peer_wait_time)
+                cmd = "ssh %s@%s \"%s\""\
+                      % (self.user, self.peer_first_ipinterface, msg)
+                if process.system(cmd, shell=True, ignore_status=True) != 0:
+                    self.log.info("unable to bring to original state in host")
+                time.sleep(self.sleep_time)
 
 
 if __name__ == "__main__":
