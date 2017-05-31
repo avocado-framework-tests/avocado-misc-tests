@@ -1,8 +1,9 @@
 cenario:
-    contorller: 0
-    disk: 1:4 1:5 1:6
-    spare: "1:7"
+    contorller: 
+    disk: 
+    spare: ""
     size: 10000
+    tool_location: /root/sas3ircu
 raidlevel: !mux
     raid1:
         raidlevel: raid1
