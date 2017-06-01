@@ -87,7 +87,10 @@ class NetDataTest(Test):
         '''
         msg = "ip addr show  | grep %s | grep -oE '[^ ]+$'" % self.peer
         cmd = "ssh %s %s" % (self.peer, msg)
+        errors = []
         self.peer_interface = process.system_output(cmd, shell=True).strip()
+        mtuval = process.system_output("ip link show %s" % self.interface,
+                                       shell=True).split()[4]
         for mtu in self.mtu_list:
             self.log.info("trying with mtu %s" % (mtu))
             # ping the peer machine with different maximum transfers unit sizes
@@ -100,9 +103,21 @@ class NetDataTest(Test):
             time.sleep(10)
             mtu = int(mtu) - 28
             cmd_ping = "ping -i 0.1 -c 2 -s %s %s" % (mtu, self.peer)
-            ret = process.system(cmd_ping, shell=True)
+            ret = process.system(cmd_ping, shell=True, ignore_status=True)
             if ret != 0:
-                self.fail("bigping test failed")
+                errors.append(str(int(mtu) + 28))
+            con_msg = "ifconfig %s mtu %s" % (self.interface, mtuval)
+            if process.system(con_msg, shell=True, ignore_status=True):
+                self.log.debug("setting original mtu value in host failed")
+            msg = "ssh %s \"ifconfig %s mtu %s\"" % (self.peer,
+                                                     self.peer_interface,
+                                                     mtuval)
+            if process.system(msg, shell=True, ignore_status=True):
+                self.log.debug("setting original mtu value in peer failed")
+            time.sleep(10)
+
+        if errors:
+            self.fail("bigping test failed for %s" % " ".join(errors))
 
     def testgro(self):
         '''
