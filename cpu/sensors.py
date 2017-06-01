@@ -32,7 +32,7 @@ ERRORS = ['I/O error']
 class Sensors(Test):
 
     """
-    Run sensors command on ppc architectures.
+    Test covers  various command input of sensors utility(Linux monitoring sensors)
     """
 
     @staticmethod
