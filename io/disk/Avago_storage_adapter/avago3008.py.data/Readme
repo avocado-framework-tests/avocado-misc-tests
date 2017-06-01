@@ -7,6 +7,6 @@ en:sn, where en --> enclosure ID, sn --> slot ID
 Spare: Give the enclosureID:slotID of the disk, which you want to be as,
 hot-spare.
 Size: Size of the raid array you want to create, default it will be max
-
-Please make sure that you place the Avago tool(SAS3IRCU) in the same location,
-from where you are planning to run this script.
+tool_location: Please give the tool location, i.e., location of the tool in
+the system. e.g., If the tool is downloaded in /root, then plz mention
+/root/sas3ircu.

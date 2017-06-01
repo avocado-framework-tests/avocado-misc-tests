@@ -21,6 +21,7 @@ This script will list all the adapter connected to the system.
 """
 
 
+import os
 import time
 from avocado import Test
 from avocado.utils import process
@@ -44,9 +45,13 @@ class Avago3008(Test):
         self.disk = str(self.params.get('disk')).split(" ")
         self.spare = str(self.params.get('spare'))
         self.size = int(self.params.get('size', default='max'))
+        self.tool_location = self.params.get('tool_location')
         if not self.disk:
             self.skip("Please provide disks to run the tests")
         self.number_of_disk = len(self.disk)
+        if (not os.path.isfile(self.tool_location) or not
+           os.access(self.tool_location, os.X_OK)):
+            self.skip()
 
         self.dict_raid = {'raid0': [2, None, None], 'raid1': [2, 2, None],
                           'raid1e': [3, None, None],
@@ -70,8 +75,8 @@ class Avago3008(Test):
         Decides which functions to run for given raid_level
         """
 
-        cmd = "echo -e 'YES\nNO' | ./sas3ircu %d delete" \
-              % (self.controller)
+        cmd = "echo -e 'YES\nNO' | %s %d delete" \
+              % (self.tool_location, self.controller)
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Unable to clear entire configuration before starting")
         if self.raidlevel == 'raid0':
@@ -126,7 +131,7 @@ class Avago3008(Test):
         Lists all the LSI adapters attached to the mahcine
         :return:
         """
-        cmd = "./sas3ircu list"
+        cmd = "%s list" % self.tool_location
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Failed to list all the Avogo adapters")
 
@@ -136,7 +141,7 @@ class Avago3008(Test):
         Display controller, volume and physical device info
         """
 
-        cmd = "./sas3ircu %d display" % self.controller
+        cmd = "%s %d display" % (self.tool_location, self.controller)
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Failed to display details of drives and VR vloumes")
 
@@ -145,8 +150,9 @@ class Avago3008(Test):
         """
         This function creates raid array
         """
-        cmd = "./sas3ircu %d create %s %s %s vr1 noprompt" \
-              % (self.controller, self.raidlevel, self.size, self.raid_disk)
+        cmd = "%s %d create %s %s %s vr1 noprompt" \
+              % (self.tool_location, self.controller, self.raidlevel,
+                 self.size, self.raid_disk)
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Failed to create raid on the drives")
 
@@ -155,8 +161,8 @@ class Avago3008(Test):
         """
         This is a helper function to create hot-spare
         """
-        cmd = "echo -e 'YES\nNO' | ./sas3ircu %d hotspare %s" \
-            % (self.controller, self.spare)
+        cmd = "echo -e 'YES\nNO' | %s %d hotspare %s" \
+            % (self.tool_location, self.controller, self.spare)
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Failed to set hotspare drive")
 
@@ -173,8 +179,8 @@ class Avago3008(Test):
         """
         This function starts CC on a Raid array
         """
-        cmd = "./sas3ircu %d constchk %d noprompt" \
-            % (self.controller, self.volumeid())
+        cmd = "%s %d constchk %d noprompt" \
+            % (self.tool_location, self.controller, self.volumeid())
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Failed to start CC on raid array VR1")
         self.sleepfunction()
@@ -184,10 +190,11 @@ class Avago3008(Test):
         """
         This function stores all the IR logs
         """
-        cmd = "./sas3ircu %d logir upload" % self.controller
+        cmd = "%s %d logir upload" % (self.tool_location, self.controller)
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Failed to upload the logs")
-        cmd = "./sas3ircu %d logir clear noprompt" % self.controller
+        cmd = "%s %d logir clear noprompt" % (self.tool_location,
+                                              self.controller)
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Failed to clear the logs on controller")
 
@@ -205,8 +212,8 @@ class Avago3008(Test):
         """
         This is a helper function, to change the state of the drives
         """
-        cmd = "./sas3ircu %d set%s %s" \
-              % (self.controller, state, self.disk[0])
+        cmd = "%s %d set%s %s" \
+              % (self.tool_location, self.controller, state, self.disk[0])
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Failed to set drive to %s" % state)
 
@@ -215,7 +222,7 @@ class Avago3008(Test):
         """
         This is a helper function, to check the status of the adapter
         """
-        cmd = "./sas3ircu %d status" % self.controller
+        cmd = "%s %d status" % (self.tool_location, self.controller)
         output = process.run(cmd, shell=True, ignore_status=True)
         if output.exit_status != 0:
             self.fail("Failed to display the status of the adapter")
@@ -228,8 +235,8 @@ class Avago3008(Test):
         """
         This function deletes raid array
         """
-        cmd = "echo -e 'YES\nNO' | ./sas3ircu %d deletevolume %d" \
-              % (self.controller, self.volumeid())
+        cmd = "echo -e 'YES\nNO' | %s %d deletevolume %d" \
+              % (self.tool_location, self.controller, self.volumeid())
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Failed to delete raid array VR1")
 
@@ -238,8 +245,8 @@ class Avago3008(Test):
         """
         This function returns volume ID of the IR volume
         """
-        cmd = "./sas3ircu %d display | grep 'vr1' -B 2 | grep 'Volume ID' | \
-               awk '{print $4}'" % self.controller
+        cmd = "%s %d display | grep 'vr1' -B 2 | grep 'Volume ID' | \
+               awk '{print $4}'" % (self.tool_location, self.controller)
         volume_id = int(process.system_output(cmd, shell=True))
         return volume_id
 
