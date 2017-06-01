@@ -68,12 +68,12 @@ class Ltp_Fs(Test):
         self.ltpbin_dir = os.path.join(ltp_dir, 'bin')
         if not os.path.isdir(self.ltpbin_dir):
             os.mkdir(self.ltpbin_dir)
-            process.system('./configure --prefix=%s' % self.ltpbin_dir)
+            process.system('./configure --prefix=%s' %
+                           self.ltpbin_dir, ignore_status=True)
             build.make(ltp_dir)
             build.make(ltp_dir, extra_args='install')
 
     def test_fs_run(self):
-
         '''
         Downloads LTP, compiles, installs and runs filesystem
         tests on a user specified disk
@@ -106,7 +106,6 @@ class Ltp_Fs(Test):
                           % (result.exit_status))
 
     def tearDown(self):
-
         '''
         Cleanup of disk used to perform this test
         '''
