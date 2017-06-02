@@ -33,6 +33,8 @@ class Sensors(Test):
 
     """
     Test covers  various command input of sensors utility(Linux monitoring sensors)
+
+    :avocado: tags=cpu,privileged
     """
 
     @staticmethod

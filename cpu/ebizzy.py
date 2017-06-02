@@ -36,6 +36,8 @@ class Ebizzy(Test):
     ebizzy is designed to generate a workload resembling common web application
     server workloads. It is highly threaded, has a large in-memory working set,
     and allocates and deallocates memory frequently.
+
+    :avocado: tags=cpu
     '''
 
     def setUp(self):
