@@ -156,6 +156,18 @@ class NetDataTest(Test):
                 if ret != 0:
                     self.fail("lro test failed")
 
+    def interface_wait(self, cmd):
+        '''
+         Waits for the interface to come up
+        '''
+        for i in range(0, 600, 5):
+            if 'UP' or 'yes' in\
+             process.system_output(cmd, shell=True, ignore_status=True):
+                self.log.info("%s is up" % self.interface)
+                return True
+            time.sleep(5)
+        return False
+
     def testinterface(self):
         '''
          test the interface
@@ -174,18 +186,13 @@ class NetDataTest(Test):
         if 'UP' in ret:
             self.fail("interface test failed")
         # up the interface
-        process.system(if_up, shell=True)
-        # check the status of interface through ethtool
-        # Waiting for interface to come up, with a timeout
-        for i in range(0, 600, 60):
-            if 'yes' in process.system_output(self.eth, shell=True):
-                break
-            time.sleep(60)
-        if 'no' in process.system_output(self.eth, shell=True):
+        process.system(if_up, shell=True, ignore_status=True)
+        self.log.info('Checking for interface status using ip link show')
+        if not self.interface_wait(ip_link):
             self.fail("interface test failed")
-        # check the status of interface through ip link show
-        ret = process.system_output(ip_link, shell=True)
-        if 'DOWN' in ret:
+        # check the status of interface through ethtool
+        self.log.info('Checking for interface status using Ethtool')
+        if not self.interface_wait(self.eth):
             self.fail("interface test failed")
 
     def tearDown(self):
