@@ -28,6 +28,8 @@ class Filebench(Test):
 
     """
     Filebench - A Model Based File System Workload Generator
+
+    :avocado: tags=fs
     """
 
     def setUp(self):
