@@ -1,6 +1,6 @@
 Interfaces:
     Interface1:
-        peer_ip: "10.10.10.11"
-        interface: "enP2p1s0f4"
+        peer_ip: "10.68.68.46"
+        interface: "enp128s0f4d3"
 MTU:
     size_val: 2000 3000 4000 5000 6000 7000 8000 9000 1500
