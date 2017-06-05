@@ -23,6 +23,8 @@ from avocado.utils.software_manager import SoftwareManager
 class Fsx(Test):
     '''
     The Fsx test is a file system exerciser test
+
+    :avocado: tags=fs
     '''
 
     def setUp(self):
