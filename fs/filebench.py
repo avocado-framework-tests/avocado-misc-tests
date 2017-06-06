@@ -17,7 +17,6 @@
 
 
 import os
-import shutil
 
 from avocado import Test
 from avocado import main
@@ -29,6 +28,8 @@ class Filebench(Test):
 
     """
     Filebench - A Model Based File System Workload Generator
+
+    :avocado: tags=fs
     """
 
     def setUp(self):
@@ -46,39 +47,28 @@ class Filebench(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.error(package + ' is needed for the test to be run')
 
-        self._testfile = self.params.get('testfile', default='fileserver.f')
-
+        name_version = 'filebench-1.5-alpha3'
         tarball = self.fetch_asset('https://github.com/filebench/'
                                    'filebench/releases/download/1.5-alpha3/'
-                                   'filebench-1.5-alpha3.tar.gz')
+                                   '%s.tar.gz' % name_version)
 
         archive.extract(tarball, self.srcdir)
-        version = os.path.basename(tarball.split('.tar.')[0])
-        self.srcdir = os.path.join(self.srcdir, version)
-
-        os.chdir(self.srcdir)
-
-        process.run('./configure', shell=True, sudo=True)
-        build.make(self.srcdir)
-        build.make(self.srcdir, extra_args='install')
-
-        # Setup test file
-        t_dir = '/usr/local/share/filebench/workloads/'
-        shutil.copyfile(os.path.join(t_dir, self._testfile),
-                        os.path.join(self.srcdir, self._testfile))
+        self.install_prefix = os.path.join(self.workdir, name_version)
+        build_dir = os.path.join(self.srcdir, name_version)
+        os.chdir(build_dir)
+        process.run('./configure --prefix=%s' % self.install_prefix,
+                    shell=True)
+        build.make(build_dir)
+        build.make(build_dir, extra_args='install')
 
     def test(self):
-
-        cmd = '%s -f  %s  ' % (os.path.join(self.srcdir,
-                                            'filebench'), self._testfile)
-
+        binary_path = os.path.join(self.install_prefix, 'bin', 'filebench')
+        testfile = self.params.get('testfile', default='fileserver.f')
+        testfile_path = os.path.join(self.install_prefix, 'share', 'filebench',
+                                     'workloads', testfile)
+        cmd = '%s -f %s' % (binary_path, testfile_path)
         out = process.system_output(cmd)
-
         self.log.info("result:" + out)
-
-    def tearDown(self):
-        # un install file bench
-        build.make(self.srcdir, extra_args='uninstall')
 
 
 if __name__ == "__main__":

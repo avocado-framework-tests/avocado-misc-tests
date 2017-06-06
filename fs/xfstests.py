@@ -34,6 +34,12 @@ from avocado.utils.software_manager import SoftwareManager
 
 class Xfstests(Test):
 
+    """
+    xfstests - AKA FSQA SUITE, is set of filesystem tests
+
+    :avocado: tags=fs,privileged
+    """
+
     def setUp(self):
         """
         Build xfstest

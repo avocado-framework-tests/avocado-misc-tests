@@ -1,7 +1,7 @@
 Avocado Misc Tests
 ==================
 
-This repository is dedicated to host any tests written using the avocado [1]
+This repository is dedicated to host any tests written using the Avocado[1]
 API. It is being initially populated with tests ported from autotest
 client tests repository, but it's not limited by that.
 
@@ -21,21 +21,24 @@ Tests are be organized per category basis, each category with its own
 directory.  Additionally, the tests are categorized by the use of the
 following tags[2] by functional area:
 
- * cpu - Exercises a system's CPU
- * net - Exercises a system's network devices or networking stack
- * storage - Exercises a system's local storage
- * fs - Exercises a system's file system
+* cpu - Exercises a system's CPU
+* net - Exercises a system's network devices or networking stack
+* storage - Exercises a system's local storage
+* fs - Exercises a system's file system
 
 Tags by architecture:
 
- * x86_64 - Requires a x86_64 architecture
- * power - Requires a Power architecture
+* x86_64 - Requires a x86_64 architecture
+* power - Requires a Power architecture
 
 Tags by access privileges:
 
- * privileged - requires the test to be run with the most privileged,
-   unrestricted privileges.  For Linux systems, this usually means the
-   root account
+* privileged - requires the test to be run with the most privileged,
+  unrestricted privileges.  For Linux systems, this usually means the
+  root account
 
-[1] https://github.com/avocado-framework/avocado
-[2] http://avocado-framework.readthedocs.io/en/latest/WritingTests.html#categorizing-tests
+References:
+-----------
+
+1. https://github.com/avocado-framework/avocado
+2. http://avocado-framework.readthedocs.io/en/latest/WritingTests.html#categorizing-tests
