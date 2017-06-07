@@ -26,6 +26,11 @@ from avocado.utils.software_manager import SoftwareManager
 
 class eatmemory(Test):
 
+    """
+    Memory stress test
+
+    :avocado: tags=memory
+    """
     def setUp(self):
         sm = SoftwareManager()
         detected_distro = distro.detect()

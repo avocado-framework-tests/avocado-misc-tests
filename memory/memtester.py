@@ -30,6 +30,8 @@ class Memtester(Test):
     2.memtester must be run with  root  privileges  to  mlock(3)  its  pages.
       Testing  memory  without locking the pages in place is mostly pointless
       and slow.
+
+    :avocado: tags=memory,privileged
     """
 
     def setUp(self):

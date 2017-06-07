@@ -32,6 +32,8 @@ class Memcached(Test):
     stress tool which generates a load against memcached server.
     For more options on memcached:
     Refer - https://linux.die.net/man/1/memcached
+
+    :avocado: tags=memory,privileged
     """
 
     def setUp(self):
