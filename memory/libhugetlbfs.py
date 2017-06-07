@@ -33,6 +33,12 @@ from avocado.utils import distro
 
 class libhugetlbfs(Test):
 
+    """
+    libhugetlbfs: libhugetlbfs is a library which provides easy
+    access to huge pages of memory. test to excersize libhugetlbfs library
+
+    :avocado: tags=memory,power,privileged
+    """
     def setUp(self):
         # Check for root permission
         if os.geteuid() != 0:
