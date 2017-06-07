@@ -1,0 +1,61 @@
+workers: null
+ttimeout: '5m'
+verify: True
+syslog: True
+metrics: True
+maximize: True
+times: True
+aggressive: True
+subsystem: !mux
+    all:
+        stressors: null
+        class: 'all'
+        exclude: null
+    memory:
+        class: 'memory'
+        stressors: null
+        exclude: null
+    cpu:
+        class: 'cpu'
+        stressors: null
+        exclude: null
+    cpu-cache:
+        class: 'cpu-cache'
+        stressors: null
+        exclude: null
+    io:
+        class: 'io'
+        stressors: null
+        exclude: null
+    device:
+        class: 'device'
+        stressors: null
+        exclude: null
+    interrupt:
+        class: 'interrupt'
+        stressors: null
+        exclude: null
+    filesystem:
+        class: 'filesystem'
+        stressors: null
+        exclude: null
+    network:
+        class: 'network'
+        stressors: null
+        exclude: null
+    os:
+        class: 'os'
+        stressors: null
+        exclude: null
+    pipe:
+        class: 'pipe'
+        stressors: null
+        exclude: null
+    scheduler:
+        class: 'scheduler'
+        stressors: null
+        exclude: null
+    vm: 
+        class: 'vm'
+        stressors: null
+        exclude: null
