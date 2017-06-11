@@ -20,9 +20,11 @@ This Suite creates and formats a namespace, reads and writes on it
 using nvme cli.
 """
 
+import os
 from avocado import Test
 from avocado import main
 from avocado.utils import process
+from avocado.utils import download
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -54,6 +56,66 @@ class NVMeTest(Test):
         self.format_size = pow(2, int(self.format_size))
         cmd = "nvme id-ns %s | grep 'in use' | awk '{print $2}'" % self.id_ns
         self.lba = process.system_output(cmd, shell=True).strip('\n')
+        self.firmware_url = self.params.get('firmware_url', default='')
+        if 'firmware_upgrade' in str(self.name) and not self.firmware_url:
+            self.skip("firmware url not gien")
+
+    def get_firmware_version(self):
+        """
+        Returns the firmware verison.
+        """
+        cmd = "nvme list | grep %s" % self.device
+        return process.system_output(cmd, shell=True,
+                                     ignore_status=True).split()[-1]
+
+    def get_firmware_log(self):
+        """
+        Returns the firmware log.
+        """
+        cmd = "nvme fw-log %s" % self.device
+        return process.system_output(cmd, shell=True, ignore_status=True)
+
+    def reset_controller_sysfs(self):
+        """
+        Resets the controller via sysfs.
+        """
+        cmd = "echo 1 > /sys/class/nvme/%s/reset_controller" \
+            % self.device.split("/")[-1]
+        return process.system(cmd, shell=True, ignore_status=True)
+
+    def test_firmware_upgrade(self):
+        """
+        Updates firmware of the device.
+        """
+        fw_file = self.firmware_url.split('/')[-1]
+        fw_version = fw_file.split('.')[0]
+        fw_file_path = download.get_file(self.firmware_url,
+                                         os.path.join(self.teststmpdir,
+                                                      fw_file))
+        # Getting the current FW details
+        self.log.debug("Current FW: %s" % self.get_firmware_version())
+        fw_log = self.get_firmware_log()
+
+        # Downloading new FW to the device
+        cmd = "nvme fw-download %s --fw=%s" % (self.device, fw_file_path)
+        if process.system(cmd, shell=True, ignore_status=True):
+            self.fail("Failed to download firmware to the device")
+
+        # Acvitating new FW on the device
+        for line in fw_log.splitlines():
+            if "frs" in line:
+                s_num = line.split()[0].split("s")[-1]
+                cmd = "nvme fw-activate %s -a 1 -s %s" % (self.device, s_num)
+                if process.system(cmd, shell=True, ignore_status=True):
+                    self.fail("Failed to activate firmware for %s" % s_num)
+
+        if self.reset_controller_sysfs():
+            self.fail("Controller reset after FW update failed")
+
+        # Getting the current FW details after updating
+        self.get_firmware_log()
+        if fw_version != self.get_firmware_version():
+            self.fail("New Firmware not reflecting after updating")
 
     def create_namespace(self):
         """
@@ -158,6 +220,13 @@ class NVMeTest(Test):
         cmd = 'nvme subsystem-reset %s' % self.device
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Subsystem reset failed")
+
+    def testreset_sysfs(self):
+        """
+        resets the controller via sysfs.
+        """
+        if self.reset_controller_sysfs():
+            self.fail("Reset failed")
 
     def tearDown(self):
         """
