@@ -19,6 +19,7 @@
 import os
 from avocado import Test
 from avocado import main
+import multiprocessing
 from avocado.utils import process, build, archive, distro
 from avocado.utils.software_manager import SoftwareManager
 
@@ -39,17 +40,29 @@ class stressng(Test):
     :param timeout: Timeout for each run (default 300)
     :param workers: How many workers to create for each run (default 0)
     :source: git://kernel.ubuntu.com/cking/stress-ng.git
+
+    :avocado: tags=cpu,memory,io,fs,privileged
     """
 
     def setUp(self):
         sm = SoftwareManager()
         detected_distro = distro.detect()
-        self.stressor = self.params.get('stressor', default='mmapfork')
-        self.ttimeout = self.params.get('ttimeout', default=300)
-        self.workers = self.params.get('workers', default=0)
+        self.stressors = self.params.get('stressors', default=None)
+        self.ttimeout = self.params.get('ttimeout', default='100')
+        self.workers = self.params.get('workers', default='1')
+        self.class_type = self.params.get('class', default='all')
+        self.verify = self.params.get('verify', default=True)
+        self.syslog = self.params.get('syslog', default=True)
+        self.metrics = self.params.get('metrics', default=True)
+        self.maximize = self.params.get('maximize', default=True)
+        self.times = self.params.get('times', default=True)
+        self.aggressive = self.params.get('aggressive', default=False)
+        self.exclude = self.params.get('exclude', default=None)
+
         if 'Ubuntu' in detected_distro.name:
-            deps = ['stress-ng', 'libaio-dev', 'libapparmor-dev', 'libattr1-dev', 'libbsd-dev',
-                    'libcap-dev', 'libgcrypt11-dev', 'libkeyutils-dev', 'libsctp-dev', 'zlib1g-dev']
+            deps = [
+                'stress-ng', 'libaio-dev', 'libapparmor-dev', 'libattr1-dev', 'libbsd-dev',
+                'libcap-dev', 'libgcrypt11-dev', 'libkeyutils-dev', 'libsctp-dev', 'zlib1g-dev']
         else:
             deps = ['libattr-devel', 'libbsd-devel', 'libcap-devel',
                     'libgcrypt-devel', 'keyutils-libs-devel', 'zlib-devel', 'libaio-devel']
@@ -75,10 +88,48 @@ class stressng(Test):
         clear_dmesg()
 
     def test(self):
-        cmd = ("stress-ng --aggressive --verify --timeout %d --%s %d"
-               % (self.ttimeout, self.stressor, self.workers))
+        args = []
+        cmdline = ''
+        # 2 instanaces of each type of stressor for each CPU detected
+        if not self.workers:
+            self.workers = 2 * multiprocessing.cpu_count()
+
+        if not self.stressors:
+            if 'all' in self.class_type:
+                args.append('--all %s ' % self.workers)
+            else:
+                args.append('--class %s --sequential %d ' %
+                            (self.class_type, self.workers))
+        else:
+            for stressor in self.stressors.split(' '):
+                cmdline += '--%s %d ' % (stressor, self.workers)
+            args.append(cmdline)
+        if self.aggressive and self.maximize:
+            # Sometimes the default memory used by each memory worker (256 M)
+            # might make our machine go OOM, so kill the stressor if OOM occurs
+            args.append('--aggressive --maximize --oomable ')
+        if self.exclude:
+            # add comma separated stressor to omit; --exclude bigheap,brk,stack
+            args.append('--exclude %s ' % self.exclude)
+        if self.ttimeout:
+            args.append('--timeout %s ' % self.ttimeout)
+        if self.verify:
+            args.append('--verify ')
+        if self.syslog:
+            args.append('--syslog ')
+        if self.metrics:
+            args.append('--metrics ')
+        if self.times:
+            args.append('--times ')
+        cmd = 'stress-ng %s' % " ".join(args)
         process.run(cmd, ignore_status=True, sudo=True)
         collect_dmesg(self)
+        pattern = ['WARNING: CPU:', 'Oops',
+                   'Segfault', 'soft lockup', 'Unable to handle']
+        logs = process.system_output('dmesg')
+        for x in pattern:
+            if any(x in y for y in logs.split()):
+                self.fail("Test failed !!!!! :  %s in dmesg" % x)
 
 
 if __name__ == "__main__":
