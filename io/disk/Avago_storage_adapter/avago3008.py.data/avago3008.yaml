@@ -1,5 +1,5 @@
 cenario:
-    contorller: 
+    controller:
     disk: 
     spare: ""
     size: 10000
