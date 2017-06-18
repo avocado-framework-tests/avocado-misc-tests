@@ -95,10 +95,11 @@ class NetDataTest(Test):
             self.log.info("trying with mtu %s" % (mtu))
             # ping the peer machine with different maximum transfers unit sizes
             # and finally set maximum transfer unit size to 1500 Bytes
-            msg = "ssh %s \"ifconfig %s mtu %s\"" % (self.peer,
-                                                     self.peer_interface, mtu)
+            msg = "ssh %s \"ip link set %s mtu %s\"" % (self.peer,
+                                                        self.peer_interface,
+                                                        mtu)
             process.system(msg, shell=True)
-            con_msg = "ifconfig %s mtu %s" % (self.interface, mtu)
+            con_msg = "ip link set %s mtu %s" % (self.interface, mtu)
             process.system(con_msg, shell=True)
             time.sleep(10)
             mtu = int(mtu) - 28
@@ -106,12 +107,12 @@ class NetDataTest(Test):
             ret = process.system(cmd_ping, shell=True, ignore_status=True)
             if ret != 0:
                 errors.append(str(int(mtu) + 28))
-            con_msg = "ifconfig %s mtu %s" % (self.interface, mtuval)
+            con_msg = "ip link set %s mtu %s" % (self.interface, mtuval)
             if process.system(con_msg, shell=True, ignore_status=True):
                 self.log.debug("setting original mtu value in host failed")
-            msg = "ssh %s \"ifconfig %s mtu %s\"" % (self.peer,
-                                                     self.peer_interface,
-                                                     mtuval)
+            msg = "ssh %s \"ip link set %s mtu %s\"" % (self.peer,
+                                                        self.peer_interface,
+                                                        mtuval)
             if process.system(msg, shell=True, ignore_status=True):
                 self.log.debug("setting original mtu value in peer failed")
             time.sleep(10)
@@ -172,8 +173,8 @@ class NetDataTest(Test):
         '''
          test the interface
         '''
-        if_down = "ifconfig %s down" % self.interface
-        if_up = "ifconfig %s up" % self.interface
+        if_down = "ip link set %s down" % self.interface
+        if_up = "ip link set %s up" % self.interface
         # down the interface
         process.system(if_down, shell=True)
         # check the status of interface through ethtool
