@@ -65,8 +65,10 @@ class Netperf(Test):
         self.timeout = self.params.get("timeout", default="600")
         self.netperf_run = self.params.get("NETSERVER_RUN", default="0")
         self.netperf = os.path.join(self.teststmpdir, 'netperf')
-        tarball = self.fetch_asset('ftp://ftp.netperf.org/netperf/'
-                                   'netperf-2.7.0.tar.bz2', expire='7d')
+        netperf_download = self.params.get("netperf_download", default="ftp:"
+                                           "//ftp.netperf.org/"
+                                           "netperf/netperf-2.7.0.tar.bz2")
+        tarball = self.fetch_asset(netperf_download, expire='7d')
         archive.extract(tarball, self.netperf)
         self.version = os.path.basename(tarball.split('.tar.')[0])
         self.neperf = os.path.join(self.netperf, self.version)
