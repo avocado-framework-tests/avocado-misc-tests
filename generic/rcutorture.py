@@ -33,6 +33,8 @@ class Rcutorture(Test):
     CONFIG_RCU_TORTURE_TEST enables an intense torture test of the RCU
     infratructure. It creates an rcutorture kernel module that can be
     loaded to run a torture test.
+
+    :avocado: tags=kernel,privileged
     """
 
     def setUp(self):
@@ -43,7 +45,7 @@ class Rcutorture(Test):
         self.log.info("Check if CONFIG_RCU_TORTURE_TEST is enabled\n")
         ret = linux_modules.check_kernel_config('CONFIG_RCU_TORTURE_TEST')
         if ret == 0:
-            self.skip("CONFIG_RCU_TORTURE_TEST is not set in .config !!\n")
+            self.cancel("CONFIG_RCU_TORTURE_TEST is not set in .config !!\n")
 
         self.log.info("Check rcutorture module is already  loaded\n")
         if linux_modules.module_is_loaded('rcutorture'):
@@ -62,37 +64,31 @@ class Rcutorture(Test):
 
         self.log.info("Online all cpus %s", totalcpus)
         for cpu in range(0, full_count):
-            online = 'echo 1 > /sys/devices/system/cpu/cpu%s/online' % cpu
-            process.system(online)
+            os.system('echo 1 > /sys/devices/system/cpu/cpu%s/online' % cpu)
         time.sleep(10)
 
         self.log.info("Offline all cpus 0 - %s\n", full_count)
         for cpu in range(0, full_count):
-            offline = 'echo 0 > /sys/devices/system/cpu/cpu%s/online' % cpu
-            process.system(offline)
+            os.system('echo 0 > /sys/devices/system/cpu/cpu%s/online' % cpu)
         time.sleep(10)
 
         self.log.info("Online all cpus 0 - %s\n", full_count)
         for cpu in range(0, full_count):
-            online = 'echo 1 > /sys/devices/system/cpu/cpu%s/online' % cpu
-            process.system(online)
+            os.system('echo 1 > /sys/devices/system/cpu/cpu%s/online' % cpu)
+        time.sleep(5)
 
         self.log.info(
             "Offline and online first half cpus %s\n", fcpu)
         for cpu in range(0, half_count):
-            offline = 'echo 0 > /sys/devices/system/cpu/cpu%s/online' % cpu
-            process.system(offline)
+            os.system('echo 0 > /sys/devices/system/cpu/cpu%s/online' % cpu)
             time.sleep(10)
-            online = 'echo 1 > /sys/devices/system/cpu/cpu%s/online' % cpu
-            process.system(online)
+            os.system('echo 1 > /sys/devices/system/cpu/cpu%s/online' % cpu)
 
         self.log.info("Offline and online second half cpus %s\n", scpu)
         for cpu in range(shalf_count, full_count):
-            offline = 'echo 0 > /sys/devices/system/cpu/cpu%s/online' % cpu
-            process.system(offline)
+            os.system('echo 0 > /sys/devices/system/cpu/cpu%s/online' % cpu)
             time.sleep(10)
-            online = 'echo 1 > /sys/devices/system/cpu/cpu%s/online' % cpu
-            process.system(online)
+            os.system('echo 1 > /sys/devices/system/cpu/cpu%s/online' % cpu)
 
     def test(self):
         """
