@@ -55,9 +55,9 @@ class PPC64Test(Test):
         self.smt_values = {1: "off"}
         self.key = 0
         self.value = ""
-        self.max_smt_value = 8
-        if cpu.get_cpu_arch().lower() == 'power7':
-            self.max_smt_value = 4
+        self.max_smt_value = 4
+        if cpu.get_cpu_arch().lower() == 'power8':
+            self.max_smt_value = 8
         if cpu.get_cpu_arch().lower() == 'power6':
             self.max_smt_value = 2
 
