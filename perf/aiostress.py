@@ -51,7 +51,7 @@ class Aiostress(Test):
         elif dist_name in ['centos', 'fedora', 'rhel', 'redhat']:
             packages.extend(['libaio', 'libaio-devel'])
         elif dist_name == 'suse':
-            self.skip("Test currently does not support distro %s" % dist_name)
+            packages.extend(['libaio1', 'libaio-devel'])
 
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
