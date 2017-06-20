@@ -12,6 +12,11 @@ Iface		        - interface on which test run
 timeout		        - Timeout
 NETSERVER_RUN	    - Whether to run netserver in peer or not
 EXPECTED_THROUGHPUT - Expected Throughput as a percentage (1-100)
+netperf_download    - User has the option to choose download location
+                      for netperf tool.
+                      User can use ftp download location passed as default
+                      to this variable or use IO-FVT repo
+                      which can be specified in yaml file                         
 
 Requirements:
 -----------------------

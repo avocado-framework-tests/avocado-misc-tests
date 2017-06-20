@@ -1,6 +1,7 @@
-interface: "net0"
-peer_ip: "10.10.10.10"
+interface: ""
+peer_ip: ""
 peer_user_name: "root"
 timeout: "600"
 NETSERVER_RUN: 0
 EXPECTED_THROUGHPUT: 90
+netperf_download: ""
