@@ -67,8 +67,10 @@ for driver in $DRIVERS; do
             break;
         fi
         if [[ $(lsmod | grep -w ^$driver | awk '{print $NF}') != '0' ]]; then
-            echo $driver" has dependencies and it cannot be unloaded"
-            break;
+            if [[ $(grep "$driver=" $CONFIG_FILE > /dev/null; echo $?) != '0' ]]; then
+                echo $driver" has dependencies and it cannot be unloaded"
+                break;
+            fi
         fi
         module_unload $driver
         # Sleep for 5s to allow the module unload to complete
