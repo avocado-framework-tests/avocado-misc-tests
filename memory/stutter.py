@@ -28,6 +28,8 @@ class Stutter(Test):
 
     """
     stutter benchmark
+
+    :avocado: tags=memory,privileged
     """
 
     def setUp(self):

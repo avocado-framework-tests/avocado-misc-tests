@@ -38,6 +38,8 @@ class DmaMemtest(Test):
     It will uncompress several copies of the linux kernel in a way that will
     force the system to go swap, then will compare the trees generated for
     differences.
+
+    :avocado: tags=memory,privileged
     """
 
     def setUp(self):
