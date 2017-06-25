@@ -54,7 +54,7 @@ class EzfioTest(Test):
         build.make(fio_path, make='./configure')
         build.make(fio_path)
         build.make(fio_path, extra_args='install')
-        self.ezfio_path = os.path.join(self.teststmpcdir, 'ezfio')
+        self.ezfio_path = os.path.join(self.teststmpdir, 'ezfio')
         ezfio_link = 'https://github.com/earlephilhower/ezfio.git'
         git.get_repo(ezfio_link, destination_dir=self.ezfio_path)
         self.utilization = self.params.get('utilization', default='100')
