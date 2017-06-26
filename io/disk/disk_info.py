@@ -104,16 +104,16 @@ class DiskInfo(Test):
         mount it on a directory and verify it with certain parameters name,
         size, UUID and IO sizes etc
         """
-        msg = ""
+        msg = []
         disk = (self.disk.split("/dev/"))[1]
         if process.system("ls /dev/disk/by-id -l| grep -i %s" % disk,
                           ignore_status=True, shell=True, sudo=True) != 0:
-            self.fail("Given disk %s is not present in /dev/disk/by-id",
-                      disk)
+            msg.append("Given disk %s is not present in /dev/disk/by-id",
+                       disk)
         if process.system("ls /dev/disk/by-path -l| grep -i %s" % disk,
                           ignore_status=True, shell=True, sudo=True) != 0:
-            self.fail("Given disk %s is not present in /dev/disk/by-path",
-                      disk)
+            msg.append("Given disk %s is not present in /dev/disk/by-path",
+                       disk)
 
         # Verify disk listed in all tools
         cmd_list = ["fdisk -l ", "parted -l", "lsblk ",
@@ -124,7 +124,7 @@ class DiskInfo(Test):
             cmd = cmd + " | grep -i %s" % disk
             if process.system(cmd, ignore_status=True,
                               shell=True, sudo=True) != 0:
-                msg += "Given disk %s is not present in %s o/p" % (disk, cmd)
+                msg.append("Given disk %s is not present in %s" % (disk, cmd))
 
         # Get the size and UUID of the disk
         cmd = "lsblk -l %s --output SIZE -b |sed -n 2p" % self.disk
@@ -151,25 +151,25 @@ class DiskInfo(Test):
                                        ignore_status=True, shell=True,
                                        sudo=True)
         if sector_string not in output:
-            msg += "Mismatch in sector sizes of lbs,pbs in " + \
-                   "fdisk o/p w.r.t sysfs paths"
+            msg.append("Mismatch in sector sizes of lbs,pbs in "
+                       "fdisk o/p w.r.t sysfs paths")
         io_size_string = "I/O size (minimum/optimal): %s " \
                          "bytes / %s bytes" % (mis, mis)
         if io_size_string not in output:
-            msg += "Mismatch in IO sizes of mis and ois" + \
-                   " in fdisk o/p w.r.t sysfs paths"
+            msg.append("Mismatch in IO sizes of mis and ois"
+                       " in fdisk o/p w.r.t sysfs paths")
 
         # Verify disk size in other tools
         cmd = "fdisk -l %s | grep -i %s" % (self.disk, self.disk)
         if self.size_bytes not in process.system_output(cmd,
                                                         ignore_status=True,
                                                         shell=True, sudo=True):
-            msg += "Size of disk %s mismatch in fdisk o/p" % self.disk
+            msg.append("Size of disk %s mismatch in fdisk o/p" % self.disk)
         cmd = "sfdisk -l %s | grep -i %s" % (self.disk, self.disk)
         if self.size_bytes not in process.system_output(cmd,
                                                         ignore_status=True,
                                                         shell=True, sudo=True):
-            msg += "Size of disk %s mismatch in sfdisk o/p" % self.disk
+            msg.append("Size of disk %s mismatch in sfdisk o/p" % self.disk)
 
         # Mount
         self.part_obj = Partition(self.disk, mountpoint=self.dir)
@@ -204,7 +204,7 @@ class DiskInfo(Test):
 
         if process.system("ls /dev/disk/by-uuid -l| grep -i %s" % disk,
                           ignore_status=True, shell=True, sudo=True) != 0:
-            msg += "Given disk %s not having uuid in /dev/disk/by-uuid" % disk
+            msg.append("Given disk %s not having uuid" % disk)
 
         output = process.system_output("blkid %s" % self.disk,
                                        ignore_status=True, shell=True,
@@ -221,25 +221,25 @@ class DiskInfo(Test):
         cmd = 'lshw -c disk | grep -n "%s" | cut -d ":" -f 1' % self.disk
         middle = process.system_output(cmd, ignore_status=True,
                                        shell=True, sudo=True)
-
-        cmd = r'lshw -c disk | grep -n "\-disk" | cut -d ":" -f 1'
-        total = process.system_output(cmd, ignore_status=True,
-                                      shell=True, sudo=True)
-        lst = total.splitlines() + middle.splitlines()
-        lst.sort()
-        index = lst.index(middle.splitlines()[0])
-        low = lst[index-1]
-        high = lst[index+1]
-        cmd = "lshw -c disk |sed -n '%s, %sp'" % (low, high)
-        disk_details = process.system_output(cmd, ignore_status=True,
-                                             shell=True, sudo=True)
-        ls_string = "logicalsectorsize=%s sectorsize=%s" % (lbs, pbs)
-        if ls_string not in disk_details:
-            msg += "Mismatch in sector sizes of lbs,pbs" + \
-                   " in lshw o/p w.r.t sysfs paths"
+        if middle:
+            cmd = r'lshw -c disk | grep -n "\-disk" | cut -d ":" -f 1'
+            total = process.system_output(cmd, ignore_status=True,
+                                          shell=True, sudo=True)
+            lst = total.splitlines() + middle.splitlines()
+            lst.sort()
+            index = lst.index(middle.splitlines()[0])
+            low = lst[index-1]
+            high = lst[index+1]
+            cmd = "lshw -c disk |sed -n '%s, %sp'" % (low, high)
+            disk_details = process.system_output(cmd, ignore_status=True,
+                                                 shell=True, sudo=True)
+            ls_string = "logicalsectorsize=%s sectorsize=%s" % (lbs, pbs)
+            if ls_string not in disk_details:
+                msg.append("Mismatch in sector sizes of lbs,pbs"
+                           " in lshw o/p w.r.t sysfs paths")
 
         if msg:
-            self.fail("Some tests failed. Find details below:\n%s" % msg)
+            self.fail("Some tests failed. Details below:\n%s" % "\n".join(msg))
 
     def tearDown(self):
         '''
