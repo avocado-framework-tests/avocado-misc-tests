@@ -33,6 +33,8 @@ class Thp(Test):
     '''
     The test enables THP and stress the system using dd load
     and verifies whether THP has been allocated for usage or not
+
+    :avocado: tags=memory,privileged
     '''
 
     @skipIf(PAGESIZE, "No THP support for kernel with 4K PAGESIZE")

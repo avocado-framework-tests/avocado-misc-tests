@@ -33,6 +33,8 @@ class Rmaptest(Test):
     """
     Create lots of VMAs mapped by lots of tasks.  To tickle objrmap and the
     virtual scan.
+
+    :avocado: tags:kernel
     """
 
     def setUp(self):

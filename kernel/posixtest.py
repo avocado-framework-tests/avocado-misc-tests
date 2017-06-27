@@ -31,7 +31,9 @@ from avocado.utils.software_manager import SoftwareManager
 class Posixtest(Test):
 
     '''
-     posix test  provides conformance, functional, and stress testing on Os Threads, Clocks & Timers, Signals, Message Queues, and Semaphores.
+    posix test  provides conformance, functional, and stress testing on Os Threads, Clocks & Timers, Signals, Message Queues, and Semaphores.
+
+    :avocado: tags=kernel
     '''
 
     def setUp(self):
