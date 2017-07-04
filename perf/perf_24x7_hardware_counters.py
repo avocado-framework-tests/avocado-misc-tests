@@ -42,7 +42,7 @@ class test_eliminate_domain_suffix(Test):
         smm = SoftwareManager()
         detected_distro = distro.detect()
         if 'ppc' not in process.system_output("uname -p", ignore_status=True):
-            self.skip("Processor is not ppc64")
+            self.cancel("Processor is not ppc64")
         deps = ['gcc', 'make']
         if 'Ubuntu' in detected_distro.name:
             deps.extend(['linux-tools-common', 'linux-tools-%s'
@@ -50,11 +50,11 @@ class test_eliminate_domain_suffix(Test):
         elif detected_distro.name in ['redhat', 'SuSE', 'fedora', 'centos']:
             deps.extend(['perf'])
         else:
-            self.skip("Install the package for perf supported by %s"
-                      % detected_distro.name)
+            self.cancel("Install the package for perf supported by %s"
+                        % detected_distro.name)
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
-                self.skip('%s is needed for the test to be run' % package)
+                self.cancel('%s is needed for the test to be run' % package)
         self.nfail = 0
         self.perf_args = "perf stat -v -C 0 -e"
         self.perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % self.perf_args

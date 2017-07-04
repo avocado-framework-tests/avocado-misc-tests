@@ -53,7 +53,7 @@ class Bonnie(Test):
             if distro.detect().name == 'Ubuntu':
                 if not smm.check_installed("btrfs-tools") and not \
                         smm.install("btrfs-tools"):
-                    self.skip('btrfs-tools is needed for the test to be run')
+                    self.cancel('btrfs-tools is needed for the test to be run')
 
         self.disk = self.params.get('disk', default=None)
         self.scratch_dir = self.params.get('dir', default=self.srcdir)

@@ -49,7 +49,7 @@ class Memcached(Test):
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
         if detected_distro.name not in ['Ubuntu', 'rhel', 'redhat']:
-            self.skip('Test Not applicable')
+            self.cancel('Test Not applicable')
 
         if detected_distro.name == "Ubuntu":
             deps = ['memcached', 'libmemcached-tools']

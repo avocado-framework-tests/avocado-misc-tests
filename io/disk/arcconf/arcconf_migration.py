@@ -42,7 +42,7 @@ class Arcconftest(Test):
         """
         smm = SoftwareManager()
         if not smm.check_installed("lsscsi") and not smm.install("lsscsi"):
-            self.skip("Unable to install lsscsi")
+            self.cancel("Unable to install lsscsi")
         self.crtl_no = self.params.get('crtl_no')
         self.channel_no = self.params.get('channel_no')
         self.disk_no = self.params.get('disk_no', default="").split(",")
@@ -76,14 +76,14 @@ class Arcconftest(Test):
            '' or self.initial_raid is '' or self.migrate_raid is '' or \
            self.disk_initial is '' or self.disk_migrated is '' or \
            len(self.initial_raid) > 1 or self.migration_sleep is '':
-            self.skip(" please ensure yaml parameters are not empty or \
+            self.cancel(" please ensure yaml parameters are not empty or \
                        the total device should be more than 1")
         elif self.comp(self.pci_id, pci_id_formatted) == 1:
-            self.skip(" Test skipped!!, PMC controller not available")
+            self.cancel(" Test skipped!!, PMC controller not available")
 
         if len(self.disk_no) < int(self.disk_initial) or \
            len(self.disk_no) < int(self.disk_migrated):
-            self.skip("Cannot Migrate, please check the prerequisite")
+            self.cancel("Cannot Migrate, please check the prerequisite")
 
         detected_distro = distro.detect()
         if not smm.check_installed("Arcconf"):
@@ -96,7 +96,7 @@ class Arcconftest(Test):
                 self.repo = self.fetch_asset(http_repo, expire='10d')
                 cmd = "rpm -ivh %s" % self.repo
             if process.system(cmd, ignore_status=True, shell=True) == 0:
-                self.skip("Unable to install arcconf")
+                self.cancel("Unable to install arcconf")
 
         self.os_drive = self.cmdop_list("OS")
 
@@ -238,7 +238,7 @@ class Arcconftest(Test):
             self.check_pass(cmd, "Failed to cleanup Logical drive")
         else:
             if cond == 0:
-                self.skip("Test Skipped!! OS disk requested for removal")
+                self.cancel("Test Skipped!! OS disk requested for removal")
 
 
 if __name__ == "__main__":

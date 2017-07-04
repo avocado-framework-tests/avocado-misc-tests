@@ -45,11 +45,11 @@ class GenWQETest(Test):
         url = "http://corpus.canterbury.ac.nz/resources/cantrbry.tar.gz"
         self.url = self.params.get('test_tar_url', default=url)
         if not os.path.isdir("/sys/class/genwqe/genwqe%s_card/" % self.card):
-            self.skip("Device %s does not exist" % self.card)
+            self.cancel("Device %s does not exist" % self.card)
         smm = SoftwareManager()
         for pkg in ['genwqe-tools', 'genwqe-zlib']:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.skip('%s is needed for the test to be run' % pkg)
+                self.cancel('%s is needed for the test to be run' % pkg)
         self.test_tar = download.get_file(self.url, "cantrbry.tar.gz")
         self.files_used = [self.test_tar]
         self.dirs_used = []

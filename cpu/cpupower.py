@@ -32,7 +32,7 @@ class cpupower(Test):
     """
     def setUp(self):
         if not os.path.exists('/sys/devices/system/cpu/cpu0/cpufreq'):
-            self.skip('sysfs directory for cpufreq is unavailable.')
+            self.cancel('sysfs directory for cpufreq is unavailable.')
         smm = SoftwareManager()
         detected_distro = distro.detect()
         kernel_ver = platform.uname()[2]
@@ -43,7 +43,7 @@ class cpupower(Test):
 
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
-                self.skip('%s is needed for the test to be run' % package)
+                self.cancel('%s is needed for the test to be run' % package)
 
     def test(self):
         self.error_count = 0

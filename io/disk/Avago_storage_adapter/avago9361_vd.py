@@ -31,8 +31,8 @@ class Avago9361(Test):
     """
     This class contains functions for VD operations
     """
-    def setUp(self):
 
+    def setUp(self):
         """
         All basic set up is done here
         """
@@ -47,11 +47,11 @@ class Avago9361(Test):
             "/", ":")
         self.add_disk = str(self.params.get('add_disk')).split(" ")
         if not self.hotspare:
-            self.skip("Hotspare test needs a drive to create/test hotspare")
+            self.cancel("Hotspare test needs a drive to create/test hotspare")
         if not self.on_off:
-            self.skip("Online/Offline test needs a drive to operate on")
+            self.cancel("Online/Offline test needs a drive to operate on")
         if not self.disk:
-            self.skip("Please provide disk to perform VD operations")
+            self.cancel("Please provide disk to perform VD operations")
         self.dict_raid = {'r0': [1, None], 'r1': [2, 'Multiple2'],
                           'r5': [3, None], 'r6': [3, None],
                           'r00': [4, 'Multiple2'], 'r10': [4, 'Multiple2'],
@@ -59,8 +59,8 @@ class Avago9361(Test):
         self.value = self.dict_raid[self.raid_level]
 
         if len(self.disk) < self.value[0]:
-            self.skip("Please give enough number of drives to create %s"
-                      % self.raid_level)
+            self.cancel("Please give enough number of drives to create %s"
+                        % self.raid_level)
         if self.value[1] is not None:
             multiple = int(self.value[1].split("Multiple")[-1])
             self.disk = self.disk[:len(self.disk) -
@@ -73,11 +73,11 @@ class Avago9361(Test):
         if self.raid_level == 'r0':
             for test in ['cc', 'offline', 'rebuild', 'ghs_dhs']:
                 if test in str(self.name):
-                    self.skip("Test not applicable for Raid0")
+                    self.cancel("Test not applicable for Raid0")
         if 'migrate' in str(self.name):
             self.raid_disk = self.disk.pop()
             if self.raid_level != 'r0':
-                self.skip("Script runs for raid0")
+                self.cancel("Script runs for raid0")
         self.write_policy = ['WT', 'WB', 'AWB']
         self.read_policy = ['nora', 'ra']
         self.io_policy = ['direct', 'cached']
@@ -85,7 +85,6 @@ class Avago9361(Test):
         self.state = ['start', 'stop', 'start', 'pause', 'resume']
 
     def test_createall(self):
-
         """
         Function to create different raid level
         """
@@ -97,7 +96,6 @@ class Avago9361(Test):
                         self.vd_delete()
 
     def test_maxvd(self):
-
         """
         Function to create max VD
         """
@@ -117,7 +115,6 @@ class Avago9361(Test):
             self.vd_delete()
 
     def test_init(self):
-
         """
         Test case to start Fast and Full init on VD
         """
@@ -126,7 +123,6 @@ class Avago9361(Test):
         self.vd_delete()
 
     def test_cc(self):
-
         """
         Function to do consistency operations on VD
         """
@@ -136,7 +132,6 @@ class Avago9361(Test):
         self.vd_delete()
 
     def test_jbod(self):
-
         """
         Function to format a drive to JBOD
         """
@@ -152,7 +147,6 @@ class Avago9361(Test):
         self.check_pass(cmd, "Failed to set JBOD drives to good")
 
     def test_online_offline(self):
-
         """
         Test to run drive Online/Offline
         """
@@ -164,7 +158,6 @@ class Avago9361(Test):
         self.vd_delete()
 
     def test_ghs_dhs(self):
-
         """
         Test to create Global hot spare and Dedicated hot spare
         """
@@ -184,7 +177,6 @@ class Avago9361(Test):
         self.vd_delete()
 
     def copyback_state(self, state):
-
         """
         Helper function to run copyback test
         """
@@ -199,7 +191,6 @@ class Avago9361(Test):
         self.check_pass(cmd, "Failed to %s copyback" % state)
 
     def copyback_operation(self):
-
         """
         Function to run copyback operations
         """
@@ -211,7 +202,6 @@ class Avago9361(Test):
         self.sleep_function(cmd)
 
     def test_rebuild(self):
-
         """
         Function to handle rebuild scenario
         """
@@ -221,7 +211,6 @@ class Avago9361(Test):
         self.vd_delete()
 
     def test_patrolread(self):
-
         """
         Function to handle PR operations
         """
@@ -230,7 +219,6 @@ class Avago9361(Test):
         self.vd_delete()
 
     def test_migrate(self):
-
         """
         Test case to execute Raid Migration
         """
@@ -246,7 +234,6 @@ class Avago9361(Test):
         self.vd_delete()
 
     def rebuild(self, perform, disk=None):
-
         """
         Helper function of all types of rebuild operations
         """
@@ -264,7 +251,6 @@ class Avago9361(Test):
             self.sleep_function(cmd)
 
     def sleep_function(self, cmd):
-
         """
         Helper function for scrit to wait, till the background operation is
         complete
@@ -273,7 +259,6 @@ class Avago9361(Test):
             time.sleep(30)
 
     def rebuild_state(self, state):
-
         """
         Helper function for all CC operations
         """
@@ -283,7 +268,6 @@ class Avago9361(Test):
         time.sleep(10)
 
     def set_online_offline(self, state):
-
         """
         Helper function to set drives online and offline
         """
@@ -292,7 +276,6 @@ class Avago9361(Test):
         self.check_pass(cmd, "Failed to set drive to %s state" % state)
 
     def jbod_show(self):
-
         """
         Helper function to show JBOD details
         """
@@ -300,7 +283,6 @@ class Avago9361(Test):
         self.check_pass(cmd, "Failed to show the JBOD status")
 
     def vd_details(self):
-
         """
         Function to display the VD details
         """
@@ -308,7 +290,6 @@ class Avago9361(Test):
         self.check_pass(cmd, "Failed to display VD configuration")
 
     def vd_delete(self):
-
         """
         Function to delete the VD
         """
@@ -316,7 +297,6 @@ class Avago9361(Test):
         self.check_pass(cmd, "Failed to delete VD")
 
     def vd_create(self, write, read, iopolicy, stripe):
-
         """
         Function to create a VD
         """
@@ -336,7 +316,6 @@ class Avago9361(Test):
         self.vd_details()
 
     def check_pass(self, cmd, errmsg):
-
         """
         Helper function to check, if the cmd is passed or failed
         """
@@ -344,7 +323,6 @@ class Avago9361(Test):
             self.fail(errmsg)
 
     def showprogress(self, cmd):
-
         """
         Helper function to see progress of a given/specified operation
         """
@@ -357,7 +335,6 @@ class Avago9361(Test):
                     return True
 
     def cc_operations(self):
-
         """
         Helper function CC operations
         """
@@ -368,7 +345,6 @@ class Avago9361(Test):
         self.sleep_function(cmd)
 
     def cc_state(self, state):
-
         """
         Helper function for all CC operations
         """
@@ -381,7 +357,6 @@ class Avago9361(Test):
         time.sleep(10)
 
     def pr_operations(self):
-
         """
         Helper function for PR operations
         """
@@ -391,7 +366,6 @@ class Avago9361(Test):
             self.check_pass(cmd, "Failed to show the PR progress")
 
     def pr_state(self, state):
-
         """
         Helper function for all PR operatoins
         """
@@ -400,7 +374,6 @@ class Avago9361(Test):
         time.sleep(10)
 
     def full_init(self):
-
         """
         Helper function to start Fast/Full init
         """
@@ -411,7 +384,6 @@ class Avago9361(Test):
         self.sleep_function(cmd)
 
     def change_vdpolicy(self, write, read, iopolicy):
-
         """
         Helper function to change the VD policy
         """

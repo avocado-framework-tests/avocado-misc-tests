@@ -59,30 +59,30 @@ class Sensors(Test):
         if d_distro.name == "Ubuntu":
             if not s_mg.check_installed("lm-sensors") and not s_mg.install(
                     "lm-sensors"):
-                self.skip('Need sensors to run the test')
+                self.cancel('Need sensors to run the test')
         elif d_distro.name == "SuSE":
             if not s_mg.check_installed("sensors") and not s_mg.install(
                     "sensors"):
-                self.skip('Need sensors to run the test')
+                self.cancel('Need sensors to run the test')
         else:
             if not s_mg.check_installed("lm_sensors") and not s_mg.install(
                     "lm_sensors"):
-                self.skip('Need sensors to run the test')
+                self.cancel('Need sensors to run the test')
         if d_distro.arch in ["ppc64", "ppc64le"]:
             if 'platform\t: PowerNV\n' not in cpu._get_cpu_info():
-                self.skip(
+                self.cancel(
                     'sensors test is applicable to bare-metal environment.')
 
             config_check = linux_modules.check_kernel_config(
                 'CONFIG_SENSORS_IBMPOWERNV')
             if config_check == 0:
-                self.skip('Config is not set')
+                self.cancel('Config is not set')
             elif config_check == 1:
                 if linux_modules.load_module('ibmpowernv'):
                     if linux_modules.module_is_loaded('ibmpowernv'):
                         self.log.info('Module Loaded Successfully')
                     else:
-                        self.skip('Module Loading Failed')
+                        self.cancel('Module Loading Failed')
             else:
                 self.log.info('Module is Built In')
 
@@ -97,7 +97,7 @@ class Sensors(Test):
         cmd = "yes | sudo sensors-detect"
         det_op = process.run(cmd, shell=True, ignore_status=True).stdout
         if 'no sensors were detected' in det_op:
-            self.skip('No sensors found to test !')
+            self.cancel('No sensors found to test !')
 
     def test(self):
         """

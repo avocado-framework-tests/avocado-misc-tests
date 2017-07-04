@@ -112,10 +112,10 @@ class Ifconfig(Test):
 
     def setUp(self):
         if process.system("ping -c 5 -w 5 localhost", ignore_status=True):
-            self.skip("Unable to ping localhost")
+            self.cancel("Unable to ping localhost")
         self.lo_up = True
         if "lo:1" in process.system_output("ifconfig", env={"LANG": "C"}):
-            self.skip("alias for an loopback interface is configured")
+            self.cancel("alias for an loopback interface is configured")
         self.alias = None
         install_dependencies()
         self.ipv6 = False
@@ -187,7 +187,7 @@ class Arp(Test):
         interface_out = process.system_output("ip route show default",
                                               env={"LANG": "C"})
         if "default via" not in interface_out:
-            self.skip("No active interface with deafult gateway configured")
+            self.cancel("No active interface with deafult gateway configured")
         install_dependencies()
         search_obj = re.search(r"^default via\s+(\S+)\s+dev\s+(\w+)",
                                interface_out)
@@ -314,11 +314,11 @@ class Iptunnel(Test):
         self.tunnel = None
         ret = process.system_output("ps -aef", env={"LANG": "C"})
         if 'dhclient' in ret:
-            self.skip("Test not supported on systems running dhclient")
+            self.cancel("Test not supported on systems running dhclient")
         install_dependencies()
         pre = process.system_output("iptunnel show")
         if "sit1" in pre:
-            self.skip("'sit1' already configured in iptunnel: %s" % pre)
+            self.cancel("'sit1' already configured in iptunnel: %s" % pre)
 
     @avocado.fail_on(process.CmdError)
     def test_loopback_sit(self):

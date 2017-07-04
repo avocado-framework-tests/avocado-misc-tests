@@ -48,7 +48,7 @@ class SoftwareRaid(Test):
         if not smm.check_installed("mdadm"):
             print "Mdadm must be installed before continuing the test"
             if SoftwareManager().install("mdadm") is False:
-                self.skip("Unable to install mdadm")
+                self.cancel("Unable to install mdadm")
         cmd = "mdadm -V"
         self.check_pass(cmd, "Unable to get mdadm version")
         self.disk = self.params.get('disk', default='').strip(" ")

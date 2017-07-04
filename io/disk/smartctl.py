@@ -46,16 +46,16 @@ class SmartctlTest(Test):
         if not smm.check_installed("smartctl"):
             self.log.info("smartctl should be installed prior to the test")
             if smm.install("smartmontools") is False:
-                self.skip("Unable to install smartctl")
+                self.cancel("Unable to install smartctl")
         self.option = self.params.get('option')
         self.disks = self.params.get('disk')
         if self.disks is '' or self.option is '':
-            self.skip(" Test skipped!!, please ensure Block device and \
+            self.cancel(" Test skipped!!, please ensure Block device and \
             options are specified in yaml file")
         cmd = "df -h /boot | grep %s" % (self.disks)
         if process.system(cmd, timeout=300, ignore_status=True,
                           shell=True) == 0:
-            self.skip(" Skipping it's OS disk")
+            self.cancel(" Skipping it's OS disk")
 
     def test(self):
         """

@@ -33,13 +33,14 @@ class Systemtap(Test):
     """
     This test runs upstream systemtap tests
     """
+
     def setUp(self):
         smm = SoftwareManager()
         detected_distro = distro.detect()
         # TODO: Add debs for Ubuntu.
         if detected_distro.name == "Ubuntu":
-            self.skip("Skip the test  for ubuntu as debs needs to be"
-                      "added in packages")
+            self.cancel("Skip the test  for ubuntu as debs needs to be"
+                        "added in packages")
         packages = ['make', 'gcc', 'systemtap', 'systemtap-runtime',
                     'elfutils', 'kernel-devel', 'dejagnu']
         # FIXME: "redhat" as the distro name for RHEL is deprecated
@@ -55,7 +56,7 @@ class Systemtap(Test):
                              'libelf-devel'])
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
-                self.skip(' %s is needed for the test to be run' % package)
+                self.cancel(' %s is needed for the test to be run' % package)
         git.get_repo('git://sourceware.org/git/systemtap.git',
                      destination_dir=self.srcdir)
         os.chdir(self.srcdir)
@@ -71,8 +72,8 @@ class Systemtap(Test):
                                        " }'", ignore_status=True, sudo=True,
                                        shell=True)
         if script_result != 0:
-            self.skip("simple systemtap test failed,"
-                      "kernel debuginfo package may be missing")
+            self.cancel("simple systemtap test failed,"
+                        "kernel debuginfo package may be missing")
 
     def test(self):
         make_option = self.params.get('make_option', default='installcheck')

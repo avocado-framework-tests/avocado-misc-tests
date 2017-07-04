@@ -43,11 +43,11 @@ class NVMeTest(Test):
         self.device = self.params.get('device', default='/dev/nvme0')
         cmd = 'ls %s' % self.device
         if process.system(cmd, ignore_status=True) is not 0:
-            self.skip("%s does not exist" % self.device)
+            self.cancel("%s does not exist" % self.device)
         smm = SoftwareManager()
         if not smm.check_installed("nvme-cli") and not \
                 smm.install("nvme-cli"):
-            self.skip('nvme-cli is needed for the test to be run')
+            self.cancel('nvme-cli is needed for the test to be run')
         self.id_ns = self.create_namespace()
         self.log.info(self.id_ns)
         cmd = "nvme id-ns %s | grep 'in use' | awk '{print $5}' | \
@@ -58,7 +58,7 @@ class NVMeTest(Test):
         self.lba = process.system_output(cmd, shell=True).strip('\n')
         self.firmware_url = self.params.get('firmware_url', default='')
         if 'firmware_upgrade' in str(self.name) and not self.firmware_url:
-            self.skip("firmware url not gien")
+            self.cancel("firmware url not gien")
 
     def get_firmware_version(self):
         """

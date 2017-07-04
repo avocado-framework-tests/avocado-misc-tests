@@ -41,13 +41,13 @@ class Mckey(Test):
         self.ext = self.params.get("ext_option", default="None")
         self.flag = self.params.get("ext_flag", default="0")
         if self.basic == "None" and self.ext == "None":
-            self.skip("No option given")
+            self.cancel("No option given")
         if self.flag == "1" and self.ext != "None":
             self.option = self.ext
         else:
             self.option = self.basic
         if process.system("ibstat", shell=True, ignore_status=True) != 0:
-            self.skip("MOFED is not installed. Skipping")
+            self.cancel("MOFED is not installed. Skipping")
         pkgs = []
         detected_distro = distro.detect()
         if detected_distro.name == "Ubuntu":
@@ -59,14 +59,14 @@ class Mckey(Test):
         smm = SoftwareManager()
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.skip("Not able to install %s" % pkg)
+                self.cancel("Not able to install %s" % pkg)
         interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface", default="")
         self.peer_ip = self.params.get("peer_ip", default="")
         if self.iface not in interfaces:
-            self.skip("%s interface is not available" % self.iface)
+            self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
-            self.skip("%s peer machine is not available" % self.peer_ip)
+            self.cancel("%s peer machine is not available" % self.peer_ip)
         self.timeout = "2m"
         self.local_ip = netifaces.ifaddresses(self.iface)[AF_INET][0]['addr']
         self.ip_val = self.local_ip.split(".")[-1]
@@ -87,10 +87,10 @@ class Mckey(Test):
         elif detected_distro.name == "centos":
             cmd = "service iptables stop"
         else:
-            self.skip("Distro not supported")
+            self.cancel("Distro not supported")
         if process.system("%s && ssh %s %s" % (cmd, self.peer_ip, cmd),
                           ignore_status=True, shell=True) != 0:
-            self.skip("Unable to disable firewall")
+            self.cancel("Unable to disable firewall")
 
     def test(self):
         """

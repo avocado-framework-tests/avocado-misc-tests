@@ -39,7 +39,7 @@ class Openblas(Test):
             packages.append("gcc-gfortran")
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
-                self.skip(' %s is needed for the test to be run' % package)
+                self.cancel(' %s is needed for the test to be run' % package)
         url = "https://github.com/xianyi/OpenBLAS/archive/develop.zip"
         tarball = self.fetch_asset("OpenBLAS-develop.zip", locations=[url],
                                    expire='7d')

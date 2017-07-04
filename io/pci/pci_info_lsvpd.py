@@ -37,7 +37,7 @@ class PciLsvpdInfo(Test):
         smm = SoftwareManager()
         for pkg in ["lsvpd"]:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.skip("%s package is need to test" % pkg)
+                self.cancel("%s package is need to test" % pkg)
         if process.system("vpdupdate", ignore_status=True, shell=True):
             self.fail("VPD Update fails")
 

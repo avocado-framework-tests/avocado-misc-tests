@@ -49,15 +49,15 @@ class Latency_Perf(Test):
             pkgs.append('openssh-clients')
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.skip("%s package is need to test" % pkg)
+                self.cancel("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
         self.flag = self.params.get("ext_flag", default="0")
         self.IF = self.params.get("interface", default="")
         self.PEER_IP = self.params.get("peer_ip", default="")
         if self.IF not in interfaces:
-            self.skip("%s interface is not available" % self.IF)
+            self.cancel("%s interface is not available" % self.IF)
         if self.PEER_IP == "":
-            self.skip("%s peer machine is not available" % self.PEER_IP)
+            self.cancel("%s peer machine is not available" % self.PEER_IP)
         self.CA = self.params.get("CA_NAME", default="mlx4_0")
         self.PORT = self.params.get("PORT_NUM", default="1")
         self.PEER_CA = self.params.get("PEERCA", default="mlx4_0")
@@ -65,7 +65,7 @@ class Latency_Perf(Test):
         self.to = self.params.get("timeout", default="600")
         self.tool_name = self.params.get("tool", default="")
         if self.tool_name == "":
-            self.skip("should specify tool name")
+            self.cancel("should specify tool name")
         self.log.info("test with %s" % (self.tool_name))
         self.test_op = self.params.get("test_opt", default="").split(",")
         self.ext_test_op = self.params.get("ext_opt", default="").split(",")
@@ -81,10 +81,10 @@ class Latency_Perf(Test):
         elif detected_distro.name == "centos":
             cmd = "service iptables stop"
         else:
-            self.skip("Distro not supported")
+            self.cancel("Distro not supported")
         if process.system("%s && ssh %s %s" % (cmd, self.PEER_IP, cmd),
                           ignore_status=True, shell=True) != 0:
-            self.skip("Unable to disable firewall")
+            self.cancel("Unable to disable firewall")
 
     def latencyperf_exec(self, arg1, arg2, arg3):
         '''

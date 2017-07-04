@@ -43,9 +43,9 @@ class pingpong(Test):
         self.IF = self.params.get("interface", default="")
         self.PEER_IP = self.params.get("peer_ip", default="")
         if self.IF not in interfaces:
-            self.skip("%s interface is not available" % self.IF)
+            self.cancel("%s interface is not available" % self.IF)
         if self.PEER_IP == "":
-            self.skip("%s peer machine is not available" % self.PEER_IP)
+            self.cancel("%s peer machine is not available" % self.PEER_IP)
         self.CA = self.params.get("CA_NAME", default="mlx4_0")
         self.GID = int(self.params.get("GID_NUM", default="0"))
         self.PORT = int(self.params.get("PORT_NUM", default="1"))
@@ -73,17 +73,17 @@ class pingpong(Test):
             pkgs.extend(['libibverbs', 'openssh-clients'])
             cmd = "service iptables stop"
         else:
-            self.skip("Distro not supported")
+            self.cancel("Distro not supported")
         if process.system("%s && ssh %s %s" %
                           (cmd, self.PEER_IP, cmd),
                           ignore_status=True,
                           shell=True) != 0:
-            self.skip("Unable to disable firewall")
+            self.cancel("Unable to disable firewall")
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.skip("%s package is need to test" % pkg)
+                self.cancel("%s package is need to test" % pkg)
         if process.system("ibstat", shell=True, ignore_status=True) != 0:
-            self.skip("infiniband adaptors not available")
+            self.cancel("infiniband adaptors not available")
 
     def pingpong_exec(self, arg1, arg2, arg3):
         '''

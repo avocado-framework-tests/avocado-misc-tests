@@ -81,9 +81,9 @@ class DmaMemtest(Test):
         # Verify if space is available in disk
         disk_free_mb = (disk.freespace(self.tmpdir) / 1024) / 1024
         if (disk_free_mb < est_size * self.sim_cps):
-            self.skip("Space not available to extract the %s linux tars\n"
-                      "Mount and Use other partitions in dir_to_extract arg "
-                      "to run the test" % self.sim_cps)
+            self.cancel("Space not available to extract the %s linux tars\n"
+                        "Mount and Use other partitions in dir_to_extract arg "
+                        "to run the test" % self.sim_cps)
 
     @staticmethod
     def get_sim_cps(est_size):

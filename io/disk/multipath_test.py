@@ -55,7 +55,7 @@ class MultipathTest(Test):
 
         smm = SoftwareManager()
         if not smm.check_installed(pkg_name) and not smm.install(pkg_name):
-            self.skip("Can not install %s" % pkg_name)
+            self.cancel("Can not install %s" % pkg_name)
 
         # Create service object
         self.mpath_svc = service.SpecificServiceManager(svc_name)
@@ -64,7 +64,7 @@ class MultipathTest(Test):
         # Check if multipath devices are present in system
         self.wwids = multipath.get_multipath_wwids()
         if self.wwids == ['']:
-            self.skip("No Multipath Devices")
+            self.cancel("No Multipath Devices")
 
         # Take a backup of current config file
         self.mpath_file = "/etc/multipath.conf"

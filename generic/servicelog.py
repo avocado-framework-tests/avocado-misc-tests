@@ -27,7 +27,8 @@ from avocado.utils.software_manager import SoftwareManager
 class servicelog(Test):
 
     is_fail = 0
-    events_path = os.path.join(os.path.dirname(__file__), "servicelog.py.data", "rtas_events")
+    events_path = os.path.join(
+        os.path.dirname(__file__), "servicelog.py.data", "rtas_events")
 
     def run_cmd(self, cmd):
         if process.system(cmd, ignore_status=True, sudo=True, shell=True):
@@ -40,14 +41,14 @@ class servicelog(Test):
 
     def setUp(self):
         if "ppc" not in os.uname()[4]:
-            self.skip("supported only on Power platform")
+            self.cancel("supported only on Power platform")
         if 'PowerNV' in open('/proc/cpuinfo', 'r').read():
-            self.skip("servicelog: is not supported on the PowerNV platform")
+            self.cancel("servicelog: is not supported on the PowerNV platform")
         smm = SoftwareManager()
         for package in ("servicelog", "ppc64-diag"):
             if not smm.check_installed(package) and not smm.install(package):
-                self.skip("Fail to install %s required for this"
-                          " test." % package)
+                self.cancel("Fail to install %s required for this"
+                            " test." % package)
 
     def test_servicelog(self):
         """
@@ -55,17 +56,20 @@ class servicelog(Test):
         """
         self.log.info("1 - Cleaning servicelog...")
         self.run_cmd("servicelog_manage --truncate notify --force")
-        rtas_events = ["v6_fru_replacement", "v6_memory_info", "v6_power_error",
-                       "v6_power_error2", "v6_fw_predictive_error", "v3_fan_failure",
-                       "v6_dump_notification", "v6_platform_error2", "v6_eeh_info",
-                       "v6_cpu_guard", "v6_platform_info", "v6_surv_error"]
+        rtas_events = [
+            "v6_fru_replacement", "v6_memory_info", "v6_power_error",
+            "v6_power_error2", "v6_fw_predictive_error", "v3_fan_failure",
+            "v6_dump_notification", "v6_platform_error2", "v6_eeh_info",
+            "v6_cpu_guard", "v6_platform_info", "v6_surv_error"]
         for event in rtas_events:
             self.log.info("Starting test scenario for %s" % event)
             self.log.info("2 - Injecting event %s" % event)
             self.run_cmd("rtas_errd -d -f %s/%s" % (self.events_path, event))
-            self.log.info("3 - Checking if service log does return ppc64_rtas events")
+            self.log.info(
+                "3 - Checking if service log does return ppc64_rtas events")
             self.run_cmd("servicelog --type=ppc64_rtas")
-            self.log.info("4 - Checking if the event was dumped to /var/log/platform")
+            self.log.info(
+                "4 - Checking if the event was dumped to /var/log/platform")
             self.run_cmd("cat /var/log/platform")
         service_log_cmds = ["--help", "--version", "--query='id=1'", "--id=1",
                             "--query='severity>=$WARNING AND closed=0'", "--serviceable=yes",
@@ -98,7 +102,8 @@ class servicelog(Test):
                      "--repair_action=all --serviceable=all" % notify_script)
         self.log.info("===========3 - Injecting serviceable event ==="
                       "======")
-        self.run_cmd("/usr/sbin/rtas_errd -d -f %s/%s" % (self.events_path, event))
+        self.run_cmd("/usr/sbin/rtas_errd -d -f %s/%s" %
+                     (self.events_path, event))
         self.log.info("========4 - Checking registered notification tools =="
                       "======")
         self.run_cmd("servicelog_notify --list")
@@ -153,7 +158,8 @@ class servicelog(Test):
         self.run_cmd("rm -f /var/spool/mail/root")
         self.log.info("===========1 - Injecting serviceable event ==="
                       "======")
-        self.run_cmd("/usr/sbin/rtas_errd -d -f %s/%s" % (self.events_path, event))
+        self.run_cmd("/usr/sbin/rtas_errd -d -f %s/%s" %
+                     (self.events_path, event))
         self.log.info("===========2 - Checking if the event shows up"
                       " on servicelog_manage =========")
         self.run_cmd("servicelog --dump")
@@ -195,7 +201,8 @@ class servicelog(Test):
         self.run_cmd("rm -f /var/spool/mail/root")
         self.log.info("===========1 - Injecting event ==="
                       "======")
-        self.run_cmd("/usr/sbin/rtas_errd -d -f %s/%s" % (self.events_path, event))
+        self.run_cmd("/usr/sbin/rtas_errd -d -f %s/%s" %
+                     (self.events_path, event))
         self.log.info("===========2 - Checking servicelog before the "
                       "repair action =========")
         self.run_cmd("servicelog --type=ppc64_rtas -v")

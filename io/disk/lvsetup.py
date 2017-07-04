@@ -61,7 +61,7 @@ class Lvsetup(Test):
             else:
                 pkg = 'btrfs-progs'
         if pkg and not smm.check_installed(pkg) and not smm.install(pkg):
-            self.skip("Package %s is missing and could not be installed" % pkg)
+            self.cancel("Package %s is missing and could not be installed" % pkg)
         lv_snapshot_name = self.params.get(
             'lv_snapshot_name', default='avocado_sn')
         self.lv_snapshot_size = self.params.get(
@@ -74,13 +74,13 @@ class Lvsetup(Test):
             'ramdisk_sparse_filename', default='virtual_hdd')
 
         if lv_utils.vg_check(vg_name):
-            self.skip('Volume group %s already exists' % vg_name)
+            self.cancel('Volume group %s already exists' % vg_name)
         self.vg_name = vg_name
         if lv_utils.lv_check(vg_name, lv_name):
-            self.skip('Logical Volume %s already exists' % lv_name)
+            self.cancel('Logical Volume %s already exists' % lv_name)
         self.lv_name = lv_name
         if lv_utils.lv_check(vg_name, lv_snapshot_name):
-            self.skip('Snapshot %s already exists' % lv_snapshot_name)
+            self.cancel('Snapshot %s already exists' % lv_snapshot_name)
         self.mount_loc = self.srcdir
         self.lv_snapshot_name = lv_snapshot_name
 

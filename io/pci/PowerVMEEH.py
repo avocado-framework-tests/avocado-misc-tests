@@ -58,7 +58,7 @@ class PowerVMEEH(Test):
         output = genio.read_file("/sys/kernel/debug/powerpc/eeh_enable")\
             .strip()
         if output != '0x1':
-            self.skip("EEH is not enabled, please enable via FSP")
+            self.cancel("EEH is not enabled, please enable via FSP")
             sys.exit(1)
         self.max_freeze = int(self.params.get('max_freeze', default='1'))
         cmd = "echo %d > /sys/kernel/debug/powerpc/eeh_max_freezes"\

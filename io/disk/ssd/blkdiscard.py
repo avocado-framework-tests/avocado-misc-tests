@@ -38,11 +38,11 @@ class Blkdiscard(Test):
         """
         smm = SoftwareManager()
         if not smm.check_installed("util-linux"):
-            self.skip("blkdiscard is needed for the test to be run")
+            self.cancel("blkdiscard is needed for the test to be run")
         self.disk = self.params.get('disk', default='/dev/nvme0n1')
         cmd = 'ls %s' % self.disk
         if process.system(cmd, ignore_status=True) is not 0:
-            self.skip("%s does not exist" % self.disk)
+            self.cancel("%s does not exist" % self.disk)
         cmd = "blkdiscard -V"
         process.run(cmd)
 

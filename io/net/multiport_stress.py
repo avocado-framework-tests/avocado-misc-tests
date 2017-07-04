@@ -34,20 +34,20 @@ class MultiportStress(Test):
         self.host_interfaces = self.params.get("host_interfaces",
                                                default="").split(",")
         if not self.host_interfaces:
-            self.skip("user should specify host interfaces")
+            self.cancel("user should specify host interfaces")
         smm = SoftwareManager()
         if distro.detect().name == 'Ubuntu':
             pkg = 'iputils-ping'
         else:
             pkg = 'iputils'
         if not smm.check_installed(pkg) and not smm.install(pkg):
-            self.skip("Package %s is needed to test" % pkg)
+            self.cancel("Package %s is needed to test" % pkg)
         self.peer_ips = self.params.get("peer_ips",
                                         default="").split(",")
         interfaces = netifaces.interfaces()
         for self.host_interface in self.host_interfaces:
             if self.host_interface not in interfaces:
-                self.skip("interface is not available")
+                self.cancel("interface is not available")
         self.count = self.params.get("count", default="1000")
 
     def test_multiport_stress(self):

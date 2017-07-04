@@ -54,21 +54,21 @@ class Bonding(Test):
             depends.extend(["openssh", "iputils"])
         for pkg in depends:
             if not sm.check_installed(pkg) and not sm.install(pkg):
-                self.skip("%s package is need to test" % pkg)
+                self.cancel("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
         self.user = self.params.get("user_name", default="root")
         self.host_interfaces = self.params.get("host_interfaces",
                                                default="").split(",")
         if not self.host_interfaces:
-            self.skip("user should specify host interfaces")
+            self.cancel("user should specify host interfaces")
         self.peer_interfaces = self.params.get("peer_interfaces",
                                                default="").split(",")
         for self.host_interface in self.host_interfaces:
             if self.host_interface not in interfaces:
-                self.skip("interface is not available")
+                self.cancel("interface is not available")
         self.peer_first_ipinterface = self.params.get("peer_ip", default="")
         if not self.peer_interfaces or self.peer_first_ipinterface == "":
-            self.skip("peer machine should available")
+            self.cancel("peer machine should available")
         msg = "ip addr show  | grep %s | grep -oE '[^ ]+$'"\
               % self.peer_first_ipinterface
         cmd = "ssh %s@%s %s" % (self.user, self.peer_first_ipinterface, msg)
@@ -80,7 +80,7 @@ class Bonding(Test):
         self.bond_status = "cat /proc/net/bonding/%s" % self.bond_name
         self.mode = self.params.get("bonding_mode", default="")
         if self.mode == "":
-            self.skip("test skipped because mode not specified")
+            self.cancel("test skipped because mode not specified")
         self.host_ips = []
         self.peer_ips = [self.peer_first_ipinterface]
         for val in self.host_interfaces:

@@ -46,7 +46,7 @@ class Valgrind(Test):
             deps.extend(['gcc-c++'])
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
-                self.skip('%s is needed for the test to be run' % package)
+                self.cancel('%s is needed for the test to be run' % package)
         tarball = self.fetch_asset(
             "http://valgrind.org/downloads/valgrind-3.12.0.tar.bz2")
         archive.extract(tarball, self.srcdir)

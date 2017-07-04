@@ -99,13 +99,13 @@ class Pktgen(Test):
         interfaces = process.system_output(
             "ip -o link show | awk -F': ' '{print $2}'", shell=True)
         if self.eth not in interfaces:
-            self.skip("%s is not available" % self.eth)
+            self.cancel("%s is not available" % self.eth)
 
     def ping_test(self):
         ping_response = process.system("ping -c 1 " + self.dst_ip, shell=True)
         self.log.info("Ping response value is %d" % ping_response)
         if ping_response != 0:
-            self.skip("Host not reachable")
+            self.cancel("Host not reachable")
 
 
 if __name__ == "__main__":

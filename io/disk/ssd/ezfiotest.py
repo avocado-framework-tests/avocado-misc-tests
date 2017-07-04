@@ -47,7 +47,7 @@ class EzfioTest(Test):
         self.disk = self.params.get('disk', default='/dev/nvme0n1')
         cmd = 'ls %s' % self.disk
         if process.system(cmd, ignore_status=True) is not 0:
-            self.skip("%s does not exist" % self.disk)
+            self.cancel("%s does not exist" % self.disk)
         fio_path = os.path.join(self.teststmpdir, 'fio')
         fio_link = 'https://github.com/axboe/fio.git'
         git.get_repo(fio_link, destination_dir=fio_path)

@@ -43,16 +43,16 @@ class HtxTest(Test):
         Build 'HTX'.
         """
         if 'ppc64' not in process.system_output('uname -a', shell=True):
-            self.skip("Platform does not supports")
+            self.cancel("Platform does not supports")
 
         if distro.detect().name != 'Ubuntu':
-            self.skip("Distro does not support")
+            self.cancel("Distro does not support")
 
         self.mdt_file = self.params.get('mdt_file', default='mdt.hd')
         self.time_limit = int(self.params.get('time_limit', default=2)) * 3600
         self.block_devices = self.params.get('disk', default=None)
         if self.block_devices is None:
-            self.skip("Needs the block devices to run the HTX")
+            self.cancel("Needs the block devices to run the HTX")
         self.block_device = []
         for disk in self.block_devices.split():
             self.block_device.append(disk.rsplit("/")[-1])
@@ -63,7 +63,7 @@ class HtxTest(Test):
         smm = SoftwareManager()
         for pkg in packages:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.skip("Can not install %s" % pkg)
+                self.cancel("Can not install %s" % pkg)
 
         url = "https://github.com/open-power/HTX/archive/master.zip"
         tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')
@@ -77,7 +77,7 @@ class HtxTest(Test):
         process.run('dpkg --purge htxubuntu')
         process.run('dpkg -i htxubuntu.deb')
         if not os.path.exists("/usr/lpp/htx/mdt/%s" % self.mdt_file):
-            self.skip("MDT file %s not found" % self.mdt_file)
+            self.cancel("MDT file %s not found" % self.mdt_file)
         self.smt = self.params.get('smt_change', default=False)
         if self.smt:
             self.max_smt_value = 8
