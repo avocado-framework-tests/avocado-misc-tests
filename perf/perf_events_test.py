@@ -48,11 +48,11 @@ class Perf_subsystem(Test):
         elif detected_distro.name in ['rhel', 'SuSE', 'fedora', 'redhat']:
             deps.extend(['perf'])
         else:
-            self.skip("Install the package for perf supported by %s"
-                      % detected_distro.name)
+            self.cancel("Install the package for perf supported by %s"
+                        % detected_distro.name)
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
-                self.skip('%s is needed for the test to be run' % package)
+                self.cancel('%s is needed for the test to be run' % package)
 
     def test(self):
         '''

@@ -47,25 +47,25 @@ class ReceiveMulticastTest(Test):
             pkgs.extend(["openssh-clients", "iputils"])
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.skip("%s package is need to test" % pkg)
+                self.cancel("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface")
         if self.iface not in interfaces:
-            self.skip("%s interface is not available" % self.iface)
+            self.cancel("%s interface is not available" % self.iface)
         self.peer = self.params.get("peer_ip", default="")
         if self.peer == "":
-            self.skip("peer ip should specify in input")
+            self.cancel("peer ip should specify in input")
         self.user = self.params.get("user_name", default="root")
         msg = "ip addr show  | grep %s | grep -oE '[^ ]+$'" % self.peer
         cmd = "ssh %s@%s \"%s\"" % (self.user, self.peer, msg)
         self.peerif = process.system_output(cmd, shell=True).strip()
         if self.peerif == "":
-            self.skip("unable to get peer interface")
+            self.cancel("unable to get peer interface")
         cmd = "ip -f inet -o addr show %s | awk '{print $4}' | cut -d / -f1"\
               % self.iface
         self.local_ip = process.system_output(cmd, shell=True).strip()
         if self.local_ip == "":
-            self.skip("unable to get local ip")
+            self.cancel("unable to get local ip")
 
     def test_multicast(self):
         '''

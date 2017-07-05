@@ -53,14 +53,14 @@ class Netperf(Test):
             pkgs.append('openssh-clients')
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.skip("%s package is need to test" % pkg)
+                self.cancel("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface", default="")
         self.peer_ip = self.params.get("peer_ip", default="")
         if self.iface not in interfaces:
-            self.skip("%s interface is not available" % self.iface)
+            self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
-            self.skip("%s peer machine is not available" % self.peer_ip)
+            self.cancel("%s peer machine is not available" % self.peer_ip)
         self.peer_user = self.params.get("peer_user_name", default="root")
         self.timeout = self.params.get("timeout", default="600")
         self.netperf_run = self.params.get("NETSERVER_RUN", default="0")
@@ -75,7 +75,7 @@ class Netperf(Test):
         cmd = "scp -r %s %s@%s:/tmp/" % (self.neperf, self.peer_user,
                                          self.peer_ip)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
-            self.skip("unable to copy the netperf into peer machine")
+            self.cancel("unable to copy the netperf into peer machine")
         tmp = "cd /tmp/%s;./configure ppc64le;make" % self.version
         cmd = "ssh %s@%s \"%s\"" % (self.peer_user, self.peer_ip, tmp)
         if process.system(cmd, shell=True, ignore_status=True) != 0:

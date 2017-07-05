@@ -39,12 +39,12 @@ class PPC64Test(Test):
         """
         command = "uname -p"
         if 'ppc' not in process.system_output(command, ignore_status=True):
-            self.skip("Processor is not ppc64")
+            self.cancel("Processor is not ppc64")
         if SoftwareManager().check_installed("powerpc-utils") is False:
             if SoftwareManager().install("powerpc-utils") is False:
-                self.skip("powerpc-utils is not installing")
+                self.cancel("powerpc-utils is not installing")
         if "is not SMT capable" in process.system_output("ppc64_cpu --smt"):
-            self.skip("Machine is not SMT capable")
+            self.cancel("Machine is not SMT capable")
         self.curr_smt = process.system_output("ppc64_cpu --smt | awk -F'=' \
                 '{print $NF}' | awk '{print $NF}'", shell=True)
         self.smt_subcores = 0

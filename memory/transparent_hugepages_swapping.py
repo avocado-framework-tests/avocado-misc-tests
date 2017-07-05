@@ -61,7 +61,7 @@ class Thp_Swapping(Test):
             tmpfs_size = mem_free
 
         if swap <= 0:
-            self.skip("Swap is not enabled in the system")
+            self.cancel("Swap is not enabled in the system")
 
         if not os.path.ismount(self.mem_path):
             if not os.path.isdir(self.mem_path):

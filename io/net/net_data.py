@@ -50,11 +50,11 @@ class NetDataTest(Test):
             pkgs.extend(["openssh-clients", "iputils"])
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.skip("%s package is need to test" % pkg)
+                self.cancel("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
         interface = self.params.get("interface")
         if interface not in interfaces:
-            self.skip("%s interface is not available" % interface)
+            self.cancel("%s interface is not available" % interface)
         mtu_list = self.params.get("size_val", default=1500)
         self.mtu_list = mtu_list.split()
         self.interface = interface

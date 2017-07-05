@@ -38,11 +38,11 @@ class NetworkconfigTest(Test):
         sm = SoftwareManager()
         for pkg in ["ethtool", "net-tools"]:
             if not sm.check_installed(pkg) and not sm.install(pkg):
-                self.skip("%s package is need to test" % pkg)
+                self.cancel("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface")
         if self.iface not in interfaces:
-            self.skip("%s interface is not available" % self.iface)
+            self.cancel("%s interface is not available" % self.iface)
 
     def test_networkconfig(self):
         '''

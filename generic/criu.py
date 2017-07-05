@@ -36,7 +36,7 @@ class CRIU(Test):
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
         if dist.name not in ['rhel', 'redhat']:
-            self.skip('Currently test is supported only on RHEL')
+            self.cancel('Currently test is supported only on RHEL')
         for package in packages:
             if not sm.check_installed(package) and not sm.install(package):
                 self.error("Fail to install %s required for this test." %

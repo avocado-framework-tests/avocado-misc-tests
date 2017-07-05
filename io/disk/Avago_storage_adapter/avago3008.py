@@ -47,11 +47,11 @@ class Avago3008(Test):
         self.size = int(self.params.get('size', default='max'))
         self.tool_location = self.params.get('tool_location')
         if not self.disk:
-            self.skip("Please provide disks to run the tests")
+            self.cancel("Please provide disks to run the tests")
         self.number_of_disk = len(self.disk)
         if (not os.path.isfile(self.tool_location) or not
            os.access(self.tool_location, os.X_OK)):
-            self.skip()
+            self.cancel()
 
         self.dict_raid = {'raid0': [2, None, None], 'raid1': [2, 2, None],
                           'raid1e': [3, None, None],
@@ -59,7 +59,7 @@ class Avago3008(Test):
 
         self.value = self.dict_raid[self.raidlevel]
         if self.number_of_disk < self.value[0]:
-            self.skip("please give enough drives to perform the test")
+            self.cancel("please give enough drives to perform the test")
 
         if self.value[1] is not None:
             self.disk = self.disk[0:self.value[1]]

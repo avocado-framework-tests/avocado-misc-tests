@@ -50,14 +50,14 @@ class ip_over_ib(Test):
             pkgs.append('openssh-clients')
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.skip("%s package is need to test" % pkg)
+                self.cancel("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
         self.IF = self.params.get("interface", default="")
         self.PEER_IP = self.params.get("peer_ip", default="")
         if self.IF not in interfaces:
-            self.skip("%s interface is not available" % self.IF)
+            self.cancel("%s interface is not available" % self.IF)
         if self.PEER_IP == "":
-            self.skip("%s peer machine is not available" % self.PEER_IP)
+            self.cancel("%s peer machine is not available" % self.PEER_IP)
         self.to = self.params.get("timeout", default="600")
         self.IPERF_RUN = self.params.get("IPERF_RUN", default="0")
         self.NETSERVER_RUN = self.params.get("NETSERVER_RUN", default="0")
@@ -75,10 +75,10 @@ class ip_over_ib(Test):
         elif detected_distro.name == "centos":
             cmd = "service iptables stop"
         else:
-            self.skip("Distro not supported")
+            self.cancel("Distro not supported")
         if process.system("%s && ssh %s %s" % (cmd, self.PEER_IP, cmd),
                           ignore_status=True, shell=True) != 0:
-            self.skip("Unable to disable firewall")
+            self.cancel("Unable to disable firewall")
 
         tarball = self.fetch_asset('ftp://ftp.netperf.org/netperf/'
                                    'netperf-2.7.0.tar.bz2', expire='7d')
@@ -87,7 +87,7 @@ class ip_over_ib(Test):
         self.neperf = os.path.join(self.netperf, version)
         tmp = "scp -r %s root@%s:" % (self.neperf, self.PEER_IP)
         if process.system(tmp, shell=True, ignore_status=True) != 0:
-            self.skip("unable to copy the netperf into peer machine")
+            self.cancel("unable to copy the netperf into peer machine")
         tmp = "cd /root/netperf-2.7.0;./configure ppc64le;make"
         cmd = "ssh %s \"%s\"" % (self.PEER_IP, tmp)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
@@ -105,7 +105,7 @@ class ip_over_ib(Test):
         self.ipe = os.path.join(self.iper, 'iperf-master')
         tmp = "scp -r %s root@%s:" % (self.ipe, self.PEER_IP)
         if process.system(tmp, shell=True, ignore_status=True) != 0:
-            self.skip("unable to copy the iperf into peer machine")
+            self.cancel("unable to copy the iperf into peer machine")
         tmp = "cd /root/iperf-master;./configure;make"
         cmd = "ssh %s \"%s\"" % (self.PEER_IP, tmp)
         if process.system(cmd, shell=True, ignore_status=True) != 0:

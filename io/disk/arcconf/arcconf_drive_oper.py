@@ -41,7 +41,7 @@ class Arcconftest(Test):
         """
         smm = SoftwareManager()
         if not smm.check_installed("lsscsi") and not smm.install("lsscsi"):
-            self.skip("Unable to install lsscsi")
+            self.cancel("Unable to install lsscsi")
         self.crtl_no = self.params.get('crtl_no')
         self.channel_no = self.params.get('channel_no')
         self.disk_no = self.params.get('disk_no', default="").split(",")
@@ -67,10 +67,10 @@ class Arcconftest(Test):
         if self.crtl_no is '' or self.channel_no is '' or self.disk_no is \
            '' or self.pci_id is '' or len(self.disk_no) <= 1 or \
            self.tool_name is '' or self.http_path is '':
-            self.skip(" please ensure yaml parameters are not empty or \
+            self.cancel(" please ensure yaml parameters are not empty or \
                        the total device should be more than 1")
         elif self.comp(self.pci_id, pci_id_formatted) == 1:
-            self.skip(" Test skipped!!, PMC controller not available")
+            self.cancel(" Test skipped!!, PMC controller not available")
 
         detected_distro = distro.detect()
         if not smm.check_installed("Arcconf"):
@@ -83,7 +83,7 @@ class Arcconftest(Test):
                 self.repo = self.fetch_asset(http_repo, expire='10d')
                 cmd = "rpm -ivh %s" % self.repo
             if process.system(cmd, ignore_status=True, shell=True) == 0:
-                self.skip("Unable to install arcconf")
+                self.cancel("Unable to install arcconf")
 
         cmd = "lsscsi  | grep LogicalDrv | awk \'{print $7}\'"
         self.os_drive = self.cmdop_list(cmd)
@@ -93,7 +93,7 @@ class Arcconftest(Test):
             cmd = "df -h /boot | grep %s" % self.os_drive
             if process.system(cmd, timeout=300, ignore_status=True,
                               shell=True) == 0:
-                self.skip("Test Skipped!! OS disk requested for removal")
+                self.cancel("Test Skipped!! OS disk requested for removal")
 
             self.log.info("Deleting the default logical drive %s" %
                           (self.logicaldrive))

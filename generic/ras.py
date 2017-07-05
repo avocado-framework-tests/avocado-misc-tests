@@ -43,7 +43,7 @@ class RASTools(Test):
     def setUp(self):
         architecture = os.uname()[4]
         if "ppc" not in architecture:
-            self.skip("supported only on Power platform")
+            self.cancel("supported only on Power platform")
         sm = SoftwareManager()
         for package in ("ppc64-diag", "powerpc-utils", "lsvpd", "ipmitool"):
             if not sm.check_installed(package) and not sm.install(package):

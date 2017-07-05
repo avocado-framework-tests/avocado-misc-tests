@@ -46,7 +46,7 @@ class Xfstests(Test):
         Source: git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git
         """
         if process.system_output("df -T / | awk 'END {print $2}'", shell=True) == 'ext3':
-            self.skip('Test does not support ext3 root file system')
+            self.cancel('Test does not support ext3 root file system')
         sm = SoftwareManager()
 
         self.detected_distro = distro.detect()
@@ -54,9 +54,10 @@ class Xfstests(Test):
         packages = ['e2fsprogs', 'automake', 'gcc', 'quota', 'attr',
                     'make', 'xfsprogs', 'gawk']
         if 'Ubuntu' in self.detected_distro.name:
-            packages.extend(['xfslibs-dev', 'uuid-dev', 'libtool-bin', 'libuuid1',
-                             'libattr1-dev', 'libacl1-dev', 'libgdbm-dev',
-                             'uuid-runtime', 'libaio-dev', 'fio', 'dbench', 'btrfs-tools'])
+            packages.extend(
+                ['xfslibs-dev', 'uuid-dev', 'libtool-bin', 'libuuid1',
+                 'libattr1-dev', 'libacl1-dev', 'libgdbm-dev',
+                 'uuid-runtime', 'libaio-dev', 'fio', 'dbench', 'btrfs-tools'])
 
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
@@ -74,12 +75,12 @@ class Xfstests(Test):
             if self.detected_distro.name in ['centos', 'fedora']:
                 packages.extend(['fio', 'dbench'])
         else:
-            self.skip("test not supported in %s" % self.detected_distro.name)
+            self.cancel("test not supported in %s" % self.detected_distro.name)
 
         for package in packages:
             if not sm.check_installed(package) and not sm.install(package):
-                self.skip("Fail to install %s required for this test." %
-                          package)
+                self.cancel("Fail to install %s required for this test." %
+                            package)
 
         self.skip_dangerous = self.params.get('skip_dangerous', default=True)
         self.test_range = self.params.get('test_range', default=None)
@@ -90,7 +91,7 @@ class Xfstests(Test):
         self.dev_type = self.params.get('type', default='loop')
         self.fs_to_test = self.params.get('fs', default='ext4')
         if process.system('which mkfs.%s' % self.fs_to_test, ignore_status=True):
-            self.skip('Unknown filesystem %s' % self.fs_to_test)
+            self.cancel('Unknown filesystem %s' % self.fs_to_test)
         mount = True
         self.devices = []
         shutil.copyfile(os.path.join(self.datadir, 'local.config'),
@@ -107,7 +108,7 @@ class Xfstests(Test):
                     self.disk_mnt = ''
                     mount = False
                 else:
-                    self.skip('Need 15 GB to create loop devices')
+                    self.cancel('Need 15 GB to create loop devices')
             self._create_loop_device(base_disk, loop_size, mount)
         else:
             self.test_dev = self.params.get('disk_test', default=None)

@@ -58,7 +58,7 @@ class Disktest(Test):
         """
         softm = SoftwareManager()
         if not softm.check_installed("gcc") and not softm.install("gcc"):
-            self.skip('Gcc is needed for the test to be run')
+            self.cancel('Gcc is needed for the test to be run')
         # Log of all the disktest processes
         self.disk_log = os.path.abspath(os.path.join(self.outputdir,
                                                      "log.txt"))
@@ -87,8 +87,8 @@ class Disktest(Test):
         if self.chunk_mb == 0:
             self.chunk_mb = 1
         if memory_mb > self.chunk_mb:
-            self.skip("Chunk size has to be greater or equal to RAM size. "
-                      "(%s > %s)" % (self.chunk_mb, memory_mb))
+            self.cancel("Chunk size has to be greater or equal to RAM size. "
+                        "(%s > %s)" % (self.chunk_mb, memory_mb))
 
         gigabytes = self.params.get('gigabytes', default=None)
         if gigabytes is None:
@@ -99,8 +99,8 @@ class Disktest(Test):
 
         self.no_chunks = 1024 * gigabytes / self.chunk_mb
         if self.no_chunks == 0:
-            self.skip("Free disk space is lower than chunk size (%s, %s)"
-                      % (1024 * gigabytes, self.chunk_mb))
+            self.cancel("Free disk space is lower than chunk size (%s, %s)"
+                        % (1024 * gigabytes, self.chunk_mb))
 
         self.log.info("Test will use %s chunks %sMB each in %sMB RAM using %s "
                       "GB of disk space on %s disks (%s).", self.no_chunks,

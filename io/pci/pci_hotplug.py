@@ -42,7 +42,7 @@ class PCIHotPlugTest(Test):
         """
         cmd = "uname -p"
         if 'ppc' not in process.system_output(cmd, ignore_status=True):
-            self.skip("Processor is not ppc64")
+            self.cancel("Processor is not ppc64")
         if cpu._list_matches(cpu._get_cpu_info(), 'pSeries'):
             for mdl in ['rpaphp', 'rpadlpar_io']:
                 if not linux_modules.module_is_loaded(mdl):
@@ -53,7 +53,7 @@ class PCIHotPlugTest(Test):
         self.return_code = 0
         self.device = self.params.get('pci_device', default=' ')
         if not os.path.isdir('/sys/bus/pci/devices/%s' % self.device):
-            self.skip("PCI device given does not exist")
+            self.cancel("PCI device given does not exist")
         devspec = genio.read_file("/sys/bus/pci/devices/%s/devspec"
                                   % self.device)
         self.slot = genio.read_file("/proc/device-tree/%s/ibm,loc-code"
@@ -61,9 +61,9 @@ class PCIHotPlugTest(Test):
         self.slot = re.match(r'((\w+)[\.])+(\w+)-P(\d+)-C(\d+)|Slot(\d+)',
                              self.slot).group()
         if not os.path.isdir('/sys/bus/pci/slots/%s' % self.slot):
-            self.skip("%s Slot not available" % self.slot)
+            self.cancel("%s Slot not available" % self.slot)
         if not os.path.exists('/sys/bus/pci/slots/%s/power' % self.slot):
-            self.skip("%s Slot does not support hotplug" % self.slot)
+            self.cancel("%s Slot does not support hotplug" % self.slot)
 
     def test(self):
         """

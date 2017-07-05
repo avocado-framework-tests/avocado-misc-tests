@@ -44,7 +44,7 @@ class DriverBindTest(Test):
         self.slot = self.params.get('pci_device', default='0001:01:00.0')
         self.driver = pci.get_driver(self.slot)
         if not self.driver:
-            self.skip("%s does not exist" % self.slot)
+            self.cancel("%s does not exist" % self.slot)
 
     def test(self):
         """

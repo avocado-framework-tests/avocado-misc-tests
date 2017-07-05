@@ -41,7 +41,7 @@ class Arcconftest(Test):
         """
         smm = SoftwareManager()
         if not smm.check_installed("lsscsi") and not smm.install("lsscsi"):
-            self.skip("Unable to install lsscsi")
+            self.cancel("Unable to install lsscsi")
         self.crtl_no = self.params.get('crtl_no')
         self.pci_id = self.params.get('pci_id', default="").split(",")
         self.http_path = self.params.get('http_path')
@@ -64,9 +64,9 @@ class Arcconftest(Test):
         if self.crtl_no is '' or self.pci_id is '' or self.tool_name \
            is '' or self.http_path is '' or self.firmware_path\
            is '' or self.firmware_name is '':
-            self.skip(" please ensure yaml parameters are not empty")
+            self.cancel(" please ensure yaml parameters are not empty")
         elif self.comp(self.pci_id, pci_id_formatted) == 1:
-            self.skip(" Test skipped!!, PMC controller not available")
+            self.cancel(" Test skipped!!, PMC controller not available")
 
         http_repo1 = "%s%s" % (self.firmware_path, self.firmware_name)
         self.repo1 = self.fetch_asset(http_repo1, expire='10d')
@@ -86,7 +86,7 @@ class Arcconftest(Test):
                 self.repo = self.fetch_asset(http_repo, expire='10d')
                 cmd = "rpm -ivh %s" % self.repo
             if process.system(cmd, ignore_status=True, shell=True) != 0:
-                self.skip("Unable to install arcconf")
+                self.cancel("Unable to install arcconf")
 
     def test(self):
         """

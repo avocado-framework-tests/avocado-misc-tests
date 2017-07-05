@@ -38,7 +38,7 @@ class MOFEDInstallTest(Test):
         """
         self.iso_location = self.params.get('iso_location', default='')
         if self.iso_location is '':
-            self.skip("No ISO location given")
+            self.cancel("No ISO location given")
         self.option = self.params.get('option', default='')
         self.uninstall_flag = self.params.get('uninstall', default=True)
         self.iso = self.fetch_asset(self.iso_location, expire='10d')

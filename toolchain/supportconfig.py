@@ -41,11 +41,11 @@ class Supportconfig(Test):
         sm = SoftwareManager()
 
         if "SuSE" not in distro.detect().name:
-            self.skip("supportconfig is supported on the SuSE Distro only.")
+            self.cancel("supportconfig is supported on the SuSE Distro only.")
 
         if not sm.check_installed(
                 "supportutils") and not sm.install("supportutils"):
-            self.skip("Failed to install supportutils required for this test.")
+            self.cancel("Failed to install supportutils required for this test.")
 
     def test_supportconfig_options(self):
         """

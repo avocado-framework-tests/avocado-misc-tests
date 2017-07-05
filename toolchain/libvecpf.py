@@ -38,7 +38,7 @@ class Libvecpf(Test):
         http://github.com/Libvecpf/libvecpf.git
         """
         if not distro.detect().name.lower() == 'ubuntu':
-            self.skip('Upsupported OS %s' % distro.detect().name.lower())
+            self.cancel('Upsupported OS %s' % distro.detect().name.lower())
 
         smm = SoftwareManager()
         for package in ['gcc', 'make']:

@@ -61,7 +61,7 @@ class GCC(Test):
 
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
-                self.skip(
+                self.cancel(
                     "Failed to install %s required for this test." % package)
         tarball = self.fetch_asset('gcc.zip', locations=[
                                    'https://github.com/gcc-mirror/gcc/archive'

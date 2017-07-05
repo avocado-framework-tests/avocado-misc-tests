@@ -40,12 +40,12 @@ class RASTools(Test):
 
     def setUp(self):
         if "ppc" not in os.uname()[4]:
-            self.skip("supported only on Power platform")
+            self.cancel("supported only on Power platform")
         sm = SoftwareManager()
         for package in ("ppc64-diag", "powerpc-utils", "lsvpd", "sysfsutils"):
             if not sm.check_installed(package) and not sm.install(package):
-                self.skip("Fail to install %s required for this"
-                          " test." % package)
+                self.cancel("Fail to install %s required for this"
+                            " test." % package)
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
     def test1_uesensor(self):
@@ -61,8 +61,9 @@ class RASTools(Test):
     def test1_serv_config(self):
         self.log.info("===============Executing serv_config tool test===="
                       "===========")
-        list = ['-l', '-b', '-s', '-r', '-m', '-d', '--remote-maint', '--surveillance',
-                '--reboot-policy', '--remote-pon', '-d --force']
+        list = [
+            '-l', '-b', '-s', '-r', '-m', '-d', '--remote-maint', '--surveillance',
+            '--reboot-policy', '--remote-pon', '-d --force']
         for list_item in list:
             cmd = "serv_config %s" % list_item
             self.run_cmd(cmd)
@@ -73,7 +74,8 @@ class RASTools(Test):
     def test1_rtas_event_decode(self):
         self.log.info("===============Executing rtas_event_decode tool test===="
                       "===========")
-        self.run_cmd("rtas_event_decode -w 500 -dv -n 2302 < %s" % os.path.join(self.datadir, 'rtas'))
+        self.run_cmd("rtas_event_decode -w 500 -dv -n 2302 < %s" %
+                     os.path.join(self.datadir, 'rtas'))
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in rtas_event_decode tool "
                       "verification" % self.is_fail)
@@ -147,7 +149,8 @@ class RASTools(Test):
     def test1_bootlist(self):
         self.log.info("===============Executing bootlist tool test===="
                       "===========")
-        list = ['--help', '-m normal -r', '-m normal -o', '-m service -o', '-m both -o']
+        list = ['--help', '-m normal -r',
+                '-m normal -o', '-m service -o', '-m both -o']
         for list_item in list:
             cmd = "bootlist %s" % list_item
             self.run_cmd(cmd)
@@ -157,8 +160,10 @@ class RASTools(Test):
                                           "tail -1 | cut -d' ' -f1",
                                           shell=True).strip("12345")
         file_path = os.path.join(self.srcdir, 'file')
-        process.run("echo %s > %s" % (disk_name, file_path), ignore_status=True, sudo=True, shell=True)
-        process.run("echo %s >> %s" % (interface, file_path), ignore_status=True, sudo=True, shell=True)
+        process.run("echo %s > %s" %
+                    (disk_name, file_path), ignore_status=True, sudo=True, shell=True)
+        process.run("echo %s >> %s" %
+                    (interface, file_path), ignore_status=True, sudo=True, shell=True)
         self.run_cmd("bootlist -r -m both -f %s" % file_path)
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in bootlist tool "
@@ -188,7 +193,8 @@ class RASTools(Test):
         self.log.info("===============Executing lsvpd tool test============="
                       "==")
         self.run_cmd("lsvpd")
-        list = ['--debug', '--version', '--mark', '--serial=STR', '--type=STR', '--list=raid']
+        list = ['--debug', '--version', '--mark',
+                '--serial=STR', '--type=STR', '--list=raid']
         for list_item in list:
             cmd = "lsvpd %s" % list_item
             self.run_cmd(cmd)

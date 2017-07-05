@@ -51,7 +51,7 @@ class Tiobench(Test):
                 packages.extend(['btrfs-tools'])
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
-                self.skip("%s package required for this test." % package)
+                self.cancel("%s package required for this test." % package)
         locations = ["https://github.com/mkuoppal/tiobench/archive/master.zip"]
         tarball = self.fetch_asset("tiobench.zip", locations=locations)
         archive.extract(tarball, self.srcdir)

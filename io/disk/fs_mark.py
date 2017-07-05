@@ -59,7 +59,7 @@ class fs_mark(Test):
             if distro.detect().name == 'Ubuntu':
                 if not smm.check_installed("btrfs-tools") and not \
                         smm.install("btrfs-tools"):
-                    self.skip('btrfs-tools is needed for the test to be run')
+                    self.cancel('btrfs-tools is needed for the test to be run')
 
     def test(self):
         """

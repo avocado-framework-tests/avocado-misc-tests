@@ -52,14 +52,14 @@ class ScpTest(Test):
             pkgs.extend(["openssh-clients", "iputils"])
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.skip("%s package is need to test" % pkg)
+                self.cancel("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface")
         if self.iface not in interfaces:
-            self.skip("%s interface is not available" % self.iface)
+            self.cancel("%s interface is not available" % self.iface)
         self.peer = self.params.get("peer_ip", default="")
         if self.peer == "":
-            self.skip("peer ip should specify in input")
+            self.cancel("peer ip should specify in input")
         self.user = self.params.get("user_name", default="root")
 
     def test_ping(self):
