@@ -92,7 +92,7 @@ class DiskInfo(Test):
         Test block device tools to list different disk devices
         """
         cmd_list = ["lsblk -l", "fdisk -l", "sfdisk -l", "parted -l",
-                    "df -h", "blkid", "lshw -c disk"]
+                    "df -h", "blkid", "lshw -c disk", "grub2-probe /boot"]
         if self.distro == 'Ubuntu':
             cmd_list.append("hwinfo --block --short")
         for cmd in cmd_list:
@@ -214,6 +214,9 @@ class DiskInfo(Test):
             self.log.info("Disk %s of file system %s and "
                           "uuid %s is updated in blkid o/p",
                           self.disk, self.fstype, self.uuid)
+
+        if process.system("grub2-probe %s" % self.dir, ignore_status=True):
+            msg.append("Given disk %s's fs not detected by grub2" % disk)
 
         # Un-mount the directory
         self.log.info("Unmounting directory %s", self.dir)
