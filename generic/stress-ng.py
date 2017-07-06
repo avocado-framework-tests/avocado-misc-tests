@@ -48,20 +48,20 @@ class stressng(Test):
         sm = SoftwareManager()
         detected_distro = distro.detect()
         self.stressors = self.params.get('stressors', default=None)
-        self.ttimeout = self.params.get('ttimeout', default='100')
-        self.workers = self.params.get('workers', default='1')
+        self.ttimeout = self.params.get('ttimeout', default='300')
+        self.workers = self.params.get('workers', default='0')
         self.class_type = self.params.get('class', default='all')
         self.verify = self.params.get('verify', default=True)
         self.syslog = self.params.get('syslog', default=True)
         self.metrics = self.params.get('metrics', default=True)
         self.maximize = self.params.get('maximize', default=True)
         self.times = self.params.get('times', default=True)
-        self.aggressive = self.params.get('aggressive', default=False)
+        self.aggressive = self.params.get('aggressive', default=True)
         self.exclude = self.params.get('exclude', default=None)
 
         if 'Ubuntu' in detected_distro.name:
             deps = [
-                'stress-ng', 'libaio-dev', 'libapparmor-dev', 'libattr1-dev', 'libbsd-dev',
+                'libaio-dev', 'libapparmor-dev', 'libattr1-dev', 'libbsd-dev',
                 'libcap-dev', 'libgcrypt11-dev', 'libkeyutils-dev', 'libsctp-dev', 'zlib1g-dev']
         else:
             deps = ['libattr-devel', 'libbsd-devel', 'libcap-devel',
@@ -71,45 +71,43 @@ class stressng(Test):
                 self.log.info(
                     '%s is needed, get the source and build' % package)
 
-        if 'Ubuntu' not in detected_distro.name:
-            tarball = self.fetch_asset('stressng.zip', locations=[
-                                       'https://github.com/ColinIanKing/'
-                                       'stress-ng/archive/master.zip'],
-                                       expire='7d')
-            archive.extract(tarball, self.srcdir)
-            self.srcdir = os.path.join(self.srcdir, 'stress-ng-master')
-            os.chdir(self.srcdir)
-            result = build.run_make(self.srcdir, ignore_status=True)
-            for line in str(result).splitlines():
-                if 'error:' in line:
-                    self.cancel(
-                        "Unsupported OS, Please check the build logs !!")
-            build.make(self.srcdir, extra_args='install')
+        tarball = self.fetch_asset('stressng.zip', locations=[
+                                   'https://github.com/ColinIanKing/'
+                                   'stress-ng/archive/master.zip'],
+                                   expire='7d')
+        archive.extract(tarball, self.srcdir)
+        self.srcdir = os.path.join(self.srcdir, 'stress-ng-master')
+        os.chdir(self.srcdir)
+        result = build.run_make(self.srcdir, ignore_status=True)
+        for line in str(result).splitlines():
+            if 'error:' in line:
+                self.cancel(
+                    "Unsupported OS, Please check the build logs !!")
+        build.make(self.srcdir, extra_args='install')
         clear_dmesg()
 
     def test(self):
         args = []
         cmdline = ''
-        # 2 instanaces of each type of stressor for each CPU detected
-        if not self.workers:
-            self.workers = 2 * multiprocessing.cpu_count()
-
+        self.workers = multiprocessing.cpu_count()
         if not self.stressors:
             if 'all' in self.class_type:
                 args.append('--all %s ' % self.workers)
+            elif 'cpu' in self.class_type:
+                self.workers = 2 * multiprocessing.cpu_count()
+                args.append('--cpu %s --cpu-method all ' % self.workers)
             else:
-                args.append('--class %s --sequential %d ' %
+                args.append('--class %s --sequential %s ' %
                             (self.class_type, self.workers))
         else:
             for stressor in self.stressors.split(' '):
-                cmdline += '--%s %d ' % (stressor, self.workers)
+                cmdline += '--%s %s ' % (stressor, self.workers)
             args.append(cmdline)
+        if self.class_type in ['memory', 'vm', 'all']:
+            args.append('--vm-bytes 80% ')
         if self.aggressive and self.maximize:
-            # Sometimes the default memory used by each memory worker (256 M)
-            # might make our machine go OOM, so kill the stressor if OOM occurs
             args.append('--aggressive --maximize --oomable ')
         if self.exclude:
-            # add comma separated stressor to omit; --exclude bigheap,brk,stack
             args.append('--exclude %s ' % self.exclude)
         if self.ttimeout:
             args.append('--timeout %s ' % self.ttimeout)
