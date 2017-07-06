@@ -40,7 +40,7 @@ class Bridging(Test):
         if not smm.check_installed("bridge-utils") and not smm.install("bridge-utils"):
             self.cancel("bridge-utils package is need to test")
 
-        self.host_interface = self.params.get("host_interface",
+        self.host_interface = self.params.get("interface",
                                               default=None)
         if not self.host_interface:
             self.cancel("User should specify host interface")
