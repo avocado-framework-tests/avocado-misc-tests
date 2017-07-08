@@ -1,6 +1,7 @@
 NVM-Express user space tooling for Linux, which handles NVMe devices.
 
 This Suite creates namespace, and performs the following tests:
+* firmware upgrade
 * format namespace
 * read
 * write
@@ -11,7 +12,10 @@ This Suite creates namespace, and performs the following tests:
 * dsm
 * reset
 * subsystem reset
+* reset_sysfs
+
 This test needs to be run as root.
 Inputs Needed (in multiplexer file):
 ------------------------------------
-Devices -       NVMe devices
+Device      -       NVMe device
+Namespace   -       Namespace in the NVMe device

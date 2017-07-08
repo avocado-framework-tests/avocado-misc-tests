@@ -34,6 +34,7 @@ class NVMeTest(Test):
     NVM-Express user space tooling for Linux, which handles NVMe devices.
 
     :param device: Name of the nvme device
+    :param namespace: Namespace of the device
     """
 
     def setUp(self):
@@ -48,8 +49,8 @@ class NVMeTest(Test):
         if not smm.check_installed("nvme-cli") and not \
                 smm.install("nvme-cli"):
             self.cancel('nvme-cli is needed for the test to be run')
-        self.id_ns = self.create_namespace()
-        self.log.info(self.id_ns)
+        self.namespace = self.params.get('namespace', default='1')
+        self.id_ns = "%sn%s" % (self.device, self.namespace)
         cmd = "nvme id-ns %s | grep 'in use' | awk '{print $5}' | \
             awk -F':' '{print $NF}'" % self.id_ns
         self.format_size = process.system_output(cmd, shell=True).strip('\n')
@@ -93,7 +94,7 @@ class NVMeTest(Test):
                                          os.path.join(self.teststmpdir,
                                                       fw_file))
         # Getting the current FW details
-        self.log.debug("Current FW: %s" % self.get_firmware_version())
+        self.log.debug("Current FW: %s", self.get_firmware_version())
         fw_log = self.get_firmware_log()
 
         # Downloading new FW to the device
@@ -116,30 +117,6 @@ class NVMeTest(Test):
         self.get_firmware_log()
         if fw_version != self.get_firmware_version():
             self.fail("New Firmware not reflecting after updating")
-
-    def create_namespace(self):
-        """
-        Creates namespace on the device.
-        """
-        cmd = "nvme show-regs %s | grep version | awk '{print $NF}'" \
-            % self.device
-        if int(process.system_output(cmd, shell=True).strip('\n')) < 10200:
-            return self.device + 'n1'
-        cmd = 'nvme create-ns %s' % self.device
-        process.run(cmd, shell=True)
-        # TODO: retrieve the created namespace for nvme spec 1.2 and above
-        return self.device + 'n1'
-
-    def delete_namespace(self):
-        """
-        Deletes namespace on the device.
-        """
-        cmd = "nvme show-regs %s | grep version | awk '{print $NF}'" \
-            % self.device
-        if int(process.system_output(cmd, shell=True).strip('\n')) < 10200:
-            return
-        cmd = 'nvme delete-ns %s' % self.device
-        process.run(cmd, shell=True)
 
     def testformatnamespace(self):
         """
@@ -227,12 +204,6 @@ class NVMeTest(Test):
         """
         if self.reset_controller_sysfs():
             self.fail("Reset failed")
-
-    def tearDown(self):
-        """
-        Clean up
-        """
-        self.delete_namespace()
 
 
 if __name__ == "__main__":
