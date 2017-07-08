@@ -58,7 +58,7 @@ class pingpong(Test):
         detected_distro = distro.detect()
         pkgs = []
         if detected_distro.name == "Ubuntu":
-            pkgs.extend(["ibverbs", 'openssh-client'])
+            pkgs.extend(["ibverbs-utils", 'openssh-client'])
             cmd = "service ufw stop"
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
