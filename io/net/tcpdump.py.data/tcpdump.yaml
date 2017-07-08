@@ -1,4 +1,5 @@
 interface: net0
+peer_ip:
 count: 100
 # interface packet drop accepted in percentage (eg 10 for 10%)
 drop_accepted: 10

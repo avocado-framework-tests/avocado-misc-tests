@@ -18,6 +18,7 @@
 Tcpdump Test.
 """
 
+import os
 import netifaces
 from avocado import Test
 from avocado import main
@@ -35,28 +36,37 @@ class TcpdumpTest(Test):
         """
         self.iface = self.params.get("interface", default="")
         self.count = self.params.get("count", default="500")
+        self.peer_ip = self.params.get("peer_ip", default="")
         self.drop = self.params.get("drop_accepted", default="10")
         # Check if interface exists in the system
         interfaces = netifaces.interfaces()
         if self.iface not in interfaces:
-            self.cancel("%s interface is not available" % self.iface)
+            self.skip("%s interface is not available" % self.iface)
+        if not self.peer_ip:
+            self.skip("peer ip should specify in input")
 
         # Install needed packages
         smm = SoftwareManager()
         if not smm.check_installed("tcpdump") and not smm.install("tcpdump"):
-            self.cancel("Can not install tcpdump")
+            self.skip("Can not install tcpdump")
 
     def test(self):
         """
         Performs the tcpdump test.
         """
-        cmd = "tcpdump -i %s -n -c %s -A -vv" % (self.iface, self.count)
+        cmd = "ping -I %s %s -c %s" % (self.iface, self.peer_ip, self.count)
+        obj = process.SubProcess(cmd, verbose=False, shell=True)
+        obj.start()
+        output_file = os.path.join(self.outputdir, 'tcpdump')
+        cmd = "tcpdump -i %s -n -c %s -w '%s'" % (self.iface, self.count,
+                                                  output_file)
         for line in process.run(cmd, shell=True,
                                 ignore_status=True).stderr.splitlines():
             if "packets dropped by interface" in line:
                 if int(line[0]) >= (int(self.drop) * int(self.count) / 100):
                     self.fail("%s, more than %s percent" % (line, self.drop))
                 print line
+        obj.stop()
 
 
 if __name__ == "__main__":
