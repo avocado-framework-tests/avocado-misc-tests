@@ -41,14 +41,14 @@ class TcpdumpTest(Test):
         # Check if interface exists in the system
         interfaces = netifaces.interfaces()
         if self.iface not in interfaces:
-            self.skip("%s interface is not available" % self.iface)
+            self.cancel("%s interface is not available" % self.iface)
         if not self.peer_ip:
-            self.skip("peer ip should specify in input")
+            self.cancel("peer ip should specify in input")
 
         # Install needed packages
         smm = SoftwareManager()
         if not smm.check_installed("tcpdump") and not smm.install("tcpdump"):
-            self.skip("Can not install tcpdump")
+            self.cancel("Can not install tcpdump")
 
     def test(self):
         """
