@@ -17,9 +17,13 @@
 import os
 import re
 import time
-import pexpect
-import sys
+try:
+    import pxssh
+except ImportError:
+    from pexpect import pxssh
+
 from avocado import Test
+from avocado.utils import distro
 from avocado import main
 from avocado.utils import process
 from avocado.utils.process import CmdError
@@ -48,7 +52,7 @@ class HtxNicTest(Test):
     :params time_limit: how much time(hours) you want to run this stress.
     :param host_ip: IP address of host
     :param peer_ip: IP address of peer
-    :param peer_test_ip: IP address of peer test N/W interface
+    :param peer_password: password of peer for peer_user user
     :param peer_user: User name of Peer
     :param host_interfaces: Host N/W Interface's to run HTX on
     :param peer_interfaces: Peer N/W Interface's to run HTX on
@@ -64,7 +68,10 @@ class HtxNicTest(Test):
             self.cancel("Platform does not support HTX tests")
 
         self.parameters()
-        self.login(self.peer_test_ip, self.peer_user)
+        self.host_distro = distro.detect()
+        self.login(self.peer_ip, self.peer_user, self.peer_password)
+        self.get_ips()
+        self.get_peer_distro()
         # Currently test assumes HTX is installed on both Host & Peer
         # TODO: Clone HTX & build it
         cmd = "test -d /usr/lpp/htx/"
@@ -80,8 +87,9 @@ class HtxNicTest(Test):
     def parameters(self):
         self.host_ip = self.params.get("host_ip", '*', default=None)
         self.peer_ip = self.params.get("peer_ip", '*', default=None)
-        self.peer_test_ip = self.params.get("peer_test_ip", '*', default=None)
         self.peer_user = self.params.get("peer_user", '*', default=None)
+        self.peer_password = self.params.get("peer_password",
+                                             '*', default=None)
         self.host_intfs = self.params.get("host_interfaces",
                                           '*', default=None).split(",")
         self.peer_intfs = self.params.get("peer_interfaces",
@@ -92,48 +100,74 @@ class HtxNicTest(Test):
                                               '*', default=2)) * 3600
         self.query_cmd = "htxcmdline -query -mdt %s" % self.mdt_file
 
-    def login(self, peer_ip, username):
-        cmd = "ssh %s@%s" % (username, peer_ip)
-        con = pexpect.spawn(cmd, logfile=sys.stdout)
-        con.sendline()
-        index = con.expect([r'.+#', pexpect.EOF, pexpect.TIMEOUT])
-        if index == 1 or index == 2:
-            self.fail("Failed to connect SSH to the Peer")
-        con.sendline('exec bash --norc --noprofile')
-        con.expect(r'.+#')
-        con.sendline('PS1=[console-pexpect]\#')
-        con.expect("\n")  # from us, because echo
-        list = ["\[console-pexpect\]#$", pexpect.EOF, pexpect.TIMEOUT]
-        res = con.expect(list)
-        if res == 0:
-            self.log.info("Shell prompt changed")
-        else:
-            self.fail("Failed to set unique prompt on peer")
-        self.con = con
+    def login(self, ip, username, password):
+        '''
+        SSH Login method for remote server
+        '''
+        pxh = pxssh.pxssh()
+        # Work-around for old pxssh not having options= parameter
+        pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
+        pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
+        pxh.force_password = True
+
+        pxh.login(ip, username, password)
+        pxh.sendline()
+        pxh.prompt(timeout=60)
+        pxh.sendline('exec bash --norc --noprofile')
+        pxh.prompt(timeout=60)
+        # Ubuntu likes to be "helpful" and alias grep to
+        # include color, which isn't helpful at all. So let's
+        # go back to absolutely no messing around with the shell
+        pxh.set_unique_prompt()
+        pxh.prompt(timeout=60)
+        self.pxssh = pxh
 
     def run_command(self, command, timeout=300):
         '''
         SSH Run command method for running commands on remote server
         '''
         self.log.info("Running the command on peer lpar %s", command)
-        if not hasattr(self, 'con'):
+        if not hasattr(self, 'pxssh'):
             self.fail("SSH Console setup is not yet done")
-        con = self.con
+        con = self.pxssh
         con.sendline(command)
         con.expect("\n")  # from us
-        index = con.expect(["\[console-pexpect\]#$", pexpect.TIMEOUT], timeout)
-        if index == 1:
-            self.fail("Command timeout occurred for %s", command)
+        con.expect(con.PROMPT, timeout=timeout)
         output = con.before.splitlines()
         con.sendline("echo $?")
-        index = con.expect(["\[console-pexpect\]#$",  pexpect.TIMEOUT],
-                           timeout)
-        if index == 1:
-            self.fail("Command timeout occurred for echo $?")
+        con.prompt(timeout)
         exitcode = int(''.join(con.before.splitlines()[1:]))
         if exitcode != 0:
             raise CommandFailed(command, output, exitcode)
         return output
+
+    def get_ips(self):
+        self.host_ips = {}
+        for intf in self.host_intfs:
+            cmd = "ip addr list %s |grep 'inet ' |cut -d' ' -f6| \
+                  cut -d/ -f1" % intf
+            ip = process.system_output(cmd, ignore_status=True,
+                                       shell=True, sudo=True)
+            self.host_ips[intf] = ip
+        self.peer_ips = {}
+        for intf in self.peer_intfs:
+            cmd = "ip addr list %s |grep 'inet ' |cut -d' ' -f6| \
+                  cut -d/ -f1" % intf
+            ip = self.run_command(cmd)[-1]
+            self.peer_ips[intf] = ip
+
+    def get_peer_distro(self):
+        res = self.run_command("cat /etc/os-release")
+        output = "\n".join(res)
+        if "ubuntu" in output:
+            self.peer_distro = "Ubuntu"
+        elif "rhel" in output:
+            self.peer_distro = "rhel"
+        elif "sles" in output:
+            self.peer_distro = "SuSE"
+        else:
+            self.fail("Unknown peer distro type")
+        self.log.info("Peer distro is %s", self.peer_distro)
 
     def test(self):
         """
@@ -297,28 +331,40 @@ class HtxNicTest(Test):
     def htx_configure_net(self):
         self.log.info("Starting the N/W ping test for HTX in Host")
         cmd = "build_net %s" % self.bpt_file
-        try:
-            process.run(cmd, shell=True, sudo=True)
-        except CmdError as details:
-            try:
-                process.run("pingum", shell=True, sudo=True)
-            except CmdError as details:
-                self.log.debug("Command %s failed %s" % (cmd, details))
-                self.fail("N/W ping test for HTX failed in Host(pingum)")
+        output = process.system_output(cmd, ignore_status=True, shell=True,
+                                       sudo=True)
+        # Try up to 10 times until pingum test passes
+        for count in range(11):
+            if count == 0:
+                try:
+                    output_peer = self.run_command(cmd, timeout=300)
+                except CommandFailed as cf:
+                    output_peer = cf.output
+                    self.log.debug("Command %s failed %s", cf.command,
+                                   cf.output)
+            if "All networks ping Ok" not in output:
+                output = process.system_output("pingum", ignore_status=True,
+                                               shell=True, sudo=True)
+            else:
+                break
+            time.sleep(5)
+        else:
+            self.fail("N/W ping test for HTX failed in Host(pingum)")
 
         self.log.info("Starting the N/W ping test for HTX in Peer")
-        try:
-            output = self.run_command(cmd, timeout=300)
-        except CommandFailed as cf:
-            output = cf.output
-            self.log.debug("Command %s failed %s" % (cf.command, cf.exitcode))
-        if "All networks ping Ok" not in "\n".join(output):
-            self.log.info("\n".join(output))
-            try:
-                output = self.run_command("pingum", timeout=300)
-            except CommandFailed as cf:
-                self.log.info("\n".join(cf.output))
-                self.fail("N/W ping test for HTX failed in Peer(pingum)")
+        for count in range(11):
+            if "All networks ping Ok" not in "\n".join(output_peer):
+                try:
+                    output_peer = self.run_command("pingum", timeout=300)
+                except CommandFailed as cf:
+                    output_peer = cf.output
+                self.log.info("\n".join(output_peer))
+            else:
+                break
+            time.sleep(5)
+        else:
+            self.fail("N/W ping test for HTX failed in Peer(pingum)")
+        self.log.info("N/W ping test for HTX passed in both Host & Peer")
 
     def run_htx(self):
         self.start_htx_deamon()
@@ -567,9 +613,61 @@ class HtxNicTest(Test):
             except CommandFailed:
                 pass
 
+    def bring_up_host_interfaces(self):
+        if self.host_distro.name == "Ubuntu":
+            file_name = "/etc/network/interfaces"
+            return  # TODO: For Ubuntu need to implement
+        elif self.host_distro.name == "SuSE":
+            base_name = "/etc/sysconfig/network/ifcfg-"
+        elif self.host_distro.name in ["rhel", "fedora", "centos", "redhat"]:
+            base_name = "/etc/sysconfig/network-scripts/ifcfg-"
+
+        list = ["rhel", "fedora", "centos", "redhat", "SuSE"]
+        if self.host_distro.name in list:
+            for intf, ip in self.host_ips.iteritems():
+                file_name = "%s%s" % (base_name, intf)
+                with open(file_name, 'r') as file:
+                    filedata = file.read()
+                search_str = "IPADDR=.*"
+                replace_str = "IPADDR=%s" % ip
+                filedata = re.sub(search_str, replace_str, filedata)
+                with open(file_name, 'w') as file:
+                    for line in filedata:
+                        file.write(line)
+            cmd = "systemctl restart network"
+            process.run(cmd, ignore_status=True, shell=True, sudo=True)
+
+    def bring_up_peer_interfaces(self):
+        if self.peer_distro == "Ubuntu":
+            file_name = "/etc/network/interfaces"
+            return  # TODO: For Ubuntu need to implement
+        elif self.peer_distro == "SuSE":
+            base_name = "/etc/sysconfig/network/ifcfg-"
+        elif self.peer_distro in ["rhel", "fedora", "centos", "redhat"]:
+            base_name = "/etc/sysconfig/network-scripts/ifcfg-"
+
+        list = ["rhel", "fedora", "centos", "redhat", "SuSE"]
+        if self.peer_distro in list:
+            for intf, ip in self.peer_ips.iteritems():
+                file_name = "%s%s" % (base_name, intf)
+                filedata = self.run_command("cat %s" % file_name)
+                search_str = "IPADDR=.*"
+                replace_str = "IPADDR=%s" % ip
+                for line in filedata:
+                    obj = re.search(search_str, line)
+                    if obj:
+                        idx = filedata.index(line)
+                        filedata[idx] = replace_str
+                filedata = "\n".join(filedata)
+                self.run_command("echo \'%s\' > %s" % (filedata, file_name))
+            cmd = "systemctl restart network"
+            self.run_command(cmd)
+
     def tearDown(self):
         self.clean_state()
         self.shutdown_htx_daemon()
+        self.bring_up_host_interfaces()
+        self.bring_up_peer_interfaces()
 
 
 if __name__ == "__main__":
