@@ -64,30 +64,30 @@ class Rcutorture(Test):
 
         self.log.info("Online all cpus %s", totalcpus)
         for cpus in range(0, full_count):
-            cpu.online(cpu)
+            cpu.online(cpus)
         time.sleep(10)
 
         self.log.info("Offline all cpus 0 - %s\n", full_count)
         for cpus in range(0, full_count):
-            cpu.offline(cpu)
+            cpu.offline(cpus)
         time.sleep(10)
 
         self.log.info("Online all cpus 0 - %s\n", full_count)
         for cpus in range(0, full_count):
-            cpu.online(cpu)
+            cpu.online(cpus)
 
         self.log.info(
             "Offline and online first half cpus %s\n", fcpu)
         for cpus in range(0, half_count):
-            cpu.offline(cpu)
+            cpu.offline(cpus)
             time.sleep(10)
-            cpu.online(cpu)
+            cpu.online(cpus)
 
         self.log.info("Offline and online second half cpus %s\n", scpu)
         for cpus in range(shalf_count, full_count):
-            cpu.offline(cpu)
+            cpu.offline(cpus)
             time.sleep(10)
-            cpu.online(cpu)
+            cpu.online(cpus)
 
     def test(self):
         """
@@ -126,6 +126,10 @@ class Rcutorture(Test):
             nmiss = b.split(" ")[7]
             if int(nmiss):
                 self.log.info("\nWarning: near mis failure !!")
+
+    def tearDown(self):
+        if linux_modules.module_is_loaded('rcutorture'):
+            linux_modules.unload_module('rcutorture')
 
 
 if __name__ == "__main__":
