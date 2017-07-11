@@ -318,6 +318,8 @@ class Bonding(Test):
         '''
         set the initial state
         '''
+        self.log.info("Removing bonding module")
+        process.system("rmmod bonding", shell=True, ignore_status=True)
         self.bond_remove("local")
         for val1, val2, val3 in map(None, self.host_interfaces,
                                     self.host_ips, self.net_mask):
