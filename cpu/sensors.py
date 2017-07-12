@@ -69,7 +69,8 @@ class Sensors(Test):
                     "lm_sensors"):
                 self.cancel('Need sensors to run the test')
         if d_distro.arch in ["ppc64", "ppc64le"]:
-            if 'platform\t: PowerNV\n' not in cpu._get_cpu_info():
+            if not cpu._list_matches(open('/proc/cpuinfo').readlines(),
+                                     'platform\t: PowerNV\n'):
                 self.cancel(
                     'sensors test is applicable to bare-metal environment.')
 
