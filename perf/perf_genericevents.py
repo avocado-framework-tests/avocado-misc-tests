@@ -68,8 +68,8 @@ class test_generic_events(Test):
             raw_code = event_code.split('=', 2)[1].rstrip()
             if raw_code != val:
                 nfail += 1
-                self.warn('FAIL : Expected value is %s but got'
-                          '%s' % (val, raw_code))
+                self.log.warn('FAIL : Expected value is %s but got'
+                              '%s' % (val, raw_code))
             self.log.info('FILE in %s is %s' % (dir, file))
             self.log.info('PASS : Expected value: %s and got'
                           '%s' % (val, raw_code))

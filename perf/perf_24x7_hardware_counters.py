@@ -47,7 +47,7 @@ class test_eliminate_domain_suffix(Test):
         if 'Ubuntu' in detected_distro.name:
             deps.extend(['linux-tools-common', 'linux-tools-%s'
                          % platform.uname()[2]])
-        elif detected_distro.name in ['redhat', 'SuSE', 'fedora', 'centos']:
+        elif detected_distro.name in ['rhel', 'SuSE', 'fedora', 'centos']:
             deps.extend(['perf'])
         else:
             self.cancel("Install the package for perf supported by %s"
