@@ -24,7 +24,7 @@ import time
 import re
 from avocado import Test
 from avocado import main
-from avocado.utils import process, cpu, linux_modules, genio
+from avocado.utils import process, linux_modules, genio, pci, cpu
 
 
 class PCIHotPlugTest(Test):
@@ -43,23 +43,31 @@ class PCIHotPlugTest(Test):
         cmd = "uname -p"
         if 'ppc' not in process.system_output(cmd, ignore_status=True):
             self.cancel("Processor is not ppc64")
-        if cpu._list_matches(cpu._get_cpu_info(), 'pSeries'):
+        cmd = "cat /proc/cpuinfo"
+        if cpu._list_matches(open('/proc/cpuinfo').readlines(),
+                             'platform\t: pSeries\n'):
+            PowerVM = True
             for mdl in ['rpaphp', 'rpadlpar_io']:
                 if not linux_modules.module_is_loaded(mdl):
                     linux_modules.load_module(mdl)
-        elif cpu._list_matches(cpu._get_cpu_info(), 'PowerNV'):
+        elif cpu._list_matches(open('/proc/cpuinfo').readlines(),
+                               'platform\t: PowerNV\n'):
+            PowerVM = False
             if not linux_modules.module_is_loaded("pnv_php"):
                 linux_modules.load_module("pnv_php")
         self.return_code = 0
         self.device = self.params.get('pci_device', default=' ')
         if not os.path.isdir('/sys/bus/pci/devices/%s' % self.device):
             self.cancel("PCI device given does not exist")
-        devspec = genio.read_file("/sys/bus/pci/devices/%s/devspec"
-                                  % self.device)
-        self.slot = genio.read_file("/proc/device-tree/%s/ibm,loc-code"
-                                    % devspec)
-        self.slot = re.match(r'((\w+)[\.])+(\w+)-P(\d+)-C(\d+)|Slot(\d+)',
-                             self.slot).group()
+        if PowerVM:
+            devspec = genio.read_file("/sys/bus/pci/devices/%s/devspec"
+                                      % self.device)
+            self.slot = genio.read_file("/proc/device-tree/%s/ibm,loc-code"
+                                        % devspec)
+            self.slot = re.match(r'((\w+)[\.])+(\w+)-P(\d+)-C(\d+)|Slot(\d+)',
+                                 self.slot).group()
+        else:
+            self.slot = pci.get_pci_prop(self.device, "PhySlot")
         if not os.path.isdir('/sys/bus/pci/slots/%s' % self.slot):
             self.cancel("%s Slot not available" % self.slot)
         if not os.path.exists('/sys/bus/pci/slots/%s/power' % self.slot):
@@ -74,11 +82,15 @@ class PCIHotPlugTest(Test):
         cmd = "lspci -k -s %s" % self.device
         if process.system_output(cmd, shell=True).strip('\n') is not '':
             self.return_code = 1
+        else:
+            print "Adapter %s removed successfully" % self.device
         genio.write_file("/sys/bus/pci/slots/%s/power" % self.slot, "1")
         time.sleep(5)
         cmd = "lspci -k -s %s" % self.device
         if process.system_output(cmd, shell=True).strip('\n') is '':
             self.return_code = 2
+        else:
+            print "Adapter %s added back successfully" % self.device
         if self.return_code == 1:
             self.fail('%s not removed' % self.device)
         if self.return_code == 2:
