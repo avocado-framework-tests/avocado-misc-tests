@@ -21,6 +21,7 @@ import telnetlib
 from avocado import Test
 from avocado import main
 from avocado.utils import process
+from avocado.utils import genio, pci
 
 
 class CommandFailed(Exception):
@@ -43,6 +44,7 @@ class PortBounceTest(Test):
     :param userid: FC switch user name to login
     :param password: FC switch password to login
     :param port_ids: FC switch port ids where port needs to disable/enable
+    :param pci_bus_addrs: List of PCI bus address for corresponding fc ports
     :param sbt: short bounce time in seconds
     :param lbt: long bounce time in seconds
     :param count: Number of times test to run
@@ -62,6 +64,8 @@ class PortBounceTest(Test):
         self.password = self.params.get("password", '*', default=None)
         self.port_ids = self.params.get("port_ids",
                                         '*', default=None).split(",")
+        self.pci_bus_addrs = self.params.get("pci_bus_addrs",
+                                             '*', default=None).split(",")
         self.sbt = int(self.params.get("sbt", '*', default=5))
         self.lbt = int(self.params.get("lbt", '*', default=250))
         self.count = int(self.params.get("count", '*', default="2"))
@@ -144,6 +148,7 @@ class PortBounceTest(Test):
                           test_ports, str(cf))
         time.sleep(sleep_time)
         self.verify_port_disable(test_ports)
+        self.verify_port_toggle_host("Linkdown")
 
         # Port Enable
         self.log.info("Enable port(s) %s", test_ports)
@@ -154,8 +159,12 @@ class PortBounceTest(Test):
                           test_ports, str(cf))
         time.sleep(5)
         self.verify_port_enable(test_ports)
+        self.verify_port_toggle_host("Online")
 
     def verify_port_disable(self, test_ports):
+        """
+        Verifies port disable in fc switch
+        """
         switch_info = self.fc_run_command("switchshow")
         for port in test_ports:
             port_string = ".*%s.*No_Sync" % port
@@ -168,6 +177,9 @@ class PortBounceTest(Test):
                 self.failure_list[port] = msg
 
     def verify_port_enable(self, test_ports):
+        """
+        Verifies port enable in fc switch
+        """
         switch_info = self.fc_run_command("switchshow")
         for port in test_ports:
             port_string = ".*%s.*Online" % port
@@ -178,6 +190,24 @@ class PortBounceTest(Test):
                 self.log.debug("switch_info: %s", switch_info)
                 msg = "Port %s is failed to enable" % port
                 self.failure_list[port] = msg
+
+    def verify_port_toggle_host(self, status):
+        """
+        Verifies port enable/disable status change in host
+        side for corresponding fc adapter
+        """
+        for bus_id in self.pci_bus_addrs:
+            pci_class = pci.get_pci_class_name(bus_id)
+            intf = pci.get_interfaces_in_pci_address(bus_id, pci_class)[-1]
+            state = genio.read_file("/sys/class/fc_host/%s/port_state"
+                                    % intf).rstrip("\n")
+            self.log.info("Host bus: %s, state: %s", bus_id, state)
+            if state == status:
+                self.log.info("bus: %s, port status %s got reflected",
+                              bus_id, state)
+            else:
+                self.fail("port state not changed in host expected state: %s, \
+                          actual_state: %s", status, state)
 
     def porttoggle_fcoe(self, port, sleep_time):
         pass
@@ -193,6 +223,7 @@ class PortBounceTest(Test):
         self.log.debug("Kernel Errors: %s", output)
         # verify given test ports are online after test.
         self.verify_port_enable(self.port_ids)
+        self.verify_port_toggle_host("Online")
 
 
 if __name__ == "__main__":
