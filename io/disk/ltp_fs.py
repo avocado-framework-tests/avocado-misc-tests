@@ -109,14 +109,14 @@ class Ltp_Fs(Test):
         '''
         Cleanup of disk used to perform this test
         '''
-        self.log.info("Removing the filesystem created on %s", self.disk)
-        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk
-        if process.system(delete_fs, shell=True, ignore_status=True):
-            self.fail("Failed to delete filesystem on %s", self.disk)
         if self.disk is not None:
             self.log.info("Unmounting disk %s on directory %s",
                           self.disk, self.mount_point)
             self.part_obj.unmount()
+        self.log.info("Removing the filesystem created on %s", self.disk)
+        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk
+        if process.system(delete_fs, shell=True, ignore_status=True):
+            self.fail("Failed to delete filesystem on %s", self.disk)
 
 
 if __name__ == "__main__":
