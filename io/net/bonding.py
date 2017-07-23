@@ -133,6 +133,8 @@ class Bonding(Test):
             cmd = "echo -%s > /sys/class/net/bonding_masters" % self.bond_name
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.log.info("bond removing command failed in local machine")
+            self.log.info("Removing bonding module")
+            process.system("rmmod bonding", shell=True, ignore_status=True)
             time.sleep(self.sleep_time)
         else:
             self.log.info("Removing Bonding configuration on Peer machine")
@@ -147,6 +149,7 @@ class Bonding(Test):
                 cmd += 'echo "-%s" > %s;' % (val, self.bonding_slave_file)
             cmd += 'echo "-%s" > /sys/class/net/bonding_masters;'\
                    % self.bond_name
+            cmd += 'rmmod bonding;'
             cmd += 'ifconfig %s %s netmask %s up;sleep 5;'\
                    % (self.peer_first_interface,
                       self.peer_first_ipinterface, self.net_mask[0])
