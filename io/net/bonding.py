@@ -29,6 +29,7 @@ from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import distro
 from avocado.utils import process
+from avocado.utils import linux_modules
 
 
 class Bonding(Test):
@@ -124,7 +125,7 @@ class Bonding(Test):
             self.log.info("Removing Bonding configuration on local machine")
             self.log.info("------------------------------------------------")
             for ifs in self.host_interfaces:
-                cmd = "ifconfig %s down" % ifs
+                cmd = "ip link set %s down" % ifs
                 if process.system(cmd, shell=True, ignore_status=True) != 0:
                     self.log.info("unable to bring down the interface")
                 cmd = "echo -%s > %s" % (ifs, self.bonding_slave_file)
@@ -133,23 +134,26 @@ class Bonding(Test):
             cmd = "echo -%s > /sys/class/net/bonding_masters" % self.bond_name
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.log.info("bond removing command failed in local machine")
+            self.log.info("Removing bonding module")
+            linux_modules.unload_module("bonding")
             time.sleep(self.sleep_time)
         else:
             self.log.info("Removing Bonding configuration on Peer machine")
             self.log.info("------------------------------------------------")
             cmd = ''
-            cmd += 'ifconfig %s down;' % self.bond_name
+            cmd += 'ip link set %s down;' % self.bond_name
             for val in self.peer_interfaces:
-                cmd += 'ifconfig %s down;' % val
+                cmd += 'ip link set %s down;' % val
             for val in self.peer_interfaces:
                 cmd += 'ip addr flush dev %s;' % val
             for val in self.peer_interfaces:
                 cmd += 'echo "-%s" > %s;' % (val, self.bonding_slave_file)
             cmd += 'echo "-%s" > /sys/class/net/bonding_masters;'\
                    % self.bond_name
-            cmd += 'ifconfig %s %s netmask %s up;sleep 5;'\
-                   % (self.peer_first_interface,
-                      self.peer_first_ipinterface, self.net_mask[0])
+            cmd += 'rmmod bonding;'
+            cmd += 'ip addr add %s/%s dev %s;ip link set %s up;sleep 5;'\
+                   % (self.peer_first_ipinterface, self.net_mask[0],
+                      self.peer_first_interface, self.peer_first_interface)
             peer_cmd = "ssh %s@%s \"%s\""\
                        % (self.user, self.peer_first_ipinterface, cmd)
             if process.system(peer_cmd, shell=True, ignore_status=True) != 0:
@@ -173,7 +177,7 @@ class Bonding(Test):
             for interface in self.host_interfaces:
                 self.log.info("Failing interface %s for mode %s"
                               % (interface, arg1))
-                cmd = "ifconfig %s down" % interface
+                cmd = "ip link set %s down" % interface
                 if process.system(cmd, shell=True, ignore_status=True) != 0:
                     self.fail("bonding not working when trying to down the\
                                interface %s " % interface)
@@ -185,7 +189,7 @@ class Bonding(Test):
                                bonding configuration" % arg1)
                 process.system_output(self.bond_status, shell=True,
                                       verbose=True)
-                cmd = "ifconfig %s up" % interface
+                cmd = "ip link set %s up" % interface
                 time.sleep(self.sleep_time)
                 if process.system(cmd, shell=True, ignore_status=True) != 0:
                     self.fail("Not able to bring up the slave\
@@ -199,7 +203,7 @@ class Bonding(Test):
         self.log.info("Failing all interfaces for mode %s" % arg1)
         self.log.info("----------------------------------------")
         for interface in self.host_interfaces:
-            cmd = "ifconfig %s down" % interface
+            cmd = "ip link set %s down" % interface
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.fail("Could not bring down the interface %s " % interface)
             time.sleep(self.sleep_time)
@@ -207,7 +211,7 @@ class Bonding(Test):
             self.log.info("Ping to Bond interface failed. This is expected")
         process.system_output(self.bond_status, shell=True, verbose=True)
         for interface in self.host_interfaces:
-            cmd = "ifconfig %s up" % interface
+            cmd = "ip link set %s up" % interface
             time.sleep(self.sleep_time)
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.fail("Not able to bring up the slave\
@@ -225,7 +229,7 @@ class Bonding(Test):
                 cmd = "ip addr flush dev %s" % ifs
                 process.system(cmd, shell=True, ignore_status=True)
             for ifs in self.host_interfaces:
-                cmd = "ifconfig %s down" % ifs
+                cmd = "ip link set %s down" % ifs
                 process.system(cmd, shell=True, ignore_status=True)
             cmd = "modprobe bonding"
             process.system(cmd, shell=True, ignore_status=True)
@@ -248,11 +252,12 @@ class Bonding(Test):
             self.log.info("Trying bond mode %s [ %s ]"
                           % (arg2, bond_name_val))
             for ifs in self.host_interfaces:
-                cmd = "ifconfig %s up" % ifs
+                cmd = "ip link set %s up" % ifs
                 if process.system(cmd, shell=True, ignore_status=True) != 0:
                     self.fail("unable to interface up")
-            cmd = "ifconfig %s %s netmask %s up"\
-                  % (self.bond_name, self.host_ips[0], self.net_mask[0])
+            cmd = "ip addr add %s/%s dev %s;ip link set %s up"\
+                  % (self.host_ips[0], self.net_mask[0],
+                     self.bond_name, self.bond_name)
             process.system(cmd, shell=True, ignore_status=True)
             for i in range(0, 600, 60):
                 if 'state UP' in process.system_output("ip link \
@@ -270,7 +275,7 @@ class Bonding(Test):
             for val in self.peer_interfaces:
                 cmd += 'ip addr flush dev %s;' % val
             for val in self.peer_interfaces:
-                cmd += 'ifconfig %s down;' % val
+                cmd += 'ip link set %s down;' % val
             cmd += 'modprobe bonding;'
             cmd += 'echo +%s > /sys/class/net/bonding_masters;'\
                    % self.bond_name
@@ -281,10 +286,10 @@ class Bonding(Test):
             for val in self.peer_interfaces:
                 cmd += 'echo "+%s" > %s;' % (val, self.bonding_slave_file)
             for val in self.peer_interfaces:
-                cmd += 'ifconfig %s up;' % val
-            cmd += 'ifconfig %s %s netmask %s up;sleep 5;'\
-                   % (self.bond_name, self.peer_first_ipinterface,
-                      self.net_mask[0])
+                cmd += 'ip link set %s up;' % val
+            cmd += 'ip addr add %s/%s dev %s;ip link set %s up;sleep 5;'\
+                   % (self.peer_first_ipinterface, self.net_mask[0],
+                      self.bond_name, self.bond_name)
             peer_cmd = "timeout %s ssh %s@%s \"%s\""\
                        % (self.peer_wait_time, self.user,
                           self.peer_first_ipinterface, cmd)
@@ -321,8 +326,8 @@ class Bonding(Test):
         self.bond_remove("local")
         for val1, val2, val3 in map(None, self.host_interfaces,
                                     self.host_ips, self.net_mask):
-            cmd = "ifconfig %s %s netmask %s up"\
-                  % (val1, val2, val3)
+            cmd = "ip addr add %s/%s dev %s;ip link set %s up"\
+                  % (val2, val3, val1, val1)
             process.system(cmd, shell=True, ignore_status=True)
             for i in range(0, 600, 60):
                 if 'state UP' in process.system_output("ip link \
@@ -337,8 +342,8 @@ class Bonding(Test):
             self.bond_remove("peer")
             for val1, val2, val3 in map(None, self.peer_interfaces,
                                         self.peer_ips, self.net_mask):
-                msg = "ifconfig %s %s netmask %s up;sleep %s"\
-                      % (val1, val2, val3, self.peer_wait_time)
+                msg = "ip addr add %s/%s dev %s;ip link set %s up;sleep %s"\
+                      % (val2, val3, val1, val1, self.peer_wait_time)
                 cmd = "ssh %s@%s \"%s\""\
                       % (self.user, self.peer_first_ipinterface, msg)
                 if process.system(cmd, shell=True, ignore_status=True) != 0:
