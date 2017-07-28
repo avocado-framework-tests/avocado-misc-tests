@@ -1,0 +1,1 @@
+configure_option: 'CFLAGS="-g -O2 -m64 -maltivec" CXXFLAGS="-g -O2 -m64 -maltivec"'
