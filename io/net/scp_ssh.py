@@ -71,6 +71,15 @@ class ScpTest(Test):
                           ignore_status=True) != 0:
             self.fail("ping test failed")
 
+    def test_floodping(self):
+        '''
+        Flood ping to peer machine
+        '''
+        cmd = "ping -I %s %s -c 1000 -f" % (self.iface, self.peer)
+        if process.system(cmd, shell=True, verbose=True,
+                          ignore_status=True) != 0:
+            self.fail("Flood ping test failed")
+
     def test_scpandssh(self):
         '''
         check scp and ssh
