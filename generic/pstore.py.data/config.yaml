@@ -1,0 +1,4 @@
+ip: "x.x.x.x"
+user_name: "root"
+password: "password"
+prompt: "~]#"
