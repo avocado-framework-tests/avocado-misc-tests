@@ -91,7 +91,7 @@ class libhugetlbfs(Test):
         # Check no of hugepages :
         if pages_available < pages_requested:
             self.error('%d pages available, < %d pages requested'
-                       % pages_available, pages_requested)
+                       % (pages_available, pages_requested))
 
         # Check if hugetlbfs is mounted
         cmd_result = process.run('grep hugetlbfs /proc/mounts', verbose=False)
