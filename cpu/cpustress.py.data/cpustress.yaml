@@ -1,0 +1,16 @@
+setup:
+    cycles: !mux
+        default:
+            iteration: 100
+        long:
+            iteration: 1000
+    delay: !mux
+        default:
+            timeout: 5
+        nodelay:
+            timeout: 0
+    type: !mux
+        default:
+            test: 'all'
+        cpu_serial_off_on:
+            test: 'cpu_serial_off_on'
