@@ -57,15 +57,15 @@ class Ebizzy(Test):
         data_dir = os.path.abspath(self.datadir)
         archive.extract(tarball, self.srcdir)
         version = os.path.basename(tarball.split('.tar.')[0])
-        self.srcdir = os.path.join(self.srcdir, version)
+        self.sourcedir = os.path.join(self.srcdir, version)
 
         patch = self.params.get(
             'patch', default='Fix-build-issues-with-ebizzy.patch')
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
         p1 = 'patch -p0 < %s/%s' % (data_dir, patch)
         process.run(p1, shell=True)
         process.run('[ -x configure ] && ./configure', shell=True)
-        build.make(self.srcdir)
+        build.make(self.sourcedir)
 
     # Note: default we use always mmap()
     def test(self):
@@ -80,7 +80,7 @@ class Ebizzy(Test):
                                                       seconds, num_threads)
         args = args + ' ' + args2
 
-        results = process.system_output('%s/ebizzy %s' % (self.srcdir, args))
+        results = process.system_output('%s/ebizzy %s' % (self.sourcedir, args))
         pattern = re.compile(r"(.*?) records/s")
         records = pattern.findall(results)[0]
         pattern = re.compile(r"real (.*?) s")

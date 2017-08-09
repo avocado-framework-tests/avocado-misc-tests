@@ -48,10 +48,10 @@ class fs_mark(Test):
                                    'forge.net/fsmark/fs_mark-3.3.tar.gz')
         archive.extract(tarball, self.srcdir)
         fs_version = os.path.basename(tarball.split('.tar.')[0])
-        self.srcdir = os.path.join(self.srcdir, fs_version)
-        os.chdir(self.srcdir)
+        self.sourcedir = os.path.join(self.srcdir, fs_version)
+        os.chdir(self.sourcedir)
         process.run('make')
-        build.make(self.srcdir)
+        build.make(self.sourcedir)
         self.disk = self.params.get('disk', default=None)
         self.fstype = self.params.get('fs', default='ext4')
 
@@ -65,7 +65,7 @@ class fs_mark(Test):
         """
         Run fs_mark
         """
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
 
         # Just provide a sample run parameters
         num_files = self.params.get('num_files', default='1024')

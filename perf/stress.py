@@ -48,10 +48,10 @@ class Stress(Test):
         tarball = self.fetch_asset('http://people.seas.harvard.edu/~apw/stress/stress-1.0.4.tar.gz')
         archive.extract(tarball, self.srcdir)
         stress_version = os.path.basename(tarball.split('.tar.')[0])
-        self.srcdir = os.path.join(self.srcdir, stress_version)
-        os.chdir(self.srcdir)
+        self.sourcedir = os.path.join(self.srcdir, stress_version)
+        os.chdir(self.sourcedir)
         process.run('./configure')
-        build.make(self.srcdir)
+        build.make(self.sourcedir)
 
     def test(self):
         """
@@ -78,7 +78,7 @@ class Stress(Test):
             # Even though unlikely, it's good to prevent from allocating more
             # disk than this machine actually has on its autotest directory
             # (limit the amount of disk used to max of 90 % of free space)
-            free_disk = disk.freespace(self.srcdir)
+            free_disk = disk.freespace(self.sourcedir)
             file_size_per_thread = 1024 ** 2
             if (0.9 * free_disk) < file_size_per_thread * threads:
                 file_size_per_thread = (0.9 * free_disk) / threads

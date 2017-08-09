@@ -59,21 +59,21 @@ class Interbench(Test):
         data_dir = os.path.abspath(self.datadir)
         archive.extract(tarball, self.srcdir)
         version = os.path.basename(tarball.split('.tar.')[0])
-        self.srcdir = os.path.join(self.srcdir, version)
+        self.sourcedir = os.path.join(self.srcdir, version)
 
         # Patch for make file
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
         makefile_patch = 'patch -p1 < %s ' % (
             os.path.join(data_dir, 'makefile_fix.patch'))
         process.run(makefile_patch, shell=True)
 
-        build.make(self.srcdir)
+        build.make(self.sourcedir)
 
     def test(self):
         args = self.params.get('arg', default='')
         args += ' c'
         process.system("%s ' run ' %s" % (os.path.join(
-            self.srcdir, 'interbench'), args), sudo=True)
+            self.sourcedir, 'interbench'), args), sudo=True)
 
 
 if __name__ == "__main__":

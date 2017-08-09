@@ -59,18 +59,18 @@ class Trinity(Test):
         tarball = self.fetch_asset("trinity.zip", locations=locations,
                                    expire='7d')
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(self.srcdir, 'trinity-master')
+        self.sourcedir = os.path.join(self.srcdir, 'trinity-master')
 
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
 
-        process.run('chmod -R  +x ' + self.srcdir)
+        process.run('chmod -R  +x ' + self.sourcedir)
         process.run('./configure', shell=True)
         build.make('.')
         process.run('touch trinity.log')
-        process.run('cp -r ' + self.srcdir + ' /home/trinity')
-        self.srcdir = os.path.join('/home/trinity', 'trinity-master')
+        process.run('cp -r ' + self.sourcedir + ' /home/trinity')
+        self.sourcedir = os.path.join('/home/trinity', 'trinity-master')
 
-        process.run('chown -R trinity:trinity ' + self.srcdir)
+        process.run('chown -R trinity:trinity ' + self.sourcedir)
 
     def test(self):
         '''
@@ -80,7 +80,7 @@ class Trinity(Test):
         args = self.params.get('runarg', default=' ')
 
         process.system('su - trinity -c " %s  %s  %s"' %
-                       (os.path.join(self.srcdir, 'trinity'), args,
+                       (os.path.join(self.sourcedir, 'trinity'), args,
                         '-N 1000000'), shell=True)
 
         dmesg = process.system_output('dmesg')

@@ -51,8 +51,8 @@ class Libunwind(Test):
             'https://github.com/pathscale/libunwind/archive/'
             'vanilla_pathscale.zip'], expire='7d')
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(self.srcdir, 'libunwind-vanilla_pathscale')
-        os.chdir(self.srcdir)
+        self.sourcedir = os.path.join(self.srcdir, 'libunwind-vanilla_pathscale')
+        os.chdir(self.sourcedir)
         process.run('./autogen.sh', shell=True)
         '''
         For configure options on different architecture please refer
@@ -61,14 +61,14 @@ class Libunwind(Test):
         configure_option = self.params.get('configure_option',
                                            default='configure_option')
         process.run('./configure %s' % configure_option, shell=True)
-        build.make(self.srcdir)
-        build.make(self.srcdir, extra_args='install')
+        build.make(self.sourcedir)
+        build.make(self.sourcedir, extra_args='install')
 
     def test(self):
         '''
         Execute regression tests for libunwind library
         '''
-        results = build.run_make(self.srcdir, extra_args='check',
+        results = build.run_make(self.sourcedir, extra_args='check',
                                  ignore_status=True).stdout
 
         fail_list = ['FAIL', 'XFAIL', 'ERROR']

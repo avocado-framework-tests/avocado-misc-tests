@@ -37,11 +37,11 @@ class GSL(Test):
         tarball = self.fetch_asset(
             "ftp://ftp.gnu.org/gnu/gsl/gsl-%s.tar.gz" % gsl_version, expire='10d')
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(
+        self.sourcedir = os.path.join(
             self.srcdir, os.path.basename(tarball.split('.tar')[0]))
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
         process.run('./configure', ignore_status=True, sudo=True)
-        build.make(self.srcdir)
+        build.make(self.sourcedir)
 
     def test(self):
         process.run("make -k check", ignore_status=True, sudo=True)

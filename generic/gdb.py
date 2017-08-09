@@ -48,11 +48,11 @@ class GDB(Test):
         tarball = self.fetch_asset(
             "http://ftp.gnu.org/gnu/gdb/gdb-%s.tar.gz" % gdb_version)
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(
+        sourcedir = os.path.join(
             self.srcdir, os.path.basename(tarball.split('.tar')[0]))
-        os.chdir(self.srcdir)
+        os.chdir(sourcedir)
         process.run('./configure', ignore_status=True, sudo=True)
-        build.make(self.srcdir)
+        build.make(sourcedir)
 
     def test(self):
         process.run("make check-gdb", ignore_status=True, sudo=True)

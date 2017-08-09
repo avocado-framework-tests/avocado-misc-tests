@@ -51,20 +51,20 @@ class Posixtest(Test):
         data_dir = os.path.abspath(self.datadir)
         archive.extract(tarball, self.srcdir)
         version = os.path.basename(tarball.split('-1.')[0])
-        self.srcdir = os.path.join(self.srcdir, version)
+        self.sourcedir = os.path.join(self.srcdir, version)
 
         patch = self.params.get(
             'patch', default='posix-linux.patch')
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
         p1 = 'patch -p1 < %s/%s' % (data_dir, patch)
 
         process.run(p1, shell=True)
 
-        build.make(self.srcdir)
+        build.make(self.sourcedir)
 
     def test(self):
 
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
         process.system('./run_tests THR')
 
 

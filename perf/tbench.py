@@ -52,10 +52,10 @@ class tbench(Test):
                   expire='7d')
         archive.extract(tarball, self.srcdir)
         version = os.path.basename(tarball.split('.tar.')[0])
-        self.srcdir = os.path.join(self.srcdir, version)
-        os.chdir(self.srcdir)
+        self.sourcedir = os.path.join(self.srcdir, version)
+        os.chdir(self.sourcedir)
         process.run('./configure', ignore_status=True, sudo=True)
-        build.make(self.srcdir)
+        build.make(self.sourcedir)
 
     def test(self):
         # only supports combined server+client model at the moment
@@ -65,15 +65,15 @@ class tbench(Test):
         args = '%s %s' % (args, nprocs)
         pid = os.fork()
         if pid:                         # parent
-            client = os.path.join(self.srcdir, 'client.txt')
+            client = os.path.join(self.sourcedir, 'client.txt')
             args = '-c %s %s' % (client, args)
-            cmd = os.path.join(self.srcdir, "tbench") + " " + args
+            cmd = os.path.join(self.sourcedir, "tbench") + " " + args
             # Standard output is verbose and merely makes our debug logs huge
             # so we don't retain it.  It gets parsed for the results.
             self.results = process.system_output(cmd, shell=True)
             os.kill(pid, signal.SIGTERM)    # clean up the server
         else:                           # child
-            server = os.path.join(self.srcdir, 'tbench_srv')
+            server = os.path.join(self.sourcedir, 'tbench_srv')
             os.execlp(server, server)
         pattern = re.compile(r"Throughput (.*?) MB/sec (.*?) procs")
         (throughput, procs) = pattern.findall(self.results)[0]

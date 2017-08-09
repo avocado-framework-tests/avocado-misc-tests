@@ -57,7 +57,7 @@ class Perftool(Test):
         tarball = self.fetch_asset("perftool.zip", locations=locations,
                                    expire='7d')
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(self.srcdir, 'perftool-testsuite-master')
+        self.sourcedir = os.path.join(self.srcdir, 'perftool-testsuite-master')
 
     def test(self):
         '''
@@ -75,7 +75,7 @@ class Perftool(Test):
                               % str(string.splitlines()))
 
         # perf testsuite
-        for line in build.run_make(self.srcdir, extra_args='check',
+        for line in build.run_make(self.sourcedir, extra_args='check',
                                    ignore_status=True).stdout.splitlines():
             if '-- [ FAIL ] --' in line:
                 self.count += 1

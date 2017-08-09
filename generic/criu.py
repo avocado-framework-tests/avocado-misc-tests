@@ -46,13 +46,13 @@ class CRIU(Test):
                   "http://download.openvz.org/criu/criu-%s.tar.bz2" % criu_version,
                   expire='10d')
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(
+        self.sourcedir = os.path.join(
             self.srcdir, os.path.basename(tarball.split('.tar')[0]))
-        build.make(self.srcdir)
-        self.srcdir = os.path.join(self.srcdir, "test")
+        build.make(self.sourcedir)
+        self.sourcedir = os.path.join(self.sourcedir, "test")
 
     def test(self):
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
         process.run("./zdtm.py run -a --report sergeyb --keep-going",
                     ignore_status=True, sudo=True)
         logfile = os.path.join(self.logdir, "stdout")

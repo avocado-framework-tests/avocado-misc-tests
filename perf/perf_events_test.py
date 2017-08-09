@@ -64,9 +64,9 @@ class Perf_subsystem(Test):
                                    'perf_event_tests/archive/'
                                    'master.zip'], expire='7d')
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(self.srcdir, 'perf_event_tests-master')
-        build.make(self.srcdir)
-        os.chdir(self.srcdir)
+        sourcedir = os.path.join(self.srcdir, 'perf_event_tests-master')
+        build.make(sourcedir)
+        os.chdir(sourcedir)
         process.system_output("echo -1 >/proc/sys/kernel/perf_event_paranoid",
                               shell=True)
         cmd = "cat /proc/sys/kernel/perf_event_paranoid"

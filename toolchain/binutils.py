@@ -69,22 +69,22 @@ class Binutils(Test):
         tarball = self.fetch_asset("binutils-%s.tar.bz2" % version,
                                    locations=locations)
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(
+        self.sourcedir = os.path.join(
             self.srcdir, os.path.basename(tarball.split('.tar.')[0]))
 
         # Compile the binutils
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
         process.run('./configure')
-        build.make(self.srcdir)
+        build.make(self.sourcedir)
 
     def test(self):
         """
         Runs the binutils `make check`
         """
-        ret = build.make(self.srcdir, extra_args='check', ignore_status=True)
+        ret = build.make(self.sourcedir, extra_args='check', ignore_status=True)
 
         errors = 0
-        for root, _, filenames in os.walk(self.srcdir):
+        for root, _, filenames in os.walk(self.sourcedir):
             for filename in fnmatch.filter(filenames, '*.log'):
                 filename = os.path.join(root, filename)
                 logfile = filename[:-4] + ".log"

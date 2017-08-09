@@ -41,8 +41,8 @@ class eatmemory(Test):
         url = 'https://github.com/julman99/eatmemory/archive/master.zip'
         tarball = self.fetch_asset("eatmemory.zip", locations=[url], expire='7d')
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(self.srcdir, "eatmemory-master")
-        build.make(self.srcdir)
+        self.sourcedir = os.path.join(self.srcdir, "eatmemory-master")
+        build.make(self.sourcedir)
         mem = self.params.get('memory_to_test', default=memory.memtotal())
         self.mem_to_eat = self._mem_to_mbytes(mem)
         if self.mem_to_eat is None:
@@ -72,7 +72,7 @@ class eatmemory(Test):
         return mem_in_bytes / multiplier['m']
 
     def test(self):
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
         mem_unit = 'M'
         cmd = './eatmemory %s%s' % (self.mem_to_eat, mem_unit)
         if process.system(cmd, ignore_status=True) == 0:

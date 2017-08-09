@@ -43,19 +43,19 @@ class unixbench(Test):
         tarball = self.fetch_asset("byte-unixbench.zip", locations=[url],
                                    expire='7d')
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(self.srcdir,
-                                   "byte-unixbench-master/UnixBench")
-        os.chdir(self.srcdir)
+        self.sourcedir = os.path.join(self.srcdir,
+                                      "byte-unixbench-master/UnixBench")
+        os.chdir(self.sourcedir)
         makefile_patch = 'patch -p1 < %s' % (os.path.join(
             self.datadir, 'Makefile.patch'))
         process.run(makefile_patch, shell=True)
-        build.make(self.srcdir)
+        build.make(self.sourcedir)
 
     def test(self):
         self.tmpdir = data_dir.get_tmp_dir()
         # Read USAGE in Unixbench directory in src to give the args
         args = self.params.get('args', default='-v -c 1')
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
         process.system(' ./Run ' + args, shell=True, sudo=True)
         report_path = os.path.join(self.logdir, 'stdout')
         self.report_data = open(report_path).readlines()

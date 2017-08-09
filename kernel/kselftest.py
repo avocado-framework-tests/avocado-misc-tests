@@ -70,8 +70,8 @@ class kselftest(Test):
                                    expire='1d')
         archive.extract(tarball, self.srcdir)
         self.buldir = os.path.join(self.srcdir, 'linux-master')
-        self.srcdir = os.path.join(self.buldir, self.testdir)
-        result = build.run_make(self.srcdir)
+        self.sourcedir = os.path.join(self.buldir, self.testdir)
+        result = build.run_make(self.sourcedir)
         for line in str(result).splitlines():
             if 'ERROR' in line:
                 self.fail("Compilation failed, Please check the build logs !!")
@@ -81,7 +81,7 @@ class kselftest(Test):
         Execute the kernel selftest
         """
         error = False
-        result = build.make(self.srcdir, extra_args='run_tests')
+        result = build.make(self.sourcedir, extra_args='run_tests')
         for line in str(result).splitlines():
             if '[FAIL]' in line:
                 error = True
