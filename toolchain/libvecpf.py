@@ -48,16 +48,16 @@ class Libvecpf(Test):
                                    'https://github.com/Libvecpf/libvecpf'
                                    '/archive/master.zip'], expire='7d')
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(self.srcdir, 'libvecpf-master')
+        self.sourcedir = os.path.join(self.srcdir, 'libvecpf-master')
 
-        build.make(self.srcdir, make='./configure')
-        build.make(self.srcdir)
+        build.make(self.sourcedir, make='./configure')
+        build.make(self.sourcedir)
 
     def test(self):
         """
         Execute self test of libvecpf library
         """
-        results = build.run_make(self.srcdir, extra_args='check',
+        results = build.run_make(self.sourcedir, extra_args='check',
                                  ignore_status=True).stdout
 
         fail_list = ['FAIL', 'XFAIL', 'ERROR']

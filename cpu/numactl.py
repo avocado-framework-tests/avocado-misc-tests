@@ -48,18 +48,18 @@ class Numactl(Test):
         tarball = self.fetch_asset("numactl.zip", locations=locations,
                                    expire='7d')
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(self.srcdir, 'numactl-master')
+        self.sourcedir = os.path.join(self.srcdir, 'numactl-master')
 
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
         process.run('./autogen.sh', shell=True)
 
         process.run('./configure', shell=True)
 
-        build.make(self.srcdir)
+        build.make(self.sourcedir)
 
     def test(self):
 
-        if build.make(self.srcdir, extra_args='test', ignore_status=True):
+        if build.make(self.sourcedir, extra_args='test', ignore_status=True):
             self.fail('test failed, Please check debug log')
 
 

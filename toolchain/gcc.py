@@ -67,11 +67,11 @@ class GCC(Test):
                                    'https://github.com/gcc-mirror/gcc/archive'
                                    '/master.zip'], expire='7d')
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(self.srcdir, 'gcc-master')
+        self.sourcedir = os.path.join(self.srcdir, 'gcc-master')
 
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
         process.run('./configure', ignore_status=True, sudo=True)
-        build.make(self.srcdir, ignore_status=True)
+        build.make(self.sourcedir, ignore_status=True)
 
     def get_summary(self, index):
         with open(os.path.join(self.outputdir, 'gcc_summary'), 'a') as f_obj:
@@ -85,7 +85,7 @@ class GCC(Test):
         Runs the gcc `make check`
         """
         ret = build.run_make(
-            self.srcdir, extra_args='check', ignore_status=True)
+            self.sourcedir, extra_args='check', ignore_status=True)
         self.summary = ret.stdout.splitlines()
         for index, line in enumerate(self.summary):
             if "=== gcc Summary ===" in line:

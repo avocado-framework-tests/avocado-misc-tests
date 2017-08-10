@@ -55,14 +55,14 @@ class rt_tests(Test):
             "https://www.kernel.org/pub/linux/utils/rt-tests/"
             "rt-tests-1.0.tar.gz")
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(
+        self.sourcedir = os.path.join(
             self.srcdir, os.path.basename(tarball.split('.tar.')[0]))
-        build.make(self.srcdir)
+        build.make(self.sourcedir)
 
     def test(self):
         test_to_run = self.params.get('test_to_run', default='signaltest')
         args = self.params.get('args', default=' -t 10 -l 100000')
-        process.system("%s %s" % (os.path.join(self.srcdir, test_to_run), args),
+        process.system("%s %s" % (os.path.join(self.sourcedir, test_to_run), args),
                        sudo=True)
 
 

@@ -49,7 +49,7 @@ class Stutter(Test):
         tarball = self.fetch_asset("stutter.zip", locations=locations,
                                    expire='7d')
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(self.srcdir, 'stutter-master')
+        self.sourcedir = os.path.join(self.srcdir, 'stutter-master')
 
         mem_byte = str(memory.memtotal())
         print mem_byte
@@ -66,11 +66,11 @@ class Stutter(Test):
         os.environ['LOGDIR_RESULTS'] = self._logdir
         os.environ['TESTDISK_DIR'] = self._rundir
 
-        build.make(self.srcdir)
+        build.make(self.sourcedir)
 
     def test(self):
 
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
         if process.system('./run.sh', shell=True, ignore_status=True) != 0:
             self.fail("Test failed")
 

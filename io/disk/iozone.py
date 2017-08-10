@@ -424,9 +424,9 @@ class IOZone(Test):
             'http://www.iozone.org/src/current/iozone3_434.tar')
         archive.extract(tarball, self.srcdir)
         version = os.path.basename(tarball.split('.tar')[0])
-        self.srcdir = os.path.join(self.srcdir, version)
+        self.sourcedir = os.path.join(self.srcdir, version)
 
-        make_dir = os.path.join(self.srcdir, 'src', 'current')
+        make_dir = os.path.join(self.sourcedir, 'src', 'current')
         os.chdir(make_dir)
         patch = self.params.get('patch', default='makefile.patch')
         patch = os.path.join(self.datadir, patch)
@@ -547,7 +547,7 @@ class IOZone(Test):
         if not args:
             args = '-a'
 
-        cmd = os.path.join(self.srcdir, 'src', 'current', 'iozone')
+        cmd = os.path.join(self.sourcedir, 'src', 'current', 'iozone')
         self.results = process.system_output('%s %s' % (cmd, args))
         self.auto_mode = ("-a" in args)
         results_path = os.path.join(self.outputdir,

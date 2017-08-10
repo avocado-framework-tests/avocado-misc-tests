@@ -55,11 +55,11 @@ class Lmbench(Test):
         data_dir = os.path.abspath(self.datadir)
         archive.extract(tarball, self.srcdir)
         version = os.path.basename(tarball.split('.tar.')[0])
-        self.srcdir = os.path.join(self.srcdir, version)
+        self.sourcedir = os.path.join(self.srcdir, version)
 
         # Patch for lmbench
 
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
 
         makefile_patch = 'patch -p1 < %s' % (
             os.path.join(data_dir, 'makefile.patch'))
@@ -75,10 +75,10 @@ class Lmbench(Test):
         process.run(lmbench_fix_patch, shell=True)
         process.run(ostype_fix_patch, shell=True)
 
-        build.make(self.srcdir)
+        build.make(self.sourcedir)
 
         # configure lmbench
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
 
         process.system('yes "" | make config', shell=True, ignore_status=True)
 
@@ -104,8 +104,8 @@ class Lmbench(Test):
 
     def test(self):
 
-        os.chdir(self.srcdir)
-        build.make(self.srcdir, extra_args='rerun')
+        os.chdir(self.sourcedir)
+        build.make(self.sourcedir, extra_args='rerun')
 
 
 if __name__ == "__main__":

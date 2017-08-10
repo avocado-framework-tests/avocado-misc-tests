@@ -51,9 +51,9 @@ class Valgrind(Test):
             "http://valgrind.org/downloads/valgrind-3.12.0.tar.bz2")
         archive.extract(tarball, self.srcdir)
         version = os.path.basename(tarball.split('.tar.')[0])
-        self.srcdir = os.path.join(self.srcdir, version)
+        self.sourcedir = os.path.join(self.srcdir, version)
 
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
         process.run('./configure', ignore_status=True, sudo=True)
 
     def get_results(self, cmd):
@@ -63,7 +63,7 @@ class Valgrind(Test):
         summary = ''
         flag = False
         results = build.run_make(
-            self.srcdir, extra_args=cmd, ignore_status=True).stdout
+            self.sourcedir, extra_args=cmd, ignore_status=True).stdout
         for line in results.splitlines():
             if line.startswith('==') and line.endswith('=='):
                 flag = True
@@ -78,7 +78,7 @@ class Valgrind(Test):
         """
         Run valgrind test with different categories
         """
-        build.make(self.srcdir)
+        build.make(self.sourcedir)
         self.get_results('regtest')
         self.get_results('exp-regtest')
         self.get_results('nonexp-regtest')

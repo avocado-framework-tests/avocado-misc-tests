@@ -44,7 +44,7 @@ class Compilebench(Test):
         tarball = self.fetch_asset('https://oss.oracle.com/~mason/compilebench/compilebench-0.6.tar.bz2')
         archive.extract(tarball, self.srcdir)
         cb_version = os.path.basename(tarball.split('.tar.')[0])
-        self.srcdir = os.path.join(self.srcdir, cb_version)
+        self.sourcedir = os.path.join(self.srcdir, cb_version)
 
     def test(self):
         """
@@ -54,14 +54,14 @@ class Compilebench(Test):
         runs = self.params.get('RUNS', default=30)
 
         args = []
-        args.append('-D %s ' % self.srcdir)
-        args.append('-s %s ' % self.srcdir)
+        args.append('-D %s ' % self.sourcedir)
+        args.append('-s %s ' % self.sourcedir)
         args.append('-i %d ' % initial_dirs)
         args.append('-r %d ' % runs)
 
         # Using python explicitly due to the compilebench current
         # shebang set to python2.4
-        cmd = ('python %s/compilebench %s' % (self.srcdir, " ".join(args)))
+        cmd = ('python %s/compilebench %s' % (self.sourcedir, " ".join(args)))
         process.run(cmd)
 
 

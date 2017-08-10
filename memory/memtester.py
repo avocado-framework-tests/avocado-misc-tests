@@ -48,11 +48,11 @@ class Memtester(Test):
                                    'memtester/archive/master.zip'],
                                    expire='7d')
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(self.srcdir, 'memtester-master')
-        os.chdir(self.srcdir)
+        sourcedir = os.path.join(self.srcdir, 'memtester-master')
+        os.chdir(sourcedir)
         process.system('chmod 755 extra-libs.sh', shell=True, sudo=True,
                        ignore_status=True)
-        build.make(self.srcdir)
+        build.make(sourcedir)
 
     def test(self):
         '''

@@ -76,14 +76,14 @@ class stressng(Test):
                                    'stress-ng/archive/master.zip'],
                                    expire='7d')
         archive.extract(tarball, self.srcdir)
-        self.srcdir = os.path.join(self.srcdir, 'stress-ng-master')
-        os.chdir(self.srcdir)
-        result = build.run_make(self.srcdir, ignore_status=True)
+        sourcedir = os.path.join(self.srcdir, 'stress-ng-master')
+        os.chdir(sourcedir)
+        result = build.run_make(sourcedir, ignore_status=True)
         for line in str(result).splitlines():
             if 'error:' in line:
                 self.cancel(
                     "Unsupported OS, Please check the build logs !!")
-        build.make(self.srcdir, extra_args='install')
+        build.make(sourcedir, extra_args='install')
         clear_dmesg()
 
     def test(self):
