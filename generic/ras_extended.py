@@ -71,6 +71,7 @@ class RASTools(Test):
             self.fail("%s command(s) failed in serv_config tool "
                       "verification" % self.is_fail)
 
+    @skipIf(IS_POWER_NV, "This test is not supported on PowerNV platform")
     def test1_rtas_event_decode(self):
         self.log.info("===============Executing rtas_event_decode tool test===="
                       "===========")
