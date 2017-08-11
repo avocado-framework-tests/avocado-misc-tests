@@ -217,7 +217,11 @@ class RASTools(Test):
         self.log.info("===============Executing lscfg tool test============="
                       "==")
         self.run_cmd("lscfg")
-        list = ['--debug', '--version', '-p', '-lcpu']
+        list = ['--debug', '--version', '-p']
+        device = process.system_output('lscfg', shell=True).splitlines()[-1]
+        if device.startswith("+"):
+            list.append("-l%s" % device.split(" ")[1])
+
         for list_item in list:
             cmd = "lscfg %s" % list_item
             self.run_cmd(cmd)
