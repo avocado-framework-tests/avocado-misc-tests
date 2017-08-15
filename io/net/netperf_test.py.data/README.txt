@@ -6,17 +6,17 @@ unidirectional throughput, and end-to-end latency.
 
 Inputs Needed To Run Tests:
 -----------------------------
-PEERIP		        - IP of the Peer interface to be tested
-PEERUSER            - Username in Peer system to be used
-Iface		        - interface on which test run
-timeout		        - Timeout
-NETSERVER_RUN	    - Whether to run netserver in peer or not
-EXPECTED_THROUGHPUT - Expected Throughput as a percentage (1-100)
-netperf_download    - User has the option to choose download location
-                      for netperf tool.
-                      User can use ftp download location passed as default
-                      to this variable or use IO-FVT repo
-                      which can be specified in yaml file                         
+PEERIP			- IP of the Peer interface to be tested
+PEERUSER		- Username in Peer system to be used
+Iface			- interface on which test run
+timeout			- Timeout
+NETSERVER_RUN		- Whether to run netserver in peer or not (1 to run, 0 to not run)
+EXPECTED_THROUGHPUT	- Expected Throughput as a percentage (1-100)
+netperf_download	- User has the option to choose download location for netperf tool.
+duration		- duration to run each test (sec) 
+minimum_iterations	- minimum iterations when trying to reach certain confidence levels
+maximum_iterations	- maximum iterations when trying to reach certain confidence levels
+option			- test and supporting parameters
 
 Requirements:
 -----------------------
