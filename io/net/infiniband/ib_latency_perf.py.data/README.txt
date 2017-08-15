@@ -10,9 +10,16 @@ Measurement for Time specified in yaml file are seconds.
 -----------------------------
 Inputs Needed To Run Tests:
 -----------------------------
-PEER_IP ---> IP of the Peer interface to be tested
-Iface --> interface on which test run
-ext_flag--> if it is 0 then test run for test_opt, if it is 1 then test run for both test_opt and ext_test_opt
+test_opt    - options for basic test
+ext_opt     - options for extended test
+ext_flag    - flag to indicate whether to run extended tests or not (1 to run)
+peer_ip     - IP of the Peer interface to be tested
+interface   - interface on which test run
+CA_NAME     - CA Name, got from 'ibstat' command
+PEERCA      - Peer CA Name, got from 'ibstat' command
+PORT_NUM    - Port Num, got from 'ibstat' command
+PEERPORT    - Peer Port Num, got from 'ibstat' command
+timeout     - timeout for commands
 -----------------------
 Requirements:
 -----------------------

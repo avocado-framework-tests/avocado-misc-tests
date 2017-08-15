@@ -93,6 +93,7 @@ class Bandwidth_Perf(Test):
         '''
         bandwidth performance exec function
         '''
+        flag = 0
         logs = "> /tmp/ib_log 2>&1 &"
         cmd = "ssh %s \" timeout %s %s -d %s -i %s %s %s %s\" " \
             % (self.peer_ip, self.to, arg1, self.PEER_CA, self.PEER_PORT,
@@ -106,26 +107,32 @@ class Bandwidth_Perf(Test):
             % (self.to, arg1, self.CA, self.PORT, self.peer_ip,
                arg2, arg3)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
-            self.fail("client command failed for the tool %s" % self.tool_name)
+            flag = 1
         self.log.info("server data for %s(%s)" % (arg1, arg2))
         cmd = "ssh %s \"timeout %s cat /tmp/ib_log && rm -rf /tmp/ib_log\" " %\
               (self.peer_ip, self.to)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("ssh failed to remote machine\
                       or fetching data from remote machine failed")
+        return flag
 
     def test_ib_bandwidth(self):
         '''
         test options are mandatory
         ext test options are depends upon user
         '''
+        err = []
         for val in self.test_op:
-            self.bandwidthperf_exec(self.tool_name, val, "")
+            if self.bandwidthperf_exec(self.tool_name, val, "") != 0:
+                err.append("client cmd fail: %s %s" % (self.tool_name, val))
         if self.flag == "1":
             for val in self.ext_test_op:
-                self.bandwidthperf_exec(self.tool_name, val, "")
+                if self.bandwidthperf_exec(self.tool_name, val, "") != 0:
+                    err.append("client cmd fail: %s %s" % (self.tool_name, val))
         else:
             self.log.info("Extended test option skipped")
+        if err:
+            self.fail("Some tests failed. Details below:\n%s" % "\n".join(err))
 
 
 if __name__ == "__main__":
