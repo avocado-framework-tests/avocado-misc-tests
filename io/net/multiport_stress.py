@@ -50,7 +50,7 @@ class MultiportStress(Test):
                 self.cancel("interface is not available")
         self.count = self.params.get("count", default="1000")
 
-    def test_multiport_stress(self):
+    def test_multiport_ping(self):
         '''
         Ping to multiple peers parallely
         '''
@@ -58,6 +58,32 @@ class MultiportStress(Test):
         for host, peer in map(None, self.host_interfaces, self.peer_ips):
             self.log.info('Starting Ping test')
             cmd = "ping -I %s %s -c %s" % (host, peer, self.count)
+            obj = process.SubProcess(cmd, verbose=False, shell=True)
+            obj.start()
+            parallel_procs.append(obj)
+        self.log.info('Wait for background processes to finish'
+                      ' before proceeding')
+        for proc in parallel_procs:
+            proc.wait()
+        errors = []
+        for proc in parallel_procs:
+            out_buf = proc.get_stdout()
+            out_buf += proc.get_stderr()
+            for val in out_buf.splitlines():
+                if 'packet loss' in val and ', 0% packet loss,' not in val:
+                    errors.append(out_buf)
+                    break
+        if errors:
+            self.fail("\n".join(errors))
+
+    def test_multiport_floodping(self):
+        '''
+        Flood ping to peer machine
+        '''
+        parallel_procs = []
+        for host, peer in map(None, self.host_interfaces, self.peer_ips):
+            self.log.info('Starting Ping test')
+            cmd = "ping -I %s %s -c %s -f" % (host, peer, self.count)
             obj = process.SubProcess(cmd, verbose=False, shell=True)
             obj.start()
             parallel_procs.append(obj)
