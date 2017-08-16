@@ -63,14 +63,15 @@ class Netperf(Test):
             self.cancel("%s peer machine is not available" % self.peer_ip)
         self.peer_user = self.params.get("peer_user_name", default="root")
         self.timeout = self.params.get("timeout", default="600")
-        self.netperf_run = self.params.get("NETSERVER_RUN", default="0")
+        self.netperf_run = str(self.params.get("NETSERVER_RUN", default=0))
         self.netperf = os.path.join(self.teststmpdir, 'netperf')
-        netperf_download = self.params.get("netperf_download", default="ftp:"
-                                           "//ftp.netperf.org/"
-                                           "netperf/netperf-2.7.0.tar.bz2")
+        netperf_download = self.params.get("netperf_download", default="https:"
+                                           "//github.com/HewlettPackard/"
+                                           "netperf/archive/netperf-2.7.0.zip")
         tarball = self.fetch_asset(netperf_download, expire='7d')
         archive.extract(tarball, self.netperf)
-        self.version = os.path.basename(tarball.split('.tar.')[0])
+        self.version = "%s-%s" % ("netperf",
+                                  os.path.basename(tarball.split('.zip')[0]))
         self.neperf = os.path.join(self.netperf, self.version)
         cmd = "scp -r %s %s@%s:/tmp/" % (self.neperf, self.peer_user,
                                          self.peer_ip)
@@ -85,12 +86,16 @@ class Netperf(Test):
         build.make(self.neperf)
         self.perf = os.path.join(self.neperf, 'src', 'netperf')
         self.expected_tp = self.params.get("EXPECTED_THROUGHPUT", default="90")
+        self.duration = self.params.get("duration", default="300")
+        self.min = self.params.get("minimum_iterations", default="1")
+        self.max = self.params.get("maximum_iterations", default="15")
+        self.option = self.params.get("option", default='')
 
     def test(self):
         """
         netperf test
         """
-        if self.netperf_run == 0:
+        if self.netperf_run == '1':
             tmp = "chmod 777 /tmp/%s/src" % self.version
             cmd = "ssh %s@%s \"%s\"" % (self.peer_user, self.peer_ip, tmp)
             if process.system(cmd, shell=True, ignore_status=True) != 0:
@@ -100,22 +105,25 @@ class Netperf(Test):
                                                            self.version)
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.fail("test failed because netserver not available")
-            else:
-                self.netperf_run = 1
-        for option in ["", "UDP_STREAM -- -m 63000", "TCP_RR", "UDP_RR"]:
-            cmd = "timeout %s %s -H %s" % (self.timeout, self.perf,
-                                           self.peer_ip)
-            if option != "":
-                cmd = "%s -t %s" % (cmd, option)
-            result = process.run(cmd, shell=True, ignore_status=True)
-            if result.exit_status != 0:
-                self.fail("test failed when run with %s" % option)
-            speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
-            if 'Throughput' in result.stdout:
-                throughput = int(result.stdout.split()[-1].split('.')[0])
-                if throughput * 100 < self.expected_tp * speed:
-                    self.fail("Throughput %d is lower than expected %d"
-                              % (throughput, self.expected_tp * speed / 100))
+        speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
+        self.expected_tp = int(self.expected_tp) * speed / 100
+        cmd = "timeout %s %s -H %s" % (self.timeout, self.perf,
+                                       self.peer_ip)
+        if self.option != "":
+            cmd = "%s -t %s" % (cmd, self.option)
+        cmd = "%s -l %s -i %s,%s" % (cmd, self.duration, self.max,
+                                     self.min)
+        result = process.run(cmd, shell=True, ignore_status=True)
+        if result.exit_status != 0:
+            self.fail("FAIL: Run failed")
+        for line in result.stdout.splitlines():
+            if line and 'Throughput' in line.split()[-1]:
+                tput = int(result.stdout.split()[-1].split('.')[0])
+                if tput < self.expected_tp:
+                    self.fail("FAIL: Throughput Actual - %d, Expected - %d"
+                              % (tput, self.expected_tp))
+        if 'WARNING' in result.stdout:
+            self.log.warn('Test completed with warning')
 
     def tearDown(self):
         """
