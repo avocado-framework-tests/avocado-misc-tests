@@ -50,14 +50,15 @@ class MultiportStress(Test):
                 self.cancel("interface is not available")
         self.count = self.params.get("count", default="1000")
 
-    def test_multiport_stress(self):
+    def multiport_ping(self, ping_option):
         '''
         Ping to multiple peers parallely
         '''
         parallel_procs = []
         for host, peer in map(None, self.host_interfaces, self.peer_ips):
             self.log.info('Starting Ping test')
-            cmd = "ping -I %s %s -c %s" % (host, peer, self.count)
+            cmd = "ping -I %s %s -c %s %s" % (host, peer, self.count,
+                                              ping_option)
             obj = process.SubProcess(cmd, verbose=False, shell=True)
             obj.start()
             parallel_procs.append(obj)
@@ -75,6 +76,12 @@ class MultiportStress(Test):
                     break
         if errors:
             self.fail("\n".join(errors))
+
+    def test_multiport_ping(self):
+        self.multiport_ping('')
+
+    def test_multiport_floodping(self):
+        self.multiport_ping('-f')
 
 
 if __name__ == "__main__":
