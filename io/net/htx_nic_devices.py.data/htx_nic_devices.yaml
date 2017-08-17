@@ -1,9 +1,9 @@
 mdt_file: 'net.mdt'
-host_ip: x.xx.xxx.xx
-peer_ip: x.xx.xxx.xy
+host_public_ip: x.xx.xxx.xx
+peer_public_ip: x.xx.xxx.xy
 peer_password: "*******"
 peer_user: "root"
-host_interfaces: "enp1s0f0,enp1s0f1"
-peer_interfaces: "enp3s0f0,enp3s0f1"
-net_ids: "130, 132"
+host_interfaces: ""
+peer_interfaces: ""
+net_ids: ""
 time_limit: 1

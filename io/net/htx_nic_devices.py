@@ -50,8 +50,8 @@ class HtxNicTest(Test):
     :see:https://github.com/open-power/HTX.git
     :param mdt_file: mdt file used to trigger HTX
     :params time_limit: how much time(hours) you want to run this stress.
-    :param host_ip: IP address of host
-    :param peer_ip: IP address of peer
+    :param host_public_ip: Public IP address of host
+    :param peer_public_ip: Public IP address of peer
     :param peer_password: password of peer for peer_user user
     :param peer_user: User name of Peer
     :param host_interfaces: Host N/W Interface's to run HTX on
@@ -85,8 +85,8 @@ class HtxNicTest(Test):
             self.cancel("HTX is not installed on Peer")
 
     def parameters(self):
-        self.host_ip = self.params.get("host_ip", '*', default=None)
-        self.peer_ip = self.params.get("peer_ip", '*', default=None)
+        self.host_ip = self.params.get("host_public_ip", '*', default=None)
+        self.peer_ip = self.params.get("peer_public_ip", '*', default=None)
         self.peer_user = self.params.get("peer_user", '*', default=None)
         self.peer_password = self.params.get("peer_password",
                                              '*', default=None)
@@ -343,11 +343,14 @@ class HtxNicTest(Test):
                     self.log.debug("Command %s failed %s", cf.command,
                                    cf.output)
             if "All networks ping Ok" not in output:
+                self.run_command("systemctl restart network", timeout=300)
+                process.system("systemctl restart network", shell=True,
+                               ignore_status=True)
                 output = process.system_output("pingum", ignore_status=True,
                                                shell=True, sudo=True)
             else:
                 break
-            time.sleep(5)
+            time.sleep(30)
         else:
             self.fail("N/W ping test for HTX failed in Host(pingum)")
 
@@ -361,7 +364,7 @@ class HtxNicTest(Test):
                 self.log.info("\n".join(output_peer))
             else:
                 break
-            time.sleep(5)
+            time.sleep(30)
         else:
             self.fail("N/W ping test for HTX failed in Peer(pingum)")
         self.log.info("N/W ping test for HTX passed in both Host & Peer")
