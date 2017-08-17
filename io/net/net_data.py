@@ -85,35 +85,59 @@ class NetDataTest(Test):
         '''
         check with different maximum transfer unit values
         '''
-        msg = "ip addr show  | grep %s | grep -oE '[^ ]+$'" % self.peer
-        cmd = "ssh %s %s" % (self.peer, msg)
+        cmd = "ip addr show  | grep %s | grep -oE '[^ ]+$'" % self.peer
+        cmd = "ssh %s \"%s\"" % (self.peer, cmd)
         errors = []
-        self.peer_interface = process.system_output(cmd, shell=True).strip()
-        mtuval = process.system_output("ip link show %s" % self.interface,
-                                       shell=True).split()[4]
+        try:
+            peer_interface = process.system_output(cmd, shell=True).strip()
+        except process.CmdError:
+            self.fail("failed to get info of peer interface")
+        try:
+            mtuval = process.system_output("ip link show %s" % self.interface,
+                                           shell=True).split()[4]
+        except process.CmdError:
+            self.fail("failed to get mtu value of %s" % self.interface)
         for mtu in self.mtu_list:
-            self.log.info("trying with mtu %s" % (mtu))
+            mtu_set = False
+            self.log.info("trying with mtu %s", mtu)
             # ping the peer machine with different maximum transfers unit sizes
             # and finally set maximum transfer unit size to 1500 Bytes
-            msg = "ssh %s \"ip link set %s mtu %s\"" % (self.peer,
-                                                        self.peer_interface,
+            cmd = "ssh %s \"ip link set %s mtu %s\"" % (self.peer,
+                                                        peer_interface,
                                                         mtu)
-            process.system(msg, shell=True)
-            con_msg = "ip link set %s mtu %s" % (self.interface, mtu)
-            process.system(con_msg, shell=True)
+            try:
+                process.system(cmd, shell=True)
+            except process.CmdError:
+                self.log.debug("setting mtu value %s in peer failed", mtu)
+            else:
+                mtu_set = True
+            con_cmd = "ip link set %s mtu %s" % (self.interface, mtu)
+            try:
+                process.system(con_cmd, shell=True)
+            except process.CmdError:
+                self.log.debug("setting mtu value %s in host failed", mtu)
+            else:
+                mtu_set = True
             time.sleep(10)
-            mtu = int(mtu) - 28
-            cmd_ping = "ping -i 0.1 -c 2 -s %s %s" % (mtu, self.peer)
-            ret = process.system(cmd_ping, shell=True, ignore_status=True)
-            if ret != 0:
-                errors.append(str(int(mtu) + 28))
-            con_msg = "ip link set %s mtu %s" % (self.interface, mtuval)
-            if process.system(con_msg, shell=True, ignore_status=True):
+            if mtu_set:
+                mtu = int(mtu) - 28
+                cmd_ping = "ping -i 0.1 -c 2 -s %s %s" % (mtu, self.peer)
+                ret = process.system(cmd_ping, shell=True, ignore_status=True)
+                if ret != 0:
+                    errors.append(str(int(mtu) + 28))
+            else:
+                errors.append(mtu)
+            con_cmd = "ip link set %s mtu %s" % (self.interface, mtuval)
+            try:
+                process.system(con_cmd, shell=True)
+            except process.CmdError:
                 self.log.debug("setting original mtu value in host failed")
-            msg = "ssh %s \"ip link set %s mtu %s\"" % (self.peer,
-                                                        self.peer_interface,
+            cmd = "ssh %s \"ip link set %s mtu %s\"" % (self.peer,
+                                                        peer_interface,
                                                         mtuval)
-            if process.system(msg, shell=True, ignore_status=True):
+            try:
+                process.system(cmd, shell=True)
+            except process.CmdError:
                 self.log.debug("setting original mtu value in peer failed")
             time.sleep(10)
 
