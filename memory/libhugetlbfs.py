@@ -38,6 +38,7 @@ class libhugetlbfs(Test):
 
     :avocado: tags=memory,privileged
     '''
+
     def setUp(self):
         # Check for root permission
         if os.geteuid() != 0:

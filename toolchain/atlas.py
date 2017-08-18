@@ -28,6 +28,7 @@ class Atlas(Test):
     The Test fetches the tar of the ATLAS and LAPACK libraries and
     performs the sanity checks on the built libraries.
     '''
+
     def setUp(self):
         sm = SoftwareManager()
         detected_distro = distro.detect()

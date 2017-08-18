@@ -38,6 +38,7 @@ class ParallelDd(Test):
     """
     Avocado test for parallel_dd.
     """
+
     def setUp(self):
         """
         :params disk: The disk on which the operations are to be performed.

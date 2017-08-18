@@ -32,6 +32,7 @@ class Ucmatose(Test):
     """
     Ucmatose Test.
     """
+
     def setUp(self):
         """
         Setup and install dependencies for the test.

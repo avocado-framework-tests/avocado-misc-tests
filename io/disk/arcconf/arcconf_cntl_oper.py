@@ -34,7 +34,6 @@ class Arcconftest(Test):
     """
 
     def setUp(self):
-
         """
         Checking if the required packages are installed,
         if not found specific packages will be installed.

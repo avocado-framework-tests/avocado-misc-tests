@@ -34,6 +34,7 @@ class pingpong(Test):
     ibv_ud_pingpong test
     ibv_ud_pingpong tool should be installed
     '''
+
     def setUp(self):
         '''
         To check and install dependencies for the test

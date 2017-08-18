@@ -30,6 +30,7 @@ class PciLsvpdInfo(Test):
     '''
     check lsvpd info
     '''
+
     def setUp(self):
         '''
         To check and install dependencies for the test

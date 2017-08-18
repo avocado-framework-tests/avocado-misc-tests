@@ -35,6 +35,7 @@ class MultipathTest(Test):
     """
     Multipath Test
     """
+
     def setUp(self):
         """
         Set up.

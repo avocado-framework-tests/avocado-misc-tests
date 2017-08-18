@@ -32,6 +32,7 @@ class Mckey(Test):
     """
     mckey Test.
     """
+
     def setUp(self):
         """
         Setup and install dependencies for the test.

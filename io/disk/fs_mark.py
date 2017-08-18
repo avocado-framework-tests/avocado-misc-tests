@@ -85,7 +85,6 @@ class fs_mark(Test):
         process.run(cmd)
 
     def tearDown(self):
-
         '''
         Cleanup of disk used to perform this test
         '''

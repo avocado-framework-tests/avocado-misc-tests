@@ -37,6 +37,7 @@ class Tiobench(Test):
     """
     Avocado test for tiobench.
     """
+
     def setUp(self):
         """
         Build tiobench.

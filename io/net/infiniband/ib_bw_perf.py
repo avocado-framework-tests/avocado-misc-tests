@@ -35,6 +35,7 @@ class Bandwidth_Perf(Test):
     Infiniband adaptors bandwidth performance tests using four tools
     tools are ib_send_bw,ib_write_bw,ib_read_bw,ib_atomic_bw
     '''
+
     def setUp(self):
         '''
         check the availability of perftest package installed

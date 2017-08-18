@@ -35,7 +35,6 @@ class Avago3008(Test):
     """
 
     def setUp(self):
-
         """
         Lists all available Avago adapters (does not need ctlr #>
         """
@@ -50,7 +49,7 @@ class Avago3008(Test):
             self.cancel("Please provide disks to run the tests")
         self.number_of_disk = len(self.disk)
         if (not os.path.isfile(self.tool_location) or not
-           os.access(self.tool_location, os.X_OK)):
+                os.access(self.tool_location, os.X_OK)):
             self.cancel()
 
         self.dict_raid = {'raid0': [2, None, None], 'raid1': [2, 2, None],
@@ -70,7 +69,6 @@ class Avago3008(Test):
         self.raid_disk = " ".join(self.disk).strip(" ")
 
     def test_run(self):
-
         """
         Decides which functions to run for given raid_level
         """
@@ -85,7 +83,6 @@ class Avago3008(Test):
             self.extensivetest()
 
     def basictest(self):
-
         """
         This function does only create and delete Raid
         """
@@ -98,7 +95,6 @@ class Avago3008(Test):
         self.logir()
 
     def extensivetest(self):
-
         """
         Lists all the LSI adapters attached to the mahcine
         :return:
@@ -126,7 +122,6 @@ class Avago3008(Test):
         self.adapter_status("Volume state")
 
     def adapterlist(self):
-
         """
         Lists all the LSI adapters attached to the mahcine
         :return:
@@ -136,7 +131,6 @@ class Avago3008(Test):
             self.fail("Failed to list all the Avogo adapters")
 
     def adapterdetails(self):
-
         """
         Display controller, volume and physical device info
         """
@@ -146,7 +140,6 @@ class Avago3008(Test):
             self.fail("Failed to display details of drives and VR vloumes")
 
     def createraid(self):
-
         """
         This function creates raid array
         """
@@ -157,7 +150,6 @@ class Avago3008(Test):
             self.fail("Failed to create raid on the drives")
 
     def hotspare(self):
-
         """
         This is a helper function to create hot-spare
         """
@@ -167,7 +159,6 @@ class Avago3008(Test):
             self.fail("Failed to set hotspare drive")
 
     def backgroundinit(self):
-
         """
         Checks if BGI starts automatically, and if so waits
         till it is completed
@@ -175,7 +166,6 @@ class Avago3008(Test):
         self.sleepfunction()
 
     def consistcheck(self):
-
         """
         This function starts CC on a Raid array
         """
@@ -186,7 +176,6 @@ class Avago3008(Test):
         self.sleepfunction()
 
     def logir(self):
-
         """
         This function stores all the IR logs
         """
@@ -199,7 +188,6 @@ class Avago3008(Test):
             self.fail("Failed to clear the logs on controller")
 
     def rebuild(self):
-
         """
         This functions waits for the rebuild to complete on a Raid
         """
@@ -208,7 +196,6 @@ class Avago3008(Test):
             time.sleep(30)
 
     def set_online_offline(self, state):
-
         """
         This is a helper function, to change the state of the drives
         """
@@ -218,7 +205,6 @@ class Avago3008(Test):
             self.fail("Failed to set drive to %s" % state)
 
     def adapter_status(self, var):
-
         """
         This is a helper function, to check the status of the adapter
         """
@@ -231,7 +217,6 @@ class Avago3008(Test):
                 return i.split(":")[-1].strip(" ").strip("\n")
 
     def deleteraid(self):
-
         """
         This function deletes raid array
         """
@@ -241,7 +226,6 @@ class Avago3008(Test):
             self.fail("Failed to delete raid array VR1")
 
     def volumeid(self):
-
         """
         This function returns volume ID of the IR volume
         """
@@ -251,7 +235,6 @@ class Avago3008(Test):
         return volume_id
 
     def sleepfunction(self):
-
         """
         This function waits, till the current operation is complete
         """

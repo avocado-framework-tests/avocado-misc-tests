@@ -38,6 +38,7 @@ class Netperf(Test):
     """
     Netperf Test
     """
+
     def setUp(self):
         """
         To check and install dependencies for the test

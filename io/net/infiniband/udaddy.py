@@ -32,6 +32,7 @@ class Udady(Test):
     """
     Udaddy Test.
     """
+
     def setUp(self):
         """
         Setup and install dependencies for the test.

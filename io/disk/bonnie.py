@@ -41,7 +41,6 @@ class Bonnie(Test):
     """
 
     def setUp(self):
-
         """
         Build bonnie++
         Source:
@@ -84,7 +83,6 @@ class Bonnie(Test):
             self.part_obj.mount()
 
     def test(self):
-
         """
         Run 'bonnie' with its arguments
         """
@@ -99,7 +97,6 @@ class Bonnie(Test):
             self.fail("test failed")
 
     def tearDown(self):
-
         '''
         Cleanup of disk used to perform this test
         '''

@@ -35,6 +35,7 @@ class ip_over_ib(Test):
     IPoIB can run over two infiniband transports,
     Unreliable Datagram (UD) mode or Connected mode (CM)
     '''
+
     def setUp(self):
         '''
         To check and install dependencies for the test
@@ -153,25 +154,25 @@ class ip_over_ib(Test):
                 self.NETSERVER_RUN = 1
         time.sleep(5)
         msg = "timeout %s %s -H %s %s" % (
-            self.to, self.perf+'/netperf', self.PEER_IP, arg2)
+            self.to, self.perf + '/netperf', self.PEER_IP, arg2)
         if process.system(msg, shell=True, ignore_status=True) != 0:
             self.fail("test failed because netperf not working")
         if arg1 == "datagram" and arg2 != "":
             msg = "timeout %s %s -H %s -t UDP_STREAM -- -m 63000" % \
-                  (self.to, self.perf+'/netperf', self.PEER_IP)
+                  (self.to, self.perf + '/netperf', self.PEER_IP)
             if process.system(msg, shell=True, ignore_status=True) != 0:
                 self.fail("test failed because netperf not working")
         else:
             msg = "timeout %s %s -H %s -t UDP_STREAM %s" % \
-                  (self.to, self.perf+'/netperf', self.PEER_IP, arg2)
+                  (self.to, self.perf + '/netperf', self.PEER_IP, arg2)
             if process.system(msg, shell=True, ignore_status=True) != 0:
                 self.fail("test failed because netperf not working")
         msg = "timeout %s %s -H %s -t TCP_RR %s" % \
-              (self.to, self.perf+'/netperf', self.PEER_IP, arg2)
+              (self.to, self.perf + '/netperf', self.PEER_IP, arg2)
         if process.system(msg, shell=True, ignore_status=True) != 0:
             self.fail("test failed because netperf not working")
         msg = "timeout %s %s -H %s -t UDP_RR %s" % \
-              (self.to, self.perf+'/netperf', self.PEER_IP, arg2)
+              (self.to, self.perf + '/netperf', self.PEER_IP, arg2)
         if process.system(msg, shell=True, ignore_status=True) != 0:
             self.fail("test failed because netperf not working")
 
@@ -193,7 +194,7 @@ class ip_over_ib(Test):
                 self.IPERF_RUN = 1
         time.sleep(5)
         cmd = "timeout %s %s -c %s -P 20 -n 8192" % \
-              (self.to, self.iperf+'/iperf3', self.PEER_IP)
+              (self.to, self.iperf + '/iperf3', self.PEER_IP)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("test failed because iperf not working")
         self.log.info("server data for iperf")

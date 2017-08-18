@@ -37,7 +37,6 @@ class Memcached(Test):
     """
 
     def setUp(self):
-
         """
         Sets up the args required to run the test.
         """
@@ -90,7 +89,6 @@ class Memcached(Test):
                                                         stress_tool_args)
 
     def test(self):
-
         """
         Runs memcached in the background and runs memcslap tool on
         top of memcached
@@ -116,7 +114,6 @@ class Memcached(Test):
                       'Cmd "%s" Failed' % self.memcslap_cmd)
 
     def tearDown(self):
-
         """
         Kills the memcached which is running background
         """

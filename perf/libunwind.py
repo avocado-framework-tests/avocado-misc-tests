@@ -40,7 +40,7 @@ class Libunwind(Test):
         elif dist.name in ['SuSE', 'rhel', 'fedora', 'redhat']:
             deps.extend(['gcc-c++'])
         else:
-            self.cancel('Test not supported in %s' dist.name)
+            self.cancel('Test not supported in %s' % dist.name)
 
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):

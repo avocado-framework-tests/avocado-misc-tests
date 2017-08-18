@@ -30,6 +30,7 @@ class TcpdumpTest(Test):
     """
     Test the tcpdump for specified interface.
     """
+
     def setUp(self):
         """
         Set up.

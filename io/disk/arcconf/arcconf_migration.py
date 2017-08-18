@@ -35,7 +35,6 @@ class Arcconftest(Test):
     """
 
     def setUp(self):
-
         """
         Checking if the required packages are installed,
         if not found specific packages will be installed.
@@ -176,7 +175,7 @@ class Arcconftest(Test):
             # restore global spare only after logical drive delete
             if self.spare_drive != "":
                 cmd = "echo y | arcconf setstate %s device %s %s RDY " % \
-                       (self.crtl_no, self.channel_no, self.spare_drive)
+                    (self.crtl_no, self.channel_no, self.spare_drive)
                 self.check_pass(cmd, "Failed to run %s" % cmd)
 
     def logical_print(self):
