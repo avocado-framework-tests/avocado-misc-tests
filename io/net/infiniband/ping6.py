@@ -32,6 +32,7 @@ class Ping6(Test):
     """
     ping6 Test.
     """
+
     def setUp(self):
         """
         Setup and install dependencies for the test.

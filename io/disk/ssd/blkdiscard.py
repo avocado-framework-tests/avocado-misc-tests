@@ -32,7 +32,6 @@ class Blkdiscard(Test):
     """
 
     def setUp(self):
-
         """
         Checks if the blkdiscard packages are installed or not.
         """
@@ -47,7 +46,6 @@ class Blkdiscard(Test):
         process.run(cmd)
 
     def test(self):
-
         """
         Sectors are dicarded for the different values of OFFSET and LENGTH.
         """

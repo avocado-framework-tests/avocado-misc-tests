@@ -131,7 +131,7 @@ class MvcliTest(Test):
         self.log.info("Mvcli set configuration parameters test")
         for state in ["on", "off"]:
             self.run_command("%s set -o hba -i %s --rawupdate%s" % (self.base,
-                             self.adapter_id, state))
+                                                                    self.adapter_id, state))
             get_cmd = "%s get -o hba -i %s" % (self.base, self.adapter_id)
             for line in self.run_cmd_output(get_cmd).split("\n"):
                 if "Raw Update:" in line and state in line:

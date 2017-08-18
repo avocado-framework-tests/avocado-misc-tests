@@ -32,6 +32,7 @@ class Rping(Test):
     """
     rping Test.
     """
+
     def setUp(self):
         """
         Setup and install dependencies for the test.

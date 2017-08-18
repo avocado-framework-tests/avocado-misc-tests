@@ -48,7 +48,7 @@ class kselftest(Test):
 
         if 'Ubuntu' in detected_distro.name:
             deps.extend(['libpopt0', 'libc6', 'libc6-dev',
-                        'libpopt-dev', 'libcap-ng0', 'libcap-ng-dev'])
+                         'libpopt-dev', 'libcap-ng0', 'libcap-ng-dev'])
         elif 'SuSE' in detected_distro.name:
             deps.extend(['popt', 'glibc', 'glibc-devel',
                          'popt-devel', 'libcap1', 'libcap1-devel',

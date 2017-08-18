@@ -37,6 +37,7 @@ class Bonding(Test):
     Channel bonding enables two or more network interfaces to act as one,
     simultaneously increasing the bandwidth and providing redundancy.
     '''
+
     def setUp(self):
         '''
         To check and install dependencies for the test
@@ -108,7 +109,7 @@ class Bonding(Test):
         for val in self.host_interfaces:
             mask = socket.inet_ntoa(fcntl.ioctl(st.fileno(), 0x891b,
                                                 struct.pack('256s',
-                                                val))[20:24]).strip('\n')
+                                                            val))[20:24]).strip('\n')
             self.net_mask.append(mask)
         self.bonding_slave_file = "/sys/class/net/%s/bonding/slaves"\
                                   % self.bond_name

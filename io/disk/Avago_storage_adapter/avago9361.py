@@ -30,8 +30,8 @@ class Avago9361(Test):
     """
     Here test cases related to LSI9361 adapter will be run
     """
-    def setUp(self):
 
+    def setUp(self):
         """
         All basic set up for test case are done here
         """
@@ -40,7 +40,6 @@ class Avago9361(Test):
         self.tool_location = str(self.params.get('tool_location'))
 
     def test_display(self):
-
         """
         Displays entire adapter configuration
         """
@@ -54,7 +53,6 @@ class Avago9361(Test):
         self.check_pass(cmd, "Fail to display 'show all' o/p of the adapter")
 
     def test_adjustablerates(self):
-
         """
         Function to set all adjustable values of the adapter
         """
@@ -70,7 +68,6 @@ class Avago9361(Test):
                 self.check_pass(cmd, "Failed to set the rate")
 
     def test_set_on_off(self):
-
         """
         Function to set ON/OFF values for the different values
         """
@@ -96,7 +93,6 @@ class Avago9361(Test):
                 self.check_pass(cmd, "Failed to set to %s for %s" % (j, i))
 
     def check_pass(self, cmd, errmsg):
-
         """
         Helper function to check, if the cmd is passed or failed
         """

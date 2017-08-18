@@ -35,6 +35,7 @@ class NetDataTest(Test):
     check the statistics of interface, test big ping
     test lro and gro and interface
     '''
+
     def setUp(self):
         '''
             To check and install dependencies for the test
@@ -163,7 +164,7 @@ class NetDataTest(Test):
         '''
         for i in range(0, 600, 5):
             if 'UP' or 'yes' in\
-             process.system_output(cmd, shell=True, ignore_status=True):
+                    process.system_output(cmd, shell=True, ignore_status=True):
                 self.log.info("%s is up" % self.interface)
                 return True
             time.sleep(5)

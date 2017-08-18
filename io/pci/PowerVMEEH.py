@@ -35,6 +35,7 @@ class EEHRecoveryFailed(Exception):
     """
     Exception class, if EEH fails to recover
     """
+
     def __init__(self, thing, dev, log=None):
         self.thing = thing
         self.dev = dev
@@ -50,8 +51,8 @@ class PowerVMEEH(Test):
     This class contains functions for listing domains
     forming EEH command
     """
-    def setUp(self):
 
+    def setUp(self):
         """
         Gets the console and set-up the machine for test
         """
@@ -68,7 +69,6 @@ class PowerVMEEH(Test):
         self.log.info("===============Testing EEH Frozen PE==================")
 
     def test_eeh_basic_pe(self):
-
         """
         Test to execute basic error injection on PE
         """
@@ -128,7 +128,6 @@ class PowerVMEEH(Test):
 
     def basic_eeh(self, func, pci_class_name, pci_interface,
                   pci_mem_addr, pci_mask):
-
         """
         Injects Error, and checks for PE recovery
         returns True, if recovery is success, else Flase
@@ -149,7 +148,6 @@ class PowerVMEEH(Test):
     @classmethod
     def error_inject(cls, func, pci_class_name, pci_interface, pci_mem_addr,
                      pci_mask):
-
         """
         Form a command to inject the error
         """
@@ -159,7 +157,6 @@ class PowerVMEEH(Test):
         return int(res[-1])
 
     def check_eeh_pe_recovery(self, addr):
-
         """
         Check if the PE is recovered successfully after injecting EEH
         """
@@ -184,7 +181,6 @@ class PowerVMEEH(Test):
 
     @classmethod
     def clear_dmesg_logs(cls):
-
         """
         Clears dmesg logs, so that functions which uses dmesg
         gets the latest logs
@@ -194,7 +190,6 @@ class PowerVMEEH(Test):
 
     @classmethod
     def check_eeh_hit(cls):
-
         """
         Function to check if EEH is successfully hit
         """
@@ -209,7 +204,6 @@ class PowerVMEEH(Test):
 
     @classmethod
     def check_eeh_removed(cls):
-
         """
         Function to check if PE is recovered successfully
         """

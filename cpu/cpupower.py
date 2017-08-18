@@ -30,6 +30,7 @@ class cpupower(Test):
 
     :avocado: tags=cpu,power,privileged
     """
+
     def setUp(self):
         if not os.path.exists('/sys/devices/system/cpu/cpu0/cpufreq'):
             self.cancel('sysfs directory for cpufreq is unavailable.')

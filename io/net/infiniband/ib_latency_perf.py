@@ -33,6 +33,7 @@ class Latency_Perf(Test):
     Infiniband adaptors latency performance tests using four tools
     tools are ib_send_lat,ib_write_lat,ib_read_lat,ib_atomic_lat
     '''
+
     def setUp(self):
         '''
         check the availability of perftest package installed

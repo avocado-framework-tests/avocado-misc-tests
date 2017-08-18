@@ -97,7 +97,7 @@ class VlanTest(Test):
         if command in output[0]:
             output.pop(0)
         output.pop()
-        output = [element.lstrip()+'\n' for element in output]
+        output = [element.lstrip() + '\n' for element in output]
         response = ''.join(output)
         response = response.strip()
         self.log.info(''.join(response))
@@ -309,7 +309,7 @@ class VlanTest(Test):
               % (ip, self.cidr_value, self.host_intf, vlan_num)
         self.run_host_command(cmd)
         self.run_host_command("ip link set %s.%s up" % (self.host_intf,
-                              vlan_num))
+                                                        vlan_num))
         cmd = "ifconfig %s.%s" % (self.host_intf, vlan_num)
         self.run_host_command(cmd)
 
@@ -326,7 +326,7 @@ class VlanTest(Test):
               % (ip, self.cidr_value, self.peer_intf, vlan_num)
         self.run_peer_command(cmd)
         self.run_peer_command("ip link set %s.%s up" % (self.peer_intf,
-                              vlan_num))
+                                                        vlan_num))
         cmd = "ifconfig %s.%s" % (self.peer_intf, vlan_num)
         self.run_peer_command(cmd)
 

@@ -36,7 +36,6 @@ class SmartctlTest(Test):
     """
 
     def setUp(self):
-
         """
         Checking if the required packages are installed,
         if not found packages will be installed

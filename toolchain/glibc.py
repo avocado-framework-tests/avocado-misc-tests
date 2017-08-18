@@ -26,6 +26,7 @@ class Glibc(Test):
     '''
     The Test fetches the latest glibc repo and runs the tests in it
     '''
+
     def setUp(self):
         sm = SoftwareManager()
         deps = ['gcc', 'make', 'gawk']
@@ -53,7 +54,7 @@ class Glibc(Test):
                 file_buff = f.read().splitlines()
                 for index, line in enumerate(file_buff):
                     if 'Summary' in line:
-                        failures = file_buff[index+1].split()[3]
+                        failures = file_buff[index + 1].split()[3]
                         if int(failures) != 0:
                             self.fail("No of Failures occured %s"
                                       "\nCheck logs for more info" % failures)
