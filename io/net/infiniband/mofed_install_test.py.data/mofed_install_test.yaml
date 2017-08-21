@@ -46,4 +46,6 @@ Options: !mux
         option: -c docs/conf/ofed-basic.conf -n docs/conf/ofed_net.conf-example
     add-kernel-support:
         option: --add-kernel-support --skip-repo --force --kmp
+    add-kernel-support_with-nvmf:
+        option: --skip-distro-check --add-kernel-support --skip-repo --with-nvmf
         uninstall: False
