@@ -1,14 +1,9 @@
 setup:
     cycles: !mux
         default:
-            iteration: 100
+            iteration: 10
         long:
-            iteration: 1000
-    delay: !mux
-        default:
-            timeout: 5
-        nodelay:
-            timeout: 0
+            iteration: 100
     type: !mux
         default:
             test: 'all'
