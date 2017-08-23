@@ -1,0 +1,10 @@
+[global]
+name=fio-rand-read
+filename=fio-rand-read
+rw=randread
+bs=4K
+direct=0
+numjobs=1
+size=10G
+ioengine=libaio
+iodepth=16
