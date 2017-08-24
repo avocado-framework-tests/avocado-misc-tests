@@ -36,7 +36,7 @@ class Perfmon(Test):
 
         for package in ("gcc", "make"):
             if not smm.check_installed(package) and not smm.install(package):
-                self.error(
+                self.cancel(
                     "Fail to install %s required for this test." % package)
 
         git.get_repo('git://perfmon2.git.sourceforge.net/gitroot'
