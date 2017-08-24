@@ -20,7 +20,6 @@ Stress test for CPU
 
 import multiprocessing
 import platform
-import time
 from random import randint
 from avocado import Test
 from avocado import main
@@ -74,8 +73,7 @@ class cpustresstest(Test):
         for pkg in ['util-linux', 'powerpc-utils', 'numactl']:
             if not sm.check_installed(pkg) and not sm.install(pkg):
                 self.cancel("%s is required to continue..." % pkg)
-        self.iteration = int(self.params.get('iteration', default='100'))
-        self.timeout = int(self.params.get('timeout', default='5'))
+        self.iteration = int(self.params.get('iteration', default='10'))
         self.tests = self.params.get('test', default='all')
 
     @staticmethod
@@ -160,22 +158,18 @@ class cpustresstest(Test):
             for cpus in range(1, totalcpus):
                 self.log.info("cpu%s going offline" % cpus)
                 cpu.offline(cpus)
-                time.sleep(self.timeout)
             self.log.info("Online CPU's in reverse order %s", totalcpus)
             for cpus in range(totalcpus, -1, -1):
                 self.log.info("cpu%s going online" % cpus)
                 cpu.online(cpus)
-                time.sleep(self.timeout)
             self.log.info("Offline CPU's in reverse order %s", totalcpus)
             for cpus in range(totalcpus, -1, -2):
                 self.log.info("cpu%s going offline" % cpus)
                 cpu.offline(cpus)
-                time.sleep(self.timeout)
             self.log.info("Online CPU's in serial")
             for cpus in range(0, totalcpus):
                 self.log.info("cpu%s going online" % cpus)
                 cpu.online(cpus)
-                time.sleep(self.timeout)
 
     def single_cpu_toggle(self):
         """
@@ -187,7 +181,6 @@ class cpustresstest(Test):
             for _ in range(self.iteration):
                 self.log.info("cpu%s going offline" % cpus)
                 cpu.offline(cpus)
-                time.sleep(self.timeout)
                 self.log.info("cpu%s going online" % cpus)
                 cpu.online(cpus)
 
@@ -200,7 +193,6 @@ class cpustresstest(Test):
             for cpus in range(totalcpus):
                 self.log.info("cpu%s going offline" % cpus)
                 cpu.offline(cpus)
-                time.sleep(self.timeout)
                 self.log.info("cpu%s going online" % cpus)
                 cpu.online(cpus)
 
@@ -283,13 +275,11 @@ class cpustresstest(Test):
                     init_count = int(multiprocessing.cpu_count())
                     process.run(
                         "drmgr -c cpu -d 5 -w 30 -r", shell=True, ignore_status=True, sudo=True)
-                    time.sleep(self.timeout)
-                    if init_count > int(multiprocessing.cpu_count()):
+                    if int(multiprocessing.cpu_count()) >= init_count:
                         self.log.warn("dlpar cpu could not complete")
                     self.log.info("DLPAR add cpu operation")
                     process.run(
                         "drmgr -c cpu -d 5 -w 30 -a", shell=True, ignore_status=True, sudo=True)
-                    time.sleep(self.timeout)
                     if init_count != int(multiprocessing.cpu_count()):
                         self.log.warn("dlpar cpu could not complete")
             else:
