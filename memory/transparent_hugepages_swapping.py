@@ -37,7 +37,6 @@ class Thp_Swapping(Test):
     :avocado: tags=memory,privileged
     '''
 
-    @skipIf(PAGESIZE, "No THP support for kernel with 4K PAGESIZE")
     def setUp(self):
         '''
         Sets the Required params for dd and mounts the tmpfs dir
@@ -70,6 +69,7 @@ class Thp_Swapping(Test):
             self.device.mount(mountpoint=self.mem_path, fstype="tmpfs",
                               args="-o size=%sM" % tmpfs_size)
 
+    @skipIf(PAGESIZE, "No THP support for kernel with 4K PAGESIZE")
     def test(self):
         '''
         Enables THP Runs dd, fills out the available memory and checks whether
