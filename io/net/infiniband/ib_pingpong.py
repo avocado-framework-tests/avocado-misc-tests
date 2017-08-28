@@ -53,7 +53,7 @@ class pingpong(Test):
         self.PEER_CA = self.params.get("PEERCA", default="mlx4_0")
         self.PEER_GID = int(self.params.get("PEERGID", default="0"))
         self.PEER_PORT = int(self.params.get("PEERPORT", default="1"))
-        self.to = self.params.get("timeout", default="120")
+        self.to = self.params.get("TIMEOUT", default="120")
 
         smm = SoftwareManager()
         detected_distro = distro.detect()

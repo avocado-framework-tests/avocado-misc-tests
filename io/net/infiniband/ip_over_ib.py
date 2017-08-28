@@ -59,7 +59,7 @@ class ip_over_ib(Test):
             self.cancel("%s interface is not available" % self.IF)
         if self.PEER_IP == "":
             self.cancel("%s peer machine is not available" % self.PEER_IP)
-        self.to = self.params.get("timeout", default="600")
+        self.to = self.params.get("TIMEOUT", default="600")
         self.IPERF_RUN = self.params.get("IPERF_RUN", default="0")
         self.NETSERVER_RUN = self.params.get("NETSERVER_RUN", default="0")
         self.iper = os.path.join(self.teststmpdir, 'iperf')

@@ -25,4 +25,4 @@ parameters:
     PEERCA: "mlx4_0"
     PEERGID: "0"
     PEERPORT: "1"
-    timeout: "120"
+    TIMEOUT: "120"

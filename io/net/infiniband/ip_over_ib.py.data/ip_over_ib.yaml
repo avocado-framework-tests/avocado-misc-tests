@@ -6,6 +6,6 @@ Test: !mux
 parameters:
     interface: "ib0"
     peer_ip: "13.13.13.15"
-    timeout: "600"
+    TIMEOUT: "600"
     NETSERVER_RUN: 0
     IPERF_RUN: 0

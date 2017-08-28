@@ -65,7 +65,7 @@ class Bandwidth_Perf(Test):
         self.PORT = self.params.get("PORT_NUM", default="1")
         self.PEER_CA = self.params.get("PEERCA", default="mlx4_0")
         self.PEER_PORT = self.params.get("PEERPORT", default="1")
-        self.to = self.params.get("timeout", default="600")
+        self.to = self.params.get("TIMEOUT", default="600")
         self.tool_name = self.params.get("tool")
         if self.tool_name == "":
             self.cancel("should specify tool name")
