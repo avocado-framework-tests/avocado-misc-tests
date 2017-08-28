@@ -13,13 +13,14 @@
 #
 # Copyright: 2016 IBM
 # Author: Prudhvi Miryala<mprudhvi@linux.vnet.ibm.com>
-# Bandwidth Performance test for infiniband adaptors
-# ib_send_bw test
-# ib_write_bw test
-# ib_read_bw test
-# ib_atomic_bw test
-#
-#
+
+'''
+Bandwidth Performance test for infiniband adaptors
+ib_send_bw test
+ib_write_bw test
+ib_read_bw test
+ib_atomic_bw test
+'''
 
 
 import time
@@ -30,7 +31,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process, distro
 
 
-class Bandwidth_Perf(Test):
+class BandwidthPerf(Test):
     '''
     Infiniband adaptors bandwidth performance tests using four tools
     tools are ib_send_bw,ib_write_bw,ib_read_bw,ib_atomic_bw
@@ -55,21 +56,21 @@ class Bandwidth_Perf(Test):
                 self.cancel("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
         self.flag = self.params.get("ext_flag", default="0")
-        self.IF = self.params.get("interface", default="")
+        self.iface = self.params.get("interface", default="")
         self.peer_ip = self.params.get("peer_ip", default="")
-        if self.IF not in interfaces:
-            self.cancel("%s interface is not available" % self.IF)
+        if self.iface not in interfaces:
+            self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
             self.cancel("%s peer machine is not available" % self.peer_ip)
-        self.CA = self.params.get("CA_NAME", default="mlx4_0")
-        self.PORT = self.params.get("PORT_NUM", default="1")
-        self.PEER_CA = self.params.get("PEERCA", default="mlx4_0")
-        self.PEER_PORT = self.params.get("PEERPORT", default="1")
-        self.to = self.params.get("TIMEOUT", default="600")
+        self.ca_name = self.params.get("CA_NAME", default="mlx4_0")
+        self.port = self.params.get("PORT_NUM", default="1")
+        self.peer_ca = self.params.get("PEERCA", default="mlx4_0")
+        self.peer_port = self.params.get("PEERPORT", default="1")
+        self.tmo = self.params.get("TIMEOUT", default="600")
         self.tool_name = self.params.get("tool")
         if self.tool_name == "":
             self.cancel("should specify tool name")
-        self.log.info("test with %s" % (self.tool_name))
+        self.log.info("test with %s", self.tool_name)
         self.test_op = self.params.get("test_opt", default="").split(",")
         self.ext_test_op = self.params.get("ext_opt", default="").split(",")
 
@@ -97,21 +98,21 @@ class Bandwidth_Perf(Test):
         flag = 0
         logs = "> /tmp/ib_log 2>&1 &"
         cmd = "ssh %s \" timeout %s %s -d %s -i %s %s %s %s\" " \
-            % (self.peer_ip, self.to, arg1, self.PEER_CA, self.PEER_PORT,
+            % (self.peer_ip, self.tmo, arg1, self.peer_ca, self.peer_port,
                arg2, arg3, logs)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("ssh failed to remote machine\
                       or  faing data from remote machine failed")
         time.sleep(2)
-        self.log.info("client data for %s(%s)" % (arg1, arg2))
+        self.log.info("client data for %s(%s)", arg1, arg2)
         cmd = "timeout %s %s -d %s -i %s %s %s %s" \
-            % (self.to, arg1, self.CA, self.PORT, self.peer_ip,
+            % (self.tmo, arg1, self.ca_name, self.port, self.peer_ip,
                arg2, arg3)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             flag = 1
-        self.log.info("server data for %s(%s)" % (arg1, arg2))
+        self.log.info("server data for %s(%s)", arg1, arg2)
         cmd = "ssh %s \"timeout %s cat /tmp/ib_log && rm -rf /tmp/ib_log\" " %\
-              (self.peer_ip, self.to)
+              (self.peer_ip, self.tmo)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("ssh failed to remote machine\
                       or fetching data from remote machine failed")
@@ -129,7 +130,8 @@ class Bandwidth_Perf(Test):
         if self.flag == "1":
             for val in self.ext_test_op:
                 if self.bandwidthperf_exec(self.tool_name, val, "") != 0:
-                    err.append("client cmd fail: %s %s" % (self.tool_name, val))
+                    err.append("client cmd fail: %s %s" % (self.tool_name,
+                                                           val))
         else:
             self.log.info("Extended test option skipped")
         if err:

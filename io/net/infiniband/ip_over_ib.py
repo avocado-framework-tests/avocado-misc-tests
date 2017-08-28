@@ -13,9 +13,12 @@
 #
 # Copyright: 2016 IBM
 # Author: Prudhvi Miryala<mprudhvi@linux.vnet.ibm.com>
-# Ip Over IB test
-# IPoIB can run over two infiniband transports
-# Unreliable Datagram (UD) mode or Connected mode (CM)
+
+'''
+Ip Over IB test
+IPoIB can run over two infiniband transports
+Unreliable Datagram (UD) mode or Connected mode (CM)
+'''
 
 
 import os
@@ -29,7 +32,7 @@ from avocado.utils import archive
 from avocado.utils import process, distro
 
 
-class ip_over_ib(Test):
+class IPOverIB(Test):
     '''
     Ip Over IB Test
     IPoIB can run over two infiniband transports,
@@ -53,15 +56,15 @@ class ip_over_ib(Test):
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
-        self.IF = self.params.get("interface", default="")
-        self.PEER_IP = self.params.get("peer_ip", default="")
-        if self.IF not in interfaces:
-            self.cancel("%s interface is not available" % self.IF)
-        if self.PEER_IP == "":
-            self.cancel("%s peer machine is not available" % self.PEER_IP)
-        self.to = self.params.get("TIMEOUT", default="600")
-        self.IPERF_RUN = self.params.get("IPERF_RUN", default="0")
-        self.NETSERVER_RUN = self.params.get("NETSERVER_RUN", default="0")
+        self.iface = self.params.get("interface", default="")
+        self.peer_ip = self.params.get("peer_ip", default="")
+        if self.iface not in interfaces:
+            self.cancel("%s interface is not available" % self.iface)
+        if self.peer_ip == "":
+            self.cancel("%s peer machine is not available" % self.peer_ip)
+        self.tmo = self.params.get("TIMEOUT", default="600")
+        self.iperf_run = self.params.get("IPERF_RUN", default="0")
+        self.netserver_run = self.params.get("NETSERVER_RUN", default="0")
         self.iper = os.path.join(self.teststmpdir, 'iperf')
         self.netperf = os.path.join(self.teststmpdir, 'netperf')
         if detected_distro.name == "Ubuntu":
@@ -77,7 +80,7 @@ class ip_over_ib(Test):
             cmd = "service iptables stop"
         else:
             self.cancel("Distro not supported")
-        if process.system("%s && ssh %s %s" % (cmd, self.PEER_IP, cmd),
+        if process.system("%s && ssh %s %s" % (cmd, self.peer_ip, cmd),
                           ignore_status=True, shell=True) != 0:
             self.cancel("Unable to disable firewall")
 
@@ -86,11 +89,11 @@ class ip_over_ib(Test):
         archive.extract(tarball, self.netperf)
         version = os.path.basename(tarball.split('.tar.')[0])
         self.neperf = os.path.join(self.netperf, version)
-        tmp = "scp -r %s root@%s:" % (self.neperf, self.PEER_IP)
+        tmp = "scp -r %s root@%s:" % (self.neperf, self.peer_ip)
         if process.system(tmp, shell=True, ignore_status=True) != 0:
             self.cancel("unable to copy the netperf into peer machine")
         tmp = "cd /root/netperf-2.7.0;./configure ppc64le;make"
-        cmd = "ssh %s \"%s\"" % (self.PEER_IP, tmp)
+        cmd = "ssh %s \"%s\"" % (self.peer_ip, tmp)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("test failed because command failed in peer machine")
         time.sleep(5)
@@ -100,15 +103,14 @@ class ip_over_ib(Test):
         self.perf = os.path.join(self.neperf, 'src')
         time.sleep(5)
         tarball = self.fetch_asset('iperf.zip', locations=[
-                                   'https://github.com/esnet/'
-                                   'iperf/archive/master.zip'], expire='7d')
+            'https://github.com/esnet/iperf/archive/master.zip'], expire='7d')
         archive.extract(tarball, self.iper)
         self.ipe = os.path.join(self.iper, 'iperf-master')
-        tmp = "scp -r %s root@%s:" % (self.ipe, self.PEER_IP)
+        tmp = "scp -r %s root@%s:" % (self.ipe, self.peer_ip)
         if process.system(tmp, shell=True, ignore_status=True) != 0:
             self.cancel("unable to copy the iperf into peer machine")
         tmp = "cd /root/iperf-master;./configure;make"
-        cmd = "ssh %s \"%s\"" % (self.PEER_IP, tmp)
+        cmd = "ssh %s \"%s\"" % (self.peer_ip, tmp)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("test failed because command failed in peer machine")
         time.sleep(5)
@@ -121,20 +123,20 @@ class ip_over_ib(Test):
         '''
         Bringup IPoIB Interface
         '''
-        self.log.info("Bringup Interface %s with %s mode" % (self.IF, arg1))
-        cmd = "timeout %s ifconfig %s down" % (self.to, self.IF)
+        self.log.info("Bringup Interface %s with %s mode", self.iface, arg1)
+        cmd = "timeout %s ifconfig %s down" % (self.tmo, self.iface)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("interface setup test failed")
         time.sleep(2)
-        logs = "> /sys/class/net/%s/mode" % self.IF
-        cmd = "timeout %s echo %s %s" % (self.to, arg1, logs)
+        logs = "> /sys/class/net/%s/mode" % self.iface
+        cmd = "timeout %s echo %s %s" % (self.tmo, arg1, logs)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("interface setup test failed")
         time.sleep(2)
-        cmd = "timeout %s cat /sys/class/net/%s/mode" % (self.to, self.IF)
+        cmd = "timeout %s cat /sys/class/net/%s/mode" % (self.tmo, self.iface)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("interface setup test failed")
-        cmd = "timeout %s ifconfig %s up" % (self.to, self.IF)
+        cmd = "timeout %s ifconfig %s up" % (self.tmo, self.iface)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("interface setup test failed")
 
@@ -142,37 +144,37 @@ class ip_over_ib(Test):
         '''
         netperf test
         '''
-        if self.NETSERVER_RUN == 0:
+        if self.netserver_run == 0:
             tmp = "chmod 777 /root/netperf-2.7.0/src"
-            cmd = "ssh %s \"%s\"" % (self.PEER_IP, tmp)
+            cmd = "ssh %s \"%s\"" % (self.peer_ip, tmp)
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.fail("test failed because netserver not available")
-            cmd = "ssh %s \"/root/netperf-2.7.0/src/netserver\"" % self.PEER_IP
+            cmd = "ssh %s \"/root/netperf-2.7.0/src/netserver\"" % self.peer_ip
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.fail("test failed because netserver not available")
             else:
-                self.NETSERVER_RUN = 1
+                self.netserver_run = 1
         time.sleep(5)
         msg = "timeout %s %s -H %s %s" % (
-            self.to, self.perf + '/netperf', self.PEER_IP, arg2)
+            self.tmo, self.perf + '/netperf', self.peer_ip, arg2)
         if process.system(msg, shell=True, ignore_status=True) != 0:
             self.fail("test failed because netperf not working")
         if arg1 == "datagram" and arg2 != "":
             msg = "timeout %s %s -H %s -t UDP_STREAM -- -m 63000" % \
-                  (self.to, self.perf + '/netperf', self.PEER_IP)
+                  (self.tmo, self.perf + '/netperf', self.peer_ip)
             if process.system(msg, shell=True, ignore_status=True) != 0:
                 self.fail("test failed because netperf not working")
         else:
             msg = "timeout %s %s -H %s -t UDP_STREAM %s" % \
-                  (self.to, self.perf + '/netperf', self.PEER_IP, arg2)
+                  (self.tmo, self.perf + '/netperf', self.peer_ip, arg2)
             if process.system(msg, shell=True, ignore_status=True) != 0:
                 self.fail("test failed because netperf not working")
         msg = "timeout %s %s -H %s -t TCP_RR %s" % \
-              (self.to, self.perf + '/netperf', self.PEER_IP, arg2)
+              (self.tmo, self.perf + '/netperf', self.peer_ip, arg2)
         if process.system(msg, shell=True, ignore_status=True) != 0:
             self.fail("test failed because netperf not working")
         msg = "timeout %s %s -H %s -t UDP_RR %s" % \
-              (self.to, self.perf + '/netperf', self.PEER_IP, arg2)
+              (self.tmo, self.perf + '/netperf', self.peer_ip, arg2)
         if process.system(msg, shell=True, ignore_status=True) != 0:
             self.fail("test failed because netperf not working")
 
@@ -180,26 +182,26 @@ class ip_over_ib(Test):
         '''
         iperf test
         '''
-        if self.IPERF_RUN == 0:
+        if self.iperf_run == 0:
             logs = "> /tmp/ib_log 2>&1 &"
             tmp = "chmod 777 /root/iperf-master/src/iperf3"
-            cmd = "ssh %s \"%s\"" % (self.PEER_IP, tmp)
+            cmd = "ssh %s \"%s\"" % (self.peer_ip, tmp)
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.fail("test failed because connect to peer sys failed")
             tmp = " /root/iperf-master/src/iperf3 -s %s " % logs
-            cmd = "ssh %s \"%s\"" % (self.PEER_IP, tmp)
+            cmd = "ssh %s \"%s\"" % (self.peer_ip, tmp)
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.fail("test failed because connect to peer sys failed")
             else:
-                self.IPERF_RUN = 1
+                self.iperf_run = 1
         time.sleep(5)
         cmd = "timeout %s %s -c %s -P 20 -n 8192" % \
-              (self.to, self.iperf + '/iperf3', self.PEER_IP)
+              (self.tmo, self.iperf + '/iperf3', self.peer_ip)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("test failed because iperf not working")
         self.log.info("server data for iperf")
-        msg = "timeout %s cat /tmp/ib_log" % self.to
-        cmd = "ssh %s \"%s\"" % (self.PEER_IP, msg)
+        msg = "timeout %s cat /tmp/ib_log" % self.tmo
+        cmd = "ssh %s \"%s\"" % (self.peer_ip, msg)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("test failed because connect to peer sys failed")
 
@@ -208,14 +210,14 @@ class ip_over_ib(Test):
         IPoIB Tests
         '''
         test_name = self.params.get("tool")
-        self.log.info("test with %s" % (test_name))
-        if "ib" in self.IF:
+        self.log.info("test with %s", test_name)
+        if "ib" in self.iface:
             self.interface_setup(test_name)
             self.netperf_test(test_name, "")
             self.netperf_test(test_name, "-- -m 65000")
             self.iperf_test()
         else:
-            self.log.info("Not applicable for the interface %s" % self.IF)
+            self.log.info("Not applicable for the interface %s", self.iface)
 
     def tearDown(self):
         '''
@@ -223,7 +225,7 @@ class ip_over_ib(Test):
         '''
         msg = "pkill iperf3; pkill netserver;rm -rf /tmp/ib_log;\
                rm -rf /root/iperf-master; rm -rf /root/netperf-2.7.0"
-        cmd = "ssh %s \"%s\"" % (self.PEER_IP, msg)
+        cmd = "ssh %s \"%s\"" % (self.peer_ip, msg)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("test failed because peer sys not connected")
 
