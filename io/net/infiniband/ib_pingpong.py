@@ -13,11 +13,14 @@
 #
 # Copyright: 2016 IBM
 # Author: Prudhvi Miryala<mprudhvi@linux.vnet.ibm.com>
-# ping pong test
-# ibv_ud_pingpong
-# ibv_uc_pingpong
-# ibv_rc_pingpong
-# ibv_srq_pingpong
+
+'''
+ping pong test
+ibv_ud_pingpong
+ibv_uc_pingpong
+ibv_rc_pingpong
+ibv_srq_pingpong
+'''
 
 
 import time
@@ -29,7 +32,7 @@ from avocado.utils import process
 from avocado.utils import distro
 
 
-class pingpong(Test):
+class PingPong(Test):
     '''
     ibv_ud_pingpong test
     ibv_ud_pingpong tool should be installed
@@ -41,19 +44,19 @@ class pingpong(Test):
         '''
         interfaces = netifaces.interfaces()
         self.flag = self.params.get("ext_flag", default="0")
-        self.IF = self.params.get("interface", default="")
-        self.PEER_IP = self.params.get("peer_ip", default="")
-        if self.IF not in interfaces:
-            self.cancel("%s interface is not available" % self.IF)
-        if self.PEER_IP == "":
-            self.cancel("%s peer machine is not available" % self.PEER_IP)
-        self.CA = self.params.get("CA_NAME", default="mlx4_0")
-        self.GID = int(self.params.get("GID_NUM", default="0"))
-        self.PORT = int(self.params.get("PORT_NUM", default="1"))
-        self.PEER_CA = self.params.get("PEERCA", default="mlx4_0")
-        self.PEER_GID = int(self.params.get("PEERGID", default="0"))
-        self.PEER_PORT = int(self.params.get("PEERPORT", default="1"))
-        self.to = self.params.get("timeout", default="120")
+        self.iface = self.params.get("interface", default="")
+        self.peer_ip = self.params.get("peer_ip", default="")
+        if self.iface not in interfaces:
+            self.cancel("%s interface is not available" % self.iface)
+        if self.peer_ip == "":
+            self.cancel("%s peer machine is not available" % self.peer_ip)
+        self.ca_name = self.params.get("CA_NAME", default="mlx4_0")
+        self.gid = int(self.params.get("GID_NUM", default="0"))
+        self.port = int(self.params.get("PORT_NUM", default="1"))
+        self.peer_ca = self.params.get("PEERCA", default="mlx4_0")
+        self.peer_gid = int(self.params.get("PEERGID", default="0"))
+        self.peer_port = int(self.params.get("PEERPORT", default="1"))
+        self.tmo = self.params.get("TIMEOUT", default="120")
 
         smm = SoftwareManager()
         detected_distro = distro.detect()
@@ -76,7 +79,7 @@ class pingpong(Test):
         else:
             self.cancel("Distro not supported")
         if process.system("%s && ssh %s %s" %
-                          (cmd, self.PEER_IP, cmd),
+                          (cmd, self.peer_ip, cmd),
                           ignore_status=True,
                           shell=True) != 0:
             self.cancel("Unable to disable firewall")
@@ -95,28 +98,26 @@ class pingpong(Test):
         if test == "basic":
             test = ""
         msg = " \"timeout %s %s -d %s -g %d -i %d %s %s %s\" " \
-            % (self.to, arg1, self.PEER_CA, self.PEER_GID, self.PEER_PORT,
+            % (self.tmo, arg1, self.peer_ca, self.peer_gid, self.peer_port,
                test, arg3, logs)
-        cmd = "ssh %s %s" % (self.PEER_IP, msg)
+        cmd = "ssh %s %s" % (self.peer_ip, msg)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("ssh failed to remote machine")
         time.sleep(2)
-        self.log.info("client data for %s(%s)" % (arg1, arg2))
-        self.log.info("%s -d %s -g %d %s -i %d %s %s"
-                      % (arg1, self.CA, self.GID, self.PEER_IP, self.PORT,
-                         test, arg3))
+        self.log.info("client data for %s(%s)", arg1, arg2)
+        self.log.info("%s -d %s -g %d %s -i %d %s %s", arg1, self.ca_name,
+                      self.gid, self.peer_ip, self.port, test, arg3)
         tmp = "timeout %s %s -d %s -g %d -i %d %s %s %s" \
-            % (self.to, arg1, self.CA, self.GID, self.PORT, self.PEER_IP,
+            % (self.tmo, arg1, self.ca_name, self.gid, self.port, self.peer_ip,
                test, arg3)
         if process.system(tmp, shell=True, ignore_status=True) != 0:
             self.fail("test failed")
-        self.log.info("server data for %s(%s)" % (arg1, arg2))
-        self.log.info("%s -d %s -g %d -i %d %s %s"
-                      % (arg1, self.PEER_CA, self.PEER_GID, self.PEER_PORT,
-                         test, arg3))
+        self.log.info("server data for %s(%s)", arg1, arg2)
+        self.log.info("%s -d %s -g %d -i %d %s %s", arg1, self.peer_ca,
+                      self.peer_gid, self.peer_port, test, arg3)
         msg = " \"timeout %s cat /tmp/ib_log && rm -rf /tmp/ib_log\" " \
-            % self.to
-        cmd = "ssh %s %s" % (self.PEER_IP, msg)
+            % self.tmo
+        cmd = "ssh %s %s" % (self.peer_ip, msg)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("test failed")
 
@@ -126,13 +127,13 @@ class pingpong(Test):
         ext test options are depends upon user
         '''
         tool_name = self.params.get("tool")
-        self.log.info("test with %s" % (tool_name))
-        if "ib" not in self.IF and tool_name == "ibv_ud_pingpong":
-            tmp = "grep -w -B 1 %s" % self.PEER_IP
-            cmd = " \` ifconfig | %s | head -1 | cut -f1 -d ' ' \` " % tmp
-            msg = "ssh %s \"ifconfig %s mtu 9000\"" % (self.PEER_IP, cmd)
+        self.log.info("test with %s", tool_name)
+        if "ib" not in self.iface and tool_name == "ibv_ud_pingpong":
+            tmp = "grep -w -B 1 %s" % self.peer_ip
+            cmd = " ` ifconfig | %s | head -1 | cut -f1 -d ' ' ` " % tmp
+            msg = "ssh %s \"ifconfig %s mtu 9000\"" % (self.peer_ip, cmd)
             process.system(msg, shell=True)
-            con_msg = "ifconfig %s mtu 9000" % (self.IF)
+            con_msg = "ifconfig %s mtu 9000" % (self.iface)
             process.system(con_msg, shell=True)
             time.sleep(10)
         val1 = ""
@@ -150,15 +151,13 @@ class pingpong(Test):
                 self.pingpong_exec(tool_name, val, "")
         else:
             self.log.info("Extended test option skipped")
-        '''
-        change MTU to 1500 for non-IB tests
-        '''
-        if "ib" not in self.IF and tool_name == "ibv_ud_pingpong":
-            tmp = "grep -w -B 1 %s" % self.PEER_IP
-            cmd = "\`ifconfig | %s | head -1 | cut -f1 -d' '\`" % tmp
-            msg = "ssh %s \"ifconfig %s mtu 1500\"" % (self.PEER_IP, cmd)
+        # change MTU to 1500 for non-IB tests
+        if "ib" not in self.iface and tool_name == "ibv_ud_pingpong":
+            tmp = "grep -w -B 1 %s" % self.peer_ip
+            cmd = "`ifconfig | %s | head -1 | cut -f1 -d' '`" % tmp
+            msg = "ssh %s \"ifconfig %s mtu 1500\"" % (self.peer_ip, cmd)
             process.system(msg, shell=True)
-            con_msg = "ifconfig %s mtu 1500" % (self.IF)
+            con_msg = "ifconfig %s mtu 1500" % (self.iface)
             process.system(con_msg, shell=True)
             time.sleep(10)
 

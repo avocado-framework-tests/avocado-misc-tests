@@ -63,7 +63,7 @@ class Netperf(Test):
         if self.peer_ip == "":
             self.cancel("%s peer machine is not available" % self.peer_ip)
         self.peer_user = self.params.get("peer_user_name", default="root")
-        self.timeout = self.params.get("timeout", default="600")
+        self.timeout = self.params.get("TIMEOUT", default="600")
         self.netperf_run = str(self.params.get("NETSERVER_RUN", default=0))
         self.netperf = os.path.join(self.teststmpdir, 'netperf')
         netperf_download = self.params.get("netperf_download", default="https:"

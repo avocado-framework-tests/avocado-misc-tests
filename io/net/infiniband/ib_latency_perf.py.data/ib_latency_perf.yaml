@@ -20,4 +20,4 @@ parameters:
     PORT_NUM: "1"
     PEERCA: ""
     PEERPORT: "1"
-    timeout: "600"
+    TIMEOUT: "600"
