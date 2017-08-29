@@ -6,5 +6,3 @@ setup:
             scenario_arg: '2'
         scenario3:
             scenario_arg: '3'
-
-

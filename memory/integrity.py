@@ -38,7 +38,6 @@ class Integrity(Test):
         '''
 
         # Check for basic utilities
-        print self.srcdir
         smm = SoftwareManager()
         detected_distro = distro.detect()
         deps = ['gcc', 'make']
