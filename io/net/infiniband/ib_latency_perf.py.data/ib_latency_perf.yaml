@@ -1,13 +1,13 @@
 Test: !mux
     ib_send_lat:
         tool: ib_send_lat
-        ext_opt: -b,-N,-c UC,-c RC,-Q 5,-w 100M,-x 1,-y 10G,-z,-D 10s,-F 15s,-l 4,-a,-c XRC,-c UD,-e,-g,-R,-R -a,-R -c RC,-R -D 30s,-R -f 5s,-R -l 2,-R -m 2048,-R -n 100000,-R -p 18600,-R -q 1,-R -Q 10,-R -s 9000,-R -S 1,-R -t 2048,-R -T 128,-R -w 10M,-R -x 1,-R -y 4G,-R -z 
+        ext_opt: -c UC,-c RC,-Q 5,-w 100M,-x 1,-y 10G,-z,-D 10s,-l 4,-a,-c XRC,-c UD,-e,-g,-R,-R -a,-R -c RC,-R -D 30s,-R -f 5s,-R -l 2,-R -m 2048,-R -n 100000,-R -p 18600,-R -Q 10,-R -s 9000,-R -S 1,-R -t 2048,-R -T 128,-R -w 10M,-R -x 1,-R -y 4G,-R -z
     ib_write_lat:
         tool: ib_write_lat
-        ext_opt: -D 10s,-l 4,-Q 5,-w 100M,-x 1,-y 10G,-z,--burst_size=2G --rate_limit=10,-R --reversed,-R,-R -a,-R -b,-R -c RC,-R -D 30s,-R -f 5s,-R -l 2,-R -m 2048,-R -n 100000,-R -p 18600,-R -q 1,-R -Q 10,-R -s 9000,-R -S 1,-R -t 2048,-R -T 128,-R -w 10M,-R -x 1,-R -y 4G,-R -z
+        ext_opt: -D 10s,-l 4,-Q 5,-w 100M,-x 1,-y 10G,-z,--burst_size=2G --rate_limit=10,-R --reversed,-R,-R -a,-R -c RC,-R -D 30s,-R -f 5s,-R -l 2,-R -m 2048,-R -n 100000,-R -p 18600,-R -Q 10,-R -s 9000,-R -S 1,-R -t 2048,-R -T 128,-R -w 10M,-R -x 1,-R -y 4G,-R -z
     ib_read_lat:
         tool: ib_read_lat
-        ext_opt: -b,-N,-c UC,-c RC,-D 10s,-l 4,-Q 5,-w 100M,-x 1,-y 10G,-z,--burst_size=2G --rate_limit=10,-R --reversed,-R,-R -a,-R -b,-R -c RC,-R -D 30s,-R -f 5s,-R -l 2,-R -m 2048,-R -n 100000,-R -N,-R -p 18600,-R -Q 10,-R -s 9000,-R -S 1,-R -t 2048,-R -T 128,-R -w 10M,-R -x 1,-R -y 4G,-R -z
+        ext_opt: -b,-c RC,-D 10s,-l 4,-Q 5,-w 100M,-x 1,-y 10G,-z,--burst_size=2G --rate_limit=10,-R --reversed,-R,-R -a,-R -c RC,-R -D 30s,-R -f 5s,-R -l 2,-R -m 2048,-R -n 100000,-R -p 18600,-R -Q 10,-R -s 9000,-R -S 1,-R -t 2048,-R -T 128,-R -w 10M,-R -x 1,-R -y 4G,-R -z
     ib_atomic_lat:
         tool: ib_atomic_lat
         ext_opt: --burst_size=2G --rate_limit=10,-R --reversed
