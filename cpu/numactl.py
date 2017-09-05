@@ -32,7 +32,7 @@ class Numactl(Test):
 
     def setUp(self):
         '''
-        Build Stutter Test
+        Build Numactl Test
         Source:
         https://github.com/numactl/numactl
         '''
