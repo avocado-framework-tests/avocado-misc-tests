@@ -30,14 +30,14 @@ class GDB(Test):
     def setUp(self):
         sm = SoftwareManager()
         dist = distro.detect()
-        packages = ['gcc', 'dejagnu', 'flex', 'bison']
+        packages = ['gcc', 'dejagnu', 'flex', 'bison', 'texinfo']
         if dist.name == 'Ubuntu':
             packages.extend(['g++', 'binutils-dev'])
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
         elif dist.name in ['SuSE', 'rhel', 'fedora', 'redhat']:
-            packages.extend(['gcc-c++', 'binutils-devel'])
+            packages.extend(['gcc-c++', 'binutils-devel', 'texi2html'])
         else:
             self.fail('no packages list for your distro.')
         for package in packages:
