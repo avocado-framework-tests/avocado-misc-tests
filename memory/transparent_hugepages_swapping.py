@@ -37,18 +37,17 @@ class Thp_Swapping(Test):
     :avocado: tags=memory,privileged
     '''
 
-    @skipIf(PAGESIZE, "No THP support for kernel with 4K PAGESIZE")
     def setUp(self):
         '''
         Sets the Required params for dd and mounts the tmpfs dir
         '''
 
         self.swap_free = []
-        mem_free = memory.read_from_meminfo("MemFree") / 1024
-        mem = memory.read_from_meminfo("MemTotal") / 1024
-        swap = memory.read_from_meminfo("SwapTotal") / 1024
-        self.hugepage_size = memory.read_from_meminfo("Hugepagesize") / 1024
-        self.swap_free.append(memory.read_from_meminfo("SwapFree") / 1024)
+        mem_free = memory.meminfo.MemFree.mb
+        mem = memory.meminfo.MemTotal.mb
+        swap = memory.meminfo.SwapTotal.mb
+        self.hugepage_size = memory.meminfo.Hugepagesize.mb
+        self.swap_free.append(memory.meminfo.SwapFree.mb)
         self.mem_path = os.path.join(data_dir.get_tmp_dir(), 'thp_space')
         self.dd_timeout = 900
 
@@ -70,6 +69,7 @@ class Thp_Swapping(Test):
             self.device.mount(mountpoint=self.mem_path, fstype="tmpfs",
                               args="-o size=%sM" % tmpfs_size)
 
+    @skipIf(PAGESIZE, "No THP support for kernel with 4K PAGESIZE")
     def test(self):
         '''
         Enables THP Runs dd, fills out the available memory and checks whether
@@ -90,7 +90,7 @@ class Thp_Swapping(Test):
                               verbose=False, ignore_status=True, shell=True)):
                 self.fail('Swap command Failed %s' % swap_cmd)
 
-        self.swap_free.append(memory.read_from_meminfo("SwapFree") / 1024)
+        self.swap_free.append(memory.meminfo.SwapFree.mb)
 
         # Checks Swap is used or not
         if self.swap_free[1] - self.swap_free[0] >= 0:
