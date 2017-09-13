@@ -34,7 +34,7 @@ class Fsx(Test):
         smm = SoftwareManager()
         for package in ['gcc', 'make']:
             if not smm.check_installed(package) and not smm.install(package):
-                self.error(package + ' is needed for the test to be run')
+                self.cancel(package + ' is needed for the test to be run')
 
         fsx = self.fetch_asset(
             'https://raw.githubusercontent.com/linux-test-project/ltp/'

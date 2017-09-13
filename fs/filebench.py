@@ -45,7 +45,7 @@ class Filebench(Test):
 
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
-                self.error(package + ' is needed for the test to be run')
+                self.cancel(package + ' is needed for the test to be run')
 
         name_version = 'filebench-1.5-alpha3'
         tarball = self.fetch_asset('https://github.com/filebench/'
