@@ -62,8 +62,8 @@ class kselftest(Test):
 
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
-                self.error(
-                    '%s is needed for the test to be run !!' % (package))
+                self.cancel(
+                    "Fail to install %s required for this test." % (package))
 
         location = ["https://github.com/torvalds/linux/archive/master.zip"]
         tarball = self.fetch_asset("kselftest.zip", locations=location,
