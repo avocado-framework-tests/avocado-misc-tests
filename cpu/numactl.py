@@ -28,6 +28,8 @@ class Numactl(Test):
 
     """
     Self test case of numactl
+
+    :avocado: tags=cpu
     """
 
     def setUp(self):

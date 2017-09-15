@@ -29,6 +29,8 @@ class Numatop(Test):
     """
     Test case of numatop functionality
     Test runs mgen application to check numatop snapshot registers it
+
+    :avocado: tags=cpu,privileged
     """
 
     def setUp(self):
