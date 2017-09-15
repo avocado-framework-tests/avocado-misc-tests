@@ -10,3 +10,6 @@ Size: Size of the raid array you want to create, default it will be max
 tool_location: Please give the tool location, i.e., location of the tool in
 the system. e.g., If the tool is downloaded in /root, then plz mention
 /root/sas3ircu.
+clear_config: If clearing raid is to be done before executing the tests, this needs to be set to True
+setup_raid: If just raid setup needs to be done, this needs to be set to True
+cleanup_raid: If just raid cleanup needs to be done, this needs to be set to True

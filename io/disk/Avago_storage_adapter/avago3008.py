@@ -41,10 +41,13 @@ class Avago3008(Test):
 
         self.controller = int(self.params.get('controller', default='0'))
         self.raidlevel = str(self.params.get('raidlevel', default='0'))
-        self.disk = str(self.params.get('disk')).split(" ")
+        self.disk = str(self.params.get('disk_bay')).split(" ")
         self.spare = str(self.params.get('spare'))
         self.size = int(self.params.get('size', default='max'))
         self.tool_location = self.params.get('tool_location')
+        self.clear_config = self.params.get('clear_config', default=False)
+        self.setup_raid = self.params.get('setup_raid', default=False)
+        self.cleanup_raid = self.params.get('cleanup_raid', default=False)
         if not self.disk:
             self.cancel("Please provide disks to run the tests")
         self.number_of_disk = len(self.disk)
@@ -73,11 +76,13 @@ class Avago3008(Test):
         Decides which functions to run for given raid_level
         """
 
-        cmd = "echo -e 'YES\nNO' | %s %d delete" \
-              % (self.tool_location, self.controller)
-        if process.system(cmd, ignore_status=True, shell=True) != 0:
-            self.fail("Unable to clear entire configuration before starting")
-        if self.raidlevel == 'raid0':
+        if self.clear_config:
+            self.clear_configuration()
+        if self.setup_raid:
+            self.createraid()
+        elif self.cleanup_raid:
+            self.deleteraid()
+        elif self.raidlevel == 'raid0':
             self.basictest()
         else:
             self.extensivetest()
@@ -112,14 +117,23 @@ class Avago3008(Test):
             for state in ['offline', 'online']:
                 self.set_online_offline(state)
                 time.sleep(10)
-        if self.spare:
+        if self.spare and self.clear_config:
             self.hotspare()
-        self.rebuild()
+            self.rebuild()
         self.consistcheck()
         self.deleteraid()
         self.logir()
         self.adapterdetails()
         self.adapter_status("Volume state")
+
+    def clear_configuration(self):
+        """
+        Deletes the existing raid in the LSI controller
+        """
+        cmd = "echo -e 'YES\nNO' | %s %d delete" \
+              % (self.tool_location, self.controller)
+        if process.system(cmd, ignore_status=True, shell=True) != 0:
+            self.fail("Unable to clear entire configuration before starting")
 
     def adapterlist(self):
         """
