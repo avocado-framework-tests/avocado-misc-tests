@@ -48,11 +48,19 @@ class Bonnie(Test):
         """
         fstype = self.params.get('fs', default='ext4')
         smm = SoftwareManager()
+        deps = ['gcc', 'make']
+        if distro.detect().name == 'Ubuntu':
+            deps.extend(['g++'])
+        else:
+            deps.extend(['gcc-c++'])
         if fstype == 'btrfs':
             if distro.detect().name == 'Ubuntu':
-                if not smm.check_installed("btrfs-tools") and not \
-                        smm.install("btrfs-tools"):
-                    self.cancel('btrfs-tools is needed for the test to be run')
+                deps.extend(['btrfs-tools'])
+
+        for package in deps:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel("Fail to install/check %s, which is needed for"
+                            "Bonnie test to run" % package)
 
         self.disk = self.params.get('disk', default=None)
         self.scratch_dir = self.params.get('dir', default=self.srcdir)
