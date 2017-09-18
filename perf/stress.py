@@ -102,7 +102,7 @@ class Stress(Test):
         # Verbose flag
         args += '--verbose'
 
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
         cmd = ('./src/stress %s' % args)
         process.run(cmd)
 
