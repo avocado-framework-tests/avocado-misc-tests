@@ -34,6 +34,10 @@ class service_check(Test):
         config_file = self.datadir + '/services.cfg'
         parser.read(config_file)
         services_list = parser.get(detected_distro.name, 'services').split(',')
+        if 'PowerNV' in open('/proc/cpuinfo', 'r').read():
+            services_list.extend(['opal_errd', 'opal-prd'])
+        else:
+            services_list.extend(['rtas_errd'])
         services_failed = []
         runner = process.run
 
