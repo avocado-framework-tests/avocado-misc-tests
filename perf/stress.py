@@ -45,7 +45,9 @@ class Stress(Test):
         Source:
          http://people.seas.harvard.edu/~apw/stress/stress-1.0.4.tar.gz
         """
-        tarball = self.fetch_asset('http://people.seas.harvard.edu/~apw/stress/stress-1.0.4.tar.gz')
+        tarball = self.fetch_asset(
+            'http://people.seas.harvard.edu/~apw/stress/stress-1.0.4.tar.gz',
+            expire='7d')
         archive.extract(tarball, self.srcdir)
         stress_version = os.path.basename(tarball.split('.tar.')[0])
         self.sourcedir = os.path.join(self.srcdir, stress_version)
@@ -68,8 +70,8 @@ class Stress(Test):
 
         if memory_per_thread is None:
             # Sometimes the default memory used by each memory worker (256 M)
-            # might make our machine go OOM and then funny things might start to
-            # happen. Let's avoid that.
+            # might make our machine go OOM and then funny things might start
+            # to  happen. Let's avoid that.
             mb = (memory.freememtotal() +
                   memory.read_from_meminfo('SwapFree') / 2)
             memory_per_thread = (mb * 1024) / threads
@@ -100,7 +102,7 @@ class Stress(Test):
         # Verbose flag
         args += '--verbose'
 
-        os.chdir(self.srcdir)
+        os.chdir(self.sourcedir)
         cmd = ('./src/stress %s' % args)
         process.run(cmd)
 
