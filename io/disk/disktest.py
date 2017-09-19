@@ -31,6 +31,7 @@ from avocado.utils import build
 from avocado.utils import disk as utils_disk
 from avocado.utils import memory
 from avocado.utils import process
+from avocado.utils.partition import Partition
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -47,14 +48,12 @@ class Disktest(Test):
     def setUp(self):
         """
         Verifies if we have gcc to compile disktest.
-        :param disks: List of directories of used in test. In case only string
-                      is used it's split using ','. When the target is not
-                      directory, it's created.
+        :param disk: Disk to be used in test.
+        :param dir: Directory of used in test. When the target does not exist,
+                    it's created.
         :param gigabytes: Disk space that will be used for the test to run.
         :param chunk_mb: Size of the portion of the disk used to run the test.
                         Cannot be smaller than the total amount of RAM.
-        :param source: name of the source file located in deps path
-        :param make: name of the makefile file located in deps path
         """
         softm = SoftwareManager()
         if not softm.check_installed("gcc") and not softm.install("gcc"):
@@ -70,18 +69,12 @@ class Disktest(Test):
         """
         Retrieves and checks the test params
         """
-        disks = self.params.get('disk', default=None)
-        if disks is None:   # Avocado does not accept lists in params.get()
-            disks = [self.workdir]
-        elif isinstance(disks, basestring):  # Allow specifying disks as str
-            disks = disks.split(',')    # it's string pylint: disable=E1101
-        for disk in disks:  # Disks have to be mounted dirs
-            if not os.path.isdir(disk):
-                os.makedirs(disk)
-        self.disks = disks
+        self.disk = self.params.get('disk', default=None)
+        self.dirs = self.params.get('dir', default=self.srcdir)
+        self.fstype = self.params.get('fs', default='ext4')
 
         memory_mb = memory.memtotal() / 1024
-        self.chunk_mb = self.params.get('chunk_mb', default=None)
+        self.chunk_mb = int(self.params.get('chunk_mb', default=None))
         if self.chunk_mb is None:   # By default total RAM
             self.chunk_mb = memory_mb
         if self.chunk_mb == 0:
@@ -90,11 +83,10 @@ class Disktest(Test):
             self.cancel("Chunk size has to be greater or equal to RAM size. "
                         "(%s > %s)" % (self.chunk_mb, memory_mb))
 
-        gigabytes = self.params.get('gigabytes', default=None)
+        gigabytes = int(self.params.get('gigabytes', default=None))
         if gigabytes is None:
             free = 107374182400  # cap it at 100GB by default
-            for disk in self.disks:
-                free = min(utils_disk.freespace(disk) / 1073741824, free)
+            free = min(utils_disk.freespace(self.dirs) / 1073741824, free)
             gigabytes = free
 
         self.no_chunks = 1024 * gigabytes / self.chunk_mb
@@ -103,18 +95,27 @@ class Disktest(Test):
                         % (1024 * gigabytes, self.chunk_mb))
 
         self.log.info("Test will use %s chunks %sMB each in %sMB RAM using %s "
-                      "GB of disk space on %s disks (%s).", self.no_chunks,
+                      "GB of disk space on %s dirs (%s).", self.no_chunks,
                       self.chunk_mb, memory_mb,
-                      self.no_chunks * self.chunk_mb, len(self.disks),
-                      self.disks)
+                      self.no_chunks * self.chunk_mb, len(self.dirs),
+                      self.dirs)
+
+        if self.disk is not None:
+            self.part_obj = Partition(self.disk, mountpoint=self.dirs)
+            self.log.info("Unmounting the disk/dir if it is already mounted")
+            self.part_obj.unmount()
+            self.log.info("creating %s fs on %s", self.fstype, self.disk)
+            self.part_obj.mkfs(self.fstype)
+            self.log.info("mounting %s on %s", self.disk, self.dirs)
+            self.part_obj.mount()
 
     def _compile_disktest(self):
         """
         Compiles the disktest
         """
         c_file = os.path.join(self.datadir, "disktest.c")
-        shutil.copy(c_file, self.srcdir)
-        build.make(self.srcdir, extra_args="disktest",
+        shutil.copy(c_file, self.teststmpdir)
+        build.make(self.teststmpdir, extra_args="disktest",
                    env={"CFLAGS": "-O2 -Wall -D_FILE_OFFSET_BITS=64 "
                                   "-D _GNU_SOURCE"})
 
@@ -124,8 +125,8 @@ class Disktest(Test):
         :param disk: Directory (usually a mountpoint).
         :param chunk: Portion of the disk used.
         """
-        cmd = ("%s/disktest -m %d -f %s/testfile.%d -i -S >>%s 2>&1" %
-               (self.srcdir, self.chunk_mb, disk, chunk, self.disk_log))
+        cmd = ("%s/disktest -m %d -f %s/testfile.%d -i -S >> \"%s\" 2>&1" %
+               (self.teststmpdir, self.chunk_mb, disk, chunk, self.disk_log))
 
         proc = process.get_sub_process_klass(cmd)(cmd, shell=True,
                                                   verbose=False)
@@ -141,22 +142,29 @@ class Disktest(Test):
         errors = []
         for i in xrange(self.no_chunks):
             self.log.debug("Testing chunk %s...", i)
-            for disk in self.disks:
-                procs.append(self.one_disk_chunk(disk, i))
+            procs.append(self.one_disk_chunk(self.dirs, i))
             for pid, proc in procs:
                 if proc.wait():
                     errors.append(str(pid))
-            if errors:
-                self.fail("The %s pid(s) failed, please check the logs and %s"
-                          " for details." % (", ".join(errors), self.disk_log))
+        if errors:
+            self.fail("The %s pid(s) failed, please check the logs and %s"
+                      " for details." % (", ".join(errors), self.disk_log))
 
     def tearDown(self):
         """
         To clean all the testfiles generated
         """
-        for disk in getattr(self, "disks", []):
+        for disk in getattr(self, "dirs", []):
             for filename in glob.glob("%s/testfile.*" % disk):
                 os.remove(filename)
+        if self.disk is not None:
+            self.log.info("Unmounting disk %s on directory %s",
+                          self.disk, self.dirs)
+            self.part_obj.unmount()
+        self.log.info("Removing the filesystem created on %s", self.disk)
+        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk
+        if process.system(delete_fs, shell=True, ignore_status=True):
+            self.fail("Failed to delete filesystem on %s", self.disk)
 
 
 if __name__ == "__main__":
