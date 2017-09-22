@@ -140,7 +140,6 @@ class MultipathTest(Test):
 
         # Need to wait for some time to make sure multipaths are loaded.
         time.sleep(5)
-        process.run('multipath -F')
 
 
 if __name__ == "__main__":
