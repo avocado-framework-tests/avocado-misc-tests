@@ -54,9 +54,9 @@ class Dbench(Test):
         data_dir = os.path.abspath(self.datadir)
         tarball = self.fetch_asset(
             'http://samba.org/ftp/tridge/dbench/dbench-3.04.tar.gz')
-        archive.extract(tarball, self.srcdir)
+        archive.extract(tarball, self.teststmpdir)
         cb_version = os.path.basename(tarball.split('.tar.')[0])
-        self.sourcedir = os.path.join(self.srcdir, cb_version)
+        self.sourcedir = os.path.join(self.teststmpdir, cb_version)
         os.chdir(self.sourcedir)
         patch = self.params.get('patch', default='dbench_startup.patch')
         process.run('patch -p1 < %s' % data_dir + '/' + patch, shell=True)
