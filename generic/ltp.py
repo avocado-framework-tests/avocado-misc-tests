@@ -77,7 +77,8 @@ class ltp(Test):
         split_lines = (line.split(None, 3)
                        for line in result.stdout.splitlines())
         failed_tests = [items[0] for items in split_lines
-                        if len(items) == 4 and items[2] in fail_statuses]
+                        if len(items) == 4 and
+                        items[2].strip(":") in fail_statuses]
 
         if failed_tests:
             self.fail("LTP tests failed: %s" % ", ".join(failed_tests))
