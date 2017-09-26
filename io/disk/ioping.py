@@ -55,9 +55,9 @@ class Ioping(Test):
                                    'google-code-archive-downloads/v2/'
                                    'code.google.com/ioping/'
                                    'ioping-0.8.tar.gz', expire='0d')
-        archive.extract(tarball, self.srcdir)
+        archive.extract(tarball, self.teststmpdir)
         version = os.path.basename(tarball.split('.tar.')[0])
-        self.sourcedir = os.path.join(self.srcdir, version)
+        self.sourcedir = os.path.join(self.teststmpdir, version)
 
         build.make(self.sourcedir)
 

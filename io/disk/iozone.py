@@ -422,9 +422,9 @@ class IOZone(Test):
                 self.cancel("%s is needed for the test to be run" % package)
         tarball = self.fetch_asset(
             'http://www.iozone.org/src/current/iozone3_434.tar')
-        archive.extract(tarball, self.srcdir)
+        archive.extract(tarball, self.teststmpdir)
         version = os.path.basename(tarball.split('.tar')[0])
-        self.sourcedir = os.path.join(self.srcdir, version)
+        self.sourcedir = os.path.join(self.teststmpdir, version)
 
         make_dir = os.path.join(self.sourcedir, 'src', 'current')
         os.chdir(make_dir)

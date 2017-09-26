@@ -55,8 +55,8 @@ class Tiobench(Test):
                 self.cancel("%s package required for this test." % package)
         locations = ["https://github.com/mkuoppal/tiobench/archive/master.zip"]
         tarball = self.fetch_asset("tiobench.zip", locations=locations)
-        archive.extract(tarball, self.srcdir)
-        os.chdir(os.path.join(self.srcdir, "tiobench-master"))
+        archive.extract(tarball, self.teststmpdir)
+        os.chdir(os.path.join(self.teststmpdir, "tiobench-master"))
         build.make(".")
 
     def test(self):
