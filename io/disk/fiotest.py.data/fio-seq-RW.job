@@ -1,0 +1,12 @@
+[global]
+name=fio-seq-RW
+filename=fio-seq-RW
+rw=rw
+rwmixread=60
+rwmixwrite=40
+bs=256K
+direct=0
+numjobs=1
+size=10G
+ioengine=libaio
+iodepth=16
