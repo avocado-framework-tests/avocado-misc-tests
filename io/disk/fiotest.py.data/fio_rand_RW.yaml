@@ -1,0 +1,9 @@
+fio_randRW.yaml:
+parameters:
+    disk: '/dev/sdd'
+    dir: '/mnt'
+    fio_job: 'fio-rand-RW.job'
+    fio_tool_url: 'http://brick.kernel.dk/snaps/fio-2.99.tar.gz'
+filesystem: !mux
+    ext4:
+        fs: 'ext4'
