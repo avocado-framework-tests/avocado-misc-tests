@@ -71,16 +71,6 @@ class RASTools(Test):
             self.fail("%s command(s) failed in serv_config tool "
                       "verification" % self.is_fail)
 
-    @skipIf(IS_POWER_NV, "This test is not supported on PowerNV platform")
-    def test1_rtas_event_decode(self):
-        self.log.info("===============Executing rtas_event_decode tool test===="
-                      "===========")
-        self.run_cmd("rtas_event_decode -w 500 -dv -n 2302 < %s" %
-                     os.path.join(self.datadir, 'rtas'))
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in rtas_event_decode tool "
-                      "verification" % self.is_fail)
-
     @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
     def test1_ls_vscsi(self):
         self.log.info("===============Executing ls-vscsi tool test===="

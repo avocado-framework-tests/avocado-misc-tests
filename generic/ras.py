@@ -255,6 +255,16 @@ class RASTools(Test):
             self.fail("%s command(s) failed in rtas_errd and rtas_dump tools "
                       "verification" % self.is_fail)
 
+    @skipIf(IS_POWER_NV, "This test is not supported on PowerNV platform")
+    def test13_rtas_event_decode(self):
+        self.log.info("===============Executing rtas_event_decode tool test===="
+                      "===========")
+        self.run_cmd("rtas_event_decode -w 500 -dv -n 2302 < %s" %
+                     os.path.join(self.datadir, 'rtas'))
+        if self.is_fail >= 1:
+            self.fail("%s command(s) failed in rtas_event_decode tool "
+                      "verification" % self.is_fail)
+
 
 if __name__ == "__main__":
     main()
