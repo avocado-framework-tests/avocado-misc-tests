@@ -18,7 +18,7 @@ import os
 from shutil import copyfile
 from avocado import Test
 from avocado import main
-from avocado.utils import process
+from avocado.utils import process, distro
 from avocado import skipIf
 from avocado.utils.software_manager import SoftwareManager
 
@@ -39,7 +39,7 @@ class RASTools(Test):
         return
 
     def setUp(self):
-        if "ppc" not in os.uname()[4]:
+        if "ppc" not in distro.detect().arch:
             self.cancel("supported only on Power platform")
         sm = SoftwareManager()
         for package in ("ppc64-diag", "powerpc-utils", "lsvpd", "sysfsutils"):
@@ -69,16 +69,6 @@ class RASTools(Test):
             self.run_cmd(cmd)
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in serv_config tool "
-                      "verification" % self.is_fail)
-
-    @skipIf(IS_POWER_NV, "This test is not supported on PowerNV platform")
-    def test1_rtas_event_decode(self):
-        self.log.info("===============Executing rtas_event_decode tool test===="
-                      "===========")
-        self.run_cmd("rtas_event_decode -w 500 -dv -n 2302 < %s" %
-                     os.path.join(self.datadir, 'rtas'))
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in rtas_event_decode tool "
                       "verification" % self.is_fail)
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
