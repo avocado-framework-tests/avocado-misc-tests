@@ -23,6 +23,7 @@ from avocado import Test
 from avocado import main
 from avocado.utils import process
 from avocado.utils import cpu
+from avocado.utils import distro
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -37,14 +38,17 @@ class PPC64Test(Test):
         """
         Verifies if powerpc-utils is installed, and gets current SMT value.
         """
-        command = "uname -p"
-        if 'ppc' not in process.system_output(command, ignore_status=True):
+        if 'ppc' not in distro.detect().arch:
             self.cancel("Processor is not ppc64")
         if SoftwareManager().check_installed("powerpc-utils") is False:
             if SoftwareManager().install("powerpc-utils") is False:
                 self.cancel("powerpc-utils is not installing")
-        if "is not SMT capable" in process.system_output("ppc64_cpu --smt"):
+        smt_op = process.system_output("ppc64_cpu --smt")
+        if "is not SMT capable" in smt_op:
             self.cancel("Machine is not SMT capable")
+        if "Inconsistent state" in smt_op:
+            self.cancel("Machine has mix of ST and SMT cores")
+
         self.curr_smt = process.system_output("ppc64_cpu --smt | awk -F'=' \
                 '{print $NF}' | awk '{print $NF}'", shell=True)
         self.smt_subcores = 0
