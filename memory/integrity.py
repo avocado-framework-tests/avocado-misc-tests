@@ -42,12 +42,12 @@ class Integrity(Test):
         detected_distro = distro.detect()
         deps = ['gcc', 'make']
         if detected_distro.name == "Ubuntu":
-            deps += ['libnuma-dev']
+            deps.extend(['libnuma-dev'])
         else:
-            deps += ['libnuma-devel']
+            deps.extend(['libnuma-devel'])
         for packages in deps:
             if not smm.check_installed(packages) and not smm.install(packages):
-                self.error(packages + ' is needed for the test to be run')
+                self.cancel('%s is needed for the test to be run' % packages)
 
         tarball = os.path.join(self.datadir, "Integritytests.tar")
         archive.extract(tarball, self.srcdir)
@@ -60,7 +60,7 @@ class Integrity(Test):
         '''
         os.chdir(self.build_dir)
         scenario_arg = self.params.get('scenario_arg', default='1')
-        if process.system('./mem_integrity_test -s ' + scenario_arg,
+        if process.system('./mem_integrity_test -s %s' % scenario_arg,
                           shell=True, ignore_status=True) != 0:
             self.fail("Test failed")
 
