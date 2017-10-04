@@ -48,7 +48,7 @@ class Valgrind(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
         tarball = self.fetch_asset(
-            "http://valgrind.org/downloads/valgrind-3.12.0.tar.bz2")
+                "ftp://sourceware.org/pub/valgrind/valgrind-3.13.0.tar.bz2")
         archive.extract(tarball, self.srcdir)
         version = os.path.basename(tarball.split('.tar.')[0])
         self.sourcedir = os.path.join(self.srcdir, version)
