@@ -1,0 +1,8 @@
+fio_randread.yaml:
+parameters:
+    dir: '/mnt'
+    fio_job: 'fio-rand-read.job'
+    fio_tool_url: 'http://brick.kernel.dk/snaps/fio-2.99.tar.gz'
+filesystem: !mux
+    ext4:
+        fs: 'ext4'
