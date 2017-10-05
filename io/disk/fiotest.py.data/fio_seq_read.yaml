@@ -1,5 +1,4 @@
 parameters:
-    disk: '/dev/sdd'
     dir: '/mnt'
     fio_job: !mux
        fio-seq-read:

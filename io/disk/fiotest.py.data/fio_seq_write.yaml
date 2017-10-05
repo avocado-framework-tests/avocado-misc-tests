@@ -1,6 +1,5 @@
 fio_seqwrite.yaml:
 parameters:
-    disk: '/dev/sdd'
     dir: '/mnt'
     fio_job: 'fio-seq-write.job'
     fio_tool_url: 'http://brick.kernel.dk/snaps/fio-2.99.tar.gz'
