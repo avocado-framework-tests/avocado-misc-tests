@@ -53,7 +53,7 @@ class Thp_Swapping(Test):
         self.dd_timeout = 900
 
         # If swap is enough fill all memory with dd
-        if self.swap_free > (mem - mem_free):
+        if self.swap_free[0] > (mem - mem_free):
             self.count = (mem / self.hugepage_size) / 2
             tmpfs_size = mem
         else:
