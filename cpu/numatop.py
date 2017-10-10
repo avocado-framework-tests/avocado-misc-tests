@@ -64,6 +64,7 @@ class Numatop(Test):
 
     def test(self):
 
+        mgen_flag = False
         mgen = os.path.join(self.sourcedir, 'test/mgen/mgen')
         self.numa_pid = process.SubProcess(
             'numatop -d result_file', shell=True)
@@ -79,11 +80,13 @@ class Numatop(Test):
         # Analyse record file for mgen record
         with open('%s/result_file' % self.sourcedir, 'r') as f_read:
             lines = f_read.readlines()
-            if 'PID' in lines[2]:
-                if 'mgen' not in lines[3]:
-                    self.fail(
-                        'Numatop failed to record mgen latency. Please check '
-                        'the record file: %s/result_file' % self.sourcedir)
+            for line in lines:
+                if 'mgen' in line:
+                    mgen_flag = True
+                    break
+        if not mgen_flag:
+            self.fail('Numatop failed to record mgen latency. Please check '
+                      'the record file: %s/result_file' % self.sourcedir)
 
 
 if __name__ == "__main__":
