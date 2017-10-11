@@ -1,0 +1,3 @@
+packages: ['powerpc-utils', 'ppc64-diag', 'lsvpd']
+packages_rhel: ['lshw', 'librtas']
+packages_ubuntu: ['librtas2']
