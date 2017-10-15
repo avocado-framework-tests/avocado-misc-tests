@@ -3,6 +3,7 @@ stresstime: '10'
 vmcount: '4'
 iocount: '4'
 memratio: None
+memcount: None
 test_input: !mux
     hotplug_loop:
         test: 'hotplug_loop'
