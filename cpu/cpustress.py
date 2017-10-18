@@ -276,12 +276,12 @@ class cpustresstest(Test):
                     process.run(
                         "drmgr -c cpu -d 5 -w 30 -r", shell=True, ignore_status=True, sudo=True)
                     if int(multiprocessing.cpu_count()) >= init_count:
-                        self.log.warn("dlpar cpu could not complete")
+                        self.log.info("no more hotunpluggable cpus")
                     self.log.info("DLPAR add cpu operation")
                     process.run(
                         "drmgr -c cpu -d 5 -w 30 -a", shell=True, ignore_status=True, sudo=True)
                     if init_count != int(multiprocessing.cpu_count()):
-                        self.log.warn("dlpar cpu could not complete")
+                        self.log.info("no more hotpluggable cpus")
             else:
                 self.log.info('UNSUPPORTED: dlpar not configured..')
         else:
