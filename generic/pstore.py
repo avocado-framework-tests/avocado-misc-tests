@@ -44,6 +44,14 @@ class PSTORE(Test):
 
     def test(self):
         log_file = os.path.join(self.srcdir, "file")
+        session_int = remote.RemoteRunner("ssh", self.ip, 22, self.user_name, self.password,
+                                          self.prompt, "\n", log_file, 100, 10, None)
+        session_int.run("cat /boot/config-`uname -r` | grep PSTORE", 600, "True")
+        if not self.run_cmd_out("cat %s | grep -Eai 'CONFIG_PSTORE=y'" % log_file):
+            self.fail("Pstore in not configured")
+        session_int.run("mount", 600, "True")
+        if not self.run_cmd_out("cat %s | grep -Eai 'debugfs on /sys/kernel/debug'" % log_file):
+            self.fail("debugfs is not mounted")
         session1 = remote.remote_login("ssh", self.ip, 22, self.user_name, self.password,
                                        self.prompt, "\n", None, 100, None, None, False)
         session1.sendline('echo "c" > /proc/sysrq-trigger;')
