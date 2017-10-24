@@ -45,8 +45,9 @@ class Xfstests(Test):
         Build xfstest
         Source: git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git
         """
+        self.use_dd = False
         if process.system_output("df -T / | awk 'END {print $2}'", shell=True) == 'ext3':
-            self.cancel('Test does not support ext3 root file system')
+            self.use_dd = True
         sm = SoftwareManager()
 
         self.detected_distro = distro.detect()
@@ -218,8 +219,13 @@ class Xfstests(Test):
             self.part.mount()
         # Creating two loop devices
         for i in range(2):
-            process.run('fallocate -o 0 -l %s %s/file-%s.img' %
-                        (loop_size, self.disk_mnt, i), shell=True, sudo=True)
+            if self.use_dd:
+                dd_count = int(loop_size.split('GiB')[0])
+                process.run('dd if=/dev/zero of=%s/file-%s.img bs=1G count=%s'
+                            % (self.disk_mnt, i, dd_count), shell=True, sudo=True)
+            else:
+                process.run('fallocate -o 0 -l %s %s/file-%s.img' %
+                            (loop_size, self.disk_mnt, i), shell=True, sudo=True)
             dev = process.system_output('losetup -f').strip()
             self.devices.append(dev)
             process.run('losetup %s %s/file-%s.img' %
