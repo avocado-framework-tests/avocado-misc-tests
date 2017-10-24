@@ -101,7 +101,7 @@ class Xfstests(Test):
 
         if self.dev_type == 'loop':
             base_disk = self.params.get('disk', default=None)
-            loop_size = self.params.get('loop_size', default='9GiB')
+            loop_size = self.params.get('loop_size', default='7GiB')
             if not base_disk:
                 # Using root for file creation by default
                 if disk.freespace('/') / 1073741824 > 15:
