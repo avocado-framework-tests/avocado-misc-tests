@@ -70,11 +70,13 @@ class PciLsvpdInfo(Test):
 
                 # Device ID match
                 sys_pci_id_output = pci.get_pci_id_from_sysfs(pci_addr)
-                vpd_device_id = vpd_output['pci_id'][4:]
-                sysfs_device_id = sys_pci_id_output[5:-10]
-                self.log.info("Device ID from sysfs: %s", sysfs_device_id)
-                self.log.info("Device ID from vpd: %s", vpd_device_id)
-                if vpd_device_id == sysfs_device_id:
+                vpd_dev_id = vpd_output['pci_id'][4:]
+                sysfs_dev_id = sys_pci_id_output[5:-10]
+                sysfs_sdev_id = sys_pci_id_output[15:]
+                self.log.info("Device ID from sysfs: %s", sysfs_dev_id)
+                self.log.info("Sub Device ID from sysfs: %s", sysfs_sdev_id)
+                self.log.info("Device ID from vpd: %s", vpd_dev_id)
+                if vpd_dev_id == sysfs_sdev_id or vpd_dev_id == sysfs_dev_id:
                     self.log.info("=======>>Device ID Match Success\n\n")
                 else:
                     self.log.error("----->>Device ID did not Match\n\n")
