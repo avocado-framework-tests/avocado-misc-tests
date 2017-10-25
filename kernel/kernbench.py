@@ -118,7 +118,7 @@ class Kernbench(Test):
         """
         # Setting the kernel
         # Uncompress the kernel archive to the work directory
-        tarball = self.fetch_asset("kernbench.zip", locations=self.location,
+        tarball = self.fetch_asset("kernbench.zip", locations=[self.location],
                                    expire='1d')
         archive.extract(tarball, self.srcdir)
         self.sourcedir = os.path.join(self.srcdir, 'linux-master')
