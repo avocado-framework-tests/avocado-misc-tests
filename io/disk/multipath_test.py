@@ -125,6 +125,7 @@ class MultipathTest(Test):
                 multipath.form_conf_mpath_file(blacklist=cmd)
                 if disk in multipath.get_paths(path_dic["wwid"]):
                     msg += "Blacklist of %s fails\n" % disk
+            multipath.form_conf_mpath_file()
 
         # Print errors
         if msg:
