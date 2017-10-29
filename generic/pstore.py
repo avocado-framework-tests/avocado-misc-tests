@@ -44,14 +44,22 @@ class PSTORE(Test):
 
     def test(self):
         log_file = os.path.join(self.srcdir, "file")
-        session_int = remote.RemoteRunner("ssh", self.ip, 22, self.user_name, self.password,
-                                          self.prompt, "\n", log_file, 100, 10, None)
-        session_int.run("cat /boot/config-`uname -r` | grep PSTORE", 600, "True")
+        session_init = remote.RemoteRunner("ssh", self.ip, 22, self.user_name, self.password,
+                                           self.prompt, "\n", log_file, 100, 10, None)
+        session_init.run("cat /boot/config-`uname -r` | grep PSTORE", 600, "True")
         if not self.run_cmd_out("cat %s | grep -Eai 'CONFIG_PSTORE=y'" % log_file):
             self.fail("Pstore in not configured")
-        session_int.run("mount", 600, "True")
+        session_init.run("mount", 600, "True")
         if not self.run_cmd_out("cat %s | grep -Eai 'debugfs on /sys/kernel/debug'" % log_file):
             self.fail("debugfs is not mounted")
+        session_init.run("ls -lrt /sys/fs/pstore", 100, "True")
+        file_list = ['common-nvram', 'dmesg-nvram']
+        for files in file_list:
+            if files not in open(log_file).read():
+                self.fail("%s is not saved" % files)
+        process.run("echo "" > %s" % log_file, ignore_status=True, sudo=True, shell=True)
+        session_init.run("date +%s", 100, "True")
+        time_init = self.run_cmd_out("cat %s | tail -3 | head -1 | cut -d' ' -f3" % log_file).strip()
         session1 = remote.remote_login("ssh", self.ip, 22, self.user_name, self.password,
                                        self.prompt, "\n", None, 100, None, None, False)
         session1.sendline('echo "c" > /proc/sysrq-trigger;')
@@ -60,10 +68,14 @@ class PSTORE(Test):
         session2 = remote.RemoteRunner("ssh", self.ip, 22, self.user_name, self.password,
                                        self.prompt, "\n", log_file, 100, 10, None)
         session2.run("ls -lrt /sys/fs/pstore", 100, "True")
-        file_list = ['common-nvram', 'dmesg-nvram']
         for files in file_list:
             if files not in open(log_file).read():
                 self.fail("%s is not saved" % files)
+            file_path = os.path.join('/sys/fs/pstore', "*%s*" % files)
+            session2.run("stat -c%%Z %s" % file_path, 100, "True")
+            time_created = self.run_cmd_out("cat %s | tail -3 | head -1 | cut -d' ' -f3" % log_file).strip()
+            if time_created < time_init:
+                self.fail("New %s is not saved" % files)
         process.run("echo "" > %s" % log_file, ignore_status=True, sudo=True, shell=True)
         session2.run("cat /etc/os-release", 600, "True")
         if "rhel" in open(log_file).read():
@@ -77,6 +89,11 @@ class PSTORE(Test):
         for files in file_list:
             if files not in open(log_file).read():
                 self.fail("%s is not saved" % files)
+            file_path = os.path.join(sosreport_dir, "*%s*" % files)
+            session2.run("stat -c%%Z %s" % file_path, 100, "True")
+            time_created = self.run_cmd_out("cat %s | tail -3 | head -1 | cut -d' ' -f3" % log_file).strip()
+            if time_created < time_init:
+                self.fail("sosreport contains wrong %s file" % files)
 
 
 if __name__ == "__main__":
