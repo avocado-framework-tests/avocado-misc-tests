@@ -35,7 +35,6 @@ class MultipathTest(Test):
     """
     Multipath Test
     """
-
     def setUp(self):
         """
         Set up.
@@ -97,19 +96,22 @@ class MultipathTest(Test):
 
         multipath.form_conf_mpath_file()
         for path_dic in self.mpath_list:
+            self.log.debug("operating on paths", path_dic["paths"])
             # mutipath -f mpathX
             if not multipath.flush_path(path_dic["name"]):
                 msg += "Flush of %s fails\n" % path_dic["name"]
             self.mpath_svc.restart()
 
             # Path Selector policy
+            self.log.info("changing Selector policy")
             for policy in ["service-time", "round-robin", "queue-length"]:
                 cmd = "path_selector \"%s 0\"" % policy
                 multipath.form_conf_mpath_file(defaults_extra=cmd)
                 if multipath.get_policy(path_dic["wwid"]) != policy:
                     msg += "%s for %s fails\n" % (policy, path_dic["wwid"])
 
-            # Blacklist wwid
+            # Blacklisting wwid
+            self.log.info("Black listing WWIDs")
             cmd = "wwid %s" % path_dic["wwid"]
             multipath.form_conf_mpath_file(blacklist=cmd)
             if multipath.device_exists(path_dic["wwid"]):
@@ -119,12 +121,44 @@ class MultipathTest(Test):
                 if not multipath.device_exists(path_dic["wwid"]):
                     msg += "Recovery of %s fails\n" % path_dic["wwid"]
 
-            # Blacklist sdX
+            # Blacklisting sdX
+            self.log.info("Black listing individual paths")
             for disk in path_dic["paths"]:
                 cmd = "devnode %s" % disk
                 multipath.form_conf_mpath_file(blacklist=cmd)
                 if disk in multipath.get_paths(path_dic["wwid"]):
                     msg += "Blacklist of %s fails\n" % disk
+                multipath.form_conf_mpath_file()
+
+            # Failing and reinstating individual paths eg: sdX
+            self.log.info(" Failing and reinstating the individual paths")
+            for path in path_dic["paths"]:
+                if multipath.fail_path(path) is False:
+                    msg += "test failed while failing %s" % path
+                elif multipath.reinstate_path(path) is False:
+                    msg += "test failed while reinstating %s" % path
+
+            # Failing n-1 paths for short time and reinstating back
+            self.log.info("Failing and reinstating the n-1 paths")
+            for path in path_dic['paths'][:-1]:
+                if multipath.fail_path(path) is False:
+                    msg += "%s did not failed in n-1 path fail" % path
+
+            time.sleep(180)
+            for path in path_dic['paths'][:-1]:
+                if multipath.fail_path(path) is False:
+                    msg += "%s failed to recover in n-1 paths fails" % path
+
+            # Failing all paths for short time and reinstating back
+            self.log.info("Failing and reinstating the All paths")
+            for path in path_dic['paths']:
+                if multipath.fail_path(path) is False:
+                    msg += "%s did not failed in all paths fail" % path
+
+            time.sleep(180)
+            for path in path_dic['paths']:
+                if multipath.fail_path(path) is False:
+                    msg += "%s did not recovered  in all path fail" % path
 
         # Print errors
         if msg:
