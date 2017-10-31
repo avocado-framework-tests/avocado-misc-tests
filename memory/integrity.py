@@ -43,6 +43,8 @@ class Integrity(Test):
         deps = ['gcc', 'make']
         if detected_distro.name == "Ubuntu":
             deps.extend(['libnuma-dev'])
+        elif detected_distro.name in ["centos", "rhel", "fedora"]:
+            deps.extend(['numactl-devel'])
         else:
             deps.extend(['libnuma-devel'])
         for packages in deps:
