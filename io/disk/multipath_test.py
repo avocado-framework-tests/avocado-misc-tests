@@ -103,6 +103,7 @@ class MultipathTest(Test):
             self.mpath_svc.restart()
 
             # Path Selector policy
+            self.log.info("changing Selecotor policy")
             for policy in ["service-time", "round-robin", "queue-length"]:
                 cmd = "path_selector \"%s 0\"" % policy
                 multipath.form_conf_mpath_file(defaults_extra=cmd)
@@ -110,6 +111,7 @@ class MultipathTest(Test):
                     msg += "%s for %s fails\n" % (policy, path_dic["wwid"])
 
             # Blacklist wwid
+            self.log.info("Block listing WWIDs")
             cmd = "wwid %s" % path_dic["wwid"]
             multipath.form_conf_mpath_file(blacklist=cmd)
             if multipath.device_exists(path_dic["wwid"]):
@@ -119,12 +121,64 @@ class MultipathTest(Test):
                 if not multipath.device_exists(path_dic["wwid"]):
                     msg += "Recovery of %s fails\n" % path_dic["wwid"]
 
-            # Blacklist sdX
-            for disk in path_dic["paths"]:
-                cmd = "devnode %s" % disk
-                multipath.form_conf_mpath_file(blacklist=cmd)
-                if disk in multipath.get_paths(path_dic["wwid"]):
-                    msg += "Blacklist of %s fails\n" % disk
+            # Failing and reinstating individual paths eg: sdX
+            self.log.info(" Failing and reinstating the individual paths")
+            for path in path_dic["paths"]:
+                if multipath.fail_path(path) is False:
+                    msg += "test failed while failing %s" % path
+                elif multipath.reinstate_path(path) is False:
+                    msg += "test failed while reinstating %s" % path
+        self.mpath_svc.restart()
+        # Failing n-1 paths for short time and reinstating back
+        self.log.info("Failing and reinstating the n-1 paths")
+        for wwid in self.wwids:
+            if wwid not in process.system_output('multipath -ll',
+                                                 ignore_status=True,
+                                                 shell=True):
+                continue
+            mpaths = multipath.get_paths(wwid)
+            count = 0
+            count = len(mpaths)-1
+            for path in range(0, count):
+                if multipath.fail_path(mpaths[path]) is False:
+                    msg += "%s did not failed in short fail" % path
+
+        time.sleep(330)
+        for wwid in self.wwids:
+            if wwid not in process.system_output('multipath -ll',
+                                                 ignore_status=True,
+                                                 shell=True):
+                continue
+            mpaths = multipath.get_paths(wwid)
+            count = len(mpaths)-1
+            for path in range(0, count):
+                if multipath.reinstate_path(mpaths[path]) is False:
+                    msg += "%s did not came back after short fail" % path
+
+        # Failing all paths for short time and reinstating back
+        self.log.info("Failing and reinstating the all paths")
+        for wwid in self.wwids:
+            if wwid not in process.system_output('multipath -ll',
+                                                 ignore_status=True,
+                                                 shell=True):
+                continue
+            mpaths = multipath.get_paths(wwid)
+            count = len(mpaths)
+            for path in range(0, count):
+                if multipath.fail_path(mpaths[path]) is False:
+                    msg += "%s did not failed in long fail" % path
+
+        time.sleep(330)
+        for wwid in self.wwids:
+            if wwid not in process.system_output('multipath -ll',
+                                                 ignore_status=True,
+                                                 shell=True):
+                continue
+            mpaths = multipath.get_paths(wwid)
+            count = len(mpaths)
+            for path in range(0, count):
+                if multipath.reinstate_path(mpaths[path]) is False:
+                    msg += "%s did not came back after long fail" % path
 
         # Print errors
         if msg:
