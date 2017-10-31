@@ -46,7 +46,8 @@ class Xfstests(Test):
         Source: git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git
         """
         self.use_dd = False
-        if process.system_output("df -T / | awk 'END {print $2}'", shell=True) == 'ext3':
+        root_fs = process.system_output("df -T / | awk 'END {print $2}'", shell=True)
+        if root_fs in ['ext3', 'ext4']:
             self.use_dd = True
         sm = SoftwareManager()
 
