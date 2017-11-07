@@ -1,10 +1,15 @@
 max-time: null
 max-request: null
-num-threads: 80
-testsupported: !mux
-  cpu:
-    type: 'cpu'
-    cpu-max-prime: 50000
-  threads:
-    type: 'threads'
-    threads-locks: 1
+tests:
+  types: !mux
+    cpu:
+      type: 'cpu'
+      cpu-max-prime: 50000
+    threads:
+      type: 'threads'
+      threads-locks: 1
+  additional_params: !mux
+    min:
+      num-threads: 80
+    max:
+      num-threads: 120
