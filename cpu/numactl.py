@@ -20,7 +20,7 @@ import os
 
 from avocado import Test
 from avocado import main
-from avocado.utils import archive, build, process
+from avocado.utils import archive, build, process, distro
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -41,7 +41,17 @@ class Numactl(Test):
 
         # Check for basic utilities
         smm = SoftwareManager()
-        for package in ['gcc', 'numactl', 'autoconf', 'automake', 'make']:
+
+        detected_distro = distro.detect()
+        deps = ['gcc', 'libtool', 'autoconf', 'automake', 'make']
+        if detected_distro.name == "Ubuntu":
+            deps.extend(['libnuma-dev'])
+        elif detected_distro.name in ["centos", "rhel", "fedora"]:
+            deps.extend(['numactl-devel'])
+        else:
+            deps.extend(['libnuma-devel'])
+
+        for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("Failed to install %s, which is needed for"
                             "the test to be run" % package)
