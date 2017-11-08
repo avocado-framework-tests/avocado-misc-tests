@@ -82,14 +82,13 @@ class cpustresstest(Test):
 
     @staticmethod
     def __error_check():
-        ERROR = None
-        logs = (process.system_output(
-            "dmesg -T --level=alert,crit,err,warn", ignore_status=True, shell=True, sudo=True)).split()
-        for log in logs:
-            for error in errorlog:
+        ERROR = []
+        logs = process.system_output("dmesg -Txl 1,2,3,4").splitlines()
+        for error in errorlog:
+            for log in logs:
                 if error in log:
-                    ERROR = 'Test resulted %s in syslogs"' % error
-        return ERROR
+                    ERROR.append(log)
+        return "\n".join(ERROR)
 
     @staticmethod
     def __isSMT():

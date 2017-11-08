@@ -122,12 +122,16 @@ class stressng(Test):
         cmd = 'stress-ng %s' % " ".join(args)
         process.run(cmd, ignore_status=True, sudo=True)
         collect_dmesg(self)
+        ERROR = []
         pattern = ['WARNING: CPU:', 'Oops',
                    'Segfault', 'soft lockup', 'Unable to handle']
-        logs = process.system_output('dmesg')
-        for x in pattern:
-            if any(x in y for y in logs.split()):
-                self.fail("Test failed !!!!! :  %s in dmesg" % x)
+        logs = process.system_output('dmesg').splitlines()
+        for fail_pattern in pattern:
+            for log in logs:
+                if fail_pattern in log:
+                    ERROR.append(log)
+        if ERROR:
+            self.fail("Test failed with following errors in demsg :  %s " % "\n".joing(ERROR))
 
 
 if __name__ == "__main__":
