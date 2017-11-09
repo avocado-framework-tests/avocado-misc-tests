@@ -41,42 +41,34 @@ class Ltrace(Test):
         that needs to be installed, if not installed test will stop.
         """
 
-        backend = SoftwareManager()
+        sm = SoftwareManager()
         dist = distro.detect()
         dist_name = dist.name.lower()
-        if not backend.check_installed("gcc") and not backend.install("gcc"):
-            self.error("gcc is needed for the test to be run")
 
-        pkgs = ['git', 'wget', 'autoconf', 'automake',
-                'dejagnu', 'binutils']
+        packages = ['gcc', 'wget', 'autoconf', 'automake',
+                    'dejagnu', 'binutils']
 
         if dist_name == 'suse':
-            sles_deps = ['build', 'libdw-devel', 'libelf-devel',
-                         'elfutils', 'binutils-devel', 'libtool', 'gcc-c++']
-            pkgs += sles_deps
+            packages.extend(['libdw-devel', 'libelf-devel', 'git-core',
+                             'elfutils', 'binutils-devel', 'libtool', 'gcc-c++'])
 
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
         elif dist_name in ("rhel", "fedora", "redhat"):
-            rhel_deps = ['elfutils-devel', 'elfutils-libelf-devel',
-                         'elfutils-libelf', 'elfutils-libs', 'libtool-ltdl']
-            pkgs += rhel_deps
+            packages.extend(['elfutils-devel', 'elfutils-libelf-devel', 'git',
+                             'elfutils-libelf', 'elfutils-libs', 'libtool-ltdl'])
 
         elif dist_name == 'ubuntu':
-            ubuntu_deps = ['elfutils', 'libelf-dev', 'libtool',
-                           'libelf1', 'librpmbuild3', 'binutils-dev']
-            pkgs += ubuntu_deps
+            packages.extend(['elfutils', 'libelf-dev', 'libtool', 'git',
+                             'libelf1', 'librpmbuild3', 'binutils-dev'])
         else:
-            self.log.warn("Unsupported OS!")
+            self.cancel("Unsupported OS!")
 
-        for pkg in pkgs:
-            if not backend.check_installed(pkg):
-                if backend.install(pkg):
-                    self.log.warn("%s installed successfully", pkg)
-                else:
-                    self.error("Fail to install package- %s required for "
-                               "this test" % pkg)
+        for package in packages:
+            if not sm.check_installed(package) and not sm.install(package):
+                self.cancel("Fail to install %s required for this test." %
+                            package)
 
         # Source: git clone git://git.debian.org/git/collab-maint/ltrace.git
         git.get_repo('git://git.debian.org/git/collab-maint/ltrace.git',
