@@ -85,6 +85,7 @@ class DlparPci(Test):
         self.pci_device = self.params.get("pci_device", '*', default=None)
         self.server = self.params.get("server", '*', default=None)
         self.loc_code = pci.get_slot_from_sysfs(self.pci_device)
+        self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         if self.loc_code is None:
             self.cancel("Failed to get the location code for the pci device")
         self.login(self.hmc_ip, self.hmc_username, self.hmc_pwd)
@@ -154,10 +155,10 @@ class DlparPci(Test):
                                        shell=True, sudo=True)
         if "inoperative" in output:
             self.fail("Failed to start the rsct and rsct_rm services")
-
-        self.dlpar_remove()
-        self.dlpar_add()
-        self.dlpar_move()
+        for i in range(self.num_of_dlpar):
+            self.dlpar_remove()
+            self.dlpar_add()
+            self.dlpar_move()
 
     def dlpar_remove(self):
         '''

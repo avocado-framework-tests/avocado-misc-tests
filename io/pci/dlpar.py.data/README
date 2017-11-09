@@ -27,3 +27,4 @@ pci_device: "0017:01:00.0"
 User need to pass the pci_device of drc to do the action of DLPAR
 lpar_1 is the name of lpar where DLPAR remove and add operation will be done
 lpar_2 is the name of lpar where DLPAR move operation will be done
+num_of_dlpar: Dlpar operations runs number of times specified here
