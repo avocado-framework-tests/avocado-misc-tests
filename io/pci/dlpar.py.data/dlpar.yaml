@@ -7,4 +7,5 @@ hmc_username:
 lpar_1: 
 lpar_2: 
 server: 
-pci_device: 
+pci_device:
+num_of_dlpar: 
