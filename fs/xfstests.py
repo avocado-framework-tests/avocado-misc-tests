@@ -97,9 +97,9 @@ class Xfstests(Test):
         mount = True
         self.devices = []
         shutil.copyfile(os.path.join(self.datadir, 'local.config'),
-                        os.path.join(self.srcdir, 'local.config'))
+                        os.path.join(self.teststmpdir, 'local.config'))
         shutil.copyfile(os.path.join(self.datadir, 'group'),
-                        os.path.join(self.srcdir, 'group'))
+                        os.path.join(self.teststmpdir, 'group'))
 
         if self.dev_type == 'loop':
             base_disk = self.params.get('disk', default=None)
@@ -120,19 +120,19 @@ class Xfstests(Test):
         if self.devices:
             line = ('export TEST_DEV=%s' % self.devices[0]).replace('/', '\/')
             process.system('sed -i "s/export TEST_DEV=.*/%s/g" %s' %
-                           (line, os.path.join(self.srcdir, 'local.config')), shell=True)
+                           (line, os.path.join(self.teststmpdir, 'local.config')), shell=True)
             line = ('export SCRATCH_DEV=%s' %
                     self.devices[1]).replace('/', '\/')
             process.system('sed -i "s/export SCRATCH_DEV=.*/%s/g" %s' %
-                           (line, os.path.join(self.srcdir, 'local.config')), shell=True)
+                           (line, os.path.join(self.teststmpdir, 'local.config')), shell=True)
             for dev in self.devices:
                 dev_obj = partition.Partition(dev)
                 dev_obj.mkfs(fstype=self.fs_to_test)
 
         git.get_repo('git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
-                     destination_dir=self.srcdir)
+                     destination_dir=self.teststmpdir)
 
-        build.make(self.srcdir)
+        build.make(self.teststmpdir)
         self.available_tests = self._get_available_tests()
 
         self.test_list = self._create_test_list(self.test_range)
@@ -142,7 +142,7 @@ class Xfstests(Test):
             self.exclude = self.params.get('exclude', default=None)
             self.gen_exclude = self.params.get('gen_exclude', default=None)
             if self.exclude or self.gen_exclude:
-                self.exclude_file = os.path.join(self.srcdir, 'exclude')
+                self.exclude_file = os.path.join(self.teststmpdir, 'exclude')
                 with open(self.exclude_file, 'w') as fp:
                     if self.exclude:
                         self.exclude_tests = self._create_test_list(
@@ -165,7 +165,7 @@ class Xfstests(Test):
 
     def test(self):
         failures = False
-        os.chdir(self.srcdir)
+        os.chdir(self.teststmpdir)
         if not self.test_list:
             self.log.info('Running all tests')
             args = ''
@@ -268,7 +268,7 @@ class Xfstests(Test):
         Returns the list of tests that belong to a certain test group
         """
         group_test_line_re = re.compile('(\d{3})\s(.*)')
-        group_path = os.path.join(self.srcdir, 'group')
+        group_path = os.path.join(self.teststmpdir, 'group')
         with open(group_path, 'r') as group_file:
             content = group_file.readlines()
 
@@ -283,10 +283,10 @@ class Xfstests(Test):
         return tests
 
     def _get_available_tests(self):
-        os.chdir(self.srcdir)
+        os.chdir(self.teststmpdir)
         tests_set = []
-        tests = glob.glob(self.srcdir + '/tests/*/???.out')
-        tests += glob.glob(self.srcdir + '/tests/*/???.out.linux')
+        tests = glob.glob(self.teststmpdir + '/tests/*/???.out')
+        tests += glob.glob(self.teststmpdir + '/tests/*/???.out.linux')
         tests = [t.replace('.linux', '') for t in tests]
 
         tests_set = [t[-7:-4] for t in tests if os.path.exists(t[:-4])]
@@ -296,7 +296,7 @@ class Xfstests(Test):
         return tests_set
 
     def _is_test_valid(self, test_number):
-        os.chdir(self.srcdir)
+        os.chdir(self.teststmpdir)
         if test_number == '000':
             return False
         if test_number not in self.available_tests:
