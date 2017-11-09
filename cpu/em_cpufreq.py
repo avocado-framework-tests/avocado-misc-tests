@@ -26,7 +26,8 @@ class Cpufreq(Test):
     """
     Test to validate the frequency transition.
     """
-    def setup(self):
+
+    def setUp(self):
         """
         Verify the system is Baremetal and cpupower tool is installed.
         """
