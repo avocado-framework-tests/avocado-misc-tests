@@ -32,4 +32,3 @@ setup:
     cxl_eeh_tests.sh:
       script: 'cxl_eeh_tests.sh'
       args: ''
-      
