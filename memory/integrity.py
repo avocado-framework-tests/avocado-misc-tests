@@ -39,6 +39,9 @@ class Integrity(Test):
 
         # Check for basic utilities
         smm = SoftwareManager()
+        self.scenario_arg = self.params.get('scenario_arg', default='1')
+        if self.scenario_arg not in ['1', '2', '3']:
+            self.cancel("Test need to skip as scenario needs to be 1-3")
         detected_distro = distro.detect()
         deps = ['gcc', 'make']
         if detected_distro.name == "Ubuntu":
@@ -61,8 +64,7 @@ class Integrity(Test):
         Execute Integrity tests
         '''
         os.chdir(self.build_dir)
-        scenario_arg = self.params.get('scenario_arg', default='1')
-        if process.system('./mem_integrity_test -s %s' % scenario_arg,
+        if process.system('./mem_integrity_test -s %s' % self.scenario_arg,
                           shell=True, ignore_status=True) != 0:
             self.fail("Test failed")
 
