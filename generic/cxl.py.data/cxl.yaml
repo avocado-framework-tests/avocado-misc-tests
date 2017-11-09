@@ -1,0 +1,35 @@
+#Usage: memcpy_afu_ctx [options]
+#Options:
+#	-c <card_num>	Use this CAPI card (default 0).
+#	-h		Display this help text.
+#	-I <irq_count>	Define this number of interrupts (default 4).
+#	-i <irq_num>	Use this interrupt command source number (default 0).
+#	-k		Use the Stop_on_Invalid_Command and Restart logic.
+#	-l <loops>	Run this number of memcpy loops (default 1).
+#	-p <procs>	Fork this number of processes (default 1).
+#	-s <bufsize>	Copy this number of bytes (default 1024).
+#	-t		Do not memcpy. Test timebase sync instead.
+#	-e <timeout>		End timeout.
+#			Seconds to wait for the AFU to signal completion.
+# SAMPLE RUN
+# A typical run of the program would look like this:
+# ./memcpy_afu_ctx -e 10 -p 508 -l 10
+setup:
+  script: 'memcpy_afu_ctx'
+  general: !mux
+    memcpy_afu_ctx_1:
+        args: "-e 10 -p 508 -l 1"
+    memcpy_afu_ctx_2:
+        args: "-e 10 -p 508 -l 10"
+    memcpy_afu_ctx_3:
+        args: "-e 10 -p 508 -l 1000"
+    memcpy_afu_ctx_4:
+        args: "-e 10 -p 200 -l 100000"
+    memcpy_afu_ctx_5:
+        args: "-e 10 -p 100 -l 1000000"
+    memcpy_afu_ctx_6:
+        args: "-e 5 -p 508 -l 10"
+    cxl_eeh_tests.sh:
+      script: 'cxl_eeh_tests.sh'
+      args: ''
+      
