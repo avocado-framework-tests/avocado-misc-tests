@@ -1,0 +1,40 @@
+--- ltrace_orig/sysdeps/linux-gnu/proc.c	2017-11-09 05:11:38.610000000 -0500
++++ ltrace/sysdeps/linux-gnu/proc.c	2017-11-09 06:00:45.140000000 -0500
+@@ -242,24 +242,27 @@ process_tasks(pid_t pid, pid_t **ret_tas
+ 	size_t alloc = 0;
+ 
+ 	while (1) {
+-		struct dirent entry;
+ 		struct dirent *result;
+-		if (readdir_r(d, &entry, &result) != 0) {
+-		fail:
+-			free(tasks);
+-			closedir(d);
+-			return -1;
+-		}
+-		if (result == NULL)
++		errno = 0;
++		result = readdir(d);
++		if (result == NULL) {
++			if (errno) {
++				free(tasks);
++				closedir(d);
++				return -1;
++			}
+ 			break;
++		}
+ 		if (result->d_type == DT_DIR && all_digits(result->d_name)) {
+ 			pid_t npid = atoi(result->d_name);
+ 			if (n >= alloc) {
+ 				alloc = alloc > 0 ? (2 * alloc) : 8;
+ 				pid_t *ntasks = realloc(tasks,
+ 							sizeof(*tasks) * alloc);
+-				if (ntasks == NULL)
+-					goto fail;
++				if (ntasks == NULL){
++					free(tasks);
++					return -1;
++				}
+ 				tasks = ntasks;
+ 			}
+ 			assert(n < alloc);

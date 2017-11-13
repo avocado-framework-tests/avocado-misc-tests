@@ -41,7 +41,7 @@ class Ltrace(Test):
         that needs to be installed, if not installed test will stop.
         """
 
-        sm = SoftwareManager()
+        smm = SoftwareManager()
         dist = distro.detect()
         dist_name = dist.name.lower()
 
@@ -66,7 +66,7 @@ class Ltrace(Test):
             self.cancel("Unsupported OS!")
 
         for package in packages:
-            if not sm.check_installed(package) and not sm.install(package):
+            if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("Fail to install %s required for this test." %
                             package)
 
@@ -76,6 +76,8 @@ class Ltrace(Test):
 
         self.src_lt = os.path.join(self.srcdir, "ltrace")
         os.chdir(self.src_lt)
+        process.run('patch -p1 < %s' %
+                    os.path.join(self.datadir, 'ltrace.patch'), shell=True)
         process.run('./autogen.sh')
         process.run('./configure')
         build.make(self.src_lt)
