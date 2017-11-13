@@ -175,6 +175,21 @@ class RASTools(Test):
             copyfile_path = os.path.join(self.outputdir, 'vpd.db')
             copyfile(path_db, copyfile_path)
             self.run_cmd("vpdupdate --path=%s" % copyfile_path)
+        if os.path.exists('/var/lib/lsvpd/run.vpdupdate'):
+            path = '/var/lib/lsvpd/run.vpdupdate'
+        elif os.path.exists('/var/lib/lsvpd/run.vpdupdate'):
+            path = '/run/run.vpdupdate'
+        process.run("mv %s /root/run.vpdupdate" % path)
+        self.log.info("Running vpdupdate after removing run.vpdupdate")
+        self.run_cmd("vpdupdate")
+        process.run("mv /root/run.vpdupdate %s" % path)
+        process.run("rm -rf /var/lib/lsvpd/vpd.db; touch /var/lib/lsvpd/vpd.db",
+                    shell=True)
+        for command in ["lsvpd", "lscfg", "lsmcode"]:
+            if not process.system_output("%s | grep run | grep vpdupdate" % command,
+                                         shell=True, ignore_status=True).strip():
+                self.fail("Error message is not displayed when vpd.db is corrupted.")
+        self.run_cmd("vpdupdate")
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in vpdupdate tool "
                       "verification" % self.is_fail)
