@@ -46,7 +46,8 @@ class Xfstests(Test):
         Source: git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git
         """
         self.use_dd = False
-        root_fs = process.system_output("df -T / | awk 'END {print $2}'", shell=True)
+        root_fs = process.system_output(
+            "df -T / | awk 'END {print $2}'", shell=True)
         if root_fs in ['ext3', 'ext4']:
             self.use_dd = True
         sm = SoftwareManager()
@@ -118,13 +119,27 @@ class Xfstests(Test):
             self.devices.extend([self.test_dev, self.scratch_dev])
         # mkfs for devices
         if self.devices:
-            line = ('export TEST_DEV=%s' % self.devices[0]).replace('/', '\/')
-            process.system('sed -i "s/export TEST_DEV=.*/%s/g" %s' %
-                           (line, os.path.join(self.teststmpdir, 'local.config')), shell=True)
-            line = ('export SCRATCH_DEV=%s' %
-                    self.devices[1]).replace('/', '\/')
-            process.system('sed -i "s/export SCRATCH_DEV=.*/%s/g" %s' %
-                           (line, os.path.join(self.teststmpdir, 'local.config')), shell=True)
+            cfg_file = os.path.join(self.teststmpdir, 'local.config')
+            with open(cfg_file, "r") as sources:
+                lines = sources.readlines()
+            with open(cfg_file, "w") as sources:
+                for line in lines:
+                    if line.startswith('export TEST_DEV'):
+                        sources.write(
+                            re.sub(r'export TEST_DEV=.*', 'export TEST_DEV=%s'
+                                   % self.devices[0], line))
+                    elif line.startswith('export TEST_DIR'):
+                        sources.write(
+                            re.sub(r'export TEST_DIR=.*', 'export TEST_DIR=%s'
+                                   % self.test_mnt, line))
+                    elif line.startswith('export SCRATCH_DEV'):
+                        sources.write(re.sub(
+                            r'export SCRATCH_DEV=.*', 'export SCRATCH_DEV=%s' % self.devices[1], line))
+                    elif line.startswith('export SCRATCH_MNT'):
+                        sources.write(re.sub(
+                            r'export SCRATCH_MNT=.*', 'export SCRATCH_MNT=%s' % self.scratch_mnt, line))
+                        break
+
             for dev in self.devices:
                 dev_obj = partition.Partition(dev)
                 dev_obj.mkfs(fstype=self.fs_to_test)
