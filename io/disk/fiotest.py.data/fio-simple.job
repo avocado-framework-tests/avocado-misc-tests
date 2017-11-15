@@ -12,62 +12,62 @@ verify=crc32
 
 [file1]
 bs=512k
-size=100M
+size=128M
 ioengine=sync
 mem=malloc
 stonewall
 
 [file2]
 bs=1M
-stonewall
-size=100M
+size=128M
 ioengine=posixaio
-mem=shm
 iodepth=4
+mem=shm
+stonewall
 
 [file3]
 bs=512M
-stonewall
-size=1000M
+size=1024M
 ioengine=mmap
 mem=mmap
+stonewall
 
 [file4]
-stonewall
 bs=1024M
-size=2048M
+size=1024M
 ioengine=splice
 mem=malloc
+stonewall
 
 [seq-write]
 bs=512k
 size=128M
+ioengine=posixaio
 iodepth=4
 rw=write
-ioengine=posixaio
 mem=shm
 stonewall
 
 [rand-write]
 size=128M
 bs=512k
-rw=randwrite
 ioengine=splice
+rw=randwrite
 mem=malloc
 stonewall
 
 [seq-readwrite]
 size=128M
 bs=512k
-rw=rw
 ioengine=mmap
+rw=rw
 mem=mmap
 stonewall
 
 [rand-readwrite]
 size=128M
 bs=512k
-rw=randrw
 ioengine=mmap
+rw=randrw
 mem=mmap
 stonewall
