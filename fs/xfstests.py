@@ -160,6 +160,7 @@ class Xfstests(Test):
             process.run('useradd fsgqa', sudo=True)
         else:
             process.run('useradd -m -U fsgqa', sudo=True)
+            process.run('groupadd sys', sudo=True)
         if not os.path.exists(self.scratch_mnt):
             os.makedirs(self.scratch_mnt)
         if not os.path.exists(self.test_mnt):
@@ -204,6 +205,7 @@ class Xfstests(Test):
         else:
             process.system('userdel -r -f fsgqa', sudo=True)
             process.system('groupdel fsgqa', sudo=True)
+            process.system('groupdel sys', sudo=True)
         # In case if any test has been interrupted
         process.system('umount %s %s' % (self.scratch_mnt, self.test_mnt),
                        sudo=True, ignore_status=True)
