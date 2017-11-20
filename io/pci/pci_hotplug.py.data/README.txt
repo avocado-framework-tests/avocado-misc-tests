@@ -5,3 +5,4 @@ This test needs to be run as root.
 Inputs Needed (in multiplexer file):
 ------------------------------------
 pci_device -       PCI devices
+num_of_hotplug -   Specify number of times hotplug to be performed
