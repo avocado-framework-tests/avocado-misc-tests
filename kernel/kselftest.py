@@ -33,7 +33,7 @@ class kselftest(Test):
     :see: https://www.kernel.org/doc/Documentation/kselftest.txt
     :source: https://github.com/torvalds/linux/archive/master.zip
 
-    :avocado: tags=kernel,privileged
+    :avocado: tags=kernel
     """
 
     testdir = 'tools/testing/selftests'

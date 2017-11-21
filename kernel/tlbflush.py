@@ -30,7 +30,7 @@ class Tlbflush(Test):
     """
     This is a macrobenchmark for TLB flush range testing.
 
-    :avocado: tags=kernel,privileged
+    :avocado: tags=kernel
     """
 
     def setUp(self):
