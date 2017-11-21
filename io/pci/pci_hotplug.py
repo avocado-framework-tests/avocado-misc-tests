@@ -57,6 +57,8 @@ class PCIHotPlugTest(Test):
                 linux_modules.load_module("pnv_php")
         self.return_code = 0
         self.device = self.params.get('pci_device', default=' ')
+        self.num_of_hotplug = int(self.params.get('num_of_hotplug',
+                                  default='1'))
         if not os.path.isdir('/sys/bus/pci/devices/%s' % self.device):
             self.cancel("PCI device given does not exist")
         if PowerVM:
@@ -77,6 +79,16 @@ class PCIHotPlugTest(Test):
         """
         Creates namespace on the device.
         """
+
+        for i in range(self.num_of_hotplug):
+            self.hotplug_remove()
+            self.hotplug_add()
+            self.check_add_remove()
+
+    def hotplug_remove(self):
+        """
+        Hot Plug remove operation
+        """
         genio.write_file("/sys/bus/pci/slots/%s/power" % self.slot, "0")
         time.sleep(5)
         cmd = "lspci -k -s %s" % self.device
@@ -84,6 +96,11 @@ class PCIHotPlugTest(Test):
             self.return_code = 1
         else:
             print "Adapter %s removed successfully" % self.device
+
+    def hotplug_add(self):
+        """
+        Hot plug add operation
+        """
         genio.write_file("/sys/bus/pci/slots/%s/power" % self.slot, "1")
         time.sleep(5)
         cmd = "lspci -k -s %s" % self.device
@@ -91,6 +108,12 @@ class PCIHotPlugTest(Test):
             self.return_code = 2
         else:
             print "Adapter %s added back successfully" % self.device
+
+    def check_add_remove(self):
+        """
+        Function to check if the adapter is removed and
+        added back as desired
+        """
         if self.return_code == 1:
             self.fail('%s not removed' % self.device)
         if self.return_code == 2:
