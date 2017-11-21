@@ -88,7 +88,7 @@ class kselftest(Test):
                 error = True
                 self.log.info("Testcase failed. Log from build: %s" % line)
         for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
-            match = re.search(r'selftests:\s+\w+\s+\[FAIL]', line)
+            match = re.search(r'selftests:(.*)\[FAIL\]', line)
             if match:
                 error = True
                 self.log.info("Testcase failed. Log from debug: %s" %
