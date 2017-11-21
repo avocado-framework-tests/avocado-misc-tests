@@ -44,12 +44,19 @@ class GDB(Test):
             if not sm.check_installed(package) and not sm.install(package):
                 self.error("Fail to install %s required for this test." %
                            package)
-        gdb_version = self.params.get('gdb_version', default='7.10')
-        tarball = self.fetch_asset(
-            "http://ftp.gnu.org/gnu/gdb/gdb-%s.tar.gz" % gdb_version)
-        archive.extract(tarball, self.srcdir)
-        sourcedir = os.path.join(
-            self.srcdir, os.path.basename(tarball.split('.tar')[0]))
+        test_type = self.params.get('type', default='upstream')
+        if test_type == 'upstream':
+            gdb_version = self.params.get('gdb_version', default='7.10')
+            tarball = self.fetch_asset(
+                "http://ftp.gnu.org/gnu/gdb/gdb-%s.tar.gz" % gdb_version)
+            archive.extract(tarball, self.srcdir)
+            sourcedir = os.path.join(
+                self.srcdir, os.path.basename(tarball.split('.tar')[0]))
+        elif test_type == 'distro':
+            sourcedir = os.path.join(self.srcdir, 'gdb-distro')
+            if not os.path.exists(sourcedir):
+                os.makedirs(sourcedir)
+            sourcedir = sm.get_source("gdb", sourcedir)
         os.chdir(sourcedir)
         process.run('./configure', ignore_status=True, sudo=True)
         build.make(sourcedir)
