@@ -14,15 +14,14 @@
 # Copyright: 2017 IBM
 # Author: Hariharan T.S.  <harihare@in.ibm.com>
 
-
+import os
 from avocado import Test
 from avocado import main
-from avocado.utils import process
+from avocado.utils import process, git
 from avocado.utils.software_manager import SoftwareManager
 
 
 class Sysbench(Test):
-
     """
     sysbench supports following performance tests
     :cpu, threads, oltp, fileio
@@ -48,9 +47,26 @@ class Sysbench(Test):
             self.fail("The sysbench failed: %s" % details)
 
     def setUp(self):
-        softmanager = SoftwareManager()
-        if not softmanager.check_installed('sysbench') and not softmanager.install('sysbench'):
-            self.cancel("sysbench package is required to continue the test")
+        if not process.system("which sysbench"):
+            softmanager = SoftwareManager()
+            if not softmanager.check_installed('sysbench') and not softmanager.install('sysbench'):
+                '''Install the package from upstream'''
+                self.log.info(
+                    'Sysbench is not available in repo, Hence will install it from upstream')
+                for package in ("autoconf", "libtool", "make"):
+                    if not softmanager.check_installed(package) and not softmanager.install(package):
+                        self.cancel(
+                            "Fail to install %s required for this test." % package)
+                self.urllink = self.params.get(
+                    'url-link', default="https://github.com/akopytov/sysbench.git")
+                self.bch = self.params.get('branch', default='master')
+                git.get_repo(self.urllink, branch=self.bch,
+                             destination_dir=self.teststmpdir)
+                os.chdir(self.teststmpdir)
+                self.run_cmd("./autogen.sh")
+                self.run_cmd("./configure --without-mysql")
+                self.run_cmd("make install")
+
         self.max_time = self.params.get('max-time', default=None)
         self.max_request = self.params.get('max-request', default=None)
         self.num_threads = int(self.params.get('num-threads', default=2))

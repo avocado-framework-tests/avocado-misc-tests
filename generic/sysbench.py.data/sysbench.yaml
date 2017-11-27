@@ -1,5 +1,8 @@
 max-time: null
 max-request: null
+url-link: 'https://github.com/akopytov/sysbench.git'
+#Comment out branch if you want to checkout master.
+branch: '0.4'
 tests:
   types: !mux
     cpu:
