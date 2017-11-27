@@ -170,9 +170,12 @@ class Xfstests(Test):
                         for test in self.gen_exclude_tests:
                             fp.write('generic/%s\n' % test)
 
-        process.run('useradd fsgqa', sudo=True)
         if self.detected_distro.name is not 'SuSE':
             process.run('useradd 123456-fsgqa', sudo=True)
+            process.run('useradd fsgqa', sudo=True)
+        else:
+            process.run('useradd -m -U fsgqa', sudo=True)
+            process.run('groupadd sys', sudo=True)
         if not os.path.exists(self.scratch_mnt):
             os.makedirs(self.scratch_mnt)
         if not os.path.exists(self.test_mnt):
@@ -211,9 +214,13 @@ class Xfstests(Test):
             self.fail('One or more tests failed. Please check the logs.')
 
     def tearDown(self):
-        process.system('userdel fsgqa', sudo=True)
         if self.detected_distro.name is not 'SuSE':
             process.system('userdel 123456-fsgqa', sudo=True)
+            process.system('userdel fsgqa', sudo=True)
+        else:
+            process.system('userdel -r -f fsgqa', sudo=True)
+            process.system('groupdel fsgqa', sudo=True)
+            process.system('groupdel sys', sudo=True)
         # In case if any test has been interrupted
         process.system('umount %s %s' % (self.scratch_mnt, self.test_mnt),
                        sudo=True, ignore_status=True)
