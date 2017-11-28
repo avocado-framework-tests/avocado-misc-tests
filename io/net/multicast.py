@@ -79,6 +79,11 @@ class ReceiveMulticastTest(Test):
         if process.system(cmd, shell=True, verbose=True,
                           ignore_status=True) != 0:
             self.fail("unable to set all mulicast option to test interface")
+        peer_route_add = "ip route add 224.0.0.0/4 dev %s" % self.peerif
+        cmd = "ssh %s@%s \"%s\"" % (self.user, self.peer, peer_route_add)
+        if process.system(cmd, shell=True, verbose=True,
+                          ignore_status=True) != 0:
+            self.fail("Unable to add route for Peer interafce")
         msg = "ping -I %s 224.0.0.1 -c 1 | grep %s" %\
               (self.peerif, self.local_ip)
         cmd = "timeout 600 ssh %s@%s \"%s\"" % (self.user, self.peer, msg)
@@ -87,8 +92,13 @@ class ReceiveMulticastTest(Test):
 
     def tearDown(self):
         '''
-        turn off multicast option
+        delete multicast route and turn off multicast option
         '''
+        peer_route_del = "ip route del 224.0.0.0/4"
+        cmd = "ssh %s@%s \"%s\"" % (self.user, self.peer, peer_route_del)
+        if process.system(cmd, shell=True, verbose=True,
+                          ignore_status=True) != 0:
+            self.log.info("Unable to delete multicast route added for peer")
         cmd = "echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts"
         if process.system(cmd, shell=True, verbose=True,
                           ignore_status=True) != 0:
