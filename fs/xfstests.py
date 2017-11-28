@@ -71,7 +71,7 @@ class Xfstests(Test):
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
                              'openssl-devel', 'xfsprogs-devel'])
             if self.detected_distro.name == 'SuSE':
-                packages.extend(['libbtrfs-devel'])
+                packages.extend(['libbtrfs-devel', 'libcap-progs'])
             else:
                 packages.extend(['btrfs-progs-devel'])
 
