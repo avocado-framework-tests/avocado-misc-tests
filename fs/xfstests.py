@@ -107,11 +107,12 @@ class Xfstests(Test):
             loop_size = self.params.get('loop_size', default='7GiB')
             if not base_disk:
                 # Using root for file creation by default
-                if disk.freespace('/') / 1073741824 > 15:
+                check = (int(loop_size.split('GiB')[0]) * 2) + 1
+                if disk.freespace('/') / 1073741824 > check:
                     self.disk_mnt = ''
                     mount = False
                 else:
-                    self.cancel('Need 15 GB to create loop devices')
+                    self.cancel('Need %s GB to create loop devices' % check)
             self._create_loop_device(base_disk, loop_size, mount)
         else:
             self.test_dev = self.params.get('disk_test', default=None)
