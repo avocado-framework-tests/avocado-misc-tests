@@ -20,6 +20,7 @@ setup:
             # Exclude only if test_range not provided
             # exclude: '2,4-7,203'
             # gen_exclude: '1-10,30-45'
+            # share_exclude: '1-2'
     # disk_type: !mux
     #    type: 'disk'
     #    disk_test: /dev/sdx1
