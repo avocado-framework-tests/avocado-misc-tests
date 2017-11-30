@@ -56,6 +56,8 @@ class PowerVMEEH(Test):
         """
         Gets the console and set-up the machine for test
         """
+        if 'ppc' not in process.system_output(cmd, ignore_status=True):
+            self.cancel("Processor is not ppc64")
         output = genio.read_file("/sys/kernel/debug/powerpc/eeh_enable")\
             .strip()
         if output != '0x1':
