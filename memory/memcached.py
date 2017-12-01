@@ -111,7 +111,7 @@ class Memcached(Test):
         if (process.system(self.stress_tool_cmd, verbose=True,
                            shell=True, ignore_status=True)):
             self.fail('Stress tool fails to load memcached server'
-                      'Cmd "%s" Failed' % self.memcslap_cmd)
+                      'Cmd "%s" Failed' % self.stress_tool_cmd)
 
     def tearDown(self):
         """
