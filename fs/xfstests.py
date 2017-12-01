@@ -107,11 +107,12 @@ class Xfstests(Test):
             loop_size = self.params.get('loop_size', default='7GiB')
             if not base_disk:
                 # Using root for file creation by default
-                if disk.freespace('/') / 1073741824 > 15:
+                check = (int(loop_size.split('GiB')[0]) * 2) + 1
+                if disk.freespace('/') / 1073741824 > check:
                     self.disk_mnt = ''
                     mount = False
                 else:
-                    self.cancel('Need 15 GB to create loop devices')
+                    self.cancel('Need %s GB to create loop devices' % check)
             self._create_loop_device(base_disk, loop_size, mount)
         else:
             self.test_dev = self.params.get('disk_test', default=None)
@@ -156,19 +157,15 @@ class Xfstests(Test):
         if not self.test_range:
             self.exclude = self.params.get('exclude', default=None)
             self.gen_exclude = self.params.get('gen_exclude', default=None)
-            if self.exclude or self.gen_exclude:
+            self.share_exclude = self.params.get('share_exclude', default=None)
+            if self.exclude or self.gen_exclude or self.share_exclude:
                 self.exclude_file = os.path.join(self.teststmpdir, 'exclude')
-                with open(self.exclude_file, 'w') as fp:
-                    if self.exclude:
-                        self.exclude_tests = self._create_test_list(
-                            self.exclude, dangerous=False)
-                        for test in self.exclude_tests:
-                            fp.write('%s/%s\n' % (self.fs_to_test, test))
-                    if self.gen_exclude:
-                        self.gen_exclude_tests = self._create_test_list(
-                            self.gen_exclude, dangerous=False)
-                        for test in self.gen_exclude_tests:
-                            fp.write('generic/%s\n' % test)
+                if self.exclude:
+                    self._create_test_list(self.exclude, self.fs_to_test, dangerous=False)
+                if self.gen_exclude:
+                    self._create_test_list(self.gen_exclude, "generic", dangerous=False)
+                if self.share_exclude:
+                    self._create_test_list(self.share_exclude, "shared", dangerous=False)
 
         if self.detected_distro.name is not 'SuSE':
             process.run('useradd 123456-fsgqa', sudo=True)
@@ -254,7 +251,7 @@ class Xfstests(Test):
             process.run('losetup %s %s/file-%s.img' %
                         (dev, self.disk_mnt, i), shell=True, sudo=True)
 
-    def _create_test_list(self, test_range, dangerous=True):
+    def _create_test_list(self, test_range, test_type=None, dangerous=True):
         test_list = []
         dangerous_tests = []
         if self.skip_dangerous:
@@ -270,7 +267,10 @@ class Xfstests(Test):
                     continue
                 test_list.append(test)
 
-        return test_list
+        if test_type:
+            with open(self.exclude_file, 'a') as fp:
+                for test in test_list:
+                    fp.write('%s/%s\n' % (test_type, test))
 
     @staticmethod
     def _parse_test_range(test_range):
