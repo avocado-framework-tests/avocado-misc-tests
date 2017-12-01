@@ -47,7 +47,7 @@ class Memcached(Test):
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
-        if detected_distro.name not in ['Ubuntu', 'rhel', 'redhat']:
+        if detected_distro.name not in ['Ubuntu', 'rhel', 'redhat', 'SuSE']:
             self.cancel('Test Not applicable')
 
         if detected_distro.name == "Ubuntu":
@@ -57,7 +57,7 @@ class Memcached(Test):
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
-        if detected_distro.name in ["rhel", "redhat"]:
+        if detected_distro.name in ["rhel", "redhat", "SuSE"]:
             deps = ['memcached', 'libmemcached']
             stress_tool = 'memslap'
 
