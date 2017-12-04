@@ -55,8 +55,7 @@ class Kernbench(Test):
         else:
             build_string = "/usr/bin/time -o %s make -j %s vmlinux" % (
                 timefile, threads)
-        process.system(build_string, allow_output_check='None',
-                       ignore_status=True, shell=True)
+        process.system(build_string, ignore_status=True, shell=True)
         if not os.path.isfile('vmlinux'):
             self.fail("No vmlinux found, kernel build failed")
 
