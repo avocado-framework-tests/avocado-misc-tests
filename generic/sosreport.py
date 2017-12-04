@@ -42,9 +42,7 @@ class sosreport_test(Test):
         dist = distro.detect()
         sm = SoftwareManager()
         sos_pkg = ""
-        if not process.system("sosreport", ignore_status=True, sudo=True):
-            self.log.info("sosreport is installed")
-        elif dist.name == 'Ubuntu':
+        if dist.name == 'Ubuntu':
             sos_pkg = 'sosreport'
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
