@@ -1,3 +1,0 @@
-PCI_devices: !mux
-    pci_device1:
-        pci_device: "0000:03:00.0"
