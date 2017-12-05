@@ -92,7 +92,7 @@ class Kernbench(Test):
                          'libnuma-dev', 'libfuse-dev'])
         elif 'SuSE' in detected_distro.name:
             deps.extend(['libpopt0', 'glibc', 'glibc-devel',
-                         'popt-devel', 'libcap1', 'libcap-devel',
+                         'popt-devel', 'libcap2', 'libcap-devel',
                          'libcap-ng-devel'])
         elif detected_distro.name in ['centos', 'fedora', 'rhel']:
             deps.extend(['popt', 'glibc', 'glibc-devel', 'libcap-ng',
