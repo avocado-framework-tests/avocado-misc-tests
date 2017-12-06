@@ -47,18 +47,23 @@ class Sysbench(Test):
             self.fail("The sysbench failed: %s" % details)
 
     def setUp(self):
-        if not process.system("which sysbench"):
+        if process.system("which sysbench", ignore_status=True):
             softmanager = SoftwareManager()
-            if not softmanager.check_installed('sysbench') and not softmanager.install('sysbench'):
+            if not softmanager.check_installed('sysbench') \
+                    and not softmanager.install('sysbench'):
                 '''Install the package from upstream'''
                 self.log.info(
-                    'Sysbench is not available in repo, Hence will install it from upstream')
+                    'Sysbench is not available in repo, Hence will '
+                    'install it from upstream')
                 for package in ("autoconf", "libtool", "make"):
-                    if not softmanager.check_installed(package) and not softmanager.install(package):
+                    if not softmanager.check_installed(package) \
+                            and not softmanager.install(package):
                         self.cancel(
-                            "Fail to install %s required for this test." % package)
+                            "Fail to install %s required for this test."
+                            "" % package)
                 self.urllink = self.params.get(
-                    'url-link', default="https://github.com/akopytov/sysbench.git")
+                    'url-link', default="https://github.com/akopytov/"
+                                        "sysbench.git")
                 self.bch = self.params.get('branch', default='master')
                 git.get_repo(self.urllink, branch=self.bch,
                              destination_dir=self.teststmpdir)
