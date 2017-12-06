@@ -83,6 +83,13 @@ class Avago9361(Test):
         self.io_policy = ['direct', 'cached']
         self.stripe = [64, 128, 256, 512, 1024]
         self.state = ['start', 'stop', 'start', 'pause', 'resume']
+        self.list_test = ['online_offline', 'rebuild']
+        if str(self.name) in self.list_test:
+            cmd = "%s /c%d set autorebuild=off" % (self.tool, self.controller)
+            self.check_pass(cmd, "Failed to set auto rebuild off")
+        if 'ghs_dhs' in str(self.name):
+            cmd = "%s /c%d set autorebuild=on" % (self.tool, self.controller)
+            self.check_pass(cmd, "Failed to set auto rebuild on")
 
     def test_createall(self):
         """
@@ -224,6 +231,8 @@ class Avago9361(Test):
         """
         self.vd_create('WT', 'NORA', 'direct', 256)
         for level in [1, 5, 6]:
+            if not self.add_disk:
+                break
             cmd = "%s /c%d/v0 start migrate type=raid%s \
                    option=add drives=%s" % (self.tool, self.controller, level,
                                             self.add_disk.pop())
@@ -274,6 +283,7 @@ class Avago9361(Test):
         cmd = "%s /c%d/%s set %s" % (self.tool, self.controller,
                                      self.on_off, state)
         self.check_pass(cmd, "Failed to set drive to %s state" % state)
+        self.rebuild('progress', self.hotspare)
 
     def jbod_show(self):
         """
@@ -396,6 +406,17 @@ class Avago9361(Test):
         cmd = "%s /c%d/vall set iopolicy=%s" % (self.tool, self.controller,
                                                 iopolicy)
         self.check_pass(cmd, "Failed to change the IO policy")
+
+    def tearDown(self):
+        """
+        Function to reset the chages made for a particular test
+        """
+        if str(self.name) in self.list_test:
+            cmd = "%s /c%d set autorebuild=on" % (self.tool, self.controller)
+            self.check_pass(cmd, "Failed to set auto rebuild on")
+        if 'ghs_dhs' in str(self.name):
+            cmd = "%s /c%d set autorebuild=off" % (self.tool, self.controller)
+            self.check_pass(cmd, "Failed to set auto rebuild off")
 
 
 if __name__ == "__main__":
