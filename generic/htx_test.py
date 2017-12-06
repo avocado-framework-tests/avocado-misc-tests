@@ -56,8 +56,8 @@ class HtxTest(Test):
             packages.extend(['gcc-c++', 'ncurses-devel',
                              'dapl-devel', 'libcxl-devel'])
         elif detected_distro.name == "Ubuntu":
-            packages.extend(['libncurses5', 'g++', 'libdapl-dev', 'ncurses-dev',
-                             'libncurses-dev', 'libcxl-dev'])
+            packages.extend(['libncurses5', 'g++', 'libdapl-dev',
+                             'ncurses-dev', 'libncurses-dev', 'libcxl-dev'])
         else:
             self.cancel("Test not supported in  %s" % detected_distro.name)
 
@@ -115,7 +115,7 @@ class HtxTest(Test):
             if self.smt and time_loop % 3600 == 0:
                 self.run_smt()
             self.log.info("HTX Error logs")
-            process.run('htxcmdline -geterrlog')
+            process.system('htxcmdline -geterrlog', ignore_status=True)
             if os.stat('/tmp/htxerr').st_size != 0:
                 self.fail("check errorlogs for exact error and failure")
             cmd = 'htxcmdline -query  -mdt %s' % self.mdt_file
@@ -129,8 +129,7 @@ class HtxTest(Test):
         for value in self.smt_values:
             process.system("ppc64_cpu --smt=%s" %
                            value, shell=True, ignore_status=True)
-            process.system("ppc64_cpu --smt" %
-                           value, shell=True, ignore_status=True)
+            process.system("ppc64_cpu --smt", shell=True, ignore_status=True)
             process.system("ppc64_cpu --info", ignore_status=True)
 
     def tearDown(self):
