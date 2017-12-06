@@ -17,11 +17,11 @@
 import re
 import time
 import telnetlib
-
 from avocado import Test
 from avocado import main
 from avocado.utils import process
 from avocado.utils import genio, pci
+from avocado.utils import multipath
 
 
 class CommandFailed(Exception):
@@ -54,9 +54,6 @@ class PortBounceTest(Test):
         """
         test parameters
         """
-        self.parameters()
-
-    def parameters(self):
         self.fc_type = self.params.get("type", '*', default=None)
         self.fcoe_fc = self.params.get("fcoe_fc", '*', default=None)
         self.switch_name = self.params.get("switch_name", '*', default=None)
@@ -66,7 +63,7 @@ class PortBounceTest(Test):
                                         '*', default=None).split(",")
         self.pci_bus_addrs = self.params.get("pci_bus_addrs",
                                              '*', default=None).split(",")
-        self.sbt = int(self.params.get("sbt", '*', default=5))
+        self.sbt = int(self.params.get("sbt", '*', default=10))
         self.lbt = int(self.params.get("lbt", '*', default=250))
         self.count = int(self.params.get("count", '*', default="2"))
         self.prompt = ">"
@@ -105,6 +102,9 @@ class PortBounceTest(Test):
         return self._send_only_result(command, response)
 
     def test(self):
+        '''
+        Test method
+        '''
         if self.fc_type == "fcoe":
             if self.fcoe_fc == "yes":
                 test = self.porttoggle_fcoe_fc
@@ -119,6 +119,9 @@ class PortBounceTest(Test):
                       self.failure_list)
 
     def port_bounce(self, test):
+        '''
+        copying the porttoggle to a variable and call it from here
+        '''
         test_ports = []
         for port in self.port_ids:
             test_ports.append(port)
@@ -134,6 +137,9 @@ class PortBounceTest(Test):
 
     @staticmethod
     def porttoggle(self, test_ports, sleep_time):
+        '''
+        port bounce starts here
+        '''
         self.fc_login(self.switch_name, self.userid, self.password)
         switch_info = self.fc_run_command("switchshow")
         self.log.info("Swicth info: %s", switch_info)
@@ -146,10 +152,12 @@ class PortBounceTest(Test):
         except CommandFailed as cf:
             self.log.info("port disable failed for port(s) %s, details: %s",
                           test_ports, str(cf))
-        time.sleep(sleep_time)
         self.verify_port_disable(test_ports)
+        time.sleep(20)
         self.verify_port_toggle_host("Linkdown")
+        self.mpath_fail_check(test_ports)
 
+        time.sleep(sleep_time)
         # Port Enable
         self.log.info("Enable port(s) %s", test_ports)
         try:
@@ -157,14 +165,16 @@ class PortBounceTest(Test):
         except CommandFailed as cf:
             self.log.info("port enable failed for port %s, details: %s",
                           test_ports, str(cf))
-        time.sleep(5)
+        time.sleep(20)
         self.verify_port_enable(test_ports)
         self.verify_port_toggle_host("Online")
+        time.sleep(20)
+        self.mpath_pass_check()
 
     def verify_port_disable(self, test_ports):
-        """
-        Verifies port disable in fc switch
-        """
+        '''
+        checking port link status after disabling the switch port
+        '''
         switch_info = self.fc_run_command("switchshow")
         for port in test_ports:
             port_string = ".*%s.*No_Sync" % port
@@ -174,21 +184,6 @@ class PortBounceTest(Test):
             else:
                 self.log.debug("switch_info: %s", switch_info)
                 msg = "Port %s is failed to disable" % port
-                self.failure_list[port] = msg
-
-    def verify_port_enable(self, test_ports):
-        """
-        Verifies port enable in fc switch
-        """
-        switch_info = self.fc_run_command("switchshow")
-        for port in test_ports:
-            port_string = ".*%s.*Online" % port
-            Obj = re.search(port_string, switch_info)
-            if Obj:
-                self.log.info("Port %s is enabled", port)
-            else:
-                self.log.debug("switch_info: %s", switch_info)
-                msg = "Port %s is failed to enable" % port
                 self.failure_list[port] = msg
 
     def verify_port_toggle_host(self, status):
@@ -209,6 +204,66 @@ class PortBounceTest(Test):
                 self.fail("port state not changed in host expected state: %s, \
                           actual_state: %s", status, state)
 
+    def verify_port_enable(self, test_ports):
+        '''
+        checking port link after enabling the switch port
+        '''
+        switch_info = self.fc_run_command("switchshow")
+        for port in test_ports:
+            port_string = ".*%s.*Online" % port
+            Obj = re.search(port_string, switch_info)
+            if Obj:
+                self.log.info("Port %s is enabled", port)
+            else:
+                self.log.debug("switch_info: %s", switch_info)
+                msg = "Port %s is failed to enable" % port
+                self.failure_list[port] = msg
+
+    def get_multipath(self):
+        '''
+        finds the valid paths and returns list of paths
+        '''
+        wwids = multipath.get_multipath_wwids()
+        mpaths = []
+        mpath_output = process.system_output('multipath -ll',
+                                             ignore_status=True, shell=True)
+        for wwid in wwids:
+            if wwid not in mpath_output:
+                continue
+            for path in multipath.get_paths(wwid):
+                mpaths.append(path)
+        return mpaths
+
+    def mpath_fail_check(self, test_ports):
+        '''
+        checking mpath disk status after disabling the switch port
+        '''
+        mpaths = self.get_multipath()
+        count = 0
+        for path in mpaths:
+            path_stat = multipath.get_path_status(path)
+            if path_stat[0] == 'failed' or path_stat[2] == 'faulty':
+                count += 1
+        self.log.info("total mpaths = %s", len(mpaths))
+        self.log.info("number of ports disabled = %s", len(test_ports))
+        self.log.info("Total Number of ports = %s", len(self.port_ids))
+        self.log.info("count value, paths faild = %s", count)
+        if count != len(mpaths) * len(test_ports) / len(self.port_ids):
+            self.error("all paths did not failed on port disable")
+
+    def mpath_pass_check(self):
+        '''
+        checking mpath disk status after enabling the switch port
+        '''
+        mpaths = self.get_multipath()
+        err_paths = []
+        for path in mpaths:
+            path_stat = multipath.get_path_status(path)
+            if path_stat[0] == 'failed' or path_stat[2] == 'faulty':
+                err_paths.append(path)
+        if err_paths:
+            self.error("following paths failed to recover %s" % err_paths)
+
     def porttoggle_fcoe(self, port, sleep_time):
         pass
 
@@ -223,7 +278,6 @@ class PortBounceTest(Test):
         self.log.debug("Kernel Errors: %s", output)
         # verify given test ports are online after test.
         self.verify_port_enable(self.port_ids)
-        self.verify_port_toggle_host("Online")
 
 
 if __name__ == "__main__":
