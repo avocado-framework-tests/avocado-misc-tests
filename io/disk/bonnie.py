@@ -46,21 +46,36 @@ class Bonnie(Test):
         Source:
          http://www.coker.com.au/bonnie++/experimental/bonnie++-1.03e.tgz
         """
-        fstype = self.params.get('fs', default='ext4')
-        smm = SoftwareManager()
-        deps = ['gcc', 'make']
-        if distro.detect().name == 'Ubuntu':
-            deps.extend(['g++'])
-        else:
-            deps.extend(['gcc-c++'])
-        if fstype == 'btrfs':
-            if distro.detect().name == 'Ubuntu':
-                deps.extend(['btrfs-tools'])
 
-        for package in deps:
-            if not smm.check_installed(package) and not smm.install(package):
-                self.cancel("Fail to install/check %s, which is needed for"
-                            "Bonnie test to run" % package)
+        fstype = self.params.get('fs', default='ext4')
+
+        if process.system("which bonnie++", ignore_status=True):
+            smm = SoftwareManager()
+            if not smm.check_installed('bonnie++') and not smm.check_installed('bonnie++'):
+                '''Install the package from upstream'''
+                deps = ['gcc', 'make']
+                if distro.detect().name == 'Ubuntu':
+                    deps.extend(['g++'])
+                else:
+                    deps.extend(['gcc-c++'])
+                if fstype == 'btrfs':
+                    if distro.detect().name == 'Ubuntu':
+                        deps.extend(['btrfs-tools'])
+
+            for package in deps:
+                if not smm.check_installed(package) and not smm.install(package):
+                    self.cancel("Fail to install/check %s, which is needed for"
+                                "Bonnie test to run" % package)
+
+            tarball = self.fetch_asset('http://www.coker.com.au/bonnie++/'
+                                       'bonnie++-1.03e.tgz', expire='7d')
+            archive.extract(tarball, self.teststmpdir)
+            self.source = os.path.join(self.teststmpdir,
+                                       os.path.basename(tarball.split('.tgz')[0]))
+            os.chdir(self.source)
+            process.run('./configure')
+            build.make(self.source)
+            build.make(self.source, extra_args='install')
 
         self.disk = self.params.get('disk', default=None)
         self.scratch_dir = self.params.get('dir', default=self.srcdir)
@@ -68,15 +83,6 @@ class Bonnie(Test):
                                           default=getpass.getuser())
         self.number_to_stat = self.params.get('number-to-stat', default=2048)
         self.data_size = self.params.get('data_size_to_pass', default=0)
-
-        tarball = self.fetch_asset('http://www.coker.com.au/bonnie++/'
-                                   'bonnie++-1.03e.tgz', expire='7d')
-        archive.extract(tarball, self.teststmpdir)
-        self.source = os.path.join(self.teststmpdir,
-                                   os.path.basename(tarball.split('.tgz')[0]))
-        os.chdir(self.source)
-        process.run('./configure')
-        build.make(self.source)
 
         if self.disk is not None:
             self.part_obj = Partition(self.disk, mountpoint=self.scratch_dir)
@@ -99,8 +105,7 @@ class Bonnie(Test):
         args.append('-n %s' % self.number_to_stat)
         args.append('-s %s' % self.data_size)
         args.append('-u %s' % self.uid_to_use)
-
-        cmd = ('%s/bonnie++ %s' % (self.source, " ".join(args)))
+        cmd = ('bonnie++ %s' % " ".join(args))
         if process.system(cmd, shell=True, ignore_status=True):
             self.fail("test failed")
 
@@ -108,6 +113,8 @@ class Bonnie(Test):
         '''
         Cleanup of disk used to perform this test
         '''
+        if os.listdir(self.source):
+            build.make(self.source, extra_args='clean')
         if self.disk is not None:
             self.log.info("Unmounting disk %s on directory %s", self.disk,
                           self.scratch_dir)
