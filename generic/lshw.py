@@ -30,7 +30,7 @@ class Lshwrun(Test):
     machines (PowerMac G4 is known to work).
     """
     interface = process.system_output("ip route show")
-    active_interface = process.system_output("ifconfig | head -1 | cut -d':' -f1", shell=True).strip()
+    active_interface = process.system_output("ifconfig | head -1 | cut -d':' -f1", shell=True).strip().split()[0]
     fail_cmd = list()
 
     def run_cmd(self, cmd):
