@@ -56,8 +56,8 @@ class HtxTest(Test):
             packages.extend(['gcc-c++', 'ncurses-devel',
                              'dapl-devel', 'libcxl-devel'])
         elif detected_distro.name == "Ubuntu":
-            packages.extend(['libncurses5', 'g++', 'libdapl-dev', 'ncurses-dev',
-                             'libncurses-dev', 'libcxl-dev'])
+            packages.extend(['libncurses5', 'g++', 'libdapl-dev',
+                             'ncurses-dev', 'libncurses-dev', 'libcxl-dev'])
         else:
             self.cancel("Test not supported in  %s" % detected_distro.name)
 
