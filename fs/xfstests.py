@@ -58,9 +58,13 @@ class Xfstests(Test):
                     'make', 'xfsprogs', 'gawk']
         if 'Ubuntu' in self.detected_distro.name:
             packages.extend(
-                ['xfslibs-dev', 'uuid-dev', 'libtool-bin', 'libuuid1',
+                ['xfslibs-dev', 'uuid-dev', 'libuuid1',
                  'libattr1-dev', 'libacl1-dev', 'libgdbm-dev',
                  'uuid-runtime', 'libaio-dev', 'fio', 'dbench', 'btrfs-tools'])
+            if '14' in self.detected_distro.version:
+                packages.extend(['libtool'])
+            else:
+                packages.extend(['libtool-bin'])
 
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
