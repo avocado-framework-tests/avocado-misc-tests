@@ -25,6 +25,7 @@ from avocado import Test
 from avocado.utils import process
 from avocado.utils import pci
 from avocado.utils import genio
+from avocado.utils import distro
 
 EEH_HIT = 0
 EEH_MISS = 1
@@ -54,6 +55,8 @@ class PowerNVEEH(Test):
         """
         Gets the console and set-up the machine for test
         """
+        if 'ppc' not in distro.detect().arch:
+            self.cancel("Processor is not ppc64")
         output = genio.read_file("/sys/kernel/debug/powerpc/eeh_enable")\
             .strip()
         if output != '0x1':
