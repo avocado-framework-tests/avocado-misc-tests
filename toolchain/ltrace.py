@@ -46,7 +46,7 @@ class Ltrace(Test):
         dist_name = dist.name.lower()
 
         packages = ['gcc', 'wget', 'autoconf', 'automake',
-                    'dejagnu', 'binutils']
+                    'dejagnu', 'binutils', 'patch']
 
         if dist_name == 'suse':
             packages.extend(['libdw-devel', 'libelf-devel', 'git-core',
