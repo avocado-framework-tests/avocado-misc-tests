@@ -15,7 +15,7 @@
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 
 import os
-from shutil import copyfile
+import shutil
 from avocado import Test
 from avocado import main
 from avocado.utils import process, distro
@@ -173,8 +173,24 @@ class RASTools(Test):
                                         "head -1", shell=True).strip()
         if path_db:
             copyfile_path = os.path.join(self.outputdir, 'vpd.db')
-            copyfile(path_db, copyfile_path)
+            shutil.copyfile(path_db, copyfile_path)
             self.run_cmd("vpdupdate --path=%s" % copyfile_path)
+        if os.path.exists('/var/lib/lsvpd/run.vpdupdate'):
+            path = '/var/lib/lsvpd/run.vpdupdate'
+        elif os.path.exists('/run/run.vpdupdate'):
+            path = '/run/run.vpdupdate'
+        move_path = '/root/run.vpdupdate'
+        shutil.move(path, move_path)
+        self.log.info("Running vpdupdate after removing run.vpdupdate")
+        self.run_cmd("vpdupdate")
+        shutil.move(move_path, path)
+        process.run("rm -f /var/lib/lsvpd/vpd.db; touch /var/lib/lsvpd/vpd.db",
+                    shell=True)
+        for command in ["lsvpd", "lscfg", "lsmcode"]:
+            if not process.system_output("%s | grep run | grep vpdupdate" % command,
+                                         shell=True, ignore_status=True).strip():
+                self.fail("Error message is not displayed when vpd.db is corrupted.")
+        self.run_cmd("vpdupdate")
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in vpdupdate tool "
                       "verification" % self.is_fail)
@@ -193,7 +209,7 @@ class RASTools(Test):
                                         "head -1", shell=True).strip()
         if path_db:
             copyfile_path = os.path.join(self.outputdir, 'vpd.db')
-            copyfile(path_db, copyfile_path)
+            shutil.copyfile(path_db, copyfile_path)
             self.run_cmd("lsvpd --path=%s" % copyfile_path)
         path_tar = process.system_output("find /var/lib/lsvpd/ -iname vpd.*.gz"
                                          " | head -1", shell=True).strip()
@@ -220,7 +236,7 @@ class RASTools(Test):
                                         "head -1", shell=True).strip()
         if path_db:
             copyfile_path = os.path.join(self.outputdir, 'vpd.db')
-            copyfile(path_db, copyfile_path)
+            shutil.copyfile(path_db, copyfile_path)
             self.run_cmd("lscfg --data=%s" % copyfile_path)
         path_tar = process.system_output("find /var/lib/lsvpd/ -iname vpd.*.gz"
                                          " | head -1", shell=True).strip()
