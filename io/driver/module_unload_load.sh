@@ -29,13 +29,13 @@ PASS=""
 
 
 module_load() {
-    echo "Reloading driver $1"
     modprobe $1
     if [[  $? != 0  ]]; then
         echo "Failed to load driver module $1"
         ERR="$ERR,load-$1"
         break;
     fi
+    echo "Reloaded driver $1"
     echo
 }
 
@@ -61,7 +61,7 @@ for driver in $DRIVERS; do
     echo "Starting driver module load/unload test for $driver"
     echo
     for j in $(seq 1 $ITERATIONS); do
-        echo $BUILT_IN_DRIVERS | grep $driver > /dev/null
+        echo $BUILT_IN_DRIVERS | grep -w $driver > /dev/null
         if [[ $? == "0" ]]; then
             echo $driver" is builtin and it cannot be unloaded"
             break;
