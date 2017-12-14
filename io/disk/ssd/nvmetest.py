@@ -61,6 +61,18 @@ class NVMeTest(Test):
         if 'firmware_upgrade' in str(self.name) and not self.firmware_url:
             self.cancel("firmware url not gien")
 
+        test_dic = {'compare': 'Compare', 'formatnamespace': 'Format NVM',
+                    'dsm': 'Data Set Management',
+                    'writezeroes': 'Write Zeroes',
+                    'firmware_upgrade': 'FW Commit and Download',
+                    'writeuncorrectable': 'Write Uncorrectable'}
+        for key, value in test_dic.iteritems():
+            if key in str(self.name):
+                cmd = "nvme id-ctrl %s -H" % self.id_ns
+                if "%s Supported" % value not in \
+                        process.system_output(cmd, shell=True):
+                    self.cancel("%s is not supported" % value)
+
     def get_firmware_version(self):
         """
         Returns the firmware verison.
