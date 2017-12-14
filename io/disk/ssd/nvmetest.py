@@ -166,7 +166,7 @@ class NVMeTest(Test):
         """
         flush data on controller.
         """
-        cmd = 'nvme flush %s -n 1' % self.device
+        cmd = 'nvme flush %s' % self.id_ns
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Flush failed")
 
@@ -174,7 +174,7 @@ class NVMeTest(Test):
         """
         Write zeroes command to the device.
         """
-        cmd = 'nvme write-zeroes %s -n 1' % self.device
+        cmd = 'nvme write-zeroes %s' % self.id_ns
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Writing Zeroes failed")
 
@@ -182,7 +182,7 @@ class NVMeTest(Test):
         """
         Write uncorrectable command to the device.
         """
-        cmd = 'nvme write-uncor %s -n 1' % self.device
+        cmd = 'nvme write-uncor %s' % self.id_ns
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Writing Uncorrectable failed")
 
@@ -190,7 +190,7 @@ class NVMeTest(Test):
         """
         The Dataset Management command test.
         """
-        cmd = 'nvme dsm %s -n 1 -a 1 -b 1 -s 1 -d -w -r' % self.device
+        cmd = 'nvme dsm %s -a 1 -b 1 -s 1 -d -w -r' % self.id_ns
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Subsystem reset failed")
 
