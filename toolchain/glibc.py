@@ -35,10 +35,17 @@ class Glibc(Test):
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
                 self.error(package + ' is needed for the test to be run')
-        url = 'https://github.com/bminor/glibc/archive/master.zip'
-        tarball = self.fetch_asset("glibc.zip", locations=[url], expire='7d')
-        archive.extract(tarball, self.srcdir)
-        glibc_dir = os.path.join(self.srcdir, "glibc-master")
+        run_type = self.params.get('type', default='upstream')
+        if run_type == "upstream":
+            url = 'https://github.com/bminor/glibc/archive/master.zip'
+            tarball = self.fetch_asset("glibc.zip", locations=[url], expire='7d')
+            archive.extract(tarball, self.srcdir)
+            glibc_dir = os.path.join(self.srcdir, "glibc-master")
+        elif run_type == "distro":
+            glibc_dir = os.path.join(self.srcdir, "glibc-distro")
+            if not os.path.exists(glibc_dir):
+                os.makedirs(glibc_dir)
+            glibc_dir = sm.get_source("glibc", glibc_dir)
         os.chdir(self.build_dir)
         process.run(glibc_dir + '/configure --prefix=%s' % self.build_dir,
                     ignore_status=True, sudo=True)
