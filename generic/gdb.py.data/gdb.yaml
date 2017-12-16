@@ -1,0 +1,7 @@
+setup:
+  run_type: !mux
+    upstream:
+        type: "upstream"
+        gdb_version: "7.11"
+    distro:
+        type: "distro"
