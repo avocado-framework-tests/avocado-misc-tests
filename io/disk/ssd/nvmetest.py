@@ -61,6 +61,18 @@ class NVMeTest(Test):
         if 'firmware_upgrade' in str(self.name) and not self.firmware_url:
             self.cancel("firmware url not gien")
 
+        test_dic = {'compare': 'Compare', 'formatnamespace': 'Format NVM',
+                    'dsm': 'Data Set Management',
+                    'writezeroes': 'Write Zeroes',
+                    'firmware_upgrade': 'FW Commit and Download',
+                    'writeuncorrectable': 'Write Uncorrectable'}
+        for key, value in test_dic.iteritems():
+            if key in str(self.name):
+                cmd = "nvme id-ctrl %s -H" % self.id_ns
+                if "%s Supported" % value not in \
+                        process.system_output(cmd, shell=True):
+                    self.cancel("%s is not supported" % value)
+
     def get_firmware_version(self):
         """
         Returns the firmware verison.
@@ -154,7 +166,7 @@ class NVMeTest(Test):
         """
         flush data on controller.
         """
-        cmd = 'nvme flush %s -n 1' % self.device
+        cmd = 'nvme flush %s' % self.id_ns
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Flush failed")
 
@@ -162,7 +174,7 @@ class NVMeTest(Test):
         """
         Write zeroes command to the device.
         """
-        cmd = 'nvme write-zeroes %s -n 1' % self.device
+        cmd = 'nvme write-zeroes %s' % self.id_ns
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Writing Zeroes failed")
 
@@ -170,7 +182,7 @@ class NVMeTest(Test):
         """
         Write uncorrectable command to the device.
         """
-        cmd = 'nvme write-uncor %s -n 1' % self.device
+        cmd = 'nvme write-uncor %s' % self.id_ns
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Writing Uncorrectable failed")
 
@@ -178,7 +190,7 @@ class NVMeTest(Test):
         """
         The Dataset Management command test.
         """
-        cmd = 'nvme dsm %s -n 1 -a 1 -b 1 -s 1 -d -w -r' % self.device
+        cmd = 'nvme dsm %s -a 1 -b 1 -s 1 -d -w -r' % self.id_ns
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Subsystem reset failed")
 
