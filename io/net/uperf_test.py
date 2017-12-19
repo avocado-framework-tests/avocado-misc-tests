@@ -69,8 +69,8 @@ class Uperf(Test):
                                         self.peer_ip)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.cancel("unable to copy the uperf into peer machine")
-        cmd = "ssh %s@%s \"cd /tmp/uperf-master;./configure ppc64le;make\""\
-              % (self.peer_user, self.peer_ip)
+        cmd = "ssh %s@%s \"cd /tmp/uperf-master;autoreconf -fi;./configure " \
+              "ppc64le;make\"" % (self.peer_user, self.peer_ip)
         if process.system(cmd, ignore_status=True, shell=True, sudo=True):
             self.cancel("Unable to compile Uperf into peer machine")
         self.uperf_run = str(self.params.get("UPERF_SERVER_RUN", default=0))
@@ -80,6 +80,7 @@ class Uperf(Test):
             obj = process.SubProcess(cmd, verbose=False, shell=True)
             obj.start()
         os.chdir(self.uperf_dir)
+        process.system('autoreconf -fi', shell=True)
         process.system('./configure ppc64le', shell=True)
         build.make(self.uperf_dir)
         self.uperf = os.path.join(self.uperf_dir, 'doc')
