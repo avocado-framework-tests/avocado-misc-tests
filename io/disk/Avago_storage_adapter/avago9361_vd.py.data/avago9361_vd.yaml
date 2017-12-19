@@ -11,10 +11,10 @@ raid_level: !mux
         raid_level: r0
     r1:
         raid_level: r1
-    r5:
-        raid_level: r5
-    r6:
-        raid_level: r6
+#    r5:
+#        raid_level: r5
+#    r6:
+#        raid_level: r6
 #    r00:
 #        raid_level: r00
 #    r10:
