@@ -1,0 +1,6 @@
+run_type: !mux
+    upstream:
+        url: 'ftp://sourceware.org/pub/valgrind/valgrind-3.13.0.tar.bz2'
+        type: 'upstream'
+    distro:
+        type: 'distro'

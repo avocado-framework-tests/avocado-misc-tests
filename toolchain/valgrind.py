@@ -47,12 +47,19 @@ class Valgrind(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        tarball = self.fetch_asset(
-                "ftp://sourceware.org/pub/valgrind/valgrind-3.13.0.tar.bz2")
-        archive.extract(tarball, self.srcdir)
-        version = os.path.basename(tarball.split('.tar.')[0])
-        self.sourcedir = os.path.join(self.srcdir, version)
-
+        run_type = self.params.get('type', default='upstream')
+        if run_type == "upstream":
+            url = self.params.get('url', default="ftp://sourceware.org/pub/"
+                                  "valgrind/valgrind-3.13.0.tar.bz2")
+            tarball = self.fetch_asset(url)
+            archive.extract(tarball, self.srcdir)
+            version = os.path.basename(tarball.split('.tar.')[0])
+            self.sourcedir = os.path.join(self.srcdir, version)
+        elif run_type == "distro":
+            self.sourcedir = os.path.join(self.srcdir, 'valgrind-distro')
+            if not os.path.exists(self.sourcedir):
+                os.makedirs(self.sourcedir)
+            self.sourcedir = smm.get_source('valgrind', self.sourcedir)
         os.chdir(self.sourcedir)
         process.run('./configure', ignore_status=True, sudo=True)
 
