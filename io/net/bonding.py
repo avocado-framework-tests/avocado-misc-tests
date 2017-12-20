@@ -13,9 +13,12 @@
 #
 # Copyright: 2016 IBM
 # Author: Prudhvi Miryala<mprudhvi@linux.vnet.ibm.com>
-# bonding test
-# Channel bonding enables two or more network interfaces to act as one,
-# simultaneously increasing the bandwidth and providing redundancy.
+
+"""
+bonding test
+Channel bonding enables two or more network interfaces to act as one,
+simultaneously increasing the bandwidth and providing redundancy.
+"""
 
 
 import time
@@ -23,8 +26,8 @@ import os
 import socket
 import fcntl
 import struct
-from avocado import main
 import netifaces
+from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import distro
@@ -43,7 +46,7 @@ class Bonding(Test):
         To check and install dependencies for the test
         '''
         detected_distro = distro.detect()
-        sm = SoftwareManager()
+        smm = SoftwareManager()
         depends = []
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
@@ -55,7 +58,7 @@ class Bonding(Test):
         else:
             depends.extend(["openssh", "iputils"])
         for pkg in depends:
-            if not sm.check_installed(pkg) and not sm.install(pkg):
+            if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
         self.user = self.params.get("user_name", default="root")
@@ -71,15 +74,15 @@ class Bonding(Test):
         self.peer_first_ipinterface = self.params.get("peer_ip", default="")
         if not self.peer_interfaces or self.peer_first_ipinterface == "":
             self.cancel("peer machine should available")
-        msg = "ip addr show  | grep %s | grep -oE '[^ ]+$'"\
+        msg = "ip addr show  | grep %s | grep -oE '[^ ]+$' | head -1"\
               % self.peer_first_ipinterface
         cmd = "ssh %s@%s %s" % (self.user, self.peer_first_ipinterface, msg)
-        self.peer_first_interface = process.system_output(cmd, shell=True
-                                                          ).strip()
+        self.peer_first_interface = process.system_output(cmd, shell=True)
         if self.peer_first_interface == "":
             self.fail("test failed because peer interface can not retrieved")
         self.bond_name = self.params.get("bond_name", default="tempbond")
         self.bond_status = "cat /proc/net/bonding/%s" % self.bond_name
+        self.bond_dir = os.path.join("/sys/class/net/", self.bond_name)
         self.mode = self.params.get("bonding_mode", default="")
         if self.mode == "":
             self.cancel("test skipped because mode not specified")
@@ -105,11 +108,10 @@ class Bonding(Test):
             self.peer_ips.append(peer_ip)
         self.peer_interfaces.insert(0, self.peer_first_interface)
         self.net_mask = []
-        st = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        stt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         for val in self.host_interfaces:
-            mask = socket.inet_ntoa(fcntl.ioctl(st.fileno(), 0x891b,
-                                                struct.pack('256s',
-                                                            val))[20:24]).strip('\n')
+            tmp = fcntl.ioctl(stt.fileno(), 0x891b, struct.pack('256s', val))
+            mask = socket.inet_ntoa(tmp[20:24]).strip('\n')
             self.net_mask.append(mask)
         self.bonding_slave_file = "/sys/class/net/%s/bonding/slaves"\
                                   % self.bond_name
@@ -164,7 +166,7 @@ class Bonding(Test):
             if process.system(peer_cmd, shell=True, ignore_status=True) != 0:
                 self.log.info("bond removing command failed in peer machine")
 
-    def ping_check(self, arg1):
+    def ping_check(self):
         '''
         ping check
         '''
@@ -180,15 +182,15 @@ class Bonding(Test):
         '''
         if len(self.host_interfaces) > 1:
             for interface in self.host_interfaces:
-                self.log.info("Failing interface %s for mode %s"
-                              % (interface, arg1))
+                self.log.info("Failing interface %s for mode %s",
+                              interface, arg1)
                 cmd = "ip link set %s down" % interface
                 if process.system(cmd, shell=True, ignore_status=True) != 0:
                     self.fail("bonding not working when trying to down the\
                                interface %s " % interface)
                 time.sleep(self.sleep_time)
-                if self.ping_check(arg1):
-                    self.log.info("Ping passed for Mode %s" % arg1)
+                if self.ping_check():
+                    self.log.info("Ping passed for Mode %s", arg1)
                 else:
                     self.fail("ping failed in Mode %s, check \
                                bonding configuration" % arg1)
@@ -205,14 +207,14 @@ class Bonding(Test):
                          slave failover in Bonding")
 
         self.log.info("\n----------------------------------------")
-        self.log.info("Failing all interfaces for mode %s" % arg1)
+        self.log.info("Failing all interfaces for mode %s", arg1)
         self.log.info("----------------------------------------")
         for interface in self.host_interfaces:
             cmd = "ip link set %s down" % interface
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.fail("Could not bring down the interface %s " % interface)
             time.sleep(self.sleep_time)
-        if not self.ping_check(arg1):
+        if not self.ping_check():
             self.log.info("Ping to Bond interface failed. This is expected")
         process.system_output(self.bond_status, shell=True, verbose=True)
         for interface in self.host_interfaces:
@@ -254,8 +256,7 @@ class Bonding(Test):
                 time.sleep(2)
             cmd = "%s | grep 'Bonding Mode'|cut -d ':' -f 2" % self.bond_status
             bond_name_val = process.system_output(cmd, shell=True).strip('\n')
-            self.log.info("Trying bond mode %s [ %s ]"
-                          % (arg2, bond_name_val))
+            self.log.info("Trying bond mode %s [ %s ]", arg2, bond_name_val)
             for ifs in self.host_interfaces:
                 cmd = "ip link set %s up" % ifs
                 if process.system(cmd, shell=True, ignore_status=True) != 0:
@@ -264,7 +265,7 @@ class Bonding(Test):
                   % (self.host_ips[0], self.net_mask[0],
                      self.bond_name, self.bond_name)
             process.system(cmd, shell=True, ignore_status=True)
-            for i in range(0, 600, 60):
+            for _ in range(0, 600, 60):
                 if 'state UP' in process.system_output("ip link \
                      show %s" % self.bond_name, shell=True):
                     self.log.info("Bonding setup is successful on\
@@ -316,18 +317,17 @@ class Bonding(Test):
         cmd = "ssh %s@%s %s" % (self.user, self.peer_first_ipinterface, msg)
         if process.system(cmd, shell=True, ignore_status=True) == 0:
             self.fail("bond name already exists on peer machine")
-        self.bond_dir = os.path.join("/sys/class/net/", self.bond_name)
         if os.path.isdir(self.bond_dir):
             self.fail("bond name already exists on local machine")
-        self.log.info("TESTING FOR MODE %s" % self.mode)
+        self.log.info("TESTING FOR MODE %s", self.mode)
         self.log.info("-------------------------------------------------")
         if self.peer_bond_needed:
             self.bond_setup("peer", "")
         self.bond_setup("local", self.mode)
         process.run(self.bond_status, shell=True, verbose=True)
-        self.ping_check(self.mode)
+        self.ping_check()
         self.bond_fail(self.mode)
-        self.log.info("Mode %s OK" % self.mode)
+        self.log.info("Mode %s OK", self.mode)
 
     def tearDown(self):
         '''
@@ -339,15 +339,15 @@ class Bonding(Test):
             cmd = "ip addr add %s/%s dev %s;ip link set %s up"\
                   % (val2, val3, val1, val1)
             process.system(cmd, shell=True, ignore_status=True)
-            for i in range(0, 600, 60):
+            for _ in range(0, 600, 60):
                 if 'state UP' in process.system_output("ip link \
                      show %s" % val1, shell=True):
-                    self.log.info("Interface %s is up" % val1)
+                    self.log.info("Interface %s is up", val1)
                     break
                 time.sleep(60)
             else:
                 self.log.info("Interface %s in not up\
-                                   in the host machine" % val1)
+                                   in the host machine", val1)
         if self.gateway:
             cmd = 'ip route add default via %s dev %s' % \
                 (self.gateway, self.host_interfaces[0])
