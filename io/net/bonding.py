@@ -117,6 +117,10 @@ class Bonding(Test):
                                                 default=False)
         self.peer_wait_time = self.params.get("peer_wait_time", default=5)
         self.sleep_time = int(self.params.get("sleep_time", default=5))
+        cmd = "route -n | grep %s | grep -w UG | awk "\
+              "'{ print $2 }'" % self.host_interfaces[0]
+        self.gateway = process.system_output(
+            '%s' % cmd, shell=True)
 
     def bond_remove(self, arg1):
         '''
@@ -269,6 +273,11 @@ class Bonding(Test):
                 time.sleep(60)
             else:
                 self.fail("Bonding setup on local machine has failed")
+            if self.gateway:
+                cmd = 'ip route add default via %s dev %s' % \
+                    (self.gateway, self.bond_name)
+                process.system(cmd, shell=True, ignore_status=True)
+
         else:
             self.log.info("Configuring Bonding on Peer machine")
             self.log.info("------------------------------------------")
@@ -339,6 +348,11 @@ class Bonding(Test):
             else:
                 self.log.info("Interface %s in not up\
                                    in the host machine" % val1)
+        if self.gateway:
+            cmd = 'ip route add default via %s dev %s' % \
+                (self.gateway, self.host_interfaces[0])
+            process.system(cmd, shell=True, ignore_status=True)
+
         if self.peer_bond_needed:
             self.bond_remove("peer")
             for val1, val2, val3 in map(None, self.peer_interfaces,
