@@ -69,15 +69,23 @@ class Ltrace(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("Fail to install %s required for this test." %
                             package)
+        run_type = self.params.get("type", default="upstream")
+        if run_type == "upstream":
+            source = self.params.get('url', default="git://git.debian.org/git/"
+                                     "collab-maint/ltrace.git")
+            git.get_repo(source, destination_dir=os.path.join(
+                self.srcdir, 'ltrace'))
 
-        # Source: git clone git://git.debian.org/git/collab-maint/ltrace.git
-        git.get_repo('git://git.debian.org/git/collab-maint/ltrace.git',
-                     destination_dir=os.path.join(self.srcdir, 'ltrace'))
+            self.src_lt = os.path.join(self.srcdir, "ltrace")
+            os.chdir(self.src_lt)
+            process.run('patch -p1 < %s' %
+                        os.path.join(self.datadir, 'ltrace.patch'), shell=True)
+        elif run_type == "distro":
+            self.src_lt = os.path.join(self.srcdir, "ltrace-distro")
+            if not os.path.exists(self.src_lt):
+                self.src_lt = smm.get_source("ltrace", self.src_lt)
+            os.chdir(self.src_lt)
 
-        self.src_lt = os.path.join(self.srcdir, "ltrace")
-        os.chdir(self.src_lt)
-        process.run('patch -p1 < %s' %
-                    os.path.join(self.datadir, 'ltrace.patch'), shell=True)
         process.run('./autogen.sh')
         process.run('./configure')
         build.make(self.src_lt)
