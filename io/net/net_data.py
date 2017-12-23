@@ -22,7 +22,7 @@ test lro and gro and interface
 
 import time
 import netifaces
-
+from netifaces import AF_INET
 from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
@@ -58,29 +58,31 @@ class NetDataTest(Test):
             self.cancel("%s interface is not available" % interface)
         mtu_list = self.params.get("size_val", default=1500)
         self.mtu_list = mtu_list.split()
-        self.interface = interface
+        self.iface = interface
         self.peer = self.params.get("peer_ip")
-        self.eth = "ethtool %s | grep 'Link detected:'" % self.interface
+        self.eth = "ethtool %s | grep 'Link detected:'" % self.iface
         self.eth_state = process.system_output(self.eth, shell=True)
+        if AF_INET in netifaces.ifaddresses(self.iface):
+            self.ip_set = netifaces.ifaddresses(self.iface)[AF_INET][0]['addr']
 
     def teststatistics(self):
         '''
          check statistics of interface
         '''
         self.log.info("Statistic incrementer")
-        rx_cmd = "cat /sys/class/net/%s/statistics/rx_packets" % self.interface
-        tx_cmd = "cat /sys/class/net/%s/statistics/tx_packets" % self.interface
+        rx_cmd = "cat /sys/class/net/%s/statistics/rx_packets" % self.iface
+        tx_cmd = "cat /sys/class/net/%s/statistics/tx_packets" % self.iface
         rx_stat = int(process.system_output(rx_cmd, shell=True))
         tx_stat = int(process.system_output(tx_cmd, shell=True))
         # flooding ICMP packets to peer system through interface
-        tmp = "ping -c 20 -f %s -I %s" % (self.peer, self.interface)
+        tmp = "ping -c 20 -f %s -I %s" % (self.peer, self.iface)
         process.system(tmp, shell=True)
         time.sleep(3)
         rx_stat_after = int(process.system_output(rx_cmd, shell=True))
         tx_stat_after = int(process.system_output(tx_cmd, shell=True))
         # check interface working or not
         if (rx_stat >= rx_stat_after) and (tx_stat >= tx_stat_after):
-            self.fail("stat not incremented.wrong with IF %s" % self.interface)
+            self.fail("stat not incremented.wrong with IF %s" % self.iface)
 
     def testbigping(self):
         '''
@@ -94,10 +96,10 @@ class NetDataTest(Test):
         except process.CmdError:
             self.fail("failed to get info of peer interface")
         try:
-            mtuval = process.system_output("ip link show %s" % self.interface,
+            mtuval = process.system_output("ip link show %s" % self.iface,
                                            shell=True).split()[4]
         except process.CmdError:
-            self.fail("failed to get mtu value of %s" % self.interface)
+            self.fail("failed to get mtu value of %s" % self.iface)
         for mtu in self.mtu_list:
             mtu_set = False
             self.log.info("trying with mtu %s", mtu)
@@ -112,7 +114,7 @@ class NetDataTest(Test):
                 self.log.debug("setting mtu value %s in peer failed", mtu)
             else:
                 mtu_set = True
-            con_cmd = "ip link set %s mtu %s" % (self.interface, mtu)
+            con_cmd = "ip link set %s mtu %s" % (self.iface, mtu)
             try:
                 process.system(con_cmd, shell=True)
             except process.CmdError:
@@ -122,13 +124,14 @@ class NetDataTest(Test):
             time.sleep(10)
             if mtu_set:
                 mtu = int(mtu) - 28
-                cmd_ping = "ping -i 0.1 -c 2 -s %s %s" % (mtu, self.peer)
+                cmd_ping = "ping -i 0.1 -c 30 -s %s %s" % (mtu, self.peer)
                 ret = process.system(cmd_ping, shell=True, ignore_status=True)
                 if ret != 0:
                     errors.append(str(int(mtu) + 28))
             else:
                 errors.append(mtu)
-            con_cmd = "ip link set %s mtu %s" % (self.interface, mtuval)
+
+            con_cmd = "ip link set %s mtu %s" % (self.iface, mtuval)
             try:
                 process.system(con_cmd, shell=True)
             except process.CmdError:
@@ -150,8 +153,8 @@ class NetDataTest(Test):
         check gro is enabled or not
         '''
         self.log.info("Generic Receive Offload")
-        tmp_on = "ethtool -K %s gro on" % self.interface
-        tmp_off = "ethtool -K %s gro off" % self.interface
+        tmp_on = "ethtool -K %s gro on" % self.iface
+        tmp_off = "ethtool -K %s gro off" % self.iface
         ret = process.system(tmp_on, shell=True)
         if ret == 0:
             ret = process.system("ping -c 1 %s" % self.peer, shell=True)
@@ -169,13 +172,13 @@ class NetDataTest(Test):
         check lro is enabled or not
         '''
         self.log.info("Largest Receive Offload")
-        tmp = "ethtool -K %s lro off" % self.interface
+        tmp = "ethtool -K %s lro off" % self.iface
         if process.system(tmp, shell=True) != 0:
             self.fail("LRO Test failed")
         ret = process.system("ping -c 1 %s" % self.peer, shell=True)
         if ret != 0:
             self.fail("lro test failed")
-            msg = "ethtool -K %s lro on" % self.interface
+            msg = "ethtool -K %s lro on" % self.iface
             if process.system(msg, shell=True) != 0:
                 self.fail("LRO Test failed")
                 ret = process.system("ping -c 1 %s" % self.peer, shell=True)
@@ -186,10 +189,10 @@ class NetDataTest(Test):
         '''
          Waits for the interface to come up
         '''
-        for i in range(0, 600, 5):
+        for _ in range(0, 600, 5):
             if 'UP' or 'yes' in\
                     process.system_output(cmd, shell=True, ignore_status=True):
-                self.log.info("%s is up" % self.interface)
+                self.log.info("%s is up", self.iface)
                 return True
             time.sleep(5)
         return False
@@ -198,8 +201,8 @@ class NetDataTest(Test):
         '''
          test the interface
         '''
-        if_down = "ip link set %s down" % self.interface
-        if_up = "ip link set %s up" % self.interface
+        if_down = "ip link set %s down" % self.iface
+        if_up = "ip link set %s up" % self.iface
         # down the interface
         process.system(if_down, shell=True)
         # check the status of interface through ethtool
@@ -207,7 +210,7 @@ class NetDataTest(Test):
         if 'yes' in ret:
             self.fail("interface test failed")
         # check the status of interface through ip link show
-        ip_link = "ip link show %s | head -1" % self.interface
+        ip_link = "ip link show %s | head -1" % self.iface
         ret = process.system_output(ip_link, shell=True)
         if 'UP' in ret:
             self.fail("interface test failed")
@@ -227,9 +230,12 @@ class NetDataTest(Test):
         '''
         self.log.info('setting intial state')
         if 'yes' in self.eth_state:
-            process.system("ifconfig %s up" % self.interface, shell=True)
+            process.system("ifconfig %s up" % self.iface, shell=True)
+            if self.ip_set:
+                process.system("ifdown %s" % self.iface, shell=True)
+                process.system("ifup %s" % self.iface, shell=True)
         else:
-            process.system("ifconfig %s down" % self.interface, shell=True)
+            process.system("ifconfig %s down" % self.iface, shell=True)
 
 
 if __name__ == "__main__":
