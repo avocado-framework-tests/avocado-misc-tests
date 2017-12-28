@@ -118,7 +118,8 @@ class DmaMemtest(Test):
         for j in range(self.sim_cps):
             tmp_dir = 'linux.%s' % j
             if self.parallel:
-                os.mkdir(tmp_dir)
+                if not os.path.exists(tmp_dir):
+                    os.mkdir(tmp_dir)
                 # Start parallel process
                 tar_cmd = 'tar jxf ' + self.tarball + ' -C ' + tmp_dir
                 self.log.info("Unpacking tarball to %s", tmp_dir)
