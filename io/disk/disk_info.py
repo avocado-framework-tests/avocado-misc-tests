@@ -30,6 +30,7 @@ from avocado.utils import distro
 from avocado.utils.partition import Partition
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.process import CmdError
+from avocado.utils.partition import PartitionError
 
 
 class DiskInfo(Test):
@@ -179,7 +180,12 @@ class DiskInfo(Test):
         self.part_obj.mkfs(self.fstype)
         self.log.info("Mounting disk %s on directory %s",
                       self.disk, self.dir)
-        self.part_obj.mount()
+        try:
+            self.part_obj.mount()
+        except PartitionError:
+            msg.append("failed to mount %s fs on %s to %s" % (self.fstype,
+                                                              self.disk,
+                                                              self.dir))
 
         # Get UUID of the disk for each filesystem mount
         cmd = "blkid %s | cut -d '=' -f 2" % self.disk
@@ -252,6 +258,10 @@ class DiskInfo(Test):
             if self.disk is not None:
                 self.log.info("Unmounting directory %s", self.dir)
                 self.part_obj.unmount()
+        self.log.info("Removing the filesystem created on %s", self.disk)
+        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk
+        if process.system(delete_fs, shell=True, ignore_status=True):
+            self.fail("Failed to delete filesystem on %s", self.disk)
 
 
 if __name__ == "__main__":
