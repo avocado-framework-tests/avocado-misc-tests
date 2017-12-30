@@ -89,7 +89,7 @@ class Bonding(Test):
             cmd = "ip -f inet -o addr show %s | awk '{print $4}' | cut -d /\
                   -f1" % val
             local_ip = process.system_output(cmd, shell=True).strip()
-            if local_ip == "":
+            if local_ip == "" and val == self.host_interfaces[0]:
                 self.fail("test failed because local ip can not retrieved")
             self.host_ips.append(local_ip)
         for val in self.peer_interfaces:
@@ -100,16 +100,18 @@ class Bonding(Test):
             peer_ip = process.system_output(cmd, shell=True).strip()
             cmd = 'echo %s | cut -d " " -f4' % peer_ip
             peer_ip = process.system_output(cmd, shell=True).strip()
-            if peer_ip == "":
+            if peer_ip == "" and val == self.peer_first_interface:
                 self.fail("test failed because peer ip can not retrieved")
             self.peer_ips.append(peer_ip)
         self.peer_interfaces.insert(0, self.peer_first_interface)
         self.net_mask = []
         st = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        for val in self.host_interfaces:
-            mask = socket.inet_ntoa(fcntl.ioctl(st.fileno(), 0x891b,
-                                                struct.pack('256s',
-                                                            val))[20:24]).strip('\n')
+        for val1, val2 in map(None, self.host_interfaces, self.host_ips):
+            mask = ""
+            if val2:
+                tmp = fcntl.ioctl(st.fileno(), 0x891b, struct.pack('256s',
+                                                                   val1))
+                mask = socket.inet_ntoa(tmp[20:24]).strip('\n')
             self.net_mask.append(mask)
         self.bonding_slave_file = "/sys/class/net/%s/bonding/slaves"\
                                   % self.bond_name
@@ -117,6 +119,10 @@ class Bonding(Test):
                                                 default=False)
         self.peer_wait_time = self.params.get("peer_wait_time", default=5)
         self.sleep_time = int(self.params.get("sleep_time", default=5))
+        cmd = "route -n | grep %s | grep -w UG | awk "\
+              "'{ print $2 }'" % self.host_interfaces[0]
+        self.gateway = process.system_output(
+            '%s' % cmd, shell=True)
 
     def bond_remove(self, arg1):
         '''
@@ -269,6 +275,11 @@ class Bonding(Test):
                 time.sleep(60)
             else:
                 self.fail("Bonding setup on local machine has failed")
+            if self.gateway:
+                cmd = 'ip route add default via %s dev %s' % \
+                    (self.gateway, self.bond_name)
+                process.system(cmd, shell=True, ignore_status=True)
+
         else:
             self.log.info("Configuring Bonding on Peer machine")
             self.log.info("------------------------------------------")
@@ -327,9 +338,13 @@ class Bonding(Test):
         self.bond_remove("local")
         for val1, val2, val3 in map(None, self.host_interfaces,
                                     self.host_ips, self.net_mask):
-            cmd = "ip addr add %s/%s dev %s;ip link set %s up"\
-                  % (val2, val3, val1, val1)
+            cmd = "ip addr flush dev %s" % val1
             process.system(cmd, shell=True, ignore_status=True)
+            cmd = "ip link set %s up" % val1
+            process.system(cmd, shell=True, ignore_status=True)
+            if val2:
+                cmd = "ip addr add %s/%s dev %s" % (val2, val3, val1)
+                process.system(cmd, shell=True, ignore_status=True)
             for i in range(0, 600, 60):
                 if 'state UP' in process.system_output("ip link \
                      show %s" % val1, shell=True):
@@ -339,6 +354,11 @@ class Bonding(Test):
             else:
                 self.log.info("Interface %s in not up\
                                    in the host machine" % val1)
+        if self.gateway:
+            cmd = 'ip route add default via %s' % \
+                (self.gateway)
+            process.system(cmd, shell=True, ignore_status=True)
+
         if self.peer_bond_needed:
             self.bond_remove("peer")
             for val1, val2, val3 in map(None, self.peer_interfaces,
