@@ -116,7 +116,7 @@ class cpustresstest(Test):
     @staticmethod
     def __kill_process(pids):
         for pid in pids:
-            process.run("kill -9 %s" % pid)
+            process.run("kill -9 %s" % pid, ignore_status=True)
 
     def test(self):
         """
