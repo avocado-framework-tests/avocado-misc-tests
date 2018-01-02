@@ -55,7 +55,7 @@ class Thp(Test):
 
         # Mount device as per free memory size
         if not os.path.exists(self.mem_path):
-            os.mkdir(self.mem_path)
+            os.makedirs(self.mem_path)
         self.device = Partition(device="none", mountpoint=self.mem_path)
         self.device.mount(mountpoint=self.mem_path, fstype="tmpfs",
                           args='-o size=%dM' % free_mem)
