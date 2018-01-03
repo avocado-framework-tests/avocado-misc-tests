@@ -28,6 +28,8 @@ class PSTORE(Test):
     This script verifies persistent storage. It trigeres crash on the machine configured
     in config.yaml file and verifies the files under /sys/fs/pstore. It also
     generates sosreport and checks whether these files are included in sosreport.
+
+    :avocado: tags=remote
     '''
 
     def run_cmd_out(self, cmd):

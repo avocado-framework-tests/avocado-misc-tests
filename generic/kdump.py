@@ -28,6 +28,11 @@ from avocado.utils.software_manager import SoftwareManager
 
 
 class KDUMP(Test):
+    '''
+    Verifies if kernel dump mechanism has been enabled. Uses `linux-crashdump`.
+
+    :avocado: tags=remote
+    '''
 
     def run_cmd_out(self, cmd):
         return process.system_output(cmd, shell=True, ignore_status=True, sudo=True).strip()
