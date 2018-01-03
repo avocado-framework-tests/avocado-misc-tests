@@ -52,7 +52,7 @@ class Thp_Defrag(Test):
         self.block_size = int(mmap.PAGESIZE) / 1024
         # add mount point
         if os.path.exists(self.mem_path):
-            os.mkdir(self.mem_path)
+            os.makedirs(self.mem_path)
         self.device = Partition(device="none", mountpoint=self.mem_path)
         self.device.mount(mountpoint=self.mem_path, fstype="tmpfs")
         free_space = (disk.freespace(self.mem_path)) / 1024

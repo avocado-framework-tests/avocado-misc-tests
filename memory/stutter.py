@@ -58,7 +58,8 @@ class Stutter(Test):
         self._logdir = self.params.get('logdir', default='/var/tmp/logdir')
         self._rundir = self.params.get('rundir', default='/tmp')
 
-        process.run('mkdir -p  %s' % self._logdir)
+        if not os.path.exists(self._logdir):
+            os.makedirs(self._logdir)
 
         # export env variable, used by test script
         os.environ['MEMTOTAL_BYTES'] = self._memory
