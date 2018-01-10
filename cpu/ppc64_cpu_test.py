@@ -147,7 +147,11 @@ class PPC64Test(Test):
         Tests the smt snooze delay in ppc64_cpu command.
         """
         command1 = "ppc64_cpu --smt-snooze-delay | awk '{print $NF}'"
-        command2 = "cat /sys/bus/cpu/devices/cpu*/smt_snooze_delay | uniq"
+        snz_delay = "cpu*/smt_snooze_delay"
+        if os.path.isdir("/sys/bus/cpu/devices"):
+            command2 = "cat /sys/bus/cpu/devices/%s | uniq" % snz_delay
+        else:
+            command2 = "cat /sys/devices/system/cpu/%s | uniq" % snz_delay
         self.equality_check("SMT snooze delay", command1, command2)
 
     def dscr(self):
