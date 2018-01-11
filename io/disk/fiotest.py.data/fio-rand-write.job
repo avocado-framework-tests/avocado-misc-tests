@@ -5,7 +5,8 @@ name=fio-rand-write
 filename=fio-rand-write
 rw=randwrite
 bs=4K
-direct=0
+direct=1
+thread
 numjobs=4
 time_based=1
 runtime=900
