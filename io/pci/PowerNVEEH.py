@@ -35,13 +35,13 @@ class EEHRecoveryFailed(Exception):
     """
     Exception class, if EEH fails to recover
     """
-    def __init__(self, thing, dev, log=None):
-        self.thing = thing
+    def __init__(self, msg, dev, log=None):
+        self.msg = msg
         self.dev = dev
         self.log = log
 
     def __str__(self):
-        return "%s %s recovery failed: %s" % (self.thing, self.dev, self.log)
+        return "%s %s recovery failed: %s" % (self.msg, self.dev, self.log)
 
 
 class PowerNVEEH(Test):
@@ -65,13 +65,22 @@ class PowerNVEEH(Test):
         cmd = "echo %d > /sys/kernel/debug/powerpc/eeh_max_freezes"\
             % self.max_freeze
         process.system(cmd, ignore_status=True, shell=True)
-        self.function = str(self.params.get('function'))
+        self.function = str(self.params.get('function'), default='4')
         self.err = str(self.params.get('err'))
         self.pci_device = str(self.params.get('pci_device', default=' '))
         self.phb = self.pci_device.split(":", 1)[0]
         self.addr = genio.read_file("/sys/bus/pci/devices/%s/"
                                     "eeh_pe_config_addr" % self.pci_device)
         self.addr = str(self.addr).rstrip()
+        self.err = 0
+        for line in process.system_output('lspci -vs %s' % self.pci_device,
+                                          ignore_status=True,
+                                          shell=True).splitlines():
+            if 'Memory' in line and '64-bit, prefetchable' in line:
+                self.err = 1
+                break
+        self.mem_addr = pci.get_memory_address(self.pci_device)
+        self.mask = pci.get_mask(self.pci_device)
         self.log.info("Test-----> %s", self.addr)
         self.log.info("===============Testing EEH Frozen PE==================")
 
@@ -85,20 +94,17 @@ class PowerNVEEH(Test):
         num_of_hit = 0
         while num_of_hit <= self.max_freeze:
             for func in self.function:
-                self.log.info("Running error inject on pe %s function %s"
-                              % (self.pci_device, func))
+                self.log.info("Running error inject on pe %s function %s",
+                              self.pci_device, func)
                 if num_of_miss < 5:
-                    return_code = self.basic_eeh(self.addr, self.err, func,
-                                                 self.phb, self.pci_device)
+                    return_code = self.basic_eeh(func)
                     if return_code == EEH_MISS:
                         num_of_miss += 1
-                        self.log.info("number of miss is %d"
-                                      % num_of_miss)
+                        self.log.info("number of miss is %d", num_of_miss)
                         continue
                     else:
                         num_of_hit += 1
-                        self.log.info("number of hit is %d"
-                                      % num_of_hit)
+                        self.log.info("number of hit is %d", num_of_hit)
                         if num_of_hit <= self.max_freeze:
                             if not self.check_eeh_pe_recovery():
                                 self.fail("PE %s recovery failed after"
@@ -116,35 +122,35 @@ class PowerNVEEH(Test):
                 break
         else:
             if self.check_eeh_removed():
-                self.log.info("PE %s removed successfully" % self.pci_device)
+                self.log.info("PE %s removed successfully", self.pci_device)
             else:
                 self.fail("PE %s not removed after max hit" % self.pci_device)
 
-    def basic_eeh(self, addr, err, func, phb, pci_device):
+    def basic_eeh(self, func):
 
         """
         Injects Error, and checks for PE recovery
         returns True, if recovery is success, else Flase
         """
         self.clear_dmesg_logs()
-        return_code = self.error_inject(addr, err, func, phb, pci_device)
+        return_code = self.error_inject(self.addr, self.err, func,
+                                        self.mem_addr, self.mask, self.phb)
         if return_code != EEH_HIT:
             self.log.info("Skipping verification, as command failed")
         if not self.check_eeh_hit():
-            self.log.info("PE %s EEH hit failed" % self.pci_device)
+            self.log.info("PE %s EEH hit failed", self.pci_device)
             return EEH_MISS
-        else:
-            self.log.info("PE %s EEH hit success" % self.pci_device)
-            return EEH_HIT
+        self.log.info("PE %s EEH hit success", self.pci_device)
+        return EEH_HIT
 
     @classmethod
-    def error_inject(cls, addr, err, func, phb, pci_device):
+    def error_inject(cls, addr, err, func, mem_addr, mask, phb):
 
         """
         Form a command to inject the error
         """
-        cmd = "echo %s:%s:%s:0:0 > /sys/kernel/debug/powerpc/PCI%s/err_injct \
-               && lspci -ns %s; echo $?" % (addr, err, func, phb, pci_device)
+        cmd = "echo %s:%s:%s:%s:%s > /sys/kernel/debug/powerpc/PCI%s/err_injct \
+               && lspci; echo $?" % (addr, err, func, mem_addr, mask, phb)
         return int(process.system_output(cmd, ignore_status=True,
                                          shell=True)[-1])
 
@@ -158,7 +164,7 @@ class PowerNVEEH(Test):
         for _ in range(0, tries):
             res = process.system_output(cmd, ignore_status=True, shell=True)
             if int(res[-1]) != 0:
-                self.log.info("waiting for PE to recover %s" % self.pci_device)
+                self.log.info("waiting for PE to recover %s", self.pci_device)
                 time.sleep(1)
             else:
                 break
