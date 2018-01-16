@@ -48,6 +48,12 @@ class Thp(Test):
         self.mem_path = os.path.join(data_dir.get_tmp_dir(), 'thp_space')
         free_mem = int(memory.freememtotal() / 1024)
         self.dd_timeout = 900
+        self.thp_split = None
+        try:
+            memory.read_from_vmstat("thp_split_page")
+            self.thp_split = "thp_split_page"
+        except IndexError:
+            self.thp_split = "thp_split"
 
         # Set block size as hugepage size * 2
         self.block_size = (memory.get_huge_page_size() / 1024) * 2
@@ -74,7 +80,7 @@ class Thp(Test):
 
         # Read thp values before stressing the system
         thp_alloted_before = int(memory.read_from_vmstat("thp_fault_alloc"))
-        thp_split_before = int(memory.read_from_vmstat("thp_split_page"))
+        thp_split_before = int(memory.read_from_vmstat(self.thp_split))
         thp_collapse_alloc_before = int(memory.read_from_vmstat
                                         ("thp_collapse_alloc"))
 
@@ -90,7 +96,7 @@ class Thp(Test):
 
         # Read thp values after stressing the system
         thp_alloted_after = int(memory.read_from_vmstat("thp_fault_alloc"))
-        thp_split_after = int(memory.read_from_vmstat("thp_split_page"))
+        thp_split_after = int(memory.read_from_vmstat(self.thp_split))
         thp_collapse_alloc_after = int(memory.read_from_vmstat
                                        ("thp_collapse_alloc"))
 
