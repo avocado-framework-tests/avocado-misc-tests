@@ -51,7 +51,8 @@ class Bonnie(Test):
 
         if process.system("which bonnie++", ignore_status=True):
             smm = SoftwareManager()
-            if not smm.check_installed('bonnie++') and not smm.check_installed('bonnie++'):
+            if not smm.check_installed('bonnie++')\
+                    and not smm.check_installed('bonnie++'):
                 '''Install the package from web'''
                 deps = ['gcc', 'make']
                 if distro.detect().name == 'Ubuntu':
@@ -63,15 +64,17 @@ class Bonnie(Test):
                         deps.extend(['btrfs-tools'])
 
                 for package in deps:
-                    if not smm.check_installed(package) and not smm.install(package):
-                        self.cancel("Fail to install/check %s, which is needed for"
-                                    "Bonnie test to run" % package)
+                    if not smm.check_installed(package)\
+                            and not smm.install(package):
+                        self.cancel("Fail to install/check %s, which is"
+                                    " needed for Bonnie test to run" % package)
 
                 tarball = self.fetch_asset('http://www.coker.com.au/bonnie++/'
                                            'bonnie++-1.03e.tgz', expire='7d')
                 archive.extract(tarball, self.teststmpdir)
                 self.source = os.path.join(self.teststmpdir,
-                                           os.path.basename(tarball.split('.tgz')[0]))
+                                           os.path.basename(
+                                               tarball.split('.tgz')[0]))
                 os.chdir(self.source)
                 process.run('./configure')
                 build.make(self.source)
