@@ -28,6 +28,8 @@ class Lshwrun(Test):
     mainboard configuration, CPU version and speed,cache configuration, bus
     speed, etc. on DMI-capable x86 or IA-64 systems and on some PowerPC
     machines (PowerMac G4 is known to work).
+    
+    :avocado: tags=privileged
     """
     interface = process.system_output("ip route show")
     active_interface = process.system_output("ifconfig | head -1 | cut -d':' -f1", shell=True).strip().split()[0]
