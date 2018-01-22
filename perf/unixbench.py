@@ -45,9 +45,6 @@ class Unixbench(Test):
         self.sourcedir = os.path.join(self.srcdir,
                                       "byte-unixbench-master/UnixBench")
         os.chdir(self.sourcedir)
-        makefile_patch = 'patch -p1 < %s' % (os.path.join(
-            self.datadir, 'Makefile.patch'))
-        process.run(makefile_patch, shell=True)
         build.make(self.sourcedir)
 
     def test(self):
