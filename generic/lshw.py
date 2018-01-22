@@ -16,6 +16,7 @@
 from avocado import Test
 from avocado import main
 from avocado.utils import process
+from avocado.utils import genio
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -33,7 +34,8 @@ class Lshwrun(Test):
     """
     interface = process.system_output("ip route show")
     active_interface = process.system_output(
-        "ifconfig | head -1 | cut -d':' -f1", shell=True).strip().split()[0]
+        "ip link ls up  | awk -F: '$0 !~ \"lo|vir|^[^0-9]\"{print $2}'"
+        " | cut -d  \" \" -f2 | head -1", shell=True).strip().split()[0]
     fail_cmd = list()
 
     def run_cmd(self, cmd):
@@ -103,9 +105,8 @@ class Lshwrun(Test):
         which produces similar info of hardware.
         """
         # verifying mac address
-        mac = process.system_output("ifconfig | grep 'ether' | "
-                                    "head -1 | cut -d' ' -f10",
-                                    shell=True).strip()
+        mac = process.system_output("ip addr | awk '/ether/ {print $2}'"
+                                    " | head -1", shell=True).strip()
         if mac not in process.system_output("lshw"):
             self.fail("lshw failed to show correct mac address")
 
@@ -167,10 +168,9 @@ class Lshwrun(Test):
         else:
             product_path = '/proc/device-tree/model'
             serial_path = '/proc/device-tree/system-id'
-        product_name = self.run_cmd_out(
-            "cat %s" % product_path).rstrip(' \t\r\n\0')
-        serial_num = self.run_cmd_out(
-            "cat %s" % serial_path).rstrip(' \t\r\n\0')
+        product_name = genio.read_file(product_path).rstrip(' \t\r\n\0')
+        serial_num = genio.read_file(serial_path).rstrip(' \t\r\n\0')
+
         if product_name\
                 not in self.run_cmd_out("lshw | grep product | head -1"):
             self.is_fail += 1
