@@ -24,20 +24,19 @@ from avocado.utils import process
 from avocado.utils import build
 from avocado.utils import archive
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import distro
 from avocado.core import data_dir
 
 
-class unixbench(Test):
+class Unixbench(Test):
 
     def setUp(self):
-        sm = SoftwareManager()
-        detected_distro = distro.detect()
+        smm = SoftwareManager()
         # Check for basic utilities
         self.tmpdir = data_dir.get_tmp_dir()
+        self.report_data = self.err = None
         self.build_dir = self.params.get('build_dir', default=self.tmpdir)
         for package in ['gcc', 'make', 'patch']:
-            if not sm.check_installed(package) and not sm.install(package):
+            if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
         url = 'https://github.com/kdlucas/byte-unixbench/archive/master.zip'
         tarball = self.fetch_asset("byte-unixbench.zip", locations=[url],
@@ -55,7 +54,6 @@ class unixbench(Test):
         self.tmpdir = data_dir.get_tmp_dir()
         # Read USAGE in Unixbench directory in src to give the args
         args = self.params.get('args', default='-v -c 1')
-        os.chdir(self.sourcedir)
         process.system(' ./Run ' + args, shell=True, sudo=True)
         report_path = os.path.join(self.logdir, 'stdout')
         self.report_data = open(report_path).readlines()
@@ -80,7 +78,7 @@ class unixbench(Test):
         result_flag = False
         for line in self.report_data:
             if "BYTE UNIX Benchmarks" in line:
-                result_flag = 1
+                result_flag = True
             if "Dhrystone" in line and result_flag:
                 parse_flag = True
             if parse_flag:
@@ -109,5 +107,4 @@ class unixbench(Test):
             self.error('Error Has been Occured \n %s' % self.err)
         else:
             self.log.info('System Benchmarks Index Score is %s \n'
-                          'Please check logs for full stats\n'
-                          % keyval['score'])
+                          'Please check log for full stat\n', keyval['score'])
