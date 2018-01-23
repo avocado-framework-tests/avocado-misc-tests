@@ -16,6 +16,7 @@
 from avocado import Test
 from avocado import main
 from avocado.utils import process
+from avocado.utils import genio
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -28,9 +29,13 @@ class Lshwrun(Test):
     mainboard configuration, CPU version and speed,cache configuration, bus
     speed, etc. on DMI-capable x86 or IA-64 systems and on some PowerPC
     machines (PowerMac G4 is known to work).
+
+    :avocado: tags=privileged
     """
     interface = process.system_output("ip route show")
-    active_interface = process.system_output("ifconfig | head -1 | cut -d':' -f1", shell=True).strip().split()[0]
+    active_interface = process.system_output(
+        "ip link ls up  | awk -F: '$0 !~ \"lo|vir|^[^0-9]\"{print $2}'"
+        " | cut -d  \" \" -f2 | head -1", shell=True).strip().split()[0]
     fail_cmd = list()
 
     def run_cmd(self, cmd):
@@ -39,7 +44,8 @@ class Lshwrun(Test):
             self.fail_cmd.append(cmd)
 
     def run_cmd_out(self, cmd):
-        return process.system_output(cmd, shell=True, ignore_status=True, sudo=True)
+        return process.system_output(cmd, shell=True,
+                                     ignore_status=True, sudo=True)
 
     def setUp(self):
         sm = SoftwareManager()
@@ -99,13 +105,14 @@ class Lshwrun(Test):
         which produces similar info of hardware.
         """
         # verifying mac address
-        mac = process.system_output("ifconfig | grep 'ether' | "
-                                    "head -1 | cut -d' ' -f10", shell=True).strip()
+        mac = process.system_output("ip addr | awk '/ether/ {print $2}'"
+                                    " | head -1", shell=True).strip()
         if mac not in process.system_output("lshw"):
             self.fail("lshw failed to show correct mac address")
 
         # verify network
-        if self.active_interface not in process.system_output("lshw -class network"):
+        if self.active_interface\
+                not in process.system_output("lshw -class network"):
             self.fail("lshw failed to show correct active network interface")
 
     def test_gen_rep(self):
@@ -152,7 +159,7 @@ class Lshwrun(Test):
         """
         Test verifies the product id and serial number in lshw output.
         """
-        self.log.info("===============Validating product id and serial number ===="
+        self.log.info("===============Validating product id and serial number"
                       "===========")
         self.is_fail = 0
         if 'KVM' in self.run_cmd_out("pseries_platform"):
@@ -161,9 +168,11 @@ class Lshwrun(Test):
         else:
             product_path = '/proc/device-tree/model'
             serial_path = '/proc/device-tree/system-id'
-        product_name = self.run_cmd_out("cat %s" % product_path).rstrip(' \t\r\n\0')
-        serial_num = self.run_cmd_out("cat %s" % serial_path).rstrip(' \t\r\n\0')
-        if product_name not in self.run_cmd_out("lshw | grep product | head -1"):
+        product_name = genio.read_file(product_path).rstrip(' \t\r\n\0')
+        serial_num = genio.read_file(serial_path).rstrip(' \t\r\n\0')
+
+        if product_name\
+                not in self.run_cmd_out("lshw | grep product | head -1"):
             self.is_fail += 1
         if serial_num not in self.run_cmd_out("lshw | grep serial | head -1"):
             self.is_fail += 1
@@ -179,15 +188,18 @@ class Lshwrun(Test):
         -numeric -> Also display numeric IDs.
         -notime -> exclude volatile attributes (timestamps) from output.
         """
-        self.log.info("===============Verifying -disable, -enable, -quiet, -numeric and -notime options ===="
-                      "===========")
+        self.log.info("===============Verifying -disable, -enable, -quiet,"
+                      " -numeric and -notime options ==============")
         self.is_fail = 0
         self.run_cmd("lshw -disable scsi | grep SCSI")
-        if "description" not in self.run_cmd_out("lshw -enable scsi | grep SCSI"):
+        if "description" not in self.run_cmd_out("lshw"
+                                                 " -enable scsi | grep SCSI"):
             self.is_fail += 1
         self.run_cmd("lshw -class -quiet")
-        if 'PowerVM' not in self.run_cmd_out("pseries_platform"):
-            if not self.run_cmd_out("lshw -numeric | grep HCI | cut -d':' -f3"):
+        if 'PowerVM'\
+                not in self.run_cmd_out("pseries_platform"):
+            if not self.run_cmd_out("lshw"
+                                    " -numeric | grep HCI | cut -d':' -f3"):
                 self.is_fail += 1
         self.run_cmd("lshw -notime | grep modified")
         if self.is_fail >= 1:
