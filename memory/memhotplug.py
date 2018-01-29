@@ -20,8 +20,7 @@ import platform
 import multiprocessing
 from avocado import Test
 from avocado import main
-from avocado.utils import process
-from avocado.utils import memory
+from avocado.utils import process, memory, build, archive
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -91,7 +90,17 @@ class memstress(Test):
             self.cancel("UnSupported : memory hotplug not enabled\n")
         sm = SoftwareManager()
         if not sm.check_installed('stress') and not sm.install('stress'):
-            self.cancel(' stress package is needed for the test to be run')
+            tarball = self.fetch_asset(
+                'https://people.seas.harvard.edu/~apw/stress/stress-1.0.4.tar.gz')
+            archive.extract(tarball, self.teststmpdir)
+            self.sourcedir = os.path.join(
+                self.teststmpdir, os.path.basename(tarball.split('.tar.')[0]))
+
+            os.chdir(self.sourcedir)
+            process.run('[ -x configure ] && ./configure', shell=True)
+            build.make(self.sourcedir)
+            build.make(self.sourcedir, extra_args='install')
+
         self.tests = self.params.get('test', default='all')
         self.iteration = int(self.params.get('iteration', default='1'))
         self.stresstime = int(self.params.get('stresstime', default='10'))
