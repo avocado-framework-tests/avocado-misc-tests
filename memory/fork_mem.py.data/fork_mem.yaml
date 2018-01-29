@@ -1,0 +1,5 @@
+setup:
+ iterations: 1
+ procs: 10
+ # in MB
+ minmem: 10
