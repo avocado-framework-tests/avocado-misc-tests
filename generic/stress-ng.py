@@ -17,9 +17,9 @@
 #
 
 import os
+import multiprocessing
 from avocado import Test
 from avocado import main
-import multiprocessing
 from avocado.utils import process, build, archive, distro
 from avocado.utils.software_manager import SoftwareManager
 
@@ -32,7 +32,7 @@ def collect_dmesg(object):
     object.whiteboard = process.system_output("dmesg")
 
 
-class stressng(Test):
+class Stressng(Test):
 
     """
     Stress-ng testsuite
@@ -45,7 +45,7 @@ class stressng(Test):
     """
 
     def setUp(self):
-        sm = SoftwareManager()
+        smm = SoftwareManager()
         detected_distro = distro.detect()
         self.stressors = self.params.get('stressors', default=None)
         self.ttimeout = self.params.get('ttimeout', default='300')
@@ -63,19 +63,21 @@ class stressng(Test):
         if 'Ubuntu' in detected_distro.name:
             deps = [
                 'libaio-dev', 'libapparmor-dev', 'libattr1-dev', 'libbsd-dev',
-                'libcap-dev', 'libgcrypt11-dev', 'libkeyutils-dev', 'libsctp-dev', 'zlib1g-dev']
+                'libcap-dev', 'libgcrypt11-dev', 'libkeyutils-dev',
+                'libsctp-dev', 'zlib1g-dev']
         else:
             deps = ['libattr-devel', 'libbsd-devel', 'libcap-devel',
-                    'libgcrypt-devel', 'keyutils-libs-devel', 'zlib-devel', 'libaio-devel']
+                    'libgcrypt-devel', 'keyutils-libs-devel', 'zlib-devel',
+                    'libaio-devel']
         for package in deps:
-            if not sm.check_installed(package) and not sm.install(package):
+            if not smm.check_installed(package) and not smm.install(package):
                 self.log.info(
-                    '%s is needed, get the source and build' % package)
+                    '%s is needed, get the source and build', package)
 
-        tarball = self.fetch_asset('stressng.zip', locations=[
-                                   'https://github.com/ColinIanKing/'
-                                   'stress-ng/archive/master.zip'],
-                                   expire='7d')
+        tarball = self.fetch_asset('stressng.zip',
+                                   locations=['https://github.com/Colin'
+                                              'IanKing/stress-ng/archive'
+                                              '/master.zip'], expire='7d')
         archive.extract(tarball, self.srcdir)
         sourcedir = os.path.join(self.srcdir, 'stress-ng-master')
         os.chdir(sourcedir)
@@ -131,7 +133,8 @@ class stressng(Test):
                 if fail_pattern in log:
                     ERROR.append(log)
         if ERROR:
-            self.fail("Test failed with following errors in demsg :  %s " % "\n".joing(ERROR))
+            self.fail("Test failed with following errors in demsg :  %s " %
+                      "\n".join(ERROR))
 
 
 if __name__ == "__main__":
