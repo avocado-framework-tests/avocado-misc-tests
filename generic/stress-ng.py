@@ -20,7 +20,7 @@ import os
 from avocado import Test
 from avocado import main
 import multiprocessing
-from avocado.utils import process, build, archive, distro
+from avocado.utils import process, build, archive, distro, memory
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -58,6 +58,8 @@ class stressng(Test):
         self.times = self.params.get('times', default=True)
         self.aggressive = self.params.get('aggressive', default=True)
         self.exclude = self.params.get('exclude', default=None)
+        self.v_stressors = self.params.get('v_stressors', default=None)
+        self.parallel = self.params.get('parallel', default=True)
 
         if 'Ubuntu' in detected_distro.name:
             deps = [
@@ -89,6 +91,7 @@ class stressng(Test):
     def test(self):
         args = []
         cmdline = ''
+        timeout = ''
         self.workers = multiprocessing.cpu_count()
         if not self.stressors:
             if 'all' in self.class_type:
@@ -100,17 +103,18 @@ class stressng(Test):
                 args.append('--class %s --sequential %s ' %
                             (self.class_type, self.workers))
         else:
-            for stressor in self.stressors.split(' '):
-                cmdline += '--%s %s ' % (stressor, self.workers)
-            args.append(cmdline)
+            if self.parallel:
+                for stressor in self.stressors.split(' '):
+                    cmdline += '--%s %s ' % (stressor, self.workers)
+                for v_stressor in self.v_stressors.split(' '):
+                    cmdline += '--%s %s ' % (v_stressor, self.workers)
+                args.append(cmdline)
         if self.class_type in ['memory', 'vm', 'all']:
             args.append('--vm-bytes 80% ')
         if self.aggressive and self.maximize:
             args.append('--aggressive --maximize --oomable ')
         if self.exclude:
             args.append('--exclude %s ' % self.exclude)
-        if self.ttimeout:
-            args.append('--timeout %s ' % self.ttimeout)
         if self.verify:
             args.append('--verify ')
         if self.syslog:
@@ -120,7 +124,21 @@ class stressng(Test):
         if self.times:
             args.append('--times ')
         cmd = 'stress-ng %s' % " ".join(args)
-        process.run(cmd, ignore_status=True, sudo=True)
+        if self.parallel:
+            if self.ttimeout:
+                cmd += ' --timeout %s ' % self.ttimeout
+            process.run(cmd, ignore_status=True, sudo=True)
+        else:
+            if self.ttimeout:
+                timeout = ' --timeout %s ' % self.ttimeout
+            for stressor in self.stressors.split(' '):
+                stress_cmd = ' --%s %s %s' % (stressor, self.workers, timeout)
+                process.run("%s %s" % (cmd, stress_cmd), ignore_status=True, sudo=True)
+            if self.ttimeout and self.v_stressors:
+                timeout = int(self.ttimeout) + int(memory.memtotal()/1024/1024)
+            for stressor in self.v_stressors.split(' '):
+                stress_cmd = ' --%s %s %s' % (stressor, self.workers, timeout)
+                process.run("%s %s" % (cmd, stress_cmd), ignore_status=True, sudo=True)
         collect_dmesg(self)
         ERROR = []
         pattern = ['WARNING: CPU:', 'Oops',

@@ -6,6 +6,7 @@ metrics: True
 maximize: True
 times: True
 aggressive: True
+parallel: True
 subsystem: !mux
     all:
         stressors: null
@@ -14,6 +15,7 @@ subsystem: !mux
     memory:
         class: 'memory'
         stressors: null
+        v_stressors: null
         exclude: null
     cpu:
         class: 'cpu'
