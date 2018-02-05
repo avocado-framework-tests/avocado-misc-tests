@@ -42,6 +42,10 @@ class eatmemory(Test):
         tarball = self.fetch_asset("eatmemory.zip", locations=[url], expire='7d')
         archive.extract(tarball, self.srcdir)
         self.sourcedir = os.path.join(self.srcdir, "eatmemory-master")
+        # patch for getch remove
+        getch_patch = 'patch -p1 < %s' % (os.path.join(
+             self.datadir, 'eatmem_getch.patch'))
+        process.run(getch_patch, shell=True)
         build.make(self.sourcedir)
         mem = self.params.get('memory_to_test', default=memory.memtotal())
         self.mem_to_eat = self._mem_to_mbytes(mem)
