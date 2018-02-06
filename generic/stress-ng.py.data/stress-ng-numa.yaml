@@ -1,0 +1,10 @@
+workers: 10
+ttimeout: '120'
+verify: True
+syslog: True
+metrics: True
+maximize: True
+times: True
+aggressive: True
+class: 'numa'
+stressors: null

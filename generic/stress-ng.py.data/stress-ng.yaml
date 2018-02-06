@@ -59,3 +59,7 @@ subsystem: !mux
         class: 'vm'
         stressors: null
         exclude: null
+    numa:
+        class: 'numa'
+        stressors: null
+        exclude: null

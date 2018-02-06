@@ -96,6 +96,8 @@ class stressng(Test):
             elif 'cpu' in self.class_type:
                 self.workers = 2 * multiprocessing.cpu_count()
                 args.append('--cpu %s --cpu-method all ' % self.workers)
+            elif 'numa' in self.class_type:
+                args.append('--numa %s' % self.workers)
             else:
                 args.append('--class %s --sequential %s ' %
                             (self.class_type, self.workers))
