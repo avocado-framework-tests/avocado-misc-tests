@@ -49,7 +49,8 @@ class stressng(Test):
         detected_distro = distro.detect()
         self.stressors = self.params.get('stressors', default=None)
         self.ttimeout = self.params.get('ttimeout', default='300')
-        self.workers = self.params.get('workers', default='0')
+        self.workers = self.params.get(
+            'workers', default=multiprocessing.cpu_count())
         self.class_type = self.params.get('class', default='all')
         self.verify = self.params.get('verify', default=True)
         self.syslog = self.params.get('syslog', default=True)
@@ -92,7 +93,6 @@ class stressng(Test):
         args = []
         cmdline = ''
         timeout = ''
-        self.workers = multiprocessing.cpu_count()
         if not self.stressors:
             if 'all' in self.class_type:
                 args.append('--all %s ' % self.workers)
