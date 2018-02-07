@@ -18,6 +18,9 @@
 #   copyright 2006 Randy Dunlap <rdunlap@xenotime.net>
 #   https://github.com/autotest/autotest-client-tests/tree/master/fio
 
+"""
+FIO Test
+"""
 
 import os
 
@@ -79,6 +82,7 @@ class FioTest(Test):
                 self.fail("Mounting disk %s on directory %s failed",
                           self.disk, self.dir)
 
+        self.fio_file = 'fiotest-image'
 
     def test(self):
         """
@@ -86,7 +90,6 @@ class FioTest(Test):
         """
         self.log.info("Test will run on %s", self.dir)
         fio_job = self.params.get('fio_job', default='fio-simple.job')
-        self.fio_file = 'fiotest-image'
         cmd = '%s/fio %s %s --filename=%s' % (self.sourcedir,
                                               os.path.join(
                                                   self.datadir, fio_job),

@@ -18,6 +18,10 @@
 # copyright 2006 Google, Inc.
 # https://github.com/autotest/autotest-client-tests/tree/master/ltp
 
+"""
+LTP Filesystem tests
+"""
+
 
 import os
 from avocado import Test
@@ -29,7 +33,7 @@ from avocado.utils.partition import Partition
 from avocado.utils.partition import PartitionError
 
 
-class Ltp_Fs(Test):
+class LtpFs(Test):
 
     '''
     Using LTP (Linux Test Project) testsuite to run Filesystem related tests
@@ -39,10 +43,10 @@ class Ltp_Fs(Test):
         '''
         To check and install dependencies for the test
         '''
-        sm = SoftwareManager()
+        smm = SoftwareManager()
         for package in ['gcc', 'make', 'automake', 'autoconf']:
-            if not sm.check_installed(package) and not sm.install(package):
-                self.error("%s is needed for the test to be run", package)
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel("%s is needed for the test to be run" % package)
         self.disk = self.params.get('disk', default=None)
         self.mount_point = self.params.get('dir', default=self.srcdir)
         self.script = self.params.get('script')

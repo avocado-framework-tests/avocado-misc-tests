@@ -54,7 +54,7 @@ class Bonnie(Test):
             smm = SoftwareManager()
             if not smm.check_installed('bonnie++')\
                     and not smm.check_installed('bonnie++'):
-                '''Install the package from web'''
+                # Install the package from web
                 deps = ['gcc', 'make']
                 if distro.detect().name == 'Ubuntu':
                     deps.extend(['g++'])
@@ -129,7 +129,7 @@ class Bonnie(Test):
         self.log.info("Removing the filesystem created on %s", self.disk)
         delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk
         if process.system(delete_fs, shell=True, ignore_status=True):
-	    self.fail("Failed to delete filesystem on %s", self.disk)
+            self.fail("Failed to delete filesystem on %s", self.disk)
 
 
 if __name__ == "__main__":

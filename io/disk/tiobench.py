@@ -59,24 +59,8 @@ class Tiobench(Test):
         archive.extract(tarball, self.teststmpdir)
         os.chdir(os.path.join(self.teststmpdir, "tiobench-master"))
         build.make(".")
-
-    def test(self):
-        """
-        Test execution with necessary arguments.
-        :params dir: The directory in which to test.
-                     Defaults to ., the current directory.
-        :params blocks: The blocksize in Bytes to use. Defaults to 4096.
-        :params threads: The number of concurrent test threads.
-        :params size: The total size in MBytes of the files may use together.
-        :params num_runs: This number specifies over how many runs
-                          each test should be averaged.
-        """
         self.target = self.params.get('dir', default=self.srcdir)
         self.disk = self.params.get('disk', default=None)
-        blocks = self.params.get('blocks', default=4096)
-        threads = self.params.get('threads', default=10)
-        size = self.params.get('size', default=1024)
-        num_runs = self.params.get('numruns', default=2)
 
         if self.disk is not None:
             self.part_obj = Partition(self.disk, mountpoint=self.target)
@@ -92,7 +76,21 @@ class Tiobench(Test):
                 self.fail("Mounting disk %s on directory %s failed",
                           self.disk, self.target)
 
-        self.log.info("Test will run on %s" % self.target)
+    def test(self):
+        """
+        Test execution with necessary arguments.
+        :params blocks: The blocksize in Bytes to use. Defaults to 4096.
+        :params threads: The number of concurrent test threads.
+        :params size: The total size in MBytes of the files may use together.
+        :params num_runs: This number specifies over how many runs
+                          each test should be averaged.
+        """
+        blocks = self.params.get('blocks', default=4096)
+        threads = self.params.get('threads', default=10)
+        size = self.params.get('size', default=1024)
+        num_runs = self.params.get('numruns', default=2)
+
+        self.log.info("Test will run on %s", self.target)
         self.whiteboard = process.system_output('perl ./tiobench.pl '
                                                 '--target {} --block={} '
                                                 '--threads={} --size={} '
