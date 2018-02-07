@@ -33,6 +33,7 @@ from avocado.utils import memory
 from avocado.utils import process
 from avocado.utils.partition import Partition
 from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.partition import PartitionError
 
 
 class Disktest(Test):
@@ -107,7 +108,11 @@ class Disktest(Test):
             self.log.info("creating %s fs on %s", self.fstype, self.disk)
             self.part_obj.mkfs(self.fstype)
             self.log.info("mounting %s on %s", self.disk, self.dirs)
-            self.part_obj.mount()
+            try:
+                self.part_obj.mount()
+            except PartitionError:
+                self.fail("Mounting disk %s on directory %s failed",
+                          self.disk, self.dirs)
 
     def _compile_disktest(self):
         """

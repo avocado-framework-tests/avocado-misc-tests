@@ -31,6 +31,7 @@ from avocado.utils import build
 from avocado.utils import process, distro
 from avocado.utils.partition import Partition
 from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.partition import PartitionError
 
 
 class Bonnie(Test):
@@ -97,7 +98,11 @@ class Bonnie(Test):
             self.part_obj.mkfs(fstype)
             self.log.info("Mounting disk %s on directory %s",
                           self.disk, self.scratch_dir)
-            self.part_obj.mount()
+            try:
+                self.part_obj.mount()
+            except PartitionError:
+                self.fail("Mounting disk %s on directory %s failed",
+                          self.disk, self.scratch_dir)
 
     def test(self):
         """
@@ -121,6 +126,10 @@ class Bonnie(Test):
             self.log.info("Unmounting disk %s on directory %s", self.disk,
                           self.scratch_dir)
             self.part_obj.unmount()
+        self.log.info("Removing the filesystem created on %s", self.disk)
+        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk
+        if process.system(delete_fs, shell=True, ignore_status=True):
+	    self.fail("Failed to delete filesystem on %s", self.disk)
 
 
 if __name__ == "__main__":

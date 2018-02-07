@@ -30,6 +30,7 @@ from avocado.utils import build
 from avocado.utils import process, distro
 from avocado.utils.partition import Partition
 from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.partition import PartitionError
 
 
 class FSMark(Test):
@@ -73,7 +74,11 @@ class FSMark(Test):
             self.log.info("creating file system")
             self.part_obj.mkfs(self.fstype)
             self.log.info("Mounting disk %s on dir %s", self.disk, self.dir)
-            self.part_obj.mount()
+            try:
+                self.part_obj.mount()
+            except PartitionError:
+                self.fail("Mounting disk %s on directory %s failed",
+                          self.disk, self.dir)
 
     def test(self):
         """

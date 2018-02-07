@@ -26,6 +26,7 @@ from avocado.utils import build
 from avocado.utils import process, archive
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.partition import Partition
+from avocado.utils.partition import PartitionError
 
 
 class Ltp_Fs(Test):
@@ -55,7 +56,11 @@ class Ltp_Fs(Test):
             self.log.info("creating %s file system on %s", fstype, self.disk)
             self.part_obj.mkfs(fstype)
             self.log.info("mounting %s on %s", self.disk, self.mount_point)
-            self.part_obj.mount()
+            try:
+                self.part_obj.mount()
+            except PartitionError:
+                self.fail("Mounting disk %s on directory %s failed",
+                          self.disk, self.mount_point)
 
         url = "https://github.com/linux-test-project/ltp/"
         url += "archive/master.zip"
