@@ -43,6 +43,9 @@ class kselftest(Test):
         Resolve the packages dependencies and download the source.
         """
         smg = SoftwareManager()
+        self.comp = self.params.get('comp', default='')
+        if self.comp:
+            self.comp = '-C %s' % self.comp
         detected_distro = distro.detect()
         deps = ['gcc', 'make', 'automake', 'autoconf']
 
@@ -81,7 +84,8 @@ class kselftest(Test):
         Execute the kernel selftest
         """
         error = False
-        result = build.make(self.sourcedir, extra_args='run_tests')
+        result = build.make(
+            self.sourcedir, extra_args='%s run_tests' % self.comp)
         for line in str(result).splitlines():
             if '[FAIL]' in line:
                 error = True
