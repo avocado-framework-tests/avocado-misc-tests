@@ -52,7 +52,7 @@ class kselftest(Test):
         if 'Ubuntu' in detected_distro.name:
             deps.extend(['libpopt0', 'libc6', 'libc6-dev',
                          'libpopt-dev', 'libcap-ng0', 'libcap-ng-dev',
-                         'libnuma-dev', 'libfuse-dev'])
+                         'libnuma-dev', 'libfuse-dev', 'elfutils', 'libelf1'])
         elif 'SuSE' in detected_distro.name:
             deps.extend(['popt', 'glibc', 'glibc-devel', 'popt-devel',
                          'libcap2', 'libcap-devel', 'libcap-ng-devel'])
@@ -61,7 +61,8 @@ class kselftest(Test):
         # enabler for older runners, but should be removed soon
         elif detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
             deps.extend(['popt', 'glibc', 'glibc-devel', 'glibc-static',
-                         'libcap-ng', 'libcap', 'libcap-devel'])
+                         'libcap-ng', 'libcap', 'libcap-devel', 'fuse-devel',
+                         'libcap-ng-devel'])
 
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
