@@ -18,6 +18,9 @@
 #   copyright 2006 Randy Dunlap <rdunlap@xenotime.net>
 #   https://github.com/autotest/autotest-client-tests/tree/master/fio
 
+"""
+FIO Test
+"""
 
 import os
 
@@ -28,6 +31,7 @@ from avocado.utils import build
 from avocado.utils import process, distro
 from avocado.utils.partition import Partition
 from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.partition import PartitionError
 
 
 class FioTest(Test):
@@ -72,7 +76,13 @@ class FioTest(Test):
             self.part_obj.mkfs(fstype)
             self.log.info("Mounting disk %s on directory %s",
                           self.disk, self.dir)
-            self.part_obj.mount()
+            try:
+                self.part_obj.mount()
+            except PartitionError:
+                self.fail("Mounting disk %s on directory %s failed",
+                          self.disk, self.dir)
+
+        self.fio_file = 'fiotest-image'
 
     def test(self):
         """
@@ -80,7 +90,6 @@ class FioTest(Test):
         """
         self.log.info("Test will run on %s", self.dir)
         fio_job = self.params.get('fio_job', default='fio-simple.job')
-        self.fio_file = 'fiotest-image'
         cmd = '%s/fio %s %s --filename=%s' % (self.sourcedir,
                                               os.path.join(
                                                   self.datadir, fio_job),
@@ -94,6 +103,10 @@ class FioTest(Test):
         if self.disk is not None:
             self.log.info("Unmounting directory %s", self.dir)
             self.part_obj.unmount()
+        self.log.info("Removing the filesystem created on %s", self.disk)
+        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk
+        if process.system(delete_fs, shell=True, ignore_status=True):
+            self.fail("Failed to delete filesystem on %s", self.disk)
         if os.path.exists(self.fio_file):
             os.remove(self.fio_file)
 

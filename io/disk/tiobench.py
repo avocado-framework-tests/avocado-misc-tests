@@ -31,6 +31,7 @@ from avocado.utils import build
 from avocado.utils import process, distro
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.partition import Partition
+from avocado.utils.partition import PartitionError
 
 
 class Tiobench(Test):
@@ -58,24 +59,8 @@ class Tiobench(Test):
         archive.extract(tarball, self.teststmpdir)
         os.chdir(os.path.join(self.teststmpdir, "tiobench-master"))
         build.make(".")
-
-    def test(self):
-        """
-        Test execution with necessary arguments.
-        :params dir: The directory in which to test.
-                     Defaults to ., the current directory.
-        :params blocks: The blocksize in Bytes to use. Defaults to 4096.
-        :params threads: The number of concurrent test threads.
-        :params size: The total size in MBytes of the files may use together.
-        :params num_runs: This number specifies over how many runs
-                          each test should be averaged.
-        """
         self.target = self.params.get('dir', default=self.srcdir)
         self.disk = self.params.get('disk', default=None)
-        blocks = self.params.get('blocks', default=4096)
-        threads = self.params.get('threads', default=10)
-        size = self.params.get('size', default=1024)
-        num_runs = self.params.get('numruns', default=2)
 
         if self.disk is not None:
             self.part_obj = Partition(self.disk, mountpoint=self.target)
@@ -85,9 +70,27 @@ class Tiobench(Test):
             self.part_obj.mkfs(self.fstype)
             self.log.info("Mounting disk %s on directory %s", self.disk,
                           self.target)
-            self.part_obj.mount()
+            try:
+                self.part_obj.mount()
+            except PartitionError:
+                self.fail("Mounting disk %s on directory %s failed",
+                          self.disk, self.target)
 
-        self.log.info("Test will run on %s" % self.target)
+    def test(self):
+        """
+        Test execution with necessary arguments.
+        :params blocks: The blocksize in Bytes to use. Defaults to 4096.
+        :params threads: The number of concurrent test threads.
+        :params size: The total size in MBytes of the files may use together.
+        :params num_runs: This number specifies over how many runs
+                          each test should be averaged.
+        """
+        blocks = self.params.get('blocks', default=4096)
+        threads = self.params.get('threads', default=10)
+        size = self.params.get('size', default=1024)
+        num_runs = self.params.get('numruns', default=2)
+
+        self.log.info("Test will run on %s", self.target)
         self.whiteboard = process.system_output('perl ./tiobench.pl '
                                                 '--target {} --block={} '
                                                 '--threads={} --size={} '
@@ -104,6 +107,10 @@ class Tiobench(Test):
             self.log.info("Unmounting disk %s on directory %s", self.disk,
                           self.target)
             self.part_obj.unmount()
+        self.log.info("Removing the filesystem created on %s", self.disk)
+        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk
+        if process.system(delete_fs, shell=True, ignore_status=True):
+            self.fail("Failed to delete filesystem on %s", self.disk)
 
 
 if __name__ == "__main__":

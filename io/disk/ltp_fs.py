@@ -18,6 +18,10 @@
 # copyright 2006 Google, Inc.
 # https://github.com/autotest/autotest-client-tests/tree/master/ltp
 
+"""
+LTP Filesystem tests
+"""
+
 
 import os
 from avocado import Test
@@ -26,9 +30,10 @@ from avocado.utils import build
 from avocado.utils import process, archive
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.partition import Partition
+from avocado.utils.partition import PartitionError
 
 
-class Ltp_Fs(Test):
+class LtpFs(Test):
 
     '''
     Using LTP (Linux Test Project) testsuite to run Filesystem related tests
@@ -38,10 +43,10 @@ class Ltp_Fs(Test):
         '''
         To check and install dependencies for the test
         '''
-        sm = SoftwareManager()
+        smm = SoftwareManager()
         for package in ['gcc', 'make', 'automake', 'autoconf']:
-            if not sm.check_installed(package) and not sm.install(package):
-                self.error("%s is needed for the test to be run", package)
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel("%s is needed for the test to be run" % package)
         self.disk = self.params.get('disk', default=None)
         self.mount_point = self.params.get('dir', default=self.srcdir)
         self.script = self.params.get('script')
@@ -55,7 +60,11 @@ class Ltp_Fs(Test):
             self.log.info("creating %s file system on %s", fstype, self.disk)
             self.part_obj.mkfs(fstype)
             self.log.info("mounting %s on %s", self.disk, self.mount_point)
-            self.part_obj.mount()
+            try:
+                self.part_obj.mount()
+            except PartitionError:
+                self.fail("Mounting disk %s on directory %s failed",
+                          self.disk, self.mount_point)
 
         url = "https://github.com/linux-test-project/ltp/"
         url += "archive/master.zip"
