@@ -6,5 +6,4 @@ metrics: True
 maximize: True
 times: True
 aggressive: True
-class: 'numa'
-stressors: null
+stressors: 'numa'

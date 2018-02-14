@@ -93,23 +93,23 @@ class stressng(Test):
         cmdline = ''
         timeout = ''
         self.workers = multiprocessing.cpu_count()
-        if not self.stressors:
+        if not (self.stressors or self.v_stressors):
             if 'all' in self.class_type:
                 args.append('--all %s ' % self.workers)
             elif 'cpu' in self.class_type:
                 self.workers = 2 * multiprocessing.cpu_count()
                 args.append('--cpu %s --cpu-method all ' % self.workers)
-            elif 'numa' in self.class_type:
-                args.append('--numa %s' % self.workers)
             else:
                 args.append('--class %s --sequential %s ' %
                             (self.class_type, self.workers))
         else:
             if self.parallel:
-                for stressor in self.stressors.split(' '):
-                    cmdline += '--%s %s ' % (stressor, self.workers)
-                for v_stressor in self.v_stressors.split(' '):
-                    cmdline += '--%s %s ' % (v_stressor, self.workers)
+                if self.stressors:
+                    for stressor in self.stressors.split(' '):
+                        cmdline += '--%s %s ' % (stressor, self.workers)
+                if self.v_stressors:
+                    for v_stressor in self.v_stressors.split(' '):
+                        cmdline += '--%s %s ' % (v_stressor, self.workers)
                 args.append(cmdline)
         if self.class_type in ['memory', 'vm', 'all']:
             args.append('--vm-bytes 80% ')
