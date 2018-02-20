@@ -17,9 +17,9 @@
 #
 
 import os
+import multiprocessing
 from avocado import Test
 from avocado import main
-import multiprocessing
 from avocado.utils import process, build, archive, distro, memory
 from avocado.utils.software_manager import SoftwareManager
 
@@ -32,7 +32,7 @@ def collect_dmesg(object):
     object.whiteboard = process.system_output("dmesg")
 
 
-class stressng(Test):
+class Stressng(Test):
 
     """
     Stress-ng testsuite
@@ -45,11 +45,12 @@ class stressng(Test):
     """
 
     def setUp(self):
-        sm = SoftwareManager()
+        smm = SoftwareManager()
         detected_distro = distro.detect()
         self.stressors = self.params.get('stressors', default=None)
         self.ttimeout = self.params.get('ttimeout', default='300')
-        self.workers = self.params.get('workers', default='0')
+        self.workers = self.params.get(
+            'workers', default=multiprocessing.cpu_count())
         self.class_type = self.params.get('class', default='all')
         self.verify = self.params.get('verify', default=True)
         self.syslog = self.params.get('syslog', default=True)
@@ -64,19 +65,21 @@ class stressng(Test):
         if 'Ubuntu' in detected_distro.name:
             deps = [
                 'libaio-dev', 'libapparmor-dev', 'libattr1-dev', 'libbsd-dev',
-                'libcap-dev', 'libgcrypt11-dev', 'libkeyutils-dev', 'libsctp-dev', 'zlib1g-dev']
+                'libcap-dev', 'libgcrypt11-dev', 'libkeyutils-dev',
+                'libsctp-dev', 'zlib1g-dev']
         else:
             deps = ['libattr-devel', 'libbsd-devel', 'libcap-devel',
-                    'libgcrypt-devel', 'keyutils-libs-devel', 'zlib-devel', 'libaio-devel']
+                    'libgcrypt-devel', 'keyutils-libs-devel', 'zlib-devel',
+                    'libaio-devel']
         for package in deps:
-            if not sm.check_installed(package) and not sm.install(package):
+            if not smm.check_installed(package) and not smm.install(package):
                 self.log.info(
-                    '%s is needed, get the source and build' % package)
+                    '%s is needed, get the source and build', package)
 
-        tarball = self.fetch_asset('stressng.zip', locations=[
-                                   'https://github.com/ColinIanKing/'
-                                   'stress-ng/archive/master.zip'],
-                                   expire='7d')
+        tarball = self.fetch_asset('stressng.zip',
+                                   locations=['https://github.com/Colin'
+                                              'IanKing/stress-ng/archive'
+                                              '/master.zip'], expire='7d')
         archive.extract(tarball, self.srcdir)
         sourcedir = os.path.join(self.srcdir, 'stress-ng-master')
         os.chdir(sourcedir)
@@ -92,7 +95,6 @@ class stressng(Test):
         args = []
         cmdline = ''
         timeout = ''
-        self.workers = multiprocessing.cpu_count()
         if not (self.stressors or self.v_stressors):
             if 'all' in self.class_type:
                 args.append('--all %s ' % self.workers)
@@ -135,12 +137,15 @@ class stressng(Test):
                 timeout = ' --timeout %s ' % self.ttimeout
             for stressor in self.stressors.split(' '):
                 stress_cmd = ' --%s %s %s' % (stressor, self.workers, timeout)
-                process.run("%s %s" % (cmd, stress_cmd), ignore_status=True, sudo=True)
+                process.run("%s %s" % (cmd, stress_cmd),
+                            ignore_status=True, sudo=True)
             if self.ttimeout and self.v_stressors:
-                timeout = int(self.ttimeout) + int(memory.memtotal()/1024/1024)
+                timeout = int(self.ttimeout) + \
+                    int(memory.memtotal() / 1024 / 1024)
             for stressor in self.v_stressors.split(' '):
                 stress_cmd = ' --%s %s %s' % (stressor, self.workers, timeout)
-                process.run("%s %s" % (cmd, stress_cmd), ignore_status=True, sudo=True)
+                process.run("%s %s" % (cmd, stress_cmd),
+                            ignore_status=True, sudo=True)
         collect_dmesg(self)
         ERROR = []
         pattern = ['WARNING: CPU:', 'Oops',
@@ -151,7 +156,8 @@ class stressng(Test):
                 if fail_pattern in log:
                     ERROR.append(log)
         if ERROR:
-            self.fail("Test failed with following errors in demsg :  %s " % "\n".joing(ERROR))
+            self.fail("Test failed with following errors in demsg :  %s " %
+                      "\n".join(ERROR))
 
 
 if __name__ == "__main__":
