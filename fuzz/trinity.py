@@ -77,7 +77,7 @@ class Trinity(Test):
         Trinity need to run as non root user
         '''
 
-        args = self.params.get('runarg', default=' ')
+        args = self.params.get('runargs', default=' ')
 
         process.system('su - trinity -c " %s  %s  %s"' %
                        (os.path.join(self.sourcedir, 'trinity'), args,
