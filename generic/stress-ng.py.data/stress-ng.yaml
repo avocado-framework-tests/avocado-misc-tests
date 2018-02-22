@@ -62,6 +62,5 @@ subsystem: !mux
         stressors: null
         exclude: null
     numa:
-        class: 'numa'
-        stressors: null
+        stressors: 'numa'
         exclude: null
