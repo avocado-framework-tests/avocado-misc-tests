@@ -44,6 +44,7 @@ class Hackbench(Test):
         '''
         self._threshold_time = self.params.get('time_val', default=None)
         self._num_groups = self.params.get('num_groups', default=90)
+        self._iterations = self.params.get('iterations', default=1)
         self.results = None
         sm = SoftwareManager()
         if not sm.check_installed("gcc") and not sm.install("gcc"):
@@ -65,14 +66,18 @@ class Hackbench(Test):
 
         hackbench_bin = os.path.join(self.srcdir, 'hackbench')
         cmd = '%s %s' % (hackbench_bin, self._num_groups)
-        self.results = process.system_output(cmd, shell=True)
+        time_spent = 0
         perf_json = {}
-        for line in self.results.split('\n'):
-            if line.startswith('Time:'):
-                time_spent = line.split()[1]
-                perf_json = {'time': time_spent}
+        for run in range(self._iterations):
+            self.log.info("Iteration " + str(run+1))
+            self.results = process.system_output(cmd, shell=True)
+            for line in self.results.split('\n'):
+                if line.startswith('Time:'):
+                    time_spent += float(line.split()[1])
+                    break
+        perf_json = {'time': time_spent}
         self.whiteboard = json.dumps(perf_json)
-        self.log.info("Time Taken:" + time_spent)
+        self.log.info("Time Taken:" + str(time_spent))
         if self._threshold_time:
             if self._threshold_time <= time_spent:
                 self.error("Test failed: Time Taken "
