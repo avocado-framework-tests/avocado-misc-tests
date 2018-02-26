@@ -4,3 +4,6 @@ setup:
     num_groups: 10
   threshold:
     time_val : '0.183'
+  stress:
+    num_groups: 50
+    iterations: 16
