@@ -1,0 +1,2 @@
+setup:
+ memory_size: 10 # in MB
