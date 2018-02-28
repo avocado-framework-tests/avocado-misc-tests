@@ -79,7 +79,8 @@ class NVMeCliSelfTest(Test):
         err = []
         for line in build.run_make(os.path.join(self.nvme_dir, 'tests'),
                                    extra_args='run',
-                                   ignore_status=True).stderr.splitlines():
+                                   process_kwargs={'ignore_status': True}
+                                   ).stderr.splitlines():
             if 'FAIL:' in line:
                 err.append(line.split('.')[1])
         self.fail("Some tests failed. Details below:\n%s" % "\n".join(err))

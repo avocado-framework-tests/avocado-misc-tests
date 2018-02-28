@@ -83,7 +83,8 @@ class Stressng(Test):
         archive.extract(tarball, self.srcdir)
         sourcedir = os.path.join(self.srcdir, 'stress-ng-master')
         os.chdir(sourcedir)
-        result = build.run_make(sourcedir, ignore_status=True)
+        result = build.run_make(sourcedir,
+                                process_kwargs={'ignore_status': True})
         for line in str(result).splitlines():
             if 'error:' in line:
                 self.cancel(

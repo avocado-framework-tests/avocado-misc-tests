@@ -76,7 +76,8 @@ class Perftool(Test):
 
         # perf testsuite
         for line in build.run_make(self.sourcedir, extra_args='check',
-                                   ignore_status=True).stdout.splitlines():
+                                   process_kwargs={'ignore_status': True}
+                                   ).stdout.splitlines():
             if '-- [ FAIL ] --' in line:
                 self.count += 1
                 self.log.info(line)

@@ -70,7 +70,8 @@ class Valgrind(Test):
         summary = ''
         flag = False
         results = build.run_make(
-            self.sourcedir, extra_args=cmd, ignore_status=True).stdout
+            self.sourcedir, extra_args=cmd,
+            process_kwargs={'ignore_status': True}).stdout
         for line in results.splitlines():
             if line.startswith('==') and line.endswith('=='):
                 flag = True

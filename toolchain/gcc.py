@@ -85,7 +85,8 @@ class GCC(Test):
         Runs the gcc `make check`
         """
         ret = build.run_make(
-            self.sourcedir, extra_args='check', ignore_status=True)
+            self.sourcedir, extra_args='check',
+            process_kwargs={'ignore_status': True})
         self.summary = ret.stdout.splitlines()
         for index, line in enumerate(self.summary):
             if "=== gcc Summary ===" in line:

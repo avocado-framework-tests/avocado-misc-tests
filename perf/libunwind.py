@@ -69,7 +69,7 @@ class Libunwind(Test):
         Execute regression tests for libunwind library
         '''
         results = build.run_make(self.sourcedir, extra_args='check',
-                                 ignore_status=True).stdout
+                                 process_kwargs={'ignore_status': True}).stdout
 
         fail_list = ['FAIL', 'XFAIL', 'ERROR']
         failures = []
