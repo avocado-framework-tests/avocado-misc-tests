@@ -1,0 +1,11 @@
+setup:
+    hugepage_size: !mux
+        2MB:
+            hpagesize: 2
+        16MB:
+            hpagesize: 16
+        1G:
+            hpagesize: 1024
+    hugepages: !mux
+        default:
+            num_pages: 1
