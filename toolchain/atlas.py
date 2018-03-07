@@ -73,7 +73,7 @@ class Atlas(Test):
         '''
         make_option = self.params.get('make_option', default='check')
         ret = build.run_make(self.atlas_build_dir, extra_args=make_option,
-                             ignore_status=True)
+                             process_kwargs={'ignore_status': True})
         if ret.exit_status:
             self.fail("Make check Has been Failed !!"
                       "Please, refer the log file")

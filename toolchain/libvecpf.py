@@ -58,7 +58,7 @@ class Libvecpf(Test):
         Execute self test of libvecpf library
         """
         results = build.run_make(self.sourcedir, extra_args='check',
-                                 ignore_status=True).stdout
+                                 process_kwargs={'ignore_status': True}).stdout
 
         fail_list = ['FAIL', 'XFAIL', 'ERROR']
         failures = []
