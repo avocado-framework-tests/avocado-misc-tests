@@ -7,7 +7,8 @@ rw=rw
 rwmixread=60
 rwmixwrite=40
 bs=256K
-direct=0
+direct=1
+thread
 numjobs=4
 time_based=1
 runtime=900
