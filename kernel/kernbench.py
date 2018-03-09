@@ -89,7 +89,8 @@ class Kernbench(Test):
         if 'Ubuntu' in detected_distro.name:
             deps.extend(['libpopt0', 'libc6', 'libc6-dev', 'libpopt-dev',
                          'libcap-ng0', 'libcap-ng-dev', 'elfutils', 'libelf1',
-                         'libnuma-dev', 'libfuse-dev'])
+                         'libnuma-dev', 'libfuse-dev', 'libssl-dev', 'flex',
+                         'bison'])
         elif 'SuSE' in detected_distro.name:
             deps.extend(['libpopt0', 'glibc', 'glibc-devel',
                          'popt-devel', 'libcap2', 'libcap-devel',

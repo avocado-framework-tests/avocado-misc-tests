@@ -50,7 +50,7 @@ class kselftest(Test):
         deps = ['gcc', 'make', 'automake', 'autoconf']
 
         if 'Ubuntu' in detected_distro.name:
-            deps.extend(['libpopt0', 'libc6', 'libc6-dev',
+            deps.extend(['libpopt0', 'libc6', 'libc6-dev', 'libcap-dev',
                          'libpopt-dev', 'libcap-ng0', 'libcap-ng-dev',
                          'libnuma-dev', 'libfuse-dev', 'elfutils', 'libelf1'])
         elif 'SuSE' in detected_distro.name:
