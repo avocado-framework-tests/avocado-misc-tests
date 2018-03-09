@@ -50,7 +50,7 @@ class SoftwareRaid(Test):
                 self.cancel("Unable to install mdadm")
         cmd = "mdadm -V"
         self.check_pass(cmd, "Unable to get mdadm version")
-        self.disk = self.params.get('disk', default='').strip(" ")
+        self.disk = self.params.get('disks', default='').strip(" ")
         self.raidlevel = str(self.params.get('raid', default='0'))
         self.sparedisk = ""
         if self.raidlevel == 'linear' or self.raidlevel == '0':

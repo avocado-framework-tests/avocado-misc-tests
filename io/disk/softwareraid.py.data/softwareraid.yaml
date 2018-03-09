@@ -1,5 +1,5 @@
 scenario:
-    disk: /dev/sde1 /dev/sde2 /dev/sde3 /dev/sde4 /dev/sdd1
+    disks: /dev/sde1 /dev/sde2 /dev/sde3 /dev/sde4 /dev/sdd1
 raidlevel: !mux
     raidlinear:
         raid: linear
