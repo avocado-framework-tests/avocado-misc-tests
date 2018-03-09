@@ -5,7 +5,7 @@ volume and merges snapshot with the logical volume.
 
 Inputs Needed in yaml file:
 ---------------------------
-disk: Name of the disk on which volume groups, logical volumes,
+disks: Name of the disks on which volume groups, logical volumes,
       snapshots are created. Created on loop device if not specified
 vg_name: Name of the volume group.
 lv_name: Name of the logical volume.
