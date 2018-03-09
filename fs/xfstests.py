@@ -63,6 +63,8 @@ class Xfstests(Test):
                  'uuid-runtime', 'libaio-dev', 'fio', 'dbench', 'btrfs-tools'])
             if '14' in self.detected_distro.version:
                 packages.extend(['libtool'])
+            elif '18' in self.detected_distro.version:
+                packages.extend(['libtool-bin', 'libgdbm-compat-dev'])
             else:
                 packages.extend(['libtool-bin'])
 
