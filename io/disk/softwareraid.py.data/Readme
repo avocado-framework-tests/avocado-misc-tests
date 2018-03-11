@@ -1,10 +1,17 @@
 mdadm - manage MD devices aka Linux Software RAID 
 
-Values to be passed in ymal file:
+Values to be passed in yaml file:
 
 * Name of the devices on which this scripts should be run.
 
 * Raid levels to be created
+
+* Setup - True if only raid needs to be created and exit
+
+* Cleanup - True if only raid needs to be deleted and exit
+
+* Run_tests - True if only mdadm tests (like add, fail, remove device, etc)
+needs to be run on created raid
 
 Note: Please specify minimum of 5 disks, for creating all levels of software
 raid. If 5 disks are not available, create 5 partitions, and specify those
