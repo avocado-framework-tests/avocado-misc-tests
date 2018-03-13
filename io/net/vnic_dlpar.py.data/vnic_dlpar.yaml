@@ -1,0 +1,14 @@
+ubuntu_url: 'http://ausgsa.ibm.com/projects/r/rsctdev/builds/muthu/rmuts006a/ppc64le'
+debs: ['src_3.2.0.6-15111_ppc64el.deb', 'rsct.core.utils_3.2.0.6-15111_ppc64el.deb', 'rsct.core.utils_3.2.0.6-15111_ppc64el.deb', 'rsct.core_3.2.0.6-15111_ppc64el.deb', 'rsct.basic_3.2.0.6-15111_ppc64el.deb', 'devices.chrp.base.servicerm_2.5.0.1-15111_ppc64el.deb', 'dynamicrm_2.0.1-3_ppc64el.deb']
+url: 
+hmc_ip: 
+hmc_pwd:
+hmc_username:
+lpar:
+server:
+slot_num:
+vios_name:
+vios_id:
+sriov_adapter_id:
+sriov_port:
+bandwidth:
