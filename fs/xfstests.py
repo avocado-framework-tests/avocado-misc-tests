@@ -63,13 +63,16 @@ class Xfstests(Test):
                  'uuid-runtime', 'libaio-dev', 'fio', 'dbench', 'btrfs-tools'])
             if '14' in self.detected_distro.version:
                 packages.extend(['libtool'])
+            elif '18' in self.detected_distro.version:
+                packages.extend(['libtool-bin', 'libgdbm-compat-dev'])
             else:
                 packages.extend(['libtool-bin'])
 
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
-        elif self.detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat', 'SuSE']:
+        elif self.detected_distro.name in ['centos', 'fedora', 'rhel',
+                                           'redhat', 'SuSE']:
             packages.extend(['acl', 'bc', 'dump', 'indent', 'libtool', 'lvm2',
                              'xfsdump', 'psmisc', 'sed', 'libacl-devel',
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
@@ -97,7 +100,8 @@ class Xfstests(Test):
         self.disk_mnt = self.params.get('disk_mnt', default='/mnt/loop_device')
         self.dev_type = self.params.get('type', default='loop')
         self.fs_to_test = self.params.get('fs', default='ext4')
-        if process.system('which mkfs.%s' % self.fs_to_test, ignore_status=True):
+        if process.system('which mkfs.%s' % self.fs_to_test,
+                          ignore_status=True):
             self.cancel('Unknown filesystem %s' % self.fs_to_test)
         mount = True
         self.devices = []
@@ -139,10 +143,12 @@ class Xfstests(Test):
                                    % self.test_mnt, line))
                     elif line.startswith('export SCRATCH_DEV'):
                         sources.write(re.sub(
-                            r'export SCRATCH_DEV=.*', 'export SCRATCH_DEV=%s' % self.devices[1], line))
+                            r'export SCRATCH_DEV=.*', 'export SCRATCH_DEV=%s'
+                                                      % self.devices[1], line))
                     elif line.startswith('export SCRATCH_MNT'):
                         sources.write(re.sub(
-                            r'export SCRATCH_MNT=.*', 'export SCRATCH_MNT=%s' % self.scratch_mnt, line))
+                            r'export SCRATCH_MNT=.*', 'export SCRATCH_MNT=%s'
+                                                      % self.scratch_mnt, line))
                         break
 
             for dev in self.devices:
@@ -165,11 +171,14 @@ class Xfstests(Test):
             if self.exclude or self.gen_exclude or self.share_exclude:
                 self.exclude_file = os.path.join(self.teststmpdir, 'exclude')
                 if self.exclude:
-                    self._create_test_list(self.exclude, self.fs_to_test, dangerous=False)
+                    self._create_test_list(self.exclude, self.fs_to_test,
+                                           dangerous=False)
                 if self.gen_exclude:
-                    self._create_test_list(self.gen_exclude, "generic", dangerous=False)
+                    self._create_test_list(self.gen_exclude, "generic",
+                                           dangerous=False)
                 if self.share_exclude:
-                    self._create_test_list(self.share_exclude, "shared", dangerous=False)
+                    self._create_test_list(self.share_exclude, "shared",
+                                           dangerous=False)
 
         if self.detected_distro.name is not 'SuSE':
             process.run('useradd 123456-fsgqa', sudo=True)
@@ -246,10 +255,12 @@ class Xfstests(Test):
             if self.use_dd:
                 dd_count = int(loop_size.split('GiB')[0])
                 process.run('dd if=/dev/zero of=%s/file-%s.img bs=1G count=%s'
-                            % (self.disk_mnt, i, dd_count), shell=True, sudo=True)
+                            % (self.disk_mnt, i, dd_count), shell=True,
+                            sudo=True)
             else:
                 process.run('fallocate -o 0 -l %s %s/file-%s.img' %
-                            (loop_size, self.disk_mnt, i), shell=True, sudo=True)
+                            (loop_size, self.disk_mnt, i), shell=True,
+                            sudo=True)
             dev = process.system_output('losetup -f').strip()
             self.devices.append(dev)
             process.run('losetup %s %s/file-%s.img' %
