@@ -37,6 +37,15 @@ errorlog = ['WARNING: CPU:', 'Oops',
             'double fault:', 'BUG: Bad page state in']
 
 
+def get_mem_count():
+    with open('/sys/devices/system/memory/block_size_bytes', 'r') as block_file:
+        blocksize = int(block_file.read()) / 10
+    with open('/sys/devices/system/node/has_normal_memory', 'r') as node_file:
+        nodes = node_file.read()
+    node_mem = (memory.meminfo.MemFree.mb) / len(nodes.split('-'))
+    return ((node_mem * 1024) / blocksize)
+
+
 def online(block):
     try:
         memory.hotplug(block)
@@ -106,9 +115,16 @@ class memstress(Test):
         self.stresstime = int(self.params.get('stresstime', default='10'))
         self.vmcount = int(self.params.get('vmcount', default='4'))
         self.iocount = int(self.params.get('iocount', default='4'))
+        self.hotplug_count = self.params.get('memcount', default='3')
         self.memratio = self.params.get('memratio', default=None)
         self.blocks_hotpluggable = get_hotpluggable_blocks(
             '%s/memory*' % mem_path)
+        if self.hotplug_count:
+            self.blocks_hotpluggable = self.blocks_hotpluggable[
+                :int(self.hotplug_count)]
+        else:
+            self.blocks_hotpluggable = self.blocks_hotpluggable[
+                :get_mem_count()]
 
     @staticmethod
     def hotunplug_all(blocks):
@@ -221,7 +237,7 @@ class memstress(Test):
                     process.run(
                         "drmgr -c mem -d 5 -w 30 -r", shell=True, ignore_status=True, sudo=True)
                 if memory.meminfo.MemTotal.kb >= init_mem:
-                    self.log.warn("dlpar mem could not complete")
+                    self.log.info("no more hotpluggable memory")
                 self.run_stress()
                 init_mem = memory.meminfo.MemTotal.kb
                 self.log.info("\nDLPAR add memory operation\n")
@@ -229,7 +245,7 @@ class memstress(Test):
                     process.run(
                         "drmgr -c mem -d 5 -w 30 -a", shell=True, ignore_status=True, sudo=True)
                 if init_mem < memory.meminfo.MemTotal.kb:
-                    self.log.warn("dlpar mem could not complete")
+                    self.log.info("no more hotpluggable memory")
             else:
                 self.log.info('UNSUPPORTED: dlpar not configured..')
         else:
@@ -244,6 +260,8 @@ class memstress(Test):
             self.log.info("Hotplug all memory in Numa Node %s" % node)
             mem_blocks = get_hotpluggable_blocks(
                 '/sys/devices/system/node/node%s/memory*' % node)
+            if self.hotplug_count:
+                mem_blocks = mem_blocks[:int(self.hotplug_count)]
             for block in mem_blocks:
                 self.log.info(
                     "offline memory%s in numa node%s" % (block, node))
