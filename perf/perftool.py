@@ -56,8 +56,8 @@ class Perftool(Test):
                      "master.zip"]
         tarball = self.fetch_asset("perftool.zip", locations=locations,
                                    expire='7d')
-        archive.extract(tarball, self.srcdir)
-        self.sourcedir = os.path.join(self.srcdir, 'perftool-testsuite-master')
+        archive.extract(tarball, self.workdir)
+        self.sourcedir = os.path.join(self.workdir, 'perftool-testsuite-master')
 
     def test(self):
         '''

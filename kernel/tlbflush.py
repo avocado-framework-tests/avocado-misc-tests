@@ -49,9 +49,9 @@ class Tlbflush(Test):
         data_dir = os.path.abspath(self.datadir)
 
         shutil.copyfile(os.path.join(data_dir, 'tlbflush.c'),
-                        os.path.join(self.srcdir, 'tlbflush.c'))
+                        os.path.join(self.workdir, 'tlbflush.c'))
 
-        os.chdir(self.srcdir)
+        os.chdir(self.workdir)
         tlbflush_patch = 'patch -p1 < %s' % (
             os.path.join(data_dir, 'tlbflush.patch'))
 
@@ -83,7 +83,7 @@ class Tlbflush(Test):
 
     def run(self):
 
-        tlbflush = os.path.join(self.srcdir, 'tlbflush')
+        tlbflush = os.path.join(self.workdir, 'tlbflush')
 
         cmd = '%s -n %s -t %s' % (tlbflush, self.nr_entries, self.nr_threads)
 

@@ -52,11 +52,11 @@ class Valgrind(Test):
             url = self.params.get('url', default="ftp://sourceware.org/pub/"
                                   "valgrind/valgrind-3.13.0.tar.bz2")
             tarball = self.fetch_asset(url)
-            archive.extract(tarball, self.srcdir)
+            archive.extract(tarball, self.workdir)
             version = os.path.basename(tarball.split('.tar.')[0])
-            self.sourcedir = os.path.join(self.srcdir, version)
+            self.sourcedir = os.path.join(self.workdir, version)
         elif run_type == "distro":
-            self.sourcedir = os.path.join(self.srcdir, 'valgrind-distro')
+            self.sourcedir = os.path.join(self.workdir, 'valgrind-distro')
             if not os.path.exists(self.sourcedir):
                 os.makedirs(self.sourcedir)
             self.sourcedir = smm.get_source('valgrind', self.sourcedir)

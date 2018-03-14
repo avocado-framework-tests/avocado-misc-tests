@@ -74,14 +74,14 @@ class Ltrace(Test):
             source = self.params.get('url', default="git://git.debian.org/git/"
                                      "collab-maint/ltrace.git")
             git.get_repo(source, destination_dir=os.path.join(
-                self.srcdir, 'ltrace'))
+                self.workdir, 'ltrace'))
 
-            self.src_lt = os.path.join(self.srcdir, "ltrace")
+            self.src_lt = os.path.join(self.workdir, "ltrace")
             os.chdir(self.src_lt)
             process.run('patch -p1 < %s' %
                         os.path.join(self.datadir, 'ltrace.patch'), shell=True)
         elif run_type == "distro":
-            self.src_lt = os.path.join(self.srcdir, "ltrace-distro")
+            self.src_lt = os.path.join(self.workdir, "ltrace-distro")
             if not os.path.exists(self.src_lt):
                 self.src_lt = smm.get_source("ltrace", self.src_lt)
             os.chdir(self.src_lt)

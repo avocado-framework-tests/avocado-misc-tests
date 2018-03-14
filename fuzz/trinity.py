@@ -58,8 +58,8 @@ class Trinity(Test):
                      "master.zip"]
         tarball = self.fetch_asset("trinity.zip", locations=locations,
                                    expire='7d')
-        archive.extract(tarball, self.srcdir)
-        self.sourcedir = os.path.join(self.srcdir, 'trinity-master')
+        archive.extract(tarball, self.workdir)
+        self.sourcedir = os.path.join(self.workdir, 'trinity-master')
 
         os.chdir(self.sourcedir)
 

@@ -52,9 +52,9 @@ class Filebench(Test):
                                    'filebench/releases/download/1.5-alpha3/'
                                    '%s.tar.gz' % name_version)
 
-        archive.extract(tarball, self.srcdir)
-        self.install_prefix = os.path.join(self.workdir, name_version)
-        build_dir = os.path.join(self.srcdir, name_version)
+        archive.extract(tarball, self.workdir)
+        self.install_prefix = os.path.join(self.workdir, 'install_prefix')
+        build_dir = os.path.join(self.workdir, name_version)
         os.chdir(build_dir)
         process.run('./configure --prefix=%s' % self.install_prefix,
                     shell=True)

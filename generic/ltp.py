@@ -47,8 +47,8 @@ class ltp(Test):
                 self.error(package + ' is needed for the test to be run')
         url = "https://github.com/linux-test-project/ltp/archive/master.zip"
         tarball = self.fetch_asset("ltp-master.zip", locations=[url])
-        archive.extract(tarball, self.srcdir)
-        ltp_dir = os.path.join(self.srcdir, "ltp-master")
+        archive.extract(tarball, self.workdir)
+        ltp_dir = os.path.join(self.workdir, "ltp-master")
         os.chdir(ltp_dir)
         build.make(ltp_dir, extra_args='autotools')
         ltpbin_dir = os.path.join(ltp_dir, 'bin')
@@ -65,8 +65,8 @@ class ltp(Test):
             failcmdfile = os.path.join(self.logdir, 'failcmdfile')
             skipfile = os.path.join(self.datadir, 'skipfile')
             args += (" -q -p -l %s -C %s -d %s -S %s"
-                     % (logfile, failcmdfile, self.srcdir, skipfile))
-        ltpbin_dir = os.path.join(self.srcdir, "ltp-master", 'bin')
+                     % (logfile, failcmdfile, self.workdir, skipfile))
+        ltpbin_dir = os.path.join(self.workdir, "ltp-master", 'bin')
         cmd = os.path.join(ltpbin_dir, script) + ' ' + args
         result = process.run(cmd, ignore_status=True)
         # Walk the stdout and try detect failed tests from lines like these:
