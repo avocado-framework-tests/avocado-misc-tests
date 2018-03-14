@@ -52,9 +52,9 @@ class Hackbench(Test):
         hackbench = self.fetch_asset('http://people.redhat.com'
                                      '/~mingo/cfs-scheduler/'
                                      'tools/hackbench.c')
-        shutil.copyfile(hackbench, os.path.join(self.srcdir, 'hackbench.c'))
+        shutil.copyfile(hackbench, os.path.join(self.wordir, 'hackbench.c'))
 
-        os.chdir(self.srcdir)
+        os.chdir(self.wordir)
 
         if 'CC' in os.environ:
             cc = '$CC'
@@ -64,7 +64,7 @@ class Hackbench(Test):
 
     def test(self):
 
-        hackbench_bin = os.path.join(self.srcdir, 'hackbench')
+        hackbench_bin = os.path.join(self.wordir, 'hackbench')
         cmd = '%s %s' % (hackbench_bin, self._num_groups)
         time_spent = 0
         perf_json = {}

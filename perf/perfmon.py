@@ -40,16 +40,16 @@ class Perfmon(Test):
                     "Fail to install %s required for this test." % package)
 
         git.get_repo('git://git.code.sf.net/p/perfmon2/libpfm4',
-                     destination_dir=self.srcdir)
+                     destination_dir=self.wordir)
 
-        os.chdir(self.srcdir)
+        os.chdir(self.wordir)
 
         build.make('.')
 
     def test(self):
 
         out = process.system_output('%s ' % os.path.join(
-            self.srcdir, 'tests/validate'))
+            self.wordir, 'tests/validate'))
         if 'fail' in out:
             self.fail("test failed:check manually")
 

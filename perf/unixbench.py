@@ -41,8 +41,8 @@ class Unixbench(Test):
         url = 'https://github.com/kdlucas/byte-unixbench/archive/master.zip'
         tarball = self.fetch_asset("byte-unixbench.zip", locations=[url],
                                    expire='7d')
-        archive.extract(tarball, self.srcdir)
-        self.sourcedir = os.path.join(self.srcdir,
+        archive.extract(tarball, self.wordir)
+        self.sourcedir = os.path.join(self.wordir,
                                       "byte-unixbench-master/UnixBench")
         os.chdir(self.sourcedir)
         build.make(self.sourcedir)

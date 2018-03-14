@@ -63,8 +63,8 @@ class Fsfuzzer(Test):
         locations = ["https://github.com/stevegrubb/fsfuzzer/archive/"
                      "master.zip"]
         tarball = self.fetch_asset("fsfuzzer.zip", locations=locations)
-        archive.extract(tarball, self.srcdir)
-        os.chdir(os.path.join(self.srcdir, "fsfuzzer-master"))
+        archive.extract(tarball, self.wordir)
+        os.chdir(os.path.join(self.wordir, "fsfuzzer-master"))
 
         if d_name == "ubuntu":
             # Patch for ubuntu

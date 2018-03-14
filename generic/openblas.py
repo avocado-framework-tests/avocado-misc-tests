@@ -46,8 +46,8 @@ class Openblas(Test):
         url = "https://github.com/xianyi/OpenBLAS/archive/develop.zip"
         tarball = self.fetch_asset("OpenBLAS-develop.zip", locations=[url],
                                    expire='7d')
-        archive.extract(tarball, self.srcdir)
-        openblas_dir = os.path.join(self.srcdir, "OpenBLAS-develop")
+        archive.extract(tarball, self.wordir)
+        openblas_dir = os.path.join(self.wordir, "OpenBLAS-develop")
         openblas_bin_dir = os.path.join(openblas_dir, 'bin')
         os.mkdir(openblas_bin_dir)
         build.make(openblas_dir, extra_args='FC=gfortran')

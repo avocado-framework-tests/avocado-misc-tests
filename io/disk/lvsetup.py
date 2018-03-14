@@ -81,7 +81,7 @@ class Lvsetup(Test):
         self.lv_name = lv_name
         if lv_utils.lv_check(vg_name, lv_snapshot_name):
             self.cancel('Snapshot %s already exists' % lv_snapshot_name)
-        self.mount_loc = self.srcdir
+        self.mount_loc = self.wordir
         self.lv_snapshot_name = lv_snapshot_name
 
     @avocado.fail_on(lv_utils.LVException)

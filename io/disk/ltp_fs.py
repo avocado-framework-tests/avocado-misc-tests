@@ -48,7 +48,7 @@ class LtpFs(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("%s is needed for the test to be run" % package)
         self.disk = self.params.get('disk', default=None)
-        self.mount_point = self.params.get('dir', default=self.srcdir)
+        self.mount_point = self.params.get('dir', default=self.wordir)
         self.script = self.params.get('script')
         fstype = self.params.get('fs', default='ext4')
         self.args = self.params.get('args', default='')

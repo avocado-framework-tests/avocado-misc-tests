@@ -120,8 +120,8 @@ class Kernbench(Test):
         # Uncompress the kernel archive to the work directory
         tarball = self.fetch_asset("kernbench.zip", locations=[self.location],
                                    expire='1d')
-        archive.extract(tarball, self.srcdir)
-        self.sourcedir = os.path.join(self.srcdir, 'linux-master')
+        archive.extract(tarball, self.wordir)
+        self.sourcedir = os.path.join(self.wordir, 'linux-master')
 
         self.log.info("Starting build the kernel")
         timefile = "%s/time_file" % self.sourcedir

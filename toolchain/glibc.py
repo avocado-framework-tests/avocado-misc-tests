@@ -39,10 +39,10 @@ class Glibc(Test):
         if run_type == "upstream":
             url = 'https://github.com/bminor/glibc/archive/master.zip'
             tarball = self.fetch_asset("glibc.zip", locations=[url], expire='7d')
-            archive.extract(tarball, self.srcdir)
-            glibc_dir = os.path.join(self.srcdir, "glibc-master")
+            archive.extract(tarball, self.wordir)
+            glibc_dir = os.path.join(self.wordir, "glibc-master")
         elif run_type == "distro":
-            glibc_dir = os.path.join(self.srcdir, "glibc-distro")
+            glibc_dir = os.path.join(self.wordir, "glibc-distro")
             if not os.path.exists(glibc_dir):
                 os.makedirs(glibc_dir)
             glibc_dir = sm.get_source("glibc", glibc_dir)

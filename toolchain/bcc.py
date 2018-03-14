@@ -58,8 +58,8 @@ class Bcc(Test):
         locations = ["https://github.com/iovisor/bcc/archive/master.zip"]
         tarball = self.fetch_asset("bcc.zip", locations=locations,
                                    expire='7d')
-        archive.extract(tarball, self.srcdir)
-        self.sourcedir = os.path.join(self.srcdir, 'bcc-master')
+        archive.extract(tarball, self.wordir)
+        self.sourcedir = os.path.join(self.wordir, 'bcc-master')
         os.makedirs('%s/build' % self.sourcedir)
         self.builddir = '%s/build' % self.sourcedir
         os.chdir(self.builddir)

@@ -53,9 +53,9 @@ class Lmbench(Test):
         tarball = self.fetch_asset('http://www.bitmover.com'
                                    '/lmbench/lmbench3.tar.gz')
         data_dir = os.path.abspath(self.datadir)
-        archive.extract(tarball, self.srcdir)
+        archive.extract(tarball, self.wordir)
         version = os.path.basename(tarball.split('.tar.')[0])
-        self.sourcedir = os.path.join(self.srcdir, version)
+        self.sourcedir = os.path.join(self.wordir, version)
 
         # Patch for lmbench
 

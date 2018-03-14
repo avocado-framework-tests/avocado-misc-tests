@@ -69,11 +69,11 @@ class Binutils(Test):
                 "/pub/binutils/releases/binutils-%s.tar.bz2" % version]
             tarball = self.fetch_asset("binutils-%s.tar.bz2" % version,
                                        locations=locations)
-            archive.extract(tarball, self.srcdir)
+            archive.extract(tarball, self.wordir)
             self.sourcedir = os.path.join(
-                self.srcdir, os.path.basename(tarball.split('.tar.')[0]))
+                self.wordir, os.path.basename(tarball.split('.tar.')[0]))
         elif run_type == "distro":
-            self.sourcedir = os.path.join(self.srcdir, "binutils-distro")
+            self.sourcedir = os.path.join(self.wordir, "binutils-distro")
             if not os.path.exists(self.sourcedir):
                 self.sourcedir = self._sm.get_source("binutils", self.sourcedir)
 

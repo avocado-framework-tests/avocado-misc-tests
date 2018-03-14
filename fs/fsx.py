@@ -39,7 +39,7 @@ class Fsx(Test):
         fsx = self.fetch_asset(
             'https://raw.githubusercontent.com/linux-test-project/ltp/'
             'master/testcases/kernel/fs/fsx-linux/fsx-linux.c', expire='7d')
-        os.chdir(self.srcdir)
+        os.chdir(self.wordir)
         process.system('gcc -o fsx %s' % fsx, shell=True, ignore_status=True)
 
     def test(self):

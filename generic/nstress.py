@@ -43,11 +43,11 @@ class NStress(Test):
         url = os.path.join('http://public.dhe.ibm.com/systems/power/community/wikifiles/PerfTools/',
                            tar_ball)
         tarball = self.fetch_asset(url, expire='10d')
-        archive.extract(tarball, self.srcdir)
+        archive.extract(tarball, self.wordir)
         self.duration = self.params.get('duration', default=300)
 
     def test(self):
-        os.chdir(self.srcdir)
+        os.chdir(self.wordir)
         self.run_cmd("./nmem -m 250 -s %s" % self.duration)
         self.run_cmd("./nmem64 -m 2047 -s %s" % self.duration)
         if self.is_fail >= 1:

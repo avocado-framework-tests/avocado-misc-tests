@@ -59,8 +59,8 @@ class Numactl(Test):
         locations = ["https://github.com/numactl/numactl/archive/master.zip"]
         tarball = self.fetch_asset("numactl.zip", locations=locations,
                                    expire='7d')
-        archive.extract(tarball, self.srcdir)
-        self.sourcedir = os.path.join(self.srcdir, 'numactl-master')
+        archive.extract(tarball, self.wordir)
+        self.sourcedir = os.path.join(self.wordir, 'numactl-master')
 
         os.chdir(self.sourcedir)
         process.run('./autogen.sh', shell=True)
