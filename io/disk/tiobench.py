@@ -59,7 +59,7 @@ class Tiobench(Test):
         archive.extract(tarball, self.teststmpdir)
         os.chdir(os.path.join(self.teststmpdir, "tiobench-master"))
         build.make(".")
-        self.target = self.params.get('dir', default=self.srcdir)
+        self.target = self.params.get('dir', default=self.workdir)
         self.disk = self.params.get('disk', default=None)
 
         if self.disk is not None:

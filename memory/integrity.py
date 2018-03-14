@@ -55,8 +55,8 @@ class Integrity(Test):
                 self.cancel('%s is needed for the test to be run' % packages)
 
         tarball = os.path.join(self.datadir, "Integritytests.tar")
-        archive.extract(tarball, self.srcdir)
-        self.build_dir = os.path.join(self.srcdir, 'Integritytests')
+        archive.extract(tarball, self.workdir)
+        self.build_dir = os.path.join(self.workdir, 'Integritytests')
         build.make(self.build_dir)
 
     def test(self):

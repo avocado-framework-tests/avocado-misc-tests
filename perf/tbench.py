@@ -50,9 +50,9 @@ class tbench(Test):
         tarball = self.fetch_asset(
                   "https://www.samba.org/ftp/tridge/dbench/dbench-3.04.tar.gz",
                   expire='7d')
-        archive.extract(tarball, self.srcdir)
+        archive.extract(tarball, self.workdir)
         version = os.path.basename(tarball.split('.tar.')[0])
-        self.sourcedir = os.path.join(self.srcdir, version)
+        self.sourcedir = os.path.join(self.workdir, version)
         os.chdir(self.sourcedir)
         process.run('./configure', ignore_status=True, sudo=True)
         build.make(self.sourcedir)

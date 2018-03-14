@@ -42,8 +42,8 @@ class Oprofile(Test):
             if not sm.check_installed(package) and not sm.install(package):
                 self.error(package + ' is needed for the test to be run')
         git.get_repo('git://git.code.sf.net/p/oprofile/oprofile-tests',
-                     destination_dir=self.srcdir)
-        os.chdir(self.srcdir)
+                     destination_dir=self.workdir)
+        os.chdir(self.workdir)
         os.chdir("testsuite/")
 
     def test(self):
