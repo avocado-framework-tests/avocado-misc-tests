@@ -47,8 +47,8 @@ class Memtester(Test):
                                    'https://github.com/jnavila/'
                                    'memtester/archive/master.zip'],
                                    expire='7d')
-        archive.extract(tarball, self.srcdir)
-        sourcedir = os.path.join(self.srcdir, 'memtester-master')
+        archive.extract(tarball, self.wordir)
+        sourcedir = os.path.join(self.wordir, 'memtester-master')
         os.chdir(sourcedir)
         process.system('chmod 755 extra-libs.sh', shell=True, sudo=True,
                        ignore_status=True)

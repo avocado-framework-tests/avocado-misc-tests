@@ -45,9 +45,9 @@ class CRIU(Test):
         tarball = self.fetch_asset(
                   "http://download.openvz.org/criu/criu-%s.tar.bz2" % criu_version,
                   expire='10d')
-        archive.extract(tarball, self.srcdir)
+        archive.extract(tarball, self.wordir)
         self.sourcedir = os.path.join(
-            self.srcdir, os.path.basename(tarball.split('.tar')[0]))
+            self.wordir, os.path.basename(tarball.split('.tar')[0]))
         build.make(self.sourcedir)
         self.sourcedir = os.path.join(self.sourcedir, "test")
 

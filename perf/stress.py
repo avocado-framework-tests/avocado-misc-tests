@@ -48,9 +48,9 @@ class Stress(Test):
         tarball = self.fetch_asset(
             'http://people.seas.harvard.edu/~apw/stress/stress-1.0.4.tar.gz',
             expire='7d')
-        archive.extract(tarball, self.srcdir)
+        archive.extract(tarball, self.wordir)
         stress_version = os.path.basename(tarball.split('.tar.')[0])
-        self.sourcedir = os.path.join(self.srcdir, stress_version)
+        self.sourcedir = os.path.join(self.wordir, stress_version)
         os.chdir(self.sourcedir)
         process.run('./configure')
         build.make(self.sourcedir)

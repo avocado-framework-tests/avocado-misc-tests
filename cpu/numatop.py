@@ -56,8 +56,8 @@ class Numatop(Test):
         locations = ["https://github.com/01org/numatop/archive/master.zip"]
         tarball = self.fetch_asset("numatop.zip", locations=locations,
                                    expire='7d')
-        archive.extract(tarball, self.srcdir)
-        self.sourcedir = os.path.join(self.srcdir, 'numatop-master')
+        archive.extract(tarball, self.wordir)
+        self.sourcedir = os.path.join(self.wordir, 'numatop-master')
 
         os.chdir(self.sourcedir)
 

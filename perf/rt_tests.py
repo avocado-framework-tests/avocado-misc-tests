@@ -54,9 +54,9 @@ class rt_tests(Test):
         tarball = self.fetch_asset(
             "https://www.kernel.org/pub/linux/utils/rt-tests/"
             "rt-tests-1.0.tar.gz")
-        archive.extract(tarball, self.srcdir)
+        archive.extract(tarball, self.wordir)
         self.sourcedir = os.path.join(
-            self.srcdir, os.path.basename(tarball.split('.tar.')[0]))
+            self.wordir, os.path.basename(tarball.split('.tar.')[0]))
         build.make(self.sourcedir)
 
     def test(self):

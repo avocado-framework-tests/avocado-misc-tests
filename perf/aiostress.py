@@ -59,7 +59,7 @@ class Aiostress(Test):
 
         aiostress = self.fetch_asset(
             'https://oss.oracle.com/~mason/aio-stress/aio-stress.c')
-        os.chdir(self.srcdir)
+        os.chdir(self.wordir)
         # This requires libaio.h in order to build
         # -laio -lpthread is provided at end as a workaround for Ubuntu
         process.run('gcc -Wall -o aio-stress %s -laio -lpthread' % aiostress)
@@ -68,7 +68,7 @@ class Aiostress(Test):
         """
         Run aiostress
         """
-        os.chdir(self.srcdir)
+        os.chdir(self.wordir)
         # aio-stress needs a filename (foo) to run tests on.
         cmd = ('./aio-stress foo')
         process.run(cmd)

@@ -47,8 +47,8 @@ class Libvecpf(Test):
         tarball = self.fetch_asset('libvecpf.zip', locations=[
                                    'https://github.com/Libvecpf/libvecpf'
                                    '/archive/master.zip'], expire='7d')
-        archive.extract(tarball, self.srcdir)
-        self.sourcedir = os.path.join(self.srcdir, 'libvecpf-master')
+        archive.extract(tarball, self.wordir)
+        self.sourcedir = os.path.join(self.wordir, 'libvecpf-master')
 
         build.make(self.sourcedir, make='./configure')
         build.make(self.sourcedir)

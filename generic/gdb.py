@@ -49,11 +49,11 @@ class GDB(Test):
             gdb_version = self.params.get('gdb_version', default='7.10')
             tarball = self.fetch_asset(
                 "http://ftp.gnu.org/gnu/gdb/gdb-%s.tar.gz" % gdb_version)
-            archive.extract(tarball, self.srcdir)
+            archive.extract(tarball, self.wordir)
             sourcedir = os.path.join(
-                self.srcdir, os.path.basename(tarball.split('.tar')[0]))
+                self.wordir, os.path.basename(tarball.split('.tar')[0]))
         elif test_type == 'distro':
-            sourcedir = os.path.join(self.srcdir, 'gdb-distro')
+            sourcedir = os.path.join(self.wordir, 'gdb-distro')
             if not os.path.exists(sourcedir):
                 os.makedirs(sourcedir)
             sourcedir = sm.get_source("gdb", sourcedir)

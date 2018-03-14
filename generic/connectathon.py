@@ -68,17 +68,17 @@ class Connectathon(Test):
         self.tmpdir = tempfile.mkdtemp(prefix='avocado_' + __name__)
         data_dir = os.path.abspath(self.datadir)
         git.get_repo('git://git.linux-nfs.org/projects/steved/cthon04.git',
-                     destination_dir=self.srcdir)
-        os.chdir(self.srcdir)
+                     destination_dir=self.wordir)
+        os.chdir(self.wordir)
 
-        build.make(self.srcdir)
+        build.make(self.wordir)
 
     def test(self):
 
         args = self.params.get('arg', default='')
         cthon_iterations = self.params.get('cthon_iterations', default=1)
         testdir = self.params.get('testdir', default=None)
-        os.chdir(self.srcdir)
+        os.chdir(self.wordir)
 
         if testdir is None:
             testdir = self.tmpdir

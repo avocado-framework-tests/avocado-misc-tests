@@ -58,7 +58,7 @@ class ParallelDd(Test):
         self.disk = self.params.get('disk')
         if not self.disk:
             self.error('Test requires disk parameter,Please check README')
-        self.fsys = partition_lib.Partition(self.disk, mountpoint=self.srcdir)
+        self.fsys = partition_lib.Partition(self.disk, mountpoint=self.wordir)
         self.megabytes = self.params.get('megabytes', default=100)
         self.blocks = self.params.get('blocks', default=None)
         self.streams = self.params.get('streams', default=2)
@@ -115,7 +115,7 @@ class ParallelDd(Test):
          Write out 'streams' files in parallel background task.
         """
         for i in range(self.streams):
-            s_file = os.path.join(self.srcdir, 'poo%d' % (i + 1))
+            s_file = os.path.join(self.wordir, 'poo%d' % (i + 1))
             cmd = 'dd if=/dev/zero of=%s bs=4k count=%d' % \
                 (s_file, self.blocks_per_file)
             for option in self.fs_dd_woptions.split():
@@ -135,7 +135,7 @@ class ParallelDd(Test):
         Read in 'streams' files in parallel background tasks.
         """
         for i in range(self.streams):
-            s_file = os.path.join(self.srcdir, 'poo%d' % (i + 1))
+            s_file = os.path.join(self.wordir, 'poo%d' % (i + 1))
             cmd = 'dd if=%s of=/dev/null bs=4k count=%d' % \
                 (s_file, self.blocks_per_file)
             for option in self.fs_dd_roptions.split():

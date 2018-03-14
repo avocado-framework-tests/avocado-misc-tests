@@ -48,8 +48,8 @@ class Stutter(Test):
                      "master.zip"]
         tarball = self.fetch_asset("stutter.zip", locations=locations,
                                    expire='7d')
-        archive.extract(tarball, self.srcdir)
-        self.sourcedir = os.path.join(self.srcdir, 'stutter-master')
+        archive.extract(tarball, self.wordir)
+        self.sourcedir = os.path.join(self.wordir, 'stutter-master')
 
         mem_byte = str(memory.memtotal())
         print mem_byte

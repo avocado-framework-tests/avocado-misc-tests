@@ -51,7 +51,7 @@ class KDUMP(Test):
         self.prompt = self.params.get('prompt', default='')
 
     def test(self):
-        log_file = os.path.join(self.srcdir, "file")
+        log_file = os.path.join(self.wordir, "file")
         session_int = remote.RemoteRunner("ssh", self.ip, 22, self.user_name, self.password,
                                           self.prompt, "\n", log_file, 100, 10, None)
         session_int.run("cat /etc/os-release", 600, "True")

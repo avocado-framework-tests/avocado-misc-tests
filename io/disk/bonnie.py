@@ -82,7 +82,7 @@ class Bonnie(Test):
                 build.make(self.source, extra_args='install')
 
         self.disk = self.params.get('disk', default=None)
-        self.scratch_dir = self.params.get('dir', default=self.srcdir)
+        self.scratch_dir = self.params.get('dir', default=self.wordir)
         self.uid_to_use = self.params.get('uid-to-use',
                                           default=getpass.getuser())
         self.number_to_stat = self.params.get('number-to-stat', default=2048)

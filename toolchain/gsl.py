@@ -36,9 +36,9 @@ class GSL(Test):
         gsl_version = self.params.get('gsl_version', default='2.2')
         tarball = self.fetch_asset(
             "ftp://ftp.gnu.org/gnu/gsl/gsl-%s.tar.gz" % gsl_version, expire='10d')
-        archive.extract(tarball, self.srcdir)
+        archive.extract(tarball, self.wordir)
         self.sourcedir = os.path.join(
-            self.srcdir, os.path.basename(tarball.split('.tar')[0]))
+            self.wordir, os.path.basename(tarball.split('.tar')[0]))
         os.chdir(self.sourcedir)
         process.run('./configure', ignore_status=True, sudo=True)
         build.make(self.sourcedir)

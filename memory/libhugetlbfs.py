@@ -104,8 +104,8 @@ class libhugetlbfs(Test):
 
         data_dir = os.path.abspath(self.datadir)
         git.get_repo('https://github.com/libhugetlbfs/libhugetlbfs.git',
-                     destination_dir=self.srcdir)
-        os.chdir(self.srcdir)
+                     destination_dir=self.wordir)
+        os.chdir(self.wordir)
         patch = self.params.get('patch', default='elflink.patch')
         process.run('patch -p1 < %s' % data_dir + '/' + patch, shell=True)
 
@@ -117,7 +117,7 @@ class libhugetlbfs(Test):
                 os.path.join(data_dir, 'falloc.patch'))
             process.run(falloc_patch, shell=True)
 
-        build.make(self.srcdir, extra_args='BUILDTYPE=NATIVEONLY')
+        build.make(self.wordir, extra_args='BUILDTYPE=NATIVEONLY')
 
     def _log_parser(self, log):
         """
@@ -174,10 +174,10 @@ class libhugetlbfs(Test):
         return parsed_results
 
     def test(self):
-        os.chdir(self.srcdir)
+        os.chdir(self.wordir)
 
         parsed_results = self._log_parser(
-            build.run_make(self.srcdir,
+            build.run_make(self.wordir,
                            extra_args='BUILDTYPE=NATIVEONLY check').stdout)
         error = ""
 

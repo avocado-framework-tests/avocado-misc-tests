@@ -57,7 +57,7 @@ class FSMark(Test):
         self.disk = self.params.get('disk', default=None)
         self.num = self.params.get('num_files', default='1024')
         self.size = self.params.get('size', default='1000')
-        self.dir = self.params.get('dir', default=self.srcdir)
+        self.dir = self.params.get('dir', default=self.wordir)
         self.fstype = self.params.get('fs', default='ext4')
 
         if self.fstype == 'btrfs':
