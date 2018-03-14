@@ -50,8 +50,8 @@ class Libunwind(Test):
         tarball = self.fetch_asset('vanilla_pathscale.zip', locations=[
             'https://github.com/pathscale/libunwind/archive/'
             'vanilla_pathscale.zip'], expire='7d')
-        archive.extract(tarball, self.srcdir)
-        self.sourcedir = os.path.join(self.srcdir, 'libunwind-vanilla_pathscale')
+        archive.extract(tarball, self.workdir)
+        self.sourcedir = os.path.join(self.workdir, 'libunwind-vanilla_pathscale')
         os.chdir(self.sourcedir)
         process.run('./autogen.sh', shell=True)
         '''

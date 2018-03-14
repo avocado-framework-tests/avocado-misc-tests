@@ -40,8 +40,8 @@ class eatmemory(Test):
                 self.error(package + ' is needed for the test to be run')
         url = 'https://github.com/julman99/eatmemory/archive/master.zip'
         tarball = self.fetch_asset("eatmemory.zip", locations=[url], expire='7d')
-        archive.extract(tarball, self.srcdir)
-        self.sourcedir = os.path.join(self.srcdir, "eatmemory-master")
+        archive.extract(tarball, self.workdir)
+        self.sourcedir = os.path.join(self.workdir, "eatmemory-master")
         build.make(self.sourcedir)
         mem = self.params.get('memory_to_test', default=memory.memtotal())
         self.mem_to_eat = self._mem_to_mbytes(mem)

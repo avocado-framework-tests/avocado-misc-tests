@@ -53,7 +53,7 @@ class FioTest(Test):
         default_url = "http://brick.kernel.dk/snaps/fio-2.1.10.tar.gz"
         url = self.params.get('fio_tool_url', default=default_url)
         self.disk = self.params.get('disk', default=None)
-        self.dir = self.params.get('dir', default=self.srcdir)
+        self.dir = self.params.get('dir', default=self.workdir)
         fstype = self.params.get('fs', default='ext4')
         tarball = self.fetch_asset(url)
         archive.extract(tarball, self.teststmpdir)

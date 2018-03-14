@@ -45,7 +45,7 @@ class PSTORE(Test):
         self.prompt = self.params.get('prompt', default='')
 
     def test(self):
-        log_file = os.path.join(self.srcdir, "file")
+        log_file = os.path.join(self.workdir, "file")
         session_init = remote.RemoteRunner("ssh", self.ip, 22, self.user_name, self.password,
                                            self.prompt, "\n", log_file, 100, 10, None)
         session_init.run("cat /boot/config-`uname -r` | grep PSTORE", 600, "True")

@@ -50,12 +50,12 @@ class Pmqa(Test):
                     "Fail to install %s required for this test." % package)
 
         git.get_repo('git://git.linaro.org/power/pm-qa.git',
-                     destination_dir=self.srcdir)
+                     destination_dir=self.workdir)
         self.test_type = self.params.get('run_arg', default='cpufreq')
 
     def test(self):
 
-        os.chdir(self.srcdir)
+        os.chdir(self.workdir)
         log = os.path.join(self.logdir, 'stdout')
 
         ext_opt = ''

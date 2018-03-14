@@ -52,17 +52,17 @@ class Linsched(Test):
                     "Fail to install %s required for this test." % package)
         self.args = self.params.get('args', default='pi 100')
         git.get_repo('https://github.com/thejinxters/linux-scheduler-testing',
-                     destination_dir=self.srcdir)
-        os.chdir(self.srcdir)
+                     destination_dir=self.workdir)
+        os.chdir(self.workdir)
         fix_patch = 'patch -p1 < %s' % (
             os.path.join(self.datadir, 'fix.patch'))
         process.run(fix_patch, shell=True, ignore_status=True)
 
-        build.make(self.srcdir)
+        build.make(self.workdir)
 
     def test(self):
 
-        os.chdir(self.srcdir)
+        os.chdir(self.workdir)
 
         if process.system('./%s' % self.args, ignore_status=True, shell=True):
             self.fail('Test [%s] failed.' % self.args)
