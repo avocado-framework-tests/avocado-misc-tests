@@ -15,6 +15,7 @@
 # Author: Hariharan T.S.  <harihare@in.ibm.com>
 
 import os
+import shutil
 from avocado import Test
 from avocado import main
 from avocado.utils import process, git
@@ -64,9 +65,17 @@ class Sysbench(Test):
                 self.urllink = self.params.get(
                     'url-link', default="https://github.com/akopytov/"
                                         "sysbench.git")
+                self.fixlink = self.params.get('fixlink', default=None)
+                self.fix_dir = self.params.get('fixdir', default=None)
                 self.bch = self.params.get('branch', default='master')
                 git.get_repo(self.urllink, branch=self.bch,
                              destination_dir=self.teststmpdir)
+
+                if self.fixlink and self.fix_dir:
+                    fixpath = '%s%s' % (self.teststmpdir, self.fix_dir)
+                    shutil.rmtree(fixpath)
+                    git.get_repo(self.fixlink, branch="ppc64-port",
+                                 destination_dir=fixpath)
                 os.chdir(self.teststmpdir)
                 self.run_cmd("./autogen.sh")
                 self.run_cmd("./configure --without-mysql")
