@@ -144,7 +144,7 @@ class memstress(Test):
             return False
 
     def run_stress(self):
-        mem_free = memory.meminfo.MemFree.mb / 2
+        mem_free = memory.meminfo.MemFree.m / 2
         cpu_count = int(multiprocessing.cpu_count()) / 2
         process.run("stress --cpu %s --io %s --vm %s --vm-bytes %sM --timeout %ss" %
                     (cpu_count, self.iocount, self.vmcount, mem_free, self.stresstime), ignore_status=True, sudo=True, shell=True)
@@ -215,20 +215,20 @@ class memstress(Test):
     def dlpar_mem_hotplug(self):
         if 'ppc' in platform.processor() and 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
             if "mem_dlpar=yes" in process.system_output("drmgr -C", ignore_status=True, shell=True):
-                init_mem = memory.meminfo.MemTotal.kb
+                init_mem = memory.meminfo.MemTotal.k
                 self.log.info("\nDLPAR remove memory operation\n")
                 for _ in range(len(self.blocks_hotpluggable) / 2):
                     process.run(
                         "drmgr -c mem -d 5 -w 30 -r", shell=True, ignore_status=True, sudo=True)
-                if memory.meminfo.MemTotal.kb >= init_mem:
+                if memory.meminfo.MemTotal.k >= init_mem:
                     self.log.warn("dlpar mem could not complete")
                 self.run_stress()
-                init_mem = memory.meminfo.MemTotal.kb
+                init_mem = memory.meminfo.MemTotal.k
                 self.log.info("\nDLPAR add memory operation\n")
                 for _ in range(len(self.blocks_hotpluggable) / 2):
                     process.run(
                         "drmgr -c mem -d 5 -w 30 -a", shell=True, ignore_status=True, sudo=True)
-                if init_mem < memory.meminfo.MemTotal.kb:
+                if init_mem < memory.meminfo.MemTotal.k:
                     self.log.warn("dlpar mem could not complete")
             else:
                 self.log.info('UNSUPPORTED: dlpar not configured..')
