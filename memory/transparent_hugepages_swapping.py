@@ -44,11 +44,11 @@ class Thp_Swapping(Test):
         '''
 
         self.swap_free = []
-        mem_free = memory.meminfo.MemFree.mb
-        mem = memory.meminfo.MemTotal.mb
-        swap = memory.meminfo.SwapTotal.mb
-        self.hugepage_size = memory.meminfo.Hugepagesize.mb
-        self.swap_free.append(memory.meminfo.SwapFree.mb)
+        mem_free = memory.meminfo.MemFree.m
+        mem = memory.meminfo.MemTotal.m
+        swap = memory.meminfo.SwapTotal.m
+        self.hugepage_size = memory.meminfo.Hugepagesize.m
+        self.swap_free.append(memory.meminfo.SwapFree.m)
         self.mem_path = os.path.join(data_dir.get_tmp_dir(), 'thp_space')
         self.dd_timeout = 900
 
@@ -90,7 +90,7 @@ class Thp_Swapping(Test):
                               verbose=False, ignore_status=True, shell=True)):
                 self.fail('Swap command Failed %s' % swap_cmd)
 
-        self.swap_free.append(memory.meminfo.SwapFree.mb)
+        self.swap_free.append(memory.meminfo.SwapFree.m)
 
         # Checks Swap is used or not
         if self.swap_free[1] - self.swap_free[0] >= 0:

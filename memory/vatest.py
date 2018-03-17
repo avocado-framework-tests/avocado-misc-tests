@@ -43,7 +43,7 @@ class VATest(Test):
         if self.scenario_arg not in range(1, 7):
             self.cancel("Test need to skip as scenario will be 1-7")
         if self.scenario_arg in [2, 3, 4]:
-            if memory.meminfo.Hugepagesize.mb != 16:
+            if memory.meminfo.Hugepagesize.m != 16:
                 self.cancel(
                     "Test need to skip as 16MB huge need to configured")
         elif self.scenario_arg in [5, 6, 7]:
