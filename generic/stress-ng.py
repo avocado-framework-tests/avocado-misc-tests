@@ -143,8 +143,8 @@ class Stressng(Test):
                     process.run("%s %s" % (cmd, stress_cmd),
                                 ignore_status=True, sudo=True)
             if self.ttimeout and self.v_stressors:
-                timeout = int(self.ttimeout) + \
-                    int(memory.memtotal() / 1024 / 1024)
+                timeout = ' --timeout %s ' % str(
+                    int(self.ttimeout) + int(memory.memtotal() / 1024 / 1024))
             if self.v_stressors:
                 for stressor in self.v_stressors.split(' '):
                     stress_cmd = ' --%s %s %s' % (stressor,
