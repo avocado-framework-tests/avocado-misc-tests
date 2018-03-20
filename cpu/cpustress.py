@@ -218,7 +218,7 @@ class cpustresstest(Test):
         self.log.info("\nCreate %s pids and set proc affinity", totalcpus)
         for proc in range(0, totalcpus):
             pid = process.SubProcess(
-                "while :; do :; done &", shell=True).start()
+                "while :; do :; done", shell=True).start()
             pids.append(pid)
             process.run("taskset -pc %s %s" %
                         (proc, pid), ignore_status=True, shell=True)
