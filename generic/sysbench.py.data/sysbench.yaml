@@ -1,6 +1,8 @@
 max-time: null
 max-request: null
 url-link: 'https://github.com/akopytov/sysbench.git'
+fixlink: 'https://github.com/PPC64/LuaJIT.git'
+fixdir: '/third_party/luajit/luajit/'
 #Comment out branch if you want to checkout master.
 branch: '0.4'
 tests:
