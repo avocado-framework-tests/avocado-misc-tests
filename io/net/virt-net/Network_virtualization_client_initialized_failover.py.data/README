@@ -1,0 +1,11 @@
+This script will perform Client initiated failover for
+a Network virtualized device for as many times as specified by the user
+
+Before starting the test, make sure that a Backing device is added to the
+Network virtualized device under test
+
+Inputs Needed (in multiplexer file):
+------------------------------------
+interface - The Network virtualized device
+count - The number of times the unbind and bind test has to be executed
+peer_ip - IP of the Peer interface to check for Network connectivity after failover
