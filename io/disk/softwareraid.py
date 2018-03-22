@@ -14,6 +14,7 @@
 #
 # Copyright: 2016 IBM
 # Author: Venkat Rao B <vrbagal1@linux.vnet.ibm.com>
+# Author: Narasimhan V <sim@linux.vnet.ibm.com>
 
 
 """
@@ -52,6 +53,9 @@ class SoftwareRaid(Test):
         self.check_pass(cmd, "Unable to get mdadm version")
         self.disk = self.params.get('disks', default='').strip(" ")
         self.raidlevel = str(self.params.get('raid', default='0'))
+        self.setup = self.params.get('setup', default=True)
+        self.run_test = self.params.get('run_test', default=False)
+        self.cleanup = self.params.get('cleanup', default=True)
         self.sparedisk = ""
         if self.raidlevel == 'linear' or self.raidlevel == '0':
             self.disk_count = len(self.disk.split(" "))
@@ -66,19 +70,22 @@ class SoftwareRaid(Test):
         """
         Decides which functions to be run for a perticular raid level
         """
-        if self.raidlevel == 'linear' or self.raidlevel == '0':
-            self.basictest()
-        else:
-            self.extensivetest()
+        if self.setup:
+            self.create_raid()
+        if self.run_test:
+            if self.raidlevel != 'linear' and self.raidlevel != '0':
+                self.extensivetest()
 
-    def basictest(self):
+    def create_raid(self):
         """
         Only basic operations are run viz create and delete
         """
         cmd = "echo 'yes' | mdadm --create --verbose --assume-clean \
-            /dev/md/mdsraid --level=%s --raid-devices=%d %s \
-            --force" \
+            /dev/md/mdsraid --level=%s --raid-devices=%d %s" \
             % (self.raidlevel, self.disk_count, self.disk)
+        if self.sparedisk:
+            cmd += " --spare-devices=1 %s " % self.sparedisk
+        cmd += " --force"
         self.check_pass(cmd, "Failed to create a MD device")
         cmd = "mdadm --detail /dev/md/mdsraid"
         self.check_pass(cmd, "Failed to display MD device details")
@@ -88,13 +95,6 @@ class SoftwareRaid(Test):
         Extensive software raid options are run viz create, delete, assemble,
         create spares, remove and add drives
         """
-        cmd = "echo 'yes' | mdadm --create --verbose --assume-clean \
-            /dev/md/mdsraid --level=%s --raid-devices=%d %s \
-            --spare-devices=1 %s --force" \
-            % (self.raidlevel, self.disk_count, self.disk, self.sparedisk)
-        self.check_pass(cmd, "Failed to create a MD device")
-        cmd = "mdadm --detail /dev/md/mdsraid"
-        self.check_pass(cmd, "Failed to display MD device details")
         cmd = "mdadm --fail /dev/md/mdsraid %s" % (self.remadd)
         self.check_pass(cmd, "Unable to fail a drive from MD device")
         cmd = "mdadm --detail /dev/md/mdsraid"
@@ -131,10 +131,11 @@ class SoftwareRaid(Test):
         """
         Stop/Remove the MD device
         """
-        cmd = "mdadm --manage /dev/md/mdsraid --stop"
-        self.check_pass(cmd, "Failed to stop the MD device")
-        cmd = "mdadm --zero-superblock %s %s" % (self.disk, self.sparedisk)
-        self.check_pass(cmd, "Failed to remove the MD device")
+        if self.cleanup:
+            cmd = "mdadm --manage /dev/md/mdsraid --stop"
+            self.check_pass(cmd, "Failed to stop the MD device")
+            cmd = "mdadm --zero-superblock %s %s" % (self.disk, self.sparedisk)
+            self.check_pass(cmd, "Failed to remove the MD device")
 
 
 if __name__ == "__main__":

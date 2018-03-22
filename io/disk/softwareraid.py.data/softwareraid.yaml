@@ -1,5 +1,5 @@
-scenario:
-    disks: /dev/sde1 /dev/sde2 /dev/sde3 /dev/sde4 /dev/sdd1
+disks: /dev/sde1 /dev/sde2 /dev/sde3 /dev/sde4 /dev/sdd1
+run_test: True
 raidlevel: !mux
     raidlinear:
         raid: linear
