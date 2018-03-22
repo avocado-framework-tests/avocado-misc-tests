@@ -6,6 +6,8 @@ Values to be passed in yaml file:
 
 * Raid levels to be created
 
+* metadata levels for raid
+
 * Setup - True if only raid needs to be created and exit
 
 * Cleanup - True if only raid needs to be deleted and exit

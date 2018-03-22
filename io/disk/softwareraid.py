@@ -53,6 +53,7 @@ class SoftwareRaid(Test):
         self.check_pass(cmd, "Unable to get mdadm version")
         self.disk = self.params.get('disks', default='').strip(" ")
         self.raidlevel = str(self.params.get('raid', default='0'))
+        self.metadata = str(self.params.get('metadata', default='1.2'))
         self.setup = self.params.get('setup', default=True)
         self.run_test = self.params.get('run_test', default=False)
         self.cleanup = self.params.get('cleanup', default=True)
@@ -81,8 +82,9 @@ class SoftwareRaid(Test):
         Only basic operations are run viz create and delete
         """
         cmd = "echo 'yes' | mdadm --create --verbose --assume-clean \
-            /dev/md/mdsraid --level=%s --raid-devices=%d %s" \
-            % (self.raidlevel, self.disk_count, self.disk)
+            /dev/md/mdsraid --level=%s --raid-devices=%d %s \
+            --metadata %s" \
+            % (self.raidlevel, self.disk_count, self.disk, self.metadata)
         if self.sparedisk:
             cmd += " --spare-devices=1 %s " % self.sparedisk
         cmd += " --force"
