@@ -23,6 +23,17 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.process import CmdError
 
 
+class CommandFailed(Exception):
+    def __init__(self, command, output, exitcode):
+        self.command = command
+        self.output = output
+        self.exitcode = exitcode
+
+    def __str__(self):
+        return "Command '%s' exited with %d.\nOutput:\n%s" \
+               % (self.command, self.exitcode, self.output)
+
+
 class NetworkVirtualizationFailoverTest(Test):
 
     """
@@ -57,7 +68,7 @@ class NetworkVirtualizationFailoverTest(Test):
             for val in range(self.count):
                 self.log.info("Performing Client initiated\
                               failover - Attempt %s" % int(val+1))
-                process.run('echo 1 > /sys/devices/vio/%s/failover' %
+                output = process.run('echo 1 > /sys/devices/vio/%s/failover' %
                             self.device, shell=True, sudo=True)
                 # Adding  a sleep of 10 sec is necessary for failover
                 # to take effect
@@ -69,8 +80,8 @@ class NetworkVirtualizationFailoverTest(Test):
                                   shell=True, ignore_status=True):
                     self.fail("Ping test failed. Network virtualized \
                                failover had affected Network connectivity")
-        except CmdError as details:
-            self.log.debug(str(details))
+        except CommandFailed as cf:
+            self.log.debug(str(cf))
             self.fail("Client initiated Failover for Network virtualized \
                        device %s failed" % self.interface)
 
