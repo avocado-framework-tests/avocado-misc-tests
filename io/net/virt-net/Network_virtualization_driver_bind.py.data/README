@@ -1,0 +1,8 @@
+This script will unbind and bind the Network virtualized device
+for as many times as specified by the user
+
+Inputs Needed (in multiplexer file):
+------------------------------------
+interface - The Network virtualized device
+count - The number of times the unbind and bind test has to be executed
+peer_ip - IP of the peer to verify network connectivity after unbind/bind
