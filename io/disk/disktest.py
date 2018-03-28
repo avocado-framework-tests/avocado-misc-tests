@@ -71,7 +71,7 @@ class Disktest(Test):
         Retrieves and checks the test params
         """
         self.disk = self.params.get('disk', default=None)
-        self.dirs = self.params.get('dir', default=self.srcdir)
+        self.dirs = self.params.get('dir', default=self.workdir)
         self.fstype = self.params.get('fs', default='ext4')
 
         memory_mb = memory.memtotal() / 1024

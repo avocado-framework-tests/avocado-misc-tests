@@ -66,8 +66,8 @@ class GCC(Test):
         tarball = self.fetch_asset('gcc.zip', locations=[
                                    'https://github.com/gcc-mirror/gcc/archive'
                                    '/master.zip'], expire='7d')
-        archive.extract(tarball, self.srcdir)
-        self.sourcedir = os.path.join(self.srcdir, 'gcc-master')
+        archive.extract(tarball, self.workdir)
+        self.sourcedir = os.path.join(self.workdir, 'gcc-master')
 
         os.chdir(self.sourcedir)
         process.run('./configure', ignore_status=True, sudo=True)

@@ -80,8 +80,8 @@ class Stressng(Test):
                                    locations=['https://github.com/Colin'
                                               'IanKing/stress-ng/archive'
                                               '/master.zip'], expire='7d')
-        archive.extract(tarball, self.srcdir)
-        sourcedir = os.path.join(self.srcdir, 'stress-ng-master')
+        archive.extract(tarball, self.workdir)
+        sourcedir = os.path.join(self.workdir, 'stress-ng-master')
         os.chdir(sourcedir)
         result = build.run_make(sourcedir,
                                 process_kwargs={'ignore_status': True})

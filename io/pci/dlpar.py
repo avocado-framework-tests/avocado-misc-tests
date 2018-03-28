@@ -67,14 +67,14 @@ class DlparPci(Test):
             for deb in debs:
                 deb_url = os.path.join(ubuntu_url, deb)
                 deb_install = self.fetch_asset(deb_url, expire='7d')
-                shutil.copy(deb_install, self.srcdir)
-                process.system("dpkg -i %s/%s" % (self.srcdir, deb),
+                shutil.copy(deb_install, self.workdir)
+                process.system("dpkg -i %s/%s" % (self.workdir, deb),
                                ignore_status=True, sudo=True)
         else:
             url = self.params.get('url', default=None)
             rpm_install = self.fetch_asset(url, expire='7d')
-            shutil.copy(rpm_install, self.srcdir)
-            os.chdir(self.srcdir)
+            shutil.copy(rpm_install, self.workdir)
+            os.chdir(self.workdir)
             process.run('chmod +x ibmtools')
             process.run('./ibmtools --install --managed')
         self.hmc_ip = self.params.get("hmc_ip", '*', default=None)
