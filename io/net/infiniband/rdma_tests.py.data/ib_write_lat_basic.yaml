@@ -1,0 +1,22 @@
+ib_write_lat_basic:
+tool: ib_write_lat
+interface: ""
+peer_ip: ""
+CA_NAME: ""
+PORT_NUM: "1"
+PEERCA: ""
+PEERPORT: "1"
+TIMEOUT: "600"
+test_opt: !mux
+    -F:
+        test_opt: -F
+    -m_1024:
+        test_opt: -m 1024
+    -n_10000:
+        test_opt: -n 10000
+    -S_2:
+        test_opt: -S 2
+    -t_1024:
+        test_opt: -t 1024
+    -p_18200:
+        test_opt: -p 18200

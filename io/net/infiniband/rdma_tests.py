@@ -13,13 +13,10 @@
 #
 # Copyright: 2016 IBM
 # Author: Prudhvi Miryala<mprudhvi@linux.vnet.ibm.com>
+# Author: Narasimhan V <sim@linux.vnet.ibm.com>
 
 '''
-Latency Performance test for infiniband adaptors
-ib_send_lat test
-ib_write_lat test
-ib_read_lat test
-ib_atomic_lat test
+RDMA test for infiniband adaptors
 '''
 
 
@@ -31,10 +28,9 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process, distro
 
 
-class LatencyPerf(Test):
+class RDMA(Test):
     '''
-    Infiniband adaptors latency performance tests using four tools
-    tools are ib_send_lat,ib_write_lat,ib_read_lat,ib_atomic_lat
+    RDMA test for infiniband adaptors
     '''
 
     def setUp(self):
@@ -55,7 +51,6 @@ class LatencyPerf(Test):
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
-        self.flag = self.params.get("ext_flag", default="0")
         self.iface = self.params.get("interface", default="")
         self.peer_ip = self.params.get("peer_ip", default="")
         if self.iface not in interfaces:
@@ -67,12 +62,12 @@ class LatencyPerf(Test):
         self.peer_ca = self.params.get("PEERCA", default="mlx4_0")
         self.peer_port = self.params.get("PEERPORT", default="1")
         self.tmo = self.params.get("TIMEOUT", default="600")
-        self.tool_name = self.params.get("tool", default="")
+        self.tool_name = self.params.get("tool")
         if self.tool_name == "":
             self.cancel("should specify tool name")
         self.log.info("test with %s", self.tool_name)
-        self.test_op = self.params.get("test_opt", default="").split(",")
-        self.ext_test_op = self.params.get("ext_opt", default="").split(",")
+        self.test_op = self.params.get("test_opt", default="")
+
         if detected_distro.name == "Ubuntu":
             cmd = "service ufw stop"
         # FIXME: "redhat" as the distro name for RHEL is deprecated
@@ -90,13 +85,13 @@ class LatencyPerf(Test):
                           ignore_status=True, shell=True) != 0:
             self.cancel("Unable to disable firewall")
 
-    def latencyperf_exec(self, arg1, arg2, arg3):
+    def rdma_exec(self, arg1, arg2, arg3):
         '''
-        latency performance exec function
+        bandwidth performance exec function
         '''
         flag = 0
         logs = "> /tmp/ib_log 2>&1 &"
-        cmd = "ssh %s \" timeout %s %s -d %s -i %s %s %s %s \" " \
+        cmd = "ssh %s \" timeout %s %s -d %s -i %s %s %s %s\" " \
             % (self.peer_ip, self.tmo, arg1, self.peer_ca, self.peer_port,
                arg2, arg3, logs)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
@@ -110,31 +105,19 @@ class LatencyPerf(Test):
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             flag = 1
         self.log.info("server data for %s(%s)", arg1, arg2)
-        cmd = "ssh %s \" timeout %s cat /tmp/ib_log && rm -rf /tmp/ib_log\" \
-              " % (self.peer_ip, self.tmo)
+        cmd = "ssh %s \"timeout %s cat /tmp/ib_log && rm -rf /tmp/ib_log\" " %\
+              (self.peer_ip, self.tmo)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("ssh failed to remote machine\
                       or fetching data from remote machine failed")
         return flag
 
-    def test_ib_latency(self):
+    def test(self):
         '''
         test options are mandatory
-        ext test options are depends upon user
         '''
-        err = []
-        for val in self.test_op:
-            if self.latencyperf_exec(self.tool_name, val, "") != 0:
-                err.append("client cmd fail: %s %s" % (self.tool_name, val))
-        if self.flag == "1":
-            for val in self.ext_test_op:
-                if self.latencyperf_exec(self.tool_name, val, "") != 0:
-                    err.append("client cmd fail: %s %s" % (self.tool_name,
-                                                           val))
-        else:
-            self.log.info("Extended test option skipped")
-        if err:
-            self.fail("Some tests failed. Details below:\n%s" % "\n".join(err))
+        if self.rdma_exec(self.tool_name, self.test_op, "") != 0:
+            self.fail("Client cmd: %s %s" % (self.tool_name, self.test_op))
 
 
 if __name__ == "__main__":
