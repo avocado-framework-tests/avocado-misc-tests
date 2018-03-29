@@ -44,8 +44,10 @@ Options: !mux
         option: --kernel-only   --without-fw-update  -v  --enable-mlnx_tune
     ofed-conf:
         option: -c docs/conf/ofed-basic.conf -n docs/conf/ofed_net.conf-example
-    add-kernel-support:
+    add-kernel-support_with-kmp:
         option: --add-kernel-support --skip-repo --force --kmp
     add-kernel-support_with-nvmf:
         option: --skip-distro-check --add-kernel-support --skip-repo --with-nvmf
+    add-kernel-support:
+        option: --add-kernel-support --skip-repo --force
         uninstall: False
