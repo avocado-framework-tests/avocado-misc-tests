@@ -73,8 +73,8 @@ class Tiobench(Test):
             try:
                 self.part_obj.mount()
             except PartitionError:
-                self.fail("Mounting disk %s on directory %s failed",
-                          self.disk, self.target)
+                self.fail("Mounting disk %s on directory %s failed"
+                          % (self.disk, self.target))
 
     def test(self):
         """

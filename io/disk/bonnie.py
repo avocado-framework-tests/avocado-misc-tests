@@ -101,8 +101,8 @@ class Bonnie(Test):
             try:
                 self.part_obj.mount()
             except PartitionError:
-                self.fail("Mounting disk %s on directory %s failed",
-                          self.disk, self.scratch_dir)
+                self.fail("Mounting disk %s on directory %s failed"
+                          % (self.disk, self.scratch_dir))
 
     def test(self):
         """

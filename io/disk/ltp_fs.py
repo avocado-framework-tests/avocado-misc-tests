@@ -63,8 +63,8 @@ class LtpFs(Test):
             try:
                 self.part_obj.mount()
             except PartitionError:
-                self.fail("Mounting disk %s on directory %s failed",
-                          self.disk, self.mount_point)
+                self.fail("Mounting disk %s on directory %s failed"
+                          % (self.disk, self.mount_point))
 
         url = "https://github.com/linux-test-project/ltp/"
         url += "archive/master.zip"
