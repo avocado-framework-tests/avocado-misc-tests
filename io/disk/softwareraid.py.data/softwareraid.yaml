@@ -13,3 +13,12 @@ raidlevel: !mux
         raid: 10
     raid6:
         raid: 6
+metadata: !mux
+    superblock-0.90:
+        metadata: 0.90
+    superblock-1.0:
+        metadata: 1.0
+    superblock-1.1:
+        metadata: 1.1
+    superblock-1.2:
+        metadata: 1.2
