@@ -1,0 +1,74 @@
+ib_send_lat_extended:
+tool: ib_send_lat
+interface: ""
+peer_ip: ""
+CA_NAME: ""
+PORT_NUM: "1"
+PEERCA: ""
+PEERPORT: "1"
+TIMEOUT: "600"
+test_opt: !mux
+    -c_UC:
+        test_opt: -c UC
+    -c_RC:
+        test_opt: -c RC
+    -Q_5:
+        test_opt: -Q 5
+    -w_100M:
+        test_opt: -w 100M
+    -x_1:
+        test_opt: -x 1
+    -y_10G:
+        test_opt: -y 10G
+    -z:
+        test_opt: -z
+    -D_10s:
+        test_opt: -D 10s
+    -l_4:
+        test_opt: -l 4
+    -a:
+        test_opt: -a
+    -c_XRC:
+        test_opt: -c XRC
+    -c_UD:
+        test_opt: -c UD
+    -e:
+        test_opt: -e
+    -g:
+        test_opt: -g
+    -R:
+        test_opt: -R
+    -R_-a:
+        test_opt: -R -a
+    -R_-c_RC:
+        test_opt: -R -c RC
+    -R_-D_30s:
+        test_opt: -R -D 30s
+    -R_-f_5s:
+        test_opt: -R -f 5s
+    -R_-l_2:
+        test_opt: -R -l 2
+    -R_-m_2048:
+        test_opt: -R -m 2048
+    -R_-n_100000:
+        test_opt: -R -n 100000
+    -R_-p_18600:
+        test_opt: -R -p 18600
+    -R_-Q_10:
+        test_opt: -R -Q 10
+    -R_-s_9000:
+        test_opt: -R -s 9000
+    -R_-S_1:
+        test_opt: -R -S 1
+    -R_-t_2048:
+        test_opt: -R -t 2048
+    -R_-T_128:
+        test_opt: -R -T 128
+    -R_-w_10M:
+        test_opt: -R -w 10M
+    -R_-x_1:
+        test_opt: -R -x 1
+    -R_-y_4G:
+        test_opt: -R -y 4G
+    -R_-z:
+        test_opt: -R -z
