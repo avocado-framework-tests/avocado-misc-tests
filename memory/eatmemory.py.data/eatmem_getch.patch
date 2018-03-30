@@ -1,0 +1,12 @@
+--- ./a/eatmemory.c	2017-11-17 14:07:02.121268394 +0530
++++ ./b/eatmemory.c	2017-11-17 14:06:54.912292114 +0530
+@@ -87,8 +87,7 @@ int main(int argc, char *argv[]){
+             printf("Eating %ld bytes in chunks of %d...\n",size,chunk);
+             if(eat(size,chunk)){
+                 if(isatty(fileno(stdin))) {
+-                    printf("Done, press any key to free the memory\n");
+-                    getchar();
++                    printf("Done\n");
+                 } else {
+                     printf("Done, kill this process to free the memory\n");
+                     while(true) {
