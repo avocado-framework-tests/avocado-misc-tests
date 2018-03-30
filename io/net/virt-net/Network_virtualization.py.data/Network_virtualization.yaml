@@ -13,4 +13,6 @@ backing_adapter_id:
 sriov_port:
 backing_sriov_port:
 bandwidth:
-count:
+iteration: !mux
+    1:
+    2:
