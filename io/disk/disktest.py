@@ -111,8 +111,8 @@ class Disktest(Test):
             try:
                 self.part_obj.mount()
             except PartitionError:
-                self.fail("Mounting disk %s on directory %s failed",
-                          self.disk, self.dirs)
+                self.fail("Mounting disk %s on directory %s failed"
+                          % (self.disk, self.dirs))
 
     def _compile_disktest(self):
         """

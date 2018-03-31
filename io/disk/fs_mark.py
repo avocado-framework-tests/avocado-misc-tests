@@ -77,8 +77,8 @@ class FSMark(Test):
             try:
                 self.part_obj.mount()
             except PartitionError:
-                self.fail("Mounting disk %s on directory %s failed",
-                          self.disk, self.dir)
+                self.fail("Mounting disk %s on directory %s failed"
+                          % (self.disk, self.dir))
 
     def test(self):
         """
