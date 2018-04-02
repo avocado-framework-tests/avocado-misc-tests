@@ -85,9 +85,6 @@ class NetworkVirtualization(Test):
         self.hmc_username = self.params.get("hmc_username", '*', default=None)
         self.lpar = self.params.get("lpar", '*', default=None)
         self.server = self.params.get("server", '*', default=None)
-        self.count = int(self.params.get("count", '*', default="1"))
-        self.lpar_profile_name = self.params.get("lpar_profile_name", '*',
-                                                 default=None)
         self.slot_num = self.params.get("slot_num", '*', default=None)
         self.vios_name = self.params.get("vios_name", '*', default=None)
         self.sriov_port = self.params.get("sriov_port", '*', default=None)
@@ -117,6 +114,7 @@ class NetworkVirtualization(Test):
                                      self.backing_adapter_id,
                                      self.backing_sriov_port,
                                      self.bandwidth)
+        self.rsct_service_start()
 
     def login(self, ip, username, password):
         '''
@@ -152,10 +150,10 @@ class NetworkVirtualization(Test):
         c.prompt(timeout)
         return output
 
-    def test(self):
+    def rsct_service_start(self):
         '''
-        Start rsct services and performs add and remove operations
-        of Network virtualized ports
+        Running rsct services which is necessary for Network
+        virtualization tests
         '''
         try:
             for svc in ["rsct", "rsct_rm"]:
@@ -169,39 +167,16 @@ class NetworkVirtualization(Test):
         if "inoperative" in output:
             self.fail("Failed to start the rsct and rsct_rm services")
 
-        for _ in range(self.count):
-            self.network_virtualization_add()
-            self.network_virtualization_backing_device_add()
-            self.network_virtualization_backing_device_remove()
-            self.network_virtualization_remove()
-
-    def network_virtualization_remove(self):
-        '''
-        Network virtualized device remove operation
-        '''
-        self.Network_virtualization_add_device(self.server, 'r',
-                                               self.lpar_id,
-                                               self.slot_num,
-                                               self.backing_devices,
-                                               'remove')
-        output = self.Network_virtualization_list_device(self.server,
-                                                         self.lpar,
-                                                         self.slot_num)
-        if 'slot_num=%s' % self.slot_num in str(output):
-            self.log.debug(output)
-            self.fail("lshwres still lists the Network virtualized device \
-                       after remove operation")
-
-    def network_virtualization_add(self):
+    def test_network_virtualization_add(self):
         '''
         Network virtualized device add operation
         '''
-        self.Network_virtualization_add_device(self.server, 'a',
-                                               self.lpar_id,
-                                               self.slot_num,
-                                               self.backing_devices,
-                                               'add')
-        output = self.Network_virtualization_list_device(self.server,
+        self.network_virtualization_add_remove_device(self.server, 'a',
+                                                      self.lpar_id,
+                                                      self.slot_num,
+                                                      self.backing_devices,
+                                                      'add')
+        output = self.network_virtualization_list_device(self.server,
                                                          self.lpar,
                                                          self.slot_num)
         if 'slot_num=%s' % self.slot_num not in str(output):
@@ -209,23 +184,54 @@ class NetworkVirtualization(Test):
             self.fail("lshwres fails to list Network virtualized device \
                        after add operation")
 
-    def Network_virtualization_list_device(self, server, lpar, slot_num):
+    def test_network_virtualization_backing_device_add(self):
         '''
-        Lists the Network vritualized devices
+        Adding Backing device for Network virtualized device
         '''
-        cmd = 'lshwres -r virtualio -m %s --rsubtype vnic --filter \
-              \"lpar_names=%s,slots=%s\"' % (server, lpar, slot_num)
-        try:
-            output = self.run_command(cmd)
-            print output
-        except CommandFailed as cf:
-            self.log.debug(str(cf))
-            self.fail("lshwres operation failed ")
-        return output
+        pre_add = self.backing_dev_count(self.slot_num)
+        self.backing_dev_add_remove(self.server, 'a', self.lpar_id,
+                                    self.slot_num, self.add_backing_device,
+                                    'add')
+        post_add = self.backing_dev_count(self.slot_num)
+        if post_add - pre_add != 1:
+            self.fail("Failed to add backing device")
 
-    def Network_virtualization_add_device(self, server, operation,
-                                          lpar_id, slot_num,
-                                          backing_devices, msg):
+    def test_network_virtualization_backing_device_remove(self):
+        '''
+        Removing Backing device for Network virtualized device
+        '''
+        pre_remove = self.backing_dev_count(self.slot_num)
+        self.backing_dev_add_remove(self.server, 'r', self.lpar_id,
+                                    self.slot_num, self.add_backing_device,
+                                    'remove')
+        post_remove = self.backing_dev_count(self.slot_num)
+        if pre_remove - post_remove != 1:
+            self.fail("Failed to remove backing device")
+
+    def test_network_virtualization_remove(self):
+        '''
+        Network virtualized device remove operation
+        '''
+        self.network_virtualization_add_remove_device(self.server, 'r',
+                                                      self.lpar_id,
+                                                      self.slot_num,
+                                                      self.backing_devices,
+                                                      'remove')
+        output = self.network_virtualization_list_device(self.server,
+                                                         self.lpar,
+                                                         self.slot_num)
+        if 'slot_num=%s' % self.slot_num in str(output):
+            self.log.debug(output)
+            self.fail("lshwres still lists the Network virtualized device \
+                       after remove operation")
+
+    def network_virtualization_add_remove_device(self, server, operation,
+                                                 lpar_id, slot_num,
+                                                 backing_devices, msg):
+        '''
+        Adds and removes a Network virtualized device based
+        on the operation
+        '''
         if operation == 'a':
             cmd = 'chhwres -m %s --id %s -r virtualio --rsubtype vnic \
                    -o a -s %s -a \"%s\" '\
@@ -241,32 +247,25 @@ class NetworkVirtualization(Test):
             self.fail("Network virtualization %s device operation \
                        failed" % msg)
 
-    def network_virtualization_backing_device_remove(self):
+    def network_virtualization_list_device(self, server, lpar, slot_num):
         '''
-        Removing Backing device for Network virtualized device
+        Lists the Network vritualized devices
         '''
-        pre_remove = self.backing_dev_count(self.slot_num)
-        self.backing_dev_add(self.server, 'r', self.lpar_id,
-                             self.slot_num, self.add_backing_device,
-                             'remove')
-        post_remove = self.backing_dev_count(self.slot_num)
-        if pre_remove - post_remove != 1:
-            self.fail("Failed to remove backing device")
+        cmd = 'lshwres -r virtualio -m %s --rsubtype vnic --filter \
+              \"lpar_names=%s,slots=%s\"' % (server, lpar, slot_num)
+        try:
+            output = self.run_command(cmd)
+            print output
+        except CommandFailed as cf:
+            self.log.debug(str(cf))
+            self.fail("lshwres operation failed ")
+        return output
 
-    def network_virtualization_backing_device_add(self):
+    def backing_dev_add_remove(self, server, operation, lpar_id, slot_num,
+                               add_backing_device, msg):
         '''
-        Adding Backing device for Network virtualized device
+        Adds and removes a backing device based on the operation
         '''
-        pre_add = self.backing_dev_count(self.slot_num)
-        self.backing_dev_add(self.server, 'a', self.lpar_id,
-                             self.slot_num, self.add_backing_device,
-                             'add')
-        post_add = self.backing_dev_count(self.slot_num)
-        if post_add - pre_add != 1:
-            self.fail("Failed to add backing device")
-
-    def backing_dev_add(self, server, operation, lpar_id, slot_num,
-                        add_backing_device, msg):
         if operation == 'a':
             cmd = 'chhwres -r virtualio --rsubtype vnic -o s -m %s -s %s --id %s \
                    -a backing_devices+=%s' % (server, slot_num,
