@@ -71,7 +71,7 @@ class Numactl(Test):
 
     def test(self):
 
-        if build.make(self.sourcedir, extra_args='test', ignore_status=True):
+        if build.make(self.sourcedir, extra_args='-k test', ignore_status=True):
             self.fail('test failed, Please check debug log')
 
 
