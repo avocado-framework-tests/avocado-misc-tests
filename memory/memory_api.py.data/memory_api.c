@@ -18,6 +18,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <signal.h>
 
 /* This file includes a simple set of memory allocation calls that
  * a user space program can use to allocate/free or move memory mappings.
@@ -31,20 +32,40 @@
 /* approximately half of memsize, page aligned */
 #define HALF_MEM(memsize) ((memsize >> (PAGE_SHIFT))<<(PAGE_SHIFT - 1))
 
+#define handle_error(msg) \
+   do { perror(msg); exit(EXIT_FAILURE); } while (0)
+
+static void
+handler(int sig, siginfo_t *si, void *unused)
+{
+        printf("Got SIGSEGV at address: 0x%lx\n", (long) si->si_addr);
+        exit(255);
+}
+
 void *mremap(void *old_address, size_t old_size,
                     size_t new_size, int flags, ... /* void *new_address */);
 
-
 int main(int argc, char *argv[]) {
 	unsigned long i, numpages, fd, pagesize, memsize;
+	int induce_err = 0;
 	char *mem;
+        struct sigaction sa;
+
+        sa.sa_flags = SA_SIGINFO;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_sigaction = handler;
+        if (sigaction(SIGSEGV, &sa, NULL) == -1)
+                handle_error("sigaction");
+
         pagesize = getpagesize();
-	if (argc != 2) {
-		printf("Usage: %s <memory_size>\n", argv[0]);
+	if (argc != 3) {
+		printf("Usage: %s <memory_size> <induce-err-flag>\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
 	memsize = strtoul(argv[1], NULL, 10);
+        if (argc == 3)
+                induce_err = atoi(argv[2]);
 
 	memsize = ROUND_PAGES(memsize);
 
@@ -63,7 +84,7 @@ int main(int argc, char *argv[]) {
 
 	if (mem == (void*) -1) {
 		perror("Failed to allocate memory using malloc\n");
-		exit(EXIT_FAILURE);
+		handle_error("malloc");
 	}
 
 	printf("Successfully allocated malloc memory %lu bytes @%p\n",
@@ -78,7 +99,7 @@ int main(int argc, char *argv[]) {
 
 	if (mem == (void*) -1) {
 		perror("Failed to allocate anon private memory using mmap\n");
-		exit(EXIT_FAILURE);
+		handle_error("mmap");
 	}
 
 	printf("Successfully allocated anon mmap memory %lu bytes @%p\n",
@@ -88,7 +109,12 @@ int main(int argc, char *argv[]) {
 
 	if (-1 == mprotect(mem, HALF_MEM(memsize), PROT_READ)) {
 		perror("Failed to W protect memory using mprotect\n");
-		exit(EXIT_FAILURE);
+		handle_error("mprotect");
+	}
+
+	if (induce_err){
+		printf("Inducing error\n");
+		*(mem) = 1;
 	}
 
 	printf("Successfully write protected %lu bytes @%p\n",
@@ -99,7 +125,7 @@ int main(int argc, char *argv[]) {
 	if (-1 == mprotect(mem, HALF_MEM(memsize),
 					 PROT_READ | PROT_WRITE)) {
 		perror("Failed to RW protect memory using mprotect\n");
-		exit(EXIT_FAILURE);
+		handle_error("mprotect");
 	}
 
 	printf("Successfully cleared write protected %lu bytes @%p\n",
@@ -118,7 +144,7 @@ int main(int argc, char *argv[]) {
 
 	if (mem == MAP_FAILED) {
 		perror("Failed to remap expand anon private memory\n");
-		exit(EXIT_FAILURE);
+		handle_error("mremap");
 	}
 
 	printf("Successfully remapped %lu bytes @%p\n",
@@ -131,13 +157,13 @@ int main(int argc, char *argv[]) {
 		if (value != i) {
 			printf("remap error expected %lu got %lu\n",
 					i, value);
-			exit(EXIT_FAILURE);
+			handle_error("wrong_value");
 		}
 	}
 
 	if (munmap(mem, memsize + HALF_MEM(memsize))) {
 		perror("Could not unmap and free memory\n");
-		exit(EXIT_FAILURE);
+		handle_error("munmap");
 	}
 
 
@@ -149,7 +175,7 @@ int main(int argc, char *argv[]) {
 
 	if (mem == (void*) -1) {
 		perror("Failed to allocate file backed memory using mmap\n");
-		exit(EXIT_FAILURE);
+		handle_error("mmap_fd");
 	}
 
 	printf("Successfully allocated file backed mmap memory %lu bytes @%p\n",
@@ -158,7 +184,7 @@ int main(int argc, char *argv[]) {
 
 	if (munmap(mem, memsize)) {
 		perror("Could not unmap and free file backed memory\n");
-		exit(EXIT_FAILURE);
+		handle_error("munmap");
 	}
 
 	exit(EXIT_SUCCESS);
