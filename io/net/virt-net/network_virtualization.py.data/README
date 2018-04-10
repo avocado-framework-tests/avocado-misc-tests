@@ -22,8 +22,14 @@ server ---> name of the server which hosts the lpar
 slot_num ---> slot number on which the Network virtualized interface will be added
 vios_name ---> name of the vios used to add/remove Network virtualized interface
 sriov_adapter_id ---> id of the the adapter that is assigned to the hypervisor
+backing_adapter_id ---> id of the adapter from which the backing device has to be added
 sriov_port ---> port using which the Network virtualized interface will be added/removed
+backing_sriov_port ---> port using which the Backing device will be added
 Ex: if the adapter has 2 ports and the Network virtualized interface should be added using Port 1, mention value as 1 
 else mention 2 if Network virtualized interface should be added using Port 2
 bandwidth ---> The percentage of the ports bandwidth this Network virtualized interface is entitled to
-count ---> Number of times the Network virtualized add/remove operation has to be executed
+iteration ---> Number of times the tests has to run(Number of variants). You can increase the value based on need
+
+While executing, use the optional arguments option "--execution-order tests-per-variant" in the command line such that all tests
+on the job’s test suite will be executed with the first variant, then all tests will be executed with the second variant and so on.
+Ex: avocado run Network_virtualization.py -m Network_virtualization.py.data/Network_virtualization.yaml --execution-order tests-per-variant
