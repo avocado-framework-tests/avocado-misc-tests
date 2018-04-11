@@ -42,8 +42,8 @@ test_opt: !mux
         test_opt: -R -c RC
     -R_-D_30s:
         test_opt: -R -D 30s
-    -R_-f_5s:
-        test_opt: -R -f 5s
+    -R_-f_5s_-D_11s:
+        test_opt: -R -f 5s -D 11s
     -R_-l_2:
         test_opt: -R -l 2
     -R_-m_2048:
