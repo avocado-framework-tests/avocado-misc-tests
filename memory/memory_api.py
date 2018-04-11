@@ -42,6 +42,7 @@ class MemorySyscall(Test):
         smm = SoftwareManager()
         self.memsize = int(self.params.get(
             'memory_size', default=(memory.freememtotal() / 1024)) * 1048576 * 0.5)
+        self.induce_err = self.params.get('induce_err', default=0)
 
         for package in ['gcc', 'make']:
             if not smm.check_installed(package) and not smm.install(package):
@@ -53,11 +54,16 @@ class MemorySyscall(Test):
 
     def test(self):
         os.chdir(self.teststmpdir)
-        proc = process.SubProcess('./memory_api %s ' % self.memsize,
+        proc = process.SubProcess('./memory_api %s %s' % (self.memsize, self.induce_err),
                                   shell=True, allow_output_check='both')
         proc.start()
         while proc.poll() is None:
             pass
+
+        ret = process.system('./memory_api %s 1' % self.memsize,
+                             shell=True, ignore_status=True)
+        if ret == 255:
+            self.log.info("Error obtained as expected")
 
         if proc.poll() != 0:
             self.fail("Unexpected application abort, check for possible issues")

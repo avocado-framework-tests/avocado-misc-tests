@@ -1,2 +1,3 @@
 setup:
  memory_size: 10 # in MB
+ induce_err: 1
