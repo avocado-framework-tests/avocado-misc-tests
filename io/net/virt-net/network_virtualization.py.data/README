@@ -28,8 +28,3 @@ backing_sriov_port ---> port using which the Backing device will be added
 Ex: if the adapter has 2 ports and the Network virtualized interface should be added using Port 1, mention value as 1 
 else mention 2 if Network virtualized interface should be added using Port 2
 bandwidth ---> The percentage of the ports bandwidth this Network virtualized interface is entitled to
-iteration ---> Number of times the tests has to run(Number of variants). You can increase the value based on need
-
-While executing, use the optional arguments option "--execution-order tests-per-variant" in the command line such that all tests
-on the job’s test suite will be executed with the first variant, then all tests will be executed with the second variant and so on.
-Ex: avocado run Network_virtualization.py -m Network_virtualization.py.data/Network_virtualization.yaml --execution-order tests-per-variant
