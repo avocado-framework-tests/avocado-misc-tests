@@ -62,15 +62,16 @@ class Stressng(Test):
         self.v_stressors = self.params.get('v_stressors', default=None)
         self.parallel = self.params.get('parallel', default=True)
 
+        deps = ['gcc', 'make']
         if 'Ubuntu' in detected_distro.name:
-            deps = [
+            deps.extend([
                 'libaio-dev', 'libapparmor-dev', 'libattr1-dev', 'libbsd-dev',
                 'libcap-dev', 'libgcrypt11-dev', 'libkeyutils-dev',
-                'libsctp-dev', 'zlib1g-dev']
+                'libsctp-dev', 'zlib1g-dev'])
         else:
-            deps = ['libattr-devel', 'libbsd-devel', 'libcap-devel',
-                    'libgcrypt-devel', 'keyutils-libs-devel', 'zlib-devel',
-                    'libaio-devel']
+            deps.extend(['libattr-devel', 'libbsd-devel', 'libcap-devel',
+                         'libgcrypt-devel', 'keyutils-libs-devel',
+                         'zlib-devel', 'libaio-devel'])
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.log.info(
