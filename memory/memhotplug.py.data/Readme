@@ -1,0 +1,15 @@
+Stress test to excercise memory component
+
+This test performs memory hotunplug/hotplug tests with below scenarios:
+  1. hotunplug one by one in a loop for all
+  2. Toggle memory blocks by making off/on in a loop
+  3. hot unplug % of memory for different ratios
+  4. dlpar memory hotplug using  drmgr
+  5. shared resource : dlpar in CMO mode
+  6. try hotplug each different numa node memblocks
+  7. run stress memory in background
+
+By default 5% of the hotpluggable memory is tested, User can provide different memory % by providing memratio
+from yaml file
+i.e
+memratio: 90
