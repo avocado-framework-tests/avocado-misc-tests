@@ -154,8 +154,8 @@ class Stressng(Test):
                                 ignore_status=True, sudo=True)
         collect_dmesg(self)
         ERROR = []
-        pattern = ['WARNING: CPU:', 'Oops',
-                   'Segfault', 'soft lockup', 'Unable to handle']
+        pattern = ['WARNING: CPU:', 'Oops', 'Segfault', 'soft lockup',
+                   'Unable to handle', 'Hard LOCKUP']
         logs = process.system_output('dmesg').splitlines()
         for fail_pattern in pattern:
             for log in logs:
