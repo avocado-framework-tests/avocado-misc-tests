@@ -1,0 +1,12 @@
+This script will unbind and bind the Network virtualized device
+for as many times as specified by the user
+
+Inputs Needed (in multiplexer file):
+------------------------------------
+device_ip - The IP used to configure the Network virtualized device for ping test
+netmask - The netmask value
+peer_ip - IP of the peer to verify network connectivity after unbind/bind
+count - The number of times the unbind and bind test has to be executed
+
+NOTE: The last device listed by "ip link show" will be used to configure and test the
+driver unbind/bind functionality
