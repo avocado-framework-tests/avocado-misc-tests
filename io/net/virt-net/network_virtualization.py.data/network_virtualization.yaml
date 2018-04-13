@@ -13,6 +13,7 @@ backing_adapter_id:
 sriov_port:
 backing_sriov_port:
 bandwidth:
-iteration: !mux
-    1:
-    2:
+device_ip:
+netmask:
+peer_ip:
+count:
