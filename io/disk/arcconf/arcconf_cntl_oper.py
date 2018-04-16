@@ -51,9 +51,9 @@ class Arcconftest(Test):
         self.option_args = self.params.get("option_args")
 
         # Gets the list of PCIIDs on the system
-        cmd = 'for device in $(lspci | awk \'{print $1}\') ; do echo \
+        cmd = r'for device in $(lspci | awk \'{print $1}\') ; do echo \
               $(lspci -vmm -nn -s $device | grep "\[" | awk \'{print $NF}\' \
-              | sed -e "s/\]//g" | sed -e "s/\[//g" | tr \'\\n\' \' \' \
+              | sed -e "s/\]//g" | sed -e "s/\[//g" | \\tr \'\\n\' \' \' \
               | awk \'{print $2,$3,$4,$5}\') ; done'
         pci_id_formatted = []
         for i in self.cmdop_list(cmd).splitlines():

@@ -28,8 +28,8 @@ class ScsiAddRemove(Test):
     '''
     Class to execute scsi add/remove operation
     '''
-    def setUp(self):
 
+    def setUp(self):
         '''
         Function for preliminary set-up to execute the test
         '''
@@ -42,7 +42,6 @@ class ScsiAddRemove(Test):
                         want to run the test")
 
     def test(self):
-
         '''
         Function where test is executed
         '''

@@ -90,7 +90,7 @@ class Unixbench(Test):
                 # 6 guys before we start accessing the array
                 if len(words) >= 6:
                     key = '_'.join(words[0:-6])
-                    key = re.sub('\W', '', key)
+                    key = re.sub(r'\W', '', key)
                     value = words[-6]
                     keyval[key] = value
             else:

@@ -28,6 +28,7 @@ class cpuidle(Test):
     """
     Test to validate the number of cpu idle states
     """
+
     def setUp(self):
         """
         Verify it is baremetal

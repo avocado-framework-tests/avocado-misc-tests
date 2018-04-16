@@ -29,6 +29,7 @@ class HugepageSanity(Test):
     Test allocates given number of hugepages of given size and mmap's
     using MAP_HUGETLB with corresponding hugepage sizes
     """
+
     def copyutil(self, file_name):
         shutil.copyfile(os.path.join(self.datadir, file_name),
                         os.path.join(self.teststmpdir, file_name))

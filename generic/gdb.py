@@ -66,7 +66,7 @@ class GDB(Test):
         logfile = os.path.join(self.logdir, "stdout")
         with open(logfile, 'r') as f:
             for line in f.readlines():
-                for match in re.finditer("of unexpected failures\s[1-9]", line):
+                for match in re.finditer("of unexpected failures[1-9]", line):
                     self.log.info(line)
                     self.fail("Few gdb tests have failed")
 
