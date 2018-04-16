@@ -57,8 +57,7 @@ class PCIHotPlugTest(Test):
                 linux_modules.load_module("pnv_php")
         self.return_code = 0
         self.device = self.params.get('pci_device', default=' ')
-        self.num_of_hotplug = int(self.params.get('num_of_hotplug',
-                                  default='1'))
+        self.num_of_hotplug = int(self.params.get('num_of_hotplug', default='1'))
         if not os.path.isdir('/sys/bus/pci/devices/%s' % self.device):
             self.cancel("PCI device given does not exist")
         if PowerVM:

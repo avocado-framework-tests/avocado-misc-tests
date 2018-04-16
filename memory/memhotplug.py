@@ -56,7 +56,7 @@ def offline(block):
 def get_hotpluggable_blocks(path):
     mem_blocks = []
     for mem_blk in glob.glob(path):
-        block = re.findall("\d+", os.path.basename(mem_blk))[0]
+        block = re.findall(r"\d+", os.path.basename(mem_blk))[0]
         block = re.sub(r'^\s*$', '', block)
         if memory.is_hot_pluggable(block):
             mem_blocks.append(block)

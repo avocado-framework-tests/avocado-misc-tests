@@ -146,9 +146,12 @@ class Xfstests(Test):
                             r'export SCRATCH_DEV=.*', 'export SCRATCH_DEV=%s'
                                                       % self.devices[1], line))
                     elif line.startswith('export SCRATCH_MNT'):
-                        sources.write(re.sub(
-                            r'export SCRATCH_MNT=.*', 'export SCRATCH_MNT=%s'
-                                                      % self.scratch_mnt, line))
+                        sources.write(
+                            re.sub(
+                                r'export SCRATCH_MNT=.*',
+                                'export SCRATCH_MNT=%s' %
+                                self.scratch_mnt,
+                                line))
                         break
 
             for dev in self.devices:
@@ -304,7 +307,7 @@ class Xfstests(Test):
         """
         Returns the list of tests that belong to a certain test group
         """
-        group_test_line_re = re.compile('(\d{3})\s(.*)')
+        group_test_line_re = re.compile(r'(\d{3})\s(.*)')
         group_path = os.path.join(self.teststmpdir, 'group')
         with open(group_path, 'r') as group_file:
             content = group_file.readlines()
@@ -326,8 +329,7 @@ class Xfstests(Test):
         tests += glob.glob(self.teststmpdir + '/tests/*/???.out.linux')
         tests = [t.replace('.linux', '') for t in tests]
 
-        tests_set = [t[-7:-4] for t in tests if os.path.exists(t[:-4])]
-        tests_set.sort()
+        tests_set = sorted([t[-7:-4] for t in tests if os.path.exists(t[:-4])])
         tests_set = set(tests_set)
 
         return tests_set

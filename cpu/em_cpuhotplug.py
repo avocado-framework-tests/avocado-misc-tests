@@ -25,6 +25,7 @@ class cpuhotplug_test(Test):
     """
     To test hotplug within core in random manner.
     """
+
     def setUp(self):
         """
         Get the number of cores and threads per core
@@ -89,7 +90,7 @@ class cpuhotplug_test(Test):
         Generate random cpu number for the given core
         """
         nums = [x for x in range(self.max_smt * core,
-                ((self.max_smt * core) + self.max_smt))]
+                                 ((self.max_smt * core) + self.max_smt))]
         random.shuffle(nums)
         return nums
 

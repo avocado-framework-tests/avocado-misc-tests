@@ -42,6 +42,7 @@ class CommandFailed(Exception):
     Defines the exception called when a
     command fails
     '''
+
     def __init__(self, command, output, exitcode):
         Exception.__init__(self, command, output, exitcode)
         self.command = command
@@ -73,7 +74,7 @@ class NetworkVirtualization(Test):
             self.error('ksh is needed for the test to be run')
         if detected_distro.name == "Ubuntu":
             if not smm.check_installed("python-paramiko") and not \
-                                      smm.install("python-paramiko"):
+                    smm.install("python-paramiko"):
                 self.error('python-paramiko is needed for the test to be run')
             ubuntu_url = self.params.get('ubuntu_url', default=None)
             debs = self.params.get('debs', default=None)

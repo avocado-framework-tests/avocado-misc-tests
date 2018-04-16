@@ -69,23 +69,23 @@ class NetworkconfigTest(Test):
                         self.log.info(driverinfo)
                         if driver != driverinfo:
                             self.fail("mismatch in driver information")
-        cmd = "cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/mtu" %\
+        cmd = r"cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/mtu" %\
               (driver, driver, businfo, self.iface)
         mtu = process.system_output(cmd, shell=True).strip()
         self.log.info("mtu value is %s" % mtu)
-        cmd = "cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/operstate" %\
+        cmd = r"cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/operstate" %\
               (driver, driver, businfo, self.iface)
         operstate = process.system_output(cmd, shell=True).strip()
         self.log.info("operstate is %s" % operstate)
-        cmd = "cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/duplex" %\
+        cmd = r"cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/duplex" %\
               (driver, driver, businfo, self.iface)
         duplex = process.system_output(cmd, shell=True).strip()
         self.log.info("transmission mode is %s" % duplex)
-        cmd = "cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/address" %\
+        cmd = r"cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/address" %\
               (driver, driver, businfo, self.iface)
         address = process.system_output(cmd, shell=True).strip()
         self.log.info("mac address is %s" % address)
-        cmd = "cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/speed" %\
+        cmd = r"cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/speed" %\
               (driver, driver, businfo, self.iface)
         speed = process.system_output(cmd, shell=True).strip()
         self.log.info("speed is %s" % speed)
