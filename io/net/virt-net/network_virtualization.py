@@ -60,7 +60,9 @@ class NetworkVirtualization(Test):
     '''
     Adding and deleting Network Virtualized devices from the vios
     Performs adding and deleting of Backing devices
+    Performs HMC failover for Network Virtualized device
     Performs driver unbind and bind for Network virtualized device
+    Performs Client initiated failover for Network Virtualized device
     '''
     @skipUnless("ppc" in distro.detect().arch,
                 "supported only on Power platform")
@@ -206,6 +208,22 @@ class NetworkVirtualization(Test):
         if post_add - pre_add != 1:
             self.fail("Failed to add backing device")
 
+    def test_failover(self):
+        '''
+        Triggers Failover for the Network virtualized
+        device
+        '''
+        for _ in range(self.count):
+            self.trigger_failover('backing_device')
+            if '1' not in self.is_backing_device_active():
+                self.fail("Failover operation for Backing device has failed")
+            time.sleep(10)
+            self.trigger_failover('network_device')
+            if '0' not in self.is_backing_device_active():
+                self.fail("Failover operation for Network device has failed")
+            if not self.ping_check():
+                self.fail("Failover has affected Network connectivity")
+
     def test_unbindbind(self):
         """
         Performs driver unbind and bind for the Network virtualized device
@@ -214,8 +232,8 @@ class NetworkVirtualization(Test):
         try:
             for _ in range(self.count):
                 for operation in ["unbind", "bind"]:
-                    self.log.info("Running %s operation for Network virtualized \
-                                   device", operation)
+                    self.log.info("Running %s operation for Network \
+                                   virtualized device", operation)
                     genio.write_file(os.path.join
                                      ("/sys/bus/vio/drivers/ibmvnic",
                                       operation), "%s" % device_id)
@@ -228,6 +246,30 @@ class NetworkVirtualization(Test):
         except CmdError as details:
             self.log.debug(str(details))
             self.fail("Driver %s operation failed" % operation)
+
+    def test_clientfailover(self):
+        '''
+        Performs Client initiated failover for Network virtualized
+        device
+        '''
+        device_id = self.find_device_id()
+        try:
+            for _ in range(self.count):
+                for val in range(2):
+                    self.log.info("Performing Client initiated\
+                                  failover - Attempt %s", int(val+1))
+                    genio.write_file("/sys/devices/vio/%s/failover"
+                                     % device_id, "1")
+                    time.sleep(5)
+                    self.log.info("Running a ping test to check if failover \
+                                    affected Network connectivity")
+                    if not self.ping_check():
+                        self.fail("Ping test failed. Network virtualized \
+                                   failover has affected Network connectivity")
+        except CmdError as details:
+            self.log.debug(str(details))
+            self.fail("Client initiated Failover for Network virtualized \
+                       device has failed")
 
     def test_backingdevremove(self):
         '''
@@ -291,15 +333,17 @@ class NetworkVirtualization(Test):
         Adds and removes a backing device based on the operation
         '''
         if operation == 'add':
-            cmd = 'chhwres -r virtualio --rsubtype vnic -o s -m %s -s %s --id %s \
-                   -a backing_devices+=%s' % (self.server, self.slot_num,
-                                              self.lpar_id,
-                                              self.add_backing_device)
+            cmd = 'chhwres -r virtualio --rsubtype vnic -o s -m %s -s %s \
+                   --id %s -a backing_devices+=%s' % (self.server,
+                                                      self.slot_num,
+                                                      self.lpar_id,
+                                                      self.add_backing_device)
         else:
-            cmd = 'chhwres -r virtualio --rsubtype vnic -o s -m %s -s %s --id %s \
-                   -a backing_devices-=%s' % (self.server, self.slot_num,
-                                              self.lpar_id,
-                                              self.add_backing_device)
+            cmd = 'chhwres -r virtualio --rsubtype vnic -o s -m %s -s %s \
+                   --id %s -a backing_devices-=%s' % (self.server,
+                                                      self.slot_num,
+                                                      self.lpar_id,
+                                                      self.add_backing_device)
         try:
             cmd = self.run_command(cmd)
         except CommandFailed as cmdfail:
@@ -312,8 +356,8 @@ class NetworkVirtualization(Test):
         Lists the Backing devices for a Network virtualized
         device
         '''
-        cmd = 'lshwres -r virtualio -m %s --rsubtype vnic --level lpar --filter \
-               lpar_names=%s -F slot_num,backing_device_states' \
+        cmd = 'lshwres -r virtualio -m %s --rsubtype vnic --level lpar \
+               --filter lpar_names=%s -F slot_num,backing_device_states' \
                % (self.server, self.lpar)
         try:
             output = self.run_command(cmd)
@@ -379,6 +423,61 @@ class NetworkVirtualization(Test):
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             return False
         return True
+
+    def trigger_failover(self, device):
+        '''
+        Triggers failover from HMC
+        '''
+        backing_dev_logport_id = self.get_backing_device_logport()
+        network_dev_logport_id = self.get_device_logport()
+        if device == 'backing_device':
+            cmd = 'chhwres -r virtualio --rsubtype vnicbkdev -o act -m %s \
+                   -s %s --id %s --logport %s' % (self.server, self.slot_num,
+                                                  self.lpar_id,
+                                                  backing_dev_logport_id)
+        else:
+            cmd = 'chhwres -r virtualio --rsubtype vnicbkdev -o act -m %s \
+                   -s %s --id %s --logport %s' % (self.server, self.slot_num,
+                                                  self.lpar_id,
+                                                  network_dev_logport_id)
+        try:
+            cmd = self.run_command(cmd)
+        except CommandFailed as cmdfail:
+            self.log.debug(str(cmdfail))
+            self.fail("Command to set %s as Active has failed" % device)
+
+    def get_backing_device_logport(self):
+        '''
+        Get the logical port id of the
+        backing device
+        '''
+        output = self.backing_dev_list()
+        for i in output:
+            if i.startswith('%s,' % self.slot_num):
+                logport = i.split(',')[1:][1].split('/')[1]
+        return logport
+
+    def get_device_logport(self):
+        '''
+        Get the logical port id of the Network
+        virtualized device
+        '''
+        output = self.backing_dev_list()
+        for i in output:
+            if i.startswith('%s,' % self.slot_num):
+                device_logport = i.split(',')[0:][1].split('/')[1]
+        return device_logport
+
+    def is_backing_device_active(self):
+        '''
+        TO check the status of the backing device
+        after failover
+        '''
+        output = self.backing_dev_list()
+        for i in output:
+            if i.startswith('%s,' % self.slot_num):
+                val = i.split(',')[1:][1].split('/')[2]
+        return val
 
     def tearDown(self):
         if self.pxssh.isalive():
