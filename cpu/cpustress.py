@@ -67,7 +67,8 @@ class cpustresstest(Test):
         """
         sm = SoftwareManager()
         self.curr_smt = process.system_output(
-            "ppc64_cpu --smt | awk -F'=' '{print $NF}' | awk '{print $NF}'", shell=True)
+            "ppc64_cpu --smt | awk -F'=' '{print $NF}' | awk '{print $NF}'",
+            shell=True)
         if 'ppc' not in platform.processor():
             self.cancel("Processor is not powerpc")
         for pkg in ['util-linux', 'powerpc-utils', 'numactl']:
@@ -268,17 +269,21 @@ class cpustresstest(Test):
         """
         output = []
         if 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
-            if "cpu_dlpar=yes" in process.system_output("drmgr -C", ignore_status=True, shell=True):
+            if "cpu_dlpar=yes" in process.system_output("drmgr -C",
+                                                        ignore_status=True,
+                                                        shell=True):
                 for _ in range(self.iteration):
                     self.log.info("DLPAR remove cpu operation")
                     init_count = int(multiprocessing.cpu_count())
                     process.run(
-                        "drmgr -c cpu -d 5 -w 30 -r", shell=True, ignore_status=True, sudo=True)
+                        "drmgr -c cpu -d 5 -w 30 -r", shell=True,
+                        ignore_status=True, sudo=True)
                     if int(multiprocessing.cpu_count()) >= init_count:
                         self.log.info("no more hotunpluggable cpus")
                     self.log.info("DLPAR add cpu operation")
                     process.run(
-                        "drmgr -c cpu -d 5 -w 30 -a", shell=True, ignore_status=True, sudo=True)
+                        "drmgr -c cpu -d 5 -w 30 -a", shell=True,
+                        ignore_status=True, sudo=True)
                     if init_count != int(multiprocessing.cpu_count()):
                         self.log.info("no more hotpluggable cpus")
             else:
@@ -292,7 +297,8 @@ class cpustresstest(Test):
         Sets back cpu states to online
         """
         process.system_output(
-            "ppc64_cpu --smt=off && ppc64_cpu --smt=on && ppc64_cpu --smt=%s" % self.curr_smt, shell=True)
+            "ppc64_cpu --smt=off && ppc64_cpu --smt=on && ppc64_cpu --smt=%s"
+            % self.curr_smt, shell=True)
         self.__online_cpus(totalcpus)
 
 
