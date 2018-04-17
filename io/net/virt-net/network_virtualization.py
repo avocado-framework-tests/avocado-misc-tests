@@ -15,12 +15,13 @@
 # Author: Harsha Thyagaraja <harshkid@linux.vnet.ibm.com>
 
 '''
-Adding and deleting Network Virtualized devices from the vios
-Also performs adding and deleting of Backing devices
+Tests for Network virtualized device
 '''
 
 import os
+import time
 import shutil
+import netifaces
 try:
     import pxssh
 except ImportError:
@@ -32,6 +33,7 @@ from avocado.utils import distro
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.process import CmdError
 from avocado import skipIf, skipUnless
+from avocado.utils import genio
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
@@ -57,7 +59,8 @@ class CommandFailed(Exception):
 class NetworkVirtualization(Test):
     '''
     Adding and deleting Network Virtualized devices from the vios
-    Also performs adding and deleting of Backing devices
+    Performs adding and deleting of Backing devices
+    Performs driver unbind and bind for Network virtualized device
     '''
     @skipUnless("ppc" in distro.detect().arch,
                 "supported only on Power platform")
@@ -106,6 +109,10 @@ class NetworkVirtualization(Test):
         self.backing_adapter_id = self.params.get("backing_adapter_id",
                                                   '*', default=None)
         self.bandwidth = self.params.get("bandwidth", '*', default=None)
+        self.count = int(self.params.get('count', default="1"))
+        self.device_ip = self.params.get('device_ip', '*', default=None)
+        self.netmask = self.params.get('netmask', '*', default=None)
+        self.peer_ip = self.params.get('peer_ip', default=None)
         self.login(self.hmc_ip, self.hmc_username, self.hmc_pwd)
         self.run_command("uname -a")
         cmd = 'lssyscfg -m ' + self.server + \
@@ -198,6 +205,29 @@ class NetworkVirtualization(Test):
         post_add = self.backing_dev_count()
         if post_add - pre_add != 1:
             self.fail("Failed to add backing device")
+
+    def test_unbindbind(self):
+        """
+        Performs driver unbind and bind for the Network virtualized device
+        """
+        device_id = self.find_device_id()
+        try:
+            for _ in range(self.count):
+                for operation in ["unbind", "bind"]:
+                    self.log.info("Running %s operation for Network virtualized \
+                                   device", operation)
+                    genio.write_file(os.path.join
+                                     ("/sys/bus/vio/drivers/ibmvnic",
+                                      operation), "%s" % device_id)
+                    time.sleep(5)
+                self.log.info("Running a ping test to check if unbind/bind \
+                                    affected newtwork connectivity")
+                if not self.ping_check():
+                    self.fail("Ping test failed. Network virtualized \
+                           unbind/bind has affected Network connectivity")
+        except CmdError as details:
+            self.log.debug(str(details))
+            self.fail("Driver %s operation failed" % operation)
 
     def test_backingdevremove(self):
         '''
@@ -301,6 +331,54 @@ class NetworkVirtualization(Test):
             if i.startswith('%s,' % self.slot_num):
                 count = len(i.split(',')[1:])
         return count
+
+    @staticmethod
+    def find_device():
+        """
+        Finds out the latest added network virtualized device
+        """
+        device = netifaces.interfaces()[-1]
+        return device
+
+    def configure_device(self):
+        """
+        Configures the Network virtualized device
+        """
+        device = self.find_device()
+        cmd = "ip addr add %s/%s dev %s;ip link set %s up" % (self.device_ip,
+                                                              self.netmask,
+                                                              device,
+                                                              device)
+        if process.system(cmd, shell=True, ignore_status=True) != 0:
+            self.fail("Failed to configure Network \
+                              Virtualized device")
+        if 'state UP' in process.system_output("ip link \
+             show %s" % device, shell=True):
+            self.log.info("Successfully configured the Network \
+                              Virtualized device")
+        return device
+
+    def find_device_id(self):
+        """
+        Finds the device id needed to trigger failover
+        """
+        device = self.find_device()
+        device_id = process.system_output("ls -l /sys/class/net/ | \
+                                           grep %s | cut -d '/' -f \
+                                           5" % device,
+                                          shell=True).strip()
+        return device_id
+
+    def ping_check(self):
+        """
+        ping check
+        """
+        device = self.configure_device()
+        cmd = "ping -I %s %s -c 5"\
+              % (device, self.peer_ip)
+        if process.system(cmd, shell=True, ignore_status=True) != 0:
+            return False
+        return True
 
     def tearDown(self):
         if self.pxssh.isalive():
