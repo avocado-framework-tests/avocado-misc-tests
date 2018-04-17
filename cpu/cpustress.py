@@ -31,7 +31,7 @@ from avocado.utils.software_manager import SoftwareManager
 pids = []
 totalcpus = int(multiprocessing.cpu_count()) - 1
 errorlog = ['WARNING: CPU:', 'Oops',
-            'Segfault', 'soft lockup',
+            'Segfault', 'soft lockup', 'Hard LOCKUP',
             'Unable to handle paging request',
             'rcu_sched detected stalls',
             'NMI backtrace for cpu',
