@@ -1,16 +1,5 @@
-iteration: '1'
-stresstime: '10'
-vmcount: '4'
-iocount: '4'
-memratio: None
-test_input: !mux
-    hotplug_loop:
-        test: 'hotplug_loop'
-    hotplug_toggle:
-        test: 'hotplug_toggle'
-    hotplug_ratio:
-        test: 'hotplug_ratio'
-    dlpar_mem_hotplug:
-        test: 'dlpar_mem_hotplug'
-    hotplug_per_numa_node:
-        test: 'hotplug_per_numa_node'
+iteration: 1
+stresstime: 10
+vmcount: 4
+iocount: 4
+memratio: 5
