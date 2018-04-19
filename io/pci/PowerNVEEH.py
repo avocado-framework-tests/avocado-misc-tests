@@ -35,6 +35,7 @@ class EEHRecoveryFailed(Exception):
     """
     Exception class, if EEH fails to recover
     """
+
     def __init__(self, msg, dev, log=None):
         self.msg = msg
         self.dev = dev
@@ -50,8 +51,8 @@ class PowerNVEEH(Test):
     This class contains functions for listing domains
     forming EEH command
     """
-    def setUp(self):
 
+    def setUp(self):
         """
         Gets the console and set-up the machine for test
         """
@@ -85,7 +86,6 @@ class PowerNVEEH(Test):
         self.log.info("===============Testing EEH Frozen PE==================")
 
     def test_eeh_basic_pe(self):
-
         """
         Test to execute basic error injection on PE
         """
@@ -127,7 +127,6 @@ class PowerNVEEH(Test):
                 self.fail("PE %s not removed after max hit" % self.pci_device)
 
     def basic_eeh(self, func):
-
         """
         Injects Error, and checks for PE recovery
         returns True, if recovery is success, else Flase
@@ -145,7 +144,6 @@ class PowerNVEEH(Test):
 
     @classmethod
     def error_inject(cls, addr, err, func, mem_addr, mask, phb):
-
         """
         Form a command to inject the error
         """
@@ -155,7 +153,6 @@ class PowerNVEEH(Test):
                                          shell=True)[-1])
 
     def check_eeh_pe_recovery(self):
-
         """
         Check if the PE is recovered successfully after injecting EEH
         """
@@ -180,7 +177,6 @@ class PowerNVEEH(Test):
 
     @classmethod
     def clear_dmesg_logs(cls):
-
         """
         Clears dmesg logs, so that functions which uses dmesg
         gets the latest logs
@@ -190,7 +186,6 @@ class PowerNVEEH(Test):
 
     @classmethod
     def check_eeh_hit(cls):
-
         """
         Function to check if EEH is successfully hit
         """
@@ -205,7 +200,6 @@ class PowerNVEEH(Test):
 
     @classmethod
     def check_eeh_removed(cls):
-
         """
         Function to check if PE is recovered successfully
         """

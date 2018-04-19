@@ -31,7 +31,7 @@ errorlog = ['WARNING: CPU:', 'Oops',
             'Unable to handle paging request',
             'rcu_sched detected stalls',
             'NMI backtrace for cpu',
-            'Call Trace:', 'WARNING: at',
+            'WARNING: at',
             'INFO: possible recursive locking detected',
             'Kernel BUG at', 'Kernel panic - not syncing:',
             'double fault:', 'BUG: Bad page state in']
@@ -53,14 +53,20 @@ def offline(block):
         pass
 
 
-def get_hotpluggable_blocks(path):
+def get_hotpluggable_blocks(path, ratio):
     mem_blocks = []
     for mem_blk in glob.glob(path):
-        block = re.findall("\d+", os.path.basename(mem_blk))[0]
+        block = re.findall(r"\d+", os.path.basename(mem_blk))[0]
         block = re.sub(r'^\s*$', '', block)
         if memory.is_hot_pluggable(block):
             mem_blocks.append(block)
-    return mem_blocks
+
+    def f(num):
+        if num % 2:
+            return (num / 100 + 1)
+        return (num / 100)
+    count = f(len(mem_blocks) * ratio)
+    return mem_blocks[:count]
 
 
 def collect_dmesg(object):
@@ -100,15 +106,16 @@ class memstress(Test):
             process.run('[ -x configure ] && ./configure', shell=True)
             build.make(self.sourcedir)
             build.make(self.sourcedir, extra_args='install')
-
-        self.tests = self.params.get('test', default='all')
-        self.iteration = int(self.params.get('iteration', default='1'))
-        self.stresstime = int(self.params.get('stresstime', default='10'))
-        self.vmcount = int(self.params.get('vmcount', default='4'))
-        self.iocount = int(self.params.get('iocount', default='4'))
-        self.memratio = self.params.get('memratio', default=None)
+        self.iteration = self.params.get('iteration', default=1)
+        self.stresstime = self.params.get('stresstime', default=10)
+        self.vmcount = self.params.get('vmcount', default=4)
+        self.iocount = self.params.get('iocount', default=4)
+        self.memratio = self.params.get('memratio', default=5)
         self.blocks_hotpluggable = get_hotpluggable_blocks(
-            '%s/memory*' % mem_path)
+            (os.path.join('%s', 'memory*') % mem_path), self.memratio)
+        if os.path.exists("%s/auto_online_blocks" % mem_path):
+            if not self.__is_auto_online():
+                self.hotplug_all(self.blocks_hotpluggable)
 
     @staticmethod
     def hotunplug_all(blocks):
@@ -123,57 +130,30 @@ class memstress(Test):
                 online(block)
 
     @staticmethod
-    def __clear_dmesg():
-        process.run("dmesg -c", sudo=True)
-
-    @staticmethod
-    def __error_check():
-        ERROR = []
-        logs = process.system_output("dmesg -Txl 1,2,3,4").splitlines()
-        for error in errorlog:
-            for log in logs:
-                if error in log:
-                    ERROR.append(log)
-        return "\n".join(ERROR)
-
-    @staticmethod
     def __is_auto_online():
         with open('%s/auto_online_blocks' % mem_path, 'r') as auto_file:
             if auto_file.read() == 'online\n':
                 return True
             return False
 
+    def __error_check(self):
+        ERROR = []
+        logs = process.system_output("dmesg -Txl 1,2,3,4").splitlines()
+        for error in errorlog:
+            for log in logs:
+                if error in log:
+                    ERROR.append(log)
+        if "\n".join(ERROR):
+            collect_dmesg(self)
+            self.fail('ERROR: Test failed, please check the dmesg logs')
+
     def run_stress(self):
-        mem_free = memory.meminfo.MemFree.m / 2
+        mem_free = memory.meminfo.MemFree.m / 4
         cpu_count = int(multiprocessing.cpu_count()) / 2
         process.run("stress --cpu %s --io %s --vm %s --vm-bytes %sM --timeout %ss" %
                     (cpu_count, self.iocount, self.vmcount, mem_free, self.stresstime), ignore_status=True, sudo=True, shell=True)
 
-    def test(self):
-        if os.path.exists("%s/auto_online_blocks" % mem_path):
-            if not self.__is_auto_online():
-                self.hotplug_all(self.blocks_hotpluggable)
-        if 'all' in self.tests:
-            tests = ['hotplug_loop',
-                     'hotplug_toggle',
-                     'hotplug_ratio',
-                     'dlpar_mem_hotplug',
-                     'hotplug_per_numa_node']
-        else:
-            tests = self.tests.split()
-
-        for method in tests:
-            self.log.info("\nTEST: %s\n", method)
-            self.__clear_dmesg()
-            run_test = 'self.%s()' % method
-            eval(run_test)
-            msg = self.__error_check()
-            if msg:
-                collect_dmesg()
-                self.log.error('Test: %s. ERROR Message: %s', run_test, msg)
-            self.log.info("\nEND: %s\n", method)
-
-    def hotplug_loop(self):
+    def test_hotplug_loop(self):
         self.log.info("\nTEST: hotunplug and hotplug in a loop\n")
         for _ in range(self.iteration):
             self.log.info("\nhotunplug all memory\n")
@@ -181,8 +161,9 @@ class memstress(Test):
             self.run_stress()
             self.log.info("\nReclaim back memory\n")
             self.hotplug_all(self.blocks_hotpluggable)
+        self.__error_check()
 
-    def hotplug_toggle(self):
+    def test_hotplug_toggle(self):
         self.log.info("\nTEST: Memory toggle\n")
         for _ in range(self.iteration):
             for block in self.blocks_hotpluggable:
@@ -191,65 +172,44 @@ class memstress(Test):
                 self.run_stress()
                 online(block)
                 self.log.info("memory%s block hotplugged" % block)
+        self.__error_check()
 
-    def hotplug_ratio(self):
-        if not self.memratio:
-            self.memratio = ['25', '50', '75', '100']
-        for ratio in self.memratio:
-            target = 0
-            self.log.info("\nTEST : Hotunplug %s%% of memory\n" % ratio)
-            num = len(self.blocks_hotpluggable) * int(ratio)
-            if num % 100:
-                target = (num / 100) + 1
-            else:
-                target = num / 100
-            for block in self.blocks_hotpluggable:
-                if target > 0:
-                    offline(block)
-                    target -= 1
-                    self.log.info("memory%s block offline" % block)
-            self.run_stress()
-            self.log.info("\nReclaim all memory\n")
-            self.hotplug_all(self.blocks_hotpluggable)
-
-    def dlpar_mem_hotplug(self):
+    def test_dlpar_mem_hotplug(self):
         if 'ppc' in platform.processor() and 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
             if "mem_dlpar=yes" in process.system_output("drmgr -C", ignore_status=True, shell=True):
-                init_mem = memory.meminfo.MemTotal.k
                 self.log.info("\nDLPAR remove memory operation\n")
                 for _ in range(len(self.blocks_hotpluggable) / 2):
                     process.run(
                         "drmgr -c mem -d 5 -w 30 -r", shell=True, ignore_status=True, sudo=True)
-                if memory.meminfo.MemTotal.k >= init_mem:
-                    self.log.warn("dlpar mem could not complete")
                 self.run_stress()
-                init_mem = memory.meminfo.MemTotal.k
                 self.log.info("\nDLPAR add memory operation\n")
                 for _ in range(len(self.blocks_hotpluggable) / 2):
                     process.run(
                         "drmgr -c mem -d 5 -w 30 -a", shell=True, ignore_status=True, sudo=True)
-                if init_mem < memory.meminfo.MemTotal.k:
-                    self.log.warn("dlpar mem could not complete")
+                self.__error_check()
             else:
                 self.log.info('UNSUPPORTED: dlpar not configured..')
         else:
             self.log.info("UNSUPPORTED: Test not supported on this platform")
 
-    def hotplug_per_numa_node(self):
+    def test_hotplug_per_numa_node(self):
         self.log.info("\nTEST: Numa Node memory off on\n")
         with open('/sys/devices/system/node/has_normal_memory', 'r') as node_file:
             nodes = node_file.read()
-        for node in nodes.split('-'):
+        for node in re.split("[,-]", nodes):
             node = node.strip('\n')
             self.log.info("Hotplug all memory in Numa Node %s" % node)
-            mem_blocks = get_hotpluggable_blocks(
-                '/sys/devices/system/node/node%s/memory*' % node)
+            mem_blocks = get_hotpluggable_blocks((
+                '/sys/devices/system/node/node%s/memory*' % node), self.memratio)
             for block in mem_blocks:
                 self.log.info(
                     "offline memory%s in numa node%s" % (block, node))
                 offline(block)
             self.run_stress()
-            self.hotplug_all(self.blocks_hotpluggable)
+        self.__error_check()
+
+    def tearDown(self):
+        self.hotplug_all(self.blocks_hotpluggable)
 
 
 if __name__ == "__main__":
