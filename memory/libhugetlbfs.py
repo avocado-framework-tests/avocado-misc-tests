@@ -112,7 +112,7 @@ class libhugetlbfs(Test):
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
-        if detected_distro.name in ["rhel", "fedora", "redhat"]:
+        if detected_distro.name in ["rhel", "fedora", "redhat", "centos"]:
             falloc_patch = 'patch -p1 < %s ' % (
                 os.path.join(data_dir, 'falloc.patch'))
             process.run(falloc_patch, shell=True)
