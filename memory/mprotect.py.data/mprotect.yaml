@@ -1,0 +1,10 @@
+setup:
+    # make sure enough memory is available
+    nr_pages: null
+    scen: !mux
+        positive:
+            induce_err: 0
+            failure: False
+        negative:
+            induce_err: 1
+            failure: True
