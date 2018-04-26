@@ -34,4 +34,4 @@ peer_ip ---> Peer ip to which the added Network virtualized interface will ping 
 count ---> The number of times the unbind and bind test has to be executed
 
 NOTE: The last device listed by "ip link show" will be used to configure and test the
-driver unbind/bind functionality
+driver unbind/bind and failover functionalities
