@@ -91,7 +91,7 @@ int mmap_chunks_lower(unsigned long no_of_chunks, unsigned long hugetlb_arg)
         		}
 		}
         	if (validate_addr(ptr, 0)){
-			printf("\n Address in > 128Tb !!! So Problem \n");
+			printf("\n Address failed, in > 128Tb !!! So Problem \n");
 			exit(-1);
 		}
 
@@ -117,7 +117,7 @@ int mmap_chunks_higher(unsigned long no_of_chunks, unsigned long hugetlb_arg)
         	}
 
         	if (validate_addr(hptr, 1)){
-			printf("\n Address is not in > 128Tb iterator = %d\n", i);
+			printf("\n Address failed, not in > 128Tb iterator = %d\n", i);
 			exit(-1);
 		}
 	}

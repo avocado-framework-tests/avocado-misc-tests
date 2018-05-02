@@ -74,7 +74,7 @@ class VATest(Test):
         result = process.run('./va_test -s %s' %
                              self.scenario_arg, shell=True, ignore_status=True)
         for line in result.stdout.splitlines():
-            if 'Problem' in line:
+            if 'failed' in line:
                 self.fail("test failed, Please check debug log for failed"
                           "test cases")
 
