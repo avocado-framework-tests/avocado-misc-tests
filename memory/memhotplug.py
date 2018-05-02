@@ -37,6 +37,10 @@ errorlog = ['WARNING: CPU:', 'Oops',
             'double fault:', 'BUG: Bad page state in']
 
 
+def clear_dmesg():
+    process.run("dmesg -c ", sudo=True)
+
+
 def online(block):
     try:
         memory.hotplug(block)
@@ -116,6 +120,7 @@ class memstress(Test):
         if os.path.exists("%s/auto_online_blocks" % mem_path):
             if not self.__is_auto_online():
                 self.hotplug_all(self.blocks_hotpluggable)
+        clear_dmesg()
 
     @staticmethod
     def hotunplug_all(blocks):
