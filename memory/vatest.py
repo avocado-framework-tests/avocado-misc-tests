@@ -39,7 +39,7 @@ class VATest(Test):
         # Check for basic utilities
         smm = SoftwareManager()
         self.scenario_arg = int(self.params.get('scenario_arg', default=1))
-        dic = {2: 1024, 3: 1024, 4: 131072, 5: 1, 6: 1, 7: 2}
+        dic = {2: 65536, 3: 65536, 4: 131072, 5: 1, 6: 1, 7: 2}
         if self.scenario_arg not in range(1, 7):
             self.cancel("Test need to skip as scenario will be 1-7")
         if self.scenario_arg in [2, 3, 4]:
@@ -47,7 +47,7 @@ class VATest(Test):
                 self.cancel(
                     "Test need to skip as 16MB huge need to configured")
         elif self.scenario_arg in [5, 6, 7]:
-            if memory.meminfo.Hugepagesize.gb != 16:
+            if memory.meminfo.Hugepagesize.g != 16:
                 self.cancel(
                     "Test need to skip as 16GB huge need to configured")
         if self.scenario_arg != 1:

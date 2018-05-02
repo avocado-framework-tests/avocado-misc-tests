@@ -129,7 +129,8 @@ void alloc_64k_full()
 {
 
 	printf("Allocating 64k pages < 128TB \n");
-	mmap_chunks_lower(8191, 0);
+        /* Note: Allocating a 16GB chunk less due to heap space required for other mappings */
+	mmap_chunks_lower(8190, 0);
 	
 	printf("Allocating 64k pages > 128TB \n");
 	mmap_chunks_higher(24575, 0);		
@@ -298,13 +299,13 @@ int main(int argc, char *argv[])
                 break;
         case 2 :
 		printf("\nScenario 2 : Get hugepage VA Below 128Tb mark \n\n");
-		printf("1024 16M hugepages must be configured \n");
+		printf("65536 16M hugepages must be configured \n");
 		printf("Else Test Fails\n\n");
 		alloc_16m_below_hint();
                 break;
         case 3 :
 		printf("\nScenario 3 : Get hugepage VA Above 128Tb mark \n\n");
-		printf("1024 16M hugepages must be configured \n");
+		printf("65536 16M hugepages must be configured \n");
 		printf("Else Test Fails\n\n");
 		alloc_16m_above_hint();
                 break;
