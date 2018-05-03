@@ -55,7 +55,7 @@ class VATest(Test):
 
         for packages in ['gcc', 'make']:
             if not smm.check_installed(packages) and not smm.install(packages):
-                self.cancle('%s is needed for the test to be run' % packages)
+                self.cancel('%s is needed for the test to be run' % packages)
 
         shutil.copyfile(os.path.join(self.datadir, 'va_test.c'),
                         os.path.join(self.teststmpdir, 'va_test.c'))
