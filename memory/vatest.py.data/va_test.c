@@ -122,52 +122,52 @@ int mmap_chunks_higher(unsigned long no_of_chunks, unsigned long hugetlb_arg)
 }
 
 
-void alloc_64k_full()
+void alloc_page_full()
 {
 
-	printf("Allocating 64k pages < 128TB \n");
+	printf("Allocating default pagesize pages < 128TB \n");
 	/* Note: Allocating a 16GB chunk less due to heap space required for other mappings */
 	mmap_chunks_lower(8190, 0);
 	
-	printf("Allocating 64k pages > 128TB \n");
+	printf("Allocating default pagesize pages > 128TB \n");
 	mmap_chunks_higher(24575, 0);		
 }
 
-void alloc_64k_full_reverse()
+void alloc_page_full_reverse()
 {
 
-	printf("Allocating 64k pages > 128TB \n");
+	printf("Allocating default pagesize pages > 128TB \n");
 	mmap_chunks_higher(24575, 0);
-	printf("Allocating 64k pages < 128TB \n");
+	printf("Allocating default pagesize pages < 128TB \n");
 	/* Note: Allocating a 16GB chunk less due to heap space required for other mappings */
 	mmap_chunks_lower(8190, 0);
 }
 
-void alloc_16m_reverse(int chunks)
+void alloc_huge_reverse(int chunks)
 {
-	printf("Allocating 16M chunks > 128TB \n");
+	printf("Allocating hugepage chunks > 128TB \n");
 	mmap_chunks_higher(chunks/2, MAP_HUGETLB);
-	printf("Allocating 16M chunks < 128TB \n");
+	printf("Allocating hugepage chunks < 128TB \n");
 	mmap_chunks_lower(chunks/2, MAP_HUGETLB);
 }
 
-void alloc_16m(int chunks)
+void alloc_huge(int chunks)
 {
-	printf("Allocating 16M chunks < 128TB \n");
+	printf("Allocating hugepage chunks < 128TB \n");
 	mmap_chunks_lower(chunks/2, MAP_HUGETLB);
-	printf("Allocating 16M chunks > 128TB \n");
+	printf("Allocating hugepage chunks > 128TB \n");
 	mmap_chunks_higher(chunks/2, MAP_HUGETLB);
 }
 
-void alloc_16m_below_hint(int chunks)
+void alloc_huge_below_hint(int chunks)
 {
-	printf("Allocating 16M chunks < 128TB \n");
+	printf("Allocating hugepage chunks < 128TB \n");
 	mmap_chunks_lower(chunks, MAP_HUGETLB);
 }
 
-void alloc_16m_above_hint(int chunks)
+void alloc_huge_above_hint(int chunks)
 {
-	printf("Allocating 16M chunks > 128TB \n");
+	printf("Allocating hugepage chunks > 128TB \n");
 	mmap_chunks_higher(chunks, MAP_HUGETLB);
 }
 	
@@ -315,28 +315,28 @@ int main(int argc, char *argv[])
 
 	switch (scenario){
 	case 1 :
-		printf("\nScenario 1 : Alloc 64k page from 0-512 tb VA with above 128 first\n\n");
-		alloc_64k_full_reverse();
+		printf("\nScenario 1 : Alloc default pagesize from 0-512 tb VA with above 128 first\n\n");
+		alloc_page_full_reverse();
 		break;
 	case 2 :
-		printf("\nScenario 2 : Alloc 64k page from 0-512 tb VA\n\n");
-		alloc_64k_full();
+		printf("\nScenario 2 : Alloc default page from 0-512 tb VA\n\n");
+		alloc_page_full();
 		break;
 	case 3 :
 		printf("\nScenario 3 : Get hugepage VA Below 128Tb mark \n\n");
-		alloc_16m_below_hint(chunks);
+		alloc_huge_below_hint(chunks);
 		break;
 	case 4 :
 		printf("\nScenario 4 : Get hugepage VA Above 128Tb mark \n\n");
-		alloc_16m_above_hint(chunks);
+		alloc_huge_above_hint(chunks);
 		break;
 	case 5 :
 		printf("\nScenario 5 : Get hugepage VA Above and Below 128Tb mark \n\n");
-		alloc_16m_reverse(chunks);
+		alloc_huge_reverse(chunks);
 		break;
 	case 6 :
 		printf("\nScenario 6 : Get hugepage VA Below and Above 128Tb mark \n\n");
-		alloc_16m(chunks);
+		alloc_huge(chunks);
 		break;
 	case 7 :
 		printf("\nScenario 7 : Get 16g hugepage VA Below 128T mark\n\n");
