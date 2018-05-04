@@ -20,7 +20,7 @@ import shutil
 
 from avocado import Test
 from avocado import main
-from avocado.utils import process,  build, memory
+from avocado.utils import process, build, memory
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -39,19 +39,25 @@ class VATest(Test):
         # Check for basic utilities
         smm = SoftwareManager()
         self.scenario_arg = int(self.params.get('scenario_arg', default=1))
-        dic = {2: 65536, 3: 65536, 4: 131072, 5: 1, 6: 1, 7: 2}
-        if self.scenario_arg not in range(1, 7):
-            self.cancel("Test need to skip as scenario will be 1-7")
-        if self.scenario_arg in [2, 3, 4]:
+        self.n_chunks = nr_pages = 0
+        if self.scenario_arg not in range(1, 9):
+            self.cancel("Test need to skip as scenario will be 1-9")
+        if self.scenario_arg in [3, 4, 5, 6]:
             if memory.meminfo.Hugepagesize.m != 16:
                 self.cancel(
                     "Test need to skip as 16MB huge need to configured")
-        elif self.scenario_arg in [5, 6, 7]:
+        elif self.scenario_arg in [7, 8, 9]:
             if memory.meminfo.Hugepagesize.g != 16:
                 self.cancel(
                     "Test need to skip as 16GB huge need to configured")
-        if self.scenario_arg != 1:
-            memory.set_num_huge_pages(dic[self.scenario_arg])
+        if self.scenario_arg not in [1, 2]:
+            max_hpages = (0.9 * memory.meminfo.MemFree.m) / \
+                memory.meminfo.Hugepagesize.m
+            self.exist_pages = memory.get_num_huge_pages()
+            memory.set_num_huge_pages(max_hpages)
+            nr_pages = memory.get_num_huge_pages()
+            self.n_chunks = (
+                (nr_pages * memory.meminfo.Hugepagesize.m) / 16384)
 
         for packages in ['gcc', 'make']:
             if not smm.check_installed(packages) and not smm.install(packages):
@@ -71,12 +77,17 @@ class VATest(Test):
         '''
         os.chdir(self.teststmpdir)
 
-        result = process.run('./va_test -s %s' %
-                             self.scenario_arg, shell=True, ignore_status=True)
+        result = process.run('./va_test -s %s -n %s'
+                             % (self.scenario_arg,
+                                self.n_chunks), shell=True, ignore_status=True)
         for line in result.stdout.splitlines():
             if 'failed' in line:
                 self.fail("test failed, Please check debug log for failed"
                           "test cases")
+
+    def tearDown(self):
+        if self.scenario_arg not in [1, 2]:
+            memory.set_num_huge_pages(self.exist_pages)
 
 
 if __name__ == "__main__":
