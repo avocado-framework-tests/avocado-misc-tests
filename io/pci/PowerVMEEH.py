@@ -20,7 +20,6 @@ This scripts basic EEH tests on all PCI device
 """
 
 import time
-import sys
 from avocado import main
 from avocado import Test
 from avocado.utils import process
@@ -33,6 +32,7 @@ EEH_MISS = 1
 
 
 class EEHRecoveryFailed(Exception):
+
     """
     Exception class, if EEH fails to recover
     """
@@ -59,12 +59,11 @@ class PowerVMEEH(Test):
         """
         if 'ppc' not in distro.detect().arch:
             self.cancel("Processor is not ppc64")
-        output = genio.read_file("/sys/kernel/debug/powerpc/eeh_enable")\
-            .strip()
-        if output != '0x1':
+        if 'PowerNV' in genio.read_file("/proc/cpuinfo").strip():
+            self.cancel("Test not supported on bare-metal")
+        if '0x1' not in genio.read_file("/sys/kernel/debug/powerpc/eeh_enable").strip():
             self.cancel("EEH is not enabled, please enable via FSP")
-            sys.exit(1)
-        self.max_freeze = int(self.params.get('max_freeze', default='1'))
+        self.max_freeze = self.params.get('max_freeze', default=1)
         cmd = "echo %d > /sys/kernel/debug/powerpc/eeh_max_freezes"\
             % self.max_freeze
         process.system(cmd, ignore_status=True, shell=True)
