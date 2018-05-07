@@ -1,0 +1,3 @@
+setup:
+ nr_pages: 10 # make sure enough memory is available
+ map_type: 'shared' # 'private' or 'shared'
