@@ -1,0 +1,6 @@
+setup:
+ run : !mux
+  xfs:
+   fstype :  'xfs'
+  ext4:
+   fstype :  'ext4'
