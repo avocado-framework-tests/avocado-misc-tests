@@ -7,8 +7,6 @@ This test Suite covers the following tests.
 * nvmf disconnect cfg
 * clear target config
 
-Note: Only one namespace and peer ip are supported right now via the test.
-
 Prerequisites:
 --------------
 1. Install MOFED with NVMf enabled on both test system and peer
@@ -17,5 +15,5 @@ Prerequisites:
 
 Inputs Needed (in multiplexer file):
 ------------------------------------
-* namespace	-	namespace on the peer to configure for NVMf
-* peer_ip	-	peer IP address
+* namespaces    -   comma separated namespaces on the peer to configure for NVMf
+* peer_ips      -   comma separated peer IP address

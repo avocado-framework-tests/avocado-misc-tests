@@ -22,6 +22,7 @@ a storage networking fabric.
 
 import os
 import json
+import copy
 from avocado import Test
 from avocado import main
 from avocado.utils import process, linux_modules, genio
@@ -39,10 +40,15 @@ class NVMfTest(Test):
         """
         Sets up NVMf configuration
         """
-        self.nvme_ns = self.params.get('namespace', default='')
-        self.peer_ip = self.params.get('peer_ip', default='')
-        if not self.nvme_ns or not self.peer_ip:
+        self.nss = self.params.get('namespaces', default='')
+        self.peer_ips = self.params.get('peer_ips', default='')
+        if not self.nss or not self.peer_ips:
             self.cancel("No inputs provided")
+        self.nss = self.nss.split(',')
+        self.peer_ips = self.peer_ips.split(',')
+        self.ids = range(1, len(self.peer_ips) + 1)
+        if len(self.nss) != len(self.peer_ips):
+            self.cancel("Count of namespace and peer ips mismatch")
         smm = SoftwareManager()
         if not smm.check_installed("nvme-cli") and not \
                 smm.install("nvme-cli"):
@@ -63,14 +69,23 @@ class NVMfTest(Test):
         with open(self.cfg_tmpl, "r") as cfg_fp:
             cfg = yaml.safe_load(cfg_fp)
 
-        cfg["subsystems"][0]["namespaces"][0]["device"]["nguid"] = "1".zfill(
-            32)
-        cfg["subsystems"][0]["namespaces"][0]["device"]["path"] = self.nvme_ns
-        cfg["subsystems"][0]["namespaces"][0]["nsid"] = "1"
-        cfg["subsystems"][0]["nqn"] = "mysubsys1"
-        cfg["ports"][0]["addr"]["traddr"] = self.peer_ip
-        cfg["ports"][0]["subsystems"][0] = "mysubsys1"
-        cfg["ports"][0]["portid"] = "1"
+        subsys_template = list(cfg["subsystems"])
+        ports_template = list(cfg["ports"])
+        del cfg["subsystems"][0]
+        del cfg["ports"][0]
+        for i in range(len(self.ids)):
+            cfg["subsystems"].append(copy.deepcopy(subsys_template[0]))
+            cfg["ports"].append(copy.deepcopy(ports_template[0]))
+
+            cfg_namespace = cfg["subsystems"][i]["namespaces"][0]
+            cfg_namespace["device"]["nguid"] = str(i + 1).zfill(32)
+            cfg_namespace["device"]["path"] = self.nss[i]
+            cfg_namespace["nsid"] = str(i + 1)
+
+            cfg["subsystems"][i]["nqn"] = "mysubsys%s" % str(i + 1)
+            cfg["ports"][i]["addr"]["traddr"] = self.peer_ips[i]
+            cfg["ports"][i]["subsystems"][0] = "mysubsys%s" % str(i + 1)
+            cfg["ports"][i]["portid"] = str(i + 1)
 
         with open(self.cfg_file, "w") as cfg_fp:
             json.dump(cfg, cfg_fp, indent=2)
@@ -90,19 +105,19 @@ class NVMfTest(Test):
         Configures the peer NVMf.
         """
         self.create_cfg_file()
-        cmd = "scp -r %s %s:/tmp/" % (self.cfg_file, self.peer_ip)
+        cmd = "scp -r %s %s:/tmp/" % (self.cfg_file, self.peer_ips[0])
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.cancel("unable to copy the NVMf cfg file into peer machine")
         for mdl in ["nvmet", "nvmet-rdma"]:
-            cmd = "ssh %s \"%s\"" % (self.peer_ip, "modprobe %s" % mdl)
+            cmd = "ssh %s \"%s\"" % (self.peer_ips[0], "modprobe %s" % mdl)
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.cancel("%s is not loadable on the peer" % mdl)
         msg = "which nvmetcli"
-        cmd = "ssh %s \"%s\"" % (self.peer_ip, msg)
+        cmd = "ssh %s \"%s\"" % (self.peer_ips[0], msg)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.cancel("nvmetcli is not installed on the peer")
         msg = "nvmetcli restore /tmp/nvmf.cfg"
-        cmd = "ssh %s \"%s\"" % (self.peer_ip, msg)
+        cmd = "ssh %s \"%s\"" % (self.peer_ips[0], msg)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("nvmetcli setup config fails on peer")
 
@@ -110,31 +125,36 @@ class NVMfTest(Test):
         """
         Discovers NVMf subsystems on the initiator
         """
-        cmd = "nvme discover -t rdma -a %s -s 4420 -q mysubsys1" % self.peer_ip
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
-            self.fail("Discover fails")
+        for i in range(len(self.ids)):
+            cmd = "nvme discover -t rdma -a %s -s 4420 -q mysubsys%s" % (
+                self.peer_ips[i], str(i + 1))
+            if process.system(cmd, shell=True, ignore_status=True) != 0:
+                self.fail("Discover of mysubsys%s fails" % str(i + 1))
 
     def test_nvmfconnect(self):
         """
         Connects to NVMf subsystems on the initiator
         """
         pre_count = self.nvme_devs_count()
-        cmd = "nvme connect -t rdma -n mysubsys1 -a %s -s 4420" % self.peer_ip
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
-            self.fail("Connect fails")
-        if (self.nvme_devs_count() - pre_count) != 1:
-            self.fail("no new nvme devices added")
+        for i in range(len(self.ids)):
+            cmd = "nvme connect -t rdma -n mysubsys%s -a %s -s 4420" % (
+                str(i + 1), self.peer_ips[i])
+            if process.system(cmd, shell=True, ignore_status=True) != 0:
+                self.fail("Connect to mysubsys%s fails" % str(i + 1))
+        if (self.nvme_devs_count() - pre_count) != len(self.ids):
+            self.fail("%d new nvme not devices added" % len(self.ids))
 
     def test_nvmfdisconnect(self):
         """
-        Disconnects NVMf subsystems on the initiator
+        Disconnects to NVMf subsystems on the initiator
         """
         pre_count = self.nvme_devs_count()
-        cmd = "nvme disconnect -n mysubsys1"
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
-            self.fail("Disconnect fails")
-        if (pre_count - self.nvme_devs_count()) != 1:
-            self.fail("no nvme devices removed")
+        for i in range(len(self.ids)):
+            cmd = "nvme disconnect -n mysubsys%s" % str(i + 1)
+            if process.system(cmd, shell=True, ignore_status=True) != 0:
+                self.fail("Disconnect to mysubsys%s fails" % str(i + 1))
+        if (pre_count - self.nvme_devs_count()) != len(self.ids):
+            self.fail("%d new nvme not devices removed" % len(self.ids))
 
     def test_nvmfconnectcfg(self):
         """
@@ -142,37 +162,42 @@ class NVMfTest(Test):
         """
         if not os.path.exists(os.path.dirname(self.nvmf_discovery_file)):
             os.makedirs(os.path.dirname(self.nvmf_discovery_file))
-        msg = "-t rdma -a %s -s 4420 -q mysubsys1" % self.peer_ip
-        genio.write_file(self.nvmf_discovery_file, msg)
+        msg = []
+        for i in range(len(self.ids)):
+            msg.append("-t rdma -a %s -s 4420 -q mysubsys%s" %
+                       (self.peer_ips[i], str(i + 1)))
+        genio.write_file(self.nvmf_discovery_file, "\n".join(msg))
+        process.system("cat %s" % self.nvmf_discovery_file)
         pre_count = self.nvme_devs_count()
         cmd = "nvme connect-all"
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("connect-all fails")
-        if (self.nvme_devs_count() - pre_count) != 1:
-            self.fail("no new nvme devices added")
+        if (self.nvme_devs_count() - pre_count) != len(self.ids):
+            self.fail("%d new nvme not devices added" % len(self.ids))
 
     def test_nvmfdisconnectcfg(self):
         """
-        Disconnects NVMf subsystems on the initiator
+        Disconnects to NVMf subsystems on the initiator
         """
         pre_count = self.nvme_devs_count()
-        cmd = "nvme disconnect -n mysubsys1"
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
-            self.fail("Disconnect of connect-all fails")
+        for i in range(len(self.ids)):
+            cmd = "nvme disconnect -n mysubsys%s" % str(i + 1)
+            if process.system(cmd, shell=True, ignore_status=True) != 0:
+                self.fail("Disconnect to mysubsys%s fails" % str(i + 1))
         genio.write_file(self.nvmf_discovery_file, "")
-        if (pre_count - self.nvme_devs_count()) != 1:
-            self.fail("no nvme devices removed")
+        if (pre_count - self.nvme_devs_count()) != len(self.ids):
+            self.fail("%d new nvme not devices removed" % len(self.ids))
 
     def test_cleartargetconfig(self):
         """
-        Clears the peer NVMf configuration
+        Clears the peer NVMf
         """
         msg = "nvmetcli clear"
-        cmd = "ssh %s \"%s\"" % (self.peer_ip, msg)
+        cmd = "ssh %s \"%s\"" % (self.peer_ips[0], msg)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("nvmetcli clear config remove on peer")
         msg = "rm -rf /tmp/nvmf.cfg"
-        cmd = "ssh %s \"%s\"" % (self.peer_ip, msg)
+        cmd = "ssh %s \"%s\"" % (self.peer_ips[0], msg)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.log.warn("removing config file on peer failed")
 
