@@ -17,6 +17,7 @@
 # Besed on the Sample Idea from:
 # https://github.com/autotest/virt-test/blob/master/samples/service.py
 
+import os
 import ConfigParser
 from avocado import Test
 from avocado import main
@@ -36,8 +37,13 @@ class service_check(Test):
         services_list = parser.get(detected_distro.name, 'services').split(',')
         if 'PowerNV' in open('/proc/cpuinfo', 'r').read():
             services_list.extend(['opal_errd', 'opal-prd'])
+            if os.path.exists('/proc/device-tree/bmc'):
+                services_list.remove(['opal_errd'])
         else:
             services_list.extend(['rtas_errd'])
+        if 'Ubuntu' in detected_distro.name:
+            if detected_distro.version >= 17:
+                services_list.remove(['networking'])
         services_failed = []
         runner = process.run
 
