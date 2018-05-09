@@ -28,17 +28,60 @@
    So chunk size id chosen as 16G */
 
 #define MAP_CHUNK_SIZE	 17179869184UL	 /* 16GB */
-
+#define MAP_HUGE_2MB    (21 << MAP_HUGE_SHIFT)
+#define MAP_HUGE_16MB    (24 << MAP_HUGE_SHIFT)
+#define MAP_HUGE_1GB    (30 << MAP_HUGE_SHIFT)
+#define MAP_HUGE_16GB    (34 << MAP_HUGE_SHIFT)
+#define MAP_HUGE_SHIFT  26
 
 #define ADDR_MARK_128TB  (1UL << 47) /* First address beyond 128TB */
 
+int MAP_ALTHUGE;
+
+long local_read_meminfo(const char *tag)
+{
+        unsigned long val;
+        char buff[256];
+        FILE *meminfo = fopen("/proc/meminfo", "r");
+        if(meminfo == NULL){
+                exit(-1);
+        }
+        while(fgets(buff, sizeof(buff), meminfo)){
+                int memsize;
+                if(sscanf(buff, tag, &memsize) == 1){
+                        val = memsize;
+                }
+        }
+        if(fclose(meminfo) != 0){
+                exit(-1);
+        }
+        return val;
+}
+
+unsigned long get_hugepage_mbytes()
+{
+        unsigned long pagesize = local_read_meminfo("Hugepagesize: %lu kB");
+        return pagesize / 1024;
+}
+
+int set_alt_hugepage()
+{
+	int size = get_hugepage_mbytes();
+        if( size == 16384 )
+                return MAP_HUGETLB | MAP_HUGE_16MB;
+        else if ( size == 1024 )
+                return MAP_HUGETLB | MAP_HUGE_2MB;
+        else if ( size == 2 )
+                return MAP_HUGETLB | MAP_HUGE_1GB;
+        else
+                return MAP_HUGETLB | MAP_HUGE_16GB;
+}
 
 static char *hind_addr(void)
 {
 	int bits = 48 + rand() % 15;
 	return (char *) (1UL << bits);
 }
-
 
 static int validate_addr(char *ptr, int high_addr)
 {
@@ -171,129 +214,128 @@ void alloc_huge_above_hint(int chunks)
 	mmap_chunks_higher(chunks, MAP_HUGETLB);
 }
 	
-void alloc_16g(int chunks)
+void alloc_alterhuge(int chunks)
 {
-	printf("Allocating 16G chunks < 128TB \n");
-	mmap_chunks_lower(chunks/2, (MAP_HUGETLB | (34 << 26)));
+	MAP_ALTHUGE = set_alt_hugepage();
+	printf("Allocating alternate hugepage chunks < 128TB \n");
+	mmap_chunks_lower(chunks/2, MAP_ALTHUGE);
 
-	printf("Allocating 16G chunks > 128TB \n");
-	mmap_chunks_higher(chunks/2, (MAP_HUGETLB | (34 << 26)));
+	printf("Allocating alternate hugepage chunks > 128TB \n");
+	mmap_chunks_higher(chunks/2, MAP_ALTHUGE);
 }
 
-void alloc_16g_below_hint(int chunks)
+void alloc_alterhuge_below_hint(int chunks)
 {
-	printf("Allocating 16G chunks < 128TB \n");
-	mmap_chunks_lower(chunks, (MAP_HUGETLB | (34 << 26)));
+	MAP_ALTHUGE = set_alt_hugepage();
+	printf("Allocating alternate hugepage chunks < 128TB \n");
+	mmap_chunks_lower(chunks, MAP_ALTHUGE);
 }
 
-void alloc_16g_above_hint(int chunks)
+void alloc_alterhuge_above_hint(int chunks)
 {
-	printf("Allocating 16G chunks > 128TB \n");
-	mmap_chunks_higher(chunks, (MAP_HUGETLB | (34 << 26)));
+	MAP_ALTHUGE = set_alt_hugepage();
+	printf("Allocating alternate hugepage chunks > 128TB \n");
+	mmap_chunks_higher(chunks, MAP_ALTHUGE);
 }
 
-/* <128Tb contains 8192 16Gb chunks
-   >128Tb - 512Tb i.e 384Tb contains 24576 16Gb chunks */
 
-void fixed_position()
+void fixed_position(int chunks1, int chunks2, int chunks3)
 {
-	/* In this function we mmap 8000 1Tb slice for 64k pages,
-	1Tb slice free for proper alignment,
-	1Tb slice for 16M hugepages , 1Tb slice for 16G hugepage
+	/* In this function we mmap some slice for default pagesize,
+	some slice for default hugepages ,some slice for alternate hugepage
 	in both address ranges*/
 
-	/* 8192 16Gb chunks < 128Tb*/
-	printf("Allocating 64k pages < 128TB \n");
-	mmap_chunks_lower(8000, 0);
-	printf("Allocating 16M chunks < 128TB \n");
-	mmap_chunks_lower(64, MAP_HUGETLB);
-	printf("Allocating 16G chunks < 128TB \n");
-	mmap_chunks_lower(1, (MAP_HUGETLB | (34 << 26)));
+	/* Chunks < 128Tb*/
+	MAP_ALTHUGE = set_alt_hugepage();
+	printf("Allocating default page chunks < 128TB \n");
+	mmap_chunks_lower(chunks1/2, 0);
+	printf("Allocating default hugepage chunks < 128TB \n");
+	mmap_chunks_lower(chunks2/2, MAP_HUGETLB);
+	printf("Allocating alternate hugepage chunks < 128TB \n");
+	mmap_chunks_lower(chunks3/2, MAP_ALTHUGE);
 
-	/* 24576 16Gb chunks in 128Tb - 512Tb*/
-	printf("Allocating 64k pages > 128TB \n");
-	mmap_chunks_higher(24384, 0);
-	printf("Allocating 16M chunks > 128TB \n");
-	mmap_chunks_higher(64, MAP_HUGETLB);
-	printf("Allocating 16G chunks > 128TB \n");
-	mmap_chunks_higher(1, (MAP_HUGETLB | (34 << 26)));
+	/* Chunks in 128Tb - 512Tb*/
+	printf("Allocating default page chunks > 128TB \n");
+	mmap_chunks_higher(chunks1/2, 0);
+	printf("Allocating default hugepage chunks > 128TB \n");
+	mmap_chunks_higher(chunks2/2, MAP_HUGETLB);
+	printf("Allocating alternate hugepage chunks > 128TB \n");
+	mmap_chunks_higher(chunks3/2, MAP_ALTHUGE);
 }
 
-void mixed_position_16M()
+void mixed_position_hugepage(int chunks1, int chunks2, int chunks3)
 {
-	/* In this function we do try mmap 16M page
-	in between 64k and 16G is mapped at last
-	in both address ranges*/
+	/* In this function we do try mmap default hugepages
+	in between default pagesize and alternate hugepage,
+	is mapped at last in both address ranges*/
 
-	/* 8192 16Gb chunks < 128Tb*/
+	/* Chunks < 128Tb*/
 
-	printf("Allocating 64k pages < 128TB \n");
-	mmap_chunks_lower(4000, 0);
-	/* mmap 16M in between 64k */
-	printf("Allocating 16M chunks < 128TB \n");
-	mmap_chunks_lower(32, MAP_HUGETLB);
-	printf("Allocating 64k pages < 128TB \n");
-	mmap_chunks_lower(4000, 0);
-	printf("Allocating 16M chunks < 128TB \n");
-	mmap_chunks_lower(32, MAP_HUGETLB);
-	printf("Allocating 16G chunks < 128TB \n");
-	mmap_chunks_lower(1, (MAP_HUGETLB | (34 << 26)));
+	MAP_ALTHUGE = set_alt_hugepage();
+	printf("Allocating default page chunks < 128TB \n");
+	mmap_chunks_lower(chunks1/4, 0);
+	printf("Allocating default hugepage chunks < 128TB \n");
+	mmap_chunks_lower(chunks2/4, MAP_HUGETLB);
+	printf("Allocating default page chunks < 128TB \n");
+	mmap_chunks_lower(chunks1/4, 0);
+	printf("Allocating default hugepage chunks < 128TB \n");
+	mmap_chunks_lower(chunks2/4, MAP_HUGETLB);
+	printf("Allocating alternate hugepage chunks < 128TB \n");
+	mmap_chunks_lower(chunks3/2, MAP_ALTHUGE);
 
-	/* 24576 16Gb chunks in 128Tb - 512Tb*/
-	printf("Allocating 64k pages > 128TB \n");
-	mmap_chunks_higher(12192, 0);
-	/* mmap 16M in between 64k */
-	printf("Allocating 16M chunks > 128TB \n");
-	mmap_chunks_higher(32, MAP_HUGETLB);
-	printf("Allocating 64k pages > 128TB \n");
-	mmap_chunks_higher(12192, 0);
-	printf("Allocating 16M chunks > 128TB \n");
-	mmap_chunks_higher(32, MAP_HUGETLB);
-	printf("Allocating 16G chunks > 128TB \n");
-	mmap_chunks_higher(1, (MAP_HUGETLB | (34 << 26)));
+	/* Chunks in 128Tb - 512Tb*/
+	printf("Allocating default page chunks > 128TB \n");
+	mmap_chunks_higher(chunks1/4, 0);
+	printf("Allocating default hugepage chunks > 128TB \n");
+	mmap_chunks_higher(chunks2/4, MAP_HUGETLB);
+	printf("Allocating default page chunks > 128TB \n");
+	mmap_chunks_higher(chunks1/4, 0);
+	printf("Allocating default hugepage chunks > 128TB \n");
+	mmap_chunks_higher(chunks2/4, MAP_HUGETLB);
+	printf("Allocating alternate hugepage chunks > 128TB \n");
+	mmap_chunks_higher(chunks3/2, MAP_ALTHUGE);
 }
 
-void mixed_position_16G()
+void mixed_position_alterhuge(int chunks1, int chunks2, int chunks3)
 {
-	/*In this function we do try mmap 16G page
-	in between 64k pages and 16M is mapped at last
+	/*In this function we do try mmap alternate hugepage
+	in between default pages and default hugepage and is mapped at last
 	in both address ranges */
 
-	/* 8192 16Gb chunks < 128Tb*/
+	/* Chunks < 128Tb*/
+	MAP_ALTHUGE = set_alt_hugepage();
+	printf("Allocating default page chunks < 128TB \n");
+	mmap_chunks_lower(chunks1/4, 0);
+	printf("Allocating alternate hugepage chunks < 128TB \n");
+	mmap_chunks_lower(chunks3/2, MAP_ALTHUGE);
+	printf("Allocating default page chunks < 128TB \n");
+	mmap_chunks_lower(chunks1/4, 0);
+	printf("Allocating default hugepage chunks < 128TB \n");
+	mmap_chunks_lower(chunks2/2, MAP_HUGETLB);
 
-	printf("Allocating 64k pages < 128TB \n");
-	mmap_chunks_lower(4000, 0);
-	/* mmap 16G in between 64k */
-	printf("Allocating 16G chunks < 128TB \n");
-	mmap_chunks_lower(1, (MAP_HUGETLB | (34 << 26)));
-	printf("Allocating 64k pages < 128TB \n");
-	mmap_chunks_lower(4000, 0);
-	printf("Allocating 16M chunks < 128TB \n");
-	mmap_chunks_lower(64, MAP_HUGETLB);
-
-	/* 24576 16Gb chunks in 128Tb - 512Tb*/
-	printf("Allocating 64k pages > 128TB \n");
-	mmap_chunks_higher(12192, 0);
-	/* mmap 16G in between 64k */
-	printf("Allocating 16G chunks > 128TB \n");
-	mmap_chunks_higher(1, (MAP_HUGETLB | (34 << 26)));
-	printf("Allocating 64k pages > 128TB \n");
-	mmap_chunks_higher(12192, 0);
-	printf("Allocating 16M chunks > 128TB \n");
-	mmap_chunks_higher(64, MAP_HUGETLB);
+	/* Chunks in 128Tb - 512Tb*/
+	printf("Allocating default page chunks > 128TB \n");
+	mmap_chunks_higher(chunks1/4, 0);
+	printf("Allocating alternate hugepage chunks > 128TB \n");
+	mmap_chunks_higher(chunks3/2, MAP_ALTHUGE);
+	printf("Allocating default page chunks > 128TB \n");
+	mmap_chunks_higher(chunks1/4, 0);
+	printf("Allocating default hugepage chunks > 128TB \n");
+	mmap_chunks_higher(chunks2/2, MAP_HUGETLB);
 }
 
 int main(int argc, char *argv[])
 {
 	int option = 0;
-	int scenario = 0, chunks = 0;
+	int scenario = 0, def_chunks = 0, chunks = 0, chunks_2 = 0;
+
 	int ret =0 ;
 	if (argc < 3){
-		printf("Usage <execname> -s <scenario_no> -n <nr_chunks>\n");
+		printf("Usage <execname> -s <scenario_no> -n <nr_chunks> -h <nr_chunks> -d <def_chunks>\n");
 		exit(-1);
 	}
 	while (1) {
-		option = getopt(argc, argv,"s:n:");
+		option = getopt(argc, argv,"s:n:h:d:");
 		if (option != -1){
 			switch(option){
 				case 's':
@@ -302,16 +344,20 @@ int main(int argc, char *argv[])
 				case 'n':
 					chunks = atoi(optarg);
 					break;
+				case 'h':
+					chunks_2 = atoi(optarg);
+					break;
+				case 'd':
+					def_chunks = atoi(optarg);
+					break;
 				default:
-					printf("Usage <execname> -s <scenario_no> -n <nr_hpages>\n");
+					printf("Usage <execname> -s <scenario_no> -n <nr_chunks> -h <nr_chunks> -d <def_chunks>\n");
 					exit(-1);
 				}
 		}
 		else
 			break;
 	}
-	if(chunks)
-		printf("%d 16G chunks can be allocated\n", chunks);
 
 	switch (scenario){
 	case 1 :
@@ -339,28 +385,28 @@ int main(int argc, char *argv[])
 		alloc_huge(chunks);
 		break;
 	case 7 :
-		printf("\nScenario 7 : Get 16g hugepage VA Below 128T mark\n\n");
-		alloc_16g_below_hint(chunks);
+		printf("\nScenario 7 : Get alternate hugepage VA Below 128T mark\n\n");
+		alloc_alterhuge_below_hint(chunks);
 		break;
 	case 8 :
-		printf("\nScenario 8 : Get 16g hugepage VA Above 128T mark\n\n");
-		alloc_16g_above_hint(chunks);
+		printf("\nScenario 8 : Get alternate hugepage VA Above 128T mark\n\n");
+		alloc_alterhuge_above_hint(chunks);
 		break;
 	case 9 :
-		printf("\nScenario 9 : Get 16g hugepage VA below and Above 128T mark\n\n");
-		alloc_16g(chunks);
+		printf("\nScenario 9 : Get alternate hugepage VA below and Above 128T mark\n\n");
+		alloc_alterhuge(chunks);
 		break;
 	case 10 :
-		printf("\nScenario 10 : Mix of all 64k 16M and 16G pages in VA\n\n");
-		fixed_position();
+		printf("\nScenario 10 : Mix of all default page, small and large hugepage in VA\n\n");
+		fixed_position(def_chunks, chunks, chunks_2);
 		break;
 	case 11 :
-		printf("\nScenario 11 : Mix 16M in between 64k and 16G pages in VA\n\n");
-		mixed_position_16M();
+		printf("\nScenario 11 : Mix default hugepage in between default page and alternate hugepage in VA\n\n");
+		mixed_position_hugepage(def_chunks, chunks, chunks_2);
 		break;
 	case 12 :
-		printf("\nScenario 12 : Mix 16G in between 64k and 16M pages in VA\n\n");
-		mixed_position_16G();
+		printf("\nScenario 12 : Mix alternate hugepage in between default page and default hugepage in VA\n\n");
+		mixed_position_alterhuge(def_chunks, chunks, chunks_2);
 		break;
 	default:
 		printf("Please Provide valid scenario\n");
