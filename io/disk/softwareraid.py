@@ -66,6 +66,7 @@ class SoftwareRaid(Test):
             self.remadd = ''.join(self.disk[-1:])
             self.disk_count = len(self.disk)
             self.disk = ' '.join(self.disk)
+        self.force = self.params.get('force', default=False)
 
     def test_run(self):
         """
@@ -87,7 +88,8 @@ class SoftwareRaid(Test):
             % (self.raidlevel, self.disk_count, self.disk, self.metadata)
         if self.sparedisk:
             cmd += " --spare-devices=1 %s " % self.sparedisk
-        cmd += " --force"
+        if self.force:
+            cmd += " --force"
         self.check_pass(cmd, "Failed to create a MD device")
         cmd = "mdadm --detail /dev/md/mdsraid"
         self.check_pass(cmd, "Failed to display MD device details")
