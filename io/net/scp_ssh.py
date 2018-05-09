@@ -115,11 +115,11 @@ class ScpTest(Test):
         '''
         self.log.info('removing data')
         cmd = "rm /tmp/tempfile"
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
+        if process.system(cmd, shell=True, ignore_status=True, encoding="utf-8") != 0:
             self.log.info("unable to remove data from client")
         msg = "rm /tmp/tempfile"
         cmd = "ssh %s@%s \"%s\"" % (self.user, self.peer, msg)
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
+        if process.system(cmd, shell=True, ignore_status=True, encoding="utf-8") != 0:
             self.log.info("unable to remove data from peer")
 
 
