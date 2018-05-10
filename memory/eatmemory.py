@@ -48,7 +48,7 @@ class eatmemory(Test):
         os.chdir(self.sourcedir)
         process.run(getch_patch, shell=True)
         build.make(self.sourcedir)
-        mem = self.params.get('memory_to_test', default=memory.memtotal())
+        mem = self.params.get('memory_to_test', default=int(0.95 * memory.meminfo.MemFree.k))
         self.mem_to_eat = self._mem_to_mbytes(mem)
         if self.mem_to_eat is None:
             self.error("Memory '%s' not valid." % mem)
