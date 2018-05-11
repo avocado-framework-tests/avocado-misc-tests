@@ -43,6 +43,7 @@ class Posixtest(Test):
         Source:
             http://ufpr.dl.sourceforge.net/sourceforge/posixtest/posixtestsuite-1.5.2.tar.gz
         '''
+        self.test_type = self.params.get('test_type', default='THR')
         sm = SoftwareManager()
         for package in ['gcc', 'make']:
             if not sm.check_installed(package) and not sm.install(package):
@@ -60,14 +61,16 @@ class Posixtest(Test):
     def test(self):
 
         os.chdir(self.sourcedir)
-        process.system('./run_tests THR', ignore_status=True)
+        result = process.system_output(
+            './run_tests %s' % self.test_type, ignore_status=True)
+        error = False
+        for line in str(result).splitlines():
+            if 'FAILED' in line:
+                error = True
+                self.log.info("Testcase failed. Log from test run: %s" % line)
 
-        logfile = os.path.join(self.logdir, "stdout")
-        failed_tests = process.system_output(
-            "grep -w FAIL %s" % logfile, shell=True, ignore_status=True)
-        if failed_tests:
-            self.fail("test failed, Please check debug log for "
-                      "failed test cases")
+        if error:
+            self.fail("Testcase failed during test check the log")
 
 
 if __name__ == "__main__":
