@@ -13,6 +13,7 @@
 #
 # Copyright: 2017 IBM
 # Author:Praveen K Pandey<praveen@linux.vnet.ibm.com>
+#        Harish <harish@linux.vnet.ibm.com>
 #
 
 import os
@@ -20,7 +21,7 @@ import shutil
 
 from avocado import Test
 from avocado import main
-from avocado.utils import process, build, memory
+from avocado.utils import process, build, memory, genio, distro, cpu
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -39,21 +40,53 @@ class VATest(Test):
         # Check for basic utilities
         smm = SoftwareManager()
         self.scenario_arg = int(self.params.get('scenario_arg', default=1))
-        self.n_chunks = nr_pages = 0
-        if self.scenario_arg not in range(1, 9):
-            self.cancel("Test need to skip as scenario will be 1-9")
+        self.n_chunks = nr_pages = self.n_chunks2 = self.def_chunks = 0
+        self.hsizes = [1024, 2]
+        page_chunker = memory.meminfo.Hugepagesize.m
+        if distro.detect().arch in ['ppc64', 'ppc64le']:
+            if 'power8' in cpu.get_cpu_arch():
+                self.hsizes = [16384, 16]
+
+        if self.scenario_arg not in range(1, 13):
+            self.cancel("Test need to skip as scenario will be 1-12")
         elif self.scenario_arg in [7, 8, 9]:
-            if memory.meminfo.Hugepagesize.g != 16:
-                self.cancel(
-                    "Test need to skip as 16GB huge need to configured")
-        if self.scenario_arg not in [1, 2]:
-            max_hpages = (0.9 * memory.meminfo.MemFree.m) / \
-                memory.meminfo.Hugepagesize.m
-            self.exist_pages = memory.get_num_huge_pages()
-            memory.set_num_huge_pages(max_hpages)
-            nr_pages = memory.get_num_huge_pages()
-            self.n_chunks = (
-                (nr_pages * memory.meminfo.Hugepagesize.m) / 16384)
+            self.log.info("Using alternate hugepages")
+            if memory.meminfo.Hugepagesize.m == self.hsizes[0]:
+                page_chunker = self.hsizes[1]
+            else:
+                page_chunker = self.hsizes[0]
+
+        self.exist_pages = memory.get_num_huge_pages()
+        if self.scenario_arg in [10, 11, 12]:
+            self.log.info("Using Multiple hugepages")
+            if memory.meminfo.Hugepagesize.m != self.hsizes[0]:
+                self.hsizes.reverse()
+
+            # Leaving half size for default pagesize
+            total_mem = (0.9 * memory.meminfo.MemFree.m) / 2
+            self.def_chunks = int(total_mem / 16384)
+            for hp_size in self.hsizes:
+                nr_pgs = int((total_mem / 2) / hp_size)
+                genio.write_file(
+                    '/sys/kernel/mm/hugepages/hugepages-%skB/nr_hugepages' % str(hp_size * 1024), str(nr_pgs))
+            n_pages = genio.read_file(
+                '/sys/kernel/mm/hugepages/hugepages-%skB/nr_hugepages' % str(self.hsizes[0] * 1024)).rstrip("\n")
+            n_pages2 = genio.read_file(
+                '/sys/kernel/mm/hugepages/hugepages-%skB/nr_hugepages' % str(self.hsizes[1] * 1024)).rstrip("\n")
+            self.n_chunks = (int(n_pages) * self.hsizes[0]) / 16384
+            self.n_chunks2 = (int(n_pages2) * self.hsizes[1]) / 16384
+        if self.scenario_arg not in [1, 2, 10, 11, 12]:
+            max_hpages = int((0.9 * memory.meminfo.MemFree.m) / page_chunker)
+            if self.scenario_arg in [3, 4, 5, 6]:
+                memory.set_num_huge_pages(max_hpages)
+                nr_pages = memory.get_num_huge_pages()
+            else:
+                genio.write_file('/sys/kernel/mm/hugepages/hugepages-%skB/nr_hugepages' %
+                                 str(page_chunker * 1024), str(max_hpages))
+                nr_pages = genio.read_file(
+                    '/sys/kernel/mm/hugepages/hugepages-%skB/nr_hugepage'
+                    's' % str(page_chunker * 1024)).rstrip("\n")
+            self.n_chunks = (int(nr_pages) * page_chunker) / 16384
 
         for packages in ['gcc', 'make']:
             if not smm.check_installed(packages) and not smm.install(packages):
@@ -73,15 +106,18 @@ class VATest(Test):
         '''
         os.chdir(self.teststmpdir)
 
-        result = process.run('./va_test -s %s -n %s'
-                             % (self.scenario_arg,
-                                self.n_chunks), shell=True, ignore_status=True)
+        result = process.run('./va_test -s %s -n %s -h %s -d %s' % (self.scenario_arg,
+                                                                    self.n_chunks, self.n_chunks2, self.def_chunks), shell=True, ignore_status=True)
         for line in result.stdout.splitlines():
             if 'failed' in line:
                 self.fail("test failed, Please check debug log for failed"
                           "test cases")
 
     def tearDown(self):
+        if self.scenario_arg in [7, 8, 9, 10, 11, 12]:
+            for hp_size in self.hsizes:
+                genio.write_file(
+                    '/sys/kernel/mm/hugepages/hugepages-%skB/nr_hugepages' % str(hp_size * 1024), str(0))
         if self.scenario_arg not in [1, 2]:
             memory.set_num_huge_pages(self.exist_pages)
 
