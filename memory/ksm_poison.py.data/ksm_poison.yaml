@@ -1,0 +1,15 @@
+setup:
+    # make sure enough memory is available
+    nr_pages: null
+    offline: !mux
+        soft:
+            offline: 's'
+        # Please be wary of the fact that hard offline would
+        # make memory unusable. uncomment the following to use
+        # hard:
+        #     offline: 'h'
+    page_touch: !mux
+        touch:
+            touch: True
+        no_touch:
+            touch: False
