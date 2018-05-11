@@ -60,7 +60,14 @@ class Posixtest(Test):
     def test(self):
 
         os.chdir(self.sourcedir)
-        process.system('./run_tests THR')
+        process.system('./run_tests THR', ignore_status=True)
+
+        logfile = os.path.join(self.logdir, "stdout")
+        failed_tests = process.system_output(
+            "grep -w FAIL %s" % logfile, shell=True, ignore_status=True)
+        if failed_tests:
+            self.fail("test failed, Please check debug log for "
+                      "failed test cases")
 
 
 if __name__ == "__main__":
