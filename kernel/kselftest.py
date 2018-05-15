@@ -72,8 +72,8 @@ class kselftest(Test):
         location = ["https://github.com/torvalds/linux/archive/master.zip"]
         tarball = self.fetch_asset("kselftest.zip", locations=location,
                                    expire='1d')
-        archive.extract(tarball, self.srcdir)
-        self.buldir = os.path.join(self.srcdir, 'linux-master')
+        archive.extract(tarball, self.workdir)
+        self.buldir = os.path.join(self.workdir, 'linux-master')
         self.sourcedir = os.path.join(self.buldir, self.testdir)
         result = build.run_make(self.sourcedir)
         for line in str(result).splitlines():

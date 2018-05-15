@@ -38,10 +38,10 @@ class Blogbench(Test):
         blogbench_url = self.params.get('blogbench_url',
                                         default=url)
         blogbench_tarball = self.fetch_asset(blogbench_url, expire='7d')
-        archive.extract(blogbench_tarball, self.srcdir)
+        archive.extract(blogbench_tarball, self.workdir)
         blogbench_version = os.path.basename(blogbench_tarball
                                              .split('.tar.')[0])
-        self.blogbench_dir = os.path.join(self.srcdir, blogbench_version)
+        self.blogbench_dir = os.path.join(self.workdir, blogbench_version)
         os.chdir(self.blogbench_dir)
         patch = self.params.get('patch', default='config_guess.patch')
         process.run('patch -p1 config.guess %s' %
