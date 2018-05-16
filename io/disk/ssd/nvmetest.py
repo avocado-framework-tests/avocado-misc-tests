@@ -61,6 +61,9 @@ class NVMeTest(Test):
         if 'firmware_upgrade' in str(self.name) and not self.firmware_url:
             self.cancel("firmware url not gien")
 
+        cmd = "nvme id-ctrl %s -H" % self.device
+        self.id_ctrl = process.system_output(cmd, shell=True)
+
         test_dic = {'compare': 'Compare', 'formatnamespace': 'Format NVM',
                     'dsm': 'Data Set Management',
                     'writezeroes': 'Write Zeroes',
@@ -69,8 +72,7 @@ class NVMeTest(Test):
         for key, value in test_dic.iteritems():
             if key in str(self.name):
                 cmd = "nvme id-ctrl %s -H" % self.id_ns
-                if "%s Supported" % value not in \
-                        process.system_output(cmd, shell=True):
+                if "%s Supported" % value not in self.id_ctrl:
                     self.cancel("%s is not supported" % value)
 
     def get_firmware_version(self):
@@ -86,7 +88,26 @@ class NVMeTest(Test):
         Returns the firmware log.
         """
         cmd = "nvme fw-log %s" % self.device
-        return process.system_output(cmd, shell=True, ignore_status=True)
+        process.system(cmd, shell=True, ignore_status=True)
+
+    def get_firmware_slots(self):
+        """
+        Returns number of firmware slots
+        """
+        for line in self.id_ctrl.splitlines():
+            if "Firmware Slots" in line:
+                return int(line.split()[2].split('x')[-1])
+        return 0
+
+    def firmware_slot_write_supported(self, slot_num):
+        """
+        Returns False if firmware slot num is read only.
+        Returns True otherwise.
+        """
+        for line in self.id_ctrl.splitlines():
+            if "Firmware Slot %d Read-Only" % slot_num in line:
+                return False
+        return True
 
     def reset_controller_sysfs(self):
         """
@@ -107,20 +128,24 @@ class NVMeTest(Test):
                                                       fw_file))
         # Getting the current FW details
         self.log.debug("Current FW: %s", self.get_firmware_version())
-        fw_log = self.get_firmware_log()
+        self.get_firmware_log()
 
         # Downloading new FW to the device
         cmd = "nvme fw-download %s --fw=%s" % (self.device, fw_file_path)
         if process.system(cmd, shell=True, ignore_status=True):
             self.fail("Failed to download firmware to the device")
 
-        # Acvitating new FW on the device
-        for line in fw_log.splitlines():
-            if "frs" in line:
-                s_num = line.split()[0].split("s")[-1]
-                cmd = "nvme fw-activate %s -a 1 -s %s" % (self.device, s_num)
+        # Activating new FW
+        for i in range(1, self.get_firmware_slots() + 1):
+            if not self.firmware_slot_write_supported(i):
+                continue
+            cmd = "nvme fw-activate %s -a 0 -s %d" % (self.device, i)
+            if process.system(cmd, shell=True, ignore_status=True):
+                self.fail("Failed to write firmware on slot %d" % i)
+            if i == self.get_firmware_slots():
+                cmd = "nvme fw-activate %s -a 3 -s %d" % (self.device, i)
                 if process.system(cmd, shell=True, ignore_status=True):
-                    self.fail("Failed to activate firmware for %s" % s_num)
+                    self.fail("Failed to activate firmware on slot %d" % i)
 
         if self.reset_controller_sysfs():
             self.fail("Controller reset after FW update failed")
