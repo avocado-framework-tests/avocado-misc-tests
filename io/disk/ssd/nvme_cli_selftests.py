@@ -19,7 +19,7 @@ NVM-Express user space tooling for Linux, which handles NVMe devices.
 """
 
 import os
-import pip
+import pkgutil
 from avocado import Test
 from avocado import main
 from avocado.utils import process
@@ -45,17 +45,17 @@ class NVMeCliSelfTest(Test):
         self.disk = self.params.get('disk', default='/dev/nvme0n1')
         cmd = 'ls %s' % self.device
         if process.system(cmd, ignore_status=True) is not 0:
-            self.skip("%s does not exist" % self.device)
+            self.cancel("%s does not exist" % self.device)
         smm = SoftwareManager()
         if not smm.check_installed("nvme-cli") and not \
                 smm.install("nvme-cli"):
-            self.skip('nvme-cli is needed for the test to be run')
-        python_packages = pip.get_installed_distributions()
-        python_packages_list = [i.key for i in python_packages]
-        python_pkgs = ['nose', 'nose2', 'pep8', 'flake8', 'pylint', 'epydoc']
-        for py_pkg in python_pkgs:
-            if py_pkg not in python_packages_list:
-                self.skip("python package %s not installed" % py_pkg)
+            self.cancel('nvme-cli is needed for the test to be run')
+        py_pkgs = ['nose', 'nose2', 'pep8', 'flake8', 'pylint', 'epydoc']
+        installed_py_pkgs = [pkg[1] for pkg in list(pkgutil.iter_modules())]
+        py_pkgs_not_installed = list(set(py_pkgs) - set(installed_py_pkgs))
+        if py_pkgs_not_installed:
+            self.cancel("python packages %s not installed" %
+                        ", ".join(py_pkgs_not_installed))
         url = 'https://codeload.github.com/linux-nvme/nvme-cli/zip/master'
         tarball = self.fetch_asset("nvme-cli-master.zip", locations=[url],
                                    expire='7d')
