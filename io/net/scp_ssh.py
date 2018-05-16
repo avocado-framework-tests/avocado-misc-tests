@@ -84,7 +84,7 @@ class ScpTest(Test):
         '''
         check scp and ssh
         '''
-        cmd = "ssh %s@%s \"echo hi\"" % (self.user, self.peer)
+        cmd = "ssh -o StrictHostKeyChecking=no %s@%s \"echo hi\"" % (self.user, self.peer)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("unable to ssh into peer machine")
         process.run("dd if=/dev/zero of=/tmp/tempfile bs=1024000000 count=1",
@@ -118,7 +118,7 @@ class ScpTest(Test):
         if process.system(cmd, shell=True, ignore_status=True, encoding="utf-8") != 0:
             self.log.info("unable to remove data from client")
         msg = "rm /tmp/tempfile"
-        cmd = "ssh %s@%s \"%s\"" % (self.user, self.peer, msg)
+        cmd = "ssh -o StrictHostKeyChecking=no %s@%s \"%s\"" % (self.user, self.peer, msg)
         if process.system(cmd, shell=True, ignore_status=True, encoding="utf-8") != 0:
             self.log.info("unable to remove data from peer")
 
