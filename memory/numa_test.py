@@ -43,6 +43,9 @@ class NumaTest(Test):
             'nr_pages', default=memsize / memory.get_page_size())
         self.map_type = self.params.get('map_type', default='private')
 
+        if len(memory.numa_nodes()) < 2:
+            self.cancel('Test requires two numa nodes to run')
+
         pkgs = ['gcc', 'make']
         if dist.name == "Ubuntu":
             pkgs.extend(['libpthread-stubs0-dev', 'libnuma-dev'])
