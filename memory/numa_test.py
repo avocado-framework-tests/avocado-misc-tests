@@ -63,7 +63,7 @@ class NumaTest(Test):
         self.log.info("Starting test...")
 
         if process.system('./numa_test -m %s -n %s' % (self.map_type, self.nr_pages),
-                          shell=True, sudo=True):
+                          shell=True, sudo=True, ignore_status=True):
             self.fail('Please check the logs for failure')
 
 
