@@ -31,7 +31,8 @@ from avocado.utils.software_manager import SoftwareManager
 class Posixtest(Test):
 
     '''
-    posix test  provides conformance, functional, and stress testing on Os Threads, Clocks & Timers, Signals, Message Queues, and Semaphores.
+    posix test  provides conformance, functional, and stress testing on
+    Os Threads, Clocks & Timers, Signals, Message Queues, and Semaphores.
 
     :avocado: tags=kernel
     '''
@@ -42,30 +43,34 @@ class Posixtest(Test):
         Source:
             http://ufpr.dl.sourceforge.net/sourceforge/posixtest/posixtestsuite-1.5.2.tar.gz
         '''
+        self.test_type = self.params.get('test_type', default='THR')
         sm = SoftwareManager()
-        for package in ['gcc', 'make', 'patch']:
+        for package in ['gcc', 'make']:
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel("%s is needed for the test to be run" % package)
-        tarball = self.fetch_asset('http://ufpr.dl.sourceforge.net'
-                                   '/sourceforge/posixtest/posixtestsuite-1.5.2.tar.gz')
+        tarball = self.fetch_asset("http://ufpr.dl.sourceforge.net"
+                                   "/sourceforge/posixtest"
+                                   "/posixtestsuite-1.5.2.tar.gz")
         data_dir = os.path.abspath(self.datadir)
         archive.extract(tarball, self.srcdir)
         version = os.path.basename(tarball.split('-1.')[0])
         self.sourcedir = os.path.join(self.srcdir, version)
-
-        patch = self.params.get(
-            'patch', default='posix-linux.patch')
-        os.chdir(self.sourcedir)
-        p1 = 'patch -p1 < %s/%s' % (data_dir, patch)
-
-        process.run(p1, shell=True)
 
         build.make(self.sourcedir)
 
     def test(self):
 
         os.chdir(self.sourcedir)
-        process.system('./run_tests THR')
+        result = process.system_output(
+            './run_tests %s' % self.test_type, ignore_status=True)
+        error = False
+        for line in str(result).splitlines():
+            if 'FAILED' in line:
+                error = True
+                self.log.info("Testcase failed. Log from test run: %s" % line)
+
+        if error:
+            self.fail("Testcase failed during test check the log")
 
 
 if __name__ == "__main__":

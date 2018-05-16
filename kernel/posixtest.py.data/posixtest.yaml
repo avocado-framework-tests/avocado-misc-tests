@@ -1,0 +1,22 @@
+#Usage: ./run_tests [AIO|MEM|MSG|SEM|SIG|THR|TMR|TPS]
+#
+#Build and run the tests for POSIX area specified by
+#the 3 letter tag in the POSIX spec
+setup:
+ run : !mux
+  aio:
+   test_type: "AIO"
+  mem:
+   test_type: "MEM"
+  msg:
+   test_type: "MSG"
+  sem:
+   test_type: "SEM"
+  sig:
+   test_type: "SIG"
+  thr:
+   test_type: "THR"
+  tmr:
+   test_type: "TMR"
+  tps:
+   test_type: "TPS"
