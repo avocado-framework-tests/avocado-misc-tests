@@ -24,7 +24,6 @@ from avocado import Test
 from avocado import main
 from avocado.utils import process
 from avocado.utils import archive
-from avocado.utils import build
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -35,6 +34,7 @@ class NVMeCliSelfTest(Test):
 
     :param device: Name of the nvme device
     :param disk: Name of the nvme namespace
+    :param test: Name of the test
     """
 
     def setUp(self):
@@ -43,6 +43,9 @@ class NVMeCliSelfTest(Test):
         """
         self.device = self.params.get('device', default='/dev/nvme0')
         self.disk = self.params.get('disk', default='/dev/nvme0n1')
+        self.test = self.params.get('test', default='')
+        if not self.test:
+            self.cancel('no test specified in yaml')
         cmd = 'ls %s' % self.device
         if process.system(cmd, ignore_status=True) is not 0:
             self.cancel("%s does not exist" % self.device)
@@ -61,7 +64,6 @@ class NVMeCliSelfTest(Test):
                                    expire='7d')
         archive.extract(tarball, self.teststmpdir)
         self.nvme_dir = os.path.join(self.teststmpdir, "nvme-cli-master")
-        print os.listdir(self.nvme_dir)
         os.chdir(os.path.join(self.nvme_dir, 'tests'))
         msg = ['{']
         msg.append('    \"controller\": \"%s\",' % self.device)
@@ -70,20 +72,15 @@ class NVMeCliSelfTest(Test):
         msg.append('}')
         with open('config.json', 'w') as config_file:
             config_file.write("\n".join(msg))
-        process.system("cat config.json")
 
     def test_selftests(self):
         """
         Runs the selftests on the device.
         """
-        err = []
-        for line in build.run_make(os.path.join(self.nvme_dir, 'tests'),
-                                   extra_args='run',
-                                   process_kwargs={'ignore_status': True}
-                                   ).stderr.splitlines():
-            if 'FAIL:' in line:
-                err.append(line.split('.')[1])
-        self.fail("Some tests failed. Details below:\n%s" % "\n".join(err))
+        res = process.run("nose2 --verbose %s" %
+                          self.test, shell=True, ignore_status=True)
+        if 'FAILED' in res.stdout or 'FAILED' in res.stderr:
+            self.fail("Test Failed")
 
 
 if __name__ == "__main__":
