@@ -49,8 +49,10 @@ class NumaTest(Test):
         pkgs = ['gcc', 'make']
         if dist.name == "Ubuntu":
             pkgs.extend(['libpthread-stubs0-dev', 'libnuma-dev'])
-        else:
+        elif dist.name in ["centos", "rhel", "fedora"]:
             pkgs.extend(['numactl-devel'])
+        else:
+            pkgs.extend(['libnuma-devel'])
 
         for package in pkgs:
             if not smm.check_installed(package) and not smm.install(package):
