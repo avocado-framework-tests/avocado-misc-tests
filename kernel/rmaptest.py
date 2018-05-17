@@ -61,7 +61,8 @@ class Rmaptest(Test):
             cc = '$CC'
         else:
             cc = 'cc'
-        process.system('%s  -Wall -o rmaptest rmap-test.c' % cc)
+        process.system('%s  -Wall -o rmaptest rmap-test.c' %
+                       cc, ignore_status=True)
 
     def test(self):
 
@@ -82,7 +83,7 @@ class Rmaptest(Test):
 
         for test in tests:
             cmd = '%s/%s  %s' % (self.srcdir, test[0], test[1])
-            process.system(cmd)
+            process.system(cmd, ignore_status=True)
 
 
 if __name__ == "__main__":
