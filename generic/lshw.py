@@ -201,7 +201,9 @@ class Lshwrun(Test):
             if not self.run_cmd_out("lshw"
                                     " -numeric | grep HCI | cut -d':' -f3"):
                 self.is_fail += 1
-        self.run_cmd("lshw -notime | grep modified")
+        if not process.system("lshw -notime | grep modified",
+                              ignore_status=True, sudo=True, shell=True):
+            self.fail("modified time stamp is present evev with -notime")
         if self.is_fail >= 1:
             self.fail("%s command(s) failed. %s command(s) failed to execute "
                       % (self.is_fail, self.fail_cmd))
