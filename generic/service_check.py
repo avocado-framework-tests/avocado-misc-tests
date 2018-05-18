@@ -35,6 +35,11 @@ class service_check(Test):
         config_file = self.datadir + '/services.cfg'
         parser.read(config_file)
         services_list = parser.get(detected_distro.name, 'services').split(',')
+        if detected_distro.name == 'SuSE':
+            if detected_distro.version >= 15:
+                services_list.append('firewalld')
+            else:
+                services_list.append('SuSEfirewall2')
         if 'PowerNV' in open('/proc/cpuinfo', 'r').read():
             services_list.extend(['opal_errd', 'opal-prd'])
             if os.path.exists('/proc/device-tree/bmc'):
