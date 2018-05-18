@@ -42,7 +42,7 @@ class MOFEDInstallTest(Test):
         self.option = self.params.get('option', default='')
         self.uninstall_flag = self.params.get('uninstall', default=True)
         self.iso = self.fetch_asset(self.iso_location, expire='10d')
-        cmd = "mount -o loop %s %s" % (self.iso, self.srcdir)
+        cmd = "mount -o loop %s %s" % (self.iso, self.workdir)
         process.run(cmd, shell=True)
         self.pwd = os.getcwd()
 
@@ -51,7 +51,7 @@ class MOFEDInstallTest(Test):
         Installs MOFED with given options.
         """
         self.log.info("Starting installation")
-        os.chdir(self.srcdir)
+        os.chdir(self.workdir)
         cmd = './mlnxofedinstall %s --force' % self.option
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Install Failed with %s" % self.option)
@@ -84,7 +84,7 @@ class MOFEDInstallTest(Test):
         Clean up
         """
         os.chdir(self.pwd)
-        cmd = "umount %s" % self.srcdir
+        cmd = "umount %s" % self.workdir
         process.run(cmd, shell=True)
 
 

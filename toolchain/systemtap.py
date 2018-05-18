@@ -58,12 +58,12 @@ class Systemtap(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel(' %s is needed for the test to be run' % package)
         git.get_repo('git://sourceware.org/git/systemtap.git',
-                     destination_dir=self.srcdir)
-        os.chdir(self.srcdir)
+                     destination_dir=self.workdir)
+        os.chdir(self.workdir)
         process.run('./configure', ignore_status=True, sudo=True)
-        build.make(self.srcdir)
-        build.make(self.srcdir, extra_args='install')
-        self.test_dir = os.path.join(self.srcdir, "testsuite")
+        build.make(self.workdir)
+        build.make(self.workdir, extra_args='install')
+        self.test_dir = os.path.join(self.workdir, "testsuite")
         os.chdir(self.test_dir)
         # Run a simple systemtap script to make sure systemtap and the
         # kernel debuginfo packages are correctly installed
@@ -77,8 +77,8 @@ class Systemtap(Test):
 
     def test(self):
         make_option = self.params.get('make_option', default='installcheck')
-        build.make(self.srcdir, extra_args=make_option)
-        # path of the log file. self.srcdir/testsuite/systemtap.sum
+        build.make(self.workdir, extra_args=make_option)
+        # path of the log file. self.workdir/testsuite/systemtap.sum
         failed_tests = process.system_output("grep -w FAIL systemtap.sum",
                                              shell=True, ignore_status=True)
         if failed_tests:

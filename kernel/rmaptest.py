@@ -53,15 +53,16 @@ class Rmaptest(Test):
                                     'linux/kernel/people/mbligh/'
                                     'tools/rmap-test.c', expire='7d')
 
-        shutil.copyfile(rmaptest, os.path.join(self.srcdir, 'rmap-test.c'))
+        shutil.copyfile(rmaptest, os.path.join(self.workdir, 'rmap-test.c'))
 
-        os.chdir(self.srcdir)
+        os.chdir(self.workdir)
 
         if 'CC' in os.environ:
             cc = '$CC'
         else:
             cc = 'cc'
-        process.system('%s  -Wall -o rmaptest rmap-test.c' % cc)
+        process.system('%s  -Wall -o rmaptest rmap-test.c' %
+                       cc, ignore_status=True)
 
     def test(self):
 
@@ -81,8 +82,8 @@ class Rmaptest(Test):
                  ]
 
         for test in tests:
-            cmd = '%s/%s  %s' % (self.srcdir, test[0], test[1])
-            process.system(cmd)
+            cmd = '%s/%s  %s' % (self.workdir, test[0], test[1])
+            process.system(cmd, ignore_status=True)
 
 
 if __name__ == "__main__":

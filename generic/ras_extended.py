@@ -150,7 +150,7 @@ class RASTools(Test):
         disk_name = process.system_output("df -h | egrep '(s|v)d[a-z][1-8]' | "
                                           "tail -1 | cut -d' ' -f1",
                                           shell=True).strip("12345")
-        file_path = os.path.join(self.srcdir, 'file')
+        file_path = os.path.join(self.workdir, 'file')
         process.run("echo %s > %s" %
                     (disk_name, file_path), ignore_status=True, sudo=True, shell=True)
         process.run("echo %s >> %s" %

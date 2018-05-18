@@ -57,9 +57,9 @@ class Interbench(Test):
                                    '.org/pub/linux/kernel/people/ck/apps/'
                                    'interbench/interbench-0.31.tar.gz')
         data_dir = os.path.abspath(self.datadir)
-        archive.extract(tarball, self.srcdir)
+        archive.extract(tarball, self.workdir)
         version = os.path.basename(tarball.split('.tar.')[0])
-        self.sourcedir = os.path.join(self.srcdir, version)
+        self.sourcedir = os.path.join(self.workdir, version)
 
         # Patch for make file
         os.chdir(self.sourcedir)

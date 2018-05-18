@@ -40,8 +40,8 @@ class eatmemory(Test):
                 self.error(package + ' is needed for the test to be run')
         url = 'https://github.com/julman99/eatmemory/archive/master.zip'
         tarball = self.fetch_asset("eatmemory.zip", locations=[url], expire='7d')
-        archive.extract(tarball, self.srcdir)
-        self.sourcedir = os.path.join(self.srcdir, "eatmemory-master")
+        archive.extract(tarball, self.workdir)
+        self.sourcedir = os.path.join(self.workdir, "eatmemory-master")
         # patch for getch remove
         getch_patch = 'patch -p1 < %s' % (os.path.join(
              self.datadir, 'eatmem_getch.patch'))

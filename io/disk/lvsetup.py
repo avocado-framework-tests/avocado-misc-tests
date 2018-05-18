@@ -27,6 +27,8 @@ using a given policy.
 
 For details about the policy see README.
 """
+import os
+
 import avocado
 from avocado import Test
 from avocado import main
@@ -69,7 +71,7 @@ class Lvsetup(Test):
         self.ramdisk_vg_size = self.params.get(
             'ramdisk_vg_size', default='10000')
         self.ramdisk_basedir = self.params.get(
-            'ramdisk_basedir', default=self.workdir)
+            'ramdisk_basedir', default=os.path.join(self.workdir, 'ramdisk'))
         self.ramdisk_sparse_filename = self.params.get(
             'ramdisk_sparse_filename', default='virtual_hdd')
 
@@ -81,7 +83,9 @@ class Lvsetup(Test):
         self.lv_name = lv_name
         if lv_utils.lv_check(vg_name, lv_snapshot_name):
             self.cancel('Snapshot %s already exists' % lv_snapshot_name)
-        self.mount_loc = self.srcdir
+        self.mount_loc = os.path.join(self.workdir, 'mountpoint')
+        if not os.path.isdir(self.mount_loc):
+            os.makedirs(self.mount_loc)
         self.lv_snapshot_name = lv_snapshot_name
 
     @avocado.fail_on(lv_utils.LVException)
