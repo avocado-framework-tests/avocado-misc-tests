@@ -38,12 +38,12 @@ class service_check(Test):
         if 'PowerNV' in open('/proc/cpuinfo', 'r').read():
             services_list.extend(['opal_errd', 'opal-prd'])
             if os.path.exists('/proc/device-tree/bmc'):
-                services_list.remove(['opal_errd'])
+                services_list.remove('opal_errd')
         else:
             services_list.extend(['rtas_errd'])
         if 'Ubuntu' in detected_distro.name:
             if detected_distro.version >= 17:
-                services_list.remove(['networking'])
+                services_list.remove('networking')
         services_failed = []
         runner = process.run
 
