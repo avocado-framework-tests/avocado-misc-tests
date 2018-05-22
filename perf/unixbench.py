@@ -51,7 +51,8 @@ class Unixbench(Test):
         self.tmpdir = data_dir.get_tmp_dir()
         # Read USAGE in Unixbench directory in src to give the args
         args = self.params.get('args', default='-v -c 1')
-        process.system(' ./Run ' + args, shell=True, sudo=True)
+        process.system('./Run %s' % args, shell=True,
+                       sudo=True, ignore_status=True)
         report_path = os.path.join(self.logdir, 'stdout')
         self.report_data = open(report_path).readlines()
 
