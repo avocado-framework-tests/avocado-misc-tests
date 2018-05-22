@@ -140,8 +140,8 @@ class RASTools(Test):
     def test1_bootlist(self):
         self.log.info("===============Executing bootlist tool test===="
                       "===========")
-        list = ['--help', '-m normal -r',
-                '-m normal -o', '-m service -o', '-m both -o']
+        list = ['-m normal -r', '-m normal -o',
+                '-m service -o', '-m both -o']
         for list_item in list:
             cmd = "bootlist %s" % list_item
             self.run_cmd(cmd)
