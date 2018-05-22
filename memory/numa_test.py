@@ -43,11 +43,16 @@ class NumaTest(Test):
             'nr_pages', default=memsize / memory.get_page_size())
         self.map_type = self.params.get('map_type', default='private')
 
+        if len(memory.numa_nodes()) < 2:
+            self.cancel('Test requires two numa nodes to run')
+
         pkgs = ['gcc', 'make']
         if dist.name == "Ubuntu":
             pkgs.extend(['libpthread-stubs0-dev', 'libnuma-dev'])
-        else:
+        elif dist.name in ["centos", "rhel", "fedora"]:
             pkgs.extend(['numactl-devel'])
+        else:
+            pkgs.extend(['libnuma-devel'])
 
         for package in pkgs:
             if not smm.check_installed(package) and not smm.install(package):
@@ -63,7 +68,7 @@ class NumaTest(Test):
         self.log.info("Starting test...")
 
         if process.system('./numa_test -m %s -n %s' % (self.map_type, self.nr_pages),
-                          shell=True, sudo=True):
+                          shell=True, sudo=True, ignore_status=True):
             self.fail('Please check the logs for failure')
 
 
