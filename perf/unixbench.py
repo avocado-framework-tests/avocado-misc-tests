@@ -55,7 +55,7 @@ class Unixbench(Test):
         report_path = os.path.join(self.logdir, 'stdout')
         self.report_data = open(report_path).readlines()
 
-    def check_for_error(self, words):
+    def check_for_failure(self, words):
         length = len(words)
         if length >= 3 and words[-3:length] == ['no', 'measured', 'results']:
             # found a problem so record it in err string
@@ -83,7 +83,7 @@ class Unixbench(Test):
                     break
                 words = line.split()
                 # look for problems first
-                if self.check_for_error(words):
+                if self.check_for_failure(words):
                     continue
 
                 # we should make sure that there are at least
@@ -101,7 +101,7 @@ class Unixbench(Test):
                 break
 
         if self.err is not None:
-            self.error('Error Has been Occured \n %s' % self.err)
+            self.fail('Test failure  Has been Occured \n %s' % self.err)
         else:
             self.log.info('System Benchmarks Index Score is %s \n'
                           'Please check log for full stat\n', keyval['score'])
