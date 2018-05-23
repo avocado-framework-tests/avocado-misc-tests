@@ -259,9 +259,10 @@ class RASTools(Test):
     def test13_rtas_event_decode(self):
         self.log.info("===============Executing rtas_event_decode tool test===="
                       "===========")
-        self.run_cmd("rtas_event_decode -w 500 -dv -n 2302 < %s" %
-                     os.path.join(self.datadir, 'rtas'))
-        if self.is_fail >= 1:
+        cmd_result = process.run("rtas_event_decode -w 500 -dv -n 2302 < %s" %
+                                 os.path.join(self.datadir, 'rtas'), ignore_status=True,
+                                 sudo=True, shell=True)
+        if cmd_result.exit_status != 17:
             self.fail("%s command(s) failed in rtas_event_decode tool "
                       "verification" % self.is_fail)
 
