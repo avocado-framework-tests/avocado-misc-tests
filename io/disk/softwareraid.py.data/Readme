@@ -15,6 +15,8 @@ Values to be passed in yaml file:
 * Run_tests - True if only mdadm tests (like add, fail, remove device, etc)
 needs to be run on created raid
 
+* force - True if force option needs to be passed while creating raid.
+
 Note: Please specify minimum of 5 disks, for creating all levels of software
 raid. If 5 disks are not available, create 5 partitions, and specify those
 partitions in the yaml file.
