@@ -102,8 +102,8 @@ class sosreport_test(Test):
             self.log.info("--case-id option failed")
         self.run_cmd("sosreport --list-profiles")
         self.run_cmd("sosreport --batch --tmp-dir=%s -p boot,memory" % directory_name)
-        if 'java' not in self.run_cmd_out("sosreport --batch --tmp-dir=%s -p webserver | "
-                                          "grep Running | tail -1" % directory_name):
+        if "java" not in self.run_cmd_out("sosreport --batch --tmp-dir=%s -p webserver | "
+                                          "grep java" % directory_name):
             self.is_fail += 1
             self.log.info("--profile option failed")
         if 'testname' not in self.run_cmd_out("sosreport --batch --tmp-dir=%s "
@@ -153,7 +153,7 @@ class sosreport_test(Test):
             if not os.path.exists(file_path):
                 self.is_fail += 1
                 self.log.info("%s file/directory not created" % file_path)
-        self.run_cmd("sosreport --batch --tmp-dir=%s -s /home/" % directory_name)
+        self.run_cmd("sosreport --batch --tmp-dir=%s -s /" % directory_name)
         shutil.rmtree(directory_name)
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in sosreport tool verification" %
