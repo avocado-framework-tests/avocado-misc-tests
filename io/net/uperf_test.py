@@ -83,7 +83,6 @@ class Uperf(Test):
         process.system('autoreconf -fi', shell=True)
         process.system('./configure ppc64le', shell=True)
         build.make(self.uperf_dir)
-        self.uperf = os.path.join(self.uperf_dir, 'doc')
         self.expected_tp = self.params.get("EXPECTED_THROUGHPUT", default="85")
         speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
         self.expected_tp = int(self.expected_tp) * speed / 100
@@ -94,7 +93,7 @@ class Uperf(Test):
         transmitting (or receiving) data from a client. This transmit large
         messages using multiple threads or processes.
         """
-        os.chdir(self.uperf)
+        os.chdir(os.path.join(self.uperf_dir, 'manual'))
         cmd = "h=%s proto=tcp uperf -m throughput.xml -a" % self.peer_ip
         result = process.run(cmd, shell=True, ignore_status=True)
         if result.exit_status:
