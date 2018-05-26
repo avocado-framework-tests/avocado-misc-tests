@@ -36,7 +36,12 @@ module_load() {
         break;
     fi
     echo "Reloaded driver $1"
-    echo
+    for i in $( cat $CONFIG_FILE | grep "$1=" | awk -F'=' '{print $2}' ); do
+        module_load $i
+        if [[  $? != 0  ]]; then
+            return
+        fi
+    done
 }
 
 
@@ -78,9 +83,9 @@ for driver in $DRIVERS; do
         module_load $driver
         # Sleep for 5s to allow the module load to complete
         sleep 5
+        echo
     done
     if [[  $j -eq $ITERATIONS  ]]; then
-        echo "Finished driver module load/unload test for $driver"
         PASS="$PASS,$driver"
     fi
     echo
