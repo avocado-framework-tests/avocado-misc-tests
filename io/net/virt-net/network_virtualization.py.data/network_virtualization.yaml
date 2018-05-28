@@ -16,4 +16,5 @@ bandwidth:
 device_ip:
 netmask:
 peer_ip:
-count:
+vnic_test_count:
+mac_id:
