@@ -111,7 +111,7 @@ class NetworkVirtualization(Test):
         self.backing_adapter_id = self.params.get("backing_adapter_id",
                                                   '*', default=None)
         self.bandwidth = self.params.get("bandwidth", '*', default=None)
-        self.count = int(self.params.get('count', default="1"))
+        self.count = int(self.params.get('vnic_test_count', default="1"))
         self.device_ip = self.params.get('device_ip', '*', default=None)
         self.netmask = self.params.get('netmask', '*', default=None)
         self.peer_ip = self.params.get('peer_ip', default=None)
