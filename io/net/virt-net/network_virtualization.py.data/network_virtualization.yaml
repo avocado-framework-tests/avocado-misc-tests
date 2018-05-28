@@ -17,3 +17,4 @@ device_ip:
 netmask:
 peer_ip:
 vnic_test_count:
+mac_id:

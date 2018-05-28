@@ -113,6 +113,7 @@ class NetworkVirtualization(Test):
         self.bandwidth = self.params.get("bandwidth", '*', default=None)
         self.count = int(self.params.get('vnic_test_count', default="1"))
         self.device_ip = self.params.get('device_ip', '*', default=None)
+        self.mac_id = self.params.get('mac_id', default="02:03:03:03:03:01")
         self.netmask = self.params.get('netmask', '*', default=None)
         self.peer_ip = self.params.get('peer_ip', default=None)
         self.login(self.hmc_ip, self.hmc_username, self.hmc_pwd)
@@ -299,9 +300,9 @@ class NetworkVirtualization(Test):
         '''
         if operation == 'add':
             cmd = 'chhwres -m %s --id %s -r virtualio --rsubtype vnic \
-                   -o a -s %s -a \"%s\" '\
+                   -o a -s %s -a \"mac_addr=%s,%s\" '\
                    % (self.server, self.lpar_id, self.slot_num,
-                      self.backing_devices)
+                      self.mac_id, self.backing_devices)
         else:
             cmd = 'chhwres -m %s --id %s -r virtualio --rsubtype vnic \
                    -o r -s %s'\
