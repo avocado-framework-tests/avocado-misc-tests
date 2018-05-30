@@ -28,7 +28,7 @@ import shutil
 
 from avocado import Test
 from avocado import main
-from avocado.utils import process, build, git, distro, partition, disk
+from avocado.utils import process, build, git, distro, partition, disk, data_structures
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -182,7 +182,6 @@ class Xfstests(Test):
                 if self.share_exclude:
                     self._create_test_list(self.share_exclude, "shared",
                                            dangerous=False)
-
         if self.detected_distro.name is not 'SuSE':
             process.run('useradd 123456-fsgqa', sudo=True)
             process.run('useradd fsgqa', sudo=True)
@@ -275,7 +274,8 @@ class Xfstests(Test):
         if self.skip_dangerous:
             dangerous_tests = self._get_tests_for_group('dangerous')
         if test_range:
-            for test in self._parse_test_range(test_range):
+            for test in data_structures.comma_separated_ranges_to_list(test_range):
+                test = "%03d" % test
                 if dangerous:
                     if test in dangerous_tests:
                         self.log.debug('Test %s is dangerous. Skipping.', test)
@@ -289,19 +289,6 @@ class Xfstests(Test):
             with open(self.exclude_file, 'a') as fp:
                 for test in test_list:
                     fp.write('%s/%s\n' % (test_type, test))
-
-    @staticmethod
-    def _parse_test_range(test_range):
-        # TODO: Validate test_range format.
-        test_list = []
-        for item in test_range.split(','):
-            if '-' in item:
-                start, end = item.split('-')
-                for element in range(int(start), int(end) + 1):
-                    test_list.append("%03d" % element)
-            else:
-                test_list.append("%03d" % int(item))
-        return test_list
 
     def _get_tests_for_group(self, group):
         """
