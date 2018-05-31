@@ -2,3 +2,4 @@ pycodestyle==2.4.0
 inspektor==0.4.5
 pep8==1.6.2
 pylint==1.6.4
+requests[security]
