@@ -1,5 +1,5 @@
-disk: ''
-dir: ''
+disk:
+dir:
 num_files: 1000
 size: 10240
 filesystem: !mux
