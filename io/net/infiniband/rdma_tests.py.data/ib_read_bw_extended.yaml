@@ -28,8 +28,6 @@ test_opt: !mux
         test_opt: -c RC
     --burst_size=2G_--rate_limit=10:
         test_opt: --burst_size=2G --rate_limit=10
-    -R_--reversed:
-        test_opt: -R --reversed
     -R:
         test_opt: -R
     -R_-a:
