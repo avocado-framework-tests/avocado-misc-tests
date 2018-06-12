@@ -135,33 +135,33 @@ class MultipathTest(Test):
             self.log.info(" Failing and reinstating the individual paths")
             for path in path_dic["paths"]:
                 if multipath.fail_path(path) is False:
-                    msg += "test failed while failing %s" % path
+                    msg += "test failed while failing %s\n" % path
                 elif multipath.reinstate_path(path) is False:
-                    msg += "test failed while reinstating %s" % path
+                    msg += "test failed while reinstating %s\n" % path
             self.mpath_svc.restart()
 
             # Failing n-1 paths for short time and reinstating back
             self.log.info("Failing and reinstating the n-1 paths")
             for path in path_dic['paths'][:-1]:
                 if multipath.fail_path(path) is False:
-                    msg += "%s did not failed in n-1 path fail" % path
+                    msg += "%s did not failed in n-1 path fail\n" % path
 
             time.sleep(180)
             for path in path_dic['paths'][:-1]:
                 if multipath.reinstate_path(path) is False:
-                    msg += "%s failed to recover in n-1 paths fails" % path
+                    msg += "%s failed to recover in n-1 paths fails\n" % path
             self.mpath_svc.restart()
 
             # Failing all paths for short time and reinstating back
             self.log.info("Failing and reinstating the All paths")
             for path in path_dic['paths']:
                 if multipath.fail_path(path) is False:
-                    msg += "%s did not failed in all paths fail" % path
+                    msg += "%s did not failed in all paths fail\n" % path
 
             time.sleep(180)
             for path in path_dic['paths']:
                 if multipath.reinstate_path(path) is False:
-                    msg += "%s did not recovered  in all path fail" % path
+                    msg += "%s did not recovered  in all path fail\n" % path
             self.mpath_svc.restart()
 
         # Print errors
