@@ -39,8 +39,7 @@ class Flail(Test):
                 self.cancel(package + ' is needed for the test to be run')
         self.fs_type = self.params.get('fstype', default='xfs')
 
-        tarball = os.path.join(self.datadir, "flail-0.2.0.tar.gz")
-        archive.extract(tarball, self.workdir)
+        archive.extract(self.get_data("flail-0.2.0.tar.gz"), self.workdir)
         self.build_dir = os.path.join(self.workdir, 'flail-0.2.0')
 
         build.make(self.build_dir)

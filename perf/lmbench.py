@@ -52,7 +52,6 @@ class Lmbench(Test):
                 self.cancel("%s is needed for the test to be run" % package)
         tarball = self.fetch_asset('http://www.bitmover.com'
                                    '/lmbench/lmbench3.tar.gz')
-        data_dir = os.path.abspath(self.datadir)
         archive.extract(tarball, self.workdir)
         version = os.path.basename(tarball.split('.tar.')[0])
         self.sourcedir = os.path.join(self.workdir, version)
@@ -61,14 +60,13 @@ class Lmbench(Test):
 
         os.chdir(self.sourcedir)
 
-        makefile_patch = 'patch -p1 < %s' % (
-            os.path.join(data_dir, 'makefile.patch'))
-        build_patch = 'patch -p1 < %s' % (os.path.join(
-            data_dir, '0001-Fix-build-issues-with-lmbench.patch'))
-        lmbench_fix_patch = 'patch -p1 < %s' % (os.path.join(
-            data_dir, '0002-Changing-shebangs-on-lmbench-scripts.patch'))
-        ostype_fix_patch = 'patch -p1 < %s' % (
-            os.path.join(data_dir, 'fix_add_os_type.patch'))
+        makefile_patch = 'patch -p1 < %s' % self.get_data('makefile.patch')
+        build_patch = 'patch -p1 < %s' % self.get_data(
+            '0001-Fix-build-issues-with-lmbench.patch')
+        lmbench_fix_patch = 'patch -p1 < %s' % self.get_data(
+            '0002-Changing-shebangs-on-lmbench-scripts.patch')
+        ostype_fix_patch = 'patch -p1 < %s' % self.get_data(
+            'fix_add_os_type.patch')
 
         process.run(makefile_patch, shell=True)
         process.run(build_patch, shell=True)

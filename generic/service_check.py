@@ -33,8 +33,7 @@ class service_check(Test):
     def test(self):
         detected_distro = distro.detect()
         parser = ConfigParser.ConfigParser()
-        config_file = self.datadir + '/services.cfg'
-        parser.read(config_file)
+        parser.read(self.get_data('services.cfg'))
         services_list = parser.get(detected_distro.name, 'services').split(',')
 
         smm = SoftwareManager()

@@ -66,7 +66,6 @@ class Connectathon(Test):
                            package)
 
         self.tmpdir = tempfile.mkdtemp(prefix='avocado_' + __name__)
-        data_dir = os.path.abspath(self.datadir)
         git.get_repo('git://git.linux-nfs.org/projects/steved/cthon04.git',
                      destination_dir=self.workdir)
         os.chdir(self.workdir)

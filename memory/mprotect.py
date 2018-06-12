@@ -32,7 +32,7 @@ class Mprotect(Test):
     """
 
     def copyutil(self, file_name):
-        shutil.copyfile(os.path.join(self.datadir, file_name),
+        shutil.copyfile(self.get_data(file_name),
                         os.path.join(self.teststmpdir, file_name))
 
     def setUp(self):

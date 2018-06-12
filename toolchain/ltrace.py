@@ -78,8 +78,7 @@ class Ltrace(Test):
 
             self.src_lt = os.path.join(self.workdir, "ltrace")
             os.chdir(self.src_lt)
-            process.run('patch -p1 < %s' %
-                        os.path.join(self.datadir, 'ltrace.patch'), shell=True)
+            process.run('patch -p1 < %s' % self.get_data('ltrace.patch'), shell=True)
         elif run_type == "distro":
             self.src_lt = os.path.join(self.workdir, "ltrace-distro")
             if not os.path.exists(self.src_lt):

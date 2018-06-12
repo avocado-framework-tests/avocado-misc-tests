@@ -63,9 +63,10 @@ class ltp(Test):
         if script == 'runltp':
             logfile = os.path.join(self.logdir, 'ltp.log')
             failcmdfile = os.path.join(self.logdir, 'failcmdfile')
-            skipfile = os.path.join(self.datadir, 'skipfile')
+
             args += (" -q -p -l %s -C %s -d %s -S %s"
-                     % (logfile, failcmdfile, self.workdir, skipfile))
+                     % (logfile, failcmdfile, self.workdir,
+                        self.get_data('skipfile')))
         ltpbin_dir = os.path.join(self.workdir, "ltp-master", 'bin')
         cmd = os.path.join(ltpbin_dir, script) + ' ' + args
         result = process.run(cmd, ignore_status=True)

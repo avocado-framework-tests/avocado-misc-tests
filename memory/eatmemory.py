@@ -43,8 +43,7 @@ class eatmemory(Test):
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(self.workdir, "eatmemory-master")
         # patch for getch remove
-        getch_patch = 'patch -p1 < %s' % (os.path.join(
-             self.datadir, 'eatmem_getch.patch'))
+        getch_patch = 'patch -p1 < %s' % self.get_data('eatmem_getch.patch')
         os.chdir(self.sourcedir)
         process.run(getch_patch, shell=True)
         build.make(self.sourcedir)

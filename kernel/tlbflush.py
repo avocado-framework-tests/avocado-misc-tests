@@ -46,14 +46,11 @@ class Tlbflush(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("%s is needed for this test." % package)
 
-        data_dir = os.path.abspath(self.datadir)
-
-        shutil.copyfile(os.path.join(data_dir, 'tlbflush.c'),
+        shutil.copyfile(self.get_data('tlbflush.c'),
                         os.path.join(self.workdir, 'tlbflush.c'))
 
         os.chdir(self.workdir)
-        tlbflush_patch = 'patch -p1 < %s' % (
-            os.path.join(data_dir, 'tlbflush.patch'))
+        tlbflush_patch = 'patch -p1 < %s' % self.get_data('tlbflush.patch')
 
         process.run(tlbflush_patch, shell=True)
         cmd = 'gcc -DFILE_SIZE=$((128*1048576)) -g -O2 tlbflush.c \

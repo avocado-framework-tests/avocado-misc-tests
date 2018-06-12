@@ -49,11 +49,11 @@ class PowerTimeBaseBug(Test):
                 self.cancel('%s is needed for the test to be run' % package)
 
         self.log.info("Tranferring the files ...")
-        shutil.copyfile(os.path.join(self.datadir, 'print_power_time_base.c'),
+        shutil.copyfile(self.get_data('print_power_time_base.c'),
                         os.path.join(self.teststmpdir, 'print_power_time_base.c'))
 
         self.log.info("About to compile ...")
-        shutil.copyfile(os.path.join(self.datadir, 'Makefile'),
+        shutil.copyfile(self.get_data('Makefile'),
                         os.path.join(self.teststmpdir, 'Makefile'))
 
         build.make(self.teststmpdir)
