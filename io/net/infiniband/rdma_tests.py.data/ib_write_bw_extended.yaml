@@ -30,8 +30,6 @@ test_opt: !mux
         test_opt: -y 10G
     -z:
         test_opt: -z
-    -R_--reversed:
-        test_opt: -R --reversed
     -R:
         test_opt: -R
     -R_-a:

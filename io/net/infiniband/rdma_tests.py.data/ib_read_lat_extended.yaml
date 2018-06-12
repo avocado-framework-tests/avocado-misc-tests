@@ -12,8 +12,6 @@ test_opt: !mux
         test_opt: -c RC
     -D_10s:
         test_opt: -D 10s
-    -l_4:
-        test_opt: -l 4
     -Q_5:
         test_opt: -Q 5
     -w_100M:
@@ -26,8 +24,6 @@ test_opt: !mux
         test_opt: -z
     --burst_size=2G_--rate_limit=10:
         test_opt: --burst_size=2G --rate_limit=10
-    -R_--reversed:
-        test_opt: -R --reversed
     -R:
         test_opt: -R
     -R_-a:
@@ -38,8 +34,6 @@ test_opt: !mux
         test_opt: -R -D 30s
     -R_-f_5s_-D_11s:
         test_opt: -R -f 5s -D 11s
-    -R_-l_2:
-        test_opt: -R -l 2
     -R_-m_2048:
         test_opt: -R -m 2048
     -R_-n_100000:
