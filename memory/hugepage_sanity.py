@@ -36,8 +36,8 @@ class HugepageSanity(Test):
 
     def setUp(self):
         smm = SoftwareManager()
-        self.hpagesize = int(self.params.get('hpagesize', default=''))
-        self.num_huge = int(self.params.get('num_pages', default=''))
+        self.hpagesize = int(self.params.get('hpagesize', default='16'))
+        self.num_huge = int(self.params.get('num_pages', default='1'))
 
         for package in ['gcc', 'make']:
             if not smm.check_installed(package) and not smm.install(package):
