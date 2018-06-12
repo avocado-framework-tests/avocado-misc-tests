@@ -63,16 +63,19 @@ class NVMeTest(Test):
 
         cmd = "nvme id-ctrl %s -H" % self.device
         self.id_ctrl = process.system_output(cmd, shell=True)
+        cmd = "nvme show-regs %s -H" % self.device
+        regs = process.system_output(cmd, shell=True)
 
         test_dic = {'compare': 'Compare', 'formatnamespace': 'Format NVM',
                     'dsm': 'Data Set Management',
                     'writezeroes': 'Write Zeroes',
                     'firmware_upgrade': 'FW Commit and Download',
-                    'writeuncorrectable': 'Write Uncorrectable'}
+                    'writeuncorrectable': 'Write Uncorrectable',
+                    'subsystemreset': 'NVM Subsystem Reset'}
         for key, value in test_dic.iteritems():
             if key in str(self.name):
-                cmd = "nvme id-ctrl %s -H" % self.id_ns
-                if "%s Supported" % value not in self.id_ctrl:
+                if "%s Supported" % value not in "%s%s" % (self.id_ctrl,
+                                                           regs):
                     self.cancel("%s is not supported" % value)
 
     def get_firmware_version(self):
