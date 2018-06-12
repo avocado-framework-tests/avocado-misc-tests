@@ -429,7 +429,7 @@ class IOZone(Test):
         make_dir = os.path.join(self.sourcedir, 'src', 'current')
         os.chdir(make_dir)
         patch = self.params.get('patch', default='makefile.patch')
-        patch = os.path.join(self.datadir, patch)
+        patch = self.get_data(patch)
         process.run('patch -p3 < %s' % patch, shell=True)
 
         d_distro = distro.detect()
