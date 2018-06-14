@@ -118,7 +118,7 @@ class Disktest(Test):
         """
         Compiles the disktest
         """
-        c_file = os.path.join(self.datadir, "disktest.c")
+        c_file = self.get_data("disktest.c")
         shutil.copy(c_file, self.teststmpdir)
         build.make(self.teststmpdir, extra_args="disktest",
                    env={"CFLAGS": "-O2 -Wall -D_FILE_OFFSET_BITS=64 "

@@ -51,7 +51,6 @@ class Dbench(Test):
             self.error('Gcc is needed for the test to be run')
 
         self.results = []
-        data_dir = os.path.abspath(self.datadir)
         tarball = self.fetch_asset(
             'http://samba.org/ftp/tridge/dbench/dbench-3.04.tar.gz')
         archive.extract(tarball, self.teststmpdir)
@@ -59,7 +58,7 @@ class Dbench(Test):
         self.sourcedir = os.path.join(self.teststmpdir, cb_version)
         os.chdir(self.sourcedir)
         patch = self.params.get('patch', default='dbench_startup.patch')
-        process.run('patch -p1 < %s' % data_dir + '/' + patch, shell=True)
+        process.run('patch -p1 < %s' % self.get_data(patch), shell=True)
         process.run('./configure')
         build.make(self.sourcedir)
 

@@ -54,8 +54,7 @@ class Linsched(Test):
         git.get_repo('https://github.com/thejinxters/linux-scheduler-testing',
                      destination_dir=self.workdir)
         os.chdir(self.workdir)
-        fix_patch = 'patch -p1 < %s' % (
-            os.path.join(self.datadir, 'fix.patch'))
+        fix_patch = 'patch -p1 < %s' % self.get_data('fix.patch')
         process.run(fix_patch, shell=True, ignore_status=True)
 
         build.make(self.workdir)

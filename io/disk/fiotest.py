@@ -91,8 +91,7 @@ class FioTest(Test):
         self.log.info("Test will run on %s", self.dir)
         fio_job = self.params.get('fio_job', default='fio-simple.job')
         cmd = '%s/fio %s %s --filename=%s' % (self.sourcedir,
-                                              os.path.join(
-                                                  self.datadir, fio_job),
+                                              self.get_data(fio_job),
                                               self.dir, self.fio_file)
         process.system(cmd)
 

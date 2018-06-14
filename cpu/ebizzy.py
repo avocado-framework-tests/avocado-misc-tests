@@ -54,13 +54,13 @@ class Ebizzy(Test):
         tarball = self.fetch_asset('http://liquidtelecom.dl.sourceforge.net'
                                    '/project/ebizzy/ebizzy/0.3'
                                    '/ebizzy-0.3.tar.gz')
-        data_dir = os.path.abspath(self.datadir)
         archive.extract(tarball, self.workdir)
         version = os.path.basename(tarball.split('.tar.')[0])
         self.sourcedir = os.path.join(self.workdir, version)
 
         patch = self.params.get(
             'patch', default='Fix-build-issues-with-ebizzy.patch')
+        data_dir = self.get_data(patch)
         os.chdir(self.sourcedir)
         p1 = 'patch -p0 < %s/%s' % (data_dir, patch)
         process.run(p1, shell=True)

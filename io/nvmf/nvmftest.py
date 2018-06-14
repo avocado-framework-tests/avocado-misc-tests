@@ -58,8 +58,8 @@ class NVMfTest(Test):
                 linux_modules.load_module("nvme-rdma")
         except CmdError:
             self.cancel("nvme-rdma module not loadable")
-        self.cfg_tmpl = os.path.join(self.datadir, "nvmf_template.cfg")
-        self.cfg_file = os.path.join(self.datadir, "nvmf.cfg")
+        self.cfg_tmpl = self.get_data("nvmf_template.cfg")
+        self.cfg_file = self.get_data("nvmf.cfg")
         self.nvmf_discovery_file = "/etc/nvme/discovery.conf"
 
     def create_cfg_file(self):
