@@ -50,6 +50,7 @@ class FioTest(Test):
         """
         Build 'fio'.
         """
+        self.fio_file = 'fiotest-image'
         default_url = "http://brick.kernel.dk/snaps/fio-2.1.10.tar.gz"
         url = self.params.get('fio_tool_url', default=default_url)
         self.disk = self.params.get('disk', default=None)
@@ -81,8 +82,6 @@ class FioTest(Test):
             except PartitionError:
                 self.fail("Mounting disk %s on directory %s failed"
                           % (self.disk, self.dir))
-
-        self.fio_file = 'fiotest-image'
 
     def test(self):
         """
