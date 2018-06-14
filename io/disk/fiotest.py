@@ -53,7 +53,7 @@ class FioTest(Test):
         default_url = "http://brick.kernel.dk/snaps/fio-2.1.10.tar.gz"
         url = self.params.get('fio_tool_url', default=default_url)
         self.disk = self.params.get('disk', default=None)
-        self.dir = self.params.get('dir', default=self.workdir)
+        self.dirs = self.params.get('dir', default=self.workdir)
         fstype = self.params.get('fs', default='ext4')
         tarball = self.fetch_asset(url)
         archive.extract(tarball, self.teststmpdir)
@@ -69,18 +69,18 @@ class FioTest(Test):
                     self.cancel('btrfs-tools is needed for the test to be run')
 
         if self.disk is not None:
-            self.part_obj = Partition(self.disk, mountpoint=self.dir)
+            self.part_obj = Partition(self.disk, mountpoint=self.dirs)
             self.log.info("Unmounting disk/dir before creating file system")
             self.part_obj.unmount()
             self.log.info("creating file system")
             self.part_obj.mkfs(fstype)
             self.log.info("Mounting disk %s on directory %s",
-                          self.disk, self.dir)
+                          self.disk, self.dirs)
             try:
                 self.part_obj.mount()
             except PartitionError:
                 self.fail("Mounting disk %s on directory %s failed"
-                          % (self.disk, self.dir))
+                          % (self.disk, self.dirs))
 
         self.fio_file = 'fiotest-image'
 
@@ -88,11 +88,11 @@ class FioTest(Test):
         """
         Execute 'fio' with appropriate parameters.
         """
-        self.log.info("Test will run on %s", self.dir)
+        self.log.info("Test will run on %s", self.dirs)
         fio_job = self.params.get('fio_job', default='fio-simple.job')
         cmd = '%s/fio %s %s --filename=%s' % (self.sourcedir,
                                               self.get_data(fio_job),
-                                              self.dir, self.fio_file)
+                                              self.dirs, self.fio_file)
         process.system(cmd)
 
     def tearDown(self):
@@ -100,7 +100,7 @@ class FioTest(Test):
         Cleanup of disk used to perform this test
         '''
         if self.disk is not None:
-            self.log.info("Unmounting directory %s", self.dir)
+            self.log.info("Unmounting directory %s", self.dirs)
             self.part_obj.unmount()
         self.log.info("Removing the filesystem created on %s", self.disk)
         delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk
