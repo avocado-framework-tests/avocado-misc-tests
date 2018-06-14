@@ -45,7 +45,7 @@ class Blogbench(Test):
         os.chdir(self.blogbench_dir)
         patch = self.params.get('patch', default='config_guess.patch')
         process.run('patch -p1 config.guess %s' %
-                    os.path.join(self.datadir, patch), shell=True)
+                    self.get_data(patch), shell=True)
         process.system('./configure')
         build.make(self.blogbench_dir, extra_args='install-strip')
 

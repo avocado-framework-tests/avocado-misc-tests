@@ -92,10 +92,10 @@ class VATest(Test):
             if not smm.check_installed(packages) and not smm.install(packages):
                 self.cancel('%s is needed for the test to be run' % packages)
 
-        shutil.copyfile(os.path.join(self.datadir, 'va_test.c'),
+        shutil.copyfile(self.get_data('va_test.c'),
                         os.path.join(self.teststmpdir, 'va_test.c'))
 
-        shutil.copyfile(os.path.join(self.datadir, 'Makefile'),
+        shutil.copyfile(self.get_data('Makefile'),
                         os.path.join(self.teststmpdir, 'Makefile'))
 
         build.make(self.teststmpdir)

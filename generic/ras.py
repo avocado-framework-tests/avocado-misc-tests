@@ -232,7 +232,7 @@ class RASTools(Test):
         self.log.info("===============Executing rtas_errd and rtas_dump tools"
                       " test===============")
         self.log.info("1 - Injecting event")
-        rtas_file = os.path.join(self.datadir, 'rtas')
+        rtas_file = self.get_data('rtas')
         self.run_cmd("/usr/sbin/rtas_errd -d -f %s" % rtas_file)
         self.log.info("2 - Checking if the event was dumped to /var/log/"
                       "platform")
@@ -260,7 +260,7 @@ class RASTools(Test):
         self.log.info("===============Executing rtas_event_decode tool test===="
                       "===========")
         cmd_result = process.run("rtas_event_decode -w 500 -dv -n 2302 < %s" %
-                                 os.path.join(self.datadir, 'rtas'), ignore_status=True,
+                                 self.get_data('rtas'), ignore_status=True,
                                  sudo=True, shell=True)
         if cmd_result.exit_status != 17:
             self.fail("%s command(s) failed in rtas_event_decode tool "

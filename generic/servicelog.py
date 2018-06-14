@@ -93,7 +93,7 @@ class servicelog(Test):
         Manageservice.stop("rtas_errd")
         self.log.info("===============1. Creating notification tool ===="
                       "===========")
-        notify_script = os.path.join(self.datadir, "notify_script.sh")
+        notify_script = self.get_data("notify_script.sh")
         cmd = "chmod 777 %s" % notify_script
         process.run(cmd, ignore_status=True, sudo=True, shell=True)
         self.log.info("=======2 - Adding notification tool to servicelog ="

@@ -53,10 +53,10 @@ class Forkoff(Test):
             if not smm.check_installed(packages) and not smm.install(packages):
                 self.cancel('%s is needed for the test to be run' % packages)
 
-        shutil.copyfile(os.path.join(self.datadir, 'forkoff.c'),
+        shutil.copyfile(self.get_data('forkoff.c'),
                         os.path.join(self.teststmpdir, 'forkoff.c'))
 
-        shutil.copyfile(os.path.join(self.datadir, 'Makefile'),
+        shutil.copyfile(self.get_data('Makefile'),
                         os.path.join(self.teststmpdir, 'Makefile'))
 
         build.make(self.teststmpdir)

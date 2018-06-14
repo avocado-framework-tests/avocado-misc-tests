@@ -54,8 +54,7 @@ class Integrity(Test):
             if not smm.check_installed(packages) and not smm.install(packages):
                 self.cancel('%s is needed for the test to be run' % packages)
 
-        tarball = os.path.join(self.datadir, "Integritytests.tar")
-        archive.extract(tarball, self.workdir)
+        archive.extract(self.get_data("Integritytests.tar"), self.workdir)
         self.build_dir = os.path.join(self.workdir, 'Integritytests')
         build.make(self.build_dir)
 

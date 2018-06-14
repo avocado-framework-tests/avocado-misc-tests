@@ -56,15 +56,13 @@ class Interbench(Test):
         tarball = self.fetch_asset('http://slackware.cs.utah.edu/pub/kernel'
                                    '.org/pub/linux/kernel/people/ck/apps/'
                                    'interbench/interbench-0.31.tar.gz')
-        data_dir = os.path.abspath(self.datadir)
         archive.extract(tarball, self.workdir)
         version = os.path.basename(tarball.split('.tar.')[0])
         self.sourcedir = os.path.join(self.workdir, version)
 
         # Patch for make file
         os.chdir(self.sourcedir)
-        makefile_patch = 'patch -p1 < %s ' % (
-            os.path.join(data_dir, 'makefile_fix.patch'))
+        makefile_patch = 'patch -p1 < %s ' % self.get_data('makefile_fix.patch')
         process.run(makefile_patch, shell=True)
 
         build.make(self.sourcedir)

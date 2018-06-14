@@ -102,19 +102,17 @@ class libhugetlbfs(Test):
                 os.makedirs(self.hugetlbfs_dir)
             process.system('mount -t hugetlbfs none %s' % self.hugetlbfs_dir)
 
-        data_dir = os.path.abspath(self.datadir)
         git.get_repo('https://github.com/libhugetlbfs/libhugetlbfs.git',
                      destination_dir=self.workdir)
         os.chdir(self.workdir)
         patch = self.params.get('patch', default='elflink.patch')
-        process.run('patch -p1 < %s' % data_dir + '/' + patch, shell=True)
+        process.run('patch -p1 < %s' % self.get_data(patch), shell=True)
 
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
         if detected_distro.name in ["rhel", "fedora", "redhat", "centos"]:
-            falloc_patch = 'patch -p1 < %s ' % (
-                os.path.join(data_dir, 'falloc.patch'))
+            falloc_patch = 'patch -p1 < %s ' % self.get_data('falloc.patch')
             process.run(falloc_patch, shell=True)
 
         build.make(self.workdir, extra_args='BUILDTYPE=NATIVEONLY')

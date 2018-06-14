@@ -105,9 +105,9 @@ class Xfstests(Test):
             self.cancel('Unknown filesystem %s' % self.fs_to_test)
         mount = True
         self.devices = []
-        shutil.copyfile(os.path.join(self.datadir, 'local.config'),
+        shutil.copyfile(self.get_data('local.config'),
                         os.path.join(self.teststmpdir, 'local.config'))
-        shutil.copyfile(os.path.join(self.datadir, 'group'),
+        shutil.copyfile(self.get_data('group'),
                         os.path.join(self.teststmpdir, 'group'))
 
         if self.dev_type == 'loop':
