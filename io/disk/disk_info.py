@@ -53,10 +53,10 @@ class DiskInfo(Test):
         if 'ppc' not in platform.processor():
             self.cancel("Processor is not ppc64")
         self.disk = self.params.get('disk', default=None)
-        self.dir = self.params.get('dir', default=self.workdir)
+        self.dirs = self.params.get('dir', default=self.workdir)
         self.fstype = self.params.get('fs', default='ext4')
         self.log.info("disk: %s, dir: %s, fstype: %s",
-                      self.disk, self.dir, self.fstype)
+                      self.disk, self.dirs, self.fstype)
         if not self.disk:
             self.cancel("No disk input, please update yaml and re-run")
         cmd = "df --output=source"
@@ -173,19 +173,19 @@ class DiskInfo(Test):
             msg.append("Size of disk %s mismatch in sfdisk o/p" % self.disk)
 
         # Mount
-        self.part_obj = Partition(self.disk, mountpoint=self.dir)
+        self.part_obj = Partition(self.disk, mountpoint=self.dirs)
         self.log.info("Unmounting disk/dir before creating file system")
         self.part_obj.unmount()
         self.log.info("creating file system")
         self.part_obj.mkfs(self.fstype)
         self.log.info("Mounting disk %s on directory %s",
-                      self.disk, self.dir)
+                      self.disk, self.dirs)
         try:
             self.part_obj.mount()
         except PartitionError:
             msg.append("failed to mount %s fs on %s to %s" % (self.fstype,
                                                               self.disk,
-                                                              self.dir))
+                                                              self.dirs))
 
         # Get UUID of the disk for each filesystem mount
         cmd = "blkid %s | cut -d '=' -f 2" % self.disk
@@ -198,15 +198,15 @@ class DiskInfo(Test):
         output = process.system_output("lsblk -l %s" % self.disk,
                                        ignore_status=True, shell=True,
                                        sudo=True)
-        if self.dir in output:
+        if self.dirs in output:
             self.log.info("Mount point %s for disk %s updated in lsblk o/p",
-                          self.dir, self.disk)
+                          self.dirs, self.disk)
         output = process.system_output("df %s" % self.disk,
                                        ignore_status=True, shell=True,
                                        sudo=True)
-        if self.dir in output:
+        if self.dirs in output:
             self.log.info("Mount point %s for disk %s updated in df o/p",
-                          self.dir, self.disk)
+                          self.dirs, self.disk)
 
         if process.system("ls /dev/disk/by-uuid -l| grep -i %s" % disk,
                           ignore_status=True, shell=True, sudo=True) != 0:
@@ -221,11 +221,11 @@ class DiskInfo(Test):
                           "uuid %s is updated in blkid o/p",
                           self.disk, self.fstype, self.uuid)
 
-        if process.system("grub2-probe %s" % self.dir, ignore_status=True):
+        if process.system("grub2-probe %s" % self.dirs, ignore_status=True):
             msg.append("Given disk %s's fs not detected by grub2" % disk)
 
         # Un-mount the directory
-        self.log.info("Unmounting directory %s", self.dir)
+        self.log.info("Unmounting directory %s", self.dirs)
         self.part_obj.unmount()
         cmd = 'lshw -c disk | grep -n "%s" | cut -d ":" -f 1' % self.disk
         middle = process.system_output(cmd, ignore_status=True,
@@ -256,7 +256,7 @@ class DiskInfo(Test):
         '''
         if hasattr(self, "part_obj"):
             if self.disk is not None:
-                self.log.info("Unmounting directory %s", self.dir)
+                self.log.info("Unmounting directory %s", self.dirs)
                 self.part_obj.unmount()
         self.log.info("Removing the filesystem created on %s", self.disk)
         delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk

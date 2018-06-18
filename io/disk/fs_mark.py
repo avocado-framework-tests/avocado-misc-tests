@@ -57,7 +57,7 @@ class FSMark(Test):
         self.disk = self.params.get('disk', default=None)
         self.num = self.params.get('num_files', default='1024')
         self.size = self.params.get('size', default='1000')
-        self.dir = self.params.get('dir', default=self.workdir)
+        self.dirs = self.params.get('dir', default=self.workdir)
         self.fstype = self.params.get('fs', default='ext4')
 
         if self.fstype == 'btrfs':
@@ -67,25 +67,25 @@ class FSMark(Test):
                     self.cancel('btrfs-tools is needed for the test to be run')
 
         if self.disk is not None:
-            self.part_obj = Partition(self.disk, mountpoint=self.dir)
-            self.log.info("Test will run on %s", self.dir)
+            self.part_obj = Partition(self.disk, mountpoint=self.dirs)
+            self.log.info("Test will run on %s", self.dirs)
             self.log.info("Unmounting the disk before creating file system")
             self.part_obj.unmount()
             self.log.info("creating file system")
             self.part_obj.mkfs(self.fstype)
-            self.log.info("Mounting disk %s on dir %s", self.disk, self.dir)
+            self.log.info("Mounting disk %s on dir %s", self.disk, self.dirs)
             try:
                 self.part_obj.mount()
             except PartitionError:
                 self.fail("Mounting disk %s on directory %s failed"
-                          % (self.disk, self.dir))
+                          % (self.disk, self.dirs))
 
     def test(self):
         """
         Run fs_mark
         """
         os.chdir(self.sourcedir)
-        cmd = ('./fs_mark -d %s -s %s -n %s' % (self.dir, self.size, self.num))
+        cmd = "./fs_mark -d %s -s %s -n %s" % (self.dirs, self.size, self.num)
         process.run(cmd)
 
     def tearDown(self):
@@ -94,7 +94,7 @@ class FSMark(Test):
         '''
         if self.disk is not None:
             self.log.info("Unmounting disk %s on directory %s",
-                          self.disk, self.dir)
+                          self.disk, self.dirs)
             self.part_obj.unmount()
         self.log.info("Removing the filesystem created on %s", self.disk)
         delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk
