@@ -164,6 +164,14 @@ class PowerNVEEH(Test):
                 self.log.info("waiting for PE to recover %s", self.pci_device)
                 time.sleep(1)
             else:
+                # EEH Recovery is not similar for all adapters. For some
+                # adapters, specifically multipath, we see that the adapter
+                # needs some more time to recover after the message "Notify
+                # device driver to resume" on the dmesg.
+                # There is no reliable way to determine this extra time
+                # required, nor a way to determine the recovery. So, a sleep
+                # time of 10s is introduced.
+                time.sleep(10)
                 break
         else:
             raise EEHRecoveryFailed("EEH recovery failed", self.pci_device)
