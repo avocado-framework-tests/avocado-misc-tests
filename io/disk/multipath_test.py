@@ -28,6 +28,7 @@ from avocado import main
 from avocado.utils import distro, process
 from avocado.utils import multipath
 from avocado.utils import service
+from avocado.utils import wait
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -74,6 +75,7 @@ class MultipathTest(Test):
         # Create service object
         self.mpath_svc = service.SpecificServiceManager(svc_name)
         self.mpath_svc.restart()
+        wait.wait_for(self.mpath_svc.status, timeout=10)
 
         # Take a backup of current config file
         self.mpath_file = "/etc/multipath.conf"
@@ -110,6 +112,7 @@ class MultipathTest(Test):
             if not multipath.flush_path(path_dic["name"]):
                 msg += "Flush of %s fails\n" % path_dic["name"]
             self.mpath_svc.restart()
+            wait.wait_for(self.mpath_svc.status, timeout=10)
 
             # Path Selector policy
             self.log.info("changing Selector policy")
@@ -147,6 +150,7 @@ class MultipathTest(Test):
                 elif multipath.reinstate_path(path) is False:
                     msg += "test failed while reinstating %s\n" % path
             self.mpath_svc.restart()
+            wait.wait_for(self.mpath_svc.status, timeout=10)
 
             # Failing n-1 paths for short time and reinstating back
             self.log.info("Failing and reinstating the n-1 paths")
@@ -159,6 +163,7 @@ class MultipathTest(Test):
                 if multipath.reinstate_path(path) is False:
                     msg += "%s failed to recover in n-1 paths fails\n" % path
             self.mpath_svc.restart()
+            wait.wait_for(self.mpath_svc.status, timeout=10)
 
             # Failing all paths for short time and reinstating back
             self.log.info("Failing and reinstating the All paths")
@@ -171,6 +176,7 @@ class MultipathTest(Test):
                 if multipath.reinstate_path(path) is False:
                     msg += "%s did not recovered  in all path fail\n" % path
             self.mpath_svc.restart()
+            wait.wait_for(self.mpath_svc.status, timeout=10)
 
         # Print errors
         if msg:
@@ -185,7 +191,7 @@ class MultipathTest(Test):
         self.mpath_svc.restart()
 
         # Need to wait for some time to make sure multipaths are loaded.
-        time.sleep(5)
+        wait.wait_for(self.mpath_svc.status, timeout=10)
 
 
 if __name__ == "__main__":
