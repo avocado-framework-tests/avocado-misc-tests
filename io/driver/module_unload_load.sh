@@ -14,7 +14,7 @@
 # Copyright: 2016 IBM
 # Author: Harsha Thyagaraja <harshkid@linux.vnet.ibm.com>
 
-CONFIG_FILE="$AVOCADO_TEST_DATADIR"/config
+CONFIG_FILE="`realpath $0`.data"/config
 BUILT_IN_DRIVERS=`cat /lib/modules/$(uname -r)/modules.builtin |awk -F"/" '{print $NF}'|sed 's/\.ko//g'`
 if [[ $MODULES ]]; then
     DRIVERS=`echo $MODULES | sed 's/,/ /g'`
