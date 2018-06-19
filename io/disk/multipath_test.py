@@ -41,6 +41,14 @@ class MultipathTest(Test):
         """
         Set up.
         """
+        self.policy = self.params.get('policy', default='service-time')
+        self.policies = ["service-time", "round-robin", "queue-length"]
+        # We will remove and add the policy back, so that this becomes
+        # the last member of the list. This is done so that in the
+        # policy change test later, this policy is set in the last
+        # iteration.
+        self.policies.remove(self.policy)
+        self.policies.append(self.policy)
         # Install needed packages
         dist = distro.detect()
         pkg_name = ""
@@ -104,32 +112,33 @@ class MultipathTest(Test):
         Tests Multipath.
         """
         msg = ""
-
         multipath.form_conf_mpath_file()
+        plcy = "path_selector \"%s 0\"" % self.policy
+        multipath.form_conf_mpath_file(defaults_extra=plcy)
         for path_dic in self.mpath_list:
             self.log.debug("operating on paths", path_dic["paths"])
+            # Path Selector policy
+            self.log.info("changing Selector policy")
+            for policy in self.policies:
+                cmd = "path_selector \"%s 0\"" % policy
+                multipath.form_conf_mpath_file(defaults_extra=cmd)
+                if multipath.get_policy(path_dic["wwid"]) != policy:
+                    msg += "%s for %s fails\n" % (policy, path_dic["wwid"])
+
             # mutipath -f mpathX
             if not multipath.flush_path(path_dic["name"]):
                 msg += "Flush of %s fails\n" % path_dic["name"]
             self.mpath_svc.restart()
             wait.wait_for(self.mpath_svc.status, timeout=10)
 
-            # Path Selector policy
-            self.log.info("changing Selector policy")
-            for policy in ["service-time", "round-robin", "queue-length"]:
-                cmd = "path_selector \"%s 0\"" % policy
-                multipath.form_conf_mpath_file(defaults_extra=cmd)
-                if multipath.get_policy(path_dic["wwid"]) != policy:
-                    msg += "%s for %s fails\n" % (policy, path_dic["wwid"])
-
             # Blacklisting wwid
             self.log.info("Black listing WWIDs")
             cmd = "wwid %s" % path_dic["wwid"]
-            multipath.form_conf_mpath_file(blacklist=cmd)
+            multipath.form_conf_mpath_file(blacklist=cmd, defaults_extra=plcy)
             if multipath.device_exists(path_dic["wwid"]):
                 msg += "Blacklist of %s fails\n" % path_dic["wwid"]
             else:
-                multipath.form_conf_mpath_file()
+                multipath.form_conf_mpath_file(defaults_extra=plcy)
                 if not multipath.device_exists(path_dic["wwid"]):
                     msg += "Recovery of %s fails\n" % path_dic["wwid"]
 
@@ -137,10 +146,11 @@ class MultipathTest(Test):
             self.log.info("Black listing individual paths")
             for disk in path_dic["paths"]:
                 cmd = "devnode %s" % disk
-                multipath.form_conf_mpath_file(blacklist=cmd)
+                multipath.form_conf_mpath_file(blacklist=cmd,
+                                               defaults_extra=plcy)
                 if disk in multipath.get_paths(path_dic["wwid"]):
                     msg += "Blacklist of %s fails\n" % disk
-            multipath.form_conf_mpath_file()
+            multipath.form_conf_mpath_file(defaults_extra=plcy)
 
             # Failing and reinstating individual paths eg: sdX
             self.log.info(" Failing and reinstating the individual paths")
