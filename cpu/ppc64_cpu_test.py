@@ -168,7 +168,8 @@ class PPC64Test(Test):
         """
         op1 = process.system_output(
             "ppc64_cpu --dscr", shell=True).strip().split()[-1]
-        op2 = genio.read_file("/sys/devices/system/cpu/dscr_default").strip()
+        op2 = int(genio.read_file(
+            "/sys/devices/system/cpu/dscr_default").strip(), 16)
         self.equality_check("DSCR", op1, op2)
 
     def smt_loop(self):
