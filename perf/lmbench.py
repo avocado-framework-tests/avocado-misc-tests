@@ -45,6 +45,7 @@ class Lmbench(Test):
         '''
         fsdir = self.params.get('fsdir', default=None)
         temp_file = self.params.get('temp_file', default=None)
+        memory_size_mb = self.params.get('MB', default=125)
         self.tmpdir = tempfile.mkdtemp(prefix='avocado_' + __name__)
         smm = SoftwareManager()
         for package in ['gcc', 'make', 'patch']:
@@ -95,12 +96,23 @@ class Lmbench(Test):
 
         # patch the resulted config to use the proper temporary directory and
         # file locations
-        tmp_config_file = config_file + '.tmp'
-        process.system('touch ' + tmp_config_file)
-        process.system("sed 's!^FSDIR=.*$!FSDIR=%s!' '%s'  '%s' " %
-                       (fsdir, config_file, tmp_config_file))
-        process.system("sed 's!^FILE=.*$!FILE=%s!' '%s'  '%s'" %
-                       (temp_file, tmp_config_file, config_file))
+        with open(config_file, "r+") as cfg_file:
+            lines = cfg_file.readlines()
+            cfg_file.seek(0)
+            cfg_file.truncate()
+            for line in lines:
+                if line.startswith("FSDIR="):
+                    cfg_file.write("FSDIR=%s\n" % fsdir)
+                elif line.startswith("FILE="):
+                    cfg_file.write("FILE=%s\n" % temp_file)
+                elif line.startswith("MB="):
+                    cfg_file.write("MB=%s\n" % memory_size_mb)
+                else:
+                    cfg_file.write(line)
+            # Printing the config file
+            cfg_file.seek(0)
+            for line in cfg_file.readlines():
+                print(line)
 
     def test(self):
 
