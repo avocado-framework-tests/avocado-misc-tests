@@ -21,7 +21,7 @@ import shutil
 
 from avocado import Test
 from avocado import main
-from avocado.utils import process, build, memory, distro
+from avocado.utils import process, build, memory, distro, genio
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -42,6 +42,7 @@ class NumaTest(Test):
         self.nr_pages = self.params.get(
             'nr_pages', default=memsize / memory.get_page_size())
         self.map_type = self.params.get('map_type', default='private')
+        self.hpage = self.params.get('h_page', default=False)
 
         nodes = memory.numa_nodes_with_memory()
         if len(nodes) < 2:
@@ -49,12 +50,26 @@ class NumaTest(Test):
                         'Node list with memory: %s' % nodes)
 
         pkgs = ['gcc', 'make']
+        hp_check = 0
+        if self.hpage:
+            hp_size = memory.get_huge_page_size()
+            for node in nodes:
+                genio.write_file('/sys/devices/system/node/node%s/hugepages/hu'
+                                 'gepages-%skB/nr_hugepages' %
+                                 (node, str(hp_size)), str(self.nr_pages))
+            for node in nodes:
+                hp_check += int(genio.read_file(
+                    '/sys/devices/system/node/node%s/hugepages/hugepages-%skB'
+                    'nr_hugepages' % (node, str(hp_size))).strip())
+            if hp_check < self.nr_pages:
+                self.cancel('Not enough pages to be configured on nodes')
         if dist.name == "Ubuntu":
-            pkgs.extend(['libpthread-stubs0-dev', 'libnuma-dev'])
+            pkgs.extend(['libpthread-stubs0-dev',
+                         'libnuma-dev', 'libhugetlbfs-dev'])
         elif dist.name in ["centos", "rhel", "fedora"]:
-            pkgs.extend(['numactl-devel'])
+            pkgs.extend(['numactl-devel', 'libhugetlbfs-devel'])
         else:
-            pkgs.extend(['libnuma-devel'])
+            pkgs.extend(['libnuma-devel', 'libhugetlbfs-devel'])
 
         for package in pkgs:
             if not smm.check_installed(package) and not smm.install(package):
@@ -68,9 +83,10 @@ class NumaTest(Test):
     def test(self):
         os.chdir(self.teststmpdir)
         self.log.info("Starting test...")
-
-        if process.system('./numa_test -m %s -n %s' % (self.map_type, self.nr_pages),
-                          shell=True, sudo=True, ignore_status=True):
+        cmd = './numa_test -m %s -n %s' % (self.map_type, self.nr_pages)
+        if self.hpage:
+            cmd = '%s -h' % cmd
+        if process.system(cmd, shell=True, sudo=True, ignore_status=True):
             self.fail('Please check the logs for failure')
 
 

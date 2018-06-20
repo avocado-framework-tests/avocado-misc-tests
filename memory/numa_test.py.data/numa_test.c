@@ -24,6 +24,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <hugetlbfs.h>
 
 #define errmsg(x, ...) fprintf(stderr, x, ##__VA_ARGS__),exit(1)
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -80,6 +81,8 @@ int test_func(unsigned long nr_nodes, int mapflag, unsigned long nr_pages, unsig
 		status = malloc(sizeof(char *) * nr_pages + 1);
 		nodes  = malloc(sizeof(char *) * nr_pages + 1);
 	}
+
+	printf("Pages: %lu, Size: %lu\n", nr_pages, page_size);
 
 	p = mmap(NULL, nr_pages * page_size, PROTFLAG, mapflag, -1, 0);
 	if (p == MAP_FAILED){
@@ -152,8 +155,12 @@ int main(int argc, char *argv[])
 		case 'n':
 			nr_pages = strtoul(optarg, NULL, 10);
 			break;
+		case 'h':
+			mapflag = mapflag | MAP_ANONYMOUS | MAP_HUGETLB;
+			page_size = gethugepagesize();
+			break;
 		case 'H':
-			errmsg("%s -m [private|shared] -n <number of pages> -s [migrate|mbind]\n", argv[0]);
+			errmsg("%s -m [private|shared] -n <number of pages> [-h]\n", argv[0]);
 			break;
 		default:
 			errmsg("invalid option\n");
@@ -163,6 +170,9 @@ int main(int argc, char *argv[])
 
 	if (nr_nodes < 2)
 		errmsg("A minimum of 2 nodes is required for this test.\n");
+
+	if (mapflag & MAP_HUGETLB)
+		printf("Using Hugepages\n");
 
 	if (!(mapflag & (MAP_SHARED | MAP_PRIVATE)))
 		errmsg("Specify shared or private using -m flag\n");
