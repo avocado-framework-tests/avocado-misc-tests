@@ -1,5 +1,6 @@
 setup:
    runarg: !mux
+    MB: 125
     fsdir:
      fsdir: None
     temp_file:
