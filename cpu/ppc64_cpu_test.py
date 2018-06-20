@@ -76,7 +76,7 @@ class PPC64Test(Test):
         :params cmd1: Command 1
         :params cmd2: Command 2
         """
-        self.log.info("Testing %s" % test_name)
+        self.log.info("Testing %s", test_name)
         if str(cmd1) != str(cmd2):
             self.failures += 1
             self.failure_message += "%s test failed when SMT=%s\n" \
@@ -102,7 +102,7 @@ class PPC64Test(Test):
         self.smt_loop()
 
         if self.failures > 0:
-            self.log.debug("Number of failures is %s" % self.failures)
+            self.log.debug("Number of failures is %s", self.failures)
             self.log.debug(self.failure_message)
             self.fail()
 
@@ -172,7 +172,8 @@ class PPC64Test(Test):
             "/sys/devices/system/cpu/dscr_default").strip(), 16)
         self.equality_check("DSCR", op1, op2)
 
-    def smt_loop(self):
+    @staticmethod
+    def smt_loop():
         """
         Tests smt on/off in a loop
         """
