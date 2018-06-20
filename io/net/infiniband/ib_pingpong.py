@@ -88,6 +88,15 @@ class PingPong(Test):
                 self.cancel("%s package is need to test" % pkg)
         if process.system("ibstat", shell=True, ignore_status=True) != 0:
             self.cancel("infiniband adaptors not available")
+        self.tool_name = self.params.get("tool")
+        self.log.info("test with %s", self.tool_name)
+        self.peer_iface = ''
+        cmd = "ssh %s \"ip addr show\"" % self.peer_ip
+        output = process.system_output(cmd, shell=True).strip()
+        for line in output.splitlines():
+            if self.peer_ip in line:
+                self.peer_iface = line.split()[-1]
+                break
 
     def pingpong_exec(self, arg1, arg2, arg3):
         '''
@@ -126,15 +135,11 @@ class PingPong(Test):
         test options are mandatory
         ext test options are depends upon user
         '''
-        tool_name = self.params.get("tool")
-        self.log.info("test with %s", tool_name)
-        if "ib" not in self.iface and tool_name == "ibv_ud_pingpong":
-            tmp = "grep -w -B 1 %s" % self.peer_ip
-            cmd = " ` ifconfig | %s | head -1 | cut -f1 -d ' ' ` " % tmp
-            msg = "ssh %s \"ifconfig %s mtu 9000\"" % (self.peer_ip, cmd)
-            process.system(msg, shell=True)
-            con_msg = "ifconfig %s mtu 9000" % (self.iface)
-            process.system(con_msg, shell=True)
+        # change MTU to 9000 for non-IB tests
+        if "ib" not in self.iface and self.tool_name == "ibv_ud_pingpong":
+            cmd = "ssh %s \"ip link set %s mtu 9000\"" % (self.peer_ip,
+                                                          self.peer_iface)
+            process.system(cmd, shell=True)
             time.sleep(10)
         val1 = ""
         val2 = ""
@@ -144,21 +149,20 @@ class PingPong(Test):
                 val1, val2 = val.split()
             except ValueError:
                 pass
-            self.pingpong_exec(tool_name, val1, val2)
+            self.pingpong_exec(self.tool_name, val1, val2)
         ext_test_op = self.params.get("ext_test_opt", default="").split(",")
         if self.flag == "1":
             for val in ext_test_op:
-                self.pingpong_exec(tool_name, val, "")
+                self.pingpong_exec(self.tool_name, val, "")
         else:
             self.log.info("Extended test option skipped")
-        # change MTU to 1500 for non-IB tests
-        if "ib" not in self.iface and tool_name == "ibv_ud_pingpong":
-            tmp = "grep -w -B 1 %s" % self.peer_ip
-            cmd = "`ifconfig | %s | head -1 | cut -f1 -d' '`" % tmp
-            msg = "ssh %s \"ifconfig %s mtu 1500\"" % (self.peer_ip, cmd)
-            process.system(msg, shell=True)
-            con_msg = "ifconfig %s mtu 1500" % (self.iface)
-            process.system(con_msg, shell=True)
+
+    def tearDown(self):
+        # change MTU back to 1500 for non-IB tests
+        if "ib" not in self.iface and self.tool_name == "ibv_ud_pingpong":
+            cmd = "ssh %s \"ip link set %s mtu 1500\"" % (self.peer_ip,
+                                                          self.peer_iface)
+            process.system(cmd, shell=True)
             time.sleep(10)
 
 
