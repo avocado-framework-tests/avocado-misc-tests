@@ -3,10 +3,14 @@ general:
     script: 'runltp'
     dir:
     args: !mux
-        test1:
+        fs_di:
             args: '-s fs_di'
-        test2:
+        fs_inod:
             args: '-s fs_inod'
+        fs_fill:
+            args: '-s fs_fill'
+        fs_perm:
+            args: '-s fs_perm'
     fs: !mux
         ext4:
             fs: 'ext4'
