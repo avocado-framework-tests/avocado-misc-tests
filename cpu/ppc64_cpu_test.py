@@ -82,7 +82,7 @@ class PPC64Test(Test):
             self.failure_message += "%s test failed when SMT=%s\n" \
                 % (test_name, self.key)
 
-    def test(self):
+    def test_cmd_options(self):
         """
         Sets the SMT value, and calls each of the test, for each value.
         """
@@ -99,14 +99,10 @@ class PPC64Test(Test):
             self.smt_snoozedelay()
             self.dscr()
 
-        self.smt_loop()
-
         if self.failures > 0:
             self.log.debug("Number of failures is %s", self.failures)
             self.log.debug(self.failure_message)
             self.fail()
-
-        process.system_output("dmesg")
 
     def smt(self):
         """
@@ -172,20 +168,21 @@ class PPC64Test(Test):
             "/sys/devices/system/cpu/dscr_default").strip(), 16)
         self.equality_check("DSCR", op1, op2)
 
-    @staticmethod
-    def smt_loop():
+    def test_smt_loop(self):
         """
         Tests smt on/off in a loop
         """
         for _ in range(1, 100):
-            process.run("ppc64_cpu --smt=off && ppc64_cpu --smt=on",
-                        shell=True)
+            if process.system("ppc64_cpu --smt=off && ppc64_cpu --smt=on",
+                              shell=True):
+                self.fail('SMT loop test failed')
 
     def tearDown(self):
         """
         Sets back SMT to original value as was before the test.
         """
         process.system_output("ppc64_cpu --smt=%s" % self.curr_smt, shell=True)
+        process.system_output("dmesg")
 
 
 if __name__ == "__main__":
