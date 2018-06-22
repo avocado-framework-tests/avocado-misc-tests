@@ -1,1 +1,8 @@
 wwids: ''
+policy: !mux
+    queue-length:
+        policy: queue-length
+    service-time:
+        policy: service-time
+    round-robin:
+        policy: round-robin
