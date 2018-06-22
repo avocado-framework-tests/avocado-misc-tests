@@ -48,12 +48,18 @@ class VATest(Test):
                 '/proc/cpuinfo').strip().splitlines()[-1]
             # Check for "Radix" as this MMU will be explicit in POWER
             if 'Radix' not in mmu_detect:
-                self.hsizes = [16384, 16]
+                self.hsizes = [16]
+                # For now, 16G hugepages are possible only when it is default.
+                # So check and add to the possible pagesize list
+                if page_chunker == 16384:
+                    self.hsizes.extend([16384])
 
         if self.scenario_arg not in range(1, 13):
             self.cancel("Test need to skip as scenario will be 1-12")
         elif self.scenario_arg in [7, 8, 9]:
             self.log.info("Using alternate hugepages")
+            if len(self.hsizes) == 1:
+                self.cancel('Scenario is not applicable')
             if memory.meminfo.Hugepagesize.m == self.hsizes[0]:
                 page_chunker = self.hsizes[1]
             else:
@@ -62,6 +68,8 @@ class VATest(Test):
         self.exist_pages = memory.get_num_huge_pages()
         if self.scenario_arg in [10, 11, 12]:
             self.log.info("Using Multiple hugepages")
+            if len(self.hsizes) == 1:
+                self.cancel('Scenario is not applicable')
             if memory.meminfo.Hugepagesize.m != self.hsizes[0]:
                 self.hsizes.reverse()
 
