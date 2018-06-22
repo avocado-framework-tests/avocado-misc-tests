@@ -21,7 +21,7 @@ import shutil
 
 from avocado import Test
 from avocado import main
-from avocado.utils import process, build, memory, genio, distro, cpu
+from avocado.utils import process, build, memory, genio, distro
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -44,7 +44,10 @@ class VATest(Test):
         self.hsizes = [1024, 2]
         page_chunker = memory.meminfo.Hugepagesize.m
         if distro.detect().arch in ['ppc64', 'ppc64le']:
-            if 'power8' in cpu.get_cpu_arch():
+            mmu_detect = genio.read_file(
+                '/proc/cpuinfo').strip().splitlines()[-1]
+            # Check for "Radix" as this MMU will be explicit in POWER
+            if 'Radix' not in mmu_detect:
                 self.hsizes = [16384, 16]
 
         if self.scenario_arg not in range(1, 13):
