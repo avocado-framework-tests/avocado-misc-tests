@@ -45,14 +45,14 @@ class PPC64Test(Test):
         if SoftwareManager().check_installed("powerpc-utils") is False:
             if SoftwareManager().install("powerpc-utils") is False:
                 self.cancel("powerpc-utils is not installing")
-        smt_op = process.system_output("ppc64_cpu --smt")
+        self.smt_str = "ppc64_cpu --smt"
+        smt_op = process.system_output(self.smt_str, shell=True)
         if "is not SMT capable" in smt_op:
             self.cancel("Machine is not SMT capable")
         if "Inconsistent state" in smt_op:
             self.cancel("Machine has mix of ST and SMT cores")
 
-        self.curr_smt = process.system_output(
-            "ppc64_cpu --smt", shell=True).strip().split("=")[-1].split()[-1]
+        self.curr_smt = smt_op.strip().split("=")[-1].split()[-1]
         self.smt_subcores = 0
         if os.path.exists("/sys/devices/system/cpu/subcores_per_core"):
             self.smt_subcores = 1
@@ -89,7 +89,8 @@ class PPC64Test(Test):
         for i in range(2, self.max_smt_value + 1):
             self.smt_values[i] = str(i)
         for self.key, self.value in self.smt_values.iteritems():
-            process.system_output("ppc64_cpu --smt=%s" % self.key, shell=True)
+            process.system_output("%s=%s" % (self.smt_str,
+                                             self.key), shell=True)
             process.system_output("ppc64_cpu --info")
             self.smt()
             self.core()
@@ -109,7 +110,7 @@ class PPC64Test(Test):
         Tests the SMT in ppc64_cpu command.
         """
         op1 = process.system_output(
-            "ppc64_cpu --smt", shell=True).strip().split("=")[-1].split()[-1]
+            self.smt_str, shell=True).strip().split("=")[-1].split()[-1]
         self.equality_check("SMT", op1, self.value)
 
     def core(self):
@@ -173,7 +174,7 @@ class PPC64Test(Test):
         Tests smt on/off in a loop
         """
         for _ in range(1, 100):
-            if process.system("ppc64_cpu --smt=off && ppc64_cpu --smt=on",
+            if process.system("%s=off && %s=on" % (self.smt_str, self.smt_str),
                               shell=True):
                 self.fail('SMT loop test failed')
 
@@ -181,7 +182,8 @@ class PPC64Test(Test):
         """
         Sets back SMT to original value as was before the test.
         """
-        process.system_output("ppc64_cpu --smt=%s" % self.curr_smt, shell=True)
+        process.system_output("%s=%s" % (self.smt_str,
+                                         self.curr_smt), shell=True)
         process.system_output("dmesg")
 
 
