@@ -232,8 +232,8 @@ class NetDataTest(Test):
         if 'yes' in self.eth_state:
             process.system("ifconfig %s up" % self.iface, shell=True)
             if self.ip_set:
-                process.system("ifdown %s" % self.iface, shell=True)
-                process.system("ifup %s" % self.iface, shell=True)
+                process.system("ip link set %s down" % self.iface, shell=True)
+                process.system("ip link set %s up" % self.iface, shell=True)
         else:
             process.system("ifconfig %s down" % self.iface, shell=True)
 
