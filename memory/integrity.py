@@ -63,9 +63,13 @@ class Integrity(Test):
         Execute Integrity tests
         '''
         os.chdir(self.build_dir)
-        if process.system('./mem_integrity_test -s %s' % self.scenario_arg,
-                          shell=True, ignore_status=True) != 0:
-            self.fail("Test failed")
+        status = process.system('./mem_integrity_test -s %s' %
+                                self.scenario_arg, shell=True, ignore_status=True)
+        if status != 0:
+            if status == 255:
+                self.cancel("System does not have numa/memory to run the test")
+            else:
+                self.fail("Test failed")
 
 
 if __name__ == "__main__":
