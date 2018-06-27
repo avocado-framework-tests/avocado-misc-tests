@@ -1,0 +1,8 @@
+ip: "x.x.x.x"
+user_name: "root"
+password: "abc123"
+prompt: "~]#"
+ip_server: "x.x.x.x"
+user_name_server: "root"
+password_server: "abc123"
+prompt_server: "~]#"
