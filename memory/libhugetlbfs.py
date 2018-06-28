@@ -68,8 +68,8 @@ class libhugetlbfs(Test):
             op = glob.glob("/usr/lib*/libpthread.a")
 
         if not op:
-            self.error("libpthread.a is required!!!"
-                       "\nTry installing glibc-static")
+            self.cancel("libpthread.a is required!!!"
+                        "\nTry installing glibc-static")
 
         # Get arguments:
         self.hugetlbfs_dir = self.params.get('hugetlbfs_dir', default=None)
@@ -83,16 +83,16 @@ class libhugetlbfs(Test):
                                                       verbose=False,
                                                       shell=True)
             if 'HugePages_' not in Hugepages_support:
-                self.error("No Hugepages Configured")
+                self.cancel("No Hugepages Configured")
             memory.set_num_huge_pages(pages_requested)
             pages_available = memory.get_num_huge_pages()
         else:
-            self.error("Kernel does not support hugepages")
+            self.cancel("Kernel does not support hugepages")
 
         # Check no of hugepages :
         if pages_available < pages_requested:
-            self.error('%d pages available, < %d pages requested'
-                       % (pages_available, pages_requested))
+            self.cancel('%d pages available, < %d pages requested'
+                        % (pages_available, pages_requested))
 
         # Check if hugetlbfs is mounted
         cmd_result = process.run('grep hugetlbfs /proc/mounts', verbose=False)
