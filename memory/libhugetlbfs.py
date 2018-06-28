@@ -99,7 +99,7 @@ class libhugetlbfs(Test):
                 self.hugetlbfs_dir = os.path.join(self.tmpdir, 'hugetlbfs')
                 os.makedirs(self.hugetlbfs_dir)
             process.system('mount -t hugetlbfs none %s' %
-                           self.hugetlbfs_dir, sudo=True)
+                           self.hugetlbfs_dir, sudo=True, ignore_status=True)
 
         git.get_repo('https://github.com/libhugetlbfs/libhugetlbfs.git',
                      destination_dir=self.workdir)
@@ -191,7 +191,8 @@ class libhugetlbfs(Test):
 
     def tearDown(self):
         if self.hugetlbfs_dir:
-            process.system('umount %s' % self.hugetlbfs_dir)
+            process.system('umount %s' %
+                           self.hugetlbfs_dir, ignore_status=True)
 
 
 if __name__ == "__main__":
