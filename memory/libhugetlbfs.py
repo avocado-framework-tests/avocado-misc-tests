@@ -28,7 +28,7 @@ from avocado.utils import kernel
 from avocado.utils import memory
 from avocado.utils import git
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import distro
+from avocado.utils import distro, genio
 
 
 class libhugetlbfs(Test):
@@ -76,9 +76,9 @@ class libhugetlbfs(Test):
         # Check hugepages:
         pages_available = 0
         if os.path.exists('/proc/sys/vm/nr_hugepages'):
-            Hugepages_support = process.system_output('cat /proc/meminfo',
-                                                      verbose=False,
-                                                      shell=True, sudo=True)
+
+            Hugepages_support = genio.read_file("/proc/meminfo").rstrip("\n")
+
             if 'HugePages_' not in Hugepages_support:
                 self.cancel("No Hugepages Configured")
             memory.set_num_huge_pages(pages_requested)
@@ -98,8 +98,10 @@ class libhugetlbfs(Test):
             if not self.hugetlbfs_dir:
                 self.hugetlbfs_dir = os.path.join(self.tmpdir, 'hugetlbfs')
                 os.makedirs(self.hugetlbfs_dir)
-            process.system('mount -t hugetlbfs none %s' %
-                           self.hugetlbfs_dir, sudo=True, ignore_status=True)
+            if process.system('mount -t hugetlbfs none %s' %
+                              self.hugetlbfs_dir, sudo=True,
+                              ignore_status=True):
+                self.cancel("hugetlbfs mount failed")
 
         git.get_repo('https://github.com/libhugetlbfs/libhugetlbfs.git',
                      destination_dir=self.workdir)
@@ -191,8 +193,9 @@ class libhugetlbfs(Test):
 
     def tearDown(self):
         if self.hugetlbfs_dir:
-            process.system('umount %s' %
-                           self.hugetlbfs_dir, ignore_status=True)
+            if process.system('umount %s' %
+                              self.hugetlbfs_dir, ignore_status=True):
+                self.log.warn("umount of hugetlbfs dir failed")
 
 
 if __name__ == "__main__":
