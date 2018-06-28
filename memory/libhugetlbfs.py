@@ -40,10 +40,7 @@ class libhugetlbfs(Test):
     '''
 
     def setUp(self):
-        # Check for root permission
-        if os.geteuid() != 0:
-            exit("You need to have root privileges to run this script."
-                 "\nPlease try again, using 'sudo'. Exiting.")
+
         # Check for basic utilities
         sm = SoftwareManager()
         detected_distro = distro.detect()
@@ -81,7 +78,7 @@ class libhugetlbfs(Test):
         if os.path.exists('/proc/sys/vm/nr_hugepages'):
             Hugepages_support = process.system_output('cat /proc/meminfo',
                                                       verbose=False,
-                                                      shell=True)
+                                                      shell=True, sudo=True)
             if 'HugePages_' not in Hugepages_support:
                 self.cancel("No Hugepages Configured")
             memory.set_num_huge_pages(pages_requested)
@@ -95,12 +92,14 @@ class libhugetlbfs(Test):
                         % (pages_available, pages_requested))
 
         # Check if hugetlbfs is mounted
-        cmd_result = process.run('grep hugetlbfs /proc/mounts', verbose=False)
+        cmd_result = process.run(
+            'grep hugetlbfs /proc/mounts', verbose=False, sudo=True)
         if not cmd_result:
             if not self.hugetlbfs_dir:
                 self.hugetlbfs_dir = os.path.join(self.tmpdir, 'hugetlbfs')
                 os.makedirs(self.hugetlbfs_dir)
-            process.system('mount -t hugetlbfs none %s' % self.hugetlbfs_dir)
+            process.system('mount -t hugetlbfs none %s' %
+                           self.hugetlbfs_dir, sudo=True)
 
         git.get_repo('https://github.com/libhugetlbfs/libhugetlbfs.git',
                      destination_dir=self.workdir)
