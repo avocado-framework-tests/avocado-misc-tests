@@ -116,6 +116,8 @@ class Lmbench(Test):
 
         os.chdir(self.sourcedir)
         build.make(self.sourcedir, extra_args='rerun')
+        build.make(self.sourcedir, extra_args='rerun')
+        build.make(self.sourcedir, extra_args='see')
 
 
 if __name__ == "__main__":
