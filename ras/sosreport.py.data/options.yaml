@@ -1,0 +1,8 @@
+list     : ['-o dlm -k dlm.lockdump', '-k filesys.dumpe2fs=on',
+            '--log-size=2000',  '-a', '--all-logs', '--build', 
+            '--chroot=always', '--chroot=auto', '--chroot=never',
+            '-n memory,samba']
+ticket_id: "test123"
+case_id  : "test123"
+file_list: ['proc/device-tree/', 'hostname', 'mount', 'netstat', 
+            'ps', 'sos_commands', 'sos_logs', 'sos_reports']
