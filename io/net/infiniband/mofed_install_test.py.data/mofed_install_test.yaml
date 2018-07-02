@@ -31,7 +31,7 @@ Options: !mux
     umad-dev-rw:
         option: --umad-dev-rw
     distro:
-        option: -U --distro rhel7.2 --with-vma
+        option: -U --distro `cat distro` --with-vma
     fw-update-only:
         option: --fw-update-only
     check-deps-only:
