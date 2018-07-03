@@ -51,7 +51,8 @@ class DlparPci(Test):
 
     def setUp(self):
         '''
-        set up required packages and gather necessary test inputs
+        set up required packages and gather necessary test inputs.
+        Test all services.
         '''
         sm = SoftwareManager()
         detected_distro = distro.detect()
@@ -77,6 +78,23 @@ class DlparPci(Test):
             os.chdir(self.workdir)
             process.run('chmod +x ibmtools')
             process.run('./ibmtools --install --managed')
+        try:
+            process.run("startsrc -g rsct", shell=True, sudo=True)
+        except CmdError as details:
+            self.log.debug(str(details))
+            self.cancel("Command startsrc -g rsct failed")
+
+        try:
+            process.run("startsrc -g rsct_rm", shell=True, sudo=True)
+        except CmdError as details:
+            self.log.debug(str(details))
+            self.cancel("Command startsrc -g rsct_rm failed")
+
+        output = process.system_output("lssrc -a", ignore_status=True,
+                                       shell=True, sudo=True)
+        if "inoperative" in output:
+            self.cancel("Failed to start the rsct and rsct_rm services")
+
         self.hmc_ip = self.params.get("hmc_ip", '*', default=None)
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default=None)
         self.hmc_username = self.params.get("hmc_username", '*', default=None)
@@ -136,25 +154,8 @@ class DlparPci(Test):
 
     def test(self):
         '''
-        Test all services and start the DLPAR of drc device
         DLPAR remove, add and move operations from lpar_1 to lpar_2
         '''
-        try:
-            process.run("startsrc -g rsct", shell=True, sudo=True)
-        except CmdError as details:
-            self.log.debug(str(details))
-            self.fail("Command startsrc -g rsct failed")
-
-        try:
-            process.run("startsrc -g rsct_rm", shell=True, sudo=True)
-        except CmdError as details:
-            self.log.debug(str(details))
-            self.fail("Command startsrc -g rsct_rm failed")
-
-        output = process.system_output("lssrc -a", ignore_status=True,
-                                       shell=True, sudo=True)
-        if "inoperative" in output:
-            self.fail("Failed to start the rsct and rsct_rm services")
         for i in range(self.num_of_dlpar):
             self.dlpar_remove()
             self.dlpar_add()
