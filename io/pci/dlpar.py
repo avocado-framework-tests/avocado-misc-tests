@@ -152,7 +152,7 @@ class DlparPci(Test):
         c.prompt(timeout)
         return output
 
-    def test(self):
+    def test_dlpar(self):
         '''
         DLPAR remove, add and move operations from lpar_1 to lpar_2
         '''
@@ -160,6 +160,26 @@ class DlparPci(Test):
             self.dlpar_remove()
             self.dlpar_add()
             self.dlpar_move()
+
+    def test_drmgr(self):
+        '''
+        drmgr remove, add and replace operations
+        '''
+        self.do_drmgr('Q')
+        for _ in range(self.num_of_dlpar):
+            self.do_drmgr('r')
+            self.do_drmgr('a')
+        for _ in range(self.num_of_dlpar):
+            self.do_drmgr('R')
+
+    def do_drmgr(self, operation):
+        '''
+        drmgr operation
+        '''
+        cmd = "echo -e \"\n\" | drmgr -c pci -s %s -%s" % (self.loc_code,
+                                                           operation)
+        if process.system(cmd, shell=True, sudo=True, ignore_status=True):
+            self.fail("drmgr operation %s fails" % operation)
 
     def dlpar_remove(self):
         '''
