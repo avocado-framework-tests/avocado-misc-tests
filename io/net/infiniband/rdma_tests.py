@@ -76,7 +76,10 @@ class RDMA(Test):
         elif detected_distro.name in ['rhel', 'fedora', 'redhat']:
             cmd = "systemctl stop firewalld"
         elif detected_distro.name == "SuSE":
-            cmd = "rcSuSEfirewall2 stop"
+            if detected_distro.version == 15:
+                cmd = "systemctl stop firewalld"
+            else:
+                cmd = "rcSuSEfirewall2 stop"
         elif detected_distro.name == "centos":
             cmd = "service iptables stop"
         else:
