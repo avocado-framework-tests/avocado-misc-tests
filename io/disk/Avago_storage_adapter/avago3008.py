@@ -245,7 +245,7 @@ class Avago3008(Test):
         cmd = "%s %d display | grep 'vr1' -B 2 | grep 'Volume ID' | \
                awk '{print $4}'" % (self.tool_location, self.controller)
         volume_id = int(process.system_output(cmd, shell=True))
-        return volume_id
+        return int(volume_id)
 
     def sleepfunction(self):
         """
