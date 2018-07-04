@@ -61,7 +61,7 @@ class Iperf(Test):
                                         self.peer_ip)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.cancel("unable to copy the iperf into peer machine")
-        cmd = "ssh %s@%s \"cd /tmp/iperf-master;./configure; " \
+        cmd = "ssh %s@%s \"cd /tmp/iperf-master;./bootstrap.sh;./configure;" \
               "make\"" % (self.peer_user, self.peer_ip)
         if process.system(cmd, ignore_status=True, shell=True, sudo=True):
             self.cancel("Unable to compile Iperf into peer machine")
@@ -72,6 +72,7 @@ class Iperf(Test):
             obj = process.SubProcess(cmd, verbose=False, shell=True)
             obj.start()
         os.chdir(self.iperf_dir)
+        process.system('./bootstrap.sh', shell=True)
         process.system('./configure', shell=True)
         build.make(self.iperf_dir)
         self.iperf = os.path.join(self.iperf_dir, 'src')
@@ -86,7 +87,7 @@ class Iperf(Test):
         messages using multiple threads or processes.
         """
         os.chdir(self.iperf)
-        cmd = "iperf3 -c %s" % self.peer_ip
+        cmd = "./iperf3 -c %s" % self.peer_ip
         result = process.run(cmd, shell=True, ignore_status=True)
         if result.exit_status:
             self.fail("FAIL: Iperf Run failed")
