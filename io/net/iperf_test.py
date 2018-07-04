@@ -54,7 +54,8 @@ class Iperf(Test):
         iperf_download = self.params.get("iperf_download", default="https:"
                                          "//github.com/esnet/"
                                          "iperf/archive/master.zip")
-        tarball = self.fetch_asset(iperf_download, expire='7d')
+        tarball = self.fetch_asset("iperf.zip", locations=[iperf_download],
+                                   expire='7d')
         archive.extract(tarball, self.teststmpdir)
         self.iperf_dir = os.path.join(self.teststmpdir, "iperf-master")
         cmd = "scp -r %s %s@%s:/tmp" % (self.iperf_dir, self.peer_user,
