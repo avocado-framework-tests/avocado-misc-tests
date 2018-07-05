@@ -130,8 +130,7 @@ class Avago3008(Test):
         """
         Deletes the existing raid in the LSI controller
         """
-        cmd = "echo -e 'YES\nNO' | %s %d delete" \
-              % (self.tool_location, self.controller)
+        cmd = "%s %d delete noprompt" % (self.tool_location, self.controller)
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Unable to clear entire configuration before starting")
 
@@ -234,8 +233,8 @@ class Avago3008(Test):
         """
         This function deletes raid array
         """
-        cmd = "echo -e 'YES\nNO' | %s %d deletevolume %d" \
-              % (self.tool_location, self.controller, self.volumeid())
+        cmd = "%s %d deletevolume %d noprompt" % (
+            self.tool_location, self.controller, self.volumeid())
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail("Failed to delete raid array VR1")
 
@@ -246,7 +245,7 @@ class Avago3008(Test):
         cmd = "%s %d display | grep 'vr1' -B 2 | grep 'Volume ID' | \
                awk '{print $4}'" % (self.tool_location, self.controller)
         volume_id = int(process.system_output(cmd, shell=True))
-        return volume_id
+        return int(volume_id)
 
     def sleepfunction(self):
         """
