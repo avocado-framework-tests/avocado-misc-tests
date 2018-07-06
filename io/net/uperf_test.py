@@ -62,7 +62,8 @@ class Uperf(Test):
         uperf_download = self.params.get("uperf_download", default="https:"
                                          "//github.com/uperf/uperf/"
                                          "archive/master.zip")
-        tarball = self.fetch_asset(uperf_download, expire='7d')
+        tarball = self.fetch_asset("uperf.zip", locations=[uperf_download],
+                                   expire='7d')
         archive.extract(tarball, self.teststmpdir)
         self.uperf_dir = os.path.join(self.teststmpdir, "uperf-master")
         cmd = "scp -r %s %s@%s:/tmp" % (self.uperf_dir, self.peer_user,
