@@ -45,6 +45,10 @@ class service_check(Test):
                 services_list.append('firewalld')
             else:
                 services_list.append('SuSEfirewall2')
+        elif detected_distro.name == 'Ubuntu':
+            deps.extend(['opal-prd'])
+            if detected_distro.version >= 17:
+                services_list.remove('networking')
 
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
@@ -56,9 +60,6 @@ class service_check(Test):
                 services_list.remove('opal_errd')
         else:
             services_list.extend(['rtas_errd'])
-        if 'Ubuntu' in detected_distro.name:
-            if detected_distro.version >= 17:
-                services_list.remove('networking')
         services_failed = []
         runner = process.run
 
