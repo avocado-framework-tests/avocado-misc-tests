@@ -108,15 +108,19 @@ class DlparPci(Test):
             self.cancel("Failed to get the location code for the pci device")
         self.login(self.hmc_ip, self.hmc_username, self.hmc_pwd)
         self.run_command("uname -a")
-        cmd = 'lshwres -r io -m ' + self.server + \
-              ' --rsubtype slot --filter lpar_names=' + self.lpar_1 + \
-              ' -F drc_index,lpar_id,drc_name | grep -i %s ' % self.loc_code
-
+        cmd = 'lshwres -r io -m %s --rsubtype slot --filter lpar_names=%s ' \
+              '-F drc_index,lpar_id,drc_name,bus_id' % (self.server,
+                                                        self.lpar_1)
         output = self.run_command(cmd)
-        self.drc_index = output[-1].split(',')[0]
-        self.lpar_id = output[-1].split(',')[1]
-        self.log.info("lpar_id : %s, loc_code: %s, drc_index: %s",
-                      self.lpar_id, self.loc_code, self.drc_index)
+        for line in output:
+            if self.loc_code in line:
+                self.drc_index = line.split(',')[0]
+                self.lpar_id = line.split(',')[1]
+                self.phb = line.split(',')[3]
+                break
+
+        self.log.info("lpar_id : %s, loc_code: %s, drc_index: %s, phb: %s",
+                      self.lpar_id, self.loc_code, self.drc_index, self.phb)
 
     def login(self, ip, username, password):
         '''
@@ -161,25 +165,40 @@ class DlparPci(Test):
             self.dlpar_add()
             self.dlpar_move()
 
-    def test_drmgr(self):
+    def test_drmgr_pci(self):
         '''
         drmgr remove, add and replace operations
         '''
-        self.do_drmgr('Q')
         for _ in range(self.num_of_dlpar):
-            self.do_drmgr('r')
-            self.do_drmgr('a')
+            self.do_drmgr_pci('r')
+            self.do_drmgr_pci('a')
         for _ in range(self.num_of_dlpar):
-            self.do_drmgr('R')
+            self.do_drmgr_pci('R')
 
-    def do_drmgr(self, operation):
+    def test_drmgr_phb(self):
         '''
-        drmgr operation
+        drmgr remove, add and replace operations
+        '''
+        for _ in range(self.num_of_dlpar):
+            self.do_drmgr_phb('r')
+            self.do_drmgr_phb('a')
+
+    def do_drmgr_pci(self, operation):
+        '''
+        drmgr operation for pci
         '''
         cmd = "echo -e \"\n\" | drmgr -c pci -s %s -%s" % (self.loc_code,
                                                            operation)
         if process.system(cmd, shell=True, sudo=True, ignore_status=True):
-            self.fail("drmgr operation %s fails" % operation)
+            self.fail("drmgr operation %s fails for PCI" % operation)
+
+    def do_drmgr_phb(self, operation):
+        '''
+        drmgr operation for phb
+        '''
+        cmd = "drmgr -c phb -s \"PHB %s\" -%s" % (self.phb, operation)
+        if process.system(cmd, shell=True, sudo=True, ignore_status=True):
+            self.fail("drmgr operation %s fails for PHB" % operation)
 
     def dlpar_remove(self):
         '''
