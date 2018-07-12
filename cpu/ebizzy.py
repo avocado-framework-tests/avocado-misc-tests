@@ -60,9 +60,8 @@ class Ebizzy(Test):
 
         patch = self.params.get(
             'patch', default='Fix-build-issues-with-ebizzy.patch')
-        data_dir = self.get_data(patch)
         os.chdir(self.sourcedir)
-        p1 = 'patch -p0 < %s/%s' % (data_dir, patch)
+        p1 = 'patch -p0 < %s' % (self.get_data(patch))
         process.run(p1, shell=True)
         process.run('[ -x configure ] && ./configure', shell=True)
         build.make(self.sourcedir)
