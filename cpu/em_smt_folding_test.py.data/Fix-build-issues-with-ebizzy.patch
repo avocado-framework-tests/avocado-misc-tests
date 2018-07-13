@@ -1,0 +1,11 @@
+--- configure	2007-10-02 08:19:45.000000000 +0530
++++ configure.new	2018-03-28 11:58:23.121008320 +0530
+@@ -31,7 +31,7 @@
+ all: ebizzy
+ 
+ ebizzy: ebizzy.c
+-	gcc -Wall -Wshadow ${LIBS} ${FLAGS} -o ebizzy ebizzy.c
++	gcc -Wall -Wshadow  ${FLAGS} -o ebizzy ebizzy.c ${LIBS}
+ 
+ clean:
+ 	rm -f ebizzy Makefile 
