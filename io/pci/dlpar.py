@@ -15,6 +15,10 @@
 # Author: Pridhiviraj Paidipeddi <ppaidipe@linux.vnet.ibm.com>
 # Author: Venkat Rao B <vrbagal1@linux.vnet.ibm.com>
 
+"""
+DLPAR operations
+"""
+
 import os
 import shutil
 try:
@@ -31,6 +35,9 @@ from avocado.utils.process import CmdError
 
 
 class CommandFailed(Exception):
+    '''
+    Class for Command Failures.
+    '''
     def __init__(self, command, output, exitcode):
         self.command = command
         self.output = output
@@ -54,15 +61,15 @@ class DlparPci(Test):
         set up required packages and gather necessary test inputs.
         Test all services.
         '''
-        sm = SoftwareManager()
+        smm = SoftwareManager()
         detected_distro = distro.detect()
-        self.log.info("Test is running on:" + detected_distro.name)
-        if not sm.check_installed("ksh") and not sm.install("ksh"):
-            self.error('ksh is needed for the test to be run')
+        self.log.info("Test is running on: %s", detected_distro.name)
+        if not smm.check_installed("ksh") and not smm.install("ksh"):
+            self.cancel('ksh is needed for the test to be run')
         if detected_distro.name == "Ubuntu":
-            if not sm.check_installed("python-paramiko") and not \
-                                      sm.install("python-paramiko"):
-                self.error('python-paramiko is needed for the test to be run')
+            if not smm.check_installed("python-paramiko") and not \
+                                      smm.install("python-paramiko"):
+                self.cancel('python-paramiko is needed for the test to be run')
             ubuntu_url = self.params.get('ubuntu_url', default=None)
             debs = self.params.get('debs', default=None)
             for deb in debs:
@@ -108,78 +115,97 @@ class DlparPci(Test):
             self.cancel("Failed to get the location code for the pci device")
         self.login(self.hmc_ip, self.hmc_username, self.hmc_pwd)
         self.run_command("uname -a")
-        cmd = 'lshwres -r io -m ' + self.server + \
-              ' --rsubtype slot --filter lpar_names=' + self.lpar_1 + \
-              ' -F drc_index,lpar_id,drc_name | grep -i %s ' % self.loc_code
-
+        cmd = 'lshwres -r io -m %s --rsubtype slot --filter lpar_names=%s ' \
+              '-F drc_index,lpar_id,drc_name,bus_id' % (self.server,
+                                                        self.lpar_1)
         output = self.run_command(cmd)
-        self.drc_index = output[-1].split(',')[0]
-        self.lpar_id = output[-1].split(',')[1]
-        self.log.info("lpar_id : %s, loc_code: %s, drc_index: %s",
-                      self.lpar_id, self.loc_code, self.drc_index)
+        for line in output:
+            if self.loc_code in line:
+                self.drc_index = line.split(',')[0]
+                self.lpar_id = line.split(',')[1]
+                self.phb = line.split(',')[3]
+                break
 
-    def login(self, ip, username, password):
+        self.log.info("lpar_id : %s, loc_code: %s, drc_index: %s, phb: %s",
+                      self.lpar_id, self.loc_code, self.drc_index, self.phb)
+
+    def login(self, ip_addr, username, password):
         '''
         SSH Login method for remote server
         '''
-        p = pxssh.pxssh()
+        ssh = pxssh.pxssh()
         # Work-around for old pxssh not having options= parameter
-        p.SSH_OPTS = p.SSH_OPTS + " -o 'StrictHostKeyChecking=no'"
-        p.SSH_OPTS = p.SSH_OPTS + " -o 'UserKnownHostsFile /dev/null' "
-        p.force_password = True
+        ssh.SSH_OPTS = ssh.SSH_OPTS + " -o 'StrictHostKeyChecking=no' "
+        ssh.SSH_OPTS = ssh.SSH_OPTS + " -o 'UserKnownHostsFile /dev/null' "
+        ssh.force_password = True
 
-        p.login(ip, username, password)
-        p.sendline()
-        p.prompt(timeout=60)
+        ssh.login(ip_addr, username, password)
+        ssh.sendline()
+        ssh.prompt(timeout=60)
         # Ubuntu likes to be "helpful" and alias grep to
         # include color, which isn't helpful at all. So let's
         # go back to absolutely no messing around with the shell
-        p.set_unique_prompt()
-        p.prompt(timeout=60)
-        self.pxssh = p
+        ssh.set_unique_prompt()
+        ssh.prompt(timeout=60)
+        self.pxssh = ssh
 
     def run_command(self, command, timeout=300):
         '''
         SSH Run command method for running commands on remote server
         '''
         self.log.info("Running the command on hmc %s", command)
-        c = self.pxssh
-        c.sendline(command)
-        c.expect("\n")  # from us
-        c.expect(c.PROMPT, timeout=timeout)
-        output = c.before.splitlines()
-        c.sendline("echo $?")
-        c.prompt(timeout)
+        hmc = self.pxssh
+        hmc.sendline(command)
+        hmc.expect("\n")  # from us
+        hmc.expect(hmc.PROMPT, timeout=timeout)
+        output = hmc.before.splitlines()
+        hmc.sendline("echo $?")
+        hmc.prompt(timeout)
         return output
 
     def test_dlpar(self):
         '''
         DLPAR remove, add and move operations from lpar_1 to lpar_2
         '''
-        for i in range(self.num_of_dlpar):
+        for _ in range(self.num_of_dlpar):
             self.dlpar_remove()
             self.dlpar_add()
             self.dlpar_move()
 
-    def test_drmgr(self):
+    def test_drmgr_pci(self):
         '''
         drmgr remove, add and replace operations
         '''
-        self.do_drmgr('Q')
         for _ in range(self.num_of_dlpar):
-            self.do_drmgr('r')
-            self.do_drmgr('a')
+            self.do_drmgr_pci('r')
+            self.do_drmgr_pci('a')
         for _ in range(self.num_of_dlpar):
-            self.do_drmgr('R')
+            self.do_drmgr_pci('R')
 
-    def do_drmgr(self, operation):
+    def test_drmgr_phb(self):
         '''
-        drmgr operation
+        drmgr remove, add and replace operations
+        '''
+        for _ in range(self.num_of_dlpar):
+            self.do_drmgr_phb('r')
+            self.do_drmgr_phb('a')
+
+    def do_drmgr_pci(self, operation):
+        '''
+        drmgr operation for pci
         '''
         cmd = "echo -e \"\n\" | drmgr -c pci -s %s -%s" % (self.loc_code,
                                                            operation)
         if process.system(cmd, shell=True, sudo=True, ignore_status=True):
-            self.fail("drmgr operation %s fails" % operation)
+            self.fail("drmgr operation %s fails for PCI" % operation)
+
+    def do_drmgr_phb(self, operation):
+        '''
+        drmgr operation for phb
+        '''
+        cmd = "drmgr -c phb -s \"PHB %s\" -%s" % (self.phb, operation)
+        if process.system(cmd, shell=True, sudo=True, ignore_status=True):
+            self.fail("drmgr operation %s fails for PHB" % operation)
 
     def dlpar_remove(self):
         '''
@@ -243,17 +269,23 @@ class DlparPci(Test):
                       dlpar move to lpar_1")
 
     def listhwres(self, server, lpar, drc_index):
+        '''
+        lists the drc index resources
+        '''
         cmd = 'lshwres -r io -m %s \
                --rsubtype slot --filter lpar_names= %s \
                | grep -i %s' % (server, lpar, drc_index)
         try:
             cmd = self.run_command(cmd)
-        except CommandFailed as cf:
-            self.log.debug(str(cf))
+        except CommandFailed as cmd_fail:
+            self.log.debug(str(cmd_fail))
             self.fail("lshwres operation failed ")
         return cmd
 
     def changehwres(self, server, operation, lpar_id, lpar, drc_index, msg):
+        '''
+        changes the drc index resource: add / remove / move
+        '''
         if operation == 'm':
             cmd = 'chhwres -r io --rsubtype slot -m %s \
                -o %s --id %s -t %s -l %s ' % (server, operation, lpar_id,
@@ -264,8 +296,8 @@ class DlparPci(Test):
                                             drc_index)
         try:
             cmd = self.run_command(cmd)
-        except CommandFailed as cf:
-            self.log.debug(str(cf))
+        except CommandFailed as cmd_fail:
+            self.log.debug(str(cmd_fail))
             self.fail("dlpar %s operation failed" % msg)
 
     def tearDown(self):
