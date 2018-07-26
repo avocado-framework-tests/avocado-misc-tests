@@ -128,6 +128,7 @@ class Bonding(Test):
               "'{ print $2 }'" % self.host_interfaces[0]
         self.gateway = process.system_output(
             '%s' % cmd, shell=True)
+        self.err = []
 
     def bond_remove(self, arg1):
         '''
@@ -197,10 +198,11 @@ class Bonding(Test):
                 if self.ping_check():
                     self.log.info("Ping passed for Mode %s", arg1)
                 else:
-                    self.fail("ping failed in Mode %s, check \
-                               bonding configuration" % arg1)
-                process.system_output(self.bond_status, shell=True,
-                                      verbose=True)
+                    error_str = "Ping fail in Mode %s when interface %s down"\
+                        % (arg1, interface)
+                    self.log.debug(error_str)
+                    self.err.append(error_str)
+
                 cmd = "ip link set %s up" % interface
                 time.sleep(self.sleep_time)
                 if process.system(cmd, shell=True, ignore_status=True) != 0:
@@ -336,6 +338,8 @@ class Bonding(Test):
         self.ping_check()
         self.bond_fail(self.mode)
         self.log.info("Mode %s OK", self.mode)
+        if self.err:
+            self.fail("Tests failed. Details:\n%s" % "\n".join(self.err))
 
     def tearDown(self):
         '''
