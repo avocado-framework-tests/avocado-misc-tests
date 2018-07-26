@@ -33,6 +33,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import distro
 from avocado.utils import process
 from avocado.utils import linux_modules
+from avocado.utils import genio
 
 
 class Bonding(Test):
@@ -252,6 +253,7 @@ class Bonding(Test):
             cmd = "echo 100 > /sys/class/net/%s/bonding/miimon"\
                   % self.bond_name
             process.system(cmd, shell=True, ignore_status=True)
+            genio.write_file("%s/bonding/fail_over_mac" % self.bond_dir, "2")
             for val in self.host_interfaces:
                 cmd = "echo '+%s' > %s"\
                       % (val, self.bonding_slave_file)
@@ -297,6 +299,8 @@ class Bonding(Test):
             cmd += 'echo 0 > /sys/class/net/%s/bonding/mode;'\
                    % self.bond_name
             cmd += 'echo 100 > /sys/class/net/%s/bonding/miimon;'\
+                   % self.bond_name
+            cmd += 'echo 2 > /sys/class/net/%s/bonding/fail_over_mac;'\
                    % self.bond_name
             for val in self.peer_interfaces:
                 cmd += 'echo "+%s" > %s;' % (val, self.bonding_slave_file)
