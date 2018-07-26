@@ -82,9 +82,6 @@ class Bonding(Test):
                                                           shell=True).strip()
         if self.peer_first_interface == "":
             self.fail("test failed because peer interface can not retrieved")
-        self.bond_name = self.params.get("bond_name", default="tempbond")
-        self.bond_status = "cat /proc/net/bonding/%s" % self.bond_name
-        self.bond_dir = os.path.join("/sys/class/net/", self.bond_name)
         self.mode = self.params.get("bonding_mode", default="")
         if self.mode == "":
             self.cancel("test skipped because mode not specified")
@@ -118,8 +115,12 @@ class Bonding(Test):
                                                                     val1))
                 mask = socket.inet_ntoa(tmp[20:24]).strip('\n')
             self.net_mask.append(mask)
-        self.bonding_slave_file = "/sys/class/net/%s/bonding/slaves"\
-                                  % self.bond_name
+        self.bond_name = self.params.get("bond_name", default="tempbond")
+        self.net_path = "/sys/class/net/"
+        self.bond_status = "/proc/net/bonding/%s" % self.bond_name
+        self.bond_dir = os.path.join(self.net_path, self.bond_name)
+        self.bonding_slave_file = "%s/bonding/slaves" % self.bond_dir
+        self.bonding_masters_file = "%s/bonding_masters" % self.net_path
         self.peer_bond_needed = self.params.get("peer_bond_needed",
                                                 default=False)
         self.peer_wait_time = self.params.get("peer_wait_time", default=5)
@@ -141,12 +142,8 @@ class Bonding(Test):
                 cmd = "ip link set %s down" % ifs
                 if process.system(cmd, shell=True, ignore_status=True) != 0:
                     self.log.info("unable to bring down the interface")
-                cmd = "echo -%s > %s" % (ifs, self.bonding_slave_file)
-                if process.system(cmd, shell=True, ignore_status=True) != 0:
-                    self.log.info("bond removing failed in local machine")
-            cmd = "echo -%s > /sys/class/net/bonding_masters" % self.bond_name
-            if process.system(cmd, shell=True, ignore_status=True) != 0:
-                self.log.info("bond removing command failed in local machine")
+                genio.write_file(self.bonding_slave_file, "-%s" % ifs)
+            genio.write_file(self.bonding_masters_file, "-%s" % self.bond_name)
             self.log.info("Removing bonding module")
             linux_modules.unload_module("bonding")
             time.sleep(self.sleep_time)
@@ -161,8 +158,8 @@ class Bonding(Test):
                 cmd += 'ip addr flush dev %s;' % val
             for val in self.peer_interfaces:
                 cmd += 'echo "-%s" > %s;' % (val, self.bonding_slave_file)
-            cmd += 'echo "-%s" > /sys/class/net/bonding_masters;'\
-                   % self.bond_name
+            cmd += 'echo "-%s" > %s;' % (self.bond_name,
+                                         self.bonding_masters_file)
             cmd += 'rmmod bonding;'
             cmd += 'ip addr add %s/%s dev %s;ip link set %s up;sleep 5;'\
                    % (self.peer_first_ipinterface, self.net_mask[0],
@@ -202,7 +199,7 @@ class Bonding(Test):
                         % (arg1, interface)
                     self.log.debug(error_str)
                     self.err.append(error_str)
-
+                self.log.info(genio.read_file(self.bond_status))
                 cmd = "ip link set %s up" % interface
                 time.sleep(self.sleep_time)
                 if process.system(cmd, shell=True, ignore_status=True) != 0:
@@ -223,7 +220,7 @@ class Bonding(Test):
             time.sleep(self.sleep_time)
         if not self.ping_check():
             self.log.info("Ping to Bond interface failed. This is expected")
-        process.system_output(self.bond_status, shell=True, verbose=True)
+        self.log.info(genio.read_file(self.bond_status))
         for interface in self.host_interfaces:
             cmd = "ip link set %s up" % interface
             time.sleep(self.sleep_time)
@@ -245,25 +242,18 @@ class Bonding(Test):
             for ifs in self.host_interfaces:
                 cmd = "ip link set %s down" % ifs
                 process.system(cmd, shell=True, ignore_status=True)
-            cmd = "modprobe bonding"
-            process.system(cmd, shell=True, ignore_status=True)
-            cmd = "echo +%s > /sys/class/net/bonding_masters" % self.bond_name
-            process.system(cmd, shell=True, ignore_status=True)
-            cmd = "echo %s > /sys/class/net/%s/bonding/mode"\
-                  % (arg2, self.bond_name)
-            process.system(cmd, shell=True, ignore_status=True)
-            cmd = "echo 100 > /sys/class/net/%s/bonding/miimon"\
-                  % self.bond_name
-            process.system(cmd, shell=True, ignore_status=True)
+            linux_modules.load_module("bonding")
+            genio.write_file(self.bonding_masters_file, "+%s" % self.bond_name)
+            genio.write_file("%s/bonding/mode" % self.bond_dir, arg2)
+            genio.write_file("%s/bonding/miimon" % self.bond_dir, "100")
             genio.write_file("%s/bonding/fail_over_mac" % self.bond_dir, "2")
             for val in self.host_interfaces:
-                cmd = "echo '+%s' > %s"\
-                      % (val, self.bonding_slave_file)
-                if process.system(cmd, shell=True, ignore_status=True) != 0:
-                    self.fail("Mode %s FAIL while bonding setup" % arg2)
+                genio.write_file(self.bonding_slave_file, "+%s" % val)
                 time.sleep(2)
-            cmd = "%s | grep 'Bonding Mode'|cut -d ':' -f 2" % self.bond_status
-            bond_name_val = process.system_output(cmd, shell=True).strip('\n')
+            bond_name_val = ''
+            for line in genio.read_file(self.bond_status).splitlines():
+                if 'Bonding Mode' in line:
+                    bond_name_val = line.split(':')[1]
             self.log.info("Trying bond mode %s [ %s ]", arg2, bond_name_val)
             for ifs in self.host_interfaces:
                 cmd = "ip link set %s up" % ifs
@@ -296,14 +286,14 @@ class Bonding(Test):
             for val in self.peer_interfaces:
                 cmd += 'ip link set %s down;' % val
             cmd += 'modprobe bonding;'
-            cmd += 'echo +%s > /sys/class/net/bonding_masters;'\
-                   % self.bond_name
-            cmd += 'echo 0 > /sys/class/net/%s/bonding/mode;'\
-                   % self.bond_name
-            cmd += 'echo 100 > /sys/class/net/%s/bonding/miimon;'\
-                   % self.bond_name
-            cmd += 'echo 2 > /sys/class/net/%s/bonding/fail_over_mac;'\
-                   % self.bond_name
+            cmd += 'echo +%s > %s;'\
+                   % (self.bond_name, self.bonding_masters_file)
+            cmd += 'echo 0 > %s/bonding/mode;'\
+                   % self.bond_dir
+            cmd += 'echo 100 > %s/bonding/miimon;'\
+                   % self.bond_dir
+            cmd += 'echo 2 > %s/bonding/fail_over_mac;'\
+                   % self.bond_dir
             for val in self.peer_interfaces:
                 cmd += 'echo "+%s" > %s;' % (val, self.bonding_slave_file)
             for val in self.peer_interfaces:
@@ -323,7 +313,7 @@ class Bonding(Test):
         work for multiple interfaces on both host and peer
         '''
         self.log.info("Bonding")
-        msg = "[ -d /sys/class/net/%s ]" % self.bond_name
+        msg = "[ -d %s ]" % self.bond_dir
         cmd = "ssh %s@%s %s" % (self.user, self.peer_first_ipinterface, msg)
         if process.system(cmd, shell=True, ignore_status=True) == 0:
             self.fail("bond name already exists on peer machine")
@@ -334,7 +324,7 @@ class Bonding(Test):
         if self.peer_bond_needed:
             self.bond_setup("peer", "")
         self.bond_setup("local", self.mode)
-        process.run(self.bond_status, shell=True, verbose=True)
+        self.log.info(genio.read_file(self.bond_status))
         self.ping_check()
         self.bond_fail(self.mode)
         self.log.info("Mode %s OK", self.mode)
