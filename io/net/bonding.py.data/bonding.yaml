@@ -16,7 +16,7 @@ Test: !mux
 host_interfaces: ""
 peer_ip: ""
 peer_interfaces: ""
-bond_name: "bond13"
+bond_name: "bondtest"
 user_name: "root"
 peer_bond_needed: False 
 peer_wait_time: "10"
