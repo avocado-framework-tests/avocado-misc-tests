@@ -72,30 +72,7 @@ class NetworkVirtualization(Test):
         '''
         set up required packages and gather necessary test inputs
         '''
-        smm = SoftwareManager()
-        detected_distro = distro.detect()
-        self.log.info("Test is running on %s", detected_distro.name)
-        if not smm.check_installed("ksh") and not smm.install("ksh"):
-            self.error('ksh is needed for the test to be run')
-        if detected_distro.name == "Ubuntu":
-            if not smm.check_installed("python-paramiko") and not \
-                    smm.install("python-paramiko"):
-                self.error('python-paramiko is needed for the test to be run')
-            ubuntu_url = self.params.get('ubuntu_url', default=None)
-            debs = self.params.get('debs', default=None)
-            for deb in debs:
-                deb_url = os.path.join(ubuntu_url, deb)
-                deb_install = self.fetch_asset(deb_url, expire='7d')
-                shutil.copy(deb_install, self.workdir)
-                process.system("dpkg -i %s/%s" % (self.workdir, deb),
-                               ignore_status=True, sudo=True)
-        else:
-            url = self.params.get('url', default=None)
-            rpm_install = self.fetch_asset(url, expire='7d')
-            shutil.copy(rpm_install, self.workdir)
-            os.chdir(self.workdir)
-            process.run('chmod +x ibmtools')
-            process.run('./ibmtools --install --managed')
+        self.install_packages()
         self.hmc_ip = self.params.get("hmc_ip", '*', default=None)
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default=None)
         self.hmc_username = self.params.get("hmc_username", '*', default=None)
@@ -171,6 +148,36 @@ class NetworkVirtualization(Test):
         con.sendline("echo $?")
         con.prompt(timeout)
         return output
+
+    def install_packages(self):
+        '''
+        Install packages
+        '''
+        smm = SoftwareManager()
+        detected_distro = distro.detect()
+        self.log.info("Test is running on %s", detected_distro.name)
+        if not smm.check_installed("ksh") and not smm.install("ksh"):
+            self.error('ksh is needed for the test to be run')
+        if detected_distro.name == "Ubuntu":
+            if not smm.check_installed("python-paramiko") and not \
+                    smm.install("python-paramiko"):
+                self.error('python-paramiko is needed for the test to be run')
+            ubuntu_url = self.params.get('ubuntu_url', default=None)
+            debs = self.params.get('debs', default=None)
+            for deb in debs:
+                deb_url = os.path.join(ubuntu_url, deb)
+                deb_install = self.fetch_asset(deb_url, expire='7d')
+                shutil.copy(deb_install, self.workdir)
+                process.system("dpkg -i %s/%s" % (self.workdir, deb),
+                               ignore_status=True, sudo=True)
+        else:
+            url = self.params.get('url', default=None)
+            rpm_install = self.fetch_asset(url, expire='7d')
+            shutil.copy(rpm_install, self.workdir)
+            os.chdir(self.workdir)
+            process.run('chmod +x ibmtools')
+            process.run('./ibmtools --install --managed')
+
 
     def rsct_service_start(self):
         '''
