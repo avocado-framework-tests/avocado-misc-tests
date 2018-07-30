@@ -21,8 +21,8 @@ lpar ---> lpar on which the Network virtualized interface needs to be added/dele
 server ---> name of the server which hosts the lpar
 slot_num ---> slot number on which the Network virtualized interface will be added
 vios_name ---> name of the vios used to add/remove Network virtualized interface
-sriov_adapter_id ---> id of the the adapter that is assigned to the hypervisor
-backing_adapter_id ---> id of the adapter from which the backing device has to be added
+sriov_adapter ---> location code (DRC) of the the adapter that is assigned to the hypervisor
+backing_adapter ---> location code (DRC) of the adapter from which the backing device has to be added
 sriov_port ---> port using which the Network virtualized interface will be added/removed
 backing_sriov_port ---> port using which the Backing device will be added
 Ex: if the adapter has 2 ports and the Network virtualized interface should be added using Port 1, mention value as 1 

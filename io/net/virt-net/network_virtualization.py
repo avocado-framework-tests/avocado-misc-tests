@@ -83,9 +83,9 @@ class NetworkVirtualization(Test):
         self.sriov_port = self.params.get("sriov_port", '*', default=None)
         self.backing_sriov_port = self.params.get("backing_sriov_port",
                                                   '*', default=None)
-        self.sriov_adapter_id = self.params.get("sriov_adapter_id", '*',
+        self.sriov_adapter = self.params.get("sriov_adapter", '*',
                                                 default=None)
-        self.backing_adapter_id = self.params.get("backing_adapter_id",
+        self.backing_adapter = self.params.get("backing_adapter",
                                                   '*', default=None)
         self.bandwidth = self.params.get("bandwidth", '*', default=None)
         self.count = int(self.params.get('vnic_test_count', default="1"))
@@ -104,6 +104,13 @@ class NetworkVirtualization(Test):
               ' -r lpar --filter lpar_names=' + self.vios_name + \
               ' -F lpar_id'
         self.vios_id = self.run_command(cmd)[-1]
+        cmd = 'lshwres -m %s -r sriov --rsubtype adapter -F phys_loc:adapter_id' % self.server
+        for line in self.run_command(cmd):
+            if str(self.sriov_adapter) in line:
+                self.sriov_adapter_id = line.split(':')[1]
+        for line in self.run_command(cmd):
+            if str(self.backing_adapter) in line:
+                self.backing_adapter_id = line.split(':')[1]
         self.backing_devices = "backing_devices=sriov/%s/%s/%s/%s/%s"\
                                % (self.vios_name, self.vios_id,
                                   self.sriov_adapter_id, self.sriov_port,
@@ -114,7 +121,6 @@ class NetworkVirtualization(Test):
                                      self.backing_sriov_port,
                                      self.bandwidth)
         self.rsct_service_start()
-
     def login(self, ipaddr, username, password):
         '''
         SSH Login method for remote server
