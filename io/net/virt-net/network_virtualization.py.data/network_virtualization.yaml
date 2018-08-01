@@ -8,10 +8,8 @@ lpar:
 server:
 slot_num:
 vios_name:
-sriov_adapter:
-backing_adapter:
-sriov_port:
-backing_sriov_port:
+sriov_adapters:
+sriov_ports:
 bandwidth:
 device_ip:
 netmask:
