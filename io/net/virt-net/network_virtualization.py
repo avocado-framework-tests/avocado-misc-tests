@@ -13,6 +13,7 @@
 #
 # Copyright: 2018 IBM
 # Author: Harsha Thyagaraja <harshkid@linux.vnet.ibm.com>
+# Author: Narasimhan V <sim@linux.vnet.ibm.com>
 
 '''
 Tests for Network virtualized device
@@ -79,13 +80,16 @@ class NetworkVirtualization(Test):
         self.lpar = self.params.get("lpar", '*', default=None)
         self.server = self.params.get("server", '*', default=None)
         self.slot_num = self.params.get("slot_num", '*', default=None)
-        self.vios_name = self.params.get("vios_name", '*', default=None)
+        self.vios_name = self.params.get("vios_names", '*',
+                                         default=None).split(',')
         self.sriov_port = self.params.get("sriov_ports", '*',
                                           default=None).split(',')
         self.backing_adapter = self.params.get("sriov_adapters", '*',
                                                default=None).split(',')
         if len(self.sriov_port) != len(self.backing_adapter):
             self.cancel('Backing Device counts and port counts differ')
+        if len(self.vios_name) != len(self.backing_adapter):
+            self.cancel('Backing Device counts and vios name counts differ')
         self.backingdev_count = len(self.backing_adapter)
         self.bandwidth = self.params.get("bandwidth", '*', default=None)
         self.count = int(self.params.get('vnic_test_count', default="1"))
@@ -100,10 +104,12 @@ class NetworkVirtualization(Test):
               ' -r lpar --filter lpar_names=' + self.lpar + \
               ' -F lpar_id'
         self.lpar_id = self.run_command(cmd)[-1]
-        cmd = 'lssyscfg -m ' + self.server + \
-              ' -r lpar --filter lpar_names=' + self.vios_name + \
-              ' -F lpar_id'
-        self.vios_id = self.run_command(cmd)[-1]
+        self.vios_id = []
+        for vios_name in self.vios_name:
+            cmd = 'lssyscfg -m ' + self.server + \
+                  ' -r lpar --filter lpar_names=' + vios_name + \
+                  ' -F lpar_id'
+            self.vios_id.append(self.run_command(cmd)[-1])
         cmd = 'lshwres -m %s -r sriov --rsubtype adapter -F phys_loc:adapter_id' % self.server
         adapter_id_output = self.run_command(cmd)
         self.backing_adapter_id = []
@@ -317,7 +323,7 @@ class NetworkVirtualization(Test):
         on the operation
         '''
         backing_device = "backing_devices=sriov/%s/%s/%s/%s/%s"\
-                         % (self.vios_name, self.vios_id,
+                         % (self.vios_name[0], self.vios_id[0],
                             self.backing_adapter_id[0], self.sriov_port[0],
                             self.bandwidth)
         if operation == 'add':
@@ -355,7 +361,7 @@ class NetworkVirtualization(Test):
         Adds and removes a backing device based on the operation
         '''
         add_backing_device = "sriov/%s/%s/%s/%s/%s" \
-                             % (self.vios_name, self.vios_id,
+                             % (self.vios_name[i], self.vios_id[i],
                                 self.backing_adapter_id[i],
                                 self.sriov_port[i],
                                 self.bandwidth)
@@ -422,6 +428,8 @@ class NetworkVirtualization(Test):
             if adapter_id == self.backing_adapter_id[i]:
                 if port == self.sriov_port[i]:
                     index = i
+        vios_id = self.vios_id.pop(index)
+        self.vios_id.insert(0, vios_id)
         self.sriov_port.pop(index)
         self.sriov_port.insert(0, port)
         self.backing_adapter_id.pop(index)

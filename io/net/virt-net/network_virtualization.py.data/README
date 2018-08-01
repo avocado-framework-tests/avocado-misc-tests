@@ -20,7 +20,7 @@ Explanation of the input parameters:
 lpar ---> lpar on which the Network virtualized interface needs to be added/deleted
 server ---> name of the server which hosts the lpar
 slot_num ---> slot number on which the Network virtualized interface will be added
-vios_name ---> name of the vios used to add/remove Network virtualized interface
+vios_names ---> Comma separated name of the vios used to add/remove Network virtualized interface
 sriov_adapters ---> Comma separated location code (DRC) of the the adapters that is assigned to the hypervisor
 sriov_ports ---> Comma separated ports using which the Network virtualized interface will be added/removed
 Ex: if the adapter has 2 ports and the Network virtualized interface should be added using Port 1, mention value as 0

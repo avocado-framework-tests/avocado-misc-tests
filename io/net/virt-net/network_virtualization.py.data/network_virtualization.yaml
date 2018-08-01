@@ -7,7 +7,7 @@ hmc_username:
 lpar:
 server:
 slot_num:
-vios_name:
+vios_names:
 sriov_adapters:
 sriov_ports:
 bandwidth:
