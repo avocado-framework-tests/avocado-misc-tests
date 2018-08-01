@@ -78,6 +78,7 @@ class DiagEncl(Test):
             product_path = '/proc/device-tree/model'
             serial_path = '/proc/device-tree/system-id'
         product_name = genio.read_one_line(product_path).rstrip(' \t\r\n\0')
+        product_name = product_name.split(',')[1]
         serial_num = genio.read_one_line(serial_path).rstrip(' \t\r\n\0')
         product_name_xml = "-".join((machine_type, machine_model))
         if product_name_xml != product_name:
