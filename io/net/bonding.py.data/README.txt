@@ -27,3 +27,4 @@ Requirements:
 1. install netifaces using pip
 command: pip install netifaces
 2. Generate sshkey for your test partner to run the test uninterrupted.(Have a passwordless ssh between the peers)
+3. Make sure IPs are set for interfaces to be used, via configuration file. ifup / ifdown should set the IPs back.

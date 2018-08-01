@@ -13,6 +13,7 @@
 #
 # Copyright: 2016 IBM
 # Author: Prudhvi Miryala<mprudhvi@linux.vnet.ibm.com>
+# Author Narasimhan V <sim@linux.vnet.ibm.com>
 
 """
 Bonding test
@@ -33,6 +34,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import distro
 from avocado.utils import process
 from avocado.utils import linux_modules
+from avocado.utils import genio
 
 
 class Bonding(Test):
@@ -60,6 +62,10 @@ class Bonding(Test):
         for pkg in depends:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
+        self.mode = self.params.get("bonding_mode", default="")
+        if 'setup' in str(self.name) or 'run' in str(self.name):
+            if not self.mode:
+                self.cancel("test skipped because mode not specified")
         interfaces = netifaces.interfaces()
         self.user = self.params.get("user_name", default="root")
         self.host_interfaces = self.params.get("host_interfaces",
@@ -74,6 +80,27 @@ class Bonding(Test):
         self.peer_first_ipinterface = self.params.get("peer_ip", default="")
         if not self.peer_interfaces or self.peer_first_ipinterface == "":
             self.cancel("peer machine should available")
+        self.bond_name = self.params.get("bond_name", default="tempbond")
+        self.net_path = "/sys/class/net/"
+        self.bond_status = "/proc/net/bonding/%s" % self.bond_name
+        self.bond_dir = os.path.join(self.net_path, self.bond_name)
+        self.bonding_slave_file = "%s/bonding/slaves" % self.bond_dir
+        self.bonding_masters_file = "%s/bonding_masters" % self.net_path
+        self.peer_bond_needed = self.params.get("peer_bond_needed",
+                                                default=False)
+        self.peer_wait_time = self.params.get("peer_wait_time", default=5)
+        self.sleep_time = int(self.params.get("sleep_time", default=5))
+        self.setup_ip()
+        self.err = []
+
+    def setup_ip(self):
+        '''
+        set up the IP config
+        '''
+        if 'setup' in str(self.name):
+            interface = self.host_interfaces[0]
+        else:
+            interface = self.bond_name
         msg = "ip addr show  | grep %s | grep -oE '[^ ]+$'"\
               % self.peer_first_ipinterface
         cmd = "ssh %s@%s %s" % (self.user, self.peer_first_ipinterface, msg)
@@ -81,50 +108,20 @@ class Bonding(Test):
                                                           shell=True).strip()
         if self.peer_first_interface == "":
             self.fail("test failed because peer interface can not retrieved")
-        self.bond_name = self.params.get("bond_name", default="tempbond")
-        self.bond_status = "cat /proc/net/bonding/%s" % self.bond_name
-        self.bond_dir = os.path.join("/sys/class/net/", self.bond_name)
-        self.mode = self.params.get("bonding_mode", default="")
-        if self.mode == "":
-            self.cancel("test skipped because mode not specified")
-        self.host_ips = []
         self.peer_ips = [self.peer_first_ipinterface]
-        for val in self.host_interfaces:
-            cmd = "ip -f inet -o addr show %s | awk '{print $4}' | cut -d /\
-                  -f1" % val
-            local_ip = process.system_output(cmd, shell=True).strip()
-            if local_ip == "" and val == self.host_interfaces[0]:
-                self.fail("test failed because local ip can not retrieved")
-            self.host_ips.append(local_ip)
-        for val in self.peer_interfaces:
-            msg = "ip -f inet -o addr show %s | awk '{print $4}' | cut -d /\
-                  -f1" % val
-            cmd = "ssh %s@%s \"%s\""\
-                  % (self.user, self.peer_first_ipinterface, msg)
-            peer_ip = process.system_output(cmd, shell=True).strip()
-            cmd = 'echo %s | cut -d " " -f4' % peer_ip
-            peer_ip = process.system_output(cmd, shell=True).strip()
-            if peer_ip == "" and val == self.peer_first_interface:
-                self.fail("test failed because peer ip can not retrieved")
-            self.peer_ips.append(peer_ip)
+        self.local_ip = netifaces.ifaddresses(interface)[2][0]['addr']
         self.peer_interfaces.insert(0, self.peer_first_interface)
         self.net_mask = []
         stf = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        for val1, val2 in map(None, self.host_interfaces, self.host_ips):
+        for val1, val2 in map(None, [interface], [self.local_ip]):
             mask = ""
             if val2:
                 tmp = fcntl.ioctl(stf.fileno(), 0x891b, struct.pack('256s',
                                                                     val1))
                 mask = socket.inet_ntoa(tmp[20:24]).strip('\n')
             self.net_mask.append(mask)
-        self.bonding_slave_file = "/sys/class/net/%s/bonding/slaves"\
-                                  % self.bond_name
-        self.peer_bond_needed = self.params.get("peer_bond_needed",
-                                                default=False)
-        self.peer_wait_time = self.params.get("peer_wait_time", default=5)
-        self.sleep_time = int(self.params.get("sleep_time", default=5))
         cmd = "route -n | grep %s | grep -w UG | awk "\
-              "'{ print $2 }'" % self.host_interfaces[0]
+              "'{ print $2 }'" % interface
         self.gateway = process.system_output(
             '%s' % cmd, shell=True)
 
@@ -139,12 +136,8 @@ class Bonding(Test):
                 cmd = "ip link set %s down" % ifs
                 if process.system(cmd, shell=True, ignore_status=True) != 0:
                     self.log.info("unable to bring down the interface")
-                cmd = "echo -%s > %s" % (ifs, self.bonding_slave_file)
-                if process.system(cmd, shell=True, ignore_status=True) != 0:
-                    self.log.info("bond removing failed in local machine")
-            cmd = "echo -%s > /sys/class/net/bonding_masters" % self.bond_name
-            if process.system(cmd, shell=True, ignore_status=True) != 0:
-                self.log.info("bond removing command failed in local machine")
+                genio.write_file(self.bonding_slave_file, "-%s" % ifs)
+            genio.write_file(self.bonding_masters_file, "-%s" % self.bond_name)
             self.log.info("Removing bonding module")
             linux_modules.unload_module("bonding")
             time.sleep(self.sleep_time)
@@ -159,8 +152,8 @@ class Bonding(Test):
                 cmd += 'ip addr flush dev %s;' % val
             for val in self.peer_interfaces:
                 cmd += 'echo "-%s" > %s;' % (val, self.bonding_slave_file)
-            cmd += 'echo "-%s" > /sys/class/net/bonding_masters;'\
-                   % self.bond_name
+            cmd += 'echo "-%s" > %s;' % (self.bond_name,
+                                         self.bonding_masters_file)
             cmd += 'rmmod bonding;'
             cmd += 'ip addr add %s/%s dev %s;ip link set %s up;sleep 5;'\
                    % (self.peer_first_ipinterface, self.net_mask[0],
@@ -196,10 +189,11 @@ class Bonding(Test):
                 if self.ping_check():
                     self.log.info("Ping passed for Mode %s", arg1)
                 else:
-                    self.fail("ping failed in Mode %s, check \
-                               bonding configuration" % arg1)
-                process.system_output(self.bond_status, shell=True,
-                                      verbose=True)
+                    error_str = "Ping fail in Mode %s when interface %s down"\
+                        % (arg1, interface)
+                    self.log.debug(error_str)
+                    self.err.append(error_str)
+                self.log.info(genio.read_file(self.bond_status))
                 cmd = "ip link set %s up" % interface
                 time.sleep(self.sleep_time)
                 if process.system(cmd, shell=True, ignore_status=True) != 0:
@@ -220,7 +214,7 @@ class Bonding(Test):
             time.sleep(self.sleep_time)
         if not self.ping_check():
             self.log.info("Ping to Bond interface failed. This is expected")
-        process.system_output(self.bond_status, shell=True, verbose=True)
+        self.log.info(genio.read_file(self.bond_status))
         for interface in self.host_interfaces:
             cmd = "ip link set %s up" % interface
             time.sleep(self.sleep_time)
@@ -242,31 +236,25 @@ class Bonding(Test):
             for ifs in self.host_interfaces:
                 cmd = "ip link set %s down" % ifs
                 process.system(cmd, shell=True, ignore_status=True)
-            cmd = "modprobe bonding"
-            process.system(cmd, shell=True, ignore_status=True)
-            cmd = "echo +%s > /sys/class/net/bonding_masters" % self.bond_name
-            process.system(cmd, shell=True, ignore_status=True)
-            cmd = "echo %s > /sys/class/net/%s/bonding/mode"\
-                  % (arg2, self.bond_name)
-            process.system(cmd, shell=True, ignore_status=True)
-            cmd = "echo 100 > /sys/class/net/%s/bonding/miimon"\
-                  % self.bond_name
-            process.system(cmd, shell=True, ignore_status=True)
+            linux_modules.load_module("bonding")
+            genio.write_file(self.bonding_masters_file, "+%s" % self.bond_name)
+            genio.write_file("%s/bonding/mode" % self.bond_dir, arg2)
+            genio.write_file("%s/bonding/miimon" % self.bond_dir, "100")
+            genio.write_file("%s/bonding/fail_over_mac" % self.bond_dir, "2")
             for val in self.host_interfaces:
-                cmd = "echo '+%s' > %s"\
-                      % (val, self.bonding_slave_file)
-                if process.system(cmd, shell=True, ignore_status=True) != 0:
-                    self.fail("Mode %s FAIL while bonding setup" % arg2)
+                genio.write_file(self.bonding_slave_file, "+%s" % val)
                 time.sleep(2)
-            cmd = "%s | grep 'Bonding Mode'|cut -d ':' -f 2" % self.bond_status
-            bond_name_val = process.system_output(cmd, shell=True).strip('\n')
+            bond_name_val = ''
+            for line in genio.read_file(self.bond_status).splitlines():
+                if 'Bonding Mode' in line:
+                    bond_name_val = line.split(':')[1]
             self.log.info("Trying bond mode %s [ %s ]", arg2, bond_name_val)
             for ifs in self.host_interfaces:
                 cmd = "ip link set %s up" % ifs
                 if process.system(cmd, shell=True, ignore_status=True) != 0:
                     self.fail("unable to interface up")
             cmd = "ip addr add %s/%s dev %s;ip link set %s up"\
-                  % (self.host_ips[0], self.net_mask[0],
+                  % (self.local_ip, self.net_mask[0],
                      self.bond_name, self.bond_name)
             process.system(cmd, shell=True, ignore_status=True)
             for _ in range(0, 600, 60):
@@ -292,12 +280,14 @@ class Bonding(Test):
             for val in self.peer_interfaces:
                 cmd += 'ip link set %s down;' % val
             cmd += 'modprobe bonding;'
-            cmd += 'echo +%s > /sys/class/net/bonding_masters;'\
-                   % self.bond_name
-            cmd += 'echo 0 > /sys/class/net/%s/bonding/mode;'\
-                   % self.bond_name
-            cmd += 'echo 100 > /sys/class/net/%s/bonding/miimon;'\
-                   % self.bond_name
+            cmd += 'echo +%s > %s;'\
+                   % (self.bond_name, self.bonding_masters_file)
+            cmd += 'echo 0 > %s/bonding/mode;'\
+                   % self.bond_dir
+            cmd += 'echo 100 > %s/bonding/miimon;'\
+                   % self.bond_dir
+            cmd += 'echo 2 > %s/bonding/fail_over_mac;'\
+                   % self.bond_dir
             for val in self.peer_interfaces:
                 cmd += 'echo "+%s" > %s;' % (val, self.bonding_slave_file)
             for val in self.peer_interfaces:
@@ -311,51 +301,48 @@ class Bonding(Test):
             if process.system(peer_cmd, shell=True, ignore_status=True) != 0:
                 self.fail("bond setup command failed in peer machine")
 
-    def test_bonding(self):
+    def test_setup(self):
         '''
         bonding the interfaces
         work for multiple interfaces on both host and peer
         '''
-        self.log.info("Bonding")
-        msg = "[ -d /sys/class/net/%s ]" % self.bond_name
+        msg = "[ -d %s ]" % self.bond_dir
         cmd = "ssh %s@%s %s" % (self.user, self.peer_first_ipinterface, msg)
         if process.system(cmd, shell=True, ignore_status=True) == 0:
             self.fail("bond name already exists on peer machine")
         if os.path.isdir(self.bond_dir):
             self.fail("bond name already exists on local machine")
-        self.log.info("TESTING FOR MODE %s", self.mode)
-        self.log.info("-------------------------------------------------")
         if self.peer_bond_needed:
             self.bond_setup("peer", "")
         self.bond_setup("local", self.mode)
-        process.run(self.bond_status, shell=True, verbose=True)
+        self.log.info(genio.read_file(self.bond_status))
         self.ping_check()
+        self.error_check()
+
+    def test_run(self):
         self.bond_fail(self.mode)
         self.log.info("Mode %s OK", self.mode)
+        self.error_check()
 
-    def tearDown(self):
+    def test_cleanup(self):
         '''
-        set the initial state
+        clean up the interface config
         '''
         self.bond_remove("local")
-        for val1, val2, val3 in map(None, self.host_interfaces,
-                                    self.host_ips, self.net_mask):
-            cmd = "ip addr flush dev %s" % val1
+        for val in self.host_interfaces:
+            cmd = "ip link set %s up" % val
             process.system(cmd, shell=True, ignore_status=True)
-            cmd = "ip link set %s up" % val1
+            cmd = "ifup %s" % val
             process.system(cmd, shell=True, ignore_status=True)
-            if val2:
-                cmd = "ip addr add %s/%s dev %s" % (val2, val3, val1)
-                process.system(cmd, shell=True, ignore_status=True)
             for _ in range(0, 600, 60):
                 if 'state UP' in process.system_output("ip link \
-                     show %s" % val1, shell=True):
-                    self.log.info("Interface %s is up", val1)
+                     show %s" % val, shell=True):
+                    self.log.info("Interface %s is up", val)
                     break
                 time.sleep(60)
             else:
-                self.log.info("Interface %s in not up\
-                                   in the host machine", val1)
+                self.log.warn("Interface %s in not up\
+                                   in the host machine", val)
         if self.gateway:
             cmd = 'ip route add default via %s' % \
                 (self.gateway)
@@ -363,15 +350,19 @@ class Bonding(Test):
 
         if self.peer_bond_needed:
             self.bond_remove("peer")
-            for val1, val2, val3 in map(None, self.peer_interfaces,
-                                        self.peer_ips, self.net_mask):
-                msg = "ip addr add %s/%s dev %s;ip link set %s up;sleep %s"\
-                      % (val2, val3, val1, val1, self.peer_wait_time)
+            for val in self.peer_interfaces:
+                msg = "ip link set %s up; ifup %s; sleep %s"\
+                      % (val, val, self.peer_wait_time)
                 cmd = "ssh %s@%s \"%s\""\
                       % (self.user, self.peer_first_ipinterface, msg)
                 if process.system(cmd, shell=True, ignore_status=True) != 0:
-                    self.log.info("unable to bring to original state in host")
+                    self.log.warn("unable to bring to original state in peer")
                 time.sleep(self.sleep_time)
+        self.error_check()
+
+    def error_check(self):
+        if self.err:
+            self.fail("Tests failed. Details:\n%s" % "\n".join(self.err))
 
 
 if __name__ == "__main__":
