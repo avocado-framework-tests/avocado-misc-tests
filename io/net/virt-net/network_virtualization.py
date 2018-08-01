@@ -110,7 +110,8 @@ class NetworkVirtualization(Test):
                   ' -r lpar --filter lpar_names=' + vios_name + \
                   ' -F lpar_id'
             self.vios_id.append(self.run_command(cmd)[-1])
-        cmd = 'lshwres -m %s -r sriov --rsubtype adapter -F phys_loc:adapter_id' % self.server
+        cmd = 'lshwres -m %s -r sriov --rsubtype adapter -F \
+              phys_loc:adapter_id' % self.server
         adapter_id_output = self.run_command(cmd)
         self.backing_adapter_id = []
         for backing_adapter in self.backing_adapter:
@@ -234,7 +235,7 @@ class NetworkVirtualization(Test):
             self.trigger_failover(self.get_backing_device_logport())
             time.sleep(10)
             after = self.get_active_device_logport()
-            self.log.debug("Active backing device: %s" % after)
+            self.log.debug("Active backing device: %s", after)
             if before == after:
                 self.fail("No failover happened")
             if not self.ping_check():
@@ -242,7 +243,7 @@ class NetworkVirtualization(Test):
         if original != self.get_active_device_logport():
             self.trigger_failover(original)
         if original != self.get_active_device_logport():
-            self.log.warn("Not able to activate the Initial backing device %s" % original)
+            self.log.warn("Fail: Activating Initial backing dev %s" % original)
 
     def test_unbindbind(self):
         """
@@ -336,7 +337,7 @@ class NetworkVirtualization(Test):
                    -o r -s %s'\
                    % (self.server, self.lpar_id, self.slot_num)
         try:
-            output = self.run_command(cmd)
+            self.run_command(cmd)
         except CommandFailed as cmdfail:
             self.log.debug(str(cmdfail))
             self.fail("Network virtualization %s device operation \
@@ -378,7 +379,7 @@ class NetworkVirtualization(Test):
                                                       self.lpar_id,
                                                       add_backing_device)
         try:
-            output = self.run_command(cmd)
+            self.run_command(cmd)
         except CommandFailed as cmdfail:
             self.log.debug(str(cmdfail))
             self.fail("Network virtualization Backing device %s \
@@ -518,7 +519,7 @@ class NetworkVirtualization(Test):
                --logport %s' % (self.server, self.slot_num,
                                 self.lpar_id, logport)
         try:
-            output = self.run_command(cmd)
+            self.run_command(cmd)
         except CommandFailed as cmdfail:
             self.log.debug(str(cmdfail))
             self.fail("Command to set %s as Active has failed" % logport)
