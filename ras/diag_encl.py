@@ -52,7 +52,7 @@ class DiagEncl(Test):
         self.log.info("===========Executing diag_encl test==========")
         diag_path = '/var/log/ppc64-diag/diag_disk/'
         if not os.path.isdir(diag_path):
-            self.fail('diag_disk path does not exists.')
+            self.run_cmd_out("diag_encl -d")
         if not self.run_cmd_out("diag_encl -h |"
                                 " grep -Eai 'disk health'").strip():
             self.fail("'-d' option is not available in help message")
