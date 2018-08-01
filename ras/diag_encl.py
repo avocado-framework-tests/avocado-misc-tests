@@ -31,13 +31,15 @@ class DiagEncl(Test):
     is_fail = 0
 
     def run_cmd(self, cmd):
-        if (process.run(cmd, ignore_status=True, sudo=True, shell=True)).exit_status:
+        if (process.run(cmd, ignore_status=True, sudo=True,
+                        shell=True)).exit_status:
             self.is_fail += 1
         return
 
     @staticmethod
     def run_cmd_out(cmd):
-        return process.system_output(cmd, shell=True, ignore_status=True, sudo=True)
+        return process.system_output(cmd, shell=True,
+                                     ignore_status=True, sudo=True)
 
     def setUp(self):
         if "ppc" not in distro.detect().arch:
@@ -51,12 +53,14 @@ class DiagEncl(Test):
         diag_path = '/var/log/ppc64-diag/diag_disk/'
         if not os.path.isdir(diag_path):
             self.fail('diag_disk path does not exists.')
-        if not self.run_cmd_out("diag_encl -h | grep -Eai 'disk health'").strip():
+        if not self.run_cmd_out("diag_encl -h |"
+                                " grep -Eai 'disk health'").strip():
             self.fail("'-d' option is not available in help message")
         for _ in range(4):
             self.run_cmd("diag_encl -d")
         xml_file_path = os.path.join(diag_path, '*diskAnalytics*')
-        no_of_files = self.run_cmd_out("ls -lrt %s | wc -l" % xml_file_path).strip()
+        no_of_files = self.run_cmd_out("ls -lrt %s |"
+                                       " wc -l" % xml_file_path).strip()
         if no_of_files == '0':
             self.fail("xml file not generated")
         if no_of_files > '1':
