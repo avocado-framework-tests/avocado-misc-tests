@@ -43,7 +43,8 @@ class Perftool(Test):
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
-        elif detected_distro.name in ['rhel', 'SuSE', 'fedora', 'centos', 'redhat']:
+        elif detected_distro.name in ['rhel', 'SuSE', 'fedora',
+                                      'centos', 'redhat']:
             deps.extend(['perf'])
         else:
             self.cancel("Install the package for perf supported\
@@ -57,7 +58,8 @@ class Perftool(Test):
         tarball = self.fetch_asset("perftool.zip", locations=locations,
                                    expire='7d')
         archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'perftool-testsuite-master')
+        self.sourcedir = os.path.join(self.workdir,
+                                      'perftool-testsuite-master')
 
     def test(self):
         '''
