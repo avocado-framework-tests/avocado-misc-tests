@@ -80,6 +80,8 @@ class NetworkVirtualization(Test):
         self.lpar = self.params.get("lpar", '*', default=None)
         self.server = self.params.get("server", '*', default=None)
         self.slot_num = self.params.get("slot_num", '*', default=None)
+        if int(self.slot_num) < 3 or int(self.slot_num) > 2999:
+            self.cancel("Slot invalid. Valid range: 3 - 2999")
         self.vios_name = self.params.get("vios_names", '*',
                                          default=None).split(',')
         self.sriov_port = self.params.get("sriov_ports", '*',
@@ -154,6 +156,21 @@ class NetworkVirtualization(Test):
         con.prompt(timeout)
         return output
 
+    def check_slot_availability(self):
+        '''
+        Checks if given slot is available(free) to be used.
+        :return: True if slot available, False otherwise.
+        '''
+        cmd = 'lshwres -r virtualio -m %s --rsubtype vnic --filter \
+           "lpar_names=%s" -F slot_num' % (self.server, self.lpar)
+        for slot in self.run_command(cmd):
+            if 'No results were found' in slot:
+                return True
+            if int(self.slot_num) == int(slot):
+                self.log.debug("Slot already exists")
+                return False
+        return True
+
     def rsct_service_start(self):
         '''
         Running rsct services which is necessary for Network
@@ -204,6 +221,8 @@ class NetworkVirtualization(Test):
         '''
         Network virtualized device add operation
         '''
+        if not self.check_slot_availability():
+            self.fail("Slot already exists")
         self.device_add_remove('add')
         output = self.list_device()
         if 'slot_num=%s' % self.slot_num not in str(output):
@@ -215,6 +234,8 @@ class NetworkVirtualization(Test):
         '''
         Adding Backing device for Network virtualized device
         '''
+        if self.check_slot_availability():
+            self.fail("Slot does not exist")
         pre_add = self.backing_dev_count()
         for count in range(1, self.backingdev_count):
             self.backing_dev_add_remove('add', count)
@@ -296,6 +317,8 @@ class NetworkVirtualization(Test):
         '''
         Removing Backing device for Network virtualized device
         '''
+        if self.check_slot_availability():
+            self.fail("Slot does not exist")
         self.update_backing_devices()
         pre_remove = self.backing_dev_count()
         for count in range(1, self.backingdev_count):
@@ -310,6 +333,8 @@ class NetworkVirtualization(Test):
         '''
         Network virtualized device remove operation
         '''
+        if self.check_slot_availability():
+            self.fail("Slot does not exist")
         self.update_backing_devices()
         self.device_add_remove('remove')
         output = self.list_device()
