@@ -37,7 +37,7 @@ class Perftool(Test):
         smm = SoftwareManager()
         detected_distro = distro.detect()
         kernel_ver = platform.uname()[2]
-        deps = ['gcc', 'make']
+        deps = ['gcc', 'make', 'gcc-c++']
         if 'Ubuntu' in detected_distro.name:
             deps.extend(['linux-tools-common', 'linux-tools-%s' % kernel_ver])
         # FIXME: "redhat" as the distro name for RHEL is deprecated
