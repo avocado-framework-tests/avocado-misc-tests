@@ -36,10 +36,10 @@ class Perftool(Test):
         # Check for basic utilities
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        kernel_ver = platform.uname()[2]
         deps = ['gcc', 'make', 'gcc-c++']
         if 'Ubuntu' in detected_distro.name:
-            deps.extend(['linux-tools-common', 'linux-tools-%s' % kernel_ver])
+            deps.extend(['linux-tools-common', 'linux-tools-%s' %
+                         platform.uname()[2]])
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
@@ -69,7 +69,7 @@ class Perftool(Test):
           Source:
           https://github.com/rfmvh/perftool-testsuite
         '''
-        self.count = 0
+        count = 0
         # Built in perf test
         for string in process.run("perf test").stderr.splitlines():
             if 'FAILED' in str(string.splitlines()):
@@ -81,10 +81,10 @@ class Perftool(Test):
                                    process_kwargs={'ignore_status': True}
                                    ).stdout.splitlines():
             if '-- [ FAIL ] --' in line:
-                self.count += 1
+                count += 1
                 self.log.info(line)
 
-        if self.count > 0:
+        if count > 0:
             self.fail("%s Test failed" % self.count)
 
 
