@@ -15,6 +15,7 @@
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 
 import os
+import glob
 import xml.etree.ElementTree
 from avocado import Test
 from avocado import main
@@ -31,13 +32,15 @@ class DiagEncl(Test):
     is_fail = 0
 
     def run_cmd(self, cmd):
-        if (process.run(cmd, ignore_status=True, sudo=True, shell=True)).exit_status:
+        if (process.run(cmd, ignore_status=True, sudo=True,
+                        shell=True)).exit_status:
             self.is_fail += 1
         return
 
     @staticmethod
     def run_cmd_out(cmd):
-        return process.system_output(cmd, shell=True, ignore_status=True, sudo=True)
+        return process.system_output(cmd, shell=True,
+                                     ignore_status=True, sudo=True)
 
     def setUp(self):
         if "ppc" not in distro.detect().arch:
@@ -49,19 +52,21 @@ class DiagEncl(Test):
     def test_diag_encl(self):
         self.log.info("===========Executing diag_encl test==========")
         diag_path = '/var/log/ppc64-diag/diag_disk/'
-        if not os.path.isdir(diag_path):
-            self.fail('diag_disk path does not exists.')
-        if not self.run_cmd_out("diag_encl -h | grep -Eai 'disk health'").strip():
+
+        if 'disk health' not in process.system_output("diag_encl -h"):
             self.fail("'-d' option is not available in help message")
+        if not os.path.isdir(diag_path):
+            self.run_cmd_out("diag_encl -d")
+
         for _ in range(4):
             self.run_cmd("diag_encl -d")
-        xml_file_path = os.path.join(diag_path, '*diskAnalytics*')
-        no_of_files = self.run_cmd_out("ls -lrt %s | wc -l" % xml_file_path).strip()
+        no_of_files = len(glob.glob1(diag_path, "*diskAnalytics*"))
+
         if no_of_files == '0':
             self.fail("xml file not generated")
         if no_of_files > '1':
             self.fail("multiple xml files are generated")
-        xml_file = self.run_cmd_out("ls %s" % diag_path).strip()
+        xml_file = os.listdir(diag_path)[0]
         xml_file = os.path.join(diag_path, xml_file)
         e_xml = xml.etree.ElementTree.parse(xml_file).getroot()
         machine_type = e_xml.find('Machine').get('type').strip()
@@ -74,6 +79,7 @@ class DiagEncl(Test):
             product_path = '/proc/device-tree/model'
             serial_path = '/proc/device-tree/system-id'
         product_name = genio.read_one_line(product_path).rstrip(' \t\r\n\0')
+        product_name = product_name.split(',')[1]
         serial_num = genio.read_one_line(serial_path).rstrip(' \t\r\n\0')
         product_name_xml = "-".join((machine_type, machine_model))
         if product_name_xml != product_name:
