@@ -41,7 +41,7 @@ class Hwinfo(Test):
             self.cancel('Hwinfo not supported on RHEL')
         sm = SoftwareManager()
         if not sm.check_installed("hwinfo") and not sm.install("hwinfo"):
-            self.error("Fail to install hwinfo required for this test.")
+            self.cancel("Fail to install hwinfo required for this test.")
 
     def test(self):
         self.log.info(
