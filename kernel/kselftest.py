@@ -54,8 +54,9 @@ class kselftest(Test):
                          'libpopt-dev', 'libcap-ng0', 'libcap-ng-dev',
                          'libnuma-dev', 'libfuse-dev', 'elfutils', 'libelf1'])
         elif 'SuSE' in detected_distro.name:
-            deps.extend(['popt', 'glibc', 'glibc-devel', 'popt-devel',
-                         'libcap2', 'libcap-devel', 'libcap-ng-devel'])
+            deps.extend(['popt', 'glibc', 'glibc-devel', 'popt-devel', 'sudo',
+                         'libcap2', 'libcap-devel', 'libcap-ng-devel',
+                         'fuse', 'fuse-devel', 'glibc-devel-static'])
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon

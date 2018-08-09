@@ -94,7 +94,7 @@ class Kernbench(Test):
         elif 'SuSE' in detected_distro.name:
             deps.extend(['libpopt0', 'glibc', 'glibc-devel',
                          'popt-devel', 'libcap2', 'libcap-devel',
-                         'libcap-ng-devel'])
+                         'libcap-ng-devel', 'flex', 'bison', 'openssl-devel'])
         elif detected_distro.name in ['centos', 'fedora', 'rhel']:
             deps.extend(['popt', 'glibc', 'glibc-devel', 'libcap-ng',
                          'libcap', 'libcap-devel', 'elfutils-libelf',
