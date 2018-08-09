@@ -56,7 +56,8 @@ class Hwinfo(Test):
         self.run_cmd("hwinfo --disk --only %s" % disk_name)
         Unique_Id = process.system_output("hwinfo --disk --only %s | "
                                           "grep 'Unique' | head -1 | "
-                                          "cut -d':' -f2" % disk_name, shell=True)
+                                          "cut -d':' -f2" % disk_name,
+                                          shell=True)
         self.run_cmd("hwinfo --disk --save-config %s" % Unique_Id)
         self.run_cmd("hwinfo --disk --show-config %s" % Unique_Id)
         self.run_cmd("hwinfo --verbose --map")
@@ -71,8 +72,9 @@ class Hwinfo(Test):
         self.run_cmd("hwinfo --debug 0 --disk --log=-")
         self.run_cmd("hwinfo --short --block")
         self.run_cmd("hwinfo --disk --save-config=all")
-        if "failed" in process.system_output("hwinfo --disk --save-config=all | "
-                                             "grep failed | tail -1", shell=True):
+        if "failed" in process.system_output("hwinfo --disk --save-config"
+                                             "=all | ""grep failed | tail -1",
+                                             shell=True):
             self.is_fail += 1
             self.log.info("--save-config option failed")
         if self.is_fail >= 1:
