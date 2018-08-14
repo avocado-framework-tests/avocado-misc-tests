@@ -27,7 +27,7 @@ from avocado.utils.software_manager import SoftwareManager
 
 class NumaTest(Test):
     """
-    Excercises numa_move_pages and mbind call with 20% of the machine's free
+    Exercises numa_move_pages and mbind call with 20% of the machine's free
     memory
     """
 
