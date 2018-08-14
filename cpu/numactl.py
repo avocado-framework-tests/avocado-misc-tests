@@ -70,7 +70,8 @@ class Numactl(Test):
 
     def test(self):
 
-        if build.make(self.sourcedir, extra_args='-k test', ignore_status=True):
+        if build.make(self.sourcedir, extra_args='-k -j 1'
+                      ' test', ignore_status=True):
             if len(memory.numa_nodes_with_memory()) < 2:
                 self.log.warn('Few tests failed due to less NUMA mem-nodes')
             else:
