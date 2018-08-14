@@ -19,7 +19,6 @@ from avocado import Test
 from avocado.utils import build
 from avocado.utils import memory
 from avocado.utils import process
-from avocado.utils import distro
 from avocado.utils import archive
 from avocado.utils.software_manager import SoftwareManager
 
@@ -33,7 +32,6 @@ class eatmemory(Test):
 
     def setUp(self):
         sm = SoftwareManager()
-        detected_distro = distro.detect()
         deps = ['gcc', 'make']
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
