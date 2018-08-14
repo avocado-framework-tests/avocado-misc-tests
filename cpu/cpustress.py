@@ -267,7 +267,6 @@ class cpustresstest(Test):
         PowerVM and Guest only: Dynamic Resource Manager
         use drmgr command to hotplug and hotunplug cpus
         """
-        output = []
         if 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
             if "cpu_dlpar=yes" in process.system_output("drmgr -C",
                                                         ignore_status=True,
