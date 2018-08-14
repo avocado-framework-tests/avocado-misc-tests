@@ -30,7 +30,7 @@
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 #define PROTFLAG PROT_READ|PROT_WRITE
 
-extern int *get_numa_nodes_to_use(int max_node);
+extern int *get_numa_nodes_to_use(int max_node, unsigned long size);
 extern unsigned long get_pfn(void *addr);
 unsigned long i;
 
@@ -57,12 +57,14 @@ int test_func(unsigned long nr_nodes, int mapflag, unsigned long nr_pages, unsig
 	int ret, same_pfn = 0;
 	void **addrs;
 	struct bitmask *all_nodes, *old_nodes, *new_nodes;
-	unsigned long *old_pfn;
+	unsigned long *old_pfn, memory_to_use;
 
 	printf("\n \n Testcase %d: %s\n\n", id, msg);
 	old_pfn = (unsigned long *)malloc(sizeof(unsigned long) * nr_pages);
+	memory_to_use = nr_pages * page_size;
+
 	node_list = (int *)malloc(sizeof(int) * 2);
-	node_list = get_numa_nodes_to_use(nr_nodes);
+	node_list = get_numa_nodes_to_use(nr_nodes, memory_to_use);
 
 	all_nodes = numa_bitmask_alloc(nr_nodes);
 	numa_bitmask_setbit(all_nodes, node_list[0]);
@@ -84,13 +86,13 @@ int test_func(unsigned long nr_nodes, int mapflag, unsigned long nr_pages, unsig
 
 	printf("Pages: %lu, Size: %lu\n", nr_pages, page_size);
 
-	p = mmap(NULL, nr_pages * page_size, PROTFLAG, mapflag, -1, 0);
+	p = mmap(NULL, memory_to_use, PROTFLAG, mapflag, -1, 0);
 	if (p == MAP_FAILED){
 		errmsg("Failed mmap\n");
 		return 1;
 	}
 	/* fault in */
-	memset(p, 'a', nr_pages * page_size);
+	memset(p, 'a', memory_to_use);
 	sleep(3);
 	numa_sched_setaffinity(0, all_nodes);
 	for (i = 0; i < nr_pages; i++) {
@@ -106,7 +108,7 @@ int test_func(unsigned long nr_nodes, int mapflag, unsigned long nr_pages, unsig
 	if (id == 1)
 		ret = numa_move_pages(0, nr_pages, addrs, nodes, status, MPOL_MF_MOVE_ALL);
 	else
-		ret = mbind(p, nr_pages * page_size, MPOL_BIND, new_nodes->maskp,
+		ret = mbind(p, memory_to_use, MPOL_BIND, new_nodes->maskp,
 			new_nodes->size + 1, MPOL_MF_MOVE|MPOL_MF_STRICT);
 	sleep(3);
 
@@ -115,7 +117,7 @@ int test_func(unsigned long nr_nodes, int mapflag, unsigned long nr_pages, unsig
 		errmsg("Failed %s \n", msg);
 		return 1;
 	}
-	memset(p, 'a', nr_pages * page_size);
+	memset(p, 'a', memory_to_use);
 
 	printf("Checking PFN's\n");
 
@@ -132,7 +134,7 @@ int test_func(unsigned long nr_nodes, int mapflag, unsigned long nr_pages, unsig
 	}
 	sleep(2);
 
-	munmap(p, nr_pages * page_size);
+	munmap(p, memory_to_use);
 	return 0;
 }
 
