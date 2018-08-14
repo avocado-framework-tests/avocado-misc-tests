@@ -45,7 +45,6 @@ class PCIHotPlugTest(Test):
             self.cancel("Processor is not ppc64")
         if os.path.exists('/proc/device-tree/bmc'):
             self.cancel("Test Unsupported! on this platform")
-        cmd = "cat /proc/cpuinfo"
         if cpu._list_matches(open('/proc/cpuinfo').readlines(),
                              'platform\t: pSeries\n'):
             PowerVM = True
