@@ -74,7 +74,6 @@ class Ebizzy(Test):
         chunk_size = self.params.get('chunk_size', default=512000)
         seconds = self.params.get('seconds', default=100)
         num_threads = self.params.get('num_threads', default=100)
-        logfile = os.path.join(self.outputdir, 'ebizzy.log')
         args2 = '-m -n %s -P -R -s %s -S %s -t %s' % (num_chunks, chunk_size,
                                                       seconds, num_threads)
         args = args + ' ' + args2
