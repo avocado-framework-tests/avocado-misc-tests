@@ -68,8 +68,12 @@ class NumaTest(Test):
                          'libnuma-dev', 'libhugetlbfs-dev'])
         elif dist.name in ["centos", "rhel", "fedora"]:
             pkgs.extend(['numactl-devel', 'libhugetlbfs-devel'])
-        else:
-            pkgs.extend(['libnuma-devel', 'libhugetlbfs-devel'])
+        elif dist.name == "SuSE":
+            pkgs.extend(['libnuma-devel'])
+            if dist.version >= 15:
+                pkgs.extend(['libhugetlbfs-devel'])
+            else:
+                pkgs.extend(['libhugetlbfs-libhugetlb-devel'])
 
         for package in pkgs:
             if not smm.check_installed(package) and not smm.install(package):
