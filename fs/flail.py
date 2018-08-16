@@ -59,7 +59,7 @@ class Flail(Test):
             self.fail("some call traces seen please check")
 
     def clear_dmesg(self):
-        process.run("dmesg -c ", sudo=True)
+        process.run("dmesg -C ", sudo=True)
 
 
 if __name__ == "__main__":

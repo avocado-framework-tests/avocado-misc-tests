@@ -38,7 +38,7 @@ errorlog = ['WARNING: CPU:', 'Oops',
 
 
 def clear_dmesg():
-    process.run("dmesg -c ", sudo=True)
+    process.run("dmesg -C ", sudo=True)
 
 
 def online(block):

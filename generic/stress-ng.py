@@ -25,7 +25,7 @@ from avocado.utils.software_manager import SoftwareManager
 
 
 def clear_dmesg():
-    process.run("dmesg -c ", sudo=True)
+    process.run("dmesg -C ", sudo=True)
 
 
 def collect_dmesg(object):
