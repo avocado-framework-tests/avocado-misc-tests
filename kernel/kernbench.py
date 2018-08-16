@@ -41,7 +41,7 @@ class Kernbench(Test):
 
     def time_build(self, threads=None, timefile=None, make_opts=None):
         """
-        Time the bulding of the kernel
+        Time the building of the kernel
         """
         os.chdir(self.sourcedir)
         build.make(self.sourcedir, extra_args='clean')
