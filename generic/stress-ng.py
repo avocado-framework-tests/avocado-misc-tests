@@ -162,7 +162,7 @@ class Stressng(Test):
                 if fail_pattern in log:
                     ERROR.append(log)
         if ERROR:
-            self.fail("Test failed with following errors in demsg :  %s " %
+            self.fail("Test failed with following errors in dmesg :  %s " %
                       "\n".join(ERROR))
 
 
