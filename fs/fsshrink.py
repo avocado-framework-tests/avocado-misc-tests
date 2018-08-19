@@ -41,7 +41,7 @@ class Fsshrink(Test):
                 self.fail("Test Failed : %s in dmesg" % fail_pattern)
 
     def setUp(self):
-        shutil.copy(os.path.join(self.datadir, 'test-shrink.sh'),
+        shutil.copy(self.get_data('test-shrink.sh'),
                     self.teststmpdir)
 
         self.clear_dmesg()
