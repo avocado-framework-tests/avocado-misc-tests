@@ -60,7 +60,7 @@ class MvcliTest(Test):
         self.run_command("chmod +x %s" % mvcli_path)
         self.base = "%s %s" % (mvcli_path, self.adapter_id)
         self.base_force = "echo y | %s %s" % (mvcli_path, self.adapter_id)
-        self.run_command("dmesg -c")
+        self.run_command("dmesg -C")
         if self.fw_upgrade == "yes":
             path = self.fetch_asset("fw", locations=[self.fw_url],
                                     expire="7d")

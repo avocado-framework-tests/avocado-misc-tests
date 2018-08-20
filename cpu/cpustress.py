@@ -79,7 +79,7 @@ class cpustresstest(Test):
 
     @staticmethod
     def __clear_dmesg():
-        process.run("dmesg -c", sudo=True)
+        process.run("dmesg -C", sudo=True)
 
     @staticmethod
     def __error_check():

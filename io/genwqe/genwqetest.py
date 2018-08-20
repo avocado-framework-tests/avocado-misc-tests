@@ -153,7 +153,7 @@ class GenWQETest(Test):
             self.fail("genwqe_poke fails")
         time.sleep(10)
         recovered = 0
-        cmd = "dmesg -c"
+        cmd = "dmesg -C"
         for line in process.system_output(cmd, shell=True,
                                           ignore_status=True).splitlines():
             if "chip reload/recovery" in line:

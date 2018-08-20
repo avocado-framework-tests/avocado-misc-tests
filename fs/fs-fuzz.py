@@ -31,7 +31,7 @@ class FsFuzz(Test):
     """
 
     def clear_dmesg(self):
-        process.run("dmesg -c ", sudo=True)
+        process.run("dmesg -C ", sudo=True)
 
     def verify_dmesg(self):
         self.whiteboard = process.system_output("dmesg")
