@@ -26,6 +26,9 @@ class Hwinfo(Test):
 
     is_fail = 0
 
+    def clear_dmesg(self):
+        process.run("dmesg -C ", sudo=True)
+
     def run_cmd(self, cmd):
         self.log.info("executing ============== %s =================" % cmd)
         if process.system(cmd, ignore_status=True, sudo=True):
@@ -44,6 +47,8 @@ class Hwinfo(Test):
             self.cancel("Fail to install hwinfo required for this test.")
 
     def test(self):
+
+        self.clear_dmesg()
         self.log.info(
             "===============Executing hwinfo tool test===============")
         list = self.params.get('list', default=['--all', '--cpu', '--disk'])
@@ -72,8 +77,7 @@ class Hwinfo(Test):
         self.run_cmd("hwinfo --debug 0 --disk --log=-")
         self.run_cmd("hwinfo --short --block")
         self.run_cmd("hwinfo --disk --save-config=all")
-        if "failed" in process.system_output("hwinfo --disk --save-config"
-                                             "=all | ""grep failed | tail -1",
+        if "failed" in process.system_output("hwinfo --disk --save-config=all",
                                              shell=True):
             self.is_fail += 1
             self.log.info("--save-config option failed")
