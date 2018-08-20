@@ -59,7 +59,7 @@ err_out:
 	return 0;
 }
 
-int *get_numa_nodes_to_use(int max_node)
+int *get_numa_nodes_to_use(int max_node, unsigned long memory_to_use)
 {
 	unsigned long free_node_sizes;
 	long node_size;
@@ -69,9 +69,9 @@ int *get_numa_nodes_to_use(int max_node)
 	/* Get 2 Nodes which contains system memory*/
 	for(node_iterator=0; node_iterator < max_node; node_iterator++){
 		node_size = numa_node_size(node_iterator,&free_node_sizes);
-		if (node_size > 0){
+		if (node_size > 0 && free_node_sizes > memory_to_use) {
 			nodes_to_use[got_nodes++] = node_iterator;
-			if(got_nodes == 2)
+			if (got_nodes == 2)
 				break;
 		}
 	}
