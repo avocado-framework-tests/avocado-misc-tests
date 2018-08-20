@@ -81,7 +81,7 @@ class Hackbench(Test):
         if self._threshold_time:
             if self._threshold_time <= time_spent:
                 self.error("Test failed: Time Taken "
-                           "grater or eqaul to threshold")
+                           "greater or equal to threshold")
 
 
 if __name__ == "__main__":
