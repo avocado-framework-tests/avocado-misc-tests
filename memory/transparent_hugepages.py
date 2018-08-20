@@ -101,11 +101,14 @@ class Thp(Test):
                                        ("thp_collapse_alloc"))
 
         # Check whether THP is Used or not
-        if thp_alloted_after <= thp_alloted_before:
+        if thp_alloted_after < thp_alloted_before:
             e_msg = "Thp usage count has not increased\n"
             e_msg += "Before Stress:%d\nAfter stress:%d" % (thp_alloted_before,
                                                             thp_alloted_after)
             self.fail(e_msg)
+        elif thp_alloted_after == thp_alloted_before:
+            self.log.warn("Kernel did not allocate THP. Make sure "
+                          "you run on an apt configuration")
         else:
             thp_fault_alloc = thp_alloted_after - thp_alloted_before
             thp_split = thp_split_after - thp_split_before
