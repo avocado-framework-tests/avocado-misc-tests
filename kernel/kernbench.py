@@ -48,7 +48,7 @@ class Kernbench(Test):
         if self.config_path is None:
             build.make(self.sourcedir, extra_args='defconfig')
         else:
-            build.make(self.sourcedir, extra_args='oldnoconfig')
+            build.make(self.sourcedir, extra_args='olddefconfig')
         if make_opts:
             build_string = "/usr/bin/time -o %s make %s -j %s vmlinux" % (
                 timefile, make_opts, threads)
