@@ -191,10 +191,13 @@ class Lshwrun(Test):
         self.log.info("===============Verifying -disable, -enable, -quiet,"
                       " -numeric and -notime options ==============")
         self.is_fail = 0
-        self.run_cmd("lshw -disable scsi | grep SCSI")
-        if "description" not in self.run_cmd_out("lshw"
-                                                 " -enable scsi | grep SCSI"):
+        if "interface" in self.run_cmd_out("lshw -disable network| "
+                                           "grep -i interface"):
             self.is_fail += 1
+        if "interface" not in self.run_cmd_out("lshw -enable network| "
+                                               "grep -i interface"):
+            self.is_fail += 1
+
         self.run_cmd("lshw -class -quiet")
         if 'PowerVM'\
                 not in self.run_cmd_out("pseries_platform"):
