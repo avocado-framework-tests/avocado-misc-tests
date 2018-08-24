@@ -38,8 +38,9 @@ class Package_check(Test):
                 'packages_rhel', default=['lshw', 'librtas'])
             self.packages.extend(packages_rhel)
             for package in self.packages:
-                if "anaconda" in process.system_output("yum list installed | "
-                                                       "grep %s | tail -1" % package, shell=True):
+                if "anaconda" in process.system_output("yum list installed "
+                                                       "| grep %s | tail -1"
+                                                       % package, shell=True):
                     self.log.info(
                         "%s package is installed by default" % package)
                 else:
@@ -51,7 +52,8 @@ class Package_check(Test):
                 'packages_ubuntu', default=['librtas2'])
             self.packages.extend(packages_ubuntu)
             for package in self.packages:
-                if process.system_output("apt-mark showauto %s" % package, shell=True):
+                if process.system_output("apt-mark showauto %s" % package,
+                                         shell=True):
                     self.log.info(
                         "%s package is installed by default" % package)
                 else:
