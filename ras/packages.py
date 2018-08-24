@@ -24,6 +24,9 @@ from avocado.utils.software_manager import SoftwareManager
 class Package_check(Test):
 
     def setUp(self):
+        if "ppc" not in distro.detect().arch:
+            self.cancel("supported only on Power platform")
+
         self.sm = SoftwareManager()
         self.packages = self.params.get(
             'packages', default=['powerpc-utils', 'ppc64-diag', 'lsvpd'])
