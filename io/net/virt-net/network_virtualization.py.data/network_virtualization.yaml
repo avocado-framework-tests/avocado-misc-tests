@@ -7,11 +7,9 @@ hmc_username:
 lpar:
 server:
 slot_num:
-vios_name:
-sriov_adapter_id:
-backing_adapter_id:
-sriov_port:
-backing_sriov_port:
+vios_names:
+sriov_adapters:
+sriov_ports:
 bandwidth:
 device_ip:
 netmask:
