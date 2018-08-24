@@ -41,7 +41,6 @@ class sosreport_test(Test):
     def setUp(self):
         dist = distro.detect()
         sm = SoftwareManager()
-        sos_pkg = ""
         if dist.name == 'Ubuntu':
             sos_pkg = 'sosreport'
         # FIXME: "redhat" as the distro name for RHEL is deprecated
@@ -50,8 +49,8 @@ class sosreport_test(Test):
         elif dist.name in ['rhel', 'redhat']:
             sos_pkg = 'sos'
         else:
-            self.cancel("sosreport is not supported on this distro ")
-        if sos_pkg and not sm.check_installed(sos_pkg) and not sm.install(sos_pkg):
+            self.cancel("sosreport is not supported on %s" % dist.name)
+        if not sm.check_installed(sos_pkg) and not sm.install(sos_pkg):
             self.cancel("Package %s is missing and could not be installed" % sos_pkg)
 
     def test(self):
