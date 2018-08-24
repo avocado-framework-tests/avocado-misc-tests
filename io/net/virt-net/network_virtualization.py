@@ -196,13 +196,15 @@ class NetworkVirtualization(Test):
         detected_distro = distro.detect()
         self.log.info("Test is running on %s", detected_distro.name)
         if not smm.check_installed("ksh") and not smm.install("ksh"):
-            self.error('ksh is needed for the test to be run')
+            self.cancel('ksh is needed for the test to be run')
         if detected_distro.name == "Ubuntu":
             if not smm.check_installed("python-paramiko") and not \
                     smm.install("python-paramiko"):
-                self.error('python-paramiko is needed for the test to be run')
+                self.cancel('python-paramiko is needed for the test to be run')
             ubuntu_url = self.params.get('ubuntu_url', default=None)
             debs = self.params.get('debs', default=None)
+            if not ubuntu_url or not debs:
+                self.cancel("No url specified")
             for deb in debs:
                 deb_url = os.path.join(ubuntu_url, deb)
                 deb_install = self.fetch_asset(deb_url, expire='7d')
@@ -211,6 +213,8 @@ class NetworkVirtualization(Test):
                                ignore_status=True, sudo=True)
         else:
             url = self.params.get('url', default=None)
+            if not url:
+                self.cancel("No url specified")
             rpm_install = self.fetch_asset(url, expire='7d')
             shutil.copy(rpm_install, self.workdir)
             os.chdir(self.workdir)
@@ -240,9 +244,11 @@ class NetworkVirtualization(Test):
         for count in range(1, self.backingdev_count):
             self.backing_dev_add_remove('add', count)
         post_add = self.backing_dev_count()
-        if post_add - pre_add + 1 != self.backingdev_count:
-            self.log.debug(post_add - pre_add + 1)
-            self.log.debug(self.backingdev_count)
+        post_add_count = post_add - pre_add + 1
+        if post_add_count != self.backingdev_count:
+            self.log.debug("Actual backing dev count: %d", post_add_count)
+            self.log.debug("Expected backing dev count: %d",
+                           self.backingdev_count)
             self.fail("Failed to add backing device")
 
     def test_hmcfailover(self):
@@ -324,9 +330,11 @@ class NetworkVirtualization(Test):
         for count in range(1, self.backingdev_count):
             self.backing_dev_add_remove('remove', count)
         post_remove = self.backing_dev_count()
-        if pre_remove - post_remove + 1 != self.backingdev_count:
-            self.log.debug(pre_remove - post_remove + 1)
-            self.log.debug(self.backingdev_count)
+        post_remove_count = pre_remove - post_remove + 1
+        if post_remove_count != self.backingdev_count:
+            self.log.debug("Actual backing dev count: %d", post_remove_count)
+            self.log.debug("Expected backing dev count: %d",
+                           self.backingdev_count)
             self.fail("Failed to remove backing device")
 
     def test_remove(self):
