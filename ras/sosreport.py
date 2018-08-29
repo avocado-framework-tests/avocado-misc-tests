@@ -28,9 +28,9 @@ class sosreport_test(Test):
 
     is_fail = 0
 
-    def run_cmd(self, cmd):
+    def run_cmd(self, cmd, verbose=True):
         self.log.info("executing ============== %s =================", cmd)
-        if process.system(cmd, ignore_status=True, sudo=True):
+        if process.system(cmd, verbose=verbose, ignore_status=True, sudo=True):
             self.log.info("%s command failed", cmd)
             self.is_fail += 1
         return
@@ -57,8 +57,8 @@ class sosreport_test(Test):
         self.log.info(
             "===============Executing sosreport tool test===============")
         directory_name = tempfile.mkdtemp()
-        self.run_cmd("sosreport -h")
-        self.run_cmd("sosreport -l")
+        self.run_cmd("sosreport -h", False)
+        self.run_cmd("sosreport -l", False)
         list = self.params.get('list', default=['--all-logs'])
         for list_item in list:
             cmd = "sosreport --batch --tmp-dir=%s %s" % (directory_name, list_item)
