@@ -138,7 +138,7 @@ class HtxTest(Test):
         """
         for value in self.smt_values:
             process.system_output("ppc64_cpu --smt=%s" % value, shell=True)
-            process.system_output("ppc64_cpu --smt" % value, shell=True)
+            process.system_output("ppc64_cpu --smt", shell=True)
             process.system_output("ppc64_cpu --info")
 
     def is_block_device_in_mdt(self):
