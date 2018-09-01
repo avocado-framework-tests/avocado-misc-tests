@@ -199,7 +199,7 @@ class HtxTest(Test):
             self.log.info("suspending active block_devices")
             self.suspend_all_block_device()
             self.log.info("shutting down the %s ", self.mdt_file)
-            cmd = 'htxcmdline -shutdown -mdt mdt.hd'
+            cmd = "htxcmdline -shutdown -mdt %s" % self.mdt_file
             process.system(cmd, ignore_status=True)
 
         daemon_state = process.system_output('/etc/init.d/htx.d status')
