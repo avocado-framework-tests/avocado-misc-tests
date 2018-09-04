@@ -15,6 +15,7 @@
 
 from avocado import Test
 from avocado import main
+from avocado import skipIf
 from avocado.utils import process
 from avocado.utils import genio
 from avocado.utils.software_manager import SoftwareManager
@@ -186,10 +187,9 @@ class Lshwrun(Test):
         -enable -> Enables a test.
         -quiet -> Don't display status.
         -numeric -> Also display numeric IDs.
-        -notime -> exclude volatile attributes (timestamps) from output.
         """
         self.log.info("===============Verifying -disable, -enable, -quiet,"
-                      " -numeric and -notime options ==============")
+                      " and -numeric options ==============")
         self.is_fail = 0
         if "interface" in self.run_cmd_out("lshw -disable network| "
                                            "grep -i interface"):
@@ -204,8 +204,20 @@ class Lshwrun(Test):
             if not self.run_cmd_out("lshw"
                                     " -numeric | grep HCI | cut -d':' -f3"):
                 self.is_fail += 1
-        if not process.system("lshw -notime | grep modified",
-                              ignore_status=True, sudo=True, shell=True):
+        if self.is_fail >= 1:
+            self.fail("%s command(s) failed. %s command(s) failed to execute "
+                      % (self.is_fail, self.fail_cmd))
+
+    @skipIf(process.system("lshw --help 2>&1 |grep notime",
+            ignore_status=True, sudo=True, shell=True) == 1,
+            "-notime option unsupported, skipping")
+    def test_lshw_notime(self):
+        """
+        -notime -> exclude volatile attributes (timestamps) from output.
+        """
+        self.log.info("===============Verifying -notime option ==============")
+        self.is_fail = 0
+        if "modified" in self.run_cmd_out("lshw -notime | grep modified"):
             self.fail("modified time stamp is present evev with -notime")
         if self.is_fail >= 1:
             self.fail("%s command(s) failed. %s command(s) failed to execute "
