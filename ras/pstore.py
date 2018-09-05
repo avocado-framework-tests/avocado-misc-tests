@@ -32,7 +32,8 @@ class PSTORE(Test):
     :avocado: tags=remote
     '''
 
-    def run_cmd_out(self, cmd):
+    @staticmethod
+    def run_cmd_out(cmd):
         return process.system_output(cmd, shell=True, ignore_status=True, sudo=True).strip()
 
     def setUp(self):

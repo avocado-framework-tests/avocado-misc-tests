@@ -44,7 +44,8 @@ class Lshwrun(Test):
             self.is_fail += 1
             self.fail_cmd.append(cmd)
 
-    def run_cmd_out(self, cmd):
+    @staticmethod
+    def run_cmd_out(cmd):
         return process.system_output(cmd, shell=True,
                                      ignore_status=True, sudo=True)
 

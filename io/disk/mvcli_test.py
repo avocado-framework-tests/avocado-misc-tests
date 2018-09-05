@@ -76,7 +76,8 @@ class MvcliTest(Test):
         except CmdError as details:
             self.fail("Command %s failed %s" % (cmd, details))
 
-    def run_cmd_output(self, cmd):
+    @staticmethod
+    def run_cmd_output(cmd):
         """
         Execute the command and return output
         """
