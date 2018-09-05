@@ -171,13 +171,15 @@ class VlanTest(Test):
         except CmdError as details:
             self.fail("Command %s failed %s" % (cmd, details))
 
-    def run_cmd_output(self, cmd):
+    @staticmethod
+    def run_cmd_output(cmd):
         """
         Execute the command and return output
         """
         return process.system_output(cmd, ignore_status=True,
                                      shell=True, sudo=True)
 
+    @staticmethod
     def ping_check_host(self, intf, ip):
         '''
         ping check for peer in host
