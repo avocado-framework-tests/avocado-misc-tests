@@ -6,3 +6,8 @@ setup:
             comp: "powerpc"
         mem_plug:
             comp: "memory-hotplug"
+    run_type: !mux
+        distro:
+            type: 'distro'
+        upstream:
+            type: 'upstream'
