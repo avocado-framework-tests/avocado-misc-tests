@@ -30,6 +30,10 @@ class Perf_subsystem(Test):
     that the perf_event subsystem is working
     """
 
+    @staticmethod
+    def run_cmd_out(cmd):
+        return process.system_output(cmd, shell=True, ignore_status=True, sudo=True)
+
     def setUp(self):
         '''
         Install the packages
@@ -37,9 +41,9 @@ class Perf_subsystem(Test):
         # Check for basic utilities
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        kernel_ver = platform.uname()[2]
         deps = ['gcc', 'make']
         if 'Ubuntu' in detected_distro.name:
+            kernel_ver = platform.uname()[2]
             deps.extend(['linux-tools-common', 'linux-tools-%s'
                          % kernel_ver])
         # FIXME: "redhat" as the distro name for RHEL is deprecated
@@ -54,27 +58,45 @@ class Perf_subsystem(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
-    def test(self):
-        '''
-        Execute the perf tests
+    def build_perf_test(self):
+        """
+        Building the perf event test suite
         Source : https://github.com/deater/perf_event_tests
-        '''
+        """
         tarball = self.fetch_asset('perf-event.zip', locations=[
                                    'https://github.com/deater/'
                                    'perf_event_tests/archive/'
                                    'master.zip'], expire='7d')
         archive.extract(tarball, self.workdir)
-        sourcedir = os.path.join(self.workdir, 'perf_event_tests-master')
-        build.make(sourcedir)
-        os.chdir(sourcedir)
-        process.system_output("echo -1 >/proc/sys/kernel/perf_event_paranoid",
-                              shell=True)
-        cmd = "cat /proc/sys/kernel/perf_event_paranoid"
-        if process.system_output(cmd, shell=True) != '-1':
+        self.sourcedir = os.path.join(self.workdir, 'perf_event_tests-master')
+        if build.make(self.sourcedir, extra_args="-s -S") > 0:
+            self.fail("Building perf even test suite failed")
+
+    def analyse_perf_output(self, output):
+        self.is_fail = 0
+        for testcase in self.output.splitlines():
+            if "FAILED" in testcase:
+                self.is_fail += 1
+            if "UNEXPLAINED" in testcase:
+                self.is_fail += 1
+
+        if self.is_fail:
+            self.fail("There are %d test(s) failure, please check the job.log" % self.is_fail)
+
+    def execute_perf_test(self):
+        os.chdir(self.sourcedir)
+        self.run_cmd_out("echo -1 >/proc/sys/kernel/perf_event_paranoid")
+        if "-1" not in self.run_cmd_out("cat /proc/sys/kernel/perf_event_paranoid"):
             self.error("Unable to set perf_event_paranoid to -1 ")
-        if 'FAILED' in process.system_output("./run_tests.sh",
-                                             ignore_status=True):
-            self.fail('Test cases have failed,please check the logs')
+        self.output = self.run_cmd_out("./run_tests.sh")
+
+    def test(self):
+        '''
+        Execute the perf tests
+        '''
+        self.build_perf_test()
+        self.execute_perf_test()
+        self.analyse_perf_output(self.output)
 
 
 if __name__ == "__main__":
