@@ -15,12 +15,14 @@
 
 import os
 import re
+import glob
+import shutil
 
 from avocado import Test
 from avocado import main
 from avocado.utils import build
 from avocado.utils import distro
-from avocado.utils import archive
+from avocado.utils import archive, process
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -44,6 +46,7 @@ class kselftest(Test):
         """
         smg = SoftwareManager()
         self.comp = self.params.get('comp', default='')
+        run_type = self.params.get('type', default='upstream')
         if self.comp:
             self.comp = '-C %s' % self.comp
         detected_distro = distro.detect()
@@ -70,11 +73,37 @@ class kselftest(Test):
                 self.cancel(
                     "Fail to install %s required for this test." % (package))
 
-        location = ["https://github.com/torvalds/linux/archive/master.zip"]
-        tarball = self.fetch_asset("kselftest.zip", locations=location,
-                                   expire='1d')
-        archive.extract(tarball, self.workdir)
-        self.buldir = os.path.join(self.workdir, 'linux-master')
+        if run_type == 'upstream':
+            location = ["https://github.com/torvalds/linux/archive/master.zip"]
+            tarball = self.fetch_asset("kselftest.zip", locations=location,
+                                       expire='1d')
+            archive.extract(tarball, self.workdir)
+            self.buldir = os.path.join(self.workdir, 'linux-master')
+        else:
+            # Make sure kernel source repo is configured
+            if detected_distro.name in ['centos', 'fedora', 'rhel']:
+                self.buldir = smg.get_source('kernel', self.workdir)
+                self.buldir = os.path.join(
+                    self.buldir, os.listdir(self.buldir)[0])
+            elif 'Ubuntu' in detected_distro.name:
+                self.buldir = smg.get_source('linux', self.workdir)
+            elif 'SuSE' in detected_distro.name:
+                smg.get_source('kernel-source', self.workdir)
+                packages = '/usr/src/packages/'
+                os.chdir(os.path.join(packages, 'SOURCES'))
+                process.system('./mkspec', ignore_status=True)
+                shutil.copy(os.path.join(packages, 'SOURCES/kernel'
+                                                   '-default.spec'),
+                            os.path.join(packages, 'SPECS/kernel'
+                                                   '-default.spec'))
+                self.buldir = smg.prepare_source(os.path.join(
+                    packages, 'SPECS/kernel'
+                              '-default.spec'), dest_path=self.teststmpdir)
+                for l_dir in glob.glob(os.path.join(self.buldir, 'linux*')):
+                    if os.path.isdir(l_dir) and 'Makefile' in os.listdir(l_dir):
+                        self.buldir = os.path.join(
+                            self.buldir, os.listdir(self.buldir)[0])
+
         self.sourcedir = os.path.join(self.buldir, self.testdir)
         result = build.run_make(self.sourcedir)
         for line in str(result).splitlines():
