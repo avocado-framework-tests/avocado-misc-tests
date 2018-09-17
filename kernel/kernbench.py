@@ -110,16 +110,16 @@ class Kernbench(Test):
             'url', default='https://github.com/torvalds/linux/archive'
             '/master.zip')
         self.config_path = os.path.join('/boot/config-', self.kernel_version)
+        # Uncompress the kernel archive to the work directory
+        tarball = self.fetch_asset("kernbench.zip", locations=[self.location],
+                                   expire='1d')
+        archive.extract(tarball, self.workdir)
 
     def test(self):
         """
         Kernel build Test
         """
         # Setting the kernel
-        # Uncompress the kernel archive to the work directory
-        tarball = self.fetch_asset("kernbench.zip", locations=[self.location],
-                                   expire='1d')
-        archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(self.workdir, 'linux-master')
 
         self.log.info("Starting build the kernel")
