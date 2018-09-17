@@ -24,6 +24,9 @@ from avocado.utils.software_manager import SoftwareManager
 class Package_check(Test):
 
     def setUp(self):
+        if "ppc" not in distro.detect().arch:
+            self.cancel("supported only on Power platform")
+
         self.sm = SoftwareManager()
         self.packages = self.params.get(
             'packages', default=['powerpc-utils', 'ppc64-diag', 'lsvpd'])
@@ -38,8 +41,7 @@ class Package_check(Test):
                 'packages_rhel', default=['lshw', 'librtas'])
             self.packages.extend(packages_rhel)
             for package in self.packages:
-                if "anaconda" in process.system_output("yum list installed | "
-                                                       "grep %s | tail -1" % package, shell=True):
+                if self.sm.check_installed("anaconda"):
                     self.log.info(
                         "%s package is installed by default" % package)
                 else:
@@ -51,7 +53,8 @@ class Package_check(Test):
                 'packages_ubuntu', default=['librtas2'])
             self.packages.extend(packages_ubuntu)
             for package in self.packages:
-                if process.system_output("apt-mark showauto %s" % package, shell=True):
+                if process.system_output("apt-mark showauto %s" % package,
+                                         shell=True):
                     self.log.info(
                         "%s package is installed by default" % package)
                 else:
