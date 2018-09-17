@@ -36,7 +36,8 @@ class Perffuzzer(Test):
 
     @staticmethod
     def run_cmd_out(cmd):
-        return process.system_output(cmd, shell=True, ignore_status=True, sudo=True)
+        return process.system_output(cmd, shell=True, ignore_status=True,
+                                     sudo=True)
 
     def setUp(self):
         '''
@@ -79,7 +80,8 @@ class Perffuzzer(Test):
     def execute_perf_fuzzer(self):
         os.chdir(self.sourcedir)
         genio.write_one_line("/proc/sys/kernel/perf_event_paranoid", "-1")
-        if "-1" not in genio.read_one_line("/proc/sys/kernel/perf_event_paranoid"):
+        if "-1" not in genio.read_one_line("/proc/sys/kernel/"
+                                           "perf_event_paranoid"):
             self.cancel("Unable to set perf_event_paranoid to -1 ")
         self.perf_fuzzer = os.path.join(self.sourcedir, "fuzzer/perf_fuzzer")
         if not os.path.exists(self.perf_fuzzer):
