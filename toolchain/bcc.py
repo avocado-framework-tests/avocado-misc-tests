@@ -44,7 +44,7 @@ class Bcc(Test):
         smm = SoftwareManager()
         # TODO: Add support for other distributions
         if not detected_distro == "ubuntu":
-            self.cancel("Upsupported OS %s" % detected_distro)
+            self.cancel("Unsupported OS %s" % detected_distro)
         for package in ['bison', 'build-essential', 'cmake', 'flex',
                         'libedit-dev', 'libllvm3.8', 'llvm-3.8-dev',
                         'libclang-3.8-dev', 'python', 'zlib1g-dev',
