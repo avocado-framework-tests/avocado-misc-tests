@@ -18,9 +18,11 @@ import shutil
 import tempfile
 from avocado import Test
 from avocado import main
+from avocado.utils import genio
 from avocado.utils import build
 from avocado.utils import distro
 from avocado.utils import process
+from avocado.utils import linux_modules
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -47,6 +49,11 @@ class Kprobe(Test):
 
     def clear_dmesg(self):
         process.run("dmesg -C ", sudo=True)
+
+    def check_kernel_support(self):
+        if linux_modules.check_kernel_config("CONFIG_OPTPROBES") != 2:
+            return 0
+        return 1
 
     def setUp(self):
         """
@@ -128,9 +135,33 @@ class Kprobe(Test):
         if "kprobe" not in self.run_cmd_out("dmesg |grep -i unregistered"):
             self.fail("kprobe unregistering failed, check dmesg for more information")
 
+    def optprobes_disable_test(self):
+        optprobes_file = "/proc/sys/debug/kprobes-optimization"
+        if not self.check_kernel_support():
+            self.log.info("No support available for optprobes, skipping optprobes test")
+            return
+
+        if not os.path.exists(optprobes_file):
+            self.log.info("optprobes control file %s missing, skipping optprobes test",
+                          optprobes_file)
+            return
+
+        cur_val = genio.read_one_line(optprobes_file)
+        genio.write_one_line(optprobes_file, "0")
+        self.log.info("================= Disabling optprobes ==================")
+        if "0" not in genio.read_one_line(optprobes_file):
+            self.fail("Not able to disable optprobes")
+        self.execute_test()
+
+        self.log.info("================= Restoring optprobes ==================")
+        genio.write_one_line(optprobes_file, cur_val)
+        if cur_val not in genio.read_one_line(optprobes_file):
+            self.fail("Not able to restore optprobes to %s", cur_val)
+
     def test(self):
         self.build_module()
         self.execute_test()
+        self.optprobes_disable_test()
 
 
 if __name__ == "__main__":
