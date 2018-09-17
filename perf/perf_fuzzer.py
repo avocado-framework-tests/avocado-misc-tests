@@ -31,7 +31,7 @@ class Perffuzzer(Test):
     Source: https://github.com/deater/perf_event_tests/fuzzer
     (http://web.eece.maine.edu/~vweaver/projects/perf_events/fuzzer/)
     This test might crash the kernel
-    :avocado: tags=privileged
+    :avocado: tags=privileged,destructive
     """
 
     @staticmethod
