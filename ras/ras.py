@@ -46,8 +46,8 @@ class RASTools(Test):
         sm = SoftwareManager()
         for package in ("ppc64-diag", "powerpc-utils", "lsvpd", "ipmitool"):
             if not sm.check_installed(package) and not sm.install(package):
-                self.error("Fail to install %s required for this"
-                           " test." % package)
+                self.cancel("Fail to install %s required for this test." %
+                            package)
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
     def test1_set_poweron_time(self):

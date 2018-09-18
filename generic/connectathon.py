@@ -62,8 +62,8 @@ class Connectathon(Test):
 
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
-                self.error("Fail to install %s required for this test." %
-                           package)
+                self.cancel("Fail to install %s required for this test." %
+                            package)
 
         self.tmpdir = tempfile.mkdtemp(prefix='avocado_' + __name__)
         git.get_repo('git://git.linux-nfs.org/projects/steved/cthon04.git',

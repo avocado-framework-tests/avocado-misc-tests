@@ -41,7 +41,7 @@ class KDUMP(Test):
     def setUp(self):
         sm = SoftwareManager()
         if not sm.check_installed("openssh*") and not sm.install("openssh*"):
-            self.error("Fail to install openssh required for this test.")
+            self.cancel("Fail to install openssh required for this test.")
         self.ip = self.params.get('ip', default='')
         try:
             socket.inet_aton(self.ip)

@@ -43,7 +43,7 @@ class Libvecpf(Test):
         smm = SoftwareManager()
         for package in ['gcc', 'make']:
             if not smm.check_installed(package) and not smm.install(package):
-                self.error('%s is needed for the test to be run' % package)
+                self.cancel('%s is needed for the test to be run' % package)
         tarball = self.fetch_asset('libvecpf.zip', locations=[
                                    'https://github.com/Libvecpf/libvecpf'
                                    '/archive/master.zip'], expire='7d')
