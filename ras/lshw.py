@@ -19,6 +19,7 @@ from avocado import skipIf
 from avocado.utils import process
 from avocado.utils import genio
 from avocado.utils.software_manager import SoftwareManager
+from avocado.utils import distro
 
 
 class Lshwrun(Test):
@@ -51,6 +52,11 @@ class Lshwrun(Test):
 
     def setUp(self):
         sm = SoftwareManager()
+
+        dist = distro.detect()
+        if dist.name == "SuSE" and dist.version < 15:
+            self.cancel("lshw not supported on SUES-%s. Please run on SLES15 or higher versions only " % dist.version)
+
         for package in ("lshw", "net-tools", "iproute", "pciutils"):
             if not sm.check_installed(package) and not sm.install(package):
                 self.error("Fail to install %s required for this"
