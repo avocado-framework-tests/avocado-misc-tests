@@ -53,7 +53,7 @@ class Lshwrun(Test):
 
         dist = distro.detect()
         if dist.name == "SuSE" and dist.version < 15:
-            self.cancel("lshw not supported on SUES-%s. Please run on SLES15 or higher versions only " % dist.version)
+            self.cancel("lshw not supported on SUES-%s. Please run on SLES15 or any higher version only " % dist.version)
 
         for package in ("lshw", "net-tools", "iproute", "pciutils"):
             if not sm.check_installed(package) and not sm.install(package):
