@@ -48,7 +48,7 @@ class Hackbench(Test):
         self.results = None
         sm = SoftwareManager()
         if not sm.check_installed("gcc") and not sm.install("gcc"):
-            self.error("Gcc is needed for the test to be run")
+            self.cancel("Gcc is needed for the test to be run")
         hackbench = self.fetch_asset('http://people.redhat.com'
                                      '/~mingo/cfs-scheduler/'
                                      'tools/hackbench.c')

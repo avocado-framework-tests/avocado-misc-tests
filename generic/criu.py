@@ -39,8 +39,8 @@ class CRIU(Test):
             self.cancel('Currently test is supported only on RHEL')
         for package in packages:
             if not sm.check_installed(package) and not sm.install(package):
-                self.error("Fail to install %s required for this test." %
-                           package)
+                self.cancel("Fail to install %s required for this test." %
+                            package)
         criu_version = self.params.get('criu_version', default='2.6')
         tarball = self.fetch_asset(
                   "http://download.openvz.org/criu/criu-%s.tar.bz2" % criu_version,

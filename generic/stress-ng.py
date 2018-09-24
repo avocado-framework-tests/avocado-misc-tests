@@ -74,8 +74,8 @@ class Stressng(Test):
                          'zlib-devel', 'libaio-devel'])
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
-                self.log.info(
-                    '%s is needed, get the source and build', package)
+                self.cancel("%s is needed, get the source and build" %
+                            package)
 
         tarball = self.fetch_asset('stressng.zip',
                                    locations=['https://github.com/Colin'
