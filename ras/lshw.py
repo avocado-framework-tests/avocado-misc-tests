@@ -54,14 +54,19 @@ class Lshwrun(Test):
         sm = SoftwareManager()
 
         dist = distro.detect()
+        packages = ['lshw', 'net-tools', 'pciutils']
         if dist.name == "SuSE" and dist.version < 15:
             self.cancel("lshw not supported on SUES-%s. Please run " +
                         "on SLES15 or higher versions only " % dist.version)
+        if dist.name == 'Ubuntu' and dist.version.version >= 18:
+            packages.extend(['iproute2'])
+        else:
+            packages.extend(['iproute'])
 
-        for package in ("lshw", "net-tools", "iproute", "pciutils"):
+        for package in packages:
             if not sm.check_installed(package) and not sm.install(package):
-                self.error("Fail to install %s required for this"
-                           " test." % package)
+                self.cancel("Fail to install %s required for this"
+                            " test." % package)
 
     def test_lshw(self):
         """
