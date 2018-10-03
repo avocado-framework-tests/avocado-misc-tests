@@ -109,13 +109,6 @@ class libhugetlbfs(Test):
         patch = self.params.get('patch', default='elflink.patch')
         process.run('patch -p1 < %s' % self.get_data(patch), shell=True)
 
-        # FIXME: "redhat" as the distro name for RHEL is deprecated
-        # on Avocado versions >= 50.0.  This is a temporary compatibility
-        # enabler for older runners, but should be removed soon
-        if detected_distro.name in ["rhel", "fedora", "redhat", "centos"]:
-            falloc_patch = 'patch -p1 < %s ' % self.get_data('falloc.patch')
-            process.run(falloc_patch, shell=True)
-
         build.make(self.workdir, extra_args='BUILDTYPE=NATIVEONLY')
 
     def _log_parser(self, log):
