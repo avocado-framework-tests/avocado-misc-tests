@@ -60,7 +60,7 @@ class NumaTest(Test):
             for node in nodes:
                 hp_check += int(genio.read_file(
                     '/sys/devices/system/node/node%s/hugepages/hugepages-%skB'
-                    'nr_hugepages' % (node, str(hp_size))).strip())
+                    '/nr_hugepages' % (node, str(hp_size))).strip())
             if hp_check < self.nr_pages:
                 self.cancel('Not enough pages to be configured on nodes')
         if dist.name == "Ubuntu":
