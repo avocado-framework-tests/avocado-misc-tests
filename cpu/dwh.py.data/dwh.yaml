@@ -1,0 +1,28 @@
+setup:
+    minimum_threads: !mux
+      default:
+        minthrd: 50
+    maximum_threads: !mux
+      default:
+        maxthrd: 100
+    io_threads: !mux
+      default:
+        iothrd: 10
+    io_time: !mux
+      default:
+        iotime: 10
+    maxi_mem: !mux
+      default:
+        maxmem: null # in MB
+    maxi_io: !mux
+      default:
+        maxio: null # in G
+    long_threads: !mux
+      default:
+        longthrd: true
+    short_threads: !mux
+      default:
+        shortthrd: false
+    time_limit: !mux
+      default:
+        time: 60

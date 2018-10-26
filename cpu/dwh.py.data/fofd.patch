@@ -1,0 +1,12 @@
+--- dwh_old.cpp	2018-10-31 11:45:43.251564344 +0530
++++ dwh.cpp	2018-10-31 11:48:21.225190688 +0530
+@@ -125,6 +125,9 @@
+ #include <atomic>
+ #include <time.h>
+
++# define F_OFD_SETLK 37
++# define F_OFD_SETLKW 38
++
+ /* Set true to get extra diagnostic information on program operation while
+  * running. It results in a lot of output so if interested in viewing only
+  * a limited number of diagnostic oputput cases change their conditional to
