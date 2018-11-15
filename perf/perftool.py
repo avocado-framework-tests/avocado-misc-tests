@@ -85,7 +85,7 @@ class Perftool(Test):
                 self.log.info(line)
 
         if count > 0:
-            self.fail("%s Test failed" % self.count)
+            self.fail("%s Test failed" % count)
 
 
 if __name__ == "__main__":
