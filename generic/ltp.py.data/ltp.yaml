@@ -1,10 +1,6 @@
 setup:
     general: !mux
-        default:
-            script: 'runltplite.sh'
-            args: ''
         runltp: !mux
-            script: 'runltp'
             syscalls:
                 args: '-f syscalls'
             mm:
