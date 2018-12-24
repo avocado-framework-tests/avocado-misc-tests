@@ -69,7 +69,7 @@ class Stressng(Test):
                 'libcap-dev', 'libgcrypt11-dev', 'libkeyutils-dev',
                 'libsctp-dev', 'zlib1g-dev'])
         else:
-            deps.extend(['libattr-devel', 'libbsd-devel', 'libcap-devel',
+            deps.extend(['libattr-devel', 'libcap-devel',
                          'libgcrypt-devel', 'keyutils-libs-devel',
                          'zlib-devel', 'libaio-devel'])
         for package in deps:
