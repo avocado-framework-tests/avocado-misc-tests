@@ -70,8 +70,7 @@ class Stressng(Test):
                 'libsctp-dev', 'zlib1g-dev'])
         else:
             deps.extend(['libattr-devel', 'libcap-devel',
-                         'libgcrypt-devel', 'keyutils-libs-devel',
-                         'zlib-devel', 'libaio-devel'])
+                         'libgcrypt-devel', 'zlib-devel', 'libaio-devel'])
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("%s is needed, get the source and build" %
