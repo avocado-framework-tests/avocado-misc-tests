@@ -25,7 +25,6 @@ from avocado import main
 from avocado.utils import process
 from avocado.utils import build
 from avocado.utils import kernel
-from avocado.utils import memory
 from avocado.utils import git
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import distro, genio
@@ -45,7 +44,7 @@ class libhugetlbfs(Test):
         sm = SoftwareManager()
         detected_distro = distro.detect()
         deps = ['gcc', 'make', 'patch']
-
+        cpuinfo = genio.read_file("/proc/cpuinfo").strip()
         if detected_distro.name == "Ubuntu":
             deps += ['libpthread-stubs0-dev', 'git']
         elif detected_distro.name == "SuSE":
@@ -68,6 +67,10 @@ class libhugetlbfs(Test):
             self.cancel("libpthread.a is required!!!"
                         "\nTry installing glibc-static")
 
+        self.page_sizes = ['16']
+        if 'POWER9' in cpuinfo and 'PowerNV' in cpuinfo:
+            self.page_sizes = ['2', '1024']
+
         # Get arguments:
         self.hugetlbfs_dir = self.params.get('hugetlbfs_dir', default=None)
         pages_requested = self.params.get('pages_requested',
@@ -81,27 +84,27 @@ class libhugetlbfs(Test):
 
             if 'HugePages_' not in Hugepages_support:
                 self.cancel("No Hugepages Configured")
-            memory.set_num_huge_pages(pages_requested)
-            pages_available = memory.get_num_huge_pages()
         else:
             self.cancel("Kernel does not support hugepages")
 
-        # Check no of hugepages :
-        if pages_available < pages_requested:
-            self.cancel('%d pages available, < %d pages requested'
-                        % (pages_available, pages_requested))
+        if not self.hugetlbfs_dir:
+            self.hugetlbfs_dir = os.path.join(self.teststmpdir, 'hugetlbfs')
+            os.makedirs(self.hugetlbfs_dir)
 
-        # Check if hugetlbfs is mounted
-        cmd_result = process.run(
-            'grep hugetlbfs /proc/mounts', verbose=False, sudo=True)
-        if not cmd_result:
-            if not self.hugetlbfs_dir:
-                self.hugetlbfs_dir = os.path.join(self.tmpdir, 'hugetlbfs')
-                os.makedirs(self.hugetlbfs_dir)
-            if process.system('mount -t hugetlbfs none %s' %
-                              self.hugetlbfs_dir, sudo=True,
+        for hp_size in self.page_sizes:
+            if process.system('mount -t hugetlbfs -o pagesize=%sM none %s' %
+                              (hp_size, self.hugetlbfs_dir), sudo=True,
                               ignore_status=True):
                 self.cancel("hugetlbfs mount failed")
+            genio.write_file(
+                '/sys/kernel/mm/hugepages/hugepages-%skB/nr_hugepages' %
+                str(int(hp_size) * 1024), str(pages_requested))
+            pages_available = int(genio.read_file(
+                '/sys/kernel/mm/hugepages/huge'
+                'pages-%skB/nr_hugepages' % str(int(hp_size) * 1024).strip()))
+            if pages_available < pages_requested:
+                self.cancel('%d pages available, < %d pages requested'
+                            % (pages_available, pages_requested))
 
         git.get_repo('https://github.com/libhugetlbfs/libhugetlbfs.git',
                      destination_dir=self.workdir)
@@ -111,7 +114,8 @@ class libhugetlbfs(Test):
 
         build.make(self.workdir, extra_args='BUILDTYPE=NATIVEONLY')
 
-    def _log_parser(self, log):
+    @staticmethod
+    def _log_parser(log, column):
         """
         Parses the log, returning a dictionary with the test results.
         Test summary section example:
@@ -160,32 +164,36 @@ class libhugetlbfs(Test):
                 section = False
             if section and ':' in line:
                 key, values = line.split(':')
-                parsed_results[32][key.lstrip('* ')] = int(values.split()[0])
-                parsed_results[64][key.lstrip('* ')] = int(values.split()[1])
+                parsed_results[32][key.lstrip(
+                    '* ')] = int(values.split()[column])
+                parsed_results[64][key.lstrip(
+                    '* ')] = int(values.split()[column + 1])
 
         return parsed_results
 
     def test(self):
         os.chdir(self.workdir)
 
-        parsed_results = self._log_parser(
-            build.run_make(self.workdir,
-                           extra_args='BUILDTYPE=NATIVEONLY check').stdout)
+        run_log = build.run_make(
+            self.workdir, extra_args='BUILDTYPE=NATIVEONLY check').stdout
+        parsed_results = []
         error = ""
+        for idx, hp_size in enumerate(self.page_sizes):
+            parsed_results.append(self._log_parser(run_log, idx * 2))
 
-        if parsed_results[32]['FAIL']:
-            error += "%s tests failed for 32-bit\n" % (
-                parsed_results[32]['FAIL'])
+            if parsed_results[idx][32]['FAIL']:
+                error += "%s 32-bit tests failed for %sMB hugepage\n" % (
+                    parsed_results[idx][32]['FAIL'], hp_size)
 
-        if parsed_results[64]['FAIL']:
-            error += "%s tests failed for 64-bit" % (
-                parsed_results[64]['FAIL'])
+            if parsed_results[idx][64]['FAIL']:
+                error += "%s 64-bit tests failed for %sMB hugepage\n" % (
+                    parsed_results[idx][64]['FAIL'], hp_size)
 
         if error:
             self.fail(error)
 
     def tearDown(self):
-        if self.hugetlbfs_dir:
+        for _ in range(0, self.page_sizes):
             if process.system('umount %s' %
                               self.hugetlbfs_dir, ignore_status=True):
                 self.log.warn("umount of hugetlbfs dir failed")
