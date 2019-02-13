@@ -17,8 +17,6 @@ test: !mux
         test: nvme_create_max_ns_test
     nvme_simple_template_test:
         test: nvme_simple_template_test
-    nvme_format_test:
-        test: nvme_format_test
     nvme_id_ns_test:
         test: nvme_id_ns_test
     nvme_fw_log_test:
@@ -37,3 +35,5 @@ test: !mux
         test: nvme_smart_log_test
     nvme_test:
         test: nvme_test
+    nvme_format_test:
+        test: nvme_format_test
