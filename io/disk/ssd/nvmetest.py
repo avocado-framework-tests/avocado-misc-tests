@@ -230,6 +230,13 @@ class NVMeTest(Test):
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Reset failed")
 
+    def testreset_sysfs(self):
+        """
+        resets the controller via sysfs.
+        """
+        if self.reset_controller_sysfs():
+            self.fail("Reset failed")
+
     def testsubsystemreset(self):
         """
         resets the controller subsystem.
@@ -237,13 +244,6 @@ class NVMeTest(Test):
         cmd = 'nvme subsystem-reset %s' % self.device
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Subsystem reset failed")
-
-    def testreset_sysfs(self):
-        """
-        resets the controller via sysfs.
-        """
-        if self.reset_controller_sysfs():
-            self.fail("Reset failed")
 
 
 if __name__ == "__main__":
