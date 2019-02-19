@@ -39,8 +39,6 @@ setup:
                 args: '-f fcntl-locktests'
             connectors:
                 args: '-f connectors'
-            aadmin_tools:
-                args: '-f admin_tools'
             timers:
                 args: '-f timers'
             power_management_tests:
