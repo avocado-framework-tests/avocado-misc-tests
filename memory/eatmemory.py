@@ -32,7 +32,7 @@ class eatmemory(Test):
 
     def setUp(self):
         sm = SoftwareManager()
-        deps = ['gcc', 'make']
+        deps = ['gcc', 'make', 'patch']
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
                 self.error(package + ' is needed for the test to be run')
