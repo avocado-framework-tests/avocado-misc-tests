@@ -35,7 +35,7 @@ class eatmemory(Test):
         deps = ['gcc', 'make', 'patch']
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
-                self.error(package + ' is needed for the test to be run')
+                self.cancel(package + ' is needed for the test to be run')
         url = 'https://github.com/julman99/eatmemory/archive/master.zip'
         tarball = self.fetch_asset("eatmemory.zip", locations=[url], expire='7d')
         archive.extract(tarball, self.workdir)
@@ -48,7 +48,7 @@ class eatmemory(Test):
         mem = self.params.get('memory_to_test', default=int(0.95 * memory.meminfo.MemFree.k))
         self.mem_to_eat = self._mem_to_mbytes(mem)
         if self.mem_to_eat is None:
-            self.error("Memory '%s' not valid." % mem)
+            self.cancel("Memory '%s' not valid." % mem)
 
     @staticmethod
     def _mem_to_mbytes(mem):
