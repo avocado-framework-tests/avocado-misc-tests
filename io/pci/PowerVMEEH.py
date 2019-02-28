@@ -64,6 +64,9 @@ class PowerVMEEH(Test):
         if '0x1' not in genio.read_file("/sys/kernel/debug/powerpc/eeh_enable").strip():
             self.cancel("EEH is not enabled, please enable via FSP")
         self.max_freeze = self.params.get('max_freeze', default=1)
+        self.pci_addr = [self.params.get('pci_device', default='')]
+        if not self.pci_addr:
+            self.cancel("No PCI Device specified")
         cmd = "echo %d > /sys/kernel/debug/powerpc/eeh_max_freezes"\
             % self.max_freeze
         process.system(cmd, ignore_status=True, shell=True)
@@ -74,7 +77,7 @@ class PowerVMEEH(Test):
         """
         Test to execute basic error injection on PE
         """
-        for self.addr in pci.get_pci_addresses():
+        for self.addr in self.pci_addr:
             enter_loop = True
             num_of_miss = 0
             num_of_hit = 0
