@@ -79,19 +79,23 @@ class FSMark(Test):
             except PartitionError:
                 self.fail("Mounting disk %s on directory %s failed"
                           % (self.disk, self.dirs))
+            self.link = "/tmp/link"
+            os.symlink(self.dirs, self.link)
 
     def test(self):
         """
         Run fs_mark
         """
         os.chdir(self.sourcedir)
-        cmd = "./fs_mark -d %s -s %s -n %s" % (self.dirs, self.size, self.num)
+        cmd = "./fs_mark -d %s -s %s -n %s" % (self.link, self.size, self.num)
         process.run(cmd)
 
     def tearDown(self):
         '''
         Cleanup of disk used to perform this test
         '''
+        if self.link:
+            os.unlink(self.link)
         if self.disk is not None:
             self.log.info("Unmounting disk %s on directory %s",
                           self.disk, self.dirs)
