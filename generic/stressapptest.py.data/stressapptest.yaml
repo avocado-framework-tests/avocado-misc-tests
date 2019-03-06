@@ -1,0 +1,7 @@
+setup:
+    general: !mux
+        default:
+                tmp_file: '/tmp/file'
+                duration: '200'
+                threads: 20
+                memory_to_test: 200 # in MiB
