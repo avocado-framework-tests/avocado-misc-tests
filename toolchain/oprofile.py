@@ -40,7 +40,7 @@ class Oprofile(Test):
             deps.append("tclsh")
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
-                self.error(package + ' is needed for the test to be run')
+                self.cancel('%s is needed for the test to be run' % package)
         git.get_repo('git://git.code.sf.net/p/oprofile/oprofile-tests',
                      destination_dir=self.workdir)
         os.chdir(self.workdir)
