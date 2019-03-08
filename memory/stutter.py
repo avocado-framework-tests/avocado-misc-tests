@@ -41,8 +41,11 @@ class Stutter(Test):
 
         # Check for basic utilities
         smm = SoftwareManager()
-        if not smm.check_installed("gcc") and not smm.install("gcc"):
-            self.error('Gcc is needed for the test to be run')
+
+        for package in ['gcc', 'make']:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel(
+                    "Fail to install %s required for this test." % package)
 
         locations = ["https://github.com/gaowanlong/stutter/archive/"
                      "master.zip"]
