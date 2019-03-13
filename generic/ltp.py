@@ -41,7 +41,7 @@ class ltp(Test):
         deps = ['gcc', 'make', 'automake', 'autoconf']
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
-                self.error(package + ' is needed for the test to be run')
+                self.cancel(package + ' is needed for the test to be run')
         url = "https://github.com/linux-test-project/ltp/archive/master.zip"
         tarball = self.fetch_asset("ltp-master.zip", locations=[url])
         archive.extract(tarball, self.workdir)
