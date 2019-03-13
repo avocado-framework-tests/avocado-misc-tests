@@ -32,10 +32,7 @@ class ltp(Test):
 
     """
     LTP (Linux Test Project) testsuite
-    :param script: Which ltp script to run (default is "runltplite.sh", which
-                   implies all LTP tests. You can use "runltp" + args to
-                   specify subset of tests).
-    :param args: Extra arguments (default "", with "runltp" you can use
+    :param args: Extra arguments ("runltp" can use with
                  "-f $test")
     """
 
@@ -44,7 +41,7 @@ class ltp(Test):
         deps = ['gcc', 'make', 'automake', 'autoconf']
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
-                self.error(package + ' is needed for the test to be run')
+                self.cancel(package + ' is needed for the test to be run')
         url = "https://github.com/linux-test-project/ltp/archive/master.zip"
         tarball = self.fetch_asset("ltp-master.zip", locations=[url])
         archive.extract(tarball, self.workdir)
@@ -58,17 +55,15 @@ class ltp(Test):
         build.make(ltp_dir, extra_args='install')
 
     def test(self):
-        script = self.params.get('script', default='runltplite.sh')
         args = self.params.get('args', default='')
-        if script == 'runltp':
-            logfile = os.path.join(self.logdir, 'ltp.log')
-            failcmdfile = os.path.join(self.logdir, 'failcmdfile')
+        logfile = os.path.join(self.logdir, 'ltp.log')
+        failcmdfile = os.path.join(self.logdir, 'failcmdfile')
 
-            args += (" -q -p -l %s -C %s -d %s -S %s"
-                     % (logfile, failcmdfile, self.workdir,
-                        self.get_data('skipfile')))
+        args += (" -q -p -l %s -C %s -d %s -S %s"
+                 % (logfile, failcmdfile, self.workdir,
+                    self.get_data('skipfile')))
         ltpbin_dir = os.path.join(self.workdir, "ltp-master", 'bin')
-        cmd = os.path.join(ltpbin_dir, script) + ' ' + args
+        cmd = os.path.join(ltpbin_dir, 'runltp') + ' ' + args
         result = process.run(cmd, ignore_status=True)
         # Walk the stdout and try detect failed tests from lines like these:
         # aio01       5  TPASS  :  Test 5: 10 reads and writes in  0.000022 sec
