@@ -41,7 +41,9 @@ class Package_check(Test):
                 'packages_rhel', default=['lshw', 'librtas'])
             self.packages.extend(packages_rhel)
             for package in self.packages:
-                if self.sm.check_installed("anaconda"):
+                if "anaconda" in process.system_output("yum list installed "
+                                                       "| grep %s | tail -1"
+                                                       % package, shell=True):
                     self.log.info(
                         "%s package is installed by default" % package)
                 else:
