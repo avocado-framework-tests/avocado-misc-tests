@@ -62,6 +62,9 @@ class PPC64Test(Test):
         self.key = 0
         self.value = ""
         self.max_smt_value = 4
+        if cpu.get_cpu_arch().lower() == 'power9':
+            if 'Hash' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
+                self.max_smt_value = 8
         if cpu.get_cpu_arch().lower() == 'power8':
             self.max_smt_value = 8
         if cpu.get_cpu_arch().lower() == 'power6':
