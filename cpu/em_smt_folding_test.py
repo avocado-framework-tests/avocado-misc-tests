@@ -94,7 +94,7 @@ class SmtFolding(Test):
         '''
         output = process.system_output("taskset -c %s ./ebizzy -t1"
                                        " -S 6 -s 4096" % self.cpu, shell=True)
-        return output.splitlines()[0]
+        return output.split()[0]
 
 
 if __name__ == "__main__":
