@@ -20,7 +20,7 @@ import re
 import platform
 from avocado import Test
 from avocado import main
-from avocado.utils import process, distro
+from avocado.utils import process, distro, cpu
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -58,6 +58,7 @@ class test_eliminate_domain_suffix(Test):
         self.perf_args = "perf stat -v -C 0 -e"
         self.perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % self.perf_args
         self.event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
+        self.cpu_arch = cpu.get_cpu_arch().lower()
 
         # Check if this is a guest
         # 24x7 is not suported on guest
@@ -101,46 +102,54 @@ class test_eliminate_domain_suffix(Test):
         result1 = self.event_stat('__PHYS_CORE,core=1/ sleep 1')
         if "Invalid event/parameter" not in result1.stdout:
             self.fail('perf unable to recognize'
-                          'hv_24x7/HPM_0THRD_NON_IDLE_CCYC__PHYS_CORE'
-                          'has invalid event')
+                      ' hv_24x7/HPM_0THRD_NON_IDLE_CCYC__PHYS_CORE'
+                      ' has invalid event')
         else:
             self.log.info('perf recognized Invalid event')
 
     def test_event_wo_domain_param(self):
+        if self.cpu_arch == 'power9':
+            self.cancel("Not supported on Power9")
         result1 = self.event_stat('/ sleep 1')
         if "invalid or unsupported event" not in result1.stderr or "Required "\
                 "parameter 'domain' not specified" not in result1.stdout:
             self.fail('Domain is not specified, perf unable'
-                          'to recognize it has invalid event')
+                      ' to recognize it has invalid event')
         else:
             self.log.info('perf recognized unsupported event')
 
     def test_event_w_domain_param(self):
+        if self.cpu_arch == 'power9':
+            self.cancel("Not supported on Power9")
         result1 = self.event_stat(',domain=2,core=1/ sleep 1')
-        print result1.stderr
+        print(result1.stderr)
         if "Performance counter stats for" not in result1.stderr:
             self.fail('perf unable to recognize domain name'
-                          'in param=value format')
+                      ' in param=value format')
         else:
             self.log.info('perf recognized domain name in param=value format')
 
     def test_check_domain_not_existing(self):
+        if self.cpu_arch == 'power9':
+            self.cancel("Not supported on Power9")
         result1 = self.event_stat(',domain=12,core=1/ sleep 1')
         if "not supported" not in result1.stderr:
             self.fail('domain does not exist but perf listed'
-                          'has supported')
+                      ' has supported')
         else:
             self.log.info('perf listed non-existing domain as unsupported')
 
     def test_check_all_domains(self):
+        if self.cpu_arch == 'power9':
+            self.cancel("Not supported on Power9")
         for domain in range(1, 6):
             result1 = self.event_stat(',domain=%s,core=1/ sleep 1' % domain)
             if "Performance counter stats for" not in result1.stderr:
                 self.fail('perf unable to recognize domain name in'
-                              'param=value format for all domains')
+                          ' param=value format for all domains')
             else:
                 self.log.info('perf recognized domain name in param=value'
-                              'format for all 6 domains')
+                              ' format for all 6 domains')
 
     def test_event_w_chip_param(self):
         event_out = process.run("cat %s/events/"
@@ -160,7 +169,7 @@ class test_eliminate_domain_suffix(Test):
         chip_miss = self.event_stat1(cmd)
         if "Required parameter 'chip' not specified" not in chip_miss.stdout:
             self.fail('perf unable to detect chip'
-                          'parameter missing')
+                      ' parameter missing')
         else:
             self.log.info('perf detected chip parameter missing')
         cmd = "hv_24x7/PM_PB_CYC,domain=1,chip=1/ /bin/true"
