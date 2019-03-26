@@ -83,21 +83,6 @@ class Perf(Test):
             self.fail("%s command(s) failed to execute  "
                       % self.fail_cmd)
 
-    def test_perf_test(self):
-        """
-        execute inbuilt test
-        """
-        self.log.info("===============Executing perf test (builtin tests)===="
-                      "===========")
-        self.is_fail = 0
-        for testcase in self.run_cmd_out("perf test 2>& 1|grep -ie failed -ie skip").splitlines():
-            if "failed" in testcase.lower():
-                self.is_fail += 1
-            elif "not compiled in" in testcase.lower():
-                self.is_fail += 1
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed to execute  " % self.fail_cmd)
-
     def test_perf_cmds(self):
         """
         execute perf commands:
