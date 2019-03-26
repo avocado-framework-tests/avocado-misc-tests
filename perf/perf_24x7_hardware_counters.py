@@ -176,6 +176,13 @@ class test_eliminate_domain_suffix(Test):
         if "Performance counter stats for" not in output_chip.stderr:
             self.fail('performance counter stats for missing')
 
+    def test_domain_chip_offset(self):
+        cmd = "perf stat -r 10 -C 0 -x ' ' perf stat -r 10 -C 0 -x ' ' \
+               -e hv_24x7/domain=2,offset=0xe0,core=0/ sleep 1"
+        output = process.run(cmd)
+        if "not supported" in output.stdout:
+            self.fail("Performance counters not enabled in HMC or it's a Bug.")
+
     # Helper functions
     def event_helper(self, event):
         search_suffix = process.run('ls %s/events |grep -E '
