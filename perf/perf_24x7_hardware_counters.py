@@ -122,7 +122,6 @@ class test_eliminate_domain_suffix(Test):
         if self.cpu_arch == 'power9':
             self.cancel("Not supported on Power9")
         result1 = self.event_stat(',domain=2,core=1/ sleep 1')
-        print(result1.stderr)
         if "Performance counter stats for" not in result1.stderr:
             self.fail('perf unable to recognize domain name'
                       ' in param=value format')
