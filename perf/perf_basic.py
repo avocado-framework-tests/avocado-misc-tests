@@ -12,6 +12,7 @@
 #
 # Copyright: 2018 IBM.
 # Author: Kamalesh Babulal <kamalesh@linux.vnet.ibm.com>
+# Author: Nageswara R Sastry <rnsastry@linux.vnet.ibm.com>
 
 import os
 from avocado import Test
@@ -33,13 +34,7 @@ class Perf(Test):
     def run_cmd(self, cmd, verbose=True):
         self.log.info("executing ============== %s =================", cmd)
         if process.system(cmd, verbose=verbose, ignore_status=True, sudo=True, shell=True):
-            self.is_fail += 1
-            self.fail_cmd.append(cmd)
-
-    @staticmethod
-    def run_cmd_out(cmd):
-        return process.system_output(cmd, shell=True,
-                                     ignore_status=True, sudo=True)
+            self.fail("perf: failed to execute command %s" % cmd)
 
     def setUp(self):
         smg = SoftwareManager()
@@ -56,59 +51,65 @@ class Perf(Test):
             if not smg.check_installed(pkg) and not smg.install(pkg):
                 self.cancel("Package %s is missing/could not be installed" % pkg)
 
-    def test_perf_short(self):
-        """
-        execute basic perf testcases:
-        - help
-        - version
-        - 'list' -> List all symbolic event types
-        - 'record' -> Run a command and record its profile into perf.data
-        - 'report' -> Read perf.data (created by perf record) and display the profile
-        """
-        self.log.info("===============Executing perf test (short)===="
-                      "===========")
-        self.is_fail = 0
+    """
+    execute basic perf testcases:
+    - help
+    - version
+    - 'list' -> List all symbolic event types
+    - 'record' -> Run a command and record its profile into perf.data
+    - 'report' -> Read perf.data (created by perf record) and display the profile
+    """
+
+    def test_perf_help(self):
         self.run_cmd("perf --help", False)
+
+    def test_perf_version(self):
         self.run_cmd("perf --version", False)
+
+    def test_perf_list(self):
         self.run_cmd("perf list", False)
+
+    def test_perf_record(self):
         self.run_cmd("perf record -o perf.data -a sleep 5")
         if os.path.exists("perf.data"):
             if not os.stat("perf.data").st_size:
-                self.is_fail += 1
-                self.log.info("perf.data sample not captured")
+                self.fail("perf.data sample not captured")
             else:
                 self.run_cmd("perf report --stdio")
 
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed to execute  "
-                      % self.fail_cmd)
+    """
+    execute perf commands:
+    - 'kallsyms' -> Searches running kernel for symbols
+    - 'annotate' -> Read perf.data (created by perf record) and display annotated code
+    - 'evlist' -> List the event names in a perf.data file
+    - 'script' -> Read perf.data (created by perf record) and display trace output
+    - 'stat' -> Run a command and gather performance counter statistics
+    - 'bench' -> General framework for benchmark suites
+    """
 
-    def test_perf_cmds(self):
-        """
-        execute perf commands:
-        - 'kallsyms' -> Searches running kernel for symbols
-        - 'annotate' -> Read perf.data (created by perf record) and display annotated code
-        - 'evlist' -> List the event names in a perf.data file
-        - 'script' -> Read perf.data (created by perf record) and display trace output
-        - 'stat' -> Run a command and gather performance counter statistics
-        - 'bench' -> General framework for benchmark suites
-        """
-        self.is_fail = 0
+    def test_perf_cmd_kallsyms(self):
         self.run_cmd("perf kallsyms __schedule")
-        subcmds = ["perf annotate --stdio", "perf evlist -v", "perf script"]
-        if os.path.exists("perf.data"):
-            for subcmd in subcmds:
-                self.run_cmd(subcmd)
-            os.remove("perf.data")
-        else:
-            self.is_fail += 1
-            for subcmd in subcmds:
-                self.fail_cmd.append(subcmd)
 
+    def test_perf_cmd_annotate(self):
+        self.run_cmd("perf annotate --stdio")
+
+    def test_perf_cmd_evlist(self):
+        self.run_cmd("perf evlist -v")
+
+    def test_perf_cmd_script(self):
+        self.run_cmd("perf script")
+
+    def test_perf_stat(self):
         self.run_cmd("perf stat -a sleep 5")
+
+    def test_perf_bench(self):
         self.run_cmd("perf bench sched")
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed to execute  " % self.fail_cmd)
+
+    def tearDown(self):
+        self.variant = getattr(self.job.args, "avocado_variants", None)
+        self.variant.parse(self.job.args)
+        if self.name.uid == 10:
+            self.run_cmd("rm -f perf.data")
 
 
 if __name__ == "__main__":
