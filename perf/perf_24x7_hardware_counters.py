@@ -55,10 +55,14 @@ class test_eliminate_domain_suffix(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        self.perf_args = "perf stat -v -C 0 -e"
-        self.perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % self.perf_args
-        self.event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
+
         self.cpu_arch = cpu.get_cpu_arch().lower()
+        self.perf_args = "perf stat -v -C 0 -e"
+        if self.cpu_arch == 'power8':
+            self.perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % self.perf_args
+        if self.cpu_arch == 'power9':
+            self.perf_stat = "%s hv_24x7/CPM_TLBIE" % self.perf_args
+        self.event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
 
         # Check if this is a guest
         # 24x7 is not suported on guest
@@ -71,17 +75,16 @@ class test_eliminate_domain_suffix(Test):
             self.log.info('hv_24x7 present')
         else:
             self.cancel("%s doesn't exist.This feature is supported"
-                        "on only lpar" % self.event_sysfs)
+                        " only on LPAR" % self.event_sysfs)
 
         # Performance measurement has to be enabled in lpar through BMC
         # Check if its enabled
         # Refer https://bugzilla.linux.ibm.com/show_bug.cgi?id=139404#c21
         result_perf = process.run("%s,domain=2,core=1/ sleep 1"
                                   % self.perf_stat, ignore_status=True)
-        if "You may not have permission to collect\
-                stats" in result_perf.stderr:
+        if "not supported" in result_perf.stderr:
             self.cancel("Please enable lpar to allow collecting"
-                        "the 24x7 counters info")
+                        " the 24x7 counters info")
 
     # Features testing
     def test_display_domain_indices_in_sysfs(self):
@@ -108,8 +111,6 @@ class test_eliminate_domain_suffix(Test):
             self.log.info('perf recognized Invalid event')
 
     def test_event_wo_domain_param(self):
-        if self.cpu_arch == 'power9':
-            self.cancel("Not supported on Power9")
         result1 = self.event_stat('/ sleep 1')
         if "invalid or unsupported event" not in result1.stderr or "Required "\
                 "parameter 'domain' not specified" not in result1.stdout:
@@ -119,8 +120,6 @@ class test_eliminate_domain_suffix(Test):
             self.log.info('perf recognized unsupported event')
 
     def test_event_w_domain_param(self):
-        if self.cpu_arch == 'power9':
-            self.cancel("Not supported on Power9")
         result1 = self.event_stat(',domain=2,core=1/ sleep 1')
         if "Performance counter stats for" not in result1.stderr:
             self.fail('perf unable to recognize domain name'
@@ -129,18 +128,9 @@ class test_eliminate_domain_suffix(Test):
             self.log.info('perf recognized domain name in param=value format')
 
     def test_check_domain_not_existing(self):
-        if self.cpu_arch == 'power9':
-            self.cancel("Not supported on Power9")
         result1 = self.event_stat(',domain=12,core=1/ sleep 1')
-        if "not supported" not in result1.stderr:
-            self.fail('domain does not exist but perf listed'
-                      ' has supported')
-        else:
-            self.log.info('perf listed non-existing domain as unsupported')
 
     def test_check_all_domains(self):
-        if self.cpu_arch == 'power9':
-            self.cancel("Not supported on Power9")
         for domain in range(1, 6):
             result1 = self.event_stat(',domain=%s,core=1/ sleep 1' % domain)
             if "Performance counter stats for" not in result1.stderr:
@@ -180,8 +170,6 @@ class test_eliminate_domain_suffix(Test):
         cmd = "perf stat -r 10 -C 0 -x ' ' perf stat -r 10 -C 0 -x ' ' \
                -e hv_24x7/domain=2,offset=0xe0,core=0/ sleep 1"
         output = process.run(cmd)
-        if "not supported" in output.stdout:
-            self.fail("Performance counters not enabled in HMC or it's a Bug.")
 
     # Helper functions
     def event_helper(self, event):
