@@ -79,7 +79,6 @@ class test_eliminate_domain_suffix(Test):
 
         # Performance measurement has to be enabled in lpar through BMC
         # Check if its enabled
-        # Refer https://bugzilla.linux.ibm.com/show_bug.cgi?id=139404#c21
         result_perf = process.run("%s,domain=2,core=1/ sleep 1"
                                   % self.perf_stat, ignore_status=True)
         if "not supported" in result_perf.stderr:
@@ -91,9 +90,6 @@ class test_eliminate_domain_suffix(Test):
         pattern = re.compile('1: Physical Chip\n2: Physical Core\n3:'
                              ' VCPU Home Core\n4: VCPU Home Chip\n5:'
                              ' VCPU Home Node\n6: VCPU Remote Node')
-        # pattern = re.compile('1: Physical Chip\n2: Physical Core\n3: VCPU
-        # Home Core\n4: VCPU Home Chip\n5: VCPU Home Node\n6: VCPU Remote
-        # Node')
         result = process.run('cat %s/interface/domains' % self.event_sysfs)
         Result_search = pattern.search(result.stdout)
         if Result_search:
