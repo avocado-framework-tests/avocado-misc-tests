@@ -193,7 +193,7 @@ class libhugetlbfs(Test):
             self.fail(error)
 
     def tearDown(self):
-        for _ in range(0, self.page_sizes):
+        for _ in range(0, len(self.page_sizes)):
             if process.system('umount %s' %
                               self.hugetlbfs_dir, ignore_status=True):
                 self.log.warn("umount of hugetlbfs dir failed")
