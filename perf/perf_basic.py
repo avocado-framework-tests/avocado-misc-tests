@@ -22,7 +22,7 @@ from avocado.utils import distro
 from avocado.utils.software_manager import SoftwareManager
 
 
-class Perf(Test):
+class PerfBasic(Test):
 
     """
     Performance analysis tools for Linux
@@ -49,7 +49,8 @@ class Perf(Test):
 
         for pkg in pkgs:
             if not smg.check_installed(pkg) and not smg.install(pkg):
-                self.cancel("Package %s is missing/could not be installed" % pkg)
+                self.cancel(
+                    "Package %s is missing/could not be installed" % pkg)
 
     """
     execute basic perf testcases:
