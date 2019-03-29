@@ -77,6 +77,9 @@ class Xfstests(Test):
                              'xfsdump', 'psmisc', 'sed', 'libacl-devel',
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
                              'openssl-devel', 'xfsprogs-devel'])
+
+            if self.detected_distro.name == 'rhel' and self.detected_distro.version.startswith('8'):
+                packages.remove('indent')
             if self.detected_distro.name == 'SuSE':
                 packages.extend(['libbtrfs-devel', 'libcap-progs'])
             else:
