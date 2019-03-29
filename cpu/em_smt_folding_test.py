@@ -17,10 +17,12 @@
 
 import os
 import platform
+from threading import Thread
+
 from avocado import Test
 from avocado import main
 from avocado.utils import archive, build
-from avocado.utils import process, cpu, distro
+from avocado.utils import process, cpu, distro, genio
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -71,7 +73,42 @@ class SmtFolding(Test):
         1. Disable all the idle states
         2. Run ebizzy when smt=off and smt=on
         3. Enable all the idle states.
+        4. run cpu Dlpar operation in parallel
         '''
+        workload_thread = Thread(target=self.run_workload)
+        workload_thread.start()
+        dlpar_thread = Thread(target=self.dlpar_cpu_hotplug)
+        dlpar_thread.start()
+        workload_thread.join()
+        dlpar_thread.join()
+
+    def run_ebizzy(self):
+        '''
+        Run ebizzy by doing taskset
+        '''
+        output = process.system_output("taskset -c %s ./ebizzy -t1"
+                                       " -S 6 -s 4096" % self.cpu, shell=True)
+        return output.split()[0]
+
+    def dlpar_cpu_hotplug(self):
+
+        if 'PowerNV' not in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
+            if "cpu_dlpar=yes" in process.system_output("drmgr -C", ignore_status=True, shell=True):
+                self.log.info("\nDLPAR remove cpu operation\n")
+                for _ in range(10):
+                    process.run(
+                        "drmgr  -c cpu -r -q .1 -w 5 -d 1", shell=True, ignore_status=True, sudo=True)
+                self.log.info("\nDLPAR add cpu operation\n")
+                for _ in range(10):
+                    process.run(
+                        "drmgr  -c cpu -a -q .1 -w 5 -d 1", shell=True, ignore_status=True, sudo=True)
+            else:
+                self.log.info('UNSUPPORTED: dlpar not configured..')
+        else:
+            self.log.info("UNSUPPORTED: Test not supported on this platform")
+
+    def run_workload(self):
+
         self.cpu = 0
         cpu.online(self.cpu)
         # Disable the idle states
@@ -87,14 +124,6 @@ class SmtFolding(Test):
                           " multi-thread performance ")
         else:
             self.fail("FAIL : Performance is degraded when SMT off")
-
-    def run_ebizzy(self):
-        '''
-        Run ebizzy by doing taskset
-        '''
-        output = process.system_output("taskset -c %s ./ebizzy -t1"
-                                       " -S 6 -s 4096" % self.cpu, shell=True)
-        return output.split()[0]
 
 
 if __name__ == "__main__":
