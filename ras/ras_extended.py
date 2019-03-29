@@ -199,6 +199,7 @@ class RASTools(Test):
     def test3_lsvpd(self):
         self.log.info("===============Executing lsvpd tool test============="
                       "==")
+        self.run_cmd("vpdupdate")
         self.run_cmd("lsvpd")
         list = ['--debug', '--version', '--mark',
                 '--serial=STR', '--type=STR', '--list=raid']
