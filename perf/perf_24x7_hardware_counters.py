@@ -20,8 +20,12 @@ import re
 import platform
 from avocado import Test
 from avocado import main
-from avocado.utils import process, distro, cpu
+from avocado.utils import process, distro, cpu, genio
 from avocado.utils.software_manager import SoftwareManager
+from avocado import skipIf
+
+IS_POWER_NV = 'PowerNV' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0')
+IS_KVM_GUEST = 'qemu' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0')
 
 
 class test_eliminate_domain_suffix(Test):
@@ -30,14 +34,14 @@ class test_eliminate_domain_suffix(Test):
     This tests domain name suffix in event names
     """
 
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or Power non-virtualized platform")
     def setUp(self):
         """
         Setup checks :
         0. Processor should be ppc64.
         1. Perf package
-        2. 24x7 is not supported on guest
-        3. 24x7 is present
-        4. Performance measurement is enabled in lpar through BMC
+        2. 24x7 is present
+        3. Performance measurement is enabled in lpar through BMC
         """
         smm = SoftwareManager()
         detected_distro = distro.detect()
@@ -63,12 +67,6 @@ class test_eliminate_domain_suffix(Test):
         if self.cpu_arch == 'power9':
             self.perf_stat = "%s hv_24x7/CPM_TLBIE" % self.perf_args
         self.event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
-
-        # Check if this is a guest
-        # 24x7 is not suported on guest
-        cpu_output = process.run("cat /proc/cpuinfo")
-        if "emulated by" in cpu_output.stdout:
-            self.cancel("This test is not supported on guest")
 
         # Check if 24x7 is present
         if os.path.exists("%s" % self.event_sysfs):
