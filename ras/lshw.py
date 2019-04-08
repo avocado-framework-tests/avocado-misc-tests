@@ -45,6 +45,12 @@ class Lshwrun(Test):
             self.is_fail += 1
             self.fail_cmd.append(cmd)
 
+    def error_check(self):
+        if len(self.fail_cmd) > 0:
+            for cmd in range(len(self.fail_cmd)):
+                self.log.info("Failed command: %s" % self.fail_cmd[cmd])
+            self.fail("lshw: Failed commands are: %s" % self.fail_cmd)
+
     @staticmethod
     def run_cmd_out(cmd):
         return process.system_output(cmd, shell=True,
@@ -52,7 +58,7 @@ class Lshwrun(Test):
 
     def setUp(self):
         sm = SoftwareManager()
-
+        self.is_fail = 0
         dist = distro.detect()
         packages = ['lshw', 'net-tools', 'pciutils']
         if dist.name == "SuSE" and dist.version < 15:
@@ -75,12 +81,9 @@ class Lshwrun(Test):
         """
         self.log.info("===============Executing lshw test ===="
                       "===========")
-        self.is_fail = 0
         self.run_cmd("lshw")
         self.run_cmd("lshw -version")
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed to execute  "
-                      % self.fail_cmd)
+        self.error_check()
 
     def test_lshw_short(self):
         """
@@ -89,13 +92,10 @@ class Lshwrun(Test):
         """
         self.log.info("===============Executing lshw -short tests ===="
                       "===========")
-        self.is_fail = 0
         for class_name in ['network', 'storage', 'memory', 'power',
                            'bus', 'processor', 'system']:
             self.run_cmd("lshw -short -class  %s" % class_name)
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed to execute "
-                      % self.fail_cmd)
+        self.error_check()
 
     def test_lshw_class(self):
         """
@@ -103,15 +103,12 @@ class Lshwrun(Test):
         """
         self.log.info("===============Executing lshw -class tests ===="
                       "===========")
-        self.is_fail = 0
         for hw_class in ['disk', 'storage', 'memory', 'cpu', 'volume',
                          'network', 'power', 'generic', 'processor',
                          'bridge', 'multimedia', 'display',
                          'system', 'communication', 'bus']:
             self.run_cmd("lshw -class %s" % hw_class)
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed to execute "
-                      % self.fail_cmd)
+        self.error_check()
 
     def test_lshw_verification(self):
         """
@@ -133,13 +130,10 @@ class Lshwrun(Test):
         """
         Lshw is capable of producing reports in html, xml and json formats.
         """
-        self.is_fail = 0
         self.run_cmd("lshw -xml")
         self.run_cmd("lshw -html -class disk")
         self.run_cmd("lshw -json")
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed to generate report"
-                      % self.fail_cmd)
+        self.error_check()
 
     def test_businfo(self):
         """
@@ -175,7 +169,6 @@ class Lshwrun(Test):
         """
         self.log.info("===============Validating product id and serial number"
                       "===========")
-        self.is_fail = 0
         if 'KVM' in self.run_cmd_out("pseries_platform"):
             product_path = '/proc/device-tree/host-model'
             serial_path = '/proc/device-tree/host-serial'
@@ -188,11 +181,11 @@ class Lshwrun(Test):
         if product_name\
                 not in self.run_cmd_out("lshw | grep product | head -1"):
             self.is_fail += 1
+            self.fail_cmd.append("lshw | grep product | head -1")
         if serial_num not in self.run_cmd_out("lshw | grep serial | head -1"):
             self.is_fail += 1
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed to execute "
-                      % self.fail_cmd)
+            self.fail_cmd.append("lshw | grep serial | head -1")
+        self.error_check()
 
     def test_lshw_options(self):
         """
@@ -203,13 +196,14 @@ class Lshwrun(Test):
         """
         self.log.info("===============Verifying -disable, -enable, -quiet,"
                       " and -numeric options ==============")
-        self.is_fail = 0
         if "interface" in self.run_cmd_out("lshw -disable network| "
                                            "grep -i interface"):
             self.is_fail += 1
+            self.fail_cmd.append("lshw -disable network|grep -i interface")
         if "interface" not in self.run_cmd_out("lshw -enable network| "
                                                "grep -i interface"):
             self.is_fail += 1
+            self.fail_cmd.append("lshw -enable network|grep -i interface")
 
         self.run_cmd("lshw -class -quiet")
         if 'PowerVM'\
@@ -217,9 +211,8 @@ class Lshwrun(Test):
             if not self.run_cmd_out("lshw"
                                     " -numeric | grep HCI | cut -d':' -f3"):
                 self.is_fail += 1
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed. %s command(s) failed to execute "
-                      % (self.is_fail, self.fail_cmd))
+            self.fail_cmd.append("lshw -numeric | grep HCI | cut -d':' -f3")
+        self.error_check()
 
     @skipIf(process.system("lshw --help 2>&1 |grep notime",
             ignore_status=True, sudo=True, shell=True) == 1,
@@ -229,12 +222,9 @@ class Lshwrun(Test):
         -notime -> exclude volatile attributes (timestamps) from output.
         """
         self.log.info("===============Verifying -notime option ==============")
-        self.is_fail = 0
         if "modified" in self.run_cmd_out("lshw -notime | grep modified"):
             self.fail("modified time stamp is present evev with -notime")
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed. %s command(s) failed to execute "
-                      % (self.is_fail, self.fail_cmd))
+        self.error_check()
 
 
 if __name__ == "__main__":
