@@ -31,14 +31,20 @@ class RASTools(Test):
     """
     This test checks various RAS tools:
     """
-    is_fail = 0
+    fail_cmd = list()
 
     def run_cmd(self, cmd):
         cmd_result = process.run(cmd, ignore_status=True, sudo=True,
                                  shell=True)
         if cmd_result.exit_status != 0:
-            self.is_fail += 1
+            self.fail_cmd.append(cmd)
         return
+
+    def error_check(self):
+        if len(self.fail_cmd) > 0:
+            for cmd in range(len(self.fail_cmd)):
+                self.log.info("Failed command: %s" % self.fail_cmd[cmd])
+            self.fail("RAS: Failed commands are: %s" % self.fail_cmd)
 
     @skipUnless("ppc" in distro.detect().arch,
                 "supported only on Power platform")
@@ -60,9 +66,7 @@ class RASTools(Test):
         self.run_cmd("set_poweron_time -h")
         self.run_cmd("set_poweron_time -d m2")
         self.run_cmd("set_poweron_time -t M6D15h12")
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in set_poweron_time tool "
-                      "verification" % self.is_fail)
+        self.error_check()
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
     def test2_sys_ident_tool(self):
@@ -73,9 +77,7 @@ class RASTools(Test):
                       "====")
         self.run_cmd("sys_ident -p")
         self.run_cmd("sys_ident -s")
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in sys_ident tool verification"
-                      % self.is_fail)
+        self.error_check()
 
     def test3_lsmcode(self):
         """
@@ -98,9 +100,7 @@ class RASTools(Test):
                                          " | head -1", shell=True).strip()
         if path_tar:
             self.run_cmd("lsmcode --zip=%s" % path_tar)
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in lsmcode tool verification"
-                      % self.is_fail)
+        self.error_check()
 
     @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
     def test4_drmgr(self):
@@ -122,9 +122,7 @@ class RASTools(Test):
                 self.run_cmd("lparstat")
                 self.run_cmd("drmgr -c cpu -a 1")
                 self.run_cmd("lparstat")
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in drmgr tool verification"
-                      % self.is_fail)
+        self.error_check()
 
     def test5_lsprop(self):
         """
@@ -133,9 +131,7 @@ class RASTools(Test):
         self.log.info("===============Executing lsprop tool test============="
                       "==")
         self.run_cmd("lsprop")
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in lsprop tool verification"
-                      % self.is_fail)
+        self.error_check()
 
     @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
     def test6_lsslot(self):
@@ -154,9 +150,7 @@ class RASTools(Test):
                                      "tail -1", shell=True).strip()
         if slot:
             self.run_cmd("lsslot -s %s" % slot)
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in lsslot tool verification"
-                      % self.is_fail)
+        self.error_check()
 
     @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
     def test7_lsvio(self):
@@ -170,9 +164,7 @@ class RASTools(Test):
         self.run_cmd("lsvio -s")
         self.run_cmd("lsvio -e")
         self.run_cmd("lsvio -d")
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in lsvio tool verification"
-                      % self.is_fail)
+        self.error_check()
 
     def test8_nvram(self):
         """
@@ -184,9 +176,7 @@ class RASTools(Test):
         self.run_cmd("nvram --partitions")
         self.run_cmd("nvram --print-config -p common")
         self.run_cmd("nvram --dump common --verbose")
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in nvram tool verification"
-                      % self.is_fail)
+        self.error_check()
 
     @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
     def test9_ofpathname(self):
@@ -206,9 +196,7 @@ class RASTools(Test):
             of_name = process.system_output("ofpathname %s"
                                             % disk_name).strip()
             self.run_cmd("ofpathname -l %s" % of_name)
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in ofpathname tool verification"
-                      % self.is_fail)
+        self.error_check()
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
     def test11_rtas_ibm_get_vpd(self):
@@ -219,9 +207,7 @@ class RASTools(Test):
                       "===========")
         output_file = os.path.join(self.outputdir, 'output')
         self.run_cmd("rtas_ibm_get_vpd >> %s 2>&1" % output_file)
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in rtas_ibm_get_vpd tool "
-                      "verification" % self.is_fail)
+        self.error_check()
 
     @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
     def test12_rtas_errd_and_rtas_dump(self):
@@ -251,20 +237,17 @@ class RASTools(Test):
         self.run_cmd("rtas_dump -f %s -v" % rtas_file)
         self.log.info("6 - Verifying rtas_dump with width 20")
         self.run_cmd("rtas_dump -f %s -w 20" % rtas_file)
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in rtas_errd and rtas_dump tools "
-                      "verification" % self.is_fail)
+        self.error_check()
 
     @skipIf(IS_POWER_NV, "This test is not supported on PowerNV platform")
     def test13_rtas_event_decode(self):
         self.log.info("===============Executing rtas_event_decode tool test===="
                       "===========")
-        cmd_result = process.run("rtas_event_decode -w 500 -dv -n 2302 < %s" %
-                                 self.get_data('rtas'), ignore_status=True,
-                                 sudo=True, shell=True)
+        cmd = "rtas_event_decode -w 500 -dv -n 2302 < %s" % self.get_data('rtas')
+        cmd_result = process.run(cmd, ignore_status=True, sudo=True, shell=True)
         if cmd_result.exit_status != 17:
-            self.fail("%s command(s) failed in rtas_event_decode tool "
-                      "verification" % self.is_fail)
+            self.fail("rtas_event_decode tool: %s command failed in "
+                      "verification" % cmd)
 
 
 if __name__ == "__main__":
