@@ -63,18 +63,30 @@ class DlparPci(Test):
         '''
         self.install_packages()
         self.rsct_service_start()
-        self.hmc_ip = self.params.get("hmc_ip", '*', default=None)
-        self.hmc_pwd = self.params.get("hmc_pwd", '*', default=None)
-        self.hmc_username = self.params.get("hmc_username", '*', default=None)
-        self.lpar_1 = self.params.get("lpar_1", '*', default=None)
+        self.hmc_ip = self.get_mcp_component("HMCIPAddr")
+        if not self.hmc_ip:
+            self.cancel("HMC IP not got")
+        self.hmc_user = self.params.get("hmc_username", default='hscroot')
+        self.hmc_pwd = self.params.get("hmc_pwd", '*', default='abc123')
+        self.lpar_1 = self.get_mcp_component("NodeNameList")
+        if not self.lpar_1:
+            self.cancel("LPAR Name not got")
+        self.lpar_1 = "ltczep9-lp1"
+        self.login(self.hmc_ip, self.hmc_user, self.hmc_pwd)
+        cmd = 'lssyscfg -r sys  -F name'
+        output = self.run_command(cmd)
+        self.server = ''
+        for line in output:
+            if line in self.lpar_1:
+                self.server = line
+        if not self.server:
+            self.cancel("Managed System not got")
         self.lpar_2 = self.params.get("lpar_2", '*', default=None)
         self.pci_device = self.params.get("pci_device", '*', default=None)
-        self.server = self.params.get("server", '*', default=None)
         self.loc_code = pci.get_slot_from_sysfs(self.pci_device)
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         if self.loc_code is None:
             self.cancel("Failed to get the location code for the pci device")
-        self.login(self.hmc_ip, self.hmc_username, self.hmc_pwd)
         self.run_command("uname -a")
         cmd = 'lshwres -r io -m %s --rsubtype slot --filter lpar_names=%s ' \
               '-F drc_index,lpar_id,drc_name,bus_id' % (self.server,
@@ -89,6 +101,18 @@ class DlparPci(Test):
 
         self.log.info("lpar_id : %s, loc_code: %s, drc_index: %s, phb: %s",
                       self.lpar_id, self.loc_code, self.drc_index, self.phb)
+
+    @staticmethod
+    def get_mcp_component(component):
+        '''
+        probes IBM.MCP class for mentioned component and returns it.
+        '''
+        for line in process.system_output('lsrsrc IBM.MCP %s' % component,
+                                          ignore_status=True, shell=True,
+                                          sudo=True).splitlines():
+            if component in line:
+                return line.split()[-1].strip('{}\"')
+        return ''
 
     def login(self, ip_addr, username, password):
         '''
@@ -171,6 +195,7 @@ class DlparPci(Test):
 
         output = process.system_output("lssrc -a", ignore_status=True,
                                        shell=True, sudo=True)
+
         if "inoperative" in output:
             self.cancel("Failed to start the rsct and rsct_rm services")
 
