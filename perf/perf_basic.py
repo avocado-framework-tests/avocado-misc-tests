@@ -27,6 +27,21 @@ class PerfBasic(Test):
     """
     Performance analysis tools for Linux
     :avocado: tags=privileged
+
+    execute basic perf testcases:
+    - help
+    - version
+    - 'list' -> List all symbolic event types
+    - 'record' -> Run a command and record its profile into perf.data
+    - 'report' -> Read perf.data (created by perf record) and display the profile
+
+    execute perf commands:
+    - 'kallsyms' -> Searches running kernel for symbols
+    - 'annotate' -> Read perf.data (created by perf record) and display annotated code
+    - 'evlist' -> List the event names in a perf.data file
+    - 'script' -> Read perf.data (created by perf record) and display trace output
+    - 'stat' -> Run a command and gather performance counter statistics
+    - 'bench' -> General framework for benchmark suites
     """
 
     fail_cmd = list()
@@ -52,15 +67,6 @@ class PerfBasic(Test):
                 self.cancel(
                     "Package %s is missing/could not be installed" % pkg)
 
-    """
-    execute basic perf testcases:
-    - help
-    - version
-    - 'list' -> List all symbolic event types
-    - 'record' -> Run a command and record its profile into perf.data
-    - 'report' -> Read perf.data (created by perf record) and display the profile
-    """
-
     def test_perf_help(self):
         self.run_cmd("perf --help", False)
 
@@ -77,16 +83,6 @@ class PerfBasic(Test):
                 self.fail("perf.data sample not captured")
             else:
                 self.run_cmd("perf report --stdio")
-
-    """
-    execute perf commands:
-    - 'kallsyms' -> Searches running kernel for symbols
-    - 'annotate' -> Read perf.data (created by perf record) and display annotated code
-    - 'evlist' -> List the event names in a perf.data file
-    - 'script' -> Read perf.data (created by perf record) and display trace output
-    - 'stat' -> Run a command and gather performance counter statistics
-    - 'bench' -> General framework for benchmark suites
-    """
 
     def test_perf_cmd_kallsyms(self):
         self.run_cmd("perf kallsyms __schedule")

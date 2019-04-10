@@ -28,7 +28,7 @@ IS_POWER_NV = 'PowerNV' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0')
 IS_KVM_GUEST = 'qemu' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0')
 
 
-class test_eliminate_domain_suffix(Test):
+class EliminateDomainSuffix(Test):
 
     """
     This tests domain name suffix in event names
@@ -89,8 +89,8 @@ class test_eliminate_domain_suffix(Test):
                              ' VCPU Home Core\n4: VCPU Home Chip\n5:'
                              ' VCPU Home Node\n6: VCPU Remote Node')
         result = process.run('cat %s/interface/domains' % self.event_sysfs)
-        Result_search = pattern.search(result.stdout)
-        if Result_search:
+        result_search = pattern.search(result.stdout)
+        if result_search:
             self.log.info('Displayed domain indices in sysfs')
         else:
             self.fail('Unable to display domain indices in sysfs')
@@ -122,7 +122,7 @@ class test_eliminate_domain_suffix(Test):
             self.log.info('perf recognized domain name in param=value format')
 
     def test_check_domain_not_existing(self):
-        result1 = self.event_stat(',domain=12,core=1/ sleep 1')
+        self.event_stat(',domain=12,core=1/ sleep 1')
 
     def test_check_all_domains(self):
         for domain in range(1, 6):
@@ -163,7 +163,7 @@ class test_eliminate_domain_suffix(Test):
     def test_domain_chip_offset(self):
         cmd = "perf stat -r 10 -C 0 -x ' ' perf stat -r 10 -C 0 -x ' ' \
                -e hv_24x7/domain=2,offset=0xe0,core=0/ sleep 1"
-        output = process.run(cmd)
+        process.run(cmd)
 
     # Helper functions
     def event_helper(self, event):
@@ -173,7 +173,7 @@ class test_eliminate_domain_suffix(Test):
         if search_suffix.stdout:
             self.fail('Found %s  suffixes in event name' % event)
         else:
-            self.log.info('No %s  suffixes in event name' % event)
+            self.log.info('No %s  suffixes in event name', event)
 
     def test_event_helper_phys_core(self):
         self.event_helper('__PHYS_CORE')
