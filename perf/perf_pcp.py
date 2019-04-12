@@ -55,8 +55,8 @@ class PCP(Test):
 
         # Check if 24x7 is present
         if not os.path.exists("/sys/bus/event_source/devices/hv_24x7"):
-            self.cancel("%s doesn't exist.This feature is supported"
-                        " only on LPAR" % self.event_sysfs)
+            self.cancel("hv_24x7 Event doesn't exist.This feature is supported"
+                        " only on LPAR")
 
     def test_pmcd_daemon(self):
         output = process.run("systemctl start pmcd", shell=True)

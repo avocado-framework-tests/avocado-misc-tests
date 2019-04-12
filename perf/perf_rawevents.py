@@ -23,12 +23,12 @@ from avocado import skipUnless
 from avocado.utils import cpu, distro, process, genio
 from avocado.utils.software_manager import SoftwareManager
 
-cpu_arch = cpu.get_cpu_arch().lower()
-IS_POWER9 = 'power9' in cpu_arch
-IS_POWER8 = 'power8' in cpu_arch
+CPU_ARCH = cpu.get_cpu_arch().lower()
+IS_POWER9 = 'power9' in CPU_ARCH
+IS_POWER8 = 'power8' in CPU_ARCH
 
 
-class perfRawevents(Test):
+class PerfRawevents(Test):
 
     """
     Tests raw events on Power8 and Power9 along with
@@ -86,9 +86,9 @@ class perfRawevents(Test):
                 self.fail_cmd.append(cmd)
 
     def error_check(self):
-        if len(self.fail_cmd) > 0:
+        if self.fail_cmd:
             for cmd in range(len(self.fail_cmd)):
-                self.log.info("Failed command: %s" % self.fail_cmd[cmd])
+                self.log.info("Failed command: %s", self.fail_cmd[cmd])
             self.fail("perf_raw_events: some of the events failed, refer to log")
 
     @skipUnless(IS_POWER8, 'Supported only on Power8')
