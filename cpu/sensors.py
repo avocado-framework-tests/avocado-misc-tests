@@ -76,9 +76,9 @@ class Sensors(Test):
 
             config_check = linux_modules.check_kernel_config(
                 'CONFIG_SENSORS_IBMPOWERNV')
-            if config_check == 0:
+            if config_check == linux_modules.ModuleConfig.NOT_SET:
                 self.cancel('Config is not set')
-            elif config_check == 1:
+            elif config_check == linux_modules.ModuleConfig.MODULE:
                 if linux_modules.load_module('ibmpowernv'):
                     if linux_modules.module_is_loaded('ibmpowernv'):
                         self.log.info('Module Loaded Successfully')
