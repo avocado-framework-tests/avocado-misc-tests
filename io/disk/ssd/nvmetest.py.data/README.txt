@@ -15,7 +15,8 @@ This Suite creates namespace, and performs the following tests:
 * reset_sysfs
 
 This test needs to be run as root.
+The suite selects one of the interface on the device and runs tests on it.
+If there are no namespaces on the nvme device, the test does not run.
 Inputs Needed (in multiplexer file):
 ------------------------------------
-Device      -       NVMe device
-Namespace   -       Namespace in the NVMe device
+Device      -       NVMe device / interface (Eg: nvme0)

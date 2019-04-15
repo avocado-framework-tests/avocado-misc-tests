@@ -41,7 +41,8 @@ class NVMeTest(Test):
         """
         Build 'nvme-cli' and setup the device.
         """
-        self.device = self.params.get('device', default='/dev/nvme0')
+        self.device = self.params.get('device', default='nvme0')
+        self.device = "/dev/%s" % self.device
         cmd = 'ls %s' % self.device
         if process.system(cmd, ignore_status=True) is not 0:
             self.cancel("%s does not exist" % self.device)
@@ -49,6 +50,11 @@ class NVMeTest(Test):
         if not smm.check_installed("nvme-cli") and not \
                 smm.install("nvme-cli"):
             self.cancel('nvme-cli is needed for the test to be run')
+        cmd = "nvme list-ns %s" % self.device
+        self.namespace = process.system_output(
+            cmd, shell=True).splitlines()[0].split('x')[-1]
+        if not self.namespace:
+            self.cancel("No namespaces on %s" % self.device)
         self.namespace = self.params.get('namespace', default='1')
         self.id_ns = "%sn%s" % (self.device, self.namespace)
         cmd = "nvme id-ns %s | grep 'in use' | awk '{print $5}' | \

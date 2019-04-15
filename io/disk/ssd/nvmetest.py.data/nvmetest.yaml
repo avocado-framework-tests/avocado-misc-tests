@@ -1,5 +1,4 @@
 Devices: !mux
     device1:
-        device: /dev/nvme0
-        namespace: 1
+        device: nvme0
         firmware_url:

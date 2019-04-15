@@ -1,4 +1,4 @@
-device: /dev/nvme0
+device: nvme0
 disk: /dev/nvme0n1
 test: !mux
     nvme_id_ctrl_test:

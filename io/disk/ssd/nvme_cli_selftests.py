@@ -41,7 +41,8 @@ class NVMeCliSelfTest(Test):
         """
         Download 'nvme-cli'.
         """
-        self.device = self.params.get('device', default='/dev/nvme0')
+        self.device = self.params.get('device', default='nvme0')
+        self.device = "/dev/%s" % self.device
         self.disk = self.params.get('disk', default='/dev/nvme0n1')
         self.test = self.params.get('test', default='')
         if not self.test:
