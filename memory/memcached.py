@@ -13,6 +13,8 @@
 # Copyright: 2017 IBM
 # Author: Santhosh G <santhog4@linux.vnet.ibm.com>
 
+from __future__ import division
+from past.utils import old_div
 import time
 import getpass
 from avocado import Test
@@ -67,7 +69,7 @@ class Memcached(Test):
 
         # Memcached Required Args
         memory_to_use = self.params.get("memory_to_use",
-                                        default=(memory.freememtotal() / 1024))
+                                        default=(old_div(memory.freememtotal(), 1024)))
         port_no = self.params.get("port_no", default='12111')
         memcached_args = self.params.get('memcached_args', default='')
         self.memcached_cmd = 'memcached -u %s -p %s -m %d  %s &'\

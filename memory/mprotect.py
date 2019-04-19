@@ -16,6 +16,8 @@
 #
 
 
+from __future__ import division
+from past.utils import old_div
 import os
 import shutil
 
@@ -43,7 +45,7 @@ class Mprotect(Test):
         self.failure = self.params.get('failure', default=False)
 
         if not self.nr_pages:
-            self.nr_pages = memsize / memory.get_page_size()
+            self.nr_pages = old_div(memsize, memory.get_page_size())
 
         for package in ['gcc', 'make']:
             if not smm.check_installed(package) and not smm.install(package):

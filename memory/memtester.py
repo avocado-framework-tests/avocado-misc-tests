@@ -15,6 +15,8 @@
 #         Basheer K<basheer@linux.vnet.ibm.com>
 #
 
+from __future__ import division
+from past.utils import old_div
 import os
 from avocado import Test
 from avocado import main
@@ -59,7 +61,7 @@ class Memtester(Test):
         Run memtester
         '''
         mem = self.params.get('memory', default=int(
-            memory.freememtotal() / 1024))
+            old_div(memory.freememtotal(), 1024)))
         runs = self.params.get('runs', default=1)
         phyaddr = self.params.get('physaddr', default=None)
 

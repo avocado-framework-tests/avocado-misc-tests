@@ -15,6 +15,10 @@
 # Copyright: 2017 IBM
 # Author: Santhosh G <santhog4@linux.vnet.ibm.com>
 
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import os
 from avocado import Test
 from avocado import main
@@ -46,7 +50,7 @@ class Thp(Test):
 
         # Set params as per available memory in system
         self.mem_path = os.path.join(data_dir.get_tmp_dir(), 'thp_space')
-        free_mem = int(memory.freememtotal() / 1024)
+        free_mem = int(old_div(memory.freememtotal(), 1024))
         self.dd_timeout = 900
         self.thp_split = None
         try:
@@ -56,8 +60,8 @@ class Thp(Test):
             self.thp_split = "thp_split"
 
         # Set block size as hugepage size * 2
-        self.block_size = (memory.get_huge_page_size() / 1024) * 2
-        self.count = free_mem / self.block_size
+        self.block_size = (old_div(memory.get_huge_page_size(), 1024)) * 2
+        self.count = old_div(free_mem, self.block_size)
 
         # Mount device as per free memory size
         if not os.path.exists(self.mem_path):

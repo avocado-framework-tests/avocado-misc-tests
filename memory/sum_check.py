@@ -15,6 +15,9 @@
 # Author: Harish <harish@linux.vnet.ibm.com>
 #
 
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import os
 from avocado import Test
 from avocado import main
@@ -32,7 +35,7 @@ class SumCheck(Test):
         self.memsize = int(self.params.get(
             'mem_size', default=memory.memtotal() * 0.9))
         self.ddfile = os.path.join(self.workdir, 'ddfile')
-        if (disk.freespace(self.workdir) / 1024) < self.memsize:
+        if (old_div(disk.freespace(self.workdir), 1024)) < self.memsize:
             self.cancel('%sM is needed for the test to be run' % self.memsize)
 
     def test(self):

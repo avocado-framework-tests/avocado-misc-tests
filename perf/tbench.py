@@ -18,9 +18,11 @@
 #   copyright: 2008 Google
 # https://github.com/autotest/autotest-client-tests/tree/master/tbench
 
+from future import standard_library
+standard_library.install_aliases()
 import os
 import signal
-import commands
+import subprocess
 import re
 from avocado import Test
 from avocado import main
@@ -60,7 +62,7 @@ class tbench(Test):
     def test(self):
         # only supports combined server+client model at the moment
         # should support separate I suppose, but nobody uses it
-        nprocs = self.params.get('nprocs', default=commands.getoutput("nproc"))
+        nprocs = self.params.get('nprocs', default=subprocess.getoutput("nproc"))
         args = self.params.get('args',  default=None)
         args = '%s %s' % (args, nprocs)
         pid = os.fork()

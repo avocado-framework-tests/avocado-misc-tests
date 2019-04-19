@@ -14,6 +14,7 @@
 # Copyright: 2017 IBM
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 
+from __future__ import print_function
 import time
 import os
 import socket
@@ -96,7 +97,7 @@ class KDUMP(Test):
         session_check.run("ls -lrt /var/crash", 100, "True")
         crash_dir = self.run_cmd_out("cat %s | grep drwxr | tail -1 | cut -d' ' -f%s" % (log_file, f_val))
         path_crash_dir = os.path.join("/var/crash", crash_dir)
-        print path_crash_dir
+        print(path_crash_dir)
         session_check.run("ls -lrt %s" % path_crash_dir, 100, "True")
         for files in file_list:
             if files not in open(log_file).read():

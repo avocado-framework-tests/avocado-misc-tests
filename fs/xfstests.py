@@ -21,6 +21,9 @@
 #   https://github.com/autotest/autotest-client-tests/tree/master/xfstests
 
 
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import os
 import glob
 import re
@@ -119,7 +122,7 @@ class Xfstests(Test):
             if not base_disk:
                 # Using root for file creation by default
                 check = (int(loop_size.split('GiB')[0]) * 2) + 1
-                if disk.freespace('/') / 1073741824 > check:
+                if old_div(disk.freespace('/'), 1073741824) > check:
                     self.disk_mnt = ''
                     mount = False
                 else:

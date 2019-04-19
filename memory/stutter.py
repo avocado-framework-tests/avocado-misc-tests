@@ -16,6 +16,8 @@
 #
 
 
+from __future__ import print_function
+from builtins import str
 import os
 
 from avocado import Test
@@ -55,7 +57,7 @@ class Stutter(Test):
         self.sourcedir = os.path.join(self.workdir, 'stutter-master')
 
         mem_byte = str(memory.memtotal())
-        print mem_byte
+        print(mem_byte)
         self._memory = self.params.get('memory', default=mem_byte)
         self._iteration = self.params.get('iteration', default='10')
         self._logdir = self.params.get('logdir', default='/var/tmp/logdir')

@@ -16,6 +16,9 @@
 #
 
 
+from __future__ import division
+from builtins import str
+from past.utils import old_div
 import os
 import shutil
 
@@ -43,7 +46,7 @@ class KsmPoison(Test):
         self.touch = self.params.get('touch', default=True)
 
         if not self.nr_pages:
-            self.nr_pages = int(memsize / memory.get_page_size())
+            self.nr_pages = int(old_div(memsize, memory.get_page_size()))
 
         for package in ['gcc', 'make']:
             if not smm.check_installed(package) and not smm.install(package):
@@ -56,7 +59,7 @@ class KsmPoison(Test):
 
     def test(self):
         os.chdir(self.teststmpdir)
-        cmd = './ksm_poison -n %s' % str(self.nr_pages / 2)
+        cmd = './ksm_poison -n %s' % str(old_div(self.nr_pages, 2))
         if self.touch:
             cmd = '%s -t' % cmd
         if self.offline:

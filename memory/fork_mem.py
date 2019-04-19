@@ -16,6 +16,8 @@
 #
 
 
+from __future__ import division
+from past.utils import old_div
 import os
 import shutil
 from avocado import Test
@@ -47,7 +49,7 @@ class Forkoff(Test):
                 'Please use a non-zero value for number'
                 ' of iterations, processes and memory to be used')
 
-        self.freemem = int((0.85 * memory.freememtotal()) / 1024)
+        self.freemem = int(old_div((0.85 * memory.freememtotal()), 1024))
         # Check for basic utilities
         for packages in ['gcc', 'make']:
             if not smm.check_installed(packages) and not smm.install(packages):
@@ -76,8 +78,8 @@ class Forkoff(Test):
         os.chdir(self.teststmpdir)
 
         self.run_test(self.freemem, 1, self.itern)
-        self.run_test(self.freemem / self.procs, self.procs, self.itern)
-        self.run_test(self.minmem, self.freemem / self.minmem, self.itern)
+        self.run_test(old_div(self.freemem, self.procs), self.procs, self.itern)
+        self.run_test(self.minmem, old_div(self.freemem, self.minmem), self.itern)
 
         if self.fails:
             self.fail("The following test(s) failed: %s" % self.fails)

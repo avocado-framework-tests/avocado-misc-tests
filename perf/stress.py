@@ -19,6 +19,8 @@
 #   https://github.com/autotest/autotest-client-tests/tree/master/stress
 
 
+from __future__ import division
+from past.utils import old_div
 import os
 import multiprocessing
 
@@ -73,8 +75,8 @@ class Stress(Test):
             # might make our machine go OOM and then funny things might start
             # to  happen. Let's avoid that.
             mb = (memory.freememtotal() +
-                  memory.read_from_meminfo('SwapFree') / 2)
-            memory_per_thread = (mb * 1024) / threads
+                  old_div(memory.read_from_meminfo('SwapFree'), 2))
+            memory_per_thread = old_div((mb * 1024), threads)
 
         if file_size_per_thread is None:
             # Even though unlikely, it's good to prevent from allocating more
@@ -83,7 +85,7 @@ class Stress(Test):
             free_disk = disk.freespace(self.sourcedir)
             file_size_per_thread = 1024 ** 2
             if (0.9 * free_disk) < file_size_per_thread * threads:
-                file_size_per_thread = (0.9 * free_disk) / threads
+                file_size_per_thread = old_div((0.9 * free_disk), threads)
 
         # Number of CPU workers spinning on sqrt()
         args = '--cpu %d ' % threads

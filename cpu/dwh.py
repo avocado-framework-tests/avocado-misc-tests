@@ -16,6 +16,8 @@
 #
 
 
+from __future__ import division
+from past.utils import old_div
 import os
 import shutil
 
@@ -41,9 +43,9 @@ class Dwh(Test):
         self.minthreads = self.params.get(
             'minthrd', default=(500 + cpu.online_cpus_count()))
         self.maxthreads = self.params.get('maxthrd', default=None)
-        self.iothreads = self.params.get('iothrd', default=self.minthreads/2)
+        self.iothreads = self.params.get('iothrd', default=old_div(self.minthreads,2))
         self.maxmem = self.params.get('maxmem', default=int(
-            memory.meminfo.MemFree.m / self.minthreads))
+            old_div(memory.meminfo.MemFree.m, self.minthreads)))
         self.maxio = self.params.get('maxio', default=None)
         self.longthreads = self.params.get('longthrd', default=False)
         self.shrtthreads = self.params.get('shortthrd', default=False)

@@ -19,6 +19,9 @@
 # https://github.com/autotest/autotest-client-tests/tree/master/dma_memtest
 
 
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import os
 import shutil
 import re
@@ -65,7 +68,7 @@ class DmaMemtest(Test):
         self.log.info('Downloading linux kernel tarball')
         self.tarball = self.fetch_asset(tarball_url, asset_hash=tarball_md5,
                                         algorithm='md5')
-        size_tarball = os.path.getsize(self.tarball) / 1024 / 1024
+        size_tarball = old_div(os.path.getsize(self.tarball), 1024 / 1024)
 
         # Estimation of the tarball size after uncompression
         compress_ratio = 5
@@ -79,7 +82,7 @@ class DmaMemtest(Test):
         self.log.info('Parallel: %s', parallel)
 
         # Verify if space is available in disk
-        disk_free_mb = (disk.freespace(self.tmpdir) / 1024) / 1024
+        disk_free_mb = old_div((old_div(disk.freespace(self.tmpdir), 1024)), 1024)
         if (disk_free_mb < est_size * self.sim_cps):
             self.cancel("Space not available to extract the %s linux tars\n"
                         "Mount and Use other partitions in dir_to_extract arg "
@@ -95,13 +98,13 @@ class DmaMemtest(Test):
         '''
         mem_str = process.system_output('grep MemTotal /proc/meminfo')
         mem = int(re.search(r'\d+', mem_str).group(0))
-        mem = int(mem / 1024)
-        sim_cps = (1.5 * mem) / est_size
+        mem = int(old_div(mem, 1024))
+        sim_cps = old_div((1.5 * mem), est_size)
 
-        if (mem % est_size) >= (est_size / 2):
+        if (mem % est_size) >= (old_div(est_size, 2)):
             sim_cps += 1
 
-        if (mem / 32) < 1:
+        if (old_div(mem, 32)) < 1:
             sim_cps += 1
 
         return int(sim_cps)
@@ -152,7 +155,7 @@ class DmaMemtest(Test):
                 try:
                     self.log.info('Comparing linux.orig with %s', tmp_dir)
                     process.system('diff -U3 -rN linux.orig linux.%s' % j)
-                except process.CmdError, error:
+                except process.CmdError as error:
                     self.nfail += 1
                     self.log.info('Error comparing trees: %s', error)
 

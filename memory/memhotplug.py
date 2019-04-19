@@ -13,6 +13,10 @@
 # Copyright: 2017 IBM
 # Author: Abdul Haleem <abdhalee@linux.vnet.ibm.com>
 
+from __future__ import print_function
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import os
 import glob
 import re
@@ -45,7 +49,7 @@ def online(block):
     try:
         memory.hotplug(block)
     except IOError:
-        print "memory%s : Resource is busy" % block
+        print("memory%s : Resource is busy" % block)
         pass
 
 
@@ -53,7 +57,7 @@ def offline(block):
     try:
         memory.hotunplug(block)
     except IOError:
-        print "memory%s : Resource is busy" % block
+        print("memory%s : Resource is busy" % block)
         pass
 
 
@@ -67,8 +71,8 @@ def get_hotpluggable_blocks(path, ratio):
 
     def f(num):
         if num % 2:
-            return (num / 100 + 1)
-        return (num / 100)
+            return (old_div(num, 100) + 1)
+        return (old_div(num, 100))
     count = f(len(mem_blocks) * ratio)
     return mem_blocks[:count]
 
@@ -153,8 +157,8 @@ class memstress(Test):
             self.fail('ERROR: Test failed, please check the dmesg logs')
 
     def run_stress(self):
-        mem_free = memory.meminfo.MemFree.m / 4
-        cpu_count = int(multiprocessing.cpu_count()) / 2
+        mem_free = old_div(memory.meminfo.MemFree.m, 4)
+        cpu_count = old_div(int(multiprocessing.cpu_count()), 2)
         process.run("stress --cpu %s --io %s --vm %s --vm-bytes %sM --timeout %ss" %
                     (cpu_count, self.iocount, self.vmcount, mem_free, self.stresstime), ignore_status=True, sudo=True, shell=True)
 
@@ -183,12 +187,12 @@ class memstress(Test):
         if 'ppc' in platform.processor() and 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
             if "mem_dlpar=yes" in process.system_output("drmgr -C", ignore_status=True, shell=True):
                 self.log.info("\nDLPAR remove memory operation\n")
-                for _ in range(len(self.blocks_hotpluggable) / 2):
+                for _ in range(old_div(len(self.blocks_hotpluggable), 2)):
                     process.run(
                         "drmgr -c mem -d 5 -w 30 -r", shell=True, ignore_status=True, sudo=True)
                 self.run_stress()
                 self.log.info("\nDLPAR add memory operation\n")
-                for _ in range(len(self.blocks_hotpluggable) / 2):
+                for _ in range(old_div(len(self.blocks_hotpluggable), 2)):
                     process.run(
                         "drmgr -c mem -d 5 -w 30 -a", shell=True, ignore_status=True, sudo=True)
                 self.__error_check()

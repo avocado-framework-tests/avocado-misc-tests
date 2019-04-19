@@ -15,8 +15,10 @@
 # Author: Athira Rajeev<atrajeev@linux.vnet.ibm.com>
 # Author: Shriya Kulkarni <shriyak@linux.vnet.ibm.com>
 
+from future import standard_library
+standard_library.install_aliases()
 import os
-import ConfigParser
+import configparser
 from avocado import Test
 from avocado import main
 
@@ -30,7 +32,7 @@ class test_generic_events(Test):
     """
 
     def read_generic_events(self):
-        parser = ConfigParser.ConfigParser()
+        parser = configparser.ConfigParser()
         parser.optionxform = str
         parser.read(self.get_data('raw_code.cfg'))
         cpu_info = open('/proc/cpuinfo', 'r').read()

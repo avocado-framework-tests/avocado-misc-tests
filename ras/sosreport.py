@@ -14,6 +14,7 @@
 # Copyright: 2017 IBM
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 
+from builtins import str
 import os
 import tempfile
 import shutil
@@ -216,7 +217,7 @@ class Sosreport(Test):
         self.is_fail = 0
         f_name = {'bzip2': 'file_name_bz2', 'gzip': 'file_name_gz', 'xz': 'file_name_xz', 'auto': 'file_name_xz2'}
         archive = {'bzip2': 'tar.bz2', 'gzip': 'tar.gz', 'xz': 'tar.xz', 'auto': 'tar.xz'}
-        for key, value in f_name.iteritems():
+        for key, value in f_name.items():
             file_name = str(f_name[key])
             file_name = self.run_cmd_out("sosreport --batch --tmp-dir=%s -z %s | grep %s" %
                                          (directory_name, str(key), str(archive[key]))).strip()

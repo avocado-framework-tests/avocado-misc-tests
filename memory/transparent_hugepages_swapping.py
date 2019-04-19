@@ -16,6 +16,10 @@
 # Copyright: 2017 IBM
 # Author: Santhosh G <santhog4@linux.vnet.ibm.com>
 
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import os
 from avocado import Test
 from avocado import main
@@ -54,10 +58,10 @@ class Thp_Swapping(Test):
 
         # If swap is enough fill all memory with dd
         if self.swap_free[0] > (mem - mem_free):
-            self.count = (mem / self.hugepage_size) / 2
+            self.count = old_div((old_div(mem, self.hugepage_size)), 2)
             tmpfs_size = mem
         else:
-            self.count = (mem_free / self.hugepage_size) / 2
+            self.count = old_div((old_div(mem_free, self.hugepage_size)), 2)
             tmpfs_size = mem_free
 
         if swap <= 0:

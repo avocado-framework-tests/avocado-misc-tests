@@ -20,6 +20,9 @@
 #
 
 
+from __future__ import division
+from builtins import str
+from past.utils import old_div
 import os
 import shutil
 from avocado import Test
@@ -41,7 +44,7 @@ class MemorySyscall(Test):
     def setUp(self):
         smm = SoftwareManager()
         self.memsize = int(self.params.get(
-            'memory_size', default=(memory.freememtotal() / 1024)) * 1048576 * 0.5)
+            'memory_size', default=(old_div(memory.freememtotal(), 1024))) * 1048576 * 0.5)
         self.induce_err = self.params.get('induce_err', default=0)
 
         for package in ['gcc', 'make']:

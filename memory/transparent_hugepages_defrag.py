@@ -15,6 +15,10 @@
 # Copyright: 2017 IBM
 # Author: Santhosh G <santhog4@linux.vnet.ibm.com>
 
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import os
 import time
 import mmap
@@ -49,15 +53,15 @@ class Thp_Defrag(Test):
 
         # Get required mem info
         self.mem_path = os.path.join(data_dir.get_tmp_dir(), 'thp_space')
-        self.block_size = int(mmap.PAGESIZE) / 1024
+        self.block_size = old_div(int(mmap.PAGESIZE), 1024)
         # add mount point
         if os.path.exists(self.mem_path):
             os.makedirs(self.mem_path)
         self.device = Partition(device="none", mountpoint=self.mem_path)
         self.device.mount(mountpoint=self.mem_path, fstype="tmpfs")
-        free_space = (disk.freespace(self.mem_path)) / 1024
+        free_space = old_div((disk.freespace(self.mem_path)), 1024)
         # Leaving out some free space in tmpfs
-        self.count = (free_space / self.block_size) - 3
+        self.count = (old_div(free_space, self.block_size)) - 3
 
     @avocado.fail_on
     def test(self):
@@ -84,7 +88,7 @@ class Thp_Defrag(Test):
 
         total = memory.memtotal()
         hugepagesize = memory.get_huge_page_size()
-        nr_full = int(0.8 * (total / hugepagesize))
+        nr_full = int(0.8 * (old_div(total, hugepagesize)))
 
         # Sets max possible hugepages before defrag on
         nr_hp_before = self.set_max_hugepages(nr_full)

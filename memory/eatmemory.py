@@ -14,6 +14,8 @@
 # Copyright: 2016 IBM
 # Author: Santhosh G <santhog4@linux.vnet.ibm.com>
 
+from __future__ import division
+from past.utils import old_div
 import os
 from avocado import Test
 from avocado.utils import build
@@ -71,7 +73,7 @@ class eatmemory(Test):
                 return None
             mem_in_bytes = value * multiplier[unit]
 
-        return mem_in_bytes / multiplier['m']
+        return old_div(mem_in_bytes, multiplier['m'])
 
     def test(self):
         os.chdir(self.sourcedir)

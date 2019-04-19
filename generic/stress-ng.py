@@ -16,6 +16,9 @@
 # Author: Aneesh Kumar K.V <anesh.kumar@linux.vnet.ibm.com>
 #
 
+from __future__ import division
+from builtins import str
+from past.utils import old_div
 import os
 import multiprocessing
 from avocado import Test
@@ -144,7 +147,7 @@ class Stressng(Test):
                                 ignore_status=True, sudo=True)
             if self.ttimeout and self.v_stressors:
                 timeout = ' --timeout %s ' % str(
-                    int(self.ttimeout) + int(memory.memtotal() / 1024 / 1024))
+                    int(self.ttimeout) + int(old_div(memory.memtotal(), 1024 / 1024)))
             if self.v_stressors:
                 for stressor in self.v_stressors.split(' '):
                     stress_cmd = ' --%s %s %s' % (stressor,

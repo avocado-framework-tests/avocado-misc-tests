@@ -16,6 +16,10 @@
 #        Harish <harish@linux.vnet.ibm.com>
 #
 
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import os
 import shutil
 
@@ -55,7 +59,7 @@ class VATest(Test):
                 if page_chunker == 16384:
                     self.hsizes.extend([16384])
 
-        if self.scenario_arg not in range(1, 13):
+        if self.scenario_arg not in list(range(1, 13)):
             self.cancel("Test need to skip as scenario will be 1-12")
         elif self.scenario_arg in [7, 8, 9]:
             self.log.info("Using alternate hugepages")
@@ -75,20 +79,20 @@ class VATest(Test):
                 self.hsizes.reverse()
 
             # Leaving half size for default pagesize
-            total_mem = (0.9 * memory.meminfo.MemFree.m) / 2
-            self.def_chunks = int(total_mem / 16384)
+            total_mem = old_div((0.9 * memory.meminfo.MemFree.m), 2)
+            self.def_chunks = int(old_div(total_mem, 16384))
             for hp_size in self.hsizes:
-                nr_pgs = int((total_mem / 2) / hp_size)
+                nr_pgs = int(old_div((old_div(total_mem, 2)), hp_size))
                 genio.write_file(self.hp_file %
                                  str(hp_size * 1024), str(nr_pgs))
             n_pages = genio.read_file(self.hp_file % str(
                 self.hsizes[0] * 1024)).rstrip("\n")
             n_pages2 = genio.read_file(self.hp_file % str(
                 self.hsizes[1] * 1024)).rstrip("\n")
-            self.n_chunks = (int(n_pages) * self.hsizes[0]) / 16384
-            self.n_chunks2 = (int(n_pages2) * self.hsizes[1]) / 16384
+            self.n_chunks = old_div((int(n_pages) * self.hsizes[0]), 16384)
+            self.n_chunks2 = old_div((int(n_pages2) * self.hsizes[1]), 16384)
         if self.scenario_arg not in [1, 2, 10, 11, 12]:
-            max_hpages = int((0.9 * memory.meminfo.MemFree.m) / page_chunker)
+            max_hpages = int(old_div((0.9 * memory.meminfo.MemFree.m), page_chunker))
             if self.scenario_arg in [3, 4, 5, 6]:
                 memory.set_num_huge_pages(max_hpages)
                 nr_pages = memory.get_num_huge_pages()
@@ -97,7 +101,7 @@ class VATest(Test):
                     page_chunker * 1024), str(max_hpages))
                 nr_pages = genio.read_file(self.hp_file % str(
                     page_chunker * 1024)).rstrip("\n")
-            self.n_chunks = (int(nr_pages) * page_chunker) / 16384
+            self.n_chunks = old_div((int(nr_pages) * page_chunker), 16384)
 
         for packages in ['gcc', 'make']:
             if not smm.check_installed(packages) and not smm.install(packages):

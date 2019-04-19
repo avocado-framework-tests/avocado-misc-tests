@@ -15,6 +15,10 @@
 # Author:Praveen K Pandey <praveen@linux.vnet.ibm.com>
 #
 
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import os
 import shutil
 import json
@@ -68,7 +72,7 @@ class Tlbflush(Test):
             # be tested
 
             nr_section = ite % 8
-            ranges = self.tlbflush_max_entries / 8
+            ranges = old_div(self.tlbflush_max_entries, 8)
             min_entries = ranges * nr_section + 1
             max_entries = min_entries + ranges
             if self.nr_entries > max_entries:

@@ -17,7 +17,11 @@
 """
 Test to verify ppc64_cpu command.
 """
+from __future__ import division
 
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import os
 import glob
 from avocado import Test
@@ -91,7 +95,7 @@ class PPC64Test(Test):
         """
         for i in range(2, self.max_smt_value + 1):
             self.smt_values[i] = str(i)
-        for self.key, self.value in self.smt_values.iteritems():
+        for self.key, self.value in self.smt_values.items():
             process.system_output("%s=%s" % (self.smt_str,
                                              self.key), shell=True)
             process.system_output("ppc64_cpu --info")
@@ -122,7 +126,7 @@ class PPC64Test(Test):
         """
         op1 = process.system_output(
             "ppc64_cpu --cores-present", shell=True).strip().split()[-1]
-        op2 = cpu.online_cpus_count() / int(self.key)
+        op2 = old_div(cpu.online_cpus_count(), int(self.key))
         self.equality_check("Core", op1, op2)
 
     def subcore(self):

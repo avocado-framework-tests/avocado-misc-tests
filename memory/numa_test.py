@@ -16,6 +16,9 @@
 #
 
 
+from __future__ import division
+from builtins import str
+from past.utils import old_div
 import os
 import shutil
 
@@ -40,7 +43,7 @@ class NumaTest(Test):
         dist = distro.detect()
         memsize = int(memory.freememtotal() * 1024 * 0.2)
         self.nr_pages = self.params.get(
-            'nr_pages', default=memsize / memory.get_page_size())
+            'nr_pages', default=old_div(memsize, memory.get_page_size()))
         self.map_type = self.params.get('map_type', default='private')
         self.hpage = self.params.get('h_page', default=False)
 

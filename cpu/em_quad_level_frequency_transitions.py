@@ -15,6 +15,7 @@
 # Author: Shriya Kulkarni <shriyak@linux.vnet.ibm.com>
 #        : Praveen K Pandey <praveen@linux.vnet.ibm.com>>
 
+from builtins import range
 import time
 import os
 import random
@@ -98,9 +99,9 @@ class freq_transitions(Test):
                     freq_set = self.cpu_freq_path('cpuinfo_cur_freq')
                     if self.max_freq < freq_set:
                         self.max_freq = freq_set
-                if chip not in self.max_freq_dict.keys():
+                if chip not in list(self.max_freq_dict.keys()):
                     self.max_freq_dict[chip] = {}
-                if quad not in self.max_freq_dict[chip].keys():
+                if quad not in list(self.max_freq_dict[chip].keys()):
                     self.max_freq_dict[chip][quad] = self.max_freq
                     self.log.info("Maximum frequency set:%s quad:"
                                   "%s" % (self.max_freq, quad))
@@ -122,15 +123,15 @@ class freq_transitions(Test):
         """
         Get the total quad and cpus list belonging to each quad.
         """
-        self.nums = range(0, self.cpus)
+        self.nums = list(range(0, self.cpus))
         for cpu in self.nums:
             phy_id = genio.read_file(
                 '/sys/devices/system/cpu/cpu%s/physical_id' % cpu).rstrip("\n")
             quad_id = int(phy_id) >> 4 & 0x7
             chip_id = int(phy_id) >> 8 & 0x7F
-            if chip_id not in self.quad_dict.keys():
+            if chip_id not in list(self.quad_dict.keys()):
                 self.quad_dict[chip_id] = {}
-            if quad_id not in self.quad_dict[chip_id].keys():
+            if quad_id not in list(self.quad_dict[chip_id].keys()):
                 self.quad_dict[chip_id][quad_id] = []
             self.quad_dict[chip_id][quad_id].append(cpu)
 
