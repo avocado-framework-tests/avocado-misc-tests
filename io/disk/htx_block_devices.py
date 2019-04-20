@@ -45,11 +45,8 @@ class HtxTest(Test):
         if 'ppc64' not in process.system_output('uname -a', shell=True):
             self.cancel("Platform does not supports")
 
-        if distro.detect().name != 'Ubuntu':
-            self.cancel("Distro does not support")
-
         self.mdt_file = self.params.get('mdt_file', default='mdt.hd')
-        self.time_limit = int(self.params.get('time_limit', default=2)) * 3600
+        self.time_limit = int(self.params.get('time_limit', default=1)) * 3600
         self.block_devices = self.params.get('disk', default=None)
         if self.block_devices is None:
             self.cancel("Needs the block devices to run the HTX")
@@ -58,8 +55,17 @@ class HtxTest(Test):
             self.block_device.append(disk.rsplit("/")[-1])
         self.block_device = " ".join(self.block_device)
 
-        packages = ['git', 'gcc', 'make', 'libncurses5', 'g++', 'libdapl-dev',
-                    'ncurses-dev', 'libncurses-dev', 'libcxl-dev']
+        packages = ['git', 'gcc', 'make']
+        detected_distro = distro.detect()
+        if detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
+            packages.extend(['gcc-c++', 'ncurses-devel', 'libocxl-devel',
+                             'dapl-devel', 'libcxl-devel'])
+        elif detected_distro.name == "Ubuntu":
+            packages.extend(['libncurses5', 'g++', 'libdapl-dev',
+                             'ncurses-dev', 'libncurses-dev', 'libcxl-dev'])
+        else:
+            self.cancel("Test not supported in  %s" % detected_distro.name)
+
         smm = SoftwareManager()
         for pkg in packages:
             if not smm.check_installed(pkg) and not smm.install(pkg):
@@ -71,13 +77,13 @@ class HtxTest(Test):
         htx_path = os.path.join(self.teststmpdir, "HTX-master")
         os.chdir(htx_path)
 
-        build.run_make(htx_path, extra_args='all')
-        build.run_make(htx_path, extra_args='deb')
-        process.run('dpkg -r htxubuntu')
-        process.run('dpkg --purge htxubuntu')
-        process.run('dpkg -i htxubuntu.deb')
-        if not os.path.exists("/usr/lpp/htx/mdt/%s" % self.mdt_file):
-            self.cancel("MDT file %s not found" % self.mdt_file)
+        build.make(htx_path, extra_args='all')
+        build.make(htx_path, extra_args='tar')
+        process.run('tar --touch -xvzf htx_package.tar.gz')
+        os.chdir('htx_package')
+        if process.system('./installer.sh -f'):
+            self.fail("Installation of htx fails:please refer job.log")
+
         self.smt = self.params.get('smt_change', default=False)
         if self.smt:
             self.max_smt_value = 8
@@ -88,8 +94,8 @@ class HtxTest(Test):
             self.smt_values = ["off", "on"]
             for i in range(2, self.max_smt_value + 1):
                 self.smt_values.append(str(i))
-            self.curr_smt = process.system_output("ppc64_cpu --smt | awk -F'=' \
-                '{print $NF}' | awk '{print $NF}'", shell=True)
+            self.curr_smt = process.system_output('ppc64_cpu --smt', shell=True)
+            self.curr_smt = self.curr_smt.split()[-1].split('=')[-1]
 
     def test(self):
         """
@@ -97,6 +103,12 @@ class HtxTest(Test):
         """
         self.log.info("Starting the HTX Deamon")
         process.run('/usr/lpp/htx/etc/scripts/htxd_run')
+
+        self.log.info("Creating the HTX mdt files")
+        process.run('htxcmdline -createmdt')
+
+        if not os.path.exists("/usr/lpp/htx/mdt/%s" % self.mdt_file):
+            self.fail("MDT file %s not found" % self.mdt_file)
 
         self.log.info("selecting the mdt file ")
         cmd = "htxcmdline -select -mdt %s" % self.mdt_file
@@ -116,11 +128,11 @@ class HtxTest(Test):
             self.fail("Block devices failed to activate")
 
         self.log.info("Running the HTX on %s", self.block_device)
-        cmd = "htxcmdline -run %s -mdt %s" % (self.block_device, self.mdt_file)
+        cmd = "htxcmdline -run -mdt %s" % self.mdt_file
         process.system(cmd, ignore_status=True)
         for time_loop in range(0, self.time_limit, 60):
             # Running SMT changes every hour
-            if time_loop % 3600 == 0:
+            if self.smt and time_loop % 3600 == 0:
                 self.run_smt()
             self.log.info("HTX Error logs")
             process.run('htxcmdline -geterrlog')
@@ -205,7 +217,9 @@ class HtxTest(Test):
         daemon_state = process.system_output('/etc/init.d/htx.d status')
         if daemon_state.split(" ")[-1] == 'running':
             process.system('/usr/lpp/htx/etc/scripts/htxd_shutdown')
-        process.system_output("ppc64_cpu --smt=%s" % self.curr_smt, shell=True)
+        if self.smt:
+            cmd = "ppc64_cpu --smt=%s" % self.curr_smt
+            process.system_output(cmd, shell=True)
 
 
 if __name__ == "__main__":
