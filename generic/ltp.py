@@ -24,6 +24,7 @@ from avocado import main
 from avocado.utils import build
 from avocado.utils import process, archive
 import os
+import re
 
 from avocado.utils.software_manager import SoftwareManager
 
@@ -35,6 +36,7 @@ class ltp(Test):
     :param args: Extra arguments ("runltp" can use with
                  "-f $test")
     """
+    failed_tests = list()
 
     def setUp(self):
         sm = SoftwareManager()
@@ -65,22 +67,17 @@ class ltp(Test):
         ltpbin_dir = os.path.join(self.workdir, "ltp-master", 'bin')
         cmd = os.path.join(ltpbin_dir, 'runltp') + ' ' + args
         result = process.run(cmd, ignore_status=True)
-        # Walk the stdout and try detect failed tests from lines like these:
-        # aio01       5  TPASS  :  Test 5: 10 reads and writes in  0.000022 sec
-        # vhangup02    1  TFAIL  :  vhangup02.c:88: vhangup() failed, errno:1
-        # and check for fail_statuses The first part contain test name
-        fail_statuses = ['TFAIL', 'TBROK', 'TWARN']
-        split_lines = (line.split(None, 3)
-                       for line in result.stdout.splitlines())
-        failed_tests = [items[0] for items in split_lines
-                        if len(items) == 4 and
-                        items[2].strip(":") in fail_statuses]
+        # Walk the ltp.log and try detect failed tests from lines like these:
+        # msgctl04                                           FAIL       2
+        with open(logfile, 'r') as fp:
+            lines = fp.readlines()
+            for line in lines:
+                if 'FAIL' in line:
+                    value = re.split(r'\s+', line)
+                    self.failed_tests.append(value[0])
 
-        if failed_tests:
-            self.fail("LTP tests failed: %s" % ", ".join(failed_tests))
-        elif result.exit_status != 0:
-            self.fail("No test failures detected, but LTP finished with %s"
-                      % (result.exit_status))
+        if self.failed_tests:
+            self.fail("LTP tests failed: %s" % self.failed_tests)
 
 
 if __name__ == "__main__":
