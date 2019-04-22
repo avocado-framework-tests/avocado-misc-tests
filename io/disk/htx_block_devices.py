@@ -35,7 +35,8 @@ class HtxTest(Test):
     :see:https://github.com/open-power/HTX.git
     :param block_devices: names of block_devices on which you want to run HTX
     :param mdt_file: mdt file used to trigger HTX
-    :params time_limit: how much time(hours) you want to run this stress.
+    :param time_limit: how much time(hours) you want to run this stress
+    :param all: if all disks in selected mdt needs to be used for HTX run
     """
 
     def setUp(self):
@@ -48,12 +49,16 @@ class HtxTest(Test):
         self.mdt_file = self.params.get('mdt_file', default='mdt.hd')
         self.time_limit = int(self.params.get('time_limit', default=1)) * 3600
         self.block_devices = self.params.get('disk', default=None)
-        if self.block_devices is None:
+        self.all = self.params.get('all', default=False)
+        if not self.all and self.block_devices is None:
             self.cancel("Needs the block devices to run the HTX")
-        self.block_device = []
-        for disk in self.block_devices.split():
-            self.block_device.append(disk.rsplit("/")[-1])
-        self.block_device = " ".join(self.block_device)
+        if self.all:
+            self.block_device = ""
+        else:
+            self.block_device = []
+            for disk in self.block_devices.split():
+                self.block_device.append(disk.rsplit("/")[-1])
+            self.block_device = " ".join(self.block_device)
 
         packages = ['git', 'gcc', 'make']
         detected_distro = distro.detect()
@@ -114,9 +119,10 @@ class HtxTest(Test):
         cmd = "htxcmdline -select -mdt %s" % self.mdt_file
         process.system(cmd, ignore_status=True)
 
-        if self.is_block_device_in_mdt() is False:
-            self.fail("Block devices %s are not available in %s",
-                      self.block_device, self.mdt_file)
+        if not self.all:
+            if self.is_block_device_in_mdt() is False:
+                self.fail("Block devices %s are not available in %s",
+                          self.block_device, self.mdt_file)
 
         self.suspend_all_block_device()
 
@@ -124,8 +130,9 @@ class HtxTest(Test):
         cmd = "htxcmdline -activate %s -mdt %s" % (self.block_device,
                                                    self.mdt_file)
         process.system(cmd, ignore_status=True)
-        if self.is_block_device_active() is False:
-            self.fail("Block devices failed to activate")
+        if not self.all:
+            if self.is_block_device_active() is False:
+                self.fail("Block devices failed to activate")
 
         self.log.info("Running the HTX on %s", self.block_device)
         cmd = "htxcmdline -run -mdt %s" % self.mdt_file
