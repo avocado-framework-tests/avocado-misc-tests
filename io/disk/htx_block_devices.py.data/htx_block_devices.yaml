@@ -1,4 +1,5 @@
-disk: '/dev/sdb'
-time_limit: 2
+disk: '/dev/sdb /dev/sdc'
+all: False
+time_limit: 1
 mdt_file: 'mdt.hd'
-smt_change: True
+smt_change: False

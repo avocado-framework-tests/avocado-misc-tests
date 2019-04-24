@@ -14,6 +14,8 @@ user in yaml file.
 Inputs:
 ------
 disk: '/dev/sdb /dev/sdc'
-time_limit: 2 (In hours)
+all: True or False (True if all disks in selected mdt needs to be run.
+Overrides disks selected)
+time_limit: 1 (In hours)
 mdt_file: 'mdt.io'
 smt_change: True or False
