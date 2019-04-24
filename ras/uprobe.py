@@ -19,7 +19,6 @@ from avocado import main
 from avocado.utils import genio
 from avocado.utils import distro
 from avocado.utils import process
-from avocado.utils import linux_modules
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -57,11 +56,6 @@ class Uprobe(Test):
     def disable_uprobes(self):
         genio.write_one_line(self.uprobes_event_fs, "0")
         genio.write_one_line(self.uprobes_enable_fs, "0")
-
-    def check_kernel_support(self):
-        if linux_modules.check_kernel_config("CONFIG_UPROBE_EVENTS") != 2:
-            return 0
-        return 1
 
     def setUp(self):
         dist = distro.detect()
