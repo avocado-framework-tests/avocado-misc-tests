@@ -67,11 +67,13 @@ class Livepatch(Test):
             linux_headers = 'linux-headers-%s' % os.uname()[2]
             deps.extend(['libpopt0', 'libc6', 'libc6-dev', 'libpopt-dev',
                          'libcap-ng0', 'libcap-ng-dev', 'elfutils', 'libelf1',
-                         'libnuma-dev', 'libfuse-dev', 'libssl-dev', linux_headers])
+                         'libnuma-dev', 'libfuse-dev', 'libssl-dev',
+                         linux_headers])
         elif 'SuSE' in detected_distro.name:
             deps.extend(['libpopt0', 'glibc', 'glibc-devel',
-                         'popt-devel', 'libcap2', 'libcap-devel', 'kernel-symm',
-                         'libcap-ng-devel', 'openssl-devel', 'kernel-source'])
+                         'popt-devel', 'libcap2', 'libcap-devel',
+                         'kernel-symm', 'libcap-ng-devel', 'openssl-devel',
+                         'kernel-source'])
         elif detected_distro.name in ['centos', 'fedora', 'rhel']:
             deps.extend(['popt', 'glibc', 'glibc-devel', 'libcap-ng',
                          'libcap', 'libcap-devel', 'elfutils-libelf',
@@ -85,7 +87,8 @@ class Livepatch(Test):
         """
         Building of the livepatching kernel module
         """
-        self.log.info("============== Building livepatching Module =================")
+        self.log.info(
+            "============== Building livepatching Module =================")
         self.sourcedir = tempfile.mkdtemp()
         os.chdir(self.sourcedir)
 
@@ -99,7 +102,8 @@ class Livepatch(Test):
         Write module make file on the fly
         """
         makefile = open("Makefile", "w")
-        makefile.write('obj-m := livepatch-sample.o\nKDIR := /lib/modules/$(shell uname -r)/build'
+        makefile.write('obj-m := livepatch-sample.o\nKDIR '
+                       ':= /lib/modules/$(shell uname -r)/build'
                        '\nPWD := $(shell pwd)\ndefault:\n\t'
                        '$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules\n')
         makefile.close()
@@ -110,32 +114,45 @@ class Livepatch(Test):
             self.fail("No livepatch-sample.ko found, module build failed")
 
     def execute_test(self):
-        self.log.info("============== Enabling livepatching =================")
+        self.log.info("============== Enabling livepatching ===============")
         self.clear_dmesg()
         self.is_fail = 0
         self.run_cmd("insmod ./livepatch-sample.ko")
         if self.is_fail >= 1:
             self.fail("insmod livepatch-sample.ko failed")
 
-        if "enabling patch" not in self.run_cmd_out("dmesg |grep -i livepatch_sample"):
-            self.fail("livepatch couldn't be enabled, check dmesg for more information")
+        if "enabling patch" not in \
+                self.run_cmd_out("dmesg |grep -i livepatch_sample"):
+            self.fail("livepatch couldn't be enabled, "
+                      "check dmesg for more information")
 
         """
         Execute /proc/cmdline, to check if livepatch works
         """
-        if "this has been live patched" not in genio.read_one_line("/proc/cmdline"):
-            self.fail("livepatching unsuccessful, check dmesg for more information")
+        if "this has been live patched" not \
+                in genio.read_one_line("/proc/cmdline"):
+            self.fail("livepatching unsuccessful, "
+                      "check dmesg for more information")
 
-        self.log.info("============== Disabling livepatching =================")
-        genio.write_one_line("/sys/kernel/livepatch/livepatch_sample/enabled", "0")
-        if "0" not in genio.read_one_line("/sys/kernel/livepatch/livepatch_sample/enabled"):
-            self.fail("Unable to disable livepatch for livepatch_sample module")
+        self.log.info("=========== Disabling livepatching ===============")
+        genio.write_one_line(
+            "/sys/kernel/livepatch/livepatch_sample/enabled", "0")
+        if "0" not in genio.read_one_line("/sys/kernel/livepatch/"
+                                          "livepatch_sample/enabled"):
+            self.fail("Unable to disable livepatch "
+                      "for livepatch_sample module")
 
-        if "unpatching transition" not in self.run_cmd_out("dmesg |grep -i livepatch_sample"):
-            self.fail("livepatch couldn't be disabled, check dmesg for more information")
+        if "unpatching transition" not in self.run_cmd_out("dmesg |grep "
+                                                           "-i livepatch_sample"):
+            self.fail(
+                "livepatch couldn't be disabled, check dmesg "
+                "for more information")
 
-        if "this has been live patched" in genio.read_one_line("/proc/cmdline"):
-            self.fail("livepatching disabling unsuccessful, check dmesg for more information")
+        if "this has been live patched" in \
+                genio.read_one_line("/proc/cmdline"):
+            self.fail(
+                "livepatching disabling unsuccessful, check dmesg "
+                "for more information")
 
         """
         Wait for 3 minutes before trying to remove the livepatching module
@@ -143,8 +160,8 @@ class Livepatch(Test):
         time.sleep(60 * 3)
         self.run_cmd("rmmod livepatch-sample")
         if self.is_fail >= 1:
-            self.log.info("rmmod livepatch-sample.ko failed, try removing it manual"
-                          "after sometime")
+            self.log.info("rmmod livepatch-sample.ko failed, "
+                          "try removing it manual after sometime")
 
     def test(self):
         self.build_module()
