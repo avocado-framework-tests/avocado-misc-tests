@@ -44,29 +44,34 @@ class Numatop(Test):
         # TODO: Add support for other distributions
         self.numa_pid = None
         detected_distro = distro.detect().name.lower()
-        if not detected_distro == "ubuntu":
-            self.cancel("Upsupported OS %s" % detected_distro)
+        if detected_distro not in ["ubuntu", "suse"]:
+            self.cancel("Unsupported OS %s" % detected_distro)
         smm = SoftwareManager()
-        for package in ['gcc', 'numatop', 'make', 'libnuma-dev',
-                        'libncurses-dev']:
+        if detected_distro == "ubuntu":
+            pkg_list = ['gcc', 'numatop', 'make', 'libnuma-dev',
+                        'libncurses-dev']
+        if detected_distro == "suse":
+            pkg_list = ['gcc', 'numatop', 'make', 'libnuma-devel',
+                        'ncurses-devel', 'check-devel']
+        for package in pkg_list:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("Failed to install %s, which is needed for"
                             "the test to be run" % package)
 
-        locations = ["https://github.com/01org/numatop/archive/master.zip"]
+        locations = ["https://github.com/intel/numatop/archive/master.zip"]
         tarball = self.fetch_asset("numatop.zip", locations=locations,
                                    expire='7d')
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(self.workdir, 'numatop-master')
 
         os.chdir(self.sourcedir)
-
-        build.make(self.sourcedir, extra_args='test')
+        process.run('./autogen.sh', shell=True, sudo=True)
+        build.make(self.sourcedir, extra_args='check')
 
     def test(self):
 
         mgen_flag = False
-        mgen = os.path.join(self.sourcedir, 'test/mgen/mgen')
+        mgen = os.path.join(self.sourcedir, 'mgen')
         self.numa_pid = process.SubProcess(
             'numatop -d result_file', shell=True)
         self.numa_pid.start()
