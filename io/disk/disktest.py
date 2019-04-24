@@ -28,9 +28,9 @@ import shutil
 from avocado import Test
 from avocado import main
 from avocado.utils import build
-from avocado.utils import disk as utils_disk
 from avocado.utils import memory
 from avocado.utils import process
+from avocado.utils import lv_utils
 from avocado.utils.partition import Partition
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.partition import PartitionError
@@ -74,21 +74,12 @@ class Disktest(Test):
         self.dirs = self.params.get('dir', default=self.workdir)
         self.fstype = self.params.get('fs', default='ext4')
 
+        gigabytes = int(lv_utils.get_diskspace(self.disk)) / 1073741824
         memory_mb = memory.memtotal() / 1024
-        self.chunk_mb = int(self.params.get('chunk_mb', default=None))
-        if self.chunk_mb is None:   # By default total RAM
-            self.chunk_mb = memory_mb
-        if self.chunk_mb == 0:
-            self.chunk_mb = 1
+        self.chunk_mb = gigabytes * 950
         if memory_mb > self.chunk_mb:
             self.cancel("Chunk size has to be greater or equal to RAM size. "
                         "(%s > %s)" % (self.chunk_mb, memory_mb))
-
-        gigabytes = int(self.params.get('gigabytes', default=None))
-        if gigabytes is None:
-            free = 107374182400  # cap it at 100GB by default
-            free = min(utils_disk.freespace(self.dirs) / 1073741824, free)
-            gigabytes = free
 
         self.no_chunks = 1024 * gigabytes / self.chunk_mb
         if self.no_chunks == 0:

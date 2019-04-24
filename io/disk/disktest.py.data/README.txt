@@ -11,6 +11,3 @@ Available parameters
 disk       - Disk to be used in test.
 dir        - Directory of used in test. When the target does not exist,
 	     it's created.
-gigabyte   - Disk space that will be used for the test to run (Unit - GB).
-chunk_mb   - Size of the portion of the disk used to run the test (Unit MB). 
-	     Cannot be smaller than the total amount of RAM.

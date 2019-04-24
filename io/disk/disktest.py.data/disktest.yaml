@@ -1,7 +1,5 @@
 disk:
 dir:
-gigabytes:
-chunk_mb:
 filesystem: !mux
     ext4:
         fs: 'ext4'
