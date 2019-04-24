@@ -51,7 +51,7 @@ class Kprobe(Test):
         process.run("dmesg -C ", sudo=True)
 
     def check_kernel_support(self):
-        if linux_modules.check_kernel_config("CONFIG_OPTPROBES") != 2:
+        if linux_modules.check_kernel_config("CONFIG_OPTPROBES") == linux_modules.ModuleConfig.NOT_SET:
             return 0
         return 1
 
