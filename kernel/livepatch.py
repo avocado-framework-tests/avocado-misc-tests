@@ -52,7 +52,7 @@ class Livepatch(Test):
         process.run("dmesg -C ", sudo=True)
 
     def check_kernel_support(self):
-        if linux_modules.check_kernel_config("CONFIG_LIVEPATCH") != 2:
+        if linux_modules.check_kernel_config("CONFIG_LIVEPATCH") == linux_modules.ModuleConfig.NOT_SET:
             self.fail("Livepatch support not available")
 
     def setUp(self):

@@ -44,7 +44,7 @@ class Rcutorture(Test):
         self.results = []
         self.log.info("Check if CONFIG_RCU_TORTURE_TEST is enabled\n")
         ret = linux_modules.check_kernel_config('CONFIG_RCU_TORTURE_TEST')
-        if ret == 0:
+        if ret == linux_modules.ModuleConfig.NOT_SET:
             self.cancel("CONFIG_RCU_TORTURE_TEST is not set in .config !!\n")
 
         self.log.info("Check rcutorture module is already  loaded\n")
