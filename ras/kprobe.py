@@ -69,7 +69,7 @@ class Kprobe(Test):
                          'libnuma-dev', 'libfuse-dev', 'libssl-dev', linux_headers])
         elif 'SuSE' in detected_distro.name:
             deps.extend(['libpopt0', 'glibc', 'glibc-devel',
-                         'popt-devel', 'libcap2', 'libcap-devel', 'kernel-symm',
+                         'popt-devel', 'libcap2', 'libcap-devel', 'kernel-syms',
                          'libcap-ng-devel', 'openssl-devel', 'kernel-source'])
         elif detected_distro.name in ['centos', 'fedora', 'rhel']:
             deps.extend(['popt', 'glibc', 'glibc-devel', 'libcap-ng',
