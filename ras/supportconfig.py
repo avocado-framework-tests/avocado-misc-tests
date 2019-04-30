@@ -43,9 +43,11 @@ class Supportconfig(Test):
         if "SuSE" not in distro.detect().name:
             self.cancel("supportconfig is supported on the SuSE Distro only.")
 
-        if not sm.check_installed(
-                "supportutils") and not sm.install("supportutils"):
-            self.cancel("Failed to install supportutils required for this test.")
+        pkgs = [ "supportutils", "psmisc" ]
+
+        for pkg in pkgs:
+            if not sm.check_installed(pkg) and not sm.install(pkg):
+                self.cancel("Package %s is missing/could not be installed" % pkg)
 
     def test_supportconfig_options(self):
         """
