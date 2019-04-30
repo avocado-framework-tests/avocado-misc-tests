@@ -16,11 +16,17 @@ RHEL :
 Links :
 -> https://pypi.python.org/packages/source/p/pycrypto/pycrypto-2.6.1.tar.gz#md5=55a61a054aa66812daf5161a0d5d7eda
 
+For rsct and DynamicRM packages, please make sure that the repo is configured manualy in the OS, script will take care of installation part 
+
 input parameters
+hmc_ip: ltciofvtr-hmc.pok.stglabs.ibm.com
 hmc_pwd: abc1234
 hmc_username: hscroot
+lpar_1: ltcalpine-lp3-venkat
 lpar_2: ltcalpine-lp8-venkat
+server: ltcalpine-fsp-8408-SN10A7AAV
 pci_device: "0017:01:00.0"
 User need to pass the pci_device of drc to do the action of DLPAR
+lpar_1 is the name of lpar where DLPAR remove and add operation will be done
 lpar_2 is the name of lpar where DLPAR move operation will be done
 num_of_dlpar: Dlpar operations runs number of times specified here
