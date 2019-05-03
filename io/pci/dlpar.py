@@ -153,10 +153,13 @@ class DlparPci(Test):
         Install required packages
         '''
         smm = SoftwareManager()
+        packages = ['ksh', 'src', 'rsct.basic', 'rsct.core.utils',
+                    'rsct.core', 'DynamicRM']
         detected_distro = distro.detect()
         self.log.info("Test is running on: %s", detected_distro.name)
-        if not smm.check_installed("ksh") and not smm.install("ksh"):
-            self.cancel('ksh is needed for the test to be run')
+        for pkg in packages:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
+                self.cancel('%s is needed for the test to be run' % pkg)
         if detected_distro.name == "Ubuntu":
             if not smm.check_installed("python-paramiko") and not \
                                       smm.install("python-paramiko"):
@@ -169,13 +172,6 @@ class DlparPci(Test):
                 shutil.copy(deb_install, self.workdir)
                 process.system("dpkg -i %s/%s" % (self.workdir, deb),
                                ignore_status=True, sudo=True)
-        else:
-            url = self.params.get('url', default=None)
-            rpm_install = self.fetch_asset(url, expire='7d')
-            shutil.copy(rpm_install, self.workdir)
-            os.chdir(self.workdir)
-            process.run('chmod +x ibmtools')
-            process.run('./ibmtools --install --managed')
 
     def rsct_service_start(self):
         '''
