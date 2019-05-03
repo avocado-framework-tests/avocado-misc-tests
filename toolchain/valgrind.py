@@ -43,7 +43,10 @@ class Valgrind(Test):
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
         elif dist.name in ['SuSE', 'rhel', 'fedora', 'centos', 'redhat']:
-            deps.extend(['gcc-c++'])
+            deps.extend(["gcc-c++"])
+
+            pkgs = ["make", "gcc-c++"]
+
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
