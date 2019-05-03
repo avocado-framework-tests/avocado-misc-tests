@@ -16,6 +16,8 @@ RHEL :
 Links :
 -> https://pypi.python.org/packages/source/p/pycrypto/pycrypto-2.6.1.tar.gz#md5=55a61a054aa66812daf5161a0d5d7eda
 
+Please setup repo for rsct and DynamicRM packages that are required for dlapr, script will take care of installation part.
+
 input parameters
 hmc_pwd: abc1234
 hmc_username: hscroot
