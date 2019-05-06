@@ -71,7 +71,6 @@ class DlparPci(Test):
         self.lpar_1 = self.get_mcp_component("NodeNameList")
         if not self.lpar_1:
             self.cancel("LPAR Name not got")
-        self.lpar_1 = "ltczep9-lp1"
         self.login(self.hmc_ip, self.hmc_user, self.hmc_pwd)
         cmd = 'lssyscfg -r sys  -F name'
         output = self.run_command(cmd)
@@ -153,14 +152,16 @@ class DlparPci(Test):
         Install required packages
         '''
         smm = SoftwareManager()
+        packages = ['ksh', 'src', 'rsct.basic', 'rsct.core.utils',
+                    'rsct.core', 'DynamicRM']
         detected_distro = distro.detect()
-        self.log.info("Test is running on: %s", detected_distro.name)
-        if not smm.check_installed("ksh") and not smm.install("ksh"):
-            self.cancel('ksh is needed for the test to be run')
         if detected_distro.name == "Ubuntu":
-            if not smm.check_installed("python-paramiko") and not \
-                                      smm.install("python-paramiko"):
-                self.cancel('python-paramiko is needed for the test to be run')
+            packages.extend(['python-paramiko'])
+        self.log.info("Test is running on: %s", detected_distro.name)
+        for pkg in packages:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
+                self.cancel('%s is needed for the test to be run' % pkg)
+        if detected_distro.name == "Ubuntu":
             ubuntu_url = self.params.get('ubuntu_url', default=None)
             debs = self.params.get('debs', default=None)
             for deb in debs:
@@ -169,13 +170,6 @@ class DlparPci(Test):
                 shutil.copy(deb_install, self.workdir)
                 process.system("dpkg -i %s/%s" % (self.workdir, deb),
                                ignore_status=True, sudo=True)
-        else:
-            url = self.params.get('url', default=None)
-            rpm_install = self.fetch_asset(url, expire='7d')
-            shutil.copy(rpm_install, self.workdir)
-            os.chdir(self.workdir)
-            process.run('chmod +x ibmtools')
-            process.run('./ibmtools --install --managed')
 
     def rsct_service_start(self):
         '''
