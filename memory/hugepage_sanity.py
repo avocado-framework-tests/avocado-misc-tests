@@ -20,7 +20,7 @@ import os
 import shutil
 from avocado import Test
 from avocado import main
-from avocado.utils import process, build
+from avocado.utils import process, build, memory
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -36,7 +36,7 @@ class HugepageSanity(Test):
 
     def setUp(self):
         smm = SoftwareManager()
-        self.hpagesize = int(self.params.get('hpagesize', default='16'))
+        self.hpagesize = int(self.params.get('hpagesize', default=memory.get_huge_page_size()/1024))
         self.num_huge = int(self.params.get('num_pages', default='1'))
 
         for package in ['gcc', 'make']:
