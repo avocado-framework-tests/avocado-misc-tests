@@ -78,8 +78,8 @@ class Iperf(Test):
         build.make(self.iperf_dir)
         self.iperf = os.path.join(self.iperf_dir, 'src')
         self.expected_tp = self.params.get("EXPECTED_THROUGHPUT", default="85")
-        speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
-        self.expected_tp = int(self.expected_tp) * speed / 100
+        self.speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
+        self.expected_tp = int(self.expected_tp) * self.speed / 100
 
     def test(self):
         """
@@ -94,7 +94,7 @@ class Iperf(Test):
             self.fail("FAIL: Iperf Run failed")
         for line in result.stdout.splitlines():
             if 'sender' in line:
-                tput = int(line.split()[6].split('.')[0])
+                tput = int(line.split()[6].split('.')[0]) * self.speed / 10
                 if tput < self.expected_tp:
                     self.fail("FAIL: Throughput Actual - %d, Expected - %d"
                               % (tput, self.expected_tp))
