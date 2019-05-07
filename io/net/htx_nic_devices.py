@@ -26,6 +26,9 @@ from avocado import Test
 from avocado.utils import distro
 from avocado import main
 from avocado.utils import process
+from avocado.utils.software_manager import SoftwareManager
+from avocado.utils import build
+from avocado.utils import archive
 from avocado.utils.process import CmdError
 
 
@@ -69,18 +72,53 @@ class HtxNicTest(Test):
 
         self.parameters()
         self.host_distro = distro.detect()
+
+        packages = ['git', 'gcc', 'make']
+        detected_distro = distro.detect()
+        if detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
+            packages.extend(['gcc-c++', 'ncurses-devel', 'libocxl-devel',
+                             'dapl-devel', 'libcxl-devel', 'tar'])
+        elif detected_distro.name == "Ubuntu":
+            packages.extend(['libncurses5', 'g++', 'libdapl-dev',
+                             'ncurses-dev', 'libncurses-dev', 'libcxl-dev'])
+        elif detected_distro.name == 'SuSE':
+            packages.extend(['libncurses5', 'gcc-c++', 'ncurses-devel',
+                             'libcxl1', 'dapl-devel', 'tar'])
+        else:
+            self.cancel("Test not supported in  %s" % detected_distro.name)
+
+        smm = SoftwareManager()
+        for pkg in packages:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
+                self.cancel("Can not install %s" % pkg)
+
+        url = "https://github.com/open-power/HTX/archive/master.zip"
+        tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')
+        archive.extract(tarball, self.teststmpdir)
+        htx_path = os.path.join(self.teststmpdir, "HTX-master")
+        os.chdir(htx_path)
+
+        build.make(htx_path, extra_args='all')
+        build.make(htx_path, extra_args='tar')
+        process.run('tar --touch -xvzf htx_package.tar.gz')
+        os.chdir('htx_package')
+        if process.system('./installer.sh -f'):
+            self.fail("Installation of htx fails:please refer job.log")
+
         self.login(self.peer_ip, self.peer_user, self.peer_password)
         self.get_ips()
         self.get_peer_distro()
-        # Currently test assumes HTX is installed on both Host & Peer
-        # TODO: Clone HTX & build it
-        cmd = "test -d /usr/lpp/htx/"
+
         try:
-            process.run(cmd, shell=True, sudo=True)
-        except CmdError:
-            self.cancel("HTX is not installed on Host")
-        try:
-            self.run_command(cmd)
+            self.run_command("wget %s -O /tmp/master.zip" % url)
+            self.run_command("cd /tmp")
+            self.run_command("unzip master.zip")
+            self.run_command("cd HTX-master")
+            self.run_command("make all")
+            self.run_command("make tar")
+            self.run_command("tar --touch -xvzf htx_package.tar.gz")
+            self.run_command("cd htx_package")
+            self.run_command("./installer.sh -f")
         except CommandFailed:
             self.cancel("HTX is not installed on Peer")
 
@@ -126,7 +164,7 @@ class HtxNicTest(Test):
         '''
         SSH Run command method for running commands on remote server
         '''
-        self.log.info("Running the command on peer lpar %s", command)
+        self.log.info("Running the command on peer lpar: %s", command)
         if not hasattr(self, 'pxssh'):
             self.fail("SSH Console setup is not yet done")
         con = self.pxssh
@@ -205,6 +243,10 @@ class HtxNicTest(Test):
         search_str2 = "%s.* %s" % (peer_name, self.peer_ip)
         add_str1 = "%s %s" % (host_name, self.host_ip)
         add_str2 = "%s %s" % (peer_name, self.peer_ip)
+
+        for index, line in enumerate(filedata):
+            filedata[index] = line.replace('\t', ' ')
+
         obj = re.search(search_str1, filedata)
         if not obj:
             filedata = "%s\n%s" % (add_str1, filedata)
@@ -217,7 +259,11 @@ class HtxNicTest(Test):
             for line in filedata:
                 file.write(line)
 
-        filedata = self.run_command("cat %s" % hosts_file)
+        filedata = self.run_command("cat %s" % hosts_file)[1:]
+
+        for index, line in enumerate(filedata):
+            filedata[index] = line.replace('\t', ' ')
+
         for line in filedata:
             obj = re.search(search_str1, line)
             if obj:
@@ -232,14 +278,14 @@ class HtxNicTest(Test):
         else:
             filedata.append(add_str2)
         filedata = "\n".join(filedata)
-        self.run_command("echo \'%s\' > %s" % (filedata, hosts_file))
+        self.run_command("echo -e \'%s\' > %s" % (filedata, hosts_file))
 
     def generate_bpt_file(self):
         """
         Generates bpt file in both Host & Peer
         """
         self.log.info("Generating bpt file in both Host & Peer")
-        cmd = "echo n | /usr/bin/build_net help"
+        cmd = "/usr/bin/build_net help n"
         self.run_command(cmd)
         try:
             process.run(cmd, shell=True, sudo=True)
@@ -322,8 +368,7 @@ class HtxNicTest(Test):
                     filedata[idx] = string
                     break
             else:
-                self.fail("Failed to get intf %s net_id in peer bpt file",
-                          peer_intf)
+                self.fail("Failed to get %s net_id in peer bpt" % peer_intf)
 
         filedata = "\n".join(filedata)
         self.run_command("echo \'%s\' > %s" % (filedata, self.bpt_file))
@@ -600,8 +645,16 @@ class HtxNicTest(Test):
 
     def clean_state(self):
         '''
-        Suspend and Shutdown the active mdt
+        Reset bpt, suspend and shutdown the active mdt
         '''
+        self.log.info("Resetting bpt file in both Host & Peer")
+        cmd = "/usr/bin/build_net help n"
+        self.run_command(cmd)
+        try:
+            process.run(cmd, shell=True, sudo=True)
+        except CmdError as details:
+            self.fail("Command %s failed %s" % (cmd, details))
+
         if self.is_net_device_active_in_host():
             self.suspend_all_net_devices_in_host()
             self.log.info("Shutting down the %s in host", self.mdt_file)
@@ -615,6 +668,8 @@ class HtxNicTest(Test):
                 self.run_command(cmd)
             except CommandFailed:
                 pass
+
+        self.run_command("rm -rf /tmp/HTX-master")
 
     def bring_up_host_interfaces(self):
         if self.host_distro.name == "Ubuntu":
