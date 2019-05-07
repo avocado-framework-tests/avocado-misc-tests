@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <sys/mman.h>
 #include <errno.h>
 #include <string.h>
@@ -31,32 +32,29 @@ unsigned long MEM_SIZE = 1048576, TMP_SIZE, poolsize, exist;
 char buf[100];
 FILE *fd;
 
-long local_read_meminfo(const char *tag)
+static long local_read_meminfo(const char *tag)
 {
-	unsigned long val;
+	unsigned long val = 0;
 	char buff[256];
+	int memsize;
 	FILE *meminfo = fopen("/proc/meminfo", "r");
-	if(meminfo == NULL){
+	if (meminfo == NULL)
 		exit(-1);
-	}
-	while(fgets(buff, sizeof(buff), meminfo)){
-		int memsize;
-		if(sscanf(buff, tag, &memsize) == 1){
+	while (fgets(buff, sizeof(buff), meminfo)) {
+		if(sscanf(buff, tag, &memsize) == 1)
 			val = memsize;
-		}
 	}
-	if(fclose(meminfo) != 0){
+	if (fclose(meminfo) != 0)
 		exit(-1);
-	}
 	return val;
 }
 
-void setup_hugetlb_pool(unsigned long size, long count)
+static void setup_hugetlb_pool(unsigned long size, long count)
 {
 	snprintf(buf, sizeof buf, HUGEPAGEFILE, size);
 
 	fd = fopen(buf, "w");
-	if (!fd){
+	if (!fd) {
 		printf("Cannot open nr_hugepages for writing\n");
 		exit(-1);
 	}
@@ -67,29 +65,72 @@ void setup_hugetlb_pool(unsigned long size, long count)
 	sleep(5);
 	/* Confirm the resize worked */
 	fd = fopen(buf, "r");
-	if (!fd){
+	if (!fd) {
 		printf("Cannot open nr_hugepages for reading\n");
 		exit(-1);
 	}
 	fscanf(fd, "%lu", &poolsize);
 	fclose(fd);
-	if (poolsize != count){
+	if (poolsize != count) {
 		printf("Failed to resize pool to %lu pages. Got %lu instead\n",
 			count, poolsize);
 		exit(-1);
 	}
 }
 
-int check_alloc_free_huge_page(unsigned long size, unsigned long pages)
+static unsigned long get_hugepage_bytes()
+{
+	unsigned long pagesize = local_read_meminfo("Hugepagesize: %lu kB");
+	if (pagesize < 0)
+		return -1;
+	return pagesize * 1024;
+}
+
+static int alloc_hugepage(unsigned long size, unsigned long no_page)
+{
+	char *addr;
+	unsigned long total = size * no_page;
+	TMP_SIZE = MEM_SIZE * total;
+
+	if (size == 1024)
+		FLAGS |= MAP_HUGE_1GB;
+	else if (size == 2)
+		FLAGS |= MAP_HUGE_2MB;
+	else
+		FLAGS |= MAP_HUGE_16MB;
+
+	addr = mmap(NULL, TMP_SIZE, PROT, FLAGS, -1, 0);
+	if (addr == MAP_FAILED)
+	{
+		printf("Allocation of %lu MB failed using HUGEPAGE size\n", size);
+		return -1;
+	}
+	printf("Allocation successful for %lu MB of %luMB Hugepage size\n", total, size);
+
+	if (memset(addr, 'x', TMP_SIZE) == NULL) {
+		printf("Memset Failed - > %d MB not supported\n", total);
+		return -1;
+	}
+
+	printf("Memset successful for %d MB Hugepage\n", total);
+	/* Un-map entire region, must be hugepage-aligned*/
+	if (munmap(addr, TMP_SIZE)) {
+		printf("Unmap failed\n");
+		return -1;
+	}
+	return 0;
+}
+
+static int check_alloc_free_huge_page(unsigned long size, unsigned long pages)
 {
 	int flag = 0;
 	snprintf(buf, sizeof buf, HUGEPAGEFILE, size * 1024);
-	if( access( buf, F_OK ) == -1 ) {
+	if (access(buf, F_OK) == -1) {
 		printf("Given hugepage size is not supported in kernel\n");
 		exit(-1);
 	}
 	fd = fopen(buf, "r");
-	if (!fd){
+	if (!fd) {
 		printf("Cannot open nr_hugepages for reading\n");
 		exit(-1);
 	}
@@ -105,74 +146,42 @@ int check_alloc_free_huge_page(unsigned long size, unsigned long pages)
 	return flag;
 }
 
-unsigned long get_hugepage_bytes()
-{
-	unsigned long pagesize = local_read_meminfo("Hugepagesize: %lu kB");
-	return pagesize * 1024;
-}
-
-int alloc_hugepage(unsigned long size, unsigned long no_page)
-{
-	char *addr;
-	unsigned long total = size * no_page;
-	TMP_SIZE = MEM_SIZE * total;
-
-	if( size == 1024 )
-		FLAGS |= MAP_HUGE_1GB;
-	else if ( size == 2 )
-		FLAGS |= MAP_HUGE_2MB;
-	else
-		FLAGS |= MAP_HUGE_16MB;
-
-	addr = mmap(NULL, TMP_SIZE, PROT, FLAGS, -1, 0);
-	if (addr == MAP_FAILED)
-	{
-		printf("Allocation of %lu MB failed using HUGEPAGE size\n", size);
-		return -1;
-	}
-	printf("Allocation successful for %lu MB of %luMB Hugepage size\n", total, size);
-
-	if(memset(addr, 'x', TMP_SIZE) == NULL){
-		printf("Memset Failed - > %d MB not supported\n", total);
-		return -1;
-	}
-
-	printf("Memset successful for %d MB Hugepage\n", total);
-	/* Un-map entire region, must be hugepage-aligned*/
-	if(munmap(addr, TMP_SIZE)){
-		printf("Unmap failed\n");
-		return -1;
-	}
-	return 0;
-}
-
 int
 main(int argc, char *argv[])
 {
 	unsigned long no_page, size, val;
-	if (argc > 3){
+	if (argc > 3) {
 		printf("Usage <execname> [hugepage-size](MB)  [no-of-hugepages]\n");
 		exit(-1);
 	}
-	if (argc == 1){
+	else if (argc == 1) {
 		printf("Using default hugepagesize and 1 hugepage\n");
 		size = get_hugepage_bytes() / MEM_SIZE;
 		no_page = 1;
 	}
-	if (argc == 2){
+	else if (argc == 2) {
 		size = atol(argv[1]);
 		no_page = 1;
 	}
-	if (argc == 3) {
+	else if (argc == 3) {
 		size = atol(argv[1]);
 		no_page = atol(argv[2]);
 	}
+	/*
+	 * If Hugepage attributes are not available in /proc/meminfo
+	 * error out gracefully before starting the test
+	 */
+	if (size <= 0) {
+		printf("Error: Pagesize is invalid or not available\n");
+		return -1;
+	}
 	printf("PAGESIZE: %lu MB\tNumber of pages: %lu\n", size, no_page);
 
-	if(!check_alloc_free_huge_page(size, no_page))
+	if (!check_alloc_free_huge_page(size, no_page))
 		printf("Test Passed!!\n");
 	else
 		printf("Test Failed!!\n");
+		return -1;
 	return 0;
 
 }
