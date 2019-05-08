@@ -1,10 +1,10 @@
 interface: ""
 peer_ip: ""
 peer_user_name: "root"
-TIMEOUT: "600"
-NETSERVER_RUN: 0
+TIMEOUT: "720"
+NETSERVER_RUN: 1
 EXPECTED_THROUGHPUT: 90
-duration: 600
+duration: 120
 minimum_iterations: 1
 maximum_iterations: 5
 netperf_download: "https://github.com/HewlettPackard/netperf/archive/netperf-2.7.0.zip"
