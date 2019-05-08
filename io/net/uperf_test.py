@@ -43,7 +43,7 @@ class Uperf(Test):
         """
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        pkgs = ["gcc", "autoconf", "perl", "m4", "git-core"]
+        pkgs = ["gcc", "autoconf", "perl", "m4", "git-core", "automake"]
         if detected_distro.name == "Ubuntu":
             pkgs.extend(["libsctp1", "libsctp-dev", "lksctp-tools"])
         else:
@@ -94,8 +94,8 @@ class Uperf(Test):
         transmitting (or receiving) data from a client. This transmit large
         messages using multiple threads or processes.
         """
-        os.chdir(os.path.join(self.uperf_dir, 'manual'))
-        cmd = "h=%s proto=tcp uperf -m throughput.xml -a" % self.peer_ip
+        cmd = "h=%s proto=tcp ./src/uperf -m manual/throughput.xml -a" \
+            % self.peer_ip
         result = process.run(cmd, shell=True, ignore_status=True)
         if result.exit_status:
             self.fail("FAIL: Uperf Run failed")
