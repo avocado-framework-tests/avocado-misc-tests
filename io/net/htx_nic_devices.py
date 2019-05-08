@@ -76,14 +76,12 @@ class HtxNicTest(Test):
         packages = ['git', 'gcc', 'make']
         detected_distro = distro.detect()
         if detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
-            packages.extend(['gcc-c++', 'ncurses-devel', 'libocxl-devel',
-                             'dapl-devel', 'libcxl-devel', 'tar'])
+            packages.extend(['gcc-c++', 'ncurses-devel', 'tar'])
         elif detected_distro.name == "Ubuntu":
-            packages.extend(['libncurses5', 'g++', 'libdapl-dev',
-                             'ncurses-dev', 'libncurses-dev', 'libcxl-dev'])
+            packages.extend(['libncurses5', 'g++', 'ncurses-dev',
+                             'libncurses-dev', 'tar'])
         elif detected_distro.name == 'SuSE':
-            packages.extend(['libncurses5', 'gcc-c++', 'ncurses-devel',
-                             'libcxl1', 'dapl-devel', 'tar'])
+            packages.extend(['libncurses5', 'gcc-c++', 'ncurses-devel', 'tar'])
         else:
             self.cancel("Test not supported in  %s" % detected_distro.name)
 
@@ -98,6 +96,10 @@ class HtxNicTest(Test):
         htx_path = os.path.join(self.teststmpdir, "HTX-master")
         os.chdir(htx_path)
 
+        exercisers = ["hxecapi_afu_dir", "hxedapl", "hxecapi", "hxeocapi"]
+        for exerciser in exercisers:
+            process.run("sed -i 's/%s//g' %s/bin/Makefile" % (exerciser,
+                                                              htx_path))
         build.make(htx_path, extra_args='all')
         build.make(htx_path, extra_args='tar')
         process.run('tar --touch -xvzf htx_package.tar.gz')
@@ -114,6 +116,8 @@ class HtxNicTest(Test):
             self.run_command("cd /tmp")
             self.run_command("unzip master.zip")
             self.run_command("cd HTX-master")
+            for exerciser in exercisers:
+                self.run_command("sed -i 's/%s//g' bin/Makefile" % exerciser)
             self.run_command("make all")
             self.run_command("make tar")
             self.run_command("tar --touch -xvzf htx_package.tar.gz")
