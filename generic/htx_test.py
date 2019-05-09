@@ -53,11 +53,12 @@ class HtxTest(Test):
 
         packages = ['git', 'gcc', 'make']
         if detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
-            packages.extend(['gcc-c++', 'ncurses-devel',
-                             'dapl-devel', 'libcxl-devel'])
+            packages.extend(['gcc-c++', 'ncurses-devel', 'tar'])
         elif detected_distro.name == "Ubuntu":
-            packages.extend(['libncurses5', 'g++', 'libdapl-dev',
-                             'ncurses-dev', 'libncurses-dev', 'libcxl-dev'])
+            packages.extend(['libncurses5', 'g++',
+                             'ncurses-dev', 'libncurses-dev'])
+        elif detected_distro.name == 'SuSE':
+            packages.extend(['libncurses5', 'gcc-c++', 'ncurses-devel', 'tar'])
         else:
             self.cancel("Test not supported in  %s" % detected_distro.name)
 
@@ -71,6 +72,11 @@ class HtxTest(Test):
         archive.extract(tarball, self.teststmpdir)
         htx_path = os.path.join(self.teststmpdir, "HTX-master")
         os.chdir(htx_path)
+
+        exercisers = ["hxecapi_afu_dir", "hxedapl", "hxecapi", "hxeocapi"]
+        for exerciser in exercisers:
+            process.run("sed -i 's/%s//g' %s/bin/Makefile" % (exerciser,
+                                                              htx_path))
 
         build.make(htx_path, extra_args='all')
         build.make(htx_path, extra_args='tar')
