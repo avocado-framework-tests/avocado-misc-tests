@@ -26,8 +26,10 @@ from avocado.utils import process
 from avocado.utils import build
 from avocado.utils import kernel
 from avocado.utils import git
+from avocado.utils import distro
+from avocado.utils import genio
+from avocado.utils import memory
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import distro, genio
 
 
 class libhugetlbfs(Test):
@@ -67,9 +69,8 @@ class libhugetlbfs(Test):
             self.cancel("libpthread.a is required!!!"
                         "\nTry installing glibc-static")
 
-        self.page_sizes = ['16']
-        if 'POWER9' in cpuinfo and 'PowerNV' in cpuinfo:
-            self.page_sizes = ['2', '1024']
+        page_sizes = memory.get_supported_huge_pages_size()
+        self.page_sizes = [str(each // 1024) for each in page_sizes]
 
         # Get arguments:
         self.hugetlbfs_dir = self.params.get('hugetlbfs_dir', default=None)
