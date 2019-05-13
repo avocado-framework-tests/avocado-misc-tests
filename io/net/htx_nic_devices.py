@@ -96,7 +96,9 @@ class HtxNicTest(Test):
         htx_path = os.path.join(self.teststmpdir, "HTX-master")
         os.chdir(htx_path)
 
-        exercisers = ["hxecapi_afu_dir", "hxedapl", "hxecapi", "hxeocapi"]
+        exercisers = ["hxecapi_afu_dir", "hxecapi", "hxeocapi"]
+        if not smm.check_installed('dapl-devel'):
+            exercisers.append("hxedapl")
         for exerciser in exercisers:
             process.run("sed -i 's/%s//g' %s/bin/Makefile" % (exerciser,
                                                               htx_path))
