@@ -179,9 +179,10 @@ main(int argc, char *argv[])
 
 	if (!check_alloc_free_huge_page(size, no_page))
 		printf("Test Passed!!\n");
-	else
+	else {
 		printf("Test Failed!!\n");
 		return -1;
+	}
 	return 0;
 
 }
