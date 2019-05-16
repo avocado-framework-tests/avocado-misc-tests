@@ -52,6 +52,7 @@ class SoftwareRaid(Test):
         cmd = "mdadm -V"
         self.check_pass(cmd, "Unable to get mdadm version")
         self.disk = self.params.get('disks', default='').strip(" ")
+        self.raid = self.params.get('raidname', default='/dev/md/mdsraid')
         self.raidlevel = str(self.params.get('raid', default='0'))
         self.metadata = str(self.params.get('metadata', default='1.2'))
         self.setup = self.params.get('setup', default=True)
@@ -83,15 +84,15 @@ class SoftwareRaid(Test):
         Only basic operations are run viz create and delete
         """
         cmd = "echo 'yes' | mdadm --create --verbose --assume-clean \
-            /dev/md/mdsraid --level=%s --raid-devices=%d %s \
-            --metadata %s" \
-            % (self.raidlevel, self.disk_count, self.disk, self.metadata)
+            %s --level=%s --raid-devices=%d %s --metadata %s" \
+            % (self.raid, self.raidlevel, self.disk_count, self.disk,
+               self.metadata)
         if self.sparedisk:
             cmd += " --spare-devices=1 %s " % self.sparedisk
         if self.force:
             cmd += " --force"
         self.check_pass(cmd, "Failed to create a MD device")
-        cmd = "mdadm --detail /dev/md/mdsraid"
+        cmd = "mdadm --detail %s" % self.raid
         self.check_pass(cmd, "Failed to display MD device details")
 
     def extensivetest(self):
@@ -99,28 +100,28 @@ class SoftwareRaid(Test):
         Extensive software raid options are run viz create, delete, assemble,
         create spares, remove and add drives
         """
-        cmd = "mdadm --fail /dev/md/mdsraid %s" % (self.remadd)
+        cmd = "mdadm --fail %s %s" % (self.raid, self.remadd)
         self.check_pass(cmd, "Unable to fail a drive from MD device")
-        cmd = "mdadm --detail /dev/md/mdsraid"
+        cmd = "mdadm --detail %s" % self.raid
         self.check_pass(cmd, "Failed to display MD device details")
-        cmd = "mdadm --manage /dev/md/mdsraid --remove %s" % (self.remadd)
+        cmd = "mdadm --manage %s --remove %s" % (self.raid, self.remadd)
         self.check_pass(cmd, "Failed to remove a drive from MD device")
-        cmd = "mdadm --detail /dev/md/mdsraid"
+        cmd = "mdadm --detail %s" % self.raid
         self.check_pass(cmd, "Failed to display MD device details")
-        cmd = "mdadm --manage /dev/md/mdsraid --add %s" % (self.remadd)
+        cmd = "mdadm --manage %s --add %s" % (self.raid, self.remadd)
         self.check_pass(cmd, "Failed to add back the drive to MD device")
-        cmd = "mdadm --detail /dev/md/mdsraid"
+        cmd = "mdadm --detail %s" % self.raid
         self.check_pass(cmd, "Failed to display MD device details")
-        cmd = "mdadm --manage /dev/md/mdsraid --stop"
+        cmd = "mdadm --manage %s --stop" % self.raid
         self.check_pass(cmd, "Failed to stop/remove the MD device")
-        cmd = "mdadm --assemble /dev/md/mdsraid %s %s" \
-              % (self.disk, self.sparedisk)
+        cmd = "mdadm --assemble %s %s %s" \
+              % (self.raid, self.disk, self.sparedisk)
         self.check_pass(cmd, "Failed to assemble back the MD device")
-        cmd = "mdadm --detail /dev/md/mdsraid | grep State | grep recovering"
+        cmd = "mdadm --detail %s | grep State | grep recovering" % self.raid
         while process.system(cmd, ignore_status=True, shell=True) == 0:
             time.sleep(30)
         process.system(cmd, ignore_status=True, shell=True)
-        cmd = "mdadm --detail /dev/md/mdsraid"
+        cmd = "mdadm --detail %s" % self.raid
         self.check_pass(cmd, "Failed to display the MD device details")
 
     def check_pass(self, cmd, errmsg):
@@ -136,7 +137,7 @@ class SoftwareRaid(Test):
         Stop/Remove the MD device
         """
         if self.cleanup:
-            cmd = "mdadm --manage /dev/md/mdsraid --stop"
+            cmd = "mdadm --manage %s --stop" % self.raid
             self.check_pass(cmd, "Failed to stop the MD device")
             cmd = "mdadm --zero-superblock %s %s" % (self.disk, self.sparedisk)
             self.check_pass(cmd, "Failed to remove the MD device")
