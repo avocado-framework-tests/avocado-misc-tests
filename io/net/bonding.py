@@ -68,7 +68,7 @@ class Bonding(Test):
                 self.cancel("test skipped because mode not specified")
         interfaces = netifaces.interfaces()
         self.user = self.params.get("user_name", default="root")
-        self.host_interfaces = self.params.get("host_interfaces",
+        self.host_interfaces = self.params.get("bond_interfaces",
                                                default="").split(",")
         if not self.host_interfaces:
             self.cancel("user should specify host interfaces")

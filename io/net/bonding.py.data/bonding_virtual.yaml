@@ -3,7 +3,7 @@ Test: !mux
         bonding_mode: "1"
     802.3ad:
         bonding_mode: "4"
-host_interfaces: ""
+bond_interfaces: ""
 peer_ip: ""
 peer_interfaces: ""
 bond_name: "bondtest"
