@@ -92,8 +92,7 @@ class SoftwareRaid(Test):
         if self.force:
             cmd += " --force"
         self.check_pass(cmd, "Failed to create a MD device")
-        cmd = "mdadm --detail %s" % self.raid
-        self.check_pass(cmd, "Failed to display MD device details")
+        self.mdadm_detail()
 
     def extensivetest(self):
         """
@@ -102,27 +101,41 @@ class SoftwareRaid(Test):
         """
         cmd = "mdadm --fail %s %s" % (self.raid, self.remadd)
         self.check_pass(cmd, "Unable to fail a drive from MD device")
-        cmd = "mdadm --detail %s" % self.raid
-        self.check_pass(cmd, "Failed to display MD device details")
+        self.mdadm_detail()
         cmd = "mdadm --manage %s --remove %s" % (self.raid, self.remadd)
         self.check_pass(cmd, "Failed to remove a drive from MD device")
-        cmd = "mdadm --detail %s" % self.raid
-        self.check_pass(cmd, "Failed to display MD device details")
+        self.mdadm_detail()
         cmd = "mdadm --manage %s --add %s" % (self.raid, self.remadd)
         self.check_pass(cmd, "Failed to add back the drive to MD device")
-        cmd = "mdadm --detail %s" % self.raid
-        self.check_pass(cmd, "Failed to display MD device details")
+        self.mdadm_detail()
         cmd = "mdadm --manage %s --stop" % self.raid
         self.check_pass(cmd, "Failed to stop/remove the MD device")
         cmd = "mdadm --assemble %s %s %s" \
               % (self.raid, self.disk, self.sparedisk)
         self.check_pass(cmd, "Failed to assemble back the MD device")
-        cmd = "mdadm --detail %s | grep State | grep recovering" % self.raid
-        while process.system(cmd, ignore_status=True, shell=True) == 0:
+        while self.is_mdadm_recovering():
             time.sleep(30)
         process.system(cmd, ignore_status=True, shell=True)
+        self.mdadm_detail()
+
+    def mdadm_detail(self):
+        """
+        Function to print the details of mdadm array
+        """
         cmd = "mdadm --detail %s" % self.raid
-        self.check_pass(cmd, "Failed to display the MD device details")
+        output = process.run(cmd, ignore_status=True, shell=True)
+        if output.exit_status != 0:
+            self.fail("Failed to display MD device details")
+        return output.stdout.splitlines()
+
+    def is_mdadm_recovering(self):
+        """
+        Function to check if the array is recovering or not
+        """
+        for line in self.mdadm_detail():
+            if 'State' in line and 'recovering' in line:
+                return True
+        return False
 
     def check_pass(self, cmd, errmsg):
         """
