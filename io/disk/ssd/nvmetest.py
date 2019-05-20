@@ -80,8 +80,10 @@ class NVMeTest(Test):
                     'subsystemreset': 'NVM Subsystem Reset'}
         for key, value in test_dic.iteritems():
             if key in str(self.name):
-                if "%s Supported" % value not in "%s%s" % (self.id_ctrl,
-                                                           regs):
+                if "%s Supported" % value not in self.id_ctrl:
+                    self.cancel("%s is not supported" % value)
+                # NVM Subsystem Reset Supported  (NSSRS): No
+                if "%s Supported   (NSSRS): No" % value in regs:
                     self.cancel("%s is not supported" % value)
 
     def get_firmware_version(self):
