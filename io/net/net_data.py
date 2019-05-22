@@ -178,12 +178,12 @@ class NetDataTest(Test):
         ret = process.system("ping -c 1 %s" % self.peer, shell=True)
         if ret != 0:
             self.fail("lro test failed")
-            msg = "ethtool -K %s lro on" % self.iface
-            if process.system(msg, shell=True) != 0:
-                self.fail("LRO Test failed")
-                ret = process.system("ping -c 1 %s" % self.peer, shell=True)
-                if ret != 0:
-                    self.fail("lro test failed")
+        msg = "ethtool -K %s lro on" % self.iface
+        if process.system(msg, shell=True) != 0:
+            self.fail("LRO Test failed")
+        ret = process.system("ping -c 1 %s" % self.peer, shell=True)
+        if ret != 0:
+            self.fail("lro test failed")
 
     def interface_wait(self, cmd):
         '''
