@@ -41,28 +41,22 @@ class Memcached(Test):
         Sets up the args required to run the test.
         """
 
-        sm = SoftwareManager()
+        smm = SoftwareManager()
         detected_distro = distro.detect()
 
-        # FIXME: "redhat" as the distro name for RHEL is deprecated
-        # on Avocado versions >= 50.0.  This is a temporary compatibility
-        # enabler for older runners, but should be removed soon
-        if detected_distro.name not in ['Ubuntu', 'rhel', 'redhat', 'SuSE']:
+        if detected_distro.name not in ['Ubuntu', 'rhel', 'SuSE']:
             self.cancel('Test Not applicable')
 
         if detected_distro.name == "Ubuntu":
             deps = ['memcached', 'libmemcached-tools']
             stress_tool = 'memcslap'
 
-        # FIXME: "redhat" as the distro name for RHEL is deprecated
-        # on Avocado versions >= 50.0.  This is a temporary compatibility
-        # enabler for older runners, but should be removed soon
-        if detected_distro.name in ["rhel", "redhat", "SuSE"]:
+        if detected_distro.name in ["rhel", "SuSE"]:
             deps = ['memcached', 'libmemcached']
             stress_tool = 'memslap'
 
         for package in deps:
-            if not sm.check_installed(package) and not sm.install(package):
+            if not smm.check_installed(package) and not smm.install(package):
                 self.error(' %s is needed for the test to be run' % package)
 
         # Memcached Required Args

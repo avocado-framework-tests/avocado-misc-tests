@@ -29,7 +29,7 @@ from avocado.utils.partition import Partition
 PAGESIZE = '4096' in str(memory.get_page_size())
 
 
-class Thp_Swapping(Test):
+class ThpSwapping(Test):
 
     '''
     The test fills out the total avl memory and tries to swap the thp out.

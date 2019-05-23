@@ -51,6 +51,7 @@ class DmaMemtest(Test):
         self.nfail = 0
         self.tmpdir = data_dir.get_tmp_dir()
         self.tmpdir = self.params.get('dir_to_extract', default=self.tmpdir)
+        self.base_dir = os.path.join(self.tmpdir, 'linux.orig')
         tarball_base = self.params.get('tarball_base',
                                        default='linux-2.6.18.tar.bz2')
         kernel_repo = self.params.get('kernel_repo',
@@ -80,7 +81,7 @@ class DmaMemtest(Test):
 
         # Verify if space is available in disk
         disk_free_mb = (disk.freespace(self.tmpdir) / 1024) / 1024
-        if (disk_free_mb < est_size * self.sim_cps):
+        if disk_free_mb < (est_size * self.sim_cps):
             self.cancel("Space not available to extract the %s linux tars\n"
                         "Mount and Use other partitions in dir_to_extract arg "
                         "to run the test" % self.sim_cps)
@@ -112,7 +113,6 @@ class DmaMemtest(Test):
         # This is the reference copy of the linux tarball
         # that will be used for subsequent comparisons
         self.log.info('Unpacking base copy')
-        self.base_dir = os.path.join(self.tmpdir, 'linux.orig')
         archive.extract(self.tarball, self.base_dir)
         self.log.info('Unpacking test copies')
         for j in range(self.sim_cps):
