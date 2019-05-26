@@ -65,7 +65,6 @@ class perfUprobe(Test):
         self.cmdProbe = "perf probe -x"
         self.recProbe = "perf record -o %s -e probe_uprobe_test:doit" % self.temp_file
         self.report = "perf report --input=%s" % self.temp_file
-        self.distro_version = detected_distro.version
 
     def cmd_verify(self, cmd):
         return process.run(cmd, shell=True)
@@ -93,8 +92,8 @@ class perfUprobe(Test):
                                  % self.cmdProbe)
         if 'Added new event' not in output.stderr:
             self.fail("perf: probe of uprobe return failed")
-        # RHEL8 onwards
-        if self.distro_name == "rhel" and self.distro_version >= '8':
+        # RHEL
+        if self.distro_name == "rhel":
             output = self.cmd_verify('%s__return -- ./uprobe_test'
                                      % self.recProbe)
         else:
@@ -107,8 +106,7 @@ class perfUprobe(Test):
         output = self.cmd_verify('%s ./uprobe_test "doit i"' % self.cmdProbe)
         if 'Added new event' not in output.stderr:
             self.fail("perf: probe of uprobe variable failed")
-        # RHEL8 onwards
-        if self.distro_name == "rhel" and self.distro_version >= '8':
+        if self.distro_name == "rhel":
             output = self.cmd_verify('%s -- ./uprobe_test' % self.recProbe)
         else:
             output = self.cmd_verify('%s ar ./uprobe_test' % self.recProbe)
