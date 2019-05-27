@@ -13,7 +13,7 @@ Test: !mux
         bonding_mode: "5"
     balance-alb:
         bonding_mode: "6"
-host_interfaces: ""
+bond_interfaces: ""
 peer_ip: ""
 peer_interfaces: ""
 bond_name: "bondtest"

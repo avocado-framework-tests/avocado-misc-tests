@@ -1,5 +1,5 @@
 bonding_mode: ""
-host_interfaces: ""
+bond_interfaces: ""
 peer_ip: ""
 peer_interfaces: ""
 bond_name: "bondtest"

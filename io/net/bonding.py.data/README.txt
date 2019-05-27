@@ -13,7 +13,7 @@ In this test we enable mode 0 in peer machine and enable all modes in host machi
 -----------------------------
 Inputs Needed To Run Tests:
 ------------------------------
-host_interfaces --> Interfaces in the Host machine requird for Bonding
+bond_interfaces --> Interfaces in the Host machine requird for Bonding
 peerip --> peer ip address
 peer_interfaces --> This is needed only if a Bond interface is to be created in the Peer machine.
 bond_name --> to create bond
