@@ -1,0 +1,11 @@
+setup:
+    memory: !mux
+        quick:
+            mem_size: 100
+            dd_timeout: 30
+        long:
+            mem_size: 2048
+            dd_timeout: 200
+    tmpdir: !mux
+        default:
+            t_dir: "/tmp/thp_mnt"

@@ -45,9 +45,11 @@ class Thp(Test):
         '''
 
         # Set params as per available memory in system
-        self.mem_path = os.path.join(data_dir.get_tmp_dir(), 'thp_space')
-        free_mem = memory.meminfo.MemFree.m
-        self.dd_timeout = 900
+        self.mem_path = self.params.get(
+            "t_dir", default=os.path.join(data_dir.get_tmp_dir(), 'thp_space'))
+        free_mem = self.params.get(
+            "mem_size", default=memory.meminfo.MemFree.m)
+        self.dd_timeout = self.params.get("dd_timeout", default=900)
         self.thp_split = None
         try:
             memory.read_from_vmstat("thp_split_page")
