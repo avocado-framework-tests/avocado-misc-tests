@@ -1,0 +1,12 @@
+setup:
+    nr_chunks: 2
+    page_type: !mux
+        normal_page:
+            nr_chunks: 5
+        hugepage:
+            h_page: True
+        overcommit_huge:
+            h_page: True
+            h_commit: True
+        thp:
+            thp: True
