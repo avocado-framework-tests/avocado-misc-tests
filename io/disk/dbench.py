@@ -47,8 +47,9 @@ class Dbench(Test):
         http://samba.org/ftp/tridge/dbench/dbench-3.04.tar.gz
         '''
         sm = SoftwareManager()
-        if not sm.check_installed("gcc") and not sm.install("gcc"):
-            self.cancel('Gcc is needed for the test to be run')
+        for pkg in ["gcc", "patch"]:
+            if not sm.check_installed(pkg) and not sm.install(pkg):
+                self.error('%s is needed for the test to be run' % pkg)
 
         self.results = []
         tarball = self.fetch_asset(
