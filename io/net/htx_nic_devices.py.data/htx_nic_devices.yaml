@@ -6,4 +6,5 @@ peer_user: "root"
 host_interfaces: ""
 peer_interfaces: ""
 net_ids: ""
-time_limit: 1
+# time limit in minutes
+time_limit: 2
