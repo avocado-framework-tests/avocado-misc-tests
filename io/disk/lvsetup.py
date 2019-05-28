@@ -111,6 +111,9 @@ class Lvsetup(Test):
         lv_utils.lv_mount(self.vg_name, self.lv_name, self.mount_loc,
                           create_filesystem=self.fs_name)
         lv_utils.lv_umount(self.vg_name, self.lv_name)
+        lv_utils.vg_reactivate(self.vg_name, export=True)
+        lv_utils.lv_mount(self.vg_name, self.lv_name, self.mount_loc)
+        lv_utils.lv_umount(self.vg_name, self.lv_name)
         lv_utils.lv_take_snapshot(self.vg_name, self.lv_name,
                                   self.lv_snapshot_name,
                                   self.lv_snapshot_size)
