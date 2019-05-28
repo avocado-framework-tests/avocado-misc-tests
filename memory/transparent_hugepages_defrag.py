@@ -32,7 +32,7 @@ from avocado.utils.partition import Partition
 PAGESIZE = '4096' in str(memory.get_page_size())
 
 
-class Thp_Defrag(Test):
+class ThpDefrag(Test):
 
     '''
     Defrag test enables THP and fragments the system memory using dd load

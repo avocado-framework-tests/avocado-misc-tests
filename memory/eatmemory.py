@@ -23,7 +23,7 @@ from avocado.utils import archive
 from avocado.utils.software_manager import SoftwareManager
 
 
-class eatmemory(Test):
+class EatMemory(Test):
     '''
     Memory stress test
 
@@ -31,10 +31,10 @@ class eatmemory(Test):
     '''
 
     def setUp(self):
-        sm = SoftwareManager()
+        smm = SoftwareManager()
         deps = ['gcc', 'make', 'patch']
         for package in deps:
-            if not sm.check_installed(package) and not sm.install(package):
+            if not smm.check_installed(package) and not smm.install(package):
                 self.cancel(package + ' is needed for the test to be run')
         url = 'https://github.com/julman99/eatmemory/archive/master.zip'
         tarball = self.fetch_asset("eatmemory.zip", locations=[url], expire='7d')

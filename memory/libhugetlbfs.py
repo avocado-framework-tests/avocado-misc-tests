@@ -30,7 +30,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import distro, genio
 
 
-class libhugetlbfs(Test):
+class LibHugetlbfs(Test):
     '''
     libhugetlbfs: libhugetlbfs is a library which provides easy
     access to huge pages of memory. test to excersize libhugetlbfs library
@@ -41,7 +41,7 @@ class libhugetlbfs(Test):
     def setUp(self):
 
         # Check for basic utilities
-        sm = SoftwareManager()
+        smm = SoftwareManager()
         detected_distro = distro.detect()
         deps = ['gcc', 'make', 'patch']
         cpuinfo = genio.read_file("/proc/cpuinfo").strip()
@@ -53,17 +53,17 @@ class libhugetlbfs(Test):
             deps += ['glibc-static', 'git']
 
         for package in deps:
-            if not sm.check_installed(package) and not sm.install(package):
+            if not smm.check_installed(package) and not smm.install(package):
                 self.cancel(' %s is needed for the test to be run' % package)
 
         kernel.check_version("2.6.16")
 
         if detected_distro.name == "Ubuntu":
-            op = glob.glob("/usr/lib/*/libpthread.a")
+            out = glob.glob("/usr/lib/*/libpthread.a")
         else:
-            op = glob.glob("/usr/lib*/libpthread.a")
+            out = glob.glob("/usr/lib*/libpthread.a")
 
-        if not op:
+        if not out:
             self.cancel("libpthread.a is required!!!"
                         "\nTry installing glibc-static")
 
@@ -80,9 +80,9 @@ class libhugetlbfs(Test):
         pages_available = 0
         if os.path.exists('/proc/sys/vm/nr_hugepages'):
 
-            Hugepages_support = genio.read_file("/proc/meminfo").rstrip("\n")
+            hugepages_support = genio.read_file("/proc/meminfo").rstrip("\n")
 
-            if 'HugePages_' not in Hugepages_support:
+            if 'HugePages_' not in hugepages_support:
                 self.cancel("No Hugepages Configured")
         else:
             self.cancel("Kernel does not support hugepages")

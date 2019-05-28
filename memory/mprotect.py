@@ -61,7 +61,7 @@ class Mprotect(Test):
         ret = process.system('./mprotect %s %s' % (self.nr_pages, self.in_err),
                              shell=True, ignore_status=True, sudo=True)
         if self.failure:
-            if ret is not 255:
+            if ret != 255:
                 self.fail("Please check the logs for debug")
             else:
                 self.log.info("Failed as expected")

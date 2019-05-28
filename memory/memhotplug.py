@@ -24,9 +24,8 @@ from avocado.utils import process, memory, build, archive
 from avocado.utils.software_manager import SoftwareManager
 
 
-blocks_hotpluggable = []
-mem_path = '/sys/devices/system/memory'
-errorlog = ['WARNING: CPU:', 'Oops',
+MEM_PATH = '/sys/devices/system/memory'
+ERRORLOG = ['WARNING: CPU:', 'Oops',
             'Segfault', 'soft lockup',
             'Unable to handle paging request',
             'rcu_sched detected stalls',
@@ -46,7 +45,6 @@ def online(block):
         memory.hotplug(block)
     except IOError:
         print "memory%s : Resource is busy" % block
-        pass
 
 
 def offline(block):
@@ -54,7 +52,6 @@ def offline(block):
         memory.hotunplug(block)
     except IOError:
         print "memory%s : Resource is busy" % block
-        pass
 
 
 def get_hotpluggable_blocks(path, ratio):
@@ -65,11 +62,14 @@ def get_hotpluggable_blocks(path, ratio):
         if memory.is_hot_pluggable(block):
             mem_blocks.append(block)
 
-    def f(num):
+    def chunks(num):
+        """
+        Return number of blocks in chunks of 100
+        """
         if num % 2:
-            return (num / 100 + 1)
-        return (num / 100)
-    count = f(len(mem_blocks) * ratio)
+            return num / 100 + 1
+        return num / 100
+    count = chunks(len(mem_blocks) * ratio)
     return mem_blocks[:count]
 
 
@@ -77,7 +77,7 @@ def collect_dmesg(object):
     object.whiteboard = process.system_output("dmesg")
 
 
-class memstress(Test):
+class MemStress(Test):
 
     '''
     Stress test to excersize memory component
@@ -98,8 +98,8 @@ class memstress(Test):
 
         if not memory.check_hotplug():
             self.cancel("UnSupported : memory hotplug not enabled\n")
-        sm = SoftwareManager()
-        if not sm.check_installed('stress') and not sm.install('stress'):
+        smm = SoftwareManager()
+        if not smm.check_installed('stress') and not smm.install('stress'):
             tarball = self.fetch_asset(
                 'https://people.seas.harvard.edu/~apw/stress/stress-1.0.4.tar.gz')
             archive.extract(tarball, self.teststmpdir)
@@ -116,8 +116,8 @@ class memstress(Test):
         self.iocount = self.params.get('iocount', default=4)
         self.memratio = self.params.get('memratio', default=5)
         self.blocks_hotpluggable = get_hotpluggable_blocks(
-            (os.path.join('%s', 'memory*') % mem_path), self.memratio)
-        if os.path.exists("%s/auto_online_blocks" % mem_path):
+            (os.path.join('%s', 'memory*') % MEM_PATH), self.memratio)
+        if os.path.exists("%s/auto_online_blocks" % MEM_PATH):
             if not self.__is_auto_online():
                 self.hotplug_all(self.blocks_hotpluggable)
         clear_dmesg()
@@ -136,19 +136,19 @@ class memstress(Test):
 
     @staticmethod
     def __is_auto_online():
-        with open('%s/auto_online_blocks' % mem_path, 'r') as auto_file:
+        with open('%s/auto_online_blocks' % MEM_PATH, 'r') as auto_file:
             if auto_file.read() == 'online\n':
                 return True
             return False
 
     def __error_check(self):
-        ERROR = []
+        err_list = []
         logs = process.system_output("dmesg -Txl 1,2,3,4").splitlines()
-        for error in errorlog:
+        for error in ERRORLOG:
             for log in logs:
                 if error in log:
-                    ERROR.append(log)
-        if "\n".join(ERROR):
+                    err_list.append(log)
+        if "\n".join(err_list):
             collect_dmesg(self)
             self.fail('ERROR: Test failed, please check the dmesg logs')
 
@@ -173,10 +173,10 @@ class memstress(Test):
         for _ in range(self.iteration):
             for block in self.blocks_hotpluggable:
                 offline(block)
-                self.log.info("memory%s block hotunplugged" % block)
+                self.log.info("memory%s block hotunplugged", block)
                 self.run_stress()
                 online(block)
-                self.log.info("memory%s block hotplugged" % block)
+                self.log.info("memory%s block hotplugged", block)
         self.__error_check()
 
     def test_dlpar_mem_hotplug(self):
@@ -203,12 +203,12 @@ class memstress(Test):
             nodes = node_file.read()
         for node in re.split("[,-]", nodes):
             node = node.strip('\n')
-            self.log.info("Hotplug all memory in Numa Node %s" % node)
+            self.log.info("Hotplug all memory in Numa Node %s", node)
             mem_blocks = get_hotpluggable_blocks((
                 '/sys/devices/system/node/node%s/memory*' % node), self.memratio)
             for block in mem_blocks:
                 self.log.info(
-                    "offline memory%s in numa node%s" % (block, node))
+                    "offline memory%s in numa node%s", block, node)
                 offline(block)
             self.run_stress()
         self.__error_check()
