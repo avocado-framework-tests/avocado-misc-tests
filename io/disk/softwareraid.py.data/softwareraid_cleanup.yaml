@@ -1,4 +1,5 @@
 disks: /dev/sde1 /dev/sde2 /dev/sde3 /dev/sde4 /dev/sdd1
+raidname: /dev/md/avocado
 setup: False
 run_test: False
 cleanup: True
