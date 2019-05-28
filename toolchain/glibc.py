@@ -34,7 +34,7 @@ class Glibc(Test):
                                          default=data_dir.get_tmp_dir())
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
-                self.cancel(package + ' is needed for the test to be run')
+                self.cancel('%s is needed for the test to be run' % package)
         run_type = self.params.get('type', default='upstream')
         if run_type == "upstream":
             url = 'https://github.com/bminor/glibc/archive/master.zip'
@@ -47,7 +47,7 @@ class Glibc(Test):
                 os.makedirs(glibc_dir)
             glibc_dir = sm.get_source("glibc", glibc_dir)
         os.chdir(self.build_dir)
-        process.run(glibc_dir + '/configure --prefix=%s' % self.build_dir,
+        process.run('%s/configure --prefix=%s' % (glibc_dir, self.build_dir),
                     ignore_status=True, sudo=True)
         build.make(self.build_dir)
 
