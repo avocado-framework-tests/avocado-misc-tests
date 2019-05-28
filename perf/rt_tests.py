@@ -50,7 +50,7 @@ class rt_tests(Test):
             deps.append("numactl-devel")
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
-                self.error(package + ' is needed for the test to be run')
+                self.cancel(package + ' is needed for the test to be run')
         tarball = self.fetch_asset(
             "https://www.kernel.org/pub/linux/utils/rt-tests/"
             "rt-tests-1.0.tar.gz")

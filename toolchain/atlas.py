@@ -43,7 +43,7 @@ class Atlas(Test):
             if detected_distro.name in ["rhel", "redhat"] and package == "gfortran":
                 package = 'gcc-gfortran'
             if not sm.check_installed(package) and not sm.install(package):
-                self.error(package + ' is needed for the test to be run')
+                self.cancel(package + ' is needed for the test to be run')
         atlas_url = 'https://sourceforge.net/projects/'\
                     'math-atlas/files/Stable/3.10.3/atlas3.10.3.tar.bz2'
         lapack_url = 'http://www.netlib.org/lapack/lapack-3.6.1.tgz'

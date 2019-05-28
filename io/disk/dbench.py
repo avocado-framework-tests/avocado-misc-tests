@@ -48,7 +48,7 @@ class Dbench(Test):
         '''
         sm = SoftwareManager()
         if not sm.check_installed("gcc") and not sm.install("gcc"):
-            self.error('Gcc is needed for the test to be run')
+            self.cancel('Gcc is needed for the test to be run')
 
         self.results = []
         tarball = self.fetch_asset(

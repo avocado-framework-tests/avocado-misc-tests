@@ -31,8 +31,8 @@ class GSL(Test):
         sm = SoftwareManager()
         for package in ['gcc', 'make']:
             if not sm.check_installed(package) and not sm.install(package):
-                self.error("Fail to install %s required for this test." %
-                           package)
+                self.cancel("Fail to install %s required for this test." %
+                            package)
         gsl_version = self.params.get('gsl_version', default='2.2')
         tarball = self.fetch_asset(
             "ftp://ftp.gnu.org/gnu/gsl/gsl-%s.tar.gz" % gsl_version, expire='10d')

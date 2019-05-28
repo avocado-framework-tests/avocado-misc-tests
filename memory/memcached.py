@@ -57,7 +57,7 @@ class Memcached(Test):
 
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
-                self.error(' %s is needed for the test to be run' % package)
+                self.cancel(' %s is needed for the test to be run' % package)
 
         # Memcached Required Args
         memory_to_use = self.params.get("memory_to_use",

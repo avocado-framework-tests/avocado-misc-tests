@@ -35,7 +35,7 @@ class ScsiAddRemove(Test):
         '''
         smm = SoftwareManager()
         if not smm.check_installed("lsscsi") and not smm.install("lsscsi"):
-            self.error("lsscsi is not installed")
+            self.cancel("lsscsi is not installed")
         self.pci_device = self.params.get("pci_device", default=None)
         if not self.pci_device:
             self.cancel("Please provide PCI address for which you \
