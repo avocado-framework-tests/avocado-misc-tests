@@ -54,7 +54,7 @@ class Dwh(Test):
             self.cancel('Please choose right inputs')
 
         dist = distro.detect()
-        packages = ['gcc']
+        packages = ['gcc', 'patch']
         if dist.name == 'Ubuntu':
             packages.extend(['g++'])
         elif dist.name in ['SuSE', 'fedora', 'rhel']:
