@@ -33,7 +33,8 @@ class SumCheck(Test):
             'mem_size', default=memory.memtotal() * 0.9))
         self.ddfile = os.path.join(self.workdir, 'ddfile')
         if (disk.freespace(self.workdir) / 1024) < self.memsize:
-            self.cancel('%sM is needed for the test to be run' % self.memsize)
+            self.cancel('%sM is needed for the test to be run' %
+                        (self.memsize / 1024))
 
     def test(self):
         mdsum = []
