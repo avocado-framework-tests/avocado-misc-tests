@@ -49,8 +49,8 @@ class Interbench(Test):
                     sm_manager.install(pkg)):
                 self.cancel("%s is needed for the test to be run" % pkg)
 
-        disk_free_mb = (disk.freespace(self.teststmpdir) / 1024) / 1024
-        if memory.memtotal()/1024 > disk_free_mb:
+        disk_free_b = disk.freespace(self.teststmpdir)
+        if memory.meminfo.MemTotal.b > disk_free_b:
             self.cancel('Disk space is less than total memory. Skipping test')
 
         tarball = self.fetch_asset('http://slackware.cs.utah.edu/pub/kernel'

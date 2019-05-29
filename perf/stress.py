@@ -72,8 +72,8 @@ class Stress(Test):
             # Sometimes the default memory used by each memory worker (256 M)
             # might make our machine go OOM and then funny things might start
             # to  happen. Let's avoid that.
-            mb = (memory.freememtotal() +
-                  memory.read_from_meminfo('SwapFree') / 2)
+            mb = (memory.meminfo.MemFree.k +
+                  memory.meminfo.SwapFree.k / 2)
             memory_per_thread = (mb * 1024) / threads
 
         if file_size_per_thread is None:

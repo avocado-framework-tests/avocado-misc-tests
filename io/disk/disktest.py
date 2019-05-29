@@ -75,7 +75,7 @@ class Disktest(Test):
         self.fstype = self.params.get('fs', default='ext4')
 
         gigabytes = int(lv_utils.get_diskspace(self.disk)) / 1073741824
-        memory_mb = memory.memtotal() / 1024
+        memory_mb = memory.meminfo.MemTotal.m
         self.chunk_mb = gigabytes * 950
         if memory_mb > self.chunk_mb:
             self.cancel("Chunk size has to be greater or equal to RAM size. "

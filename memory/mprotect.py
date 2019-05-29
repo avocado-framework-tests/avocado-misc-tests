@@ -37,12 +37,12 @@ class Mprotect(Test):
 
     def setUp(self):
         smm = SoftwareManager()
-        memsize = int(memory.freememtotal() * 1024 * 0.9)
         self.nr_pages = self.params.get('nr_pages', default=None)
         self.in_err = self.params.get('induce_err', default=0)
         self.failure = self.params.get('failure', default=False)
 
         if not self.nr_pages:
+            memsize = int(memory.meminfo.MemFree.b * 0.9)
             self.nr_pages = memsize / memory.get_page_size()
 
         for package in ['gcc', 'make']:

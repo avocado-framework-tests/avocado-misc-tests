@@ -82,9 +82,8 @@ class ThpDefrag(Test):
                               verbose=False, ignore_status=True, shell=True)):
                 self.fail('Defrag command Failed %s' % defrag_cmd)
 
-        total = memory.memtotal()
         hugepagesize = memory.get_huge_page_size()
-        nr_full = int(0.8 * (total / hugepagesize))
+        nr_full = int(0.8 * (memory.meminfo.MemTotal.k / hugepagesize))
 
         # Sets max possible hugepages before defrag on
         nr_hp_before = self.set_max_hugepages(nr_full)

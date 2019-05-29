@@ -47,7 +47,7 @@ class Forkoff(Test):
                 'Please use a non-zero value for number'
                 ' of iterations, processes and memory to be used')
 
-        self.freemem = int((0.85 * memory.freememtotal()) / 1024)
+        self.freemem = int(0.85 * memory.meminfo.MemFree.m)
         # Check for basic utilities
         for packages in ['gcc', 'make']:
             if not smm.check_installed(packages) and not smm.install(packages):

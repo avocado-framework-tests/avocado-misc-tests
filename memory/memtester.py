@@ -58,8 +58,7 @@ class Memtester(Test):
         '''
         Run memtester
         '''
-        mem = self.params.get('memory', default=int(
-            memory.freememtotal() / 1024))
+        mem = self.params.get('memory', default=memory.meminfo.MemFree.m)
         runs = self.params.get('runs', default=1)
         phyaddr = self.params.get('physaddr', default=None)
 

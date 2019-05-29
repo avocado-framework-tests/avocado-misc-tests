@@ -41,7 +41,7 @@ class MemorySyscall(Test):
     def setUp(self):
         smm = SoftwareManager()
         self.memsize = int(self.params.get(
-            'memory_size', default=(memory.freememtotal() / 1024)) * 1048576 * 0.5)
+            'memory_size', default=memory.meminfo.MemFree.m) * 1048576 * 0.5)
         self.induce_err = self.params.get('induce_err', default=0)
 
         for package in ['gcc', 'make']:
@@ -69,7 +69,7 @@ class MemorySyscall(Test):
             self.fail("Unexpected application abort, check for possible issues")
 
         self.log.info("Testing mremap with minimal memory and expand it")
-        if process.system('./mremap %s' % str(int(memory.freememtotal())), ignore_status=True):
+        if process.system('./mremap %s' % str(memory.meminfo.MemFree.k), ignore_status=True):
             self.fail('Mremap expansion failed')
 
 
