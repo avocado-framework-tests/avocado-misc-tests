@@ -53,20 +53,20 @@ class Numatop(Test):
                 self.cancel("Failed to install %s, which is needed for"
                             "the test to be run" % package)
 
-        locations = ["https://github.com/01org/numatop/archive/master.zip"]
+        locations = ["https://github.com/intel/numatop/archive/master.zip"]
         tarball = self.fetch_asset("numatop.zip", locations=locations,
                                    expire='7d')
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(self.workdir, 'numatop-master')
 
         os.chdir(self.sourcedir)
-
-        build.make(self.sourcedir, extra_args='test')
+        process.run('./autogen.sh', shell=True, sudo=True)
+        build.make(self.sourcedir, extra_args='check')
 
     def test(self):
 
         mgen_flag = False
-        mgen = os.path.join(self.sourcedir, 'test/mgen/mgen')
+        mgen = os.path.join(self.sourcedir, 'mgen')
         self.numa_pid = process.SubProcess(
             'numatop -d result_file', shell=True)
         self.numa_pid.start()
