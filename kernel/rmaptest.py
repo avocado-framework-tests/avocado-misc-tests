@@ -47,7 +47,7 @@ class Rmaptest(Test):
         # Check for basic utilities
         smm = SoftwareManager()
         if not smm.check_installed("gcc") and not smm.install("gcc"):
-            self.error('Gcc is needed for the test to be run')
+            self.cancel('Gcc is needed for the test to be run')
 
         rmaptest = self.fetch_asset('https://www.kernel.org/pub/'
                                     'linux/kernel/people/mbligh/'

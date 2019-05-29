@@ -42,8 +42,8 @@ class GDB(Test):
             self.fail('no packages list for your distro.')
         for package in packages:
             if not sm.check_installed(package) and not sm.install(package):
-                self.error("Fail to install %s required for this test." %
-                           package)
+                self.cancel("Fail to install %s required for this test." %
+                            package)
         test_type = self.params.get('type', default='upstream')
         if test_type == 'upstream':
             gdb_version = self.params.get('gdb_version', default='7.10')

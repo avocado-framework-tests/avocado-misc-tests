@@ -55,7 +55,7 @@ class Aiostress(Test):
 
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
-                self.error('%s is needed for the test to be run' % package)
+                self.cancel('%s is needed for the test to be run' % package)
 
         aiostress = self.fetch_asset(
             'https://oss.oracle.com/~mason/aio-stress/aio-stress.c')

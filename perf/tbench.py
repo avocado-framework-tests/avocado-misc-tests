@@ -46,7 +46,7 @@ class tbench(Test):
         sm = SoftwareManager()
         for package in ['gcc', 'make']:
             if not sm.check_installed(package) and not sm.install(package):
-                self.error(package + ' is needed for the test to be run')
+                self.cancel('%s is needed for the test to be run' % package)
         tarball = self.fetch_asset(
                   "https://www.samba.org/ftp/tridge/dbench/dbench-3.04.tar.gz",
                   expire='7d')
