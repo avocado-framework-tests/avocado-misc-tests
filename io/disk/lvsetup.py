@@ -53,7 +53,6 @@ class Lvsetup(Test):
         self.disk = self.params.get('disks', default=None)
         vg_name = self.params.get('vg_name', default='avocado_vg')
         lv_name = self.params.get('lv_name', default='avocado_lv')
-        self.lv_size = self.params.get('lv_size', default='1G')
         self.fs_name = self.params.get('fs', default='ext4').lower()
         if self.fs_name == 'xfs':
             pkg = 'xfsprogs'
@@ -66,10 +65,6 @@ class Lvsetup(Test):
             self.cancel("Package %s is missing and could not be installed" % pkg)
         lv_snapshot_name = self.params.get(
             'lv_snapshot_name', default='avocado_sn')
-        self.lv_snapshot_size = self.params.get(
-            'lv_snapshot_size', default='1G')
-        self.ramdisk_vg_size = self.params.get(
-            'ramdisk_vg_size', default='10000')
         self.ramdisk_basedir = self.params.get(
             'ramdisk_basedir', default=os.path.join(self.workdir, 'ramdisk'))
         self.ramdisk_sparse_filename = self.params.get(
@@ -88,6 +83,17 @@ class Lvsetup(Test):
             os.makedirs(self.mount_loc)
         self.lv_snapshot_name = lv_snapshot_name
 
+        if self.disk:
+            # converting bytes to megabytes, and considering only half the size
+            self.lv_size = int(lv_utils.get_diskspace(self.disk)) / 2097152
+        else:
+            self.lv_size = '1G'
+        self.lv_size = self.params.get('lv_size', default=self.lv_size)
+        self.lv_snapshot_size = self.params.get('lv_snapshot_size',
+                                                default=self.lv_size)
+        self.ramdisk_vg_size = self.params.get(
+            'ramdisk_vg_size', default=self.lv_size)
+
     @avocado.fail_on(lv_utils.LVException)
     def test_snapshot(self):
         """
@@ -104,6 +110,9 @@ class Lvsetup(Test):
         lv_utils.lv_create(self.vg_name, self.lv_name, self.lv_size)
         lv_utils.lv_mount(self.vg_name, self.lv_name, self.mount_loc,
                           create_filesystem=self.fs_name)
+        lv_utils.lv_umount(self.vg_name, self.lv_name)
+        lv_utils.vg_reactivate(self.vg_name, export=True)
+        lv_utils.lv_mount(self.vg_name, self.lv_name, self.mount_loc)
         lv_utils.lv_umount(self.vg_name, self.lv_name)
         lv_utils.lv_take_snapshot(self.vg_name, self.lv_name,
                                   self.lv_snapshot_name,
