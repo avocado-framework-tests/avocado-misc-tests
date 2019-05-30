@@ -110,12 +110,7 @@ class kselftest(Test):
         Execute the kernel selftest
         """
         error = False
-        result = build.make(
-            self.sourcedir, extra_args='%s run_tests' % self.comp)
-        for line in str(result).splitlines():
-            if '[FAIL]' in line:
-                error = True
-                self.log.info("Testcase failed. Log from build: %s" % line)
+        build.make(self.sourcedir, extra_args='%s run_tests' % self.comp)
         for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
             match = re.search(r'selftests:(.*)\[FAIL\]', line)
             if match:
