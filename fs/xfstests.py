@@ -71,8 +71,7 @@ class Xfstests(Test):
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
-        elif self.detected_distro.name in ['centos', 'fedora', 'rhel',
-                                           'redhat', 'SuSE']:
+        elif self.detected_distro.name in ['centos', 'fedora', 'rhel', 'SuSE']:
             packages.extend(['acl', 'bc', 'dump', 'indent', 'libtool', 'lvm2',
                              'xfsdump', 'psmisc', 'sed', 'libacl-devel',
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
