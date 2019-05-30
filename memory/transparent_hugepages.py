@@ -45,9 +45,11 @@ class Thp(Test):
         '''
 
         # Set params as per available memory in system
-        self.mem_path = os.path.join(data_dir.get_tmp_dir(), 'thp_space')
-        free_mem = int(memory.freememtotal() / 1024)
-        self.dd_timeout = 900
+        self.mem_path = self.params.get(
+            "t_dir", default=os.path.join(data_dir.get_tmp_dir(), 'thp_space'))
+        free_mem = self.params.get(
+            "mem_size", default=memory.meminfo.MemFree.m)
+        self.dd_timeout = self.params.get("dd_timeout", default=900)
         self.thp_split = None
         try:
             memory.read_from_vmstat("thp_split_page")
@@ -56,7 +58,7 @@ class Thp(Test):
             self.thp_split = "thp_split"
 
         # Set block size as hugepage size * 2
-        self.block_size = (memory.get_huge_page_size() / 1024) * 2
+        self.block_size = memory.meminfo.Hugepagesize.m * 2
         self.count = free_mem / self.block_size
 
         # Mount device as per free memory size
