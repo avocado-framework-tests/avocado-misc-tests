@@ -54,9 +54,7 @@ class Stutter(Test):
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(self.workdir, 'stutter-master')
 
-        mem_byte = str(memory.memtotal())
-        print mem_byte
-        self._memory = self.params.get('memory', default=mem_byte)
+        self._memory = self.params.get('memory', default=memory.meminfo.MemTotal.k)
         self._iteration = self.params.get('iteration', default='10')
         self._logdir = self.params.get('logdir', default='/var/tmp/logdir')
         self._rundir = self.params.get('rundir', default='/tmp')

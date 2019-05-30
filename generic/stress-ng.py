@@ -144,7 +144,7 @@ class Stressng(Test):
                                 ignore_status=True, sudo=True)
             if self.ttimeout and self.v_stressors:
                 timeout = ' --timeout %s ' % str(
-                    int(self.ttimeout) + int(memory.memtotal() / 1024 / 1024))
+                    int(self.ttimeout) + int(memory.meminfo.MemTotal.g))
             if self.v_stressors:
                 for stressor in self.v_stressors.split(' '):
                     stress_cmd = ' --%s %s %s' % (stressor,

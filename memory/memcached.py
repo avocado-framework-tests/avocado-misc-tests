@@ -61,7 +61,7 @@ class Memcached(Test):
 
         # Memcached Required Args
         memory_to_use = self.params.get("memory_to_use",
-                                        default=(memory.freememtotal() / 1024))
+                                        default=memory.meminfo.MemFree.m)
         port_no = self.params.get("port_no", default='12111')
         memcached_args = self.params.get('memcached_args', default='')
         self.memcached_cmd = 'memcached -u %s -p %s -m %d  %s &'\
