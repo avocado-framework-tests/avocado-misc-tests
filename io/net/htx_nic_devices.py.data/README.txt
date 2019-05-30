@@ -5,7 +5,7 @@ ready for the execution and also updates bpt file with necessary
 data. Once configuration is done test starts executing the stress
 test on all the interfaces provided in input yaml file
 
-User can mention the time limit to be executed in hours.
+User can mention the time limit to be executed in minutes.
 
 This test assumes below packages to be installed on both host & peer
 	pexpect

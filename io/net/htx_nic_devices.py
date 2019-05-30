@@ -64,7 +64,7 @@ class HtxNicTest(Test):
 
     def setUp(self):
         """
-        Build 'HTX'.
+        Set up
         """
         if 'ppc64' not in process.system_output('uname -a', ignore_status=True,
                                                 shell=True, sudo=True):
@@ -72,7 +72,16 @@ class HtxNicTest(Test):
 
         self.parameters()
         self.host_distro = distro.detect()
+        self.login(self.peer_ip, self.peer_user, self.peer_password)
+        self.get_ips()
+        self.get_peer_distro()
+        #if 'start' in str(self.name):
+        #    self.build_htx()
 
+    def build_htx(self):
+        """
+        Build 'HTX'
+        """
         packages = ['git', 'gcc', 'make']
         detected_distro = distro.detect()
         if detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
@@ -109,10 +118,6 @@ class HtxNicTest(Test):
         if process.system('./installer.sh -f'):
             self.fail("Installation of htx fails:please refer job.log")
 
-        self.login(self.peer_ip, self.peer_user, self.peer_password)
-        self.get_ips()
-        self.get_peer_distro()
-
         try:
             self.run_command("wget %s -O /tmp/master.zip" % url)
             self.run_command("cd /tmp")
@@ -141,7 +146,7 @@ class HtxNicTest(Test):
         self.net_ids = self.params.get("net_ids", '*', default=None).split(",")
         self.mdt_file = self.params.get("mdt_file", '*', default="net.mdt")
         self.time_limit = int(self.params.get("time_limit",
-                                              '*', default=2)) * 3600
+                                              '*', default=2)) * 60
         self.query_cmd = "htxcmdline -query -mdt %s" % self.mdt_file
 
     def login(self, ip, username, password):
@@ -213,16 +218,22 @@ class HtxNicTest(Test):
             self.fail("Unknown peer distro type")
         self.log.info("Peer distro is %s", self.peer_distro)
 
-    def test(self):
+    def test_start(self):
         """
         This test will be in two phases
         Phase 1: Configure all necessary pre-setup steps for both the
                  interfaces in both Host & Peer
-        Phase 2: Start the HTX setup & execution of test for a time_limit
-                 Monitor HTX error log for any errors in both Host & Peer
+        Phase 2: Start the HTX setup & execution of test.
         """
+        self.build_htx()
         self.setup_htx_nic()
         self.run_htx()
+
+    def test_check(self):
+        self.monitor_htx_run()
+
+    def test_stop(self):
+        self.htx_cleanup()
 
     def setup_htx_nic(self):
         self.update_host_peer_names()
@@ -244,7 +255,7 @@ class HtxNicTest(Test):
         self.log.info("Updating hostname of both Host & Peer in \
                       %s file", hosts_file)
         with open(hosts_file, 'r') as file:
-            filedata = file.read()
+            filedata = file.read().splitlines()
         search_str1 = "%s.* %s" % (host_name, self.host_ip)
         search_str2 = "%s.* %s" % (peer_name, self.peer_ip)
         add_str1 = "%s %s" % (host_name, self.host_ip)
@@ -253,6 +264,7 @@ class HtxNicTest(Test):
         for index, line in enumerate(filedata):
             filedata[index] = line.replace('\t', ' ')
 
+        filedata = "\n".join(filedata)
         obj = re.search(search_str1, filedata)
         if not obj:
             filedata = "%s\n%s" % (add_str1, filedata)
@@ -429,7 +441,6 @@ class HtxNicTest(Test):
         self.activate_mdt()
         self.is_net_devices_active()
         self.start_htx_run()
-        self.monitor_htx_run()
 
     def start_htx_deamon(self):
         cmd = '/usr/lpp/htx/etc/scripts/htxd_run'
@@ -727,7 +738,7 @@ class HtxNicTest(Test):
             cmd = "systemctl restart network"
             self.run_command(cmd)
 
-    def tearDown(self):
+    def htx_cleanup(self):
         self.clean_state()
         self.shutdown_htx_daemon()
         self.bring_up_host_interfaces()
