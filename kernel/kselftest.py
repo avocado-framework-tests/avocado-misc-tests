@@ -102,10 +102,8 @@ class kselftest(Test):
                             self.buldir, os.listdir(self.buldir)[0])
 
         self.sourcedir = os.path.join(self.buldir, self.testdir)
-        result = build.run_make(self.sourcedir)
-        for line in str(result).splitlines():
-            if 'ERROR' in line:
-                self.fail("Compilation failed, Please check the build logs !!")
+        if build.make(self.sourcedir):
+            self.fail("Compilation failed, Please check the build logs !!")
 
     def test(self):
         """
