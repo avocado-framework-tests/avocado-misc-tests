@@ -1,5 +1,4 @@
-disk: ''
+htx_disks: ''
 all: True
 time_limit: 24
 mdt_file: 'mdt.hd'
-smt_change: False
