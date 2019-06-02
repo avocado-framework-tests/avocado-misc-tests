@@ -1,24 +1,23 @@
-general:
-    disk:
-    script: 'runltp'
-    dir:
-    args: !mux
-        fs_di:
-            args: '-s fs_di'
-        fs_inod:
-            args: '-s fs_inod'
-        fs_fill:
-            args: '-s fs_fill'
-        fs_perm:
-            args: '-s fs_perm'
-    fs: !mux
-        ext4:
-            fs: 'ext4'
-        ext3:
-            fs: 'ext3'
-        ext2:
-            fs: 'ext2'
-        xfs:
-            fs: 'xfs'
-        btrfs:
-            fs: 'btrfs'
+disk:
+script: 'runltp'
+dir:
+args: !mux
+    fs_di:
+        args: '-s fs_di'
+    fs_inod:
+        args: '-s fs_inod'
+    fs_fill:
+        args: '-s fs_fill'
+    fs_perm:
+        args: '-s fs_perm'
+fs: !mux
+    ext4:
+        fs: 'ext4'
+    ext3:
+        fs: 'ext3'
+    ext2:
+        fs: 'ext2'
+    xfs:
+        fs: 'xfs'
+    btrfs:
+        fs: 'btrfs'
