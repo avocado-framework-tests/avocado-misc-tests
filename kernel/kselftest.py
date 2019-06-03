@@ -60,13 +60,10 @@ class kselftest(Test):
             deps.extend(['popt', 'glibc', 'glibc-devel', 'popt-devel', 'sudo',
                          'libcap2', 'libcap-devel', 'libcap-ng-devel',
                          'fuse', 'fuse-devel', 'glibc-devel-static'])
-        # FIXME: "redhat" as the distro name for RHEL is deprecated
-        # on Avocado versions >= 50.0.  This is a temporary compatibility
-        # enabler for older runners, but should be removed soon
-        elif detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
+        elif detected_distro.name in ['centos', 'fedora', 'rhel']:
             deps.extend(['popt', 'glibc', 'glibc-devel', 'glibc-static',
                          'libcap-ng', 'libcap', 'libcap-devel', 'fuse-devel',
-                         'libcap-ng-devel'])
+                         'libcap-ng-devel', 'popt-devel'])
 
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
@@ -105,22 +102,15 @@ class kselftest(Test):
                             self.buldir, os.listdir(self.buldir)[0])
 
         self.sourcedir = os.path.join(self.buldir, self.testdir)
-        result = build.run_make(self.sourcedir)
-        for line in str(result).splitlines():
-            if 'ERROR' in line:
-                self.fail("Compilation failed, Please check the build logs !!")
+        if build.make(self.sourcedir):
+            self.fail("Compilation failed, Please check the build logs !!")
 
     def test(self):
         """
         Execute the kernel selftest
         """
         error = False
-        result = build.make(
-            self.sourcedir, extra_args='%s run_tests' % self.comp)
-        for line in str(result).splitlines():
-            if '[FAIL]' in line:
-                error = True
-                self.log.info("Testcase failed. Log from build: %s" % line)
+        build.make(self.sourcedir, extra_args='%s run_tests' % self.comp)
         for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
             match = re.search(r'selftests:(.*)\[FAIL\]', line)
             if match:
