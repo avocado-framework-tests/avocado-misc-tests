@@ -14,6 +14,9 @@
 # Author:Praveen K Pandey <praveen@linux.vnet.ibm.com>
 #
 
+"""
+HTX Test
+"""
 
 import os
 import time
@@ -23,7 +26,6 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import build
 from avocado.utils import process, archive
 from avocado.utils import distro
-from avocado.utils import cpu
 
 
 class HtxTest(Test):
@@ -41,16 +43,20 @@ class HtxTest(Test):
 
     def setUp(self):
         """
-        Build 'HTX'.
+        Setup
         """
         if 'ppc64' not in process.system_output('uname -a', shell=True):
             self.cancel("Supported only on Power Architecture")
 
-        detected_distro = distro.detect()
         self.mdt_file = self.params.get('mdt_file', default='mdt.mem')
-        self.time_limit = int(self.params.get('time_limit', default=2)) * 3600
-        self.smt = self.params.get('smt_change', default=False)
+        self.time_limit = int(self.params.get('time_limit', default=2)) * 60
+        self.failed = False
 
+    def setup_htx(self):
+        """
+        Builds HTX
+        """
+        detected_distro = distro.detect()
         packages = ['git', 'gcc', 'make']
         if detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
             packages.extend(['gcc-c++', 'ncurses-devel', 'tar'])
@@ -85,24 +91,20 @@ class HtxTest(Test):
         if process.system('./installer.sh -f'):
             self.fail("Installation of htx fails:please refer job.log")
 
-        if self.smt:
-            self.max_smt_value = 8
-            if cpu.get_cpu_arch().lower() == 'power7':
-                self.max_smt_value = 4
-            if cpu.get_cpu_arch().lower() == 'power6':
-                self.max_smt_value = 2
-            self.smt_values = ["off", "on"]
-            for i in range(2, self.max_smt_value + 1):
-                self.smt_values.append(str(i))
-            self.curr_smt = process.system_output("ppc64_cpu --smt | awk -F'=' \
-                '{print $NF}' | awk '{print $NF}'", shell=True)
-
-    def test(self):
+    def test_start(self):
         """
         Execute 'HTX' with appropriate parameters.
         """
+        self.setup_htx()
         self.log.info("Starting the HTX Deamon")
         process.run('/usr/lpp/htx/etc/scripts/htxd_run')
+
+        self.log.info("Creating the HTX mdt files")
+        process.run('htxcmdline -createmdt')
+
+        if not os.path.exists("/usr/lpp/htx/mdt/%s" % self.mdt_file):
+            self.failed = True
+            self.fail("MDT file %s not found" % self.mdt_file)
 
         self.log.info("selecting the mdt file")
         cmd = "htxcmdline -select -mdt %s" % self.mdt_file
@@ -116,32 +118,31 @@ class HtxTest(Test):
         cmd = "htxcmdline -run  -mdt %s" % self.mdt_file
 
         process.system(cmd, ignore_status=True)
-        for time_loop in range(0, self.time_limit, 60):
-            # Running SMT changes every hour
-            if self.smt and time_loop % 3600 == 0:
-                self.run_smt()
+
+    def test_check(self):
+        """
+        Checks if HTX is running, and if no errors.
+        """
+        for _ in range(0, self.time_limit, 60):
             self.log.info("HTX Error logs")
             process.system('htxcmdline -geterrlog', ignore_status=True)
             if os.stat('/tmp/htxerr').st_size != 0:
+                self.failed = True
                 self.fail("check errorlogs for exact error and failure")
             cmd = 'htxcmdline -query  -mdt %s' % self.mdt_file
             process.system(cmd, ignore_status=True)
             time.sleep(60)
 
-    def run_smt(self):
-        """
-        Sets each of the supported SMT value.
-        """
-        for value in self.smt_values:
-            process.system("ppc64_cpu --smt=%s" %
-                           value, shell=True, ignore_status=True)
-            process.system("ppc64_cpu --smt", shell=True, ignore_status=True)
-            process.system("ppc64_cpu --info", ignore_status=True)
-
-    def tearDown(self):
+    def test_stop(self):
         '''
         Shutdown the mdt file and the htx daemon and set SMT to original value
         '''
+        self.stop_htx()
+
+    def stop_htx(self):
+        """
+        Stop the HTX Run
+        """
         self.log.info("shutting down the %s ", self.mdt_file)
         cmd = 'htxcmdline -shutdown -mdt %s' % self.mdt_file
         process.system(cmd, ignore_status=True)
@@ -149,10 +150,13 @@ class HtxTest(Test):
         daemon_state = process.system_output('/etc/init.d/htx.d status')
         if daemon_state.split(" ")[-1] == 'running':
             process.system('/usr/lpp/htx/etc/scripts/htxd_shutdown')
-        if self.smt:
-            process.system("ppc64_cpu --smt=%s" %
-                           self.curr_smt, shell=True, ignore_status=True)
-        process.system("./uninstaller.sh -f")
+
+    def tearDown(self):
+        """
+        tearDown
+        """
+        if self.failed:
+            self.stop_htx()
 
 
 if __name__ == "__main__":
