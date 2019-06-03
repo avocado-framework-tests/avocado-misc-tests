@@ -21,16 +21,15 @@
 #      -q              suppress human-readable output
 #      -h              display this message and exit
 #      -v              display version and exit
-setup:
- io_type: !mux
-  cache_io:
-   mode: '-C'
-  idirect_io:
-   mode: '-D'
- count: '8'
- deadline: '10'
- period: '10'
- interval: '1s'
- size: '4k'
- wsize: '10m'
- disk: '/home'
+io_type: !mux
+    cache_io:
+        mode: '-C'
+    idirect_io:
+        mode: '-D'
+count: '8'
+deadline: '10'
+period: '10'
+interval: '1s'
+size: '4k'
+wsize: '10m'
+disk:

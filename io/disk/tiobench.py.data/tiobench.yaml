@@ -1,33 +1,23 @@
-setup:
-    location: !mux
-        default:
-            disk: '/dev/sdd'
-            dir: '/mnt'
-    filesystem: !mux
-        ext4:
-            fs: 'ext4'
-        xfs:
-            fs: 'xfs'
-        btrfs:
-            fs: 'btrfs'
-    block: !mux
-        first:
-            blocks: 4096
-        second:
-            blocks: 8192
-    thread: !mux
-        default:
-            threads: 10
-    blocksize: !mux
-        default:
-            size: 1024
-    runs: !mux
-        default:
-            numruns: 2
-    iteration: !mux
-        default: !mux
-            1:
-            2:
-            3:
-            4:
-            5:
+disk:
+dir:
+filesystem: !mux
+    ext4:
+        fs: 'ext4'
+    xfs:
+        fs: 'xfs'
+    btrfs:
+        fs: 'btrfs'
+block: !mux
+    4096:
+        blocks: 4096
+    8192:
+        blocks: 8192
+thread: !mux
+    10:
+        threads: 10
+blocksize: !mux
+    1024:
+        size: 1024
+runs: !mux
+    2:
+        numruns: 2

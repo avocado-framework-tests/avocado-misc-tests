@@ -1,23 +1,24 @@
-setup:
-    filesystem: !mux
-        default:
-            disk: 
-    mb: !mux
-        default:
-            megabytes: 100
-    blocks: !mux
-        first:
-            blocks: 25600
-    blocksize: !mux
-        default:
-            blocks_per_file: 12800
-    file_system_type: !mux
-        default:
-           fs: 'ext4'
-    seqread: !mux
-        default:
-           seq_read: True
-    dd_woptions:
-    dd_roptions:
-    fs_dd_woptions:
-    fs_dd_roptions:
+disk: 
+mb: !mux
+    100:
+        megabytes: 100
+blocks: !mux
+    25600:
+        blocks: 25600
+blocksize: !mux
+    12800:
+        blocks_per_file: 12800
+file_system_type: !mux
+    ext4:
+       fs: 'ext4'
+    xfs:
+        fs: 'xfs'
+    btrfs:
+        fs: 'btrfs'
+seqread: !mux
+    yes:
+       seq_read: True
+dd_woptions:
+dd_roptions:
+fs_dd_woptions:
+fs_dd_roptions:

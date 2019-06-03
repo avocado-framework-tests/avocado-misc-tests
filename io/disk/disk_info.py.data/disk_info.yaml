@@ -1,6 +1,5 @@
-cenario:
-    disk: ''
-    dir: '/mnt'
+disk:
+dir: '/mnt'
 filesystem: !mux
     ext4:
         fs: 'ext4'

@@ -1,9 +1,7 @@
-disks: /dev/sde1 /dev/sde2 /dev/sde3 /dev/sde4 /dev/sdd1
+disks:
 raidname: /dev/md/avocado
 setup: False
 run_test: False
 cleanup: True
 force: True
-raidlevel: !mux
-    raid1:
-        raid: 1
+raid: 1
