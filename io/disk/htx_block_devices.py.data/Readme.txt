@@ -13,9 +13,8 @@ user in yaml file.
 
 Inputs:
 ------
-disk: '/dev/sdb /dev/sdc'
+htx_disk: '/dev/sdb /dev/sdc'
 all: True or False (True if all disks in selected mdt needs to be run.
 Overrides disks selected)
-time_limit: 1 (In hours)
+time_limit: 1 (In minutes)
 mdt_file: 'mdt.io'
-smt_change: True or False

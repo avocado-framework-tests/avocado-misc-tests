@@ -14,6 +14,10 @@
 # Author: Naresh Bannoth<nbannoth@in.ibm.com>
 # this script run IO stress on block devices for give time.
 
+"""
+HTX Test
+"""
+
 import os
 import time
 from avocado import Test
@@ -22,7 +26,6 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import build
 from avocado.utils import process, archive
 from avocado.utils import distro
-from avocado.utils import cpu
 
 
 class HtxTest(Test):
@@ -41,15 +44,16 @@ class HtxTest(Test):
 
     def setUp(self):
         """
-        Build 'HTX'.
+        Setup
         """
         if 'ppc64' not in process.system_output('uname -a', shell=True):
             self.cancel("Platform does not supports")
 
         self.mdt_file = self.params.get('mdt_file', default='mdt.hd')
-        self.time_limit = int(self.params.get('time_limit', default=1)) * 3600
-        self.block_devices = self.params.get('disk', default=None)
+        self.time_limit = int(self.params.get('time_limit', default=1)) * 60
+        self.block_devices = self.params.get('htx_disks', default=None)
         self.all = self.params.get('all', default=False)
+
         if not self.all and self.block_devices is None:
             self.cancel("Needs the block devices to run the HTX")
         if self.all:
@@ -59,7 +63,12 @@ class HtxTest(Test):
             for disk in self.block_devices.split():
                 self.block_device.append(disk.rsplit("/")[-1])
             self.block_device = " ".join(self.block_device)
+        self.failed = False
 
+    def setup_htx(self):
+        """
+        Builds HTX
+        """
         packages = ['git', 'gcc', 'make']
         detected_distro = distro.detect()
         if detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
@@ -94,23 +103,11 @@ class HtxTest(Test):
         if process.system('./installer.sh -f'):
             self.fail("Installation of htx fails:please refer job.log")
 
-        self.smt = self.params.get('smt_change', default=False)
-        if self.smt:
-            self.max_smt_value = 8
-            if cpu.get_cpu_arch().lower() == 'power7':
-                self.max_smt_value = 4
-            if cpu.get_cpu_arch().lower() == 'power6':
-                self.max_smt_value = 2
-            self.smt_values = ["off", "on"]
-            for i in range(2, self.max_smt_value + 1):
-                self.smt_values.append(str(i))
-            self.curr_smt = process.system_output('ppc64_cpu --smt', shell=True)
-            self.curr_smt = self.curr_smt.split()[-1].split('=')[-1]
-
-    def test(self):
+    def test_start(self):
         """
         Execute 'HTX' with appropriate parameters.
         """
+        self.setup_htx()
         self.log.info("Starting the HTX Deamon")
         process.run('/usr/lpp/htx/etc/scripts/htxd_run')
 
@@ -118,6 +115,7 @@ class HtxTest(Test):
         process.run('htxcmdline -createmdt')
 
         if not os.path.exists("/usr/lpp/htx/mdt/%s" % self.mdt_file):
+            self.failed = True
             self.fail("MDT file %s not found" % self.mdt_file)
 
         self.log.info("selecting the mdt file ")
@@ -126,6 +124,7 @@ class HtxTest(Test):
 
         if not self.all:
             if self.is_block_device_in_mdt() is False:
+                self.failed = True
                 self.fail("Block devices %s are not available in %s",
                           self.block_device, self.mdt_file)
 
@@ -137,33 +136,28 @@ class HtxTest(Test):
         process.system(cmd, ignore_status=True)
         if not self.all:
             if self.is_block_device_active() is False:
+                self.failed = True
                 self.fail("Block devices failed to activate")
 
         self.log.info("Running the HTX on %s", self.block_device)
         cmd = "htxcmdline -run -mdt %s" % self.mdt_file
         process.system(cmd, ignore_status=True)
-        for time_loop in range(0, self.time_limit, 60):
-            # Running SMT changes every hour
-            if self.smt and time_loop % 3600 == 0:
-                self.run_smt()
+
+    def test_check(self):
+        """
+        Checks if HTX is running, and if no errors.
+        """
+        for _ in range(0, self.time_limit, 60):
             self.log.info("HTX Error logs")
             process.run('htxcmdline -geterrlog')
             if os.stat('/tmp/htxerr').st_size != 0:
+                self.failed = True
                 self.fail("check errorlogs for exact error and failure")
             self.log.info("status of block devices after every 60 sec")
             cmd = 'htxcmdline -query %s -mdt %s' % (self.block_device,
                                                     self.mdt_file)
             process.system(cmd, ignore_status=True)
             time.sleep(60)
-
-    def run_smt(self):
-        """
-        Sets each of the supported SMT value.
-        """
-        for value in self.smt_values:
-            process.system_output("ppc64_cpu --smt=%s" % value, shell=True)
-            process.system_output("ppc64_cpu --smt", shell=True)
-            process.system_output("ppc64_cpu --info")
 
     def is_block_device_in_mdt(self):
         '''
@@ -180,11 +174,9 @@ class HtxTest(Test):
         if device:
             self.log.info("block_devices %s are not avalable in %s ",
                           device, self.mdt_file)
-            return False
-        else:
-            self.log.info("BLOCK DEVICES %s ARE AVAILABLE %s",
-                          self.block_device, self.mdt_file)
-            return True
+        self.log.info("BLOCK DEVICES %s ARE AVAILABLE %s",
+                      self.block_device, self.mdt_file)
+        return True
 
     def suspend_all_block_device(self):
         '''
@@ -211,14 +203,19 @@ class HtxTest(Test):
         non_active_device = list(set(device_list) - set(active_devices))
         if non_active_device:
             return False
-        else:
-            self.log.info("BLOCK DEVICES %s ARE ACTIVE", self.block_device)
-            return True
+        self.log.info("BLOCK DEVICES %s ARE ACTIVE", self.block_device)
+        return True
 
-    def tearDown(self):
+    def test_stop(self):
         '''
         Shutdown the mdt file and the htx daemon and set SMT to original value
         '''
+        self.stop_htx()
+
+    def stop_htx(self):
+        """
+        Stop the HTX Run
+        """
         if self.is_block_device_active() is True:
             self.log.info("suspending active block_devices")
             self.suspend_all_block_device()
@@ -229,9 +226,13 @@ class HtxTest(Test):
         daemon_state = process.system_output('/etc/init.d/htx.d status')
         if daemon_state.split(" ")[-1] == 'running':
             process.system('/usr/lpp/htx/etc/scripts/htxd_shutdown')
-        if self.smt:
-            cmd = "ppc64_cpu --smt=%s" % self.curr_smt
-            process.system_output(cmd, shell=True)
+
+    def tearDown(self):
+        """
+        tearDown
+        """
+        if self.failed:
+            self.stop_htx()
 
 
 if __name__ == "__main__":
