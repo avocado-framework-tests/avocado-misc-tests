@@ -81,7 +81,7 @@ class Trinity(Test):
 
         process.system('su - trinity -c " %s  %s  %s"' %
                        (os.path.join(self.sourcedir, 'trinity'), args,
-                        '-N 1000000'), shell=True)
+                        '-N 1000000'), shell=True, ignore_status=True)
 
         dmesg = process.system_output('dmesg')
 
@@ -96,7 +96,7 @@ class Trinity(Test):
 
     def tearDown(self):
 
-        process.system('userdel -r  trinity', sudo=True)
+        process.system('userdel -r  trinity', sudo=True, ignore_status=True)
 
 
 if __name__ == "__main__":
