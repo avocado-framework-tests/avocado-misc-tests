@@ -38,7 +38,7 @@ class Trinity(Test):
         https://github.com/kernelslacker/trinity
         '''
         """
-        Add not root user
+        Adding  non-root user
         """
         if process.system('getent group trinity', ignore_status=True):
             process.run('groupadd trinity', sudo=True)
@@ -95,6 +95,9 @@ class Trinity(Test):
             self.log.info("some call traces seen please check")
 
     def tearDown(self):
+        """
+        removing already added non-root user
+        """
 
         process.system('userdel -r  trinity', sudo=True, ignore_status=True)
 

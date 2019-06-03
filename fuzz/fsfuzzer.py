@@ -90,7 +90,8 @@ class Fsfuzzer(Test):
         Runs the fsfuzz test suite. By default uses all supported fstypes,
         but you can specify only one by `fstype` param.
         '''
-        process.system("%s %s" % (self._fsfuzz, self._args), sudo=True, ignore_status=True)
+        process.system("%s %s" % (self._fsfuzz, self._args), sudo=True,
+                       ignore_status=True)
 
 
 if __name__ == "__main__":
