@@ -68,6 +68,8 @@ class MemorySyscall(Test):
         if proc.poll() != 0:
             self.fail("Unexpected application abort, check for possible issues")
 
+    def test_mremap(self):
+        os.chdir(self.teststmpdir)
         self.log.info("Testing mremap with minimal memory and expand it")
         if process.system('./mremap %s' % str(memory.meminfo.MemFree.k), ignore_status=True):
             self.fail('Mremap expansion failed')
