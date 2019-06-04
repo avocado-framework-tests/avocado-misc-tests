@@ -62,7 +62,7 @@ class Lvsetup(Test):
             else:
                 pkg = 'btrfs-progs'
         if pkg and not smm.check_installed(pkg) and not smm.install(pkg):
-            self.cancel("Package %s is missing and could not be installed" % pkg)
+            self.cancel("Package %s could not be installed" % pkg)
         lv_snapshot_name = self.params.get(
             'lv_snapshot_name', default='avocado_sn')
         self.ramdisk_basedir = self.params.get(
@@ -84,24 +84,23 @@ class Lvsetup(Test):
         self.lv_snapshot_name = lv_snapshot_name
 
         if self.disk:
-            # converting bytes to megabytes, and considering only half the size
-            self.lv_size = int(lv_utils.get_diskspace(self.disk)) / 2097152
+            # converting bytes to megabytes, and using only 45% of the size
+            self.lv_size = int(lv_utils.get_diskspace(self.disk)) / 2330168
         else:
             self.lv_size = '1G'
         self.lv_size = self.params.get('lv_size', default=self.lv_size)
         self.lv_snapshot_size = self.params.get('lv_snapshot_size',
                                                 default=self.lv_size)
-        self.ramdisk_vg_size = self.params.get(
-            'ramdisk_vg_size', default=self.lv_size)
+        self.ramdisk_vg_size = self.params.get('ramdisk_vg_size',
+                                               default=self.lv_size)
 
     @avocado.fail_on(lv_utils.LVException)
-    def test_snapshot(self):
+    def create_lv(self):
         """
         General logical volume setup.
 
         A volume group with given name is created in the ramdisk. It then
-        creates a logical volume. Takes a snapshot from the logical and
-        merges snapshot with the logical volume.
+        creates a logical volume.
         """
         self.ramdisks.append(lv_utils.vg_ramdisk(self.disk, self.vg_name,
                                                  self.ramdisk_vg_size,
@@ -111,13 +110,45 @@ class Lvsetup(Test):
         lv_utils.lv_mount(self.vg_name, self.lv_name, self.mount_loc,
                           create_filesystem=self.fs_name)
         lv_utils.lv_umount(self.vg_name, self.lv_name)
-        lv_utils.vg_reactivate(self.vg_name, export=True)
+
+    @avocado.fail_on(lv_utils.LVException)
+    def mount_unmount_lv(self):
+        """
+        Mounts and unmounts the filesystem on the logical volume.
+        """
         lv_utils.lv_mount(self.vg_name, self.lv_name, self.mount_loc)
         lv_utils.lv_umount(self.vg_name, self.lv_name)
+
+    @avocado.fail_on(lv_utils.LVException)
+    def test(self):
+        """
+        A volume group with given name is created in the ramdisk. It then
+        creates a logical volume, mounts and unmounts it.
+        """
+        self.create_lv()
+        self.mount_unmount_lv()
+
+    @avocado.fail_on(lv_utils.LVException)
+    def test_vg_recreate(self):
+        """
+        Deactivate, export, import and activate a volume group.
+        """
+        self.create_lv()
+        lv_utils.vg_reactivate(self.vg_name, export=True)
+        self.mount_unmount_lv()
+
+    @avocado.fail_on(lv_utils.LVException)
+    def test_lv_snapshot(self):
+        """
+        Takes a snapshot from the logical and merges snapshot with the
+        logical volume.
+        """
+        self.create_lv()
         lv_utils.lv_take_snapshot(self.vg_name, self.lv_name,
                                   self.lv_snapshot_name,
                                   self.lv_snapshot_size)
         lv_utils.lv_revert(self.vg_name, self.lv_name, self.lv_snapshot_name)
+        self.mount_unmount_lv()
 
     def tearDown(self):
         """
