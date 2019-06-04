@@ -5,16 +5,12 @@ test: !mux
         test: nvme_id_ctrl_test
     nvme_compare_test:
         test: nvme_compare_test
-    nvme_attach_detach_ns_test:
-        test: nvme_attach_detach_ns_test
     nvme_error_log_test:
         test: nvme_error_log_test
     nvme_test_logger:
         test: nvme_test_logger
     nvme_read_write_test:
         test: nvme_read_write_test
-    nvme_create_max_ns_test:
-        test: nvme_create_max_ns_test
     nvme_simple_template_test:
         test: nvme_simple_template_test
     nvme_id_ns_test:
