@@ -32,6 +32,8 @@ class MigratePages(Test):
     2) hugepages
     3) hugepages with overcommit
     4) transparent hugepages
+
+    :avocado: tags=memory,hugepage,migration
     """
 
     def copyutil(self, file_name):

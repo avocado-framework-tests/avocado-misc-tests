@@ -29,7 +29,7 @@ class VATest(Test):
     """
     Performs Virtual address space validation
 
-    :avocado: tags=memory, power
+    :avocado: tags=memory,power
     """
 
     def setUp(self):

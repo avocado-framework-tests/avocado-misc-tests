@@ -29,6 +29,8 @@ class Mprotect(Test):
     """
     Uses mprotect call to protect 90% of the machine's free
     memory and accesses with PROT_READ, PROT_WRITE and PROT_NONE
+
+    :avocado: tags=memory
     """
 
     def copyutil(self, file_name):

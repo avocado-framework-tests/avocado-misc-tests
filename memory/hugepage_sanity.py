@@ -28,6 +28,8 @@ class HugepageSanity(Test):
     """
     Test allocates given number of hugepages of given size and mmap's
     using MAP_HUGETLB with corresponding hugepage sizes
+
+    :avocado: tags=memory,hugepage
     """
 
     def copyutil(self, file_name):

@@ -38,7 +38,7 @@ class ThpDefrag(Test):
     Defrag test enables THP and fragments the system memory using dd load
     and turns on THP defrag and checks whether defrag occured.
 
-    :avocado: tags=memory,privileged
+    :avocado: tags=memory,privileged,hugepage
     '''
 
     @skipIf(PAGESIZE, "No THP support for kernel with 4K PAGESIZE")
