@@ -272,14 +272,14 @@ class NVMeTest(Test):
             d_cmd = "nvme fw-download %s --fw=%s" % (self.device, fw_file_path)
             if process.system(d_cmd, shell=True, ignore_status=True):
                 self.fail("Failed to download firmware to the device")
-            cmd = "nvme fw-activate %s -a 0 -s %d" % (self.device, i)
+            cmd = "nvme fw-commit %s -a 0 -s %d" % (self.device, i)
             if process.system(cmd, shell=True, ignore_status=True):
                 self.fail("Failed to write firmware on slot %d" % i)
             if i == self.get_firmware_slots():
                 # Downloading new FW to the device for each action
                 if process.system(d_cmd, shell=True, ignore_status=True):
                     self.fail("Failed to download firmware to the device")
-                cmd = "nvme fw-activate %s -a 3 -s %d" % (self.device, i)
+                cmd = "nvme fw-commit %s -a 3 -s %d" % (self.device, i)
                 if process.system(cmd, shell=True, ignore_status=True):
                     self.fail("Failed to activate firmware on slot %d" % i)
 
