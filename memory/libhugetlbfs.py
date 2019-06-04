@@ -35,7 +35,7 @@ class LibHugetlbfs(Test):
     libhugetlbfs: libhugetlbfs is a library which provides easy
     access to huge pages of memory. test to excersize libhugetlbfs library
 
-    :avocado: tags=memory,privileged
+    :avocado: tags=memory,privileged,hugepage
     '''
 
     def setUp(self):

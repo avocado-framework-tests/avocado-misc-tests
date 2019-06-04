@@ -32,6 +32,8 @@ class MemorySyscall(Test):
     """
     Excercises malloc, mmap, mprotect, mremap syscalls with 90 %
     of the machine's free memory
+
+    :avocado: tags=memory
     """
 
     def copyutil(self, file_name):

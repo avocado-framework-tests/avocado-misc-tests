@@ -29,7 +29,7 @@ class Integrity(Test):
     """
     Performs Memory Integrity Tests
 
-    :avocado: tags=memory,privileged
+    :avocado: tags=memory,privileged,migration
     """
 
     def setUp(self):

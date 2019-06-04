@@ -29,6 +29,8 @@ class KsmPoison(Test):
     """
     Exercise Kernel Samepage Merging (KSM) through madvise call to share
     machine's free mapped memory and accesses the pages through memset
+
+    :avocado: tags=memory,ksm
     """
 
     def copyutil(self, file_name):

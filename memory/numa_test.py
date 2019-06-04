@@ -29,6 +29,8 @@ class NumaTest(Test):
     """
     Exercises numa_move_pages and mbind call with 20% of the machine's free
     memory
+
+    :avocado: tags=memory,migration,hugepage
     """
 
     def copyutil(self, file_name):

@@ -25,6 +25,8 @@ class SumCheck(Test):
     """
     Test allocates file chuck of RAM size and checks for md5sum of the file
     repetitively so that memory integrity persists
+
+    :avocado: tags=memory
     """
 
     def setUp(self):

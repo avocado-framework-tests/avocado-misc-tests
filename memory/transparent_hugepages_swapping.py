@@ -34,7 +34,7 @@ class ThpSwapping(Test):
     '''
     The test fills out the total avl memory and tries to swap the thp out.
 
-    :avocado: tags=memory,privileged
+    :avocado: tags=memory,privileged,hugepage
     '''
 
     @skipIf(PAGESIZE, "No THP support for kernel with 4K PAGESIZE")
