@@ -31,6 +31,8 @@ IS_POWER_NV = 'POWER9' not in open('/proc/cpuinfo', 'r').read()
 class freq_transitions(Test):
     """
     To validate quad level frequency transitions.
+
+    :avocado: tags=cpu,power,privileged
     """
     @skipIf(IS_POWER_NV, "This test only supported on Power9  platform")
     def setUp(self):

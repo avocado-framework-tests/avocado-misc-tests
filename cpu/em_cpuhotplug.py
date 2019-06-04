@@ -24,6 +24,8 @@ from avocado.utils import process, cpu
 class cpuhotplug_test(Test):
     """
     To test hotplug within core in random manner.
+
+    :avocado: tags=cpu,power
     """
 
     def setUp(self):
