@@ -38,7 +38,7 @@ class Trinity(Test):
         https://github.com/kernelslacker/trinity
         '''
         """
-        Add not root user
+        Adding  non-root user
         """
         if process.system('getent group trinity', ignore_status=True):
             process.run('groupadd trinity', sudo=True)
@@ -79,9 +79,10 @@ class Trinity(Test):
 
         args = self.params.get('runargs', default=' ')
 
-        process.system('su - trinity -c " %s  %s  %s"' %
-                       (os.path.join(self.sourcedir, 'trinity'), args,
-                        '-N 1000000'), shell=True)
+        if process.system('su - trinity -c " %s  %s  %s"' %
+                          (os.path.join(self.sourcedir, 'trinity'), args,
+                           '-N 1000000'), shell=True, ignore_status=True):
+            self.fail("trinity  command line  return as non zero exit code ")
 
         dmesg = process.system_output('dmesg')
 
@@ -95,8 +96,11 @@ class Trinity(Test):
             self.log.info("some call traces seen please check")
 
     def tearDown(self):
+        """
+        removing already added non-root user
+        """
 
-        process.system('userdel -r  trinity', sudo=True)
+        process.system('userdel -r  trinity', sudo=True, ignore_status=True)
 
 
 if __name__ == "__main__":

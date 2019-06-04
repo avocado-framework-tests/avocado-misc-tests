@@ -68,7 +68,8 @@ class Fsfuzzer(Test):
 
         if d_name == "ubuntu":
             # Patch for ubuntu
-            fuzz_fix_patch = 'patch -p1 < %s' % self.get_data('fsfuzz_fix.patch')
+            fuzz_fix_patch = 'patch -p1 < %s' % self.get_data(
+                'fsfuzz_fix.patch')
             if process.system(fuzz_fix_patch, shell=True, ignore_status=True):
                 self.log.warn("Unable to apply sh->bash patch!")
 
@@ -89,8 +90,13 @@ class Fsfuzzer(Test):
         '''
         Runs the fsfuzz test suite. By default uses all supported fstypes,
         but you can specify only one by `fstype` param.
+
+        ##TODO need add valid failure check for test
         '''
-        process.system("%s %s" % (self._fsfuzz, self._args), sudo=True)
+
+        if process.system("%s %s" % (self._fsfuzz, self._args), sudo=True,
+                          ignore_status=True):
+            self.fail("fs_fuzzer command return as non zero exit code ")
 
 
 if __name__ == "__main__":
