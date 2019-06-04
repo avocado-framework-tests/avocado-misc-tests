@@ -1,0 +1,3 @@
+setup:
+    cpu_unit: .1
+    range: 10

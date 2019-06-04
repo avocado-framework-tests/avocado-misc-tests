@@ -55,6 +55,9 @@ class SmtFolding(Test):
         tarball = self.fetch_asset('http://liquidtelecom.dl.sourceforge.net'
                                    '/project/ebizzy/ebizzy/0.3'
                                    '/ebizzy-0.3.tar.gz')
+        self.cpu_unit = self.params.get('cpu_unit', default=.1)
+        self.dlpar_loop = self.params.get('range', default=10)
+
         archive.extract(tarball, self.workdir)
         version = os.path.basename(tarball.split('.tar.')[0])
         self.sourcedir = os.path.join(self.workdir, version)
@@ -95,13 +98,13 @@ class SmtFolding(Test):
         if 'PowerNV' not in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
             if "cpu_dlpar=yes" in process.system_output("drmgr -C", ignore_status=True, shell=True):
                 self.log.info("\nDLPAR remove cpu operation\n")
-                for _ in range(10):
+                for _ in range(self.dlpar_loop):
                     process.run(
-                        "drmgr  -c cpu -r -q .1 -w 5 -d 1", shell=True, ignore_status=True, sudo=True)
+                        "drmgr  -c cpu -r -q %s -w 5 -d 1" % self.cpu_unit, shell=True, ignore_status=True, sudo=True)
                 self.log.info("\nDLPAR add cpu operation\n")
-                for _ in range(10):
+                for _ in range(self.dlpar_loop):
                     process.run(
-                        "drmgr  -c cpu -a -q .1 -w 5 -d 1", shell=True, ignore_status=True, sudo=True)
+                        "drmgr  -c cpu -a -q %s -w 5 -d 1" % self.cpu_unit, shell=True, ignore_status=True, sudo=True)
             else:
                 self.log.info('UNSUPPORTED: dlpar not configured..')
         else:
