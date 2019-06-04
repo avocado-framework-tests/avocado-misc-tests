@@ -55,7 +55,7 @@ class NVMeTest(Test):
         self.id_ns = "%sn%s" % (self.device, self.namespace)
         self.firmware_url = self.params.get('firmware_url', default='')
         if 'firmware_upgrade' in str(self.name) and not self.firmware_url:
-            self.cancel("firmware url not gien")
+            self.cancel("firmware url not given")
 
         cmd = "nvme id-ctrl %s -H" % self.device
         self.id_ctrl = process.system_output(cmd, shell=True)
