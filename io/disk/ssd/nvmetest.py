@@ -50,22 +50,12 @@ class NVMeTest(Test):
         if not smm.check_installed("nvme-cli") and not \
                 smm.install("nvme-cli"):
             self.cancel('nvme-cli is needed for the test to be run')
-        cmd = "nvme list-ns %s" % self.device
-        self.namespace = process.system_output(
-            cmd, shell=True).splitlines()[0].split('x')[-1]
-        if not self.namespace:
-            self.cancel("No namespaces on %s" % self.device)
+        self.format_size = self.get_block_size()
         self.namespace = self.params.get('namespace', default='1')
         self.id_ns = "%sn%s" % (self.device, self.namespace)
-        cmd = "nvme id-ns %s | grep 'in use' | awk '{print $5}' | \
-            awk -F':' '{print $NF}'" % self.id_ns
-        self.format_size = process.system_output(cmd, shell=True).strip('\n')
-        self.format_size = pow(2, int(self.format_size))
-        cmd = "nvme id-ns %s | grep 'in use' | awk '{print $2}'" % self.id_ns
-        self.lba = process.system_output(cmd, shell=True).strip('\n')
         self.firmware_url = self.params.get('firmware_url', default='')
         if 'firmware_upgrade' in str(self.name) and not self.firmware_url:
-            self.cancel("firmware url not gien")
+            self.cancel("firmware url not given")
 
         cmd = "nvme id-ctrl %s -H" % self.device
         self.id_ctrl = process.system_output(cmd, shell=True)
@@ -86,13 +76,22 @@ class NVMeTest(Test):
                 if "%s Supported   (NSSRS): No" % value in regs:
                     self.cancel("%s is not supported" % value)
 
+    def get_id_ctrl_prop(self, prop):
+        """
+        :param prop: property whose value is requested
+
+        Returns the property value from 'nvme id-ctrl' command
+        """
+        for line in self.id_ctrl.splitlines():
+            if line.startswith(prop):
+                return line.split()[-1]
+        return ''
+
     def get_firmware_version(self):
         """
         Returns the firmware verison.
         """
-        cmd = "nvme list | grep %s" % self.device
-        return process.system_output(cmd, shell=True,
-                                     ignore_status=True).split()[-1]
+        return self.get_id_ctrl_prop('fr')
 
     def get_firmware_log(self):
         """
@@ -127,6 +126,130 @@ class NVMeTest(Test):
         cmd = "echo 1 > /sys/class/nvme/%s/reset_controller" \
             % self.device.split("/")[-1]
         return process.system(cmd, shell=True, ignore_status=True)
+
+    def get_max_ns_count(self):
+        """
+        Returns the maximum number of namespaces supported
+        """
+        output = self.get_id_ctrl_prop('nn')
+        if output:
+            return int(output)
+        return 1
+
+    def get_total_capacity(self):
+        """
+        Returns the total capacity of the nvme controller.
+        If not found, return defaults to 0.
+        """
+        output = self.get_id_ctrl_prop('tnvmcap')
+        if output:
+            return int(output)
+        return 0
+
+    def ns_list(self):
+        """
+        Returns the list of namespaces in the nvme controller
+        """
+        cmd = "nvme list-ns %s" % self.device
+        namespaces = []
+        for line in process.system_output(cmd, shell=True,
+                                          ignore_status=True).splitlines():
+            namespaces.append(int(line.split()[1].split(']')[0]) + 1)
+        return namespaces
+
+    def list_ns(self):
+        """
+        Prints the namespaces list command, and does a rescan as part of it
+        """
+        cmd = "nvme ns-rescan %s" % self.device
+        process.system(cmd, shell=True, ignore_status=True)
+        cmd = "nvme list"
+        return process.system_output(cmd, shell=True, ignore_status=True)
+
+    def get_ns_controller(self):
+        """
+        Returns the nvme controller id
+        """
+        cmd = "nvme list-ctrl %s" % self.device
+        output = process.system_output(cmd, shell=True, ignore_status=True)
+        if output:
+            return output.split(':')[-1]
+        return ""
+
+    def get_lba(self):
+        """
+        Returns LBA of the namespace.
+        If not found, return defaults to 0.
+        """
+        namespace = self.ns_list()
+        if namespace:
+            namespace = namespace[0]
+            cmd = "nvme id-ns %sn%s" % (self.device, namespace)
+            for line in process.system_output(cmd, shell=True,
+                                              ignore_status=True).splitlines():
+                if 'in use' in line:
+                    return int(line.split()[1])
+        return '0'
+
+    def get_block_size(self):
+        """
+        Returns the block size of the namespace.
+        If not found, return defaults to 4k.
+        """
+        namespace = self.ns_list()
+        if namespace:
+            namespace = namespace[0]
+            cmd = "nvme id-ns %sn%s" % (self.device, namespace)
+            for line in process.system_output(cmd, shell=True,
+                                              ignore_status=True).splitlines():
+                if 'in use' in line:
+                    return pow(2, int(line.split()[4].split(':')[-1]))
+        return 4096
+
+    def delete_all_ns(self):
+        """
+        Deletes all namespaces in the controller
+        """
+        for namespace in self.ns_list():
+            self.delete_ns(namespace)
+
+    def delete_ns(self, namespace):
+        """
+        :param ns: namespace id to be deleted
+
+        Deletes the specified namespace on the controller
+        """
+        cmd = "nvme delete-ns %s -n %s" % (self.device, namespace)
+        process.system(cmd, shell=True, ignore_status=True)
+
+    def create_full_capacity_ns(self):
+        """
+        Creates one namespace with full capacity
+        """
+        max_ns_blocks = self.get_total_capacity() / self.get_block_size()
+        self.create_one_ns('1', max_ns_blocks, self.get_ns_controller())
+
+    def create_max_ns(self):
+        """
+        Creates maximum number of namespaces, with equal capacity
+        """
+        max_ns_blocks = self.get_total_capacity() / self.get_block_size()
+        max_ns_blocks_considered = 60 * max_ns_blocks / 100
+        per_ns_blocks = max_ns_blocks_considered / self.get_max_ns_count()
+        ns_controller = self.get_ns_controller()
+        for ns_id in range(1, self.get_max_ns_count() + 1):
+            self.create_one_ns(str(ns_id), per_ns_blocks, ns_controller)
+
+    def create_one_ns(self, ns_id, blocksize, controller):
+        """
+        Creates one namespace, with the specified id, block size, controller
+        """
+        cmd = "nvme create-ns %s --nsze=%s --ncap=%s --flbas=0 -dps=0" % (
+            self.device, blocksize, blocksize)
+        process.system(cmd, shell=True, ignore_status=True)
+        cmd = "nvme attach-ns %s --namespace-id=%s -controllers=%s" % (
+            self.device, ns_id, controller)
+        process.system(cmd, shell=True, ignore_status=True)
 
     def test_firmware_upgrade(self):
         """
@@ -168,11 +291,27 @@ class NVMeTest(Test):
         if fw_version != self.get_firmware_version():
             self.fail("New Firmware not reflecting after updating")
 
+    def test_create_max_ns(self):
+        """
+        Test to create maximum number of namespaces
+        """
+        self.delete_all_ns()
+        self.create_max_ns()
+        self.list_ns()
+
+    def test_create_full_capacity_ns(self):
+        """
+        Test to create namespace with full capacity
+        """
+        self.delete_all_ns()
+        self.create_full_capacity_ns()
+        self.list_ns()
+
     def testformatnamespace(self):
         """
         Formats the namespace on the device.
         """
-        cmd = 'nvme format %s -l %s' % (self.id_ns, self.lba)
+        cmd = 'nvme format %s -l %s' % (self.id_ns, self.get_lba())
         process.run(cmd, shell=True)
 
     def testread(self):
