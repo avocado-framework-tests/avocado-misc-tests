@@ -95,16 +95,21 @@ class SmtFolding(Test):
 
     def dlpar_cpu_hotplug(self):
 
-        if 'PowerNV' not in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
-            if "cpu_dlpar=yes" in process.system_output("drmgr -C", ignore_status=True, shell=True):
+        if 'PowerNV' not in \
+                genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
+            if "cpu_dlpar=yes" in process.system_output("drmgr -C",
+                                                        ignore_status=True,
+                                                        shell=True):
                 self.log.info("\nDLPAR remove cpu operation\n")
                 for _ in range(self.dlpar_loop):
                     process.run(
-                        "drmgr  -c cpu -r -q %s -w 5 -d 1" % self.cpu_unit, shell=True, ignore_status=True, sudo=True)
+                        "drmgr  -c cpu -r -q %s -w 5 -d 1" % self.cpu_unit,
+                        shell=True, ignore_status=True, sudo=True)
                 self.log.info("\nDLPAR add cpu operation\n")
                 for _ in range(self.dlpar_loop):
                     process.run(
-                        "drmgr  -c cpu -a -q %s -w 5 -d 1" % self.cpu_unit, shell=True, ignore_status=True, sudo=True)
+                        "drmgr  -c cpu -a -q %s -w 5 -d 1" % self.cpu_unit,
+                        shell=True, ignore_status=True, sudo=True)
             else:
                 self.log.info('UNSUPPORTED: dlpar not configured..')
         else:
