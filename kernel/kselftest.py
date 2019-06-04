@@ -46,7 +46,7 @@ class kselftest(Test):
         """
         smg = SoftwareManager()
         self.comp = self.params.get('comp', default='')
-        run_type = self.params.get('type', default='upstream')
+        self.run_type = self.params.get('type', default='upstream')
         if self.comp:
             self.comp = '-C %s' % self.comp
         detected_distro = distro.detect()
@@ -70,7 +70,7 @@ class kselftest(Test):
                 self.cancel(
                     "Fail to install %s required for this test." % (package))
 
-        if run_type == 'upstream':
+        if self.run_type == 'upstream':
             location = ["https://github.com/torvalds/linux/archive/master.zip"]
             tarball = self.fetch_asset("kselftest.zip", locations=location,
                                        expire='1d')
@@ -112,12 +112,18 @@ class kselftest(Test):
         error = False
         build.make(self.sourcedir, extra_args='%s run_tests' % self.comp)
         for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
-            match = re.search(r'selftests:(.*)\[FAIL\]', line)
-            if match:
-                error = True
-                self.log.info("Testcase failed. Log from debug: %s" %
-                              match.group(0))
-
+            if self.run_type == 'upstream':
+                match = re.search(r'not ok (.*) selftests:(.*)', line)
+                if match:
+                    error = True
+                    self.log.info("Testcase failed. Log from debug: %s" %
+                                  match.group(0))
+            elif self.run_type == 'distro':
+                match = re.search(r'selftests:(.*)\[FAIL\]', line)
+                if match:
+                    error = True
+                    self.log.info("Testcase failed. Log from debug: %s" %
+                                  match.group(0))
         if error:
             self.fail("Testcase failed during selftests")
 
