@@ -79,9 +79,10 @@ class Trinity(Test):
 
         args = self.params.get('runargs', default=' ')
 
-        process.system('su - trinity -c " %s  %s  %s"' %
-                       (os.path.join(self.sourcedir, 'trinity'), args,
-                        '-N 1000000'), shell=True, ignore_status=True)
+        if process.system('su - trinity -c " %s  %s  %s"' %
+                          (os.path.join(self.sourcedir, 'trinity'), args,
+                           '-N 1000000'), shell=True, ignore_status=True):
+            self.fail("trinity  command line  return as non zero exit code ")
 
         dmesg = process.system_output('dmesg')
 
