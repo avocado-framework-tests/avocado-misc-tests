@@ -68,6 +68,7 @@ class FsFuzz(Test):
 
         if process.system('./fd_fuzz 1', shell=True, ignore_status=True) != 0:
             self.fail("stress test for  file I/O layer failed")
+        self.verify_dmesg()
 
     def test_file(self):
         os.chdir(self.build_dir)
