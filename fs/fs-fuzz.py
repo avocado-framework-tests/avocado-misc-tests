@@ -27,7 +27,7 @@ from avocado.utils.software_manager import SoftwareManager
 class FsFuzz(Test):
 
     """
-    fs-fuzz : Two simple fuzzers, one for  filesystem operations
+    fs-fuzz : Two simple fuzzers, both for  filesystem operations
     """
 
     def clear_dmesg(self):
@@ -43,7 +43,7 @@ class FsFuzz(Test):
 
     def setUp(self):
         '''
-        Build FileBench
+        Build fs-fuzz
         Source:
         https://github.com/regehr/fs-fuzz
         '''
@@ -73,7 +73,8 @@ class FsFuzz(Test):
     def test_file(self):
         os.chdir(self.build_dir)
 
-        if process.system('./file_fuzz 1', shell=True, ignore_status=True) != 0:
+        if process.system('./file_fuzz 1', shell=True,
+                          ignore_status=True) != 0:
             self.fail("stress test for the C streams layer failed")
         self.verify_dmesg()
 
