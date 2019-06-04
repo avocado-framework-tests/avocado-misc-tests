@@ -21,7 +21,7 @@
 
 from avocado import Test
 from avocado import main
-from avocado.utils import build
+from avocado.utils import build, distro
 from avocado.utils import process, archive
 import os
 import re
@@ -40,7 +40,16 @@ class ltp(Test):
 
     def setUp(self):
         sm = SoftwareManager()
+        dist = distro.detect()
+
         deps = ['gcc', 'make', 'automake', 'autoconf']
+        if dist.name == "Ubuntu":
+            deps.extend(['libnuma-dev'])
+        elif dist.name in ["centos", "rhel", "fedora"]:
+            deps.extend(['numactl-devel'])
+        elif dist.name == "SuSE":
+            deps.extend(['libnuma-devel'])
+
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
