@@ -1,0 +1,3 @@
+setup:
+ memory_size: 1 # in GB
+ induce_err: 1
