@@ -40,6 +40,13 @@ class kselftest(Test):
 
     testdir = 'tools/testing/selftests'
 
+    def find_match(self, match_str, line):
+        match = re.search(match_str, line)
+        if match:
+            self.error = True
+            self.log.info("Testcase failed. Log from debug: %s" %
+                          match.group(0))
+
     def setUp(self):
         """
         Resolve the packages dependencies and download the source.
@@ -109,22 +116,15 @@ class kselftest(Test):
         """
         Execute the kernel selftest
         """
-        error = False
+        self.error = False
         build.make(self.sourcedir, extra_args='%s run_tests' % self.comp)
         for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
             if self.run_type == 'upstream':
-                match = re.search(r'not ok (.*) selftests:(.*)', line)
-                if match:
-                    error = True
-                    self.log.info("Testcase failed. Log from debug: %s" %
-                                  match.group(0))
+                self.find_match(r'not ok (.*) selftests:(.*)', line)
             elif self.run_type == 'distro':
-                match = re.search(r'selftests:(.*)\[FAIL\]', line)
-                if match:
-                    error = True
-                    self.log.info("Testcase failed. Log from debug: %s" %
-                                  match.group(0))
-        if error:
+                self.find_match(r'selftests:(.*)\[FAIL\]', line)
+
+        if self.error:
             self.fail("Testcase failed during selftests")
 
 
