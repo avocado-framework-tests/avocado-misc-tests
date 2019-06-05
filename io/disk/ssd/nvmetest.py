@@ -289,7 +289,7 @@ class NVMeTest(Test):
         # Getting the current FW details after updating
         self.get_firmware_log()
         if fw_version != self.get_firmware_version():
-            self.fail("New Firmware not reflecting after updating")
+            self.log.warn("New Firmware not reflecting after updating")
 
     def test_create_max_ns(self):
         """
