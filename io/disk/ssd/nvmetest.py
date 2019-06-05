@@ -265,26 +265,36 @@ class NVMeTest(Test):
         self.get_firmware_log()
 
         # Activating new FW
-        for i in range(1, self.get_firmware_slots() + 1):
-            if not self.firmware_slot_write_supported(i):
+        passed_commits = []
+        failed = False
+        d_cmd = "nvme fw-download %s --fw=%s" % (self.device, fw_file_path)
+        for slot in range(1, self.get_firmware_slots() + 1):
+            if not self.firmware_slot_write_supported(slot):
                 continue
-            # Downloading new FW to the device for each slot
-            d_cmd = "nvme fw-download %s --fw=%s" % (self.device, fw_file_path)
-            if process.system(d_cmd, shell=True, ignore_status=True):
-                self.fail("Failed to download firmware to the device")
-            cmd = "nvme fw-commit %s -a 0 -s %d" % (self.device, i)
-            if process.system(cmd, shell=True, ignore_status=True):
-                self.fail("Failed to write firmware on slot %d" % i)
-            if i == self.get_firmware_slots():
-                # Downloading new FW to the device for each action
+            passed_actions = []
+            for action in range(0, 4):
+                # Downloading new FW to the device for each slot
                 if process.system(d_cmd, shell=True, ignore_status=True):
-                    self.fail("Failed to download firmware to the device")
-                cmd = "nvme fw-commit %s -a 3 -s %d" % (self.device, i)
+                    continue
+                cmd = "nvme fw-commit %s -s %d -a %d" % (self.device, slot,
+                                                         action)
                 if process.system(cmd, shell=True, ignore_status=True):
-                    self.fail("Failed to activate firmware on slot %d" % i)
+                    failed = True
+                else:
+                    passed_actions.append(action)
+            passed_commits.append(passed_actions)
 
-        if self.reset_controller_sysfs():
-            self.fail("Controller reset after FW update failed")
+        # Reset device if not already taken care
+        reset_needed = False
+        for commit in passed_commits:
+            if 3 not in commit:
+                reset_needed = True
+        if reset_needed:
+            if self.reset_controller_sysfs():
+                self.fail("Controller reset after FW update failed")
+        if failed:
+            self.log.debug(passed_commits)
+            self.fail("Passed only for the above slot actions")
 
         # Getting the current FW details after updating
         self.get_firmware_log()
