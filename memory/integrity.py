@@ -17,10 +17,11 @@
 
 
 import os
+import shutil
 
 from avocado import Test
 from avocado import main
-from avocado.utils import process, archive, build
+from avocado.utils import process, build
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import distro
 
@@ -31,6 +32,10 @@ class Integrity(Test):
 
     :avocado: tags=memory,privileged,migration
     """
+
+    def copyutil(self, file_name):
+        shutil.copyfile(self.get_data(file_name),
+                        os.path.join(self.teststmpdir, file_name))
 
     def setUp(self):
         '''
@@ -54,15 +59,16 @@ class Integrity(Test):
             if not smm.check_installed(packages) and not smm.install(packages):
                 self.cancel('%s is needed for the test to be run' % packages)
 
-        archive.extract(self.get_data("Integritytests.tar"), self.workdir)
-        self.build_dir = os.path.join(self.workdir, 'Integritytests')
-        build.make(self.build_dir)
+        for file_name in ['mem_integrity_test.c', 'Makefile']:
+            self.copyutil(file_name)
+
+        build.make(self.teststmpdir)
 
     def test(self):
         '''
         Execute Integrity tests
         '''
-        os.chdir(self.build_dir)
+        os.chdir(self.teststmpdir)
         status = process.system('./mem_integrity_test -s %s' %
                                 self.scenario_arg, shell=True, ignore_status=True)
         if status != 0:
