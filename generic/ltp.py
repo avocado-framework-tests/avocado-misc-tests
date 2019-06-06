@@ -70,7 +70,7 @@ class ltp(Test):
         logfile = os.path.join(self.logdir, 'ltp.log')
         failcmdfile = os.path.join(self.logdir, 'failcmdfile')
 
-        args += (" -q -p -l %s -C %s -d %s -S %s"
+        args += (" -q -p -l %s -C %s -d %s -S %s -M 3"
                  % (logfile, failcmdfile, self.workdir,
                     self.get_data('skipfile')))
         ltpbin_dir = os.path.join(self.workdir, "ltp-master", 'bin')
