@@ -1,0 +1,28 @@
+Test Usage:
+
+./mem_integrity_test -s <scenario_number>
+
+The test basically contains 3 test scenario's:
+
+Scanerio 1:
+The test maps 80% of memory and writes a pattern into it and verifies whether the same 
+pattern is read again. It also verifies whether all pages faulted and has pfn or not.
+
+
+Scenario 2:
+It determines two nodes which contains atleast 10% of total memory and allocate
+pages in node1 and writes pattern into it. Then, the pages are moved to node2,
+pattern is read and verified from node2. It also verifies whether all pages 
+are faulted in the corresponding node requested else test is failed.
+
+The test fails if numa suport is not there or if two nodes does not contains 
+at least 10% of total system memory.
+
+Scenario 3:
+The test maps 10% of memory and writes a pattern into it and it does soft offline of 
+that memory.Read from the same address again which is expected to be faulted from
+some other portion of memory.
+
+Note that the percentage of memory soft-offlined is considered as bad area and taken out 
+of normal memory management. System must be rebooted to make use of full memory of the 
+system again.
