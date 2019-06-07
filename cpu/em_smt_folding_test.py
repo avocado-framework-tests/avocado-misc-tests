@@ -31,6 +31,8 @@ class SmtFolding(Test):
     Throughput test for SMT folding in presence of swizzle.
     TODO :  add logic to  Revert back  value smt and cpu  state
             as it was before test.
+
+    :avocado: tags=cpu,power,privileged
     """
 
     def setUp(self):

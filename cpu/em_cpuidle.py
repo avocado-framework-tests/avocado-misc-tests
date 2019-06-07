@@ -33,6 +33,8 @@ class cpuidle(Test):
         """
         Verify it is baremetal
         Install the cpupower tool
+
+        :avocado: tags=cpu,power
         """
         if not os.path.exists('/proc/device-tree/ibm,opal/power-mgt'):
             self.cancel("Supported only on Power Non Virutalized environment")

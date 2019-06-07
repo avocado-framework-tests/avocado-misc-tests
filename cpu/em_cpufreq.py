@@ -25,6 +25,8 @@ from avocado.utils.software_manager import SoftwareManager
 class Cpufreq(Test):
     """
     Test to validate the frequency transition.
+
+    :avocado: tags=cpu,power
     """
 
     def setUp(self):
