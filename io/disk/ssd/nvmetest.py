@@ -24,6 +24,8 @@ import os
 from avocado import Test
 from avocado import main
 from avocado.utils import process
+from avocado.utils import archive
+from avocado.utils import build
 from avocado.utils import download
 from avocado.utils.software_manager import SoftwareManager
 
@@ -46,10 +48,24 @@ class NVMeTest(Test):
         cmd = 'ls %s' % self.device
         if process.system(cmd, ignore_status=True) is not 0:
             self.cancel("%s does not exist" % self.device)
-        smm = SoftwareManager()
-        if not smm.check_installed("nvme-cli") and not \
-                smm.install("nvme-cli"):
-            self.cancel('nvme-cli is needed for the test to be run')
+
+        self.package = self.params.get('package', default='distro')
+        if self.package == 'upstream':
+            locations = ["https://github.com/linux-nvme/nvme-cli/archive/"
+                         "master.zip"]
+            tarball = self.fetch_asset("nvme-cli.zip", locations=locations,
+                                       expire='15d')
+            archive.extract(tarball, self.teststmpdir)
+            os.chdir("%s/nvme-cli-master" % self.teststmpdir)
+            process.system("./NVME-VERSION-GEN", ignore_status=True)
+            build.make(".")
+            self.binary = './nvme'
+        else:
+            smm = SoftwareManager()
+            if not smm.check_installed("nvme-cli") and not \
+                    smm.install("nvme-cli"):
+                self.cancel('nvme-cli is needed for the test to be run')
+            self.binary = 'nvme'
         self.format_size = self.get_block_size()
         self.namespace = self.params.get('namespace', default='1')
         self.id_ns = "%sn%s" % (self.device, self.namespace)
@@ -57,9 +73,9 @@ class NVMeTest(Test):
         if 'firmware_upgrade' in str(self.name) and not self.firmware_url:
             self.cancel("firmware url not given")
 
-        cmd = "nvme id-ctrl %s -H" % self.device
+        cmd = "%s id-ctrl %s -H" % (self.binary, self.device)
         self.id_ctrl = process.system_output(cmd, shell=True)
-        cmd = "nvme show-regs %s -H" % self.device
+        cmd = "%s show-regs %s -H" % (self.binary, self.device)
         regs = process.system_output(cmd, shell=True)
 
         test_dic = {'compare': 'Compare', 'formatnamespace': 'Format NVM',
@@ -79,7 +95,6 @@ class NVMeTest(Test):
     def get_id_ctrl_prop(self, prop):
         """
         :param prop: property whose value is requested
-
         Returns the property value from 'nvme id-ctrl' command
         """
         for line in self.id_ctrl.splitlines():
@@ -97,7 +112,7 @@ class NVMeTest(Test):
         """
         Returns the firmware log.
         """
-        cmd = "nvme fw-log %s" % self.device
+        cmd = "%s fw-log %s" % (self.binary, self.device)
         process.system(cmd, shell=True, ignore_status=True)
 
     def get_firmware_slots(self):
@@ -150,7 +165,7 @@ class NVMeTest(Test):
         """
         Returns the list of namespaces in the nvme controller
         """
-        cmd = "nvme list-ns %s" % self.device
+        cmd = "%s list-ns %s" % (self.binary, self.device)
         namespaces = []
         for line in process.system_output(cmd, shell=True,
                                           ignore_status=True).splitlines():
@@ -161,16 +176,16 @@ class NVMeTest(Test):
         """
         Prints the namespaces list command, and does a rescan as part of it
         """
-        cmd = "nvme ns-rescan %s" % self.device
+        cmd = "%s ns-rescan %s" % (self.binary, self.device)
         process.system(cmd, shell=True, ignore_status=True)
-        cmd = "nvme list"
+        cmd = "%s list" % self.binary
         return process.system_output(cmd, shell=True, ignore_status=True)
 
     def get_ns_controller(self):
         """
         Returns the nvme controller id
         """
-        cmd = "nvme list-ctrl %s" % self.device
+        cmd = "%s list-ctrl %s" % (self.binary, self.device)
         output = process.system_output(cmd, shell=True, ignore_status=True)
         if output:
             return output.split(':')[-1]
@@ -184,7 +199,7 @@ class NVMeTest(Test):
         namespace = self.ns_list()
         if namespace:
             namespace = namespace[0]
-            cmd = "nvme id-ns %sn%s" % (self.device, namespace)
+            cmd = "%s id-ns %sn%s" % (self.binary, self.device, namespace)
             for line in process.system_output(cmd, shell=True,
                                               ignore_status=True).splitlines():
                 if 'in use' in line:
@@ -199,7 +214,7 @@ class NVMeTest(Test):
         namespace = self.ns_list()
         if namespace:
             namespace = namespace[0]
-            cmd = "nvme id-ns %sn%s" % (self.device, namespace)
+            cmd = "%s id-ns %sn%s" % (self.binary, self.device, namespace)
             for line in process.system_output(cmd, shell=True,
                                               ignore_status=True).splitlines():
                 if 'in use' in line:
@@ -216,10 +231,9 @@ class NVMeTest(Test):
     def delete_ns(self, namespace):
         """
         :param ns: namespace id to be deleted
-
         Deletes the specified namespace on the controller
         """
-        cmd = "nvme delete-ns %s -n %s" % (self.device, namespace)
+        cmd = "%s delete-ns %s -n %s" % (self.binary, self.device, namespace)
         process.system(cmd, shell=True, ignore_status=True)
 
     def create_full_capacity_ns(self):
@@ -244,11 +258,11 @@ class NVMeTest(Test):
         """
         Creates one namespace, with the specified id, block size, controller
         """
-        cmd = "nvme create-ns %s --nsze=%s --ncap=%s --flbas=0 -dps=0" % (
-            self.device, blocksize, blocksize)
+        cmd = "%s create-ns %s --nsze=%s --ncap=%s --flbas=0 -dps=0" % (
+            self.binary, self.device, blocksize, blocksize)
         process.system(cmd, shell=True, ignore_status=True)
-        cmd = "nvme attach-ns %s --namespace-id=%s -controllers=%s" % (
-            self.device, ns_id, controller)
+        cmd = "%s attach-ns %s --namespace-id=%s -controllers=%s" % (
+            self.binary, self.device, ns_id, controller)
         process.system(cmd, shell=True, ignore_status=True)
 
     def test_firmware_upgrade(self):
@@ -267,7 +281,8 @@ class NVMeTest(Test):
         # Activating new FW
         passed_commits = []
         failed = False
-        d_cmd = "nvme fw-download %s --fw=%s" % (self.device, fw_file_path)
+        d_cmd = "%s fw-download %s --fw=%s" % (self.binary, self.device,
+                                               fw_file_path)
         for slot in range(1, self.get_firmware_slots() + 1):
             if not self.firmware_slot_write_supported(slot):
                 continue
@@ -276,8 +291,9 @@ class NVMeTest(Test):
                 # Downloading new FW to the device for each slot
                 if process.system(d_cmd, shell=True, ignore_status=True):
                     continue
-                cmd = "nvme fw-commit %s -s %d -a %d" % (self.device, slot,
-                                                         action)
+                cmd = "%s fw-commit %s -s %d -a %d" % (self.binary,
+                                                       self.device, slot,
+                                                       action)
                 if process.system(cmd, shell=True, ignore_status=True):
                     failed = True
                 else:
@@ -321,14 +337,15 @@ class NVMeTest(Test):
         """
         Formats the namespace on the device.
         """
-        cmd = 'nvme format %s -l %s' % (self.id_ns, self.get_lba())
+        cmd = '%s format %s -l %s' % (self.binary, self.id_ns, self.get_lba())
         process.run(cmd, shell=True)
 
     def testread(self):
         """
         Reads from the namespace on the device.
         """
-        cmd = 'nvme read %s -z %d -t' % (self.id_ns, self.format_size)
+        cmd = '%s read %s -z %d -t' % (self.binary, self.id_ns,
+                                       self.format_size)
         if process.system(cmd, timeout=300, ignore_status=True, shell=True):
             self.fail("Read failed")
 
@@ -336,7 +353,8 @@ class NVMeTest(Test):
         """
         Write to the namespace on the device.
         """
-        cmd = 'echo 1|nvme write %s -z %d -t' % (self.id_ns, self.format_size)
+        cmd = 'echo 1|%s write %s -z %d -t' % (self.binary, self.id_ns,
+                                               self.format_size)
         if process.system(cmd, timeout=300, ignore_status=True, shell=True):
             self.fail("Write failed")
 
@@ -345,7 +363,8 @@ class NVMeTest(Test):
         Compares data written on the device with given data.
         """
         self.testwrite()
-        cmd = 'echo 1|nvme compare %s -z %d' % (self.id_ns, self.format_size)
+        cmd = 'echo 1|%s compare %s -z %d' % (self.binary, self.id_ns,
+                                              self.format_size)
         if process.system(cmd, timeout=300, ignore_status=True, shell=True):
             self.fail("Compare failed")
 
@@ -353,7 +372,7 @@ class NVMeTest(Test):
         """
         flush data on controller.
         """
-        cmd = 'nvme flush %s' % self.id_ns
+        cmd = '%s flush %s' % (self.binary, self.id_ns)
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Flush failed")
 
@@ -361,7 +380,7 @@ class NVMeTest(Test):
         """
         Write zeroes command to the device.
         """
-        cmd = 'nvme write-zeroes %s' % self.id_ns
+        cmd = '%s write-zeroes %s' % (self.binary, self.id_ns)
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Writing Zeroes failed")
 
@@ -369,7 +388,7 @@ class NVMeTest(Test):
         """
         Write uncorrectable command to the device.
         """
-        cmd = 'nvme write-uncor %s' % self.id_ns
+        cmd = '%s write-uncor %s' % (self.binary, self.id_ns)
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Writing Uncorrectable failed")
 
@@ -377,7 +396,8 @@ class NVMeTest(Test):
         """
         The Dataset Management command test.
         """
-        cmd = 'nvme dsm %s -a 1 -b 1 -s 1 -d -w -r' % self.id_ns
+        cmd = '%s dsm %s -a 1 -b 1 -s 1 -d -w -r' % (self.binary,
+                                                     self.id_ns)
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Subsystem reset failed")
 
@@ -385,7 +405,7 @@ class NVMeTest(Test):
         """
         resets the controller.
         """
-        cmd = 'nvme reset %s' % self.device
+        cmd = '%s reset %s' % (self.binary, self.device)
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Reset failed")
 
@@ -400,7 +420,7 @@ class NVMeTest(Test):
         """
         resets the controller subsystem.
         """
-        cmd = 'nvme subsystem-reset %s' % self.device
+        cmd = '%s subsystem-reset %s' % (self.binary, self.device)
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Subsystem reset failed")
 
