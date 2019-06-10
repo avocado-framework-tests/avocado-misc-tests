@@ -1,4 +1,5 @@
 NVM-Express user space tooling for Linux, which handles NVMe devices.
+The test suite can run for both distro nvme-cli and upstream nvme-cli.
 
 This Suite creates namespace, and performs the following tests:
 * firmware upgrade

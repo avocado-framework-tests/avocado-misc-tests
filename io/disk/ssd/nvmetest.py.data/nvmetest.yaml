@@ -1,3 +1,8 @@
+package: !mux
+    upstream-nvme-cli:
+        package: upstream
+    distro-nvme-cli:
+        package: distro
 Devices: !mux
     device1:
         device: nvme0
