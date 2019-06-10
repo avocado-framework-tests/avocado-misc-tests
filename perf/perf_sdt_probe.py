@@ -12,9 +12,12 @@
 #
 # Copyright: 2018 IBM.
 # Author: Kamalesh Babulal <kamalesh@linux.vnet.ibm.com>
+# Modified And tested : Praveen K Pandey <praveen@linux.vnet.ibm.com>
 
 import os
 import platform
+import re
+
 from avocado import Test
 from avocado import main
 from avocado.utils import distro
@@ -30,27 +33,36 @@ class PerfSDT(Test):
     """
 
     def run_cmd(self, cmd):
-        self.log.info("executing ============== %s =================", cmd)
         if process.system(cmd, ignore_status=True, sudo=True, shell=True):
             self.is_fail += 1
         return
 
     @staticmethod
     def run_cmd_out(cmd):
-        return process.system_output(cmd, shell=True, ignore_status=True,
-                                     sudo=True)
+        return process.system_output(cmd, shell=True,
+                                     ignore_status=True, sudo=True)
 
     def add_library(self):
         """
         Find the libpthread path, it differs for distros
         example:
-        libpthread.so.0 (libc6,64bit, OS ABI: Linux 3.10.0) => /lib/powerpc64le-linux-gnu/libpthread.so.0
+        libpthread.so.0 (libc6,64bit, OS ABI: Linux 3.10.0) =>
+            /lib/powerpc64le-linux-gnu/libpthread.so.0
         """
-        self.libpthread = self.run_cmd_out("ldconfig -p|grep -i libpthread|grep 64").split(" ")[7]
+        self.libpthread = self.run_cmd_out("ldconfig -p")
+
+        for line in str(self.libpthread).splitlines():
+            if re.search('libpthread', line, re.IGNORECASE):
+                if '64' in line:
+                    self.libpthread = line.split(" ")[7]
+
         if not self.libpthread:
             self.fail("Library %s not found", self.libpthread)
-
-        val = self.run_cmd_out("perf list | grep SDT|wc -l")
+        val = 0
+        result = self.run_cmd_out("perf list")
+        for line in str(result).splitlines():
+            if 'SDT' in line:
+                val = val + 1
         # Add the libpthread.so.0 to perf
         perf_add = "perf buildid-cache -v --add %s" % self.libpthread
         self.is_fail = 0
@@ -59,7 +71,12 @@ class PerfSDT(Test):
             self.fail("Unable to add %s to builid-cache", self.libpthread)
 
         # Check if libpthread has valid SDT markers
-        new_val = self.run_cmd_out("perf list | grep SDT|wc -l")
+        new_val = 0
+        result = self.run_cmd_out("perf list")
+        for line in str(result).splitlines():
+            if 'SDT' in line:
+                new_val = new_val + 1
+
         if val == new_val:
             self.fail("No SDT markers available in the %s", self.libpthread)
 
@@ -79,7 +96,6 @@ class PerfSDT(Test):
         self.is_fail = 0
         self.run_cmd(enable_sdt_probe)
         if self.is_fail:
-            self.remove_library()
             self.fail("Unable to probe SDT marker event %s", self.sdt_marker)
 
     def disable_sdt_marker_probe(self):
@@ -87,8 +103,8 @@ class PerfSDT(Test):
         self.is_fail = 0
         self.run_cmd(disable_sdt_probe)
         if self.is_fail:
-            self.remove_library()
-            self.fail("Unable to remove SDT marker event probe %s", self.sdt_marker)
+            self.fail("Unable to remove SDT marker event probe %s",
+                      self.sdt_marker)
 
     def record_sdt_marker_probe(self):
         record_sdt_probe = "perf record -e %s -aR sleep 1" % self.sdt_marker
@@ -96,8 +112,8 @@ class PerfSDT(Test):
         self.run_cmd(record_sdt_probe)
         if self.is_fail or not os.path.exists("perf.data"):
             self.disable_sdt_marker_probe()
-            self.remove_library()
-            self.fail("Perf record of SDT marker event %s failed", self.sdt_marker)
+            self.fail("Perf record of SDT marker event %s failed",
+                      self.sdt_marker)
 
     def setUp(self):
         """
@@ -105,12 +121,12 @@ class PerfSDT(Test):
         """
         smg = SoftwareManager()
         detected_distro = distro.detect()
-        if 'ppc' not in process.system_output("uname -p", ignore_status=True):
-            self.cancel("Processor is not ppc64")
+        if 'ppc' not in distro.detect().arch:
+            self.cancel("Test supportd only on  ppc64 arch")
         deps = ['gcc', 'make']
         if 'Ubuntu' in detected_distro.name:
             deps.extend(['libc-dev', 'libc-bin', 'linux-tools-common',
-                        'linux-tools-%s' % platform.uname()[2]])
+                         'linux-tools-%s' % platform.uname()[2]])
         elif detected_distro.name in ['rhel', 'SuSE', 'fedora', 'centos']:
             deps.extend(['perf', 'glibc', 'glibc-devel'])
         else:
@@ -123,7 +139,11 @@ class PerfSDT(Test):
     def test(self):
         self.add_library()
         self.enable_sdt_marker_probe()
+        self.record_sdt_marker_probe()
         self.disable_sdt_marker_probe()
+
+    def tearDown(self):
+        'cleanup'
         self.remove_library()
 
 
