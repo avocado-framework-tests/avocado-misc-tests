@@ -38,7 +38,6 @@ class HtxTest(Test):
     :see:https://github.com/open-power/HTX.git
     :param mdt_file: mdt file used to trigger HTX
     :params time_limit: how much time(hours) you want to run this stress.
-    :smt_change : if user want to change smt value as well while running test
     """
 
     def setUp(self):
