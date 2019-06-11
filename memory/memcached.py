@@ -44,14 +44,14 @@ class Memcached(Test):
         smm = SoftwareManager()
         detected_distro = distro.detect()
 
-        if detected_distro.name not in ['Ubuntu', 'rhel', 'SuSE']:
+        if detected_distro.name not in ['Ubuntu', 'rhel', 'SuSE', 'fedora']:
             self.cancel('Test Not applicable')
 
         if detected_distro.name == "Ubuntu":
             deps = ['memcached', 'libmemcached-tools']
             stress_tool = 'memcslap'
 
-        if detected_distro.name in ["rhel", "SuSE"]:
+        if detected_distro.name in ["rhel", "SuSE", "fedora"]:
             deps = ['memcached', 'libmemcached']
             stress_tool = 'memslap'
 
