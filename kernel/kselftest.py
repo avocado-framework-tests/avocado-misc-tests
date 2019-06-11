@@ -64,7 +64,7 @@ class kselftest(Test):
                          'libpopt-dev', 'libcap-ng0', 'libcap-ng-dev',
                          'libnuma-dev', 'libfuse-dev', 'elfutils', 'libelf1'])
         elif 'SuSE' in detected_distro.name:
-            deps.extend(['popt', 'glibc', 'glibc-devel', 'popt-devel', 'sudo',
+            deps.extend(['glibc', 'glibc-devel', 'popt-devel', 'sudo',
                          'libcap2', 'libcap-devel', 'libcap-ng-devel',
                          'fuse', 'fuse-devel', 'glibc-devel-static'])
         elif detected_distro.name in ['centos', 'fedora', 'rhel']:
