@@ -1,0 +1,24 @@
+setup:
+    time_limit: 5 # in minutes
+    mdt: !mux
+        inter_node:
+            mdt_file: 'mdt.mem_inter_node'
+        tlbie:
+            mdt_file: 'mdt.mem_tlbie'
+        cache_hit:
+            mdt_file: 'mdt.mem.max_cache_hit'
+        cache_miss:
+            mdt_file: 'mdt.mem.max_cache_miss'
+        prefetch:
+            mdt_file: 'mdt.mem.hw_prefetch'
+        reload:
+            mdt_file: 'mdt.mem.dl1_reloads_from_caches'
+        io:
+            mdt_file: 'mdt.mem.io'
+        nest:
+            mdt_file: 'mdt.mem_nest'
+        nest_io:
+            mdt_file: 'mdt.mem_nest_inter_io'
+        mem_all:
+            time_limit: 120
+            mdt_file: 'mdt.mem'
