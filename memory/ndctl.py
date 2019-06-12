@@ -89,6 +89,65 @@ class NdctlTest(Test):
                           shell=True, ignore_status=True):
             self.fail("Failed to enable %s region(s)" % name)
 
+    def disable_namespace(self, namespace='all', region='', bus='',
+                          force=False):
+        """
+        Disable namepsaces
+        """
+        args = namespace
+        if region:
+            args = '%s -r %s' % (args, region)
+        if bus:
+            args = '%s -b %s' % (args, bus)
+        if force:
+            args = '%s -f' % args
+
+        if process.system('%s disable-namespace %s' % (self.binary, args),
+                          shell=True, ignore_status=True):
+            self.fail('Namespace disble command failed')
+
+    def create_namespace(self, region='', bus='', n_type='pmem', mode='fsdax',
+                         memmap='mem', name='', size='', uuid='',
+                         sector_size='', align='', force=False,
+                         autolabel=False):
+        """
+        Creates namespace with specified options
+        """
+        args_dict = {region: '-r', bus: '-b', name: '-n', size: '-s',
+                     uuid: '-u', sector_size: '-l', align: '-a'}
+        minor_dict = {force: '-f', autolabel: '-L'}
+        args = '-t %s -m %s ' % (n_type, mode)
+
+        if mode in ['fsdax', 'devdax']:
+            args += ' -M %s' % memmap
+        for option in list(args_dict.keys()):
+            if option:
+                args += ' %s %s' % (args_dict[option], option)
+        for option in list(minor_dict.keys()):
+            if option:
+                args += ' %s' % minor_dict[option]
+
+        if process.system('%s create-namespace %s' % (self.binary, args),
+                          shell=True, ignore_status=True):
+            self.fail('Namespace create command failed')
+
+    def destroy_namespace(self, namespace='all', region='', bus='',
+                          force=False):
+        """
+        Destroy namepsaces
+        """
+        args = namespace
+        args_dict = {region: '-r', bus: '-b'}
+        for option in list(args_dict.keys()):
+            if option:
+                args += ' %s %s' % (args_dict[option], option)
+        if force:
+            args += ' -f'
+
+        if process.system('%s destroy-namespace %s' % (self.binary, args),
+                          shell=True, ignore_status=True):
+            self.fail('Namespace destroy command failed')
+
     def setUp(self):
         """
         Build 'ndctl' and setup the binary.
@@ -131,7 +190,8 @@ class NdctlTest(Test):
             if not smm.check_installed(pkg) and not \
                     smm.install(pkg):
                 self.cancel('%s is needed for the test to be run' % pkg)
-        self.opt_dict = {'-B': 'provider', '-D': 'dev', '-R': 'dev'}
+        self.opt_dict = {'-B': 'provider',
+                         '-D': 'dev', '-R': 'dev', '-N': 'dev'}
 
     def test_bus_ids(self):
         """
@@ -162,6 +222,25 @@ class NdctlTest(Test):
         if len(new) <= len(old):
             self.fail('Failed to fetch regions')
         self.log.info('Available regions: %s', new)
+
+    def test_namespace(self):
+        """
+        Test namespace
+        """
+        self.enable_region()
+        regions = self.get_json('-R')
+        for region in regions:
+            self.disable_namespace(region=region)
+            self.destroy_namespace(region=region)
+            self.create_namespace(region=region)
+
+        namespaces = self.get_json('-N')
+        self.log.info('Created namespace %s', namespaces)
+
+    def tearDown(self):
+        if self.get_json('-N'):
+            self.destroy_namespace(force=True)
+        self.disable_region()
 
 
 if __name__ == "__main__":
