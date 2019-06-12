@@ -50,6 +50,11 @@ class HtxTest(Test):
         self.mdt_file = self.params.get('mdt_file', default='mdt.mem')
         self.time_limit = int(self.params.get('time_limit', default=2)) * 60
         self.failed = False
+        if str(self.name.name).endswith('test_start'):
+            # Build HTX only at the start phase of test
+            self.setup_htx()
+        if not os.path.exists("/usr/lpp/htx/mdt/%s" % self.mdt_file):
+            self.cancel("MDT file %s not found due to config" % self.mdt_file)
 
     def setup_htx(self):
         """
@@ -89,21 +94,16 @@ class HtxTest(Test):
         os.chdir('htx_package')
         if process.system('./installer.sh -f'):
             self.fail("Installation of htx fails:please refer job.log")
-
-    def test_start(self):
-        """
-        Execute 'HTX' with appropriate parameters.
-        """
-        self.setup_htx()
         self.log.info("Starting the HTX Deamon")
         process.run('/usr/lpp/htx/etc/scripts/htxd_run')
 
         self.log.info("Creating the HTX mdt files")
         process.run('htxcmdline -createmdt')
 
-        if not os.path.exists("/usr/lpp/htx/mdt/%s" % self.mdt_file):
-            self.failed = True
-            self.fail("MDT file %s not found" % self.mdt_file)
+    def test_start(self):
+        """
+        Execute 'HTX' with appropriate parameters.
+        """
 
         self.log.info("selecting the mdt file")
         cmd = "htxcmdline -select -mdt %s" % self.mdt_file
