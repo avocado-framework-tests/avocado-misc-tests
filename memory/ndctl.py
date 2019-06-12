@@ -153,18 +153,18 @@ class NdctlTest(Test):
         Build 'ndctl' and setup the binary.
         """
         deps = []
-        dist = distro.detect()
+        self.dist = distro.detect()
         self.package = self.params.get('package', default='upstream')
 
-        if 'SuSE' not in dist.name:
-            self.cancel('Unsupported OS %s' % dist.name)
+        if 'SuSE' not in self.dist.name:
+            self.cancel('Unsupported OS %s' % self.dist.name)
 
         if not self.check_buses():
             self.cancel("Test needs atleast one region")
 
         if self.package == 'upstream':
             deps.extend(['gcc', 'make', 'automake', 'autoconf'])
-            if dist.name == 'SuSE':
+            if self.dist.name == 'SuSE':
                 deps.extend(['ruby2.5-rubygem-asciidoctor', 'libtool',
                              'libkmod-devel', 'libudev-devel',
                              'libuuid-devel-static', 'libjson-c-devel',
@@ -236,6 +236,35 @@ class NdctlTest(Test):
 
         namespaces = self.get_json('-N')
         self.log.info('Created namespace %s', namespaces)
+
+    def test_namespace_modes(self):
+        """
+        Create  different namespace types
+        """
+        failed_modes = []
+        self.enable_region()
+        region = self.get_json('-R')[0]
+        self.log.info("Using %s for different namespace modes", region)
+        self.disable_namespace(region=region)
+        self.destroy_namespace(region=region)
+        modes = ['raw', 'fsdax', 'devdax']
+        if self.dist.arch != 'ppc64le':
+            modes.extend(['blk'])
+        for mode in modes:
+            self.create_namespace(region=region, mode=mode)
+            ns_json = self.get_json()[0]
+            created_mode = self.get_json_val(ns_json, 'mode')
+            if mode != created_mode:
+                failed_modes.append(mode)
+                self.log.error("Expected mode %s, Got %s", mode, created_mode)
+            else:
+                self.log.info("Namespace with %s mode: %s" % (mode, ns_json))
+            ns_name = self.get_json_val(ns_json, 'dev')
+            self.disable_namespace(namespace=ns_name, region=region)
+            self.destroy_namespace(namespace=ns_name, region=region)
+
+        if failed_modes:
+            self.fail("Namespace for %s mode failed!" % failed_modes)
 
     def tearDown(self):
         if self.get_json('-N'):
