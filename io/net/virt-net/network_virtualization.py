@@ -74,11 +74,21 @@ class NetworkVirtualization(Test):
         set up required packages and gather necessary test inputs
         '''
         self.install_packages()
-        self.hmc_ip = self.params.get("hmc_ip", '*', default=None)
+        self.hmc_ip = self.get_mcp_component("HMCIPAddr")
+        if not self.hmc_ip:
+            self.cancel("HMC IP not got")
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default=None)
         self.hmc_username = self.params.get("hmc_username", '*', default=None)
         self.lpar = self.params.get("lpar", '*', default=None)
-        self.server = self.params.get("server", '*', default=None)
+        self.login(self.hmc_ip, self.hmc_username, self.hmc_pwd)
+        cmd = 'lssyscfg -r sys  -F name'
+        output = self.run_command(cmd)
+        self.server = ''
+        for line in output:
+            if line in self.lpar:
+                self.server = line
+        if not self.server:
+            self.cancel("Managed System not got")
         self.slot_num = self.params.get("slot_num", '*', default=None)
         if int(self.slot_num) < 3 or int(self.slot_num) > 2999:
             self.cancel("Slot invalid. Valid range: 3 - 2999")
@@ -121,6 +131,18 @@ class NetworkVirtualization(Test):
                 if str(backing_adapter) in line:
                     self.backing_adapter_id.append(line.split(':')[1])
         self.rsct_service_start()
+
+    @staticmethod
+    def get_mcp_component(component):
+        '''
+        probes IBM.MCP class for mentioned component and returns it.
+        '''
+        for line in process.system_output('lsrsrc IBM.MCP %s' % component,
+                                          ignore_status=True, shell=True,
+                                          sudo=True).splitlines():
+            if component in line:
+                return line.split()[-1].strip('{}\"')
+        return ''
 
     def login(self, ipaddr, username, password):
         '''
@@ -193,33 +215,24 @@ class NetworkVirtualization(Test):
         Install necessary packages
         '''
         smm = SoftwareManager()
+        packages = ['ksh', 'src', 'rsct.basic', 'rsct.core.utils',
+                    'rsct.core', 'DynamicRM', 'powerpc-utils']
         detected_distro = distro.detect()
-        self.log.info("Test is running on %s", detected_distro.name)
-        if not smm.check_installed("ksh") and not smm.install("ksh"):
-            self.cancel('ksh is needed for the test to be run')
         if detected_distro.name == "Ubuntu":
-            if not smm.check_installed("python-paramiko") and not \
-                    smm.install("python-paramiko"):
-                self.cancel('python-paramiko is needed for the test to be run')
+            packages.extend(['python-paramiko'])
+        self.log.info("Test is running on: %s", detected_distro.name)
+        for pkg in packages:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
+                self.cancel('%s is needed for the test to be run' % pkg)
+        if detected_distro.name == "Ubuntu":
             ubuntu_url = self.params.get('ubuntu_url', default=None)
             debs = self.params.get('debs', default=None)
-            if not ubuntu_url or not debs:
-                self.cancel("No url specified")
             for deb in debs:
                 deb_url = os.path.join(ubuntu_url, deb)
                 deb_install = self.fetch_asset(deb_url, expire='7d')
                 shutil.copy(deb_install, self.workdir)
                 process.system("dpkg -i %s/%s" % (self.workdir, deb),
                                ignore_status=True, sudo=True)
-        else:
-            url = self.params.get('url', default=None)
-            if not url:
-                self.cancel("No url specified")
-            rpm_install = self.fetch_asset(url, expire='7d')
-            shutil.copy(rpm_install, self.workdir)
-            os.chdir(self.workdir)
-            process.run('chmod +x ibmtools')
-            process.run('./ibmtools --install --managed')
 
     def test_add(self):
         '''
