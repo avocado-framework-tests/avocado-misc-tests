@@ -12,4 +12,5 @@ device_ip:
 netmask:
 peer_ip:
 vnic_test_count:
+num_of_dlpar:
 mac_id:

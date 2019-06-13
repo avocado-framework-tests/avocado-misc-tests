@@ -105,6 +105,7 @@ class NetworkVirtualization(Test):
         self.backingdev_count = len(self.backing_adapter)
         self.bandwidth = self.params.get("bandwidth", '*', default=None)
         self.count = int(self.params.get('vnic_test_count', default="1"))
+        self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         self.device_ip = self.params.get('device_ip', '*', default=None)
         self.mac_id = self.params.get('mac_id', default="02:03:03:03:03:01")
         self.mac_id = self.mac_id.replace(':', '')
@@ -350,6 +351,26 @@ class NetworkVirtualization(Test):
                            self.backingdev_count)
             self.fail("Failed to remove backing device")
 
+    def test_vnic_dlpar(self):
+        '''
+        Perform vNIC device hot add and hot remove using drmgr command
+        '''
+        self.update_backing_devices()
+        dev_id = self.find_device_id()
+        slot = self.find_virtual_slot(dev_id)
+        if slot:
+            try:
+                for _ in range(self.num_of_dlpar):
+                    self.drmgr_vnic_dlpar('-r', slot)
+                    self.drmgr_vnic_dlpar('-a', slot)
+            except CmdError as details:
+                self.log.debug(str(details))
+                self.fail("dlpar operation did not complete")
+            if not self.ping_check():
+                self.fail("dlpar has affected Network connectivity")
+        else:
+            self.fail("slot not found")
+
     def test_remove(self):
         '''
         Network virtualized device remove operation
@@ -515,6 +536,14 @@ class NetworkVirtualization(Test):
             time.sleep(5)
         return False
 
+    def drmgr_vnic_dlpar(self, operation, slot):
+        """
+        Perform add / remove operation
+        """
+        cmd = 'drmgr %s -c slot -s %s -w 5 -d 1' % (operation, slot)
+        if process.system(cmd, shell=True, sudo=True, ignore_status=True):
+            self.fail("drmgr operation %s fails for vNIC device %s" % (operation, slot))
+
     def configure_device(self):
         """
         Configures the Network virtualized device
@@ -544,6 +573,17 @@ class NetworkVirtualization(Test):
                                            5" % device,
                                           shell=True).strip()
         return device_id
+
+    def find_virtual_slot(self, dev_id):
+        """
+        finds the virtual slot for the given virtual ID
+        """
+        output = process.system_output("lsslot", ignore_status=True,
+                                       shell=True, sudo=True)
+        for slot in output.split('\n'):
+            if dev_id in slot:
+                return slot.split(' ')[0]
+        return False
 
     def ping_check(self):
         """

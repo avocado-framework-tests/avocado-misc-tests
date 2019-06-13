@@ -30,6 +30,7 @@ device_ip ---> Ip to be configured for the added Network virtualized interface
 netmask ---> netmask value for the added Network virtualized interface
 peer_ip ---> Peer ip to which the added Network virtualized interface will ping to check for ping test
 count ---> The number of times the unbind and bind test has to be executed
+num_of_dlpar --> number of times ddlpar remove and add operation to be executed
 mac_id ---> MAC ID to be set for the vnic interface. This is needed for us to have control over interface name via interface file or udev rules
 
 NOTE: The last device listed by "ip link show" will be used to configure and test the
