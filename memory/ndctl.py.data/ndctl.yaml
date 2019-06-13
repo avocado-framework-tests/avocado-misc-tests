@@ -1,0 +1,6 @@
+config:
+    version: !mux
+        upstream:
+            package : 'upstream'
+        distro:
+            package : 'distro'
