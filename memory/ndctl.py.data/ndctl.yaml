@@ -1,4 +1,5 @@
 config:
+    namespace_cnt: 4
     version: !mux
         upstream:
             package : 'upstream'
