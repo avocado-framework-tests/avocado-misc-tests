@@ -63,7 +63,7 @@ class Stutter(Test):
             os.makedirs(self._logdir)
 
         # export env variable, used by test script
-        os.environ['MEMTOTAL_BYTES'] = self._memory
+        os.environ['MEMTOTAL_BYTES'] = str(self._memory)
         os.environ['ITERATIONS'] = self._iteration
         os.environ['LOGDIR_RESULTS'] = self._logdir
         os.environ['TESTDISK_DIR'] = self._rundir
