@@ -56,6 +56,11 @@ class Sensors(Test):
         """
         s_mg = SoftwareManager()
         d_distro = distro.detect()
+        if d_distro.arch in ["ppc64", "ppc64le"]:
+            if not cpu._list_matches(open('/proc/cpuinfo').readlines(),
+                                     'platform\t: PowerNV\n'):
+                self.cancel(
+                    'sensors test is applicable to bare-metal environment.')
         if d_distro.name == "Ubuntu":
             if not s_mg.check_installed("lm-sensors") and not s_mg.install(
                     "lm-sensors"):
@@ -68,12 +73,6 @@ class Sensors(Test):
             if not s_mg.check_installed("lm_sensors") and not s_mg.install(
                     "lm_sensors"):
                 self.cancel('Need sensors to run the test')
-        if d_distro.arch in ["ppc64", "ppc64le"]:
-            if not cpu._list_matches(open('/proc/cpuinfo').readlines(),
-                                     'platform\t: PowerNV\n'):
-                self.cancel(
-                    'sensors test is applicable to bare-metal environment.')
-
             config_check = linux_modules.check_kernel_config(
                 'CONFIG_SENSORS_IBMPOWERNV')
             if config_check == linux_modules.ModuleConfig.NOT_SET:
