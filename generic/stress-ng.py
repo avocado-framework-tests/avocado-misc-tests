@@ -154,7 +154,7 @@ class Stressng(Test):
         collect_dmesg(self)
         ERROR = []
         pattern = ['WARNING: CPU:', 'Oops', 'Segfault', 'soft lockup',
-                   'Unable to handle', 'Hard LOCKUP']
+                   'Unable to handle', 'ard LOCKUP']
         logs = process.system_output('dmesg').splitlines()
         for fail_pattern in pattern:
             for log in logs:
