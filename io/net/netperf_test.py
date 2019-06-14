@@ -121,11 +121,8 @@ class Netperf(Test):
             if line and 'Throughput' in line.split()[-1]:
                 tput = int(result.stdout.split()[-1].split('.')[0])
                 if tput < self.expected_tp:
-                    self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%, \
-                              Throughput Actual value - %s "
-                              % ((tput*100)/1000, (self.expected_tp*100)/1000,
-                                 str(tput)+'Mb/sec'))
-
+                    self.fail("FAIL: Throughput Actual - %d, Expected - %d"
+                              % (tput, self.expected_tp))
         if 'WARNING' in result.stdout:
             self.log.warn('Test completed with warning')
 
