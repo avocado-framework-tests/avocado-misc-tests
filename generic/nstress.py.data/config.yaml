@@ -2,6 +2,11 @@ tar_ball_ubuntu: "nstress_Ubuntu1410_ppc64_Nov_2015.tar"
 tar_ball_rhel: "nstress_RHEL71_LE_ppc64_Nov_2015.tar"
 tar_ball_sles: "nstress_SLES12_ppc64_Nov_2015.tar"
 duration: "500"
-memchunk: "250"
-memchunk_nmem64: "2047"
 procs: "255"
+test: !mux
+        nmem:
+                testcase: "nmem"
+                memchunk: "250"
+        nmem64:
+                testcase: "nmem64"
+                memchunk: "2047"
