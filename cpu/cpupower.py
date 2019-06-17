@@ -14,13 +14,15 @@
 # Copyright: 2016 IBM
 # Author: Pavithra D P <pavithra@linux.vnet.ibm.com>
 
-import os
 import random
 import platform
 from avocado import Test
 from avocado import main
-from avocado.utils import process, distro
+from avocado import skipIf
+from avocado.utils import process, distro, cpu
 from avocado.utils.software_manager import SoftwareManager
+
+IS_POWER_NV = 'PowerNV' in cpu._get_cpu_info()
 
 
 class cpupower(Test):
@@ -31,9 +33,8 @@ class cpupower(Test):
     :avocado: tags=cpu,power,privileged
     """
 
+    @skipIf(not IS_POWER_NV, "This test is not supported on PowerVM platform")
     def setUp(self):
-        if not os.path.exists('/sys/devices/system/cpu/cpu0/cpufreq'):
-            self.cancel('sysfs directory for cpufreq is unavailable.')
         smm = SoftwareManager()
         detected_distro = distro.detect()
         kernel_ver = platform.uname()[2]

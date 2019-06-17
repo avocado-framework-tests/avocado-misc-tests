@@ -13,13 +13,15 @@
 #
 # Copyright: 2017 IBM
 # Author: Shriya Kulkarni <shriyak@linux.vnet.ibm.com>
-import os
 import random
 import platform
 from avocado import Test
 from avocado import main
+from avocado import skipIf
 from avocado.utils import process, distro, cpu
 from avocado.utils.software_manager import SoftwareManager
+
+IS_POWER_NV = 'PowerNV' in cpu._get_cpu_info()
 
 
 class Cpufreq(Test):
@@ -28,13 +30,8 @@ class Cpufreq(Test):
 
     :avocado: tags=cpu,power
     """
-
+    @skipIf(not IS_POWER_NV, "This test is not supported on PowerVM platform")
     def setUp(self):
-        """
-        Verify the system is Baremetal and cpupower tool is installed.
-        """
-        if not os.path.exists('/sys/devices/system/cpu/cpu0/cpufreq'):
-            self.cancel('CPUFREQ is supported only on Power NV')
         smm = SoftwareManager()
         detected_distro = distro.detect()
         if 'Ubuntu' in detected_distro.name:
