@@ -123,7 +123,8 @@ class Netperf(Test):
                 if tput < self.expected_tp:
                     self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%, \
                               Throughput Actual value - %s "
-                              % ((tput*100)/1000, (self.expected_tp*100)/1000,
+                              % ((tput*100)/speed,
+                                 (self.expected_tp*100)/speed,
                                  str(tput)+'Mb/sec'))
 
         if 'WARNING' in result.stdout:
