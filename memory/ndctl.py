@@ -28,6 +28,7 @@ from avocado.utils import process
 from avocado.utils import archive
 from avocado.utils import distro
 from avocado.utils import build
+from avocado.utils import genio
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -38,21 +39,28 @@ class NdctlTest(Test):
 
     """
 
-    def get_json(self, option=''):
+    def get_json(self, short_opt='', long_opt=''):
         """
         Get the json of each provided options
 
-        return: By default returns entire detail of namespaces
+        return: By default returns entire list of json objects
+        return: Empty list is no output is empty
         """
+        if short_opt:
+            option = short_opt
+        elif long_opt:
+            option = long_opt
+        else:
+            option = ''
         try:
             json_op = json.loads(process.system_output(
                 '%s list %s' % (self.binary, option), shell=True))
         except ValueError:
             json_op = []
-        if option:
+        if short_opt:
             vals = []
             for nid in json_op:
-                vals.append(self.get_json_val(nid, self.opt_dict[option]))
+                vals.append(self.get_json_val(nid, self.opt_dict[short_opt]))
             return vals
         return json_op
 
@@ -197,7 +205,7 @@ class NdctlTest(Test):
         """
         Test the bus id info
         """
-        vals = self.get_json('-B')
+        vals = self.get_json(short_opt='-B')
         if not vals:
             self.fail('Failed to fetch bus IDs')
         self.log.info('Available Bus provider IDs: %s', vals)
@@ -206,7 +214,7 @@ class NdctlTest(Test):
         """
         Test the dimms info
         """
-        vals = self.get_json('-D')
+        vals = self.get_json(short_opt='-D')
         if not vals:
             self.fail('Failed to fetch DIMMs')
         self.log.info('Available DIMMs: %s', vals)
@@ -216,9 +224,9 @@ class NdctlTest(Test):
         Test the regions info
         """
         self.disable_region()
-        old = self.get_json('-R')
+        old = self.get_json(short_opt='-R')
         self.enable_region()
-        new = self.get_json('-R')
+        new = self.get_json(short_opt='-R')
         if len(new) <= len(old):
             self.fail('Failed to fetch regions')
         self.log.info('Available regions: %s', new)
@@ -228,13 +236,13 @@ class NdctlTest(Test):
         Test namespace
         """
         self.enable_region()
-        regions = self.get_json('-R')
+        regions = self.get_json(short_opt='-R')
         for region in regions:
             self.disable_namespace(region=region)
             self.destroy_namespace(region=region)
             self.create_namespace(region=region)
 
-        namespaces = self.get_json('-N')
+        namespaces = self.get_json(short_opt='-N')
         self.log.info('Created namespace %s', namespaces)
 
     def test_namespace_modes(self):
@@ -243,7 +251,7 @@ class NdctlTest(Test):
         """
         failed_modes = []
         self.enable_region()
-        region = self.get_json('-R')[0]
+        region = self.get_json(short_opt='-R')[0]
         self.log.info("Using %s for different namespace modes", region)
         self.disable_namespace(region=region)
         self.destroy_namespace(region=region)
@@ -266,8 +274,39 @@ class NdctlTest(Test):
         if failed_modes:
             self.fail("Namespace for %s mode failed!" % failed_modes)
 
+    def test_multiple_namespaces_region(self):
+        """
+        Test multiple namespace with single region
+        """
+        max_cnt = cnt = self.params.get('namespace_cnt', default=5)
+        self.enable_region()
+        region = self.get_json(short_opt='-R')[0]
+        self.log.info("Using %s for muliple namespace regions", region)
+        self.disable_namespace(region=region)
+        self.destroy_namespace(region=region)
+        size = self.get_json_val(self.get_json(
+            long_opt='-r %s' % region)[0], 'size')
+        self.log.info("Creating %s namespaces", cnt)
+        if 'Hash' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
+            def_align = 16 * 1024 * 1024
+        else:
+            def_align = 2 * 1024 * 1024
+        if ((size / cnt) % def_align) != 0:
+            self.log.warn("Namespace would fail as it is not %sM "
+                          "aligned! Chaning the number of "
+                          "namespaces", def_align / (1024 * 1024))
+            for count in range(max_cnt, 1, -1):
+                if ((size / count) % def_align) == 0:
+                    self.log.info("Changing namespaces to %s", count)
+                    cnt = count
+                    break
+
+        for nid in range(0, cnt):
+            self.create_namespace(region=region, mode='fsdax', size=size / cnt)
+            self.log.info("Namespace %s created", nid + 1)
+
     def tearDown(self):
-        if self.get_json('-N'):
+        if self.get_json(short_opt='-N'):
             self.destroy_namespace(force=True)
         self.disable_region()
 
