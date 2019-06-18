@@ -97,7 +97,7 @@ class perfUprobe(Test):
             output = self.cmd_verify('%s__return -- ./uprobe_test'
                                      % self.recProbe)
         else:
-            output = self.cmd_verify('%s ar ./uprobe_test' % self.recProbe)
+            output = self.cmd_verify('%s -aR ./uprobe_test' % self.recProbe)
         if 'samples' not in output.stderr:
             self.fail("perf: perf.data file not created")
         output = self.cmd_verify(self.report)
@@ -109,7 +109,7 @@ class perfUprobe(Test):
         if self.distro_name == "rhel":
             output = self.cmd_verify('%s -- ./uprobe_test' % self.recProbe)
         else:
-            output = self.cmd_verify('%s ar ./uprobe_test' % self.recProbe)
+            output = self.cmd_verify('%s -aR ./uprobe_test' % self.recProbe)
         if 'samples' not in output.stderr:
             self.fail("perf: perf.data file not created")
         output = self.cmd_verify(self.report)
