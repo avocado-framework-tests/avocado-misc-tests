@@ -14,6 +14,7 @@
 # Author: Abdul Haleem <abdhalee@linux.vnet.ibm.com>
 
 import os
+import platform
 import re
 import glob
 import shutil
@@ -86,7 +87,13 @@ class kselftest(Test):
         else:
             # Make sure kernel source repo is configured
             if detected_distro.name in ['centos', 'fedora', 'rhel']:
-                self.buldir = smg.get_source('kernel', self.workdir)
+                src_name = 'kernel'
+                if detected_distro.name == 'rhel':
+                    # Check for "el*a" where ALT always ends with 'a'
+                    if platform.uname()[2].split(".")[-2].endswith('a'):
+                        self.log.info('Using ALT as kernel source')
+                        src_name = 'kernel-alt'
+                self.buldir = smg.get_source(src_name, self.workdir)
                 self.buldir = os.path.join(
                     self.buldir, os.listdir(self.buldir)[0])
             elif 'Ubuntu' in detected_distro.name:
