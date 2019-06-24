@@ -74,11 +74,21 @@ class NetworkVirtualization(Test):
         set up required packages and gather necessary test inputs
         '''
         self.install_packages()
-        self.hmc_ip = self.params.get("hmc_ip", '*', default=None)
+        self.hmc_ip = self.get_mcp_component("HMCIPAddr")
+        if not self.hmc_ip:
+            self.cancel("HMC IP not got")
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default=None)
         self.hmc_username = self.params.get("hmc_username", '*', default=None)
         self.lpar = self.params.get("lpar", '*', default=None)
-        self.server = self.params.get("server", '*', default=None)
+        self.login(self.hmc_ip, self.hmc_username, self.hmc_pwd)
+        cmd = 'lssyscfg -r sys  -F name'
+        output = self.run_command(cmd)
+        self.server = ''
+        for line in output:
+            if line in self.lpar:
+                self.server = line
+        if not self.server:
+            self.cancel("Managed System not got")
         self.slot_num = self.params.get("slot_num", '*', default=None)
         if int(self.slot_num) < 3 or int(self.slot_num) > 2999:
             self.cancel("Slot invalid. Valid range: 3 - 2999")
@@ -95,6 +105,7 @@ class NetworkVirtualization(Test):
         self.backingdev_count = len(self.backing_adapter)
         self.bandwidth = self.params.get("bandwidth", '*', default=None)
         self.count = int(self.params.get('vnic_test_count', default="1"))
+        self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         self.device_ip = self.params.get('device_ip', '*', default=None)
         self.mac_id = self.params.get('mac_id', default="02:03:03:03:03:01")
         self.mac_id = self.mac_id.replace(':', '')
@@ -121,6 +132,18 @@ class NetworkVirtualization(Test):
                 if str(backing_adapter) in line:
                     self.backing_adapter_id.append(line.split(':')[1])
         self.rsct_service_start()
+
+    @staticmethod
+    def get_mcp_component(component):
+        '''
+        probes IBM.MCP class for mentioned component and returns it.
+        '''
+        for line in process.system_output('lsrsrc IBM.MCP %s' % component,
+                                          ignore_status=True, shell=True,
+                                          sudo=True).splitlines():
+            if component in line:
+                return line.split()[-1].strip('{}\"')
+        return ''
 
     def login(self, ipaddr, username, password):
         '''
@@ -193,33 +216,24 @@ class NetworkVirtualization(Test):
         Install necessary packages
         '''
         smm = SoftwareManager()
+        packages = ['ksh', 'src', 'rsct.basic', 'rsct.core.utils',
+                    'rsct.core', 'DynamicRM', 'powerpc-utils']
         detected_distro = distro.detect()
-        self.log.info("Test is running on %s", detected_distro.name)
-        if not smm.check_installed("ksh") and not smm.install("ksh"):
-            self.cancel('ksh is needed for the test to be run')
         if detected_distro.name == "Ubuntu":
-            if not smm.check_installed("python-paramiko") and not \
-                    smm.install("python-paramiko"):
-                self.cancel('python-paramiko is needed for the test to be run')
+            packages.extend(['python-paramiko'])
+        self.log.info("Test is running on: %s", detected_distro.name)
+        for pkg in packages:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
+                self.cancel('%s is needed for the test to be run' % pkg)
+        if detected_distro.name == "Ubuntu":
             ubuntu_url = self.params.get('ubuntu_url', default=None)
             debs = self.params.get('debs', default=None)
-            if not ubuntu_url or not debs:
-                self.cancel("No url specified")
             for deb in debs:
                 deb_url = os.path.join(ubuntu_url, deb)
                 deb_install = self.fetch_asset(deb_url, expire='7d')
                 shutil.copy(deb_install, self.workdir)
                 process.system("dpkg -i %s/%s" % (self.workdir, deb),
                                ignore_status=True, sudo=True)
-        else:
-            url = self.params.get('url', default=None)
-            if not url:
-                self.cancel("No url specified")
-            rpm_install = self.fetch_asset(url, expire='7d')
-            shutil.copy(rpm_install, self.workdir)
-            os.chdir(self.workdir)
-            process.run('chmod +x ibmtools')
-            process.run('./ibmtools --install --managed')
 
     def test_add(self):
         '''
@@ -336,6 +350,26 @@ class NetworkVirtualization(Test):
             self.log.debug("Expected backing dev count: %d",
                            self.backingdev_count)
             self.fail("Failed to remove backing device")
+
+    def test_vnic_dlpar(self):
+        '''
+        Perform vNIC device hot add and hot remove using drmgr command
+        '''
+        self.update_backing_devices()
+        dev_id = self.find_device_id()
+        slot = self.find_virtual_slot(dev_id)
+        if slot:
+            try:
+                for _ in range(self.num_of_dlpar):
+                    self.drmgr_vnic_dlpar('-r', slot)
+                    self.drmgr_vnic_dlpar('-a', slot)
+            except CmdError as details:
+                self.log.debug(str(details))
+                self.fail("dlpar operation did not complete")
+            if not self.ping_check():
+                self.fail("dlpar has affected Network connectivity")
+        else:
+            self.fail("slot not found")
 
     def test_remove(self):
         '''
@@ -502,6 +536,14 @@ class NetworkVirtualization(Test):
             time.sleep(5)
         return False
 
+    def drmgr_vnic_dlpar(self, operation, slot):
+        """
+        Perform add / remove operation
+        """
+        cmd = 'drmgr %s -c slot -s %s -w 5 -d 1' % (operation, slot)
+        if process.system(cmd, shell=True, sudo=True, ignore_status=True):
+            self.fail("drmgr operation %s fails for vNIC device %s" % (operation, slot))
+
     def configure_device(self):
         """
         Configures the Network virtualized device
@@ -531,6 +573,17 @@ class NetworkVirtualization(Test):
                                            5" % device,
                                           shell=True).strip()
         return device_id
+
+    def find_virtual_slot(self, dev_id):
+        """
+        finds the virtual slot for the given virtual ID
+        """
+        output = process.system_output("lsslot", ignore_status=True,
+                                       shell=True, sudo=True)
+        for slot in output.split('\n'):
+            if dev_id in slot:
+                return slot.split(' ')[0]
+        return False
 
     def ping_check(self):
         """
