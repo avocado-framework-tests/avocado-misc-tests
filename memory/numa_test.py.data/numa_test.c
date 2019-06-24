@@ -26,7 +26,7 @@
 #include <getopt.h>
 #include <hugetlbfs.h>
 
-#define errmsg(x, ...) fprintf(stderr, x, ##__VA_ARGS__),exit(1)
+#define errmsg(x, ...) fprintf(stderr, x, ##__VA_ARGS__),exit(255)
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 #define PROTFLAG PROT_READ|PROT_WRITE
 

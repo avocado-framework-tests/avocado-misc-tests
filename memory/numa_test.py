@@ -92,7 +92,10 @@ class NumaTest(Test):
         cmd = './numa_test -m %s -n %s' % (self.map_type, self.nr_pages)
         if self.hpage:
             cmd = '%s -h' % cmd
-        if process.system(cmd, shell=True, sudo=True, ignore_status=True):
+        ret = process.system(cmd, shell=True, sudo=True, ignore_status=True)
+        if ret == 255:
+            self.cancel("Environment prevents test! Check logs for issues")
+        elif ret != 0:
             self.fail('Please check the logs for failure')
 
 

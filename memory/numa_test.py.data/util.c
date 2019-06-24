@@ -81,7 +81,7 @@ int *get_numa_nodes_to_use(int max_node, unsigned long memory_to_use)
 		printf("Nodes used in test %d %d \n", nodes_to_use[0], nodes_to_use[1]);
 	} else {
 		printf("memory is not found in 2 nodes\n");
-		exit(1);
+		exit(255);
 	}
 	return nodes_to_use;
 }
