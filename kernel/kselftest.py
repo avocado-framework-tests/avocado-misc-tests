@@ -79,7 +79,8 @@ class kselftest(Test):
                     "Fail to install %s required for this test." % (package))
 
         if self.run_type == 'upstream':
-            location = ["https://github.com/torvalds/linux/archive/master.zip"]
+            location = self.params.get('location', default='https://github.c'
+                                       'om/torvalds/linux/archive/master.zip')
             tarball = self.fetch_asset("kselftest.zip", locations=location,
                                        expire='1d')
             archive.extract(tarball, self.workdir)
