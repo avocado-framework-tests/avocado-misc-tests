@@ -115,14 +115,15 @@ class NdctlTest(Test):
             self.fail('Namespace disble command failed')
 
     def create_namespace(self, region='', bus='', n_type='pmem', mode='fsdax',
-                         memmap='mem', name='', size='', uuid='',
-                         sector_size='', align='', force=False,
+                         memmap='dev', name='', size='', uuid='',
+                         sector_size='', align='', reconfig='', force=False,
                          autolabel=False):
         """
         Creates namespace with specified options
         """
         args_dict = {region: '-r', bus: '-b', name: '-n', size: '-s',
-                     uuid: '-u', sector_size: '-l', align: '-a'}
+                     uuid: '-u', sector_size: '-l', align: '-a',
+                     reconfig: '-e'}
         minor_dict = {force: '-f', autolabel: '-L'}
         args = '-t %s -m %s ' % (n_type, mode)
 
@@ -304,6 +305,33 @@ class NdctlTest(Test):
         for nid in range(0, cnt):
             self.create_namespace(region=region, mode='fsdax', size=size / cnt)
             self.log.info("Namespace %s created", nid + 1)
+
+    def test_namespace_reconfigure(self):
+        """
+        Test namespace reconfiguration
+        """
+        self.enable_region()
+        region = self.get_json(short_opt='-R')[0]
+        self.log.info("Using %s for reconfiguring namespace", region)
+        self.disable_namespace()
+        self.destroy_namespace()
+        self.create_namespace(region=region, mode='fsdax', align='64k')
+        old_ns = self.get_json()[0]
+        old_ns_dev = self.get_json_val(old_ns, 'dev')
+        self.log.info("Re-configuring namespace %s", old_ns_dev)
+        self.create_namespace(region=region, mode='fsdax',
+                              name='test_ns', reconfig=old_ns_dev, force=True)
+        new_ns = self.get_json()[0]
+        self.log.info("Checking namespace changes")
+        failed_vals = []
+        for key, val in new_ns.iteritems():
+            if key in list(set(old_ns.keys()) - set(['uuid', 'dev'])):
+                if old_ns[key] != val:
+                    failed_vals.append({key: val})
+            else:
+                self.log.info("Newly added filed %s:%s", key, val)
+        if failed_vals:
+            self.fail("New namespace unexpected change(s): %s" % failed_vals)
 
     def tearDown(self):
         if self.get_json(short_opt='-N'):
