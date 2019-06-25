@@ -333,6 +333,23 @@ class NdctlTest(Test):
         if failed_vals:
             self.fail("New namespace unexpected change(s): %s" % failed_vals)
 
+    def test_check_namespace(self):
+        """
+        Verify metadata for sector mode namespaces
+        """
+        self.enable_region()
+        region = self.get_json(short_opt='-R')[0]
+        self.disable_namespace()
+        self.destroy_namespace()
+        self.log.info("Creating sector namespace using %s", region)
+        self.create_namespace(region=region, mode='sector')
+        ns_sec_dev = self.get_json_val(self.get_json()[0], 'dev')
+        self.disable_namespace(namespace=ns_sec_dev)
+        self.log.info("Checking BTT metadata")
+        if process.system("%s check-namespace %s" % (self.binary, ns_sec_dev),
+                          ignore_status=True):
+            self.fail("Failed to check namespace metadata")
+
     def tearDown(self):
         if self.get_json(short_opt='-N'):
             self.destroy_namespace(force=True)
