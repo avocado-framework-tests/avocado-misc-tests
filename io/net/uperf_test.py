@@ -41,6 +41,8 @@ class Uperf(Test):
         """
         To check and install dependencies for the test
         """
+        self.peer_ip = self.params.get("peer_ip", default="")
+        self.peer_user = self.params.get("peer_user_name", default="root")
         smm = SoftwareManager()
         detected_distro = distro.detect()
         pkgs = ["gcc", "autoconf", "perl", "m4", "git-core", "automake"]
@@ -51,14 +53,17 @@ class Uperf(Test):
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
+            cmd = "ssh %s@%s \"%s install %s\"" % (self.peer_user,
+                                                   self.peer_ip,
+                                                   smm.backend.base_command,
+                                                   pkg)
+            process.system(cmd)
         interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface", default="")
-        self.peer_ip = self.params.get("peer_ip", default="")
         if self.iface not in interfaces:
             self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
             self.cancel("%s peer machine is not available" % self.peer_ip)
-        self.peer_user = self.params.get("peer_user_name", default="root")
         uperf_download = self.params.get("uperf_download", default="https:"
                                          "//github.com/uperf/uperf/"
                                          "archive/master.zip")
@@ -85,8 +90,6 @@ class Uperf(Test):
         process.system('./configure ppc64le', shell=True)
         build.make(self.uperf_dir)
         self.expected_tp = self.params.get("EXPECTED_THROUGHPUT", default="85")
-        speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
-        self.expected_tp = int(self.expected_tp) * speed / 100
 
     def test(self):
         """
@@ -94,6 +97,8 @@ class Uperf(Test):
         transmitting (or receiving) data from a client. This transmit large
         messages using multiple threads or processes.
         """
+        speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
+        self.expected_tp = int(self.expected_tp) * speed / 100
         cmd = "h=%s proto=tcp ./src/uperf -m manual/throughput.xml -a" \
             % self.peer_ip
         result = process.run(cmd, shell=True, ignore_status=True)
@@ -108,8 +113,11 @@ class Uperf(Test):
                     tput = int(line.split()[3].split('.')[0]) * 1000
 
                 if tput < self.expected_tp:
-                    self.fail("FAIL: Throughput Actual - %d, Expected - %d"
-                              % (tput, self.expected_tp))
+                    self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%, \
+                              Throughput Actual value - %s "
+                              % ((tput*100)/speed,
+                                 (self.expected_tp*100)/speed,
+                                  str(tput)+'Mb/sec'))
         if 'WARNING' in result.stdout:
             self.log.warn('Test completed with warning')
 
