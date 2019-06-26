@@ -84,6 +84,7 @@ class LPM(Test):
         for line in output:
             if line in self.lpar:
                 self.server = line
+                break
         if not self.server:
             self.cancel("Managed System not got")
 
@@ -101,6 +102,7 @@ class LPM(Test):
         for line in output:
             if "%s-" % self.lpar in line:
                 self.lpar = line
+                break
 
         if not self.is_lpar_in_server(current_server, self.lpar):
             self.cancel("%s not in %s" % (self.lpar, current_server))
