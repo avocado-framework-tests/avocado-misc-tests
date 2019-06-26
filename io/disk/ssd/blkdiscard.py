@@ -18,9 +18,10 @@
 # Blkdiscard  is  used  to  discard  device  sectors.This is useful for
 # solid-state drivers (SSDs) and thinly-provisioned storage.
 
+import avocado
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import process
+from avocado.utils import process, lv_utils
 from avocado import main
 
 
@@ -45,12 +46,12 @@ class Blkdiscard(Test):
         cmd = "blkdiscard -V"
         process.run(cmd)
 
+    @avocado.fail_on
     def test(self):
         """
         Sectors are dicarded for the different values of OFFSET and LENGTH.
         """
-        cmd = "fdisk -l | grep %s | awk '{print $5}' | sed 1q;" % self.disk
-        size = int(process.system_output(cmd, shell=True).strip(""))
+        size = int(lv_utils.get_diskspace(self.disk))
         cmd = "blkdiscard %s -o 0 -v -l %d" % (self.disk, size)
         process.run(cmd, shell=True)
         cmd = "blkdiscard %s -o %d \
