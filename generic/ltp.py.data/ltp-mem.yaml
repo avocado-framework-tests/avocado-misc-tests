@@ -1,0 +1,12 @@
+setup:
+    general: !mux
+        runltp: !mux
+            mm:
+                args: '-f mm'
+                overcommit: True
+            hugetlb:
+                args: '-f hugetlb'
+                overcommit: False
+            thp-page-cache:
+                args: '-f mm'
+                tmpfs_mount_dir: '/mnt/thp/'
