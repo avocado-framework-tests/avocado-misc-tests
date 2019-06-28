@@ -81,7 +81,7 @@ class kselftest(Test):
         if self.run_type == 'upstream':
             location = self.params.get('location', default='https://github.c'
                                        'om/torvalds/linux/archive/master.zip')
-            tarball = self.fetch_asset("kselftest.zip", locations=location,
+            tarball = self.fetch_asset("kselftest.zip", locations=[location],
                                        expire='1d')
             archive.extract(tarball, self.workdir)
             self.buldir = os.path.join(self.workdir, 'linux-master')
