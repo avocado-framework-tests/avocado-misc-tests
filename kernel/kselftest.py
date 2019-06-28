@@ -100,6 +100,7 @@ class kselftest(Test):
             elif 'Ubuntu' in detected_distro.name:
                 self.buldir = smg.get_source('linux', self.workdir)
             elif 'SuSE' in detected_distro.name:
+                smg._source_install('kernel-default')
                 smg.get_source('kernel-source', self.workdir)
                 packages = '/usr/src/packages/'
                 os.chdir(os.path.join(packages, 'SOURCES'))
