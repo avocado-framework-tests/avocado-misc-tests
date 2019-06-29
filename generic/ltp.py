@@ -19,22 +19,18 @@
 # https://github.com/autotest/autotest-client-tests/tree/master/ltp
 
 
+import os
+import re
 from avocado import Test
 from avocado import main
 from avocado.utils import build, distro, genio
 from avocado.utils import process, archive
 from avocado.utils.partition import Partition
-import os
-import re
 
 from avocado.utils.software_manager import SoftwareManager
 
 
-def collect_dmesg(obj):
-    obj.whiteboard = process.system_output("dmesg")
-
-
-class ltp(Test):
+class LTP(Test):
 
     """
     LTP (Linux Test Project) testsuite
@@ -48,13 +44,12 @@ class ltp(Test):
     def mount_point(mount_dir):
         lines = genio.read_file('/proc/mounts').rstrip('\t\r\0').splitlines()
         for substr in lines:
-            mp = substr.split(" ")[1]
-            if mp == mount_dir:
+            mop = substr.split(" ")[1]
+            if mop == mount_dir:
                 return True
         return False
 
     def check_thp(self):
-        self.thp = False
         if 'thp_file_alloc' in genio.read_file('/proc/vm'
                                                'stat').rstrip('\t\r\n\0'):
             self.thp = True
@@ -79,7 +74,7 @@ class ltp(Test):
             self.device.mount(mountpoint=self.mount_dir, fstype="tmpfs")
 
     def setUp(self):
-        sm = SoftwareManager()
+        smg = SoftwareManager()
         dist = distro.detect()
         self.args = self.params.get('args', default='')
 
@@ -91,6 +86,7 @@ class ltp(Test):
         elif dist.name == "SuSE":
             deps.extend(['libnuma-devel'])
         self.ltpbin_dir = self.mount_dir = None
+        self.thp = False
         if self.args in self.mem_tests:
             self.mount_dir = self.params.get('tmpfs_mount_dir', default=None)
             if self.mount_dir:
@@ -101,7 +97,7 @@ class ltp(Test):
                             shell=True, ignore_status=True)
 
         for package in deps:
-            if not sm.check_installed(package) and not sm.install(package):
+            if not smg.check_installed(package) and not smg.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
         url = "https://github.com/linux-test-project/ltp/archive/master.zip"
         tarball = self.fetch_asset("ltp-master.zip", locations=[url])
@@ -125,17 +121,16 @@ class ltp(Test):
                          self.get_data('skipfile')))
         self.ltpbin_dir = os.path.join(self.workdir, "ltp-master", 'bin')
         cmd = "%s %s" % (os.path.join(self.ltpbin_dir, 'runltp'), self.args)
-        result = process.run(cmd, ignore_status=True)
+        process.run(cmd, ignore_status=True)
         # Walk the ltp.log and try detect failed tests from lines like these:
         # msgctl04                                           FAIL       2
-        with open(logfile, 'r') as fp:
-            lines = fp.readlines()
+        with open(logfile, 'r') as file_p:
+            lines = file_p.readlines()
             for line in lines:
                 if 'FAIL' in line:
                     value = re.split(r'\s+', line)
                     self.failed_tests.append(value[0])
 
-        collect_dmesg(self)
         if self.failed_tests:
             self.fail("LTP tests failed: %s" % self.failed_tests)
 
