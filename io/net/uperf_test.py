@@ -106,7 +106,6 @@ class Uperf(Test):
                 else:
                     # Converting the throughput calculated in Gb to Mb
                     tput = int(line.split()[3].split('.')[0]) * 1000
-
                 if tput < self.expected_tp:
                     self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%, \
                               Throughput Actual value - %s "
