@@ -1,6 +1,6 @@
 Interfaces: !mux
     interface1:
-        interface: eth1
+        interface:
 Parameters: !mux
     Information:
         arg:
@@ -27,3 +27,13 @@ Parameters: !mux
         arg: -S
     SelfTest:
         arg: -t
+    Show-permaddr:
+        arg: -P
+    Get-dump:
+        arg: -w
+    Show-time-stamping:
+        arg: -T
+    Get-phy-tunable:
+        arg: --get-phy-tunable
+        action_elapse: downshift
+
