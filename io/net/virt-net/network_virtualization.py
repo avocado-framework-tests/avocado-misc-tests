@@ -79,7 +79,9 @@ class NetworkVirtualization(Test):
             self.cancel("HMC IP not got")
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default=None)
         self.hmc_username = self.params.get("hmc_username", '*', default=None)
-        self.lpar = self.params.get("lpar", '*', default=None)
+        self.lpar = self.get_mcp_component("NodeNameList").split('.')[0]
+        if not self.lpar:
+            self.cancel("LPAR Name not got from lsrsrc command")
         self.login(self.hmc_ip, self.hmc_username, self.hmc_pwd)
         cmd = 'lssyscfg -r sys  -F name'
         output = self.run_command(cmd)
@@ -87,8 +89,15 @@ class NetworkVirtualization(Test):
         for line in output:
             if line in self.lpar:
                 self.server = line
+                break
         if not self.server:
             self.cancel("Managed System not got")
+        cmd = 'lssyscfg -r lpar -F name -m %s' % self.server
+        output = self.run_command(cmd)
+        for line in output:
+            if "%s-" % self.lpar in line:
+                self.lpar = line
+                break
         self.slot_num = self.params.get("slot_num", '*', default=None)
         if int(self.slot_num) < 3 or int(self.slot_num) > 2999:
             self.cancel("Slot invalid. Valid range: 3 - 2999")
