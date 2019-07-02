@@ -42,7 +42,7 @@ class ltp(Test):
         sm = SoftwareManager()
         dist = distro.detect()
 
-        deps = ['gcc', 'make', 'automake', 'autoconf']
+        deps = ['gcc', 'make', 'automake', 'autoconf', 'psmisc']
         if dist.name == "Ubuntu":
             deps.extend(['libnuma-dev'])
         elif dist.name in ["centos", "rhel", "fedora"]:
