@@ -74,6 +74,24 @@ class NdctlTest(Test):
                 return value
         return None
 
+    def get_aligned_count(self, size):
+        """
+        Return count based on default alignemnt
+        """
+        if 'Hash' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
+            def_align = 16 * 1024 * 1024
+        else:
+            def_align = 2 * 1024 * 1024
+        if ((size / self.cnt) % def_align) != 0:
+            self.log.warn("Namespace would fail as it is not %sM "
+                          "aligned! Changing the number of "
+                          "namespaces", def_align / (1024 * 1024))
+            for count in range(self.cnt, 1, -1):
+                if ((size / count) % def_align) == 0:
+                    self.log.info("Changing namespaces to %s", count)
+                    return count
+        return self.cnt
+
     @staticmethod
     def check_buses():
         """
@@ -164,6 +182,7 @@ class NdctlTest(Test):
         deps = []
         self.dist = distro.detect()
         self.package = self.params.get('package', default='upstream')
+        self.cnt = self.params.get('namespace_cnt', default=4)
 
         if 'SuSE' not in self.dist.name:
             self.cancel('Unsupported OS %s' % self.dist.name)
@@ -279,7 +298,6 @@ class NdctlTest(Test):
         """
         Test multiple namespace with single region
         """
-        max_cnt = cnt = self.params.get('namespace_cnt', default=5)
         self.enable_region()
         region = self.get_json(short_opt='-R')[0]
         self.log.info("Using %s for muliple namespace regions", region)
@@ -287,24 +305,33 @@ class NdctlTest(Test):
         self.destroy_namespace(region=region)
         size = self.get_json_val(self.get_json(
             long_opt='-r %s' % region)[0], 'size')
-        self.log.info("Creating %s namespaces", cnt)
-        if 'Hash' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
-            def_align = 16 * 1024 * 1024
-        else:
-            def_align = 2 * 1024 * 1024
-        if ((size / cnt) % def_align) != 0:
-            self.log.warn("Namespace would fail as it is not %sM "
-                          "aligned! Chaning the number of "
-                          "namespaces", def_align / (1024 * 1024))
-            for count in range(max_cnt, 1, -1):
-                if ((size / count) % def_align) == 0:
-                    self.log.info("Changing namespaces to %s", count)
-                    cnt = count
-                    break
-
-        for nid in range(0, cnt):
-            self.create_namespace(region=region, mode='fsdax', size=size / cnt)
+        self.log.info("Creating %s namespaces", self.cnt)
+        ch_cnt = self.get_aligned_count(size)
+        for nid in range(0, ch_cnt):
+            self.create_namespace(
+                region=region, mode='fsdax', size=size / ch_cnt)
             self.log.info("Namespace %s created", nid + 1)
+
+    def test_multiple_ns_multiple_region(self):
+        """
+        Test multiple namespace with multiple region
+        """
+        self.enable_region()
+        if len(self.get_json(short_opt='-R')) <= 1:
+            self.cancel("Test not applicable without multiple regions")
+        regions = self.get_json(short_opt='-R')
+        self.disable_namespace()
+        self.destroy_namespace()
+        for region in regions:
+            self.log.info("Using %s for muliple namespaces", region)
+            size = self.get_json_val(self.get_json(
+                long_opt='-r %s' % region)[0], 'size')
+            self.log.info("Creating %s namespaces", self.cnt)
+            ch_cnt = self.get_aligned_count(size)
+            for nid in range(0, ch_cnt):
+                self.create_namespace(
+                    region=region, mode='fsdax', size=size / ch_cnt)
+                self.log.info("Namespace %s created", nid + 1)
 
     def test_namespace_reconfigure(self):
         """
