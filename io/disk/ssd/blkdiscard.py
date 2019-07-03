@@ -15,12 +15,15 @@
 # Copyright: 2016 IBM
 # Author: Venkat Rao B <vrbagal1@linux.vnet.ibm.com>
 
-# Blkdiscard  is  used  to  discard  device  sectors.This is useful for
-# solid-state drivers (SSDs) and thinly-provisioned storage.
+"""
+Blkdiscard  is  used  to  discard  device  sectors.This is useful for
+solid-state drivers (SSDs) and thinly-provisioned storage.
+"""
 
+import avocado
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import process
+from avocado.utils import process, lv_utils
 from avocado import main
 
 
@@ -45,12 +48,12 @@ class Blkdiscard(Test):
         cmd = "blkdiscard -V"
         process.run(cmd)
 
+    @avocado.fail_on
     def test(self):
         """
         Sectors are dicarded for the different values of OFFSET and LENGTH.
         """
-        cmd = "fdisk -l | grep %s | awk '{print $5}' | sed 1q;" % self.disk
-        size = int(process.system_output(cmd, shell=True).strip(""))
+        size = int(lv_utils.get_diskspace(self.disk))
         cmd = "blkdiscard %s -o 0 -v -l %d" % (self.disk, size)
         process.run(cmd, shell=True)
         cmd = "blkdiscard %s -o %d \
@@ -60,13 +63,13 @@ class Blkdiscard(Test):
         process.run(cmd, shell=True)
         for i in xrange(2, 10, 2):
             for j in xrange(2, 10, 2):
-                if (int(size) / i) % 4096 == 0 and (int(size) / j) % 4096 == 0:
+                if (size / i) % 4096 == 0 and (size / j) % 4096 == 0:
                     cmd = "blkdiscard %s -o %d -l %d -v" \
-                        % (self.disk, int(size) / i, int(size) / j)
+                        % (self.disk, size / i, size / j)
                     process.system(cmd, shell=True)
                 else:
                     cmd = "blkdiscard %s -o %d -l %d -v" \
-                        % (self.disk, int(size) / i, int(size) / j)
+                        % (self.disk, size / i, size / j)
                     if process.system(cmd, ignore_status=True,
                                       shell=True) == 0:
                         self.fail("Blkdiscard passed for the values which is, \
