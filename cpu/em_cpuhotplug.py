@@ -58,11 +58,25 @@ class Cpuhotplug_Test(Test):
         process.system("ppc64_cpu --smt=%s" % self.max_smt, shell=True)
         self.path = "/sys/devices/system/cpu"
 
+    def clear_dmesg(self):
+        process.run("dmesg -C ", sudo=True)
+
+    def verify_dmesg(self):
+        whiteboard = process.system_output("dmesg")
+
+        pattern = ['WARNING: CPU:', 'Oops', 'Segfault', 'soft lockup',
+                   'Unable to handle', 'ard LOCKUP']
+
+        for fail_pattern in pattern:
+            if fail_pattern in whiteboard:
+                self.fail("Test Failed : %s in dmesg" % fail_pattern)
+
     def test(self):
         """
         This script picks a random core and then offlines all its threads
         in a random order and onlines all its threads in a random order.
         """
+        self.clear_dmesg()
         for val in range(1, 100):
             self.log.info("================= TEST %s ==================" % val)
             core_list = self.random_gen_cores()
@@ -79,6 +93,8 @@ class Cpuhotplug_Test(Test):
                     self.online_cpu(cpu_num)
         if self.nfail > 0:
             self.fail(" Unable to online/offline few cpus")
+
+        self.verify_dmesg()
 
     def random_gen_cores(self):
         """
