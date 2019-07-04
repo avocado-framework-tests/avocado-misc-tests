@@ -16,11 +16,10 @@
 # Author: Shriya Kulkarni <shriyak@linux.vnet.ibm.com>
 
 import random
-import platform
 
 from avocado import Test
 from avocado import main
-from avocado.utils import process, cpu
+from avocado.utils import process, cpu, genio, distro
 
 
 class Cpuhotplug_Test(Test):
@@ -35,8 +34,9 @@ class Cpuhotplug_Test(Test):
         Get the number of cores and threads per core
         Set the SMT value to 4/8
         """
-        if 'ppc' not in platform.processor():
-            self.cancel("Processor is not ppc64")
+        if distro.detect().arch not in ['ppc64', 'ppc64le']:
+            self.cancel("Only supported in powerpc system")
+
         self.nfail = 0
         self.CORES = process.system_output("lscpu | grep 'Core(s) per socket:'"
                                            "| awk '{print $4}'", shell=True)
@@ -48,14 +48,14 @@ class Cpuhotplug_Test(Test):
         self.T_CORES = int(self.CORES) * int(self.SOCKETS)
         self.log.info(" Cores = %s and threads = %s "
                       % (self.T_CORES, self.THREADS))
-        process.system("echo 8 > /proc/sys/kernel/printk", shell=True,
-                       ignore_status=True)
+
+        genio.write_one_line('/proc/sys/kernel/printk', "8")
         self.max_smt = 4
         if cpu.get_cpu_arch().lower() == 'power8':
             self.max_smt = 8
         if cpu.get_cpu_arch().lower() == 'power6':
             self.max_smt = 2
-        process.system_output("ppc64_cpu --smt=%s" % self.max_smt, shell=True)
+        process.system("ppc64_cpu --smt=%s" % self.max_smt, shell=True)
         self.path = "/sys/devices/system/cpu"
 
     def test(self):
