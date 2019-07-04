@@ -14,14 +14,16 @@
 # Copyright: 2017 IBM
 # Author: Gautham R. Shenoy <ego@linux.vnet.ibm.com>
 # Author: Shriya Kulkarni <shriyak@linux.vnet.ibm.com>
+
 import random
 import platform
+
 from avocado import Test
 from avocado import main
 from avocado.utils import process, cpu
 
 
-class cpuhotplug_test(Test):
+class Cpuhotplug_Test(Test):
     """
     To test hotplug within core in random manner.
 
@@ -61,8 +63,8 @@ class cpuhotplug_test(Test):
         This script picks a random core and then offlines all its threads
         in a random order and onlines all its threads in a random order.
         """
-        for x in range(1, 100):
-            self.log.info("================= TEST %s ==================" % x)
+        for val in range(1, 100):
+            self.log.info("================= TEST %s ==================" % val)
             core_list = self.random_gen_cores()
             for core in core_list:
                 cpu_list = self.random_gen_cpu(core)
@@ -82,7 +84,7 @@ class cpuhotplug_test(Test):
         """
         Generate random core list
         """
-        nums = [x for x in range(0, self.T_CORES)]
+        nums = [val for val in range(0, self.T_CORES)]
         random.shuffle(nums)
         self.log.info(" Core list is %s" % nums)
         return nums
@@ -91,8 +93,8 @@ class cpuhotplug_test(Test):
         """
         Generate random cpu number for the given core
         """
-        nums = [x for x in range(self.max_smt * core,
-                                 ((self.max_smt * core) + self.max_smt))]
+        nums = [val for val in range(self.max_smt * core,
+                                     ((self.max_smt * core) + self.max_smt))]
         random.shuffle(nums)
         return nums
 
