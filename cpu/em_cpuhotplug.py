@@ -37,6 +37,7 @@ class Cpuhotplug_Test(Test):
         if distro.detect().arch not in ['ppc64', 'ppc64le']:
             self.cancel("Only supported in powerpc system")
 
+        self.loop = int(self.params.get('test_loop', default=100))
         self.nfail = 0
         self.CORES = process.system_output("lscpu | grep 'Core(s) per socket:'"
                                            "| awk '{print $4}'", shell=True)
@@ -77,7 +78,7 @@ class Cpuhotplug_Test(Test):
         in a random order and onlines all its threads in a random order.
         """
         self.clear_dmesg()
-        for val in range(1, 100):
+        for val in range(1, self.loop):
             self.log.info("================= TEST %s ==================" % val)
             core_list = self.random_gen_cores()
             for core in core_list:
