@@ -78,8 +78,6 @@ class Iperf(Test):
         build.make(self.iperf_dir)
         self.iperf = os.path.join(self.iperf_dir, 'src')
         self.expected_tp = self.params.get("EXPECTED_THROUGHPUT", default="85")
-        speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
-        self.expected_tp = int(self.expected_tp) * speed / 100
 
     def test(self):
         """
@@ -87,6 +85,7 @@ class Iperf(Test):
         transmitting (or receiving) data from a client. This transmit large
         messages using multiple threads or processes.
         """
+        speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
         os.chdir(self.iperf)
         cmd = "./iperf3 -c %s" % self.peer_ip
         result = process.run(cmd, shell=True, ignore_status=True)
@@ -95,9 +94,11 @@ class Iperf(Test):
         for line in result.stdout.splitlines():
             if 'sender' in line:
                 tput = int(line.split()[6].split('.')[0])
-                if tput < self.expected_tp:
-                    self.fail("FAIL: Throughput Actual - %d, Expected - %d"
-                              % (tput, self.expected_tp))
+                if tput < (int(self.expected_tp) * speed) / 100:
+                    self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%, \
+                              Throughput Actual value - %s "
+                              % ((tput*100)/speed, self.expected_tp,
+                                 str(tput)+'Mb/sec'))
 
     def tearDown(self):
         """

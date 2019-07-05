@@ -107,7 +107,6 @@ class Netperf(Test):
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.fail("test failed because netserver not available")
         speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
-        self.expected_tp = int(self.expected_tp) * speed / 100
         cmd = "timeout %s %s -H %s" % (self.timeout, self.perf,
                                        self.peer_ip)
         if self.option != "":
@@ -120,11 +119,10 @@ class Netperf(Test):
         for line in result.stdout.splitlines():
             if line and 'Throughput' in line.split()[-1]:
                 tput = int(result.stdout.split()[-1].split('.')[0])
-                if tput < self.expected_tp:
+                if tput < (int(self.expected_tp) * speed) / 100:
                     self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%, \
                               Throughput Actual value - %s "
-                              % ((tput*100)/speed,
-                                 (self.expected_tp*100)/speed,
+                              % ((tput*100)/speed, self.expected_tp,
                                  str(tput)+'Mb/sec'))
 
         if 'WARNING' in result.stdout:
