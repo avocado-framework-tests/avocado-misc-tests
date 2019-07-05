@@ -14,14 +14,15 @@
 # Copyright: 2017 IBM
 # Author: Gautham R. Shenoy <ego@linux.vnet.ibm.com>
 # Author: Shriya Kulkarni <shriyak@linux.vnet.ibm.com>
+
 import random
-import platform
+
 from avocado import Test
 from avocado import main
-from avocado.utils import process, cpu
+from avocado.utils import process, cpu, genio, distro
 
 
-class cpuhotplug_test(Test):
+class Cpuhotplug_Test(Test):
     """
     To test hotplug within core in random manner.
 
@@ -33,8 +34,10 @@ class cpuhotplug_test(Test):
         Get the number of cores and threads per core
         Set the SMT value to 4/8
         """
-        if 'ppc' not in platform.processor():
-            self.cancel("Processor is not ppc64")
+        if distro.detect().arch not in ['ppc64', 'ppc64le']:
+            self.cancel("Only supported in powerpc system")
+
+        self.loop = int(self.params.get('test_loop', default=100))
         self.nfail = 0
         self.CORES = process.system_output("lscpu | grep 'Core(s) per socket:'"
                                            "| awk '{print $4}'", shell=True)
@@ -46,23 +49,37 @@ class cpuhotplug_test(Test):
         self.T_CORES = int(self.CORES) * int(self.SOCKETS)
         self.log.info(" Cores = %s and threads = %s "
                       % (self.T_CORES, self.THREADS))
-        process.system("echo 8 > /proc/sys/kernel/printk", shell=True,
-                       ignore_status=True)
+
+        genio.write_one_line('/proc/sys/kernel/printk', "8")
         self.max_smt = 4
         if cpu.get_cpu_arch().lower() == 'power8':
             self.max_smt = 8
         if cpu.get_cpu_arch().lower() == 'power6':
             self.max_smt = 2
-        process.system_output("ppc64_cpu --smt=%s" % self.max_smt, shell=True)
+        process.system("ppc64_cpu --smt=%s" % self.max_smt, shell=True)
         self.path = "/sys/devices/system/cpu"
+
+    def clear_dmesg(self):
+        process.run("dmesg -C ", sudo=True)
+
+    def verify_dmesg(self):
+        whiteboard = process.system_output("dmesg")
+
+        pattern = ['WARNING: CPU:', 'Oops', 'Segfault', 'soft lockup',
+                   'Unable to handle', 'ard LOCKUP']
+
+        for fail_pattern in pattern:
+            if fail_pattern in whiteboard:
+                self.fail("Test Failed : %s in dmesg" % fail_pattern)
 
     def test(self):
         """
         This script picks a random core and then offlines all its threads
         in a random order and onlines all its threads in a random order.
         """
-        for x in range(1, 100):
-            self.log.info("================= TEST %s ==================" % x)
+        self.clear_dmesg()
+        for val in range(1, self.loop):
+            self.log.info("================= TEST %s ==================" % val)
             core_list = self.random_gen_cores()
             for core in core_list:
                 cpu_list = self.random_gen_cpu(core)
@@ -78,11 +95,13 @@ class cpuhotplug_test(Test):
         if self.nfail > 0:
             self.fail(" Unable to online/offline few cpus")
 
+        self.verify_dmesg()
+
     def random_gen_cores(self):
         """
         Generate random core list
         """
-        nums = [x for x in range(0, self.T_CORES)]
+        nums = [val for val in range(0, self.T_CORES)]
         random.shuffle(nums)
         self.log.info(" Core list is %s" % nums)
         return nums
@@ -91,8 +110,8 @@ class cpuhotplug_test(Test):
         """
         Generate random cpu number for the given core
         """
-        nums = [x for x in range(self.max_smt * core,
-                                 ((self.max_smt * core) + self.max_smt))]
+        nums = [val for val in range(self.max_smt * core,
+                                     ((self.max_smt * core) + self.max_smt))]
         random.shuffle(nums)
         return nums
 
