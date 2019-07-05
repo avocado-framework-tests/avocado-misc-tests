@@ -85,8 +85,6 @@ class Uperf(Test):
         process.system('./configure ppc64le', shell=True)
         build.make(self.uperf_dir)
         self.expected_tp = self.params.get("EXPECTED_THROUGHPUT", default="85")
-        speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
-        self.expected_tp = int(self.expected_tp) * speed / 100
 
     def test(self):
         """
@@ -94,6 +92,7 @@ class Uperf(Test):
         transmitting (or receiving) data from a client. This transmit large
         messages using multiple threads or processes.
         """
+        speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
         cmd = "h=%s proto=tcp ./src/uperf -m manual/throughput.xml -a" \
             % self.peer_ip
         result = process.run(cmd, shell=True, ignore_status=True)
@@ -106,10 +105,11 @@ class Uperf(Test):
                 else:
                     # Converting the throughput calculated in Gb to Mb
                     tput = int(line.split()[3].split('.')[0]) * 1000
-
-                if tput < self.expected_tp:
-                    self.fail("FAIL: Throughput Actual - %d, Expected - %d"
-                              % (tput, self.expected_tp))
+                if tput < (int(self.expected_tp) * speed) / 100:
+                    self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%, \
+                              Throughput Actual value - %s "
+                              % ((tput*100)/speed, self.expected_tp,
+                                 str(tput)+'Mb/sec'))
         if 'WARNING' in result.stdout:
             self.log.warn('Test completed with warning')
 
