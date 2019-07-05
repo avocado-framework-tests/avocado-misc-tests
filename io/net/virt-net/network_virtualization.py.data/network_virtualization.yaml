@@ -6,6 +6,8 @@ slot_num:
 vios_names:
 sriov_adapters:
 sriov_ports:
+priority:
+auto_failover:
 bandwidth:
 device_ip:
 netmask:

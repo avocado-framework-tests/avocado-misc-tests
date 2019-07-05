@@ -41,6 +41,7 @@ IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
 
 
 class CommandFailed(Exception):
+
     '''
     Defines the exception called when a
     command fails
@@ -58,6 +59,7 @@ class CommandFailed(Exception):
 
 
 class NetworkVirtualization(Test):
+
     '''
     Adding and deleting Network Virtualized devices from the vios
     Performs adding and deleting of Backing devices
@@ -113,6 +115,18 @@ class NetworkVirtualization(Test):
             self.cancel('Backing Device counts and vios name counts differ')
         self.backingdev_count = len(self.backing_adapter)
         self.bandwidth = self.params.get("bandwidth", '*', default=None)
+        self.vnic_priority = self.params.get(
+            "priority", '*', default=None)
+        if not self.vnic_priority:
+            self.vnic_priority = [50] * len(self.backing_adapter)
+        else:
+            self.vnic_priority = self.vnic_priority.split(',')
+        if len(self.vnic_priority) != len(self.backing_adapter):
+            self.cancel('Backing Device counts and priority counts differ')
+        self.auto_failover = self.params.get(
+            "auto_failover", '*', default=None)
+        if self.auto_failover not in ['0', '1']:
+            self.auto_failover = '1'
         self.count = int(self.params.get('vnic_test_count', default="1"))
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         self.device_ip = self.params.get('device_ip', '*', default=None)
@@ -328,7 +342,7 @@ class NetworkVirtualization(Test):
             for _ in range(self.count):
                 for val in range(int(self.backing_dev_count())):
                     self.log.info("Performing Client initiated\
-                                  failover - Attempt %s", int(val+1))
+                                  failover - Attempt %s", int(val + 1))
                     genio.write_file("/sys/devices/vio/%s/failover"
                                      % device_id, "1")
                     time.sleep(10)
@@ -399,15 +413,15 @@ class NetworkVirtualization(Test):
         Adds and removes a Network virtualized device based
         on the operation
         '''
-        backing_device = "backing_devices=sriov/%s/%s/%s/%s/%s"\
+        backing_device = "backing_devices=sriov/%s/%s/%s/%s/%s/%s"\
                          % (self.vios_name[0], self.vios_id[0],
                             self.backing_adapter_id[0], self.sriov_port[0],
-                            self.bandwidth)
+                            self.bandwidth, self.vnic_priority[0])
         if operation == 'add':
             cmd = 'chhwres -m %s --id %s -r virtualio --rsubtype vnic \
-                   -o a -s %s -a \"mac_addr=%s,%s\" '\
+                   -o a -s %s -a \"auto_priority_failover=%s,mac_addr=%s,%s\" '\
                    % (self.server, self.lpar_id, self.slot_num,
-                      self.mac_id, backing_device)
+                      self.auto_failover, self.mac_id, backing_device)
         else:
             cmd = 'chhwres -m %s --id %s -r virtualio --rsubtype vnic \
                    -o r -s %s'\
@@ -437,17 +451,19 @@ class NetworkVirtualization(Test):
         '''
         Adds and removes a backing device based on the operation
         '''
-        add_backing_device = "sriov/%s/%s/%s/%s/%s" \
+        add_backing_device = "sriov/%s/%s/%s/%s/%s/%s" \
                              % (self.vios_name[i], self.vios_id[i],
                                 self.backing_adapter_id[i],
                                 self.sriov_port[i],
-                                self.bandwidth)
+                                self.bandwidth,
+                                self.vnic_priority[i])
         if operation == 'add':
             cmd = 'chhwres -r virtualio --rsubtype vnic -o s -m %s -s %s \
-                   --id %s -a backing_devices+=%s' % (self.server,
-                                                      self.slot_num,
-                                                      self.lpar_id,
-                                                      add_backing_device)
+                   --id %s -a \"auto_priority_failover=%s,backing_devices+=%s\"' % (self.server,
+                                                                                    self.slot_num,
+                                                                                    self.lpar_id,
+                                                                                    self.auto_failover,
+                                                                                    add_backing_device)
         else:
             cmd = 'chhwres -r virtualio --rsubtype vnic -o s -m %s -s %s \
                    --id %s -a backing_devices-=%s' % (self.server,
@@ -551,7 +567,8 @@ class NetworkVirtualization(Test):
         """
         cmd = 'drmgr %s -c slot -s %s -w 5 -d 1' % (operation, slot)
         if process.system(cmd, shell=True, sudo=True, ignore_status=True):
-            self.fail("drmgr operation %s fails for vNIC device %s" % (operation, slot))
+            self.fail("drmgr operation %s fails for vNIC device %s" %
+                      (operation, slot))
 
     def configure_device(self):
         """
