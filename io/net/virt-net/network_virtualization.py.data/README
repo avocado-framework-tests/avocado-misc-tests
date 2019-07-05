@@ -26,6 +26,8 @@ sriov_ports ---> Comma separated ports using which the Network virtualized inter
 Ex: if the adapter has 2 ports and the Network virtualized interface should be added using Port 1, mention value as 0
 else mention 2 if Network virtualized interface should be added using Port 1
 bandwidth ---> The percentage of the ports bandwidth this Network virtualized interface is entitled to
+priority ---> Comma seperated prirotiy value for backing devices should be range of 1-100 (1,100,50,.. 1 for active and 100, 50 for consecutive backing device). 1 represents highest priority, 100 represents lowest, 50 is default if param not specified
+auto_failover --> enable auto_failover flag, 1 to enable or 0 to disable, defaults to 1
 device_ip ---> Ip to be configured for the added Network virtualized interface
 netmask ---> netmask value for the added Network virtualized interface
 peer_ip ---> Peer ip to which the added Network virtualized interface will ping to check for ping test
