@@ -149,7 +149,7 @@ class KDUMP(Test):
                                             self.prompt_server, "\n", log_file_server, 100, 10, None)
         if self.distro == "rhel":
             nfs_dir_path = os.path.join(self.nfs_path, "var", "crash")
-        print nfs_dir_path
+        self.log.info(nfs_dir_path)
         session_check.run("ls -lrt %s;" % nfs_dir_path, 100, "True")
         crash_dir = self.run_cmd_out("cat %s | grep drwxr | awk '{print $NF}' | tail -1" % log_file_server)
         path_crash_dir = os.path.join(nfs_dir_path, crash_dir)
