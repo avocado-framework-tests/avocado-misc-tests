@@ -29,7 +29,7 @@ def clear_dmesg():
 
 
 def collect_dmesg(object):
-    object.whiteboard = process.system_output("dmesg")
+    return process.system_output("dmesg")
 
 
 class Stressng(Test):
@@ -151,13 +151,11 @@ class Stressng(Test):
                                                   self.workers, timeout)
                     process.run("%s %s" % (cmd, stress_cmd),
                                 ignore_status=True, sudo=True)
-        collect_dmesg(self)
         ERROR = []
         pattern = ['WARNING: CPU:', 'Oops', 'Segfault', 'soft lockup',
                    'Unable to handle', 'ard LOCKUP']
-        logs = process.system_output('dmesg').splitlines()
         for fail_pattern in pattern:
-            for log in logs:
+            for log in collect_dmesg(self).splitlines():
                 if fail_pattern in log:
                     ERROR.append(log)
         if ERROR:
