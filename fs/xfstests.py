@@ -293,6 +293,7 @@ class Xfstests(Test):
             with open(self.exclude_file, 'a') as fp:
                 for test in test_list:
                     fp.write('%s/%s\n' % (test_type, test))
+        return test_list
 
     def _get_tests_for_group(self, group):
         """
