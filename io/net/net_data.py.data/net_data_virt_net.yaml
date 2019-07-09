@@ -1,6 +1,0 @@
-Interfaces:
-    Interface1:
-        peer_ip: ""
-        interface: ""
-MTU:
-    size_val: 9000 1500
