@@ -39,18 +39,25 @@ class Iperf(Test):
         """
         To check and install dependencies for the test
         """
+        self.peer_user = self.params.get("peer_user_name", default="root")
+        self.peer_ip = self.params.get("peer_ip", default="")
         smm = SoftwareManager()
-        for pkg in ["gcc", "autoconf", "perl", "m4"]:
+        for pkg in ["gcc", "autoconf", "perl", "m4", "libtool"]:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
+            cmd = "ssh %s@%s \"%s install %s\"" % (self.peer_user,
+                                                   self.peer_ip,
+                                                   smm.backend.base_command,
+                                                   pkg)
+            if process.system(cmd, shell=True, ignore_status=True) != 0:
+                self.cancel("unable to install the package %s on peer machine "
+                            % pkg)
         interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface", default="")
-        self.peer_ip = self.params.get("peer_ip", default="")
         if self.iface not in interfaces:
             self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
             self.cancel("%s peer machine is not available" % self.peer_ip)
-        self.peer_user = self.params.get("peer_user_name", default="root")
         iperf_download = self.params.get("iperf_download", default="https:"
                                          "//github.com/esnet/"
                                          "iperf/archive/master.zip")
