@@ -43,15 +43,17 @@ def clear_dmesg():
 def online(block):
     try:
         memory.hotplug(block)
+        return ""
     except IOError:
-        print "memory%s : Resource is busy" % block
+        return "memory%s : Resource is busy" % block
 
 
 def offline(block):
     try:
         memory.hotunplug(block)
+        return ""
     except IOError:
-        print "memory%s : Resource is busy" % block
+        return "memory%s : Resource is busy" % block
 
 
 def get_hotpluggable_blocks(path, ratio):
@@ -122,17 +124,19 @@ class MemStress(Test):
                 self.hotplug_all(self.blocks_hotpluggable)
         clear_dmesg()
 
-    @staticmethod
-    def hotunplug_all(blocks):
+    def hotunplug_all(self, blocks):
         for block in blocks:
             if memory._check_memory_state(block):
-                offline(block)
+                err = offline(block)
+                if err:
+                    self.log.error(err)
 
-    @staticmethod
-    def hotplug_all(blocks):
+    def hotplug_all(self, blocks):
         for block in blocks:
             if not memory._check_memory_state(block):
-                online(block)
+                err = online(block)
+                if err:
+                    self.log.error(err)
 
     @staticmethod
     def __is_auto_online():
@@ -172,10 +176,14 @@ class MemStress(Test):
         self.log.info("\nTEST: Memory toggle\n")
         for _ in range(self.iteration):
             for block in self.blocks_hotpluggable:
-                offline(block)
+                err = offline(block)
+                if err:
+                    self.log.error(err)
                 self.log.info("memory%s block hotunplugged", block)
                 self.run_stress()
-                online(block)
+                err = online(block)
+                if err:
+                    self.log.error(err)
                 self.log.info("memory%s block hotplugged", block)
         self.__error_check()
 
@@ -209,7 +217,9 @@ class MemStress(Test):
             for block in mem_blocks:
                 self.log.info(
                     "offline memory%s in numa node%s", block, node)
-                offline(block)
+                err = offline(block)
+                if err:
+                    self.log.error(err)
             self.run_stress()
         self.__error_check()
 
