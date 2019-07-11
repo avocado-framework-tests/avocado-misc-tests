@@ -17,7 +17,7 @@ args: !mux
        arg: -e
     RingParameter:
         arg: -g
-   ShowOffloadProtocolFeature:
+    ShowOffloadProtocolFeature:
         arg: -k
     AdapterInitiate:
         arg: -p
@@ -26,3 +26,12 @@ args: !mux
         arg: -S
     SelfTest:
         arg: -t
+    Show-permaddr:
+        arg: -P
+    Get-dump:
+        arg: -w
+    Show-time-stamping:
+        arg: -T
+    Get-phy-tunable:
+        arg: --get-phy-tunable
+        action_elapse: downshift
