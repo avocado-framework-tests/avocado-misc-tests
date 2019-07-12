@@ -183,6 +183,7 @@ class NdctlTest(Test):
         self.dist = distro.detect()
         self.package = self.params.get('package', default='upstream')
         self.cnt = self.params.get('namespace_cnt', default=4)
+        self.preserve_setup = self.params.get('preserve_change', default=False)
 
         if 'SuSE' not in self.dist.name:
             self.cancel('Unsupported OS %s' % self.dist.name)
@@ -406,9 +407,10 @@ class NdctlTest(Test):
             self.fail("Failed to check namespace metadata")
 
     def tearDown(self):
-        if self.get_json(short_opt='-N'):
-            self.destroy_namespace(force=True)
-        self.disable_region()
+        if not self.preserve_setup:
+            if self.get_json(short_opt='-N'):
+                self.destroy_namespace(force=True)
+            self.disable_region()
 
 
 if __name__ == "__main__":
