@@ -1,5 +1,6 @@
 config:
     namespace_cnt: 4
+    region: 'region0'
     version: !mux
         upstream:
             package : 'upstream'

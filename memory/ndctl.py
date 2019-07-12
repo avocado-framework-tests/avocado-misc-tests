@@ -274,7 +274,9 @@ class NdctlTest(Test):
         """
         failed_modes = []
         self.enable_region()
-        region = self.get_json(short_opt='-R')[0]
+        region = self.params.get('region', default=None)
+        if not region:
+            region = self.get_json(short_opt='-R')[0]
         self.log.info("Using %s for different namespace modes", region)
         self.disable_namespace(region=region)
         self.destroy_namespace(region=region)
@@ -299,7 +301,9 @@ class NdctlTest(Test):
         Test multiple namespace with single region
         """
         self.enable_region()
-        region = self.get_json(short_opt='-R')[0]
+        region = self.params.get('region', default=None)
+        if not region:
+            region = self.get_json(short_opt='-R')[0]
         self.log.info("Using %s for muliple namespace regions", region)
         self.disable_namespace(region=region)
         self.destroy_namespace(region=region)
@@ -317,7 +321,9 @@ class NdctlTest(Test):
         Test multiple namespace modes with single region
         """
         self.enable_region()
-        region = self.get_json(short_opt='-R')[0]
+        region = self.params.get('region', default=None)
+        if not region:
+            region = self.get_json(short_opt='-R')[0]
         self.log.info("Using %s for muliple namespace regions", region)
         self.disable_namespace(region=region)
         self.destroy_namespace(region=region)
@@ -356,7 +362,9 @@ class NdctlTest(Test):
         Test namespace reconfiguration
         """
         self.enable_region()
-        region = self.get_json(short_opt='-R')[0]
+        region = self.params.get('region', default=None)
+        if not region:
+            region = self.get_json(short_opt='-R')[0]
         self.log.info("Using %s for reconfiguring namespace", region)
         self.disable_namespace()
         self.destroy_namespace()
@@ -383,7 +391,9 @@ class NdctlTest(Test):
         Verify metadata for sector mode namespaces
         """
         self.enable_region()
-        region = self.get_json(short_opt='-R')[0]
+        region = self.params.get('region', default=None)
+        if not region:
+            region = self.get_json(short_opt='-R')[0]
         self.disable_namespace()
         self.destroy_namespace()
         self.log.info("Creating sector namespace using %s", region)
