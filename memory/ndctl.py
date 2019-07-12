@@ -220,6 +220,9 @@ class NdctlTest(Test):
                 self.cancel('%s is needed for the test to be run' % pkg)
         self.opt_dict = {'-B': 'provider',
                          '-D': 'dev', '-R': 'dev', '-N': 'dev'}
+        self.modes = ['raw', 'fsdax', 'devdax']
+        if self.dist.arch != 'ppc64le':
+            self.modes.extend(['blk'])
 
     def test_bus_ids(self):
         """
@@ -275,10 +278,7 @@ class NdctlTest(Test):
         self.log.info("Using %s for different namespace modes", region)
         self.disable_namespace(region=region)
         self.destroy_namespace(region=region)
-        modes = ['raw', 'fsdax', 'devdax']
-        if self.dist.arch != 'ppc64le':
-            modes.extend(['blk'])
-        for mode in modes:
+        for mode in self.modes:
             self.create_namespace(region=region, mode=mode)
             ns_json = self.get_json()[0]
             created_mode = self.get_json_val(ns_json, 'mode')
@@ -311,6 +311,24 @@ class NdctlTest(Test):
             self.create_namespace(
                 region=region, mode='fsdax', size=size / ch_cnt)
             self.log.info("Namespace %s created", nid + 1)
+
+    def test_multiple_ns_modes_region(self):
+        """
+        Test multiple namespace modes with single region
+        """
+        self.enable_region()
+        region = self.get_json(short_opt='-R')[0]
+        self.log.info("Using %s for muliple namespace regions", region)
+        self.disable_namespace(region=region)
+        self.destroy_namespace(region=region)
+        size = self.get_json_val(self.get_json(
+            long_opt='-r %s' % region)[0], 'size')
+        if size < (len(self.modes) * 64 * 1024 * 1024):
+            self.cancel('Not enough memory to create namespaces')
+        for mode in self.modes:
+            self.create_namespace(
+                region=region, mode=mode, size='64M')
+            self.log.info("Namespace of type %s created", mode)
 
     def test_multiple_ns_multiple_region(self):
         """
