@@ -1,0 +1,20 @@
+setup:
+    skip_dangerous: True
+    scratch_mnt: '/mnt/scratch_pmem'
+    test_mnt: '/mnt/test_pmem'
+    mount_opt: '-o dax'
+    fs_type: !mux
+        fs_ext4:
+            fs: 'ext4'
+            mkfs_opt: '-b 65536'
+            #test_range: '388'
+            #exclude: '1-400'
+            #gen_exclude: '1-387,389-600'
+            #share_exclude: '1-600'
+        fs_xfs:
+            fs: 'xfs'
+            mkfs_opt: '-b size=65536 -s size=4096'
+    disk_type: !mux
+        type: 'disk'
+        disk_test: /dev/pmem0
+        disk_scratch: /dev/pmem0.1
