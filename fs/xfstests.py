@@ -109,6 +109,7 @@ class Xfstests(Test):
             self.cancel('Unknown filesystem %s' % self.fs_to_test)
         mount = True
         self.devices = []
+        self.log_devices = []
         shutil.copyfile(self.get_data('local.config'),
                         os.path.join(self.teststmpdir, 'local.config'))
         shutil.copyfile(self.get_data('group'),
@@ -133,6 +134,10 @@ class Xfstests(Test):
         # mkfs for devices
         if self.devices:
             cfg_file = os.path.join(self.teststmpdir, 'local.config')
+            self.mkfs_opt = self.params.get('mkfs_opt', default='')
+            self.mount_opt = self.params.get('mount_opt', default='')
+            self.log_test = self.params.get('log_test', default='')
+            self.log_scratch = self.params.get('log_scratch', default='')
             with open(cfg_file, "r") as sources:
                 lines = sources.readlines()
             with open(cfg_file, "w") as sources:
@@ -157,10 +162,27 @@ class Xfstests(Test):
                                 self.scratch_mnt,
                                 line))
                         break
-
-            for dev in self.devices:
+            with open(cfg_file, "a") as sources:
+                if self.log_test:
+                    sources.write('export TEST_LOGDEV="%s"\n' % self.log_test)
+                    self.log_devices.append(self.log_test)
+                if self.log_scratch:
+                    sources.write('export SCRATCH_LOGDEV="%s"\n' % self.log_scratch)
+                    self.log_devices.append(self.log_scratch)
+                if self.mkfs_opt:
+                    sources.write('MKFS_OPTIONS="%s"\n' % self.mkfs_opt)
+                if self.mount_opt:
+                    sources.write('MOUNT_OPTIONS="%s"\n' % self.mount_opt)
+            self.logdev_opt = self.params.get('logdev_opt', default='')
+            for dev in self.log_devices:
                 dev_obj = partition.Partition(dev)
-                dev_obj.mkfs(fstype=self.fs_to_test)
+                dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
+            for ite, dev in enumerate(self.devices):
+                dev_obj = partition.Partition(dev)
+                if self.logdev_opt:
+                    dev_obj.mkfs(fstype=self.fs_to_test, args='%s %s=%s' % (self.mkfs_opt, self.logdev_opt, self.log_devices[ite]))
+                else:
+                    dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
 
         git.get_repo('git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
                      destination_dir=self.teststmpdir)
