@@ -20,8 +20,6 @@ test_opt: !mux
         test_opt: -Q 5
     -w_100M:
         test_opt: -w 100M
-    -x_1:
-        test_opt: -x 1
     -y_10G:
         test_opt: -y 10G
     -z:
