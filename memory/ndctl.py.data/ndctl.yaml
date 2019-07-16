@@ -7,3 +7,10 @@ config:
             package : 'upstream'
         distro:
             package : 'distro'
+    mode_types: !mux
+        fsdax:
+            modes: 'fsdax'
+            size: '1G'
+        sector:
+            modes: 'sector'
+            size: '300M'

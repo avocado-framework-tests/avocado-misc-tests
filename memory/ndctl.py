@@ -184,6 +184,8 @@ class NdctlTest(Test):
         self.package = self.params.get('package', default='upstream')
         self.cnt = self.params.get('namespace_cnt', default=4)
         self.preserve_setup = self.params.get('preserve_change', default=False)
+        self.size = self.params.get('size', default=None)
+        self.mode_to_use = self.params.get('modes', default='fsdax')
 
         if 'SuSE' not in self.dist.name:
             self.cancel('Unsupported OS %s' % self.dist.name)
@@ -308,13 +310,18 @@ class NdctlTest(Test):
         self.log.info("Using %s for muliple namespace regions", region)
         self.disable_namespace(region=region)
         self.destroy_namespace(region=region)
-        size = self.get_json_val(self.get_json(
-            long_opt='-r %s' % region)[0], 'size')
         self.log.info("Creating %s namespaces", self.cnt)
-        ch_cnt = self.get_aligned_count(size)
+        if not self.size:
+            self.size = self.get_json_val(self.get_json(
+                long_opt='-r %s' % region)[0], 'size')
+            ch_cnt = self.get_aligned_count(self.size)
+            self.size = self.size / ch_cnt
+        else:
+            # Assuming self.cnt is aligned
+            ch_cnt = self.cnt
         for nid in range(0, ch_cnt):
             self.create_namespace(
-                region=region, mode='fsdax', size=size / ch_cnt)
+                region=region, mode=self.mode_to_use, size=self.size)
             self.log.info("Namespace %s created", nid + 1)
 
     def test_multiple_ns_modes_region(self):
@@ -349,13 +356,18 @@ class NdctlTest(Test):
         self.destroy_namespace()
         for region in regions:
             self.log.info("Using %s for muliple namespaces", region)
-            size = self.get_json_val(self.get_json(
-                long_opt='-r %s' % region)[0], 'size')
             self.log.info("Creating %s namespaces", self.cnt)
-            ch_cnt = self.get_aligned_count(size)
+            if not self.size:
+                size = self.get_json_val(self.get_json(
+                    long_opt='-r %s' % region)[0], 'size')
+                ch_cnt = self.get_aligned_count(size)
+                self.size = self.size / ch_cnt
+            else:
+                # Assuming size is aligned
+                ch_cnt = self.cnt
             for nid in range(0, ch_cnt):
                 self.create_namespace(
-                    region=region, mode='fsdax', size=size / ch_cnt)
+                    region=region, mode=self.mode_to_use, size=self.size)
                 self.log.info("Namespace %s created", nid + 1)
 
     def test_namespace_reconfigure(self):
