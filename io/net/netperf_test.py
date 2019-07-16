@@ -127,8 +127,8 @@ class Netperf(Test):
             if line and 'Throughput' in line.split()[-1]:
                 tput = int(result.stdout.split()[-1].split('.')[0])
                 if tput < (int(self.expected_tp) * speed) / 100:
-                    self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%, \
-                              Throughput Actual value - %s "
+                    self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%"
+                              ", Throughput Actual value - %s "
                               % ((tput*100)/speed, self.expected_tp,
                                  str(tput)+'Mb/sec'))
 
