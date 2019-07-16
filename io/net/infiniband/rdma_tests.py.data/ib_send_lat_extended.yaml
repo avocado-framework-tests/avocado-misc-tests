@@ -32,8 +32,8 @@ test_opt: !mux
         test_opt: -c UD
     -e:
         test_opt: -e
-    -g:
-        test_opt: -g
+    -g_x:
+        test_opt: -g -x 0
     -R:
         test_opt: -R
     -R_-a:

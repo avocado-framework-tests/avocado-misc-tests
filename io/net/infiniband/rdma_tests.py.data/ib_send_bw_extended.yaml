@@ -38,8 +38,8 @@ test_opt: !mux
         test_opt: -c UD
     -e:
         test_opt: -e
-    -g:
-        test_opt: -g
+    -g_x:
+        test_opt: -g -x 0
     -r_2048:
         test_opt: -r 2048
     -R:
