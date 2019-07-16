@@ -14,3 +14,4 @@ install MOFED iso
 Note:
 -----
 1. Generate sshkey for your test partner to run the test uninterrupted.
+2. Ensure to run the tests from cfg file so that all the MTU sizes can be tested accordingly.
