@@ -127,7 +127,7 @@ class IPOverIB(Test):
         Bringup IPoIB Interface
         '''
         self.log.info("Bringup Interface %s with %s mode", self.iface, arg1)
-        cmd = "timeout %s ifconfig %s down" % (self.tmo, self.iface)
+        cmd = "timeout %s ip link set %s down" % (self.tmo, self.iface)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("interface setup test failed")
         time.sleep(2)
@@ -139,7 +139,7 @@ class IPOverIB(Test):
         cmd = "timeout %s cat /sys/class/net/%s/mode" % (self.tmo, self.iface)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("interface setup test failed")
-        cmd = "timeout %s ifconfig %s up" % (self.tmo, self.iface)
+        cmd = "timeout %s ip link set %s up" % (self.tmo, self.iface)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("interface setup test failed")
 
