@@ -3,6 +3,9 @@ Description:
 iperf is a tool for active measurements of the maximum achievable
 bandwidth on IP networks.
 
+here we assuming the peer machine same as host and installing
+the packages based on that.
+
 Inputs Needed To Run Tests:
 ---------------------------
 interface		- interface on which test run

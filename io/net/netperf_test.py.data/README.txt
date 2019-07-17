@@ -4,6 +4,10 @@ Netperf is a benchmark that can be used to measure the performance of
 many different types of networking. It provides tests for both
 unidirectional throughput, and end-to-end latency.
 
+here we assuming the peer machine same as host and installing
+the packages based on that.
+
+
 Inputs Needed To Run Tests:
 -----------------------------
 PEERIP			- IP of the Peer interface to be tested

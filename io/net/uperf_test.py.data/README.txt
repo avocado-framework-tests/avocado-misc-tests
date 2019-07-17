@@ -4,7 +4,10 @@ Unified Performance Tool or uperf for short, is a network
 performance measurement tool that supports execution of
 workload profiles
 
-Inputs Needed To Run Tests:
+here we assuming the peer machine same as host and installing
+the packages based on that.
+
+Inpute Needed To Run Tests:
 -----------------------------
 interface		- interface on which test run
 peer_ip			- IP of the Peer interface to be tested
