@@ -1,0 +1,66 @@
+c2c:
+    record: !mux
+        event_load:
+                record_method: -e ldlat-loads
+        event__load_full:
+                record_method: --event ldlat-loads
+        event_store:
+                record_method: -e ldlat-stores
+        event__store_full:
+                record_method: --event ldlat-stores
+        all_kernel:
+                record_method: -k
+        all_kernel_full:
+                record_method: --all-kernel
+        latency:
+                record_method: -l 10
+        latency_full:
+                record_method: --ldlat 10
+        all_user:
+                record_method: -u
+        all_user_full:
+                record_method: --all-user
+
+    report: !mux
+        coalesce:
+                report_method: -c pid,tid,iaddr,dso
+        coalesce_full:
+                report_method: --coalesce pid,tid,iaddr,dso
+        display-lcl:
+                report_method: -d lcl
+        display-rmt:
+                report_method: -d rmt
+        display-lcl_full:
+                report_method: --display lcl
+        display-rmt_full:
+                report_method: --display rmt
+        force:
+                report_method: -f
+        force_full:
+                report_method: --force
+        graph:
+                report_method: -g
+        graph_full:
+                report_method: --call-graph
+        input:
+                report_method: -i 
+        input_full:
+                report_method: --input
+        vmlinux:
+                report_method: -k /boot/vmlinux
+        vmlinux_full:
+                report_method: --vmlinux /boot/vmlinux
+        node-info:
+                report_method: -N
+        node-info_full:
+                report_method: --node-info
+        full-symbols:
+                report_method: --full-symbols
+        no-source:
+                report_method: --no-source
+        show-all:
+                report_method: --show-all
+        stats:
+                report_method: --stats
+        stdio:
+                report_method: --stdio
