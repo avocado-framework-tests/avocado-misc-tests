@@ -358,9 +358,9 @@ class NdctlTest(Test):
             self.log.info("Using %s for muliple namespaces", region)
             self.log.info("Creating %s namespaces", self.cnt)
             if not self.size:
-                size = self.get_json_val(self.get_json(
+                self.size = self.get_json_val(self.get_json(
                     long_opt='-r %s' % region)[0], 'size')
-                ch_cnt = self.get_aligned_count(size)
+                ch_cnt = self.get_aligned_count(self.size)
                 self.size = self.size / ch_cnt
             else:
                 # Assuming size is aligned
