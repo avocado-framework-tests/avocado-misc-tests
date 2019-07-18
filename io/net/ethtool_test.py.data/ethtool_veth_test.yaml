@@ -1,0 +1,15 @@
+interface:
+peer_ip:
+args: !mux
+    Information:
+        arg:
+    Driver:
+        arg: -i
+    ShowOffloadProtocolFeature:
+        arg: -k
+    Statistics:
+        arg: -S
+    Show-permaddr:
+        arg: -P
+    Show-time-stamping:
+        arg: -T
