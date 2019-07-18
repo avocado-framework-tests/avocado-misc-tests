@@ -70,6 +70,10 @@ class LibHugetlbfs(Test):
                         "\nTry installing glibc-static")
 
         page_sizes = memory.get_supported_huge_pages_size()
+        if 'PowerVM' in process.system_output("pseries_platform",
+                                              ignore_status=True):
+            # Remove 16G pages for pseries
+            page_sizes.remove(16 * 1024 * 1024)
         self.page_sizes = [str(each // 1024) for each in page_sizes]
 
         # Get arguments:
