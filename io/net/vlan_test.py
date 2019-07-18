@@ -312,7 +312,7 @@ class VlanTest(Test):
         self.run_host_command(cmd)
         self.run_host_command("ip link set %s.%s up" % (self.host_intf,
                                                         vlan_num))
-        cmd = "ifconfig %s.%s" % (self.host_intf, vlan_num)
+        cmd = "ip addr show %s.%s" % (self.host_intf, vlan_num)
         self.run_host_command(cmd)
 
     def conf_peer_vlan_intf(self, vlan_num):
@@ -329,7 +329,7 @@ class VlanTest(Test):
         self.run_peer_command(cmd)
         self.run_peer_command("ip link set %s.%s up" % (self.peer_intf,
                                                         vlan_num))
-        cmd = "ifconfig %s.%s" % (self.peer_intf, vlan_num)
+        cmd = "ip addr show %s.%s" % (self.peer_intf, vlan_num)
         self.run_peer_command(cmd)
 
     def restore_host_intf(self):
