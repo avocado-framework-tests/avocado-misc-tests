@@ -52,12 +52,11 @@ class DiagEncl(Test):
     def test_diag_encl(self):
         self.log.info("===========Executing diag_encl test==========")
         diag_path = '/var/log/ppc64-diag/diag_disk/'
-
         if 'disk health' not in process.system_output("diag_encl -h"):
             self.fail("'-d' option is not available in help message")
+        self.run_cmd("vpdupdate")
         if not os.path.isdir(diag_path):
             self.run_cmd_out("diag_encl -d")
-
         for _ in range(4):
             self.run_cmd("diag_encl -d")
         no_of_files = len(glob.glob1(diag_path, "*diskAnalytics*"))
