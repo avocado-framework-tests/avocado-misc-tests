@@ -49,15 +49,15 @@ class ThpDefrag(Test):
 
         # Get required mem info
         self.mem_path = os.path.join(data_dir.get_tmp_dir(), 'thp_space')
-        self.block_size = int(mmap.PAGESIZE) / 1024
+        self.block_size = int(mmap.PAGESIZE) // 1024
         # add mount point
         if os.path.exists(self.mem_path):
             os.makedirs(self.mem_path)
         self.device = Partition(device="none", mountpoint=self.mem_path)
         self.device.mount(mountpoint=self.mem_path, fstype="tmpfs")
-        free_space = (disk.freespace(self.mem_path)) / 1024
+        free_space = (disk.freespace(self.mem_path)) // 1024
         # Leaving out some free space in tmpfs
-        self.count = (free_space / self.block_size) - 3
+        self.count = (free_space // self.block_size) - 3
 
     @avocado.fail_on
     def test(self):

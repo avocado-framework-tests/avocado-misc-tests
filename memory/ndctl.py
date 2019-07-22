@@ -69,7 +69,7 @@ class NdctlTest(Test):
         """
         Get the value of a field in given json
         """
-        for key, value in json_op.iteritems():
+        for key, value in json_op.items():
             if key == field:
                 return value
         return None
@@ -82,12 +82,12 @@ class NdctlTest(Test):
             def_align = 16 * 1024 * 1024
         else:
             def_align = 2 * 1024 * 1024
-        if ((size / self.cnt) % def_align) != 0:
+        if ((size // self.cnt) % def_align) != 0:
             self.log.warn("Namespace would fail as it is not %sM "
                           "aligned! Changing the number of "
-                          "namespaces", def_align / (1024 * 1024))
+                          "namespaces", def_align // (1024 * 1024))
             for count in range(self.cnt, 1, -1):
-                if ((size / count) % def_align) == 0:
+                if ((size // count) % def_align) == 0:
                     self.log.info("Changing namespaces to %s", count)
                     return count
         return self.cnt
@@ -315,7 +315,7 @@ class NdctlTest(Test):
             self.size = self.get_json_val(self.get_json(
                 long_opt='-r %s' % region)[0], 'size')
             ch_cnt = self.get_aligned_count(self.size)
-            self.size = self.size / ch_cnt
+            self.size = self.size // ch_cnt
         else:
             # Assuming self.cnt is aligned
             ch_cnt = self.cnt
@@ -361,7 +361,7 @@ class NdctlTest(Test):
                 self.size = self.get_json_val(self.get_json(
                     long_opt='-r %s' % region)[0], 'size')
                 ch_cnt = self.get_aligned_count(self.size)
-                self.size = self.size / ch_cnt
+                self.size = self.size // ch_cnt
             else:
                 # Assuming size is aligned
                 ch_cnt = self.cnt
@@ -390,7 +390,7 @@ class NdctlTest(Test):
         new_ns = self.get_json()[0]
         self.log.info("Checking namespace changes")
         failed_vals = []
-        for key, val in new_ns.iteritems():
+        for key, val in new_ns.items():
             if key in list(set(old_ns.keys()) - set(['uuid', 'dev'])):
                 if old_ns[key] != val:
                     failed_vals.append({key: val})

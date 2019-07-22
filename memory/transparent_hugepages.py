@@ -59,7 +59,7 @@ class Thp(Test):
 
         # Set block size as hugepage size * 2
         self.block_size = memory.meminfo.Hugepagesize.m * 2
-        self.count = free_mem / self.block_size
+        self.count = free_mem // self.block_size
 
         # Mount device as per free memory size
         if not os.path.exists(self.mem_path):

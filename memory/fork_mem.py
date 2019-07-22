@@ -76,8 +76,8 @@ class Forkoff(Test):
         os.chdir(self.teststmpdir)
 
         self.run_test(self.freemem, 1, self.itern)
-        self.run_test(self.freemem / self.procs, self.procs, self.itern)
-        self.run_test(self.minmem, self.freemem / self.minmem, self.itern)
+        self.run_test(self.freemem // self.procs, self.procs, self.itern)
+        self.run_test(self.minmem, self.freemem // self.minmem, self.itern)
 
         if self.fails:
             self.fail("The following test(s) failed: %s" % self.fails)
