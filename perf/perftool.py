@@ -71,7 +71,7 @@ class Perftool(Test):
         '''
         count = 0
         # Built in perf test
-        for string in process.run("perf test").stderr.splitlines():
+        for string in process.run("perf test", ignore_status=True).stderr.splitlines():
             if 'FAILED' in str(string.splitlines()):
                 self.log.info("Test case failed is %s"
                               % str(string.splitlines()))
