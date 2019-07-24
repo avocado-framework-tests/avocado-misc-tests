@@ -21,27 +21,12 @@
 
 PATH=$(avocado "exec-path"):$PATH
 
-# Install dependencies
-if [[ `python -c 'from avocado.utils.software_manager import SoftwareManager; \
-   print SoftwareManager().install("dapl*")'` == 'False' ]]
-then
-    avocado_debug 'Dapl Packages not installed'
-    exit
-fi
-
-# Load Modules
-modules=(ib_uverbs ib_ucm ib_cm ib_mad ib_sa ib_umad ib_addr rdma_cm rdma_ucm \
-    ib_core mlx4_core mlx5_core mlx5_ib ib_ipoib mlx4_en mlx4_ib)
-for i in "${modules[@]}"; do
-    modprobe $i || avocado_debug 'not able to load module'$i
-done
-
 # Parsing Input
 host_param=$(eval "echo $HOST_PARAM")
 peer_param=$(eval "echo $PEER_PARAM")
 
 # Timeout
-timeout=2m
+timeout=6m
 
 # Runs dapltest on client and server
 dapl_exec()
@@ -70,11 +55,12 @@ dapl_exec()
 testdapl()
 {
     if [[ $dapl_interface != "" ]] && [[ $dapl_peer_interface != "" ]]; then
-        if type "dapltest" > /dev/null
+        if type "dapltest" > /dev/null || [[ `python -c 'from avocado.utils.software_manager import SoftwareManager; \
+               print SoftwareManager().install("dapl*")'` == 'True' ]]
         then
-            dapl_exec dapltest "$host_param" "$peer_param"
+            dapl_exec dapltest "$peer_param" "$host_param"
         else
-            avocado_debug "Cmd dapltest doesn't exist, Test will be skipped"
+            avocado_debug "Dapl Packages could not be installed, Test will be skipped"
             exit 1
         fi
     else
