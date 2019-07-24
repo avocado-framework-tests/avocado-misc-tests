@@ -623,6 +623,21 @@ class NetworkVirtualization(Test):
                         break
         return priority
 
+    def change_failover_priority(self, logport, priority):
+        """
+        Change the fail over priroity for given backing device
+        """
+        cmd = 'chhwres -r virtualio --rsubtype vnicbkdev -o s -m %s \
+               -s %s --id %s --logport %s -a failover_priority=%s' \
+               % (self.server, self.slot_num, self.lpar_id, logport, priority)
+        try:
+            self.run_command(cmd)
+        except CommandFailed as cmdfail:
+            self.log.debug(str(cmdfail))
+        if priority != self.get_failover_priority(logport):
+            return False
+        return True
+
     def configure_device(self):
         """
         Configures the Network virtualized device
