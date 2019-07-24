@@ -709,9 +709,11 @@ class NetworkVirtualization(Test):
         device = self.configure_device()
         cmd = "ping -I %s %s -c 5"\
               % (device, self.peer_ip)
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
-            return False
-        return True
+        output = process.system_output(cmd)
+        for log in output.split('\n'):
+            if ' 0% packet loss' in log.split(','):
+                return True
+        return False
 
     def trigger_failover(self, logport):
         '''
