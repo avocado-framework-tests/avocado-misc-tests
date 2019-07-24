@@ -356,23 +356,28 @@ class NetworkVirtualization(Test):
             self.fail("Client initiated Failover for Network virtualized \
                       device has failed")
 
-    def test_backingdevremove(self):
+    def test_vnic_auto_failover(self):
         '''
-        Removing Backing device for Network virtualized device
+        Set the priority for vNIC active and backing devices and check if autofailover works
         '''
-        if self.check_slot_availability():
-            self.fail("Slot does not exist")
-        self.update_backing_devices()
-        pre_remove = self.backing_dev_count()
-        for count in range(1, self.backingdev_count):
-            self.backing_dev_add_remove('remove', count)
-        post_remove = self.backing_dev_count()
-        post_remove_count = pre_remove - post_remove + 1
-        if post_remove_count != self.backingdev_count:
-            self.log.debug("Actual backing dev count: %d", post_remove_count)
-            self.log.debug("Expected backing dev count: %d",
-                           self.backingdev_count)
-            self.fail("Failed to remove backing device")
+        if len(self.backing_adapter) >= 2:
+            for _ in range(self.count):
+                self.update_backing_devices()
+                backing_logport = self.get_backing_device_logport()
+                active_logport = self.get_active_device_logport()
+                if self.enable_auto_failover():
+                    if not self.change_failover_priority(backing_logport, '1'):
+                        self.fail("Fail to change the priority for backing device %s", backing_logport)
+                    if not self.change_failover_priority(active_logport, '100'):
+                        self.fail("Fail to change the priority for active device %s", active_logport)
+                    if backing_logport != self.get_active_device_logport():
+                        self.fail("Auto failover of backing device failed")
+                    if not self.ping_check():
+                        self.fail("Auto failover has effected connectivity")
+                else:
+                    self.fail("Could not enable auto failover")
+        else:
+            self.cancel("Provide more backing device, only 1 given")
 
     def test_vnic_dlpar(self):
         '''
@@ -393,6 +398,24 @@ class NetworkVirtualization(Test):
                 self.fail("dlpar has affected Network connectivity")
         else:
             self.fail("slot not found")
+
+    def test_backingdevremove(self):
+        '''
+        Removing Backing device for Network virtualized device
+        '''
+        if self.check_slot_availability():
+            self.fail("Slot does not exist")
+        self.update_backing_devices()
+        pre_remove = self.backing_dev_count()
+        for count in range(1, self.backingdev_count):
+            self.backing_dev_add_remove('remove', count)
+        post_remove = self.backing_dev_count()
+        post_remove_count = pre_remove - post_remove + 1
+        if post_remove_count != self.backingdev_count:
+            self.log.debug("Actual backing dev count: %d", post_remove_count)
+            self.log.debug("Expected backing dev count: %d",
+                           self.backingdev_count)
+            self.fail("Failed to remove backing device")
 
     def test_remove(self):
         '''
