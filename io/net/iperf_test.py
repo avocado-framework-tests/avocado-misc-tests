@@ -20,6 +20,10 @@ bandwidth on IP networks.
 """
 
 import os
+try:
+    import pxssh
+except ImportError:
+    from pexpect import pxssh
 import netifaces
 from avocado import main
 from avocado import Test
@@ -41,15 +45,16 @@ class Iperf(Test):
         """
         self.peer_user = self.params.get("peer_user_name", default="root")
         self.peer_ip = self.params.get("peer_ip", default="")
+        self.peer_password = self.params.get("peer_password", '*',
+                                             default=None)
+        self.peer_login(self.peer_ip, self.peer_user, self.peer_password)
         smm = SoftwareManager()
         for pkg in ["gcc", "autoconf", "perl", "m4", "libtool"]:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
-            cmd = "ssh %s@%s \"%s install %s\"" % (self.peer_user,
-                                                   self.peer_ip,
-                                                   smm.backend.base_command,
-                                                   pkg)
-            if process.system(cmd, shell=True, ignore_status=True) != 0:
+            cmd = "%s install %s" % (smm.backend.base_command, pkg)
+            output, exitcode = self.run_command(cmd)
+            if exitcode != 0:
                 self.cancel("unable to install the package %s on peer machine "
                             % pkg)
         interfaces = netifaces.interfaces()
@@ -69,22 +74,64 @@ class Iperf(Test):
                                         self.peer_ip)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.cancel("unable to copy the iperf into peer machine")
-        cmd = "ssh %s@%s \"cd /tmp/iperf-master;./bootstrap.sh;./configure;" \
-              "make\"" % (self.peer_user, self.peer_ip)
-        if process.system(cmd, ignore_status=True, shell=True, sudo=True):
+        cmd = "cd /tmp/iperf-master;./bootstrap.sh;./configure;make"
+        output, exitcode = self.run_command(cmd)
+        if exitcode != 0:
             self.cancel("Unable to compile Iperf into peer machine")
         self.iperf_run = str(self.params.get("IPERF_SERVER_RUN", default=0))
         if self.iperf_run == '1':
-            cmd = "ssh %s@%s \"cd /tmp/iperf-master/src/;./iperf3 -s\""\
-                  % (self.peer_user, self.peer_ip)
-            obj = process.SubProcess(cmd, verbose=False, shell=True)
-            obj.start()
+            cmd = "/tmp/iperf-master/src/iperf3 -s &"
+            output, exitcode = self.run_command(cmd)
+            if exitcode != 0:
+                self.log.debug("Command %s failed %s", cmd, output)
         os.chdir(self.iperf_dir)
         process.system('./bootstrap.sh', shell=True)
         process.system('./configure', shell=True)
         build.make(self.iperf_dir)
         self.iperf = os.path.join(self.iperf_dir, 'src')
         self.expected_tp = self.params.get("EXPECTED_THROUGHPUT", default="85")
+
+    def peer_login(self, ip, username, password):
+        '''
+        SSH Login method for remote peer server
+        '''
+        pxh = pxssh.pxssh()
+        # Work-around for old pxssh not having options= parameter
+        pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
+        pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
+        pxh.force_password = True
+
+        pxh.login(ip, username, password)
+        pxh.sendline()
+        pxh.prompt(timeout=60)
+        pxh.sendline('exec bash --norc --noprofile')
+        # Ubuntu likes to be "helpful" and alias grep to
+        # include color, which isn't helpful at all. So let's
+        # go back to absolutely no messing around with the shell
+        pxh.set_unique_prompt()
+        self.pxssh = pxh
+
+    def run_command(self, command, timeout=300):
+        '''
+        SSH Run command method for running commands on remote server
+        '''
+        self.log.info("Running the command on peer lpar %s", command)
+        if not hasattr(self, 'pxssh'):
+            self.fail("SSH Console setup is not yet done")
+        con = self.pxssh
+        con.sendline(command)
+        con.expect("\n")  # from us
+        if command.endswith('&'):
+            return ("", 0)
+        con.expect(con.PROMPT, timeout=timeout)
+        output = con.before.splitlines()
+        con.sendline("echo $?")
+        con.prompt(timeout)
+        try:
+            exitcode = int(''.join(con.before.splitlines()[1:]))
+        except Exception as exc:
+            exitcode = 0
+        return (output, exitcode)
 
     def test(self):
         """
@@ -111,9 +158,9 @@ class Iperf(Test):
         """
         Killing Iperf process in peer machine
         """
-        cmd = "ssh %s@%s \"pkill iperf; rm -rf /tmp/iperf-master\""\
-              % (self.peer_user, self.peer_ip)
-        if process.system(cmd, shell=True, ignore_status=True):
+        cmd = "pkill iperf; rm -rf /tmp/iperf-master"
+        output, exitcode = self.run_command(cmd)
+        if exitcode != 0:
             self.fail("Either the ssh to peer machine machine\
                        failed or iperf process was not killed")
 
