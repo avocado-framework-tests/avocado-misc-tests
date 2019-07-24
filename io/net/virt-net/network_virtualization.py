@@ -601,6 +601,28 @@ class NetworkVirtualization(Test):
             return False
         return True
 
+    def get_failover_priority(self, logport):
+        """
+        get the priority value for the given backing device
+        """
+        priority = None
+        cmd = 'lshwres -r virtualio -m %s --rsubtype vnic --level lpar \
+               --filter lpar_names=%s -F slot_num,backing_devices' \
+               % (self.server, self.lpar)
+        try:
+            output = self.run_command(cmd)
+        except CommandFailed as cmdfail:
+            self.log.debug(str(cmdfail))
+        for backing_dev in output:
+            if backing_dev.startswith('%s,' % self.slot_num):
+                backing_dev = backing_dev.strip('%s,"' % self.slot_num)
+                for entry in backing_dev.split(','):
+                    entry = entry.split('/')
+                    if logport in entry:
+                        priority = entry[8]
+                        break
+        return priority
+
     def configure_device(self):
         """
         Configures the Network virtualized device
