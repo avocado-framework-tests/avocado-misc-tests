@@ -586,6 +586,21 @@ class NetworkVirtualization(Test):
                 return True
         return False
 
+    def enable_auto_failover(self):
+        """
+        Function to enable auto failover option
+        """
+        cmd = 'chhwres -r virtualio -m %s --rsubtype vnic \
+               -o s --id %s -s %s -a auto_priority_failover=1' \
+               % (self.server, self.lpar_id, self.slot_num)
+        try:
+            self.run_command(cmd)
+        except CommandFailed as cmdfail:
+            self.log.debug(str(cmdfail))
+        if not self.is_auto_failover_enabled():
+            return False
+        return True
+
     def configure_device(self):
         """
         Configures the Network virtualized device
