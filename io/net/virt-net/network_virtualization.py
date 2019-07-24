@@ -570,6 +570,22 @@ class NetworkVirtualization(Test):
             self.fail("drmgr operation %s fails for vNIC device %s" %
                       (operation, slot))
 
+    def is_auto_failover_enabled(self):
+        """
+        Check if auto failover is enabled for the vNIC device
+        """
+        cmd = 'lshwres -r virtualio -m %s --rsubtype vnic \
+               --filter lpar_names=%s,slots=%s' \
+               % (self.server, self.lpar, self.slot_num)
+        try:
+            output = self.run_command(cmd)
+        except CommandFailed as cmdfail:
+            self.log.debug(str(cmdfail))
+        for entry in output:
+            if 'auto_priority_failover=1' in entry:
+                return True
+        return False
+
     def configure_device(self):
         """
         Configures the Network virtualized device
