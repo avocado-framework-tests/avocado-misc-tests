@@ -55,7 +55,7 @@ class Fsx(Test):
             './fsx   -l %s -o %s -n -s 1 -N %s -d %s'
             % (file_ub, op_ub, num_times, output))
 
-        if 'All operations completed' not in results.splitlines()[-1]:
+        if b'All operations completed' not in results.splitlines()[-1]:
             self.fail('Fsx test failed')
 
 

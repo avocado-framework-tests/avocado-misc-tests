@@ -54,7 +54,7 @@ class Flail(Test):
         os.chdir(self.build_dir)
         process.system('./flail %s 1' % self.fs_type, ignore_status=True)
         dmesg = process.system_output('dmesg')
-        match = re.search(r'Call Trace:', dmesg, re.M | re.I)
+        match = re.search(br'Call Trace:', dmesg, re.M | re.I)
         if match:
             self.fail("some call traces seen please check")
 

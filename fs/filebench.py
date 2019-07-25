@@ -68,7 +68,7 @@ class Filebench(Test):
                                      'workloads', testfile)
         cmd = '%s -f %s' % (binary_path, testfile_path)
         out = process.system_output(cmd)
-        self.log.info("result:" + out)
+        self.log.info(b"result:" + out)
 
 
 if __name__ == "__main__":
