@@ -29,6 +29,7 @@ class perfUprobe(Test):
     """
     Uprobe related test cases run through perf commands
     with the help a 'c' program.
+    :avocado: tags=perf,uprobe,probe
     """
 
     def setUp(self):

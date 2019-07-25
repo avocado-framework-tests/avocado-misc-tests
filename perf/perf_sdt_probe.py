@@ -29,7 +29,7 @@ class PerfSDT(Test):
 
     """
     Test userspace SDT markers
-    :avocado: tags=privileged
+    :avocado: tags=privileged,perf,sdtprobe,probe
     """
 
     def run_cmd(self, cmd):

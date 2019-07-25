@@ -27,6 +27,7 @@ class test_generic_events(Test):
     This test will read content of each file from
     /sys/bus/event_source/devices/cpu/events
     and compare the raw event code for each generic event
+    :avocado: tags=perf,events
     """
 
     def read_generic_events(self):

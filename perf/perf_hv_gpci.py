@@ -25,6 +25,7 @@ class perf_hv_gpci(Test):
 
     """
     Tests hv_gpci events
+    :avocado: tags=perf,hv_gpci,events
     """
     # Initializing fail command list
     fail_cmd = list()

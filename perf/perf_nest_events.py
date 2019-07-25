@@ -27,6 +27,7 @@ class nestEvents(Test):
     Tests nest events
     Collects all the available events from 'perf list' and
     executes them using 'perf stat' command
+    :avocado: tags=perf,nest,events
     """
     # Initializing fail command list
     fail_cmd = list()

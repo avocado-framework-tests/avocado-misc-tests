@@ -26,7 +26,7 @@ class PerfBasic(Test):
 
     """
     Performance analysis tools for Linux
-    :avocado: tags=privileged
+    :avocado: tags=privileged,perf
 
     execute basic perf testcases:
     - help

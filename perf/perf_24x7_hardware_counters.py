@@ -32,6 +32,7 @@ class EliminateDomainSuffix(Test):
 
     """
     This tests domain name suffix in event names
+    :avocado: tags=perf,24x7,events
     """
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or Power non-virtualized platform")

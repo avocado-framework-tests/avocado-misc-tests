@@ -26,6 +26,7 @@ class Perftool(Test):
 
     """
     perftool-testsuite
+    :avocado: tags=perf,testsuite
     """
 
     def setUp(self):
