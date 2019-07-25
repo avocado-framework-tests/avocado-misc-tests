@@ -49,6 +49,9 @@ class cpuidle(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
+    def cmp(self, first_value, second_value):
+        return (first_value > second_value) - (first_value < second_value)
+
     def test(self):
         """
         Validate the number of cpu idle states against device tree
@@ -69,7 +72,7 @@ class cpuidle(Test):
                     val = self.set_idle_states(val)
                 cpu_idle_states.append(val)
             devicetree_list = self.read_from_device_tree()
-            res = cmp(cpu_idle_states, devicetree_list)
+            res = self.cmp(cpu_idle_states, devicetree_list)
             if res == 0:
                 self.log.info("PASS : Validated the idle states")
             else:
