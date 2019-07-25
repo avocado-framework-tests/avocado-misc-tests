@@ -54,10 +54,10 @@ class ThpSwapping(Test):
 
         # If swap is enough fill all memory with dd
         if self.swap_free[0] > (mem - mem_free):
-            self.count = (mem / self.hugepage_size) / 2
+            self.count = (mem // self.hugepage_size) // 2
             tmpfs_size = mem
         else:
-            self.count = (mem_free / self.hugepage_size) / 2
+            self.count = (mem_free // self.hugepage_size) // 2
             tmpfs_size = mem_free
 
         if swap <= 0:

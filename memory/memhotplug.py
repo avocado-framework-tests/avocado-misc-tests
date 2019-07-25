@@ -69,8 +69,8 @@ def get_hotpluggable_blocks(path, ratio):
         Return number of blocks in chunks of 100
         """
         if num % 2:
-            return num / 100 + 1
-        return num / 100
+            return num // 100 + 1
+        return num // 100
     count = chunks(len(mem_blocks) * ratio)
     return mem_blocks[:count]
 
@@ -150,7 +150,7 @@ class MemStress(Test):
         logs = process.system_output("dmesg -Txl 1,2,3,4").splitlines()
         for error in ERRORLOG:
             for log in logs:
-                if error in log:
+                if error in log.decode():
                     err_list.append(log)
         if "\n".join(err_list):
             collect_dmesg(self)
@@ -189,14 +189,14 @@ class MemStress(Test):
 
     def test_dlpar_mem_hotplug(self):
         if 'ppc' in platform.processor() and 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
-            if "mem_dlpar=yes" in process.system_output("drmgr -C", ignore_status=True, shell=True):
+            if b"mem_dlpar=yes" in process.system_output("drmgr -C", ignore_status=True, shell=True):
                 self.log.info("\nDLPAR remove memory operation\n")
-                for _ in range(len(self.blocks_hotpluggable) / 2):
+                for _ in range(len(self.blocks_hotpluggable) // 2):
                     process.run(
                         "drmgr -c mem -d 5 -w 30 -r", shell=True, ignore_status=True, sudo=True)
                 self.run_stress()
                 self.log.info("\nDLPAR add memory operation\n")
-                for _ in range(len(self.blocks_hotpluggable) / 2):
+                for _ in range(len(self.blocks_hotpluggable) // 2):
                     process.run(
                         "drmgr -c mem -d 5 -w 30 -a", shell=True, ignore_status=True, sudo=True)
                 self.__error_check()
