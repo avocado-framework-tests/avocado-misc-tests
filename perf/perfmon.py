@@ -27,6 +27,7 @@ class Perfmon(Test):
 
     """
     performance monitoring on Linux : test  perf_events on Linux
+    :avocado: tags=perf,perfmon
     """
 
     def setUp(self):

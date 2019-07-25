@@ -29,6 +29,7 @@ class perf_c2c(Test):
     Tests perf c2c and it's options namely
     record, report with all possible flags with
     the help of yaml file
+    :avocado: tags=perf,c2c
     """
 
     def setUp(self):

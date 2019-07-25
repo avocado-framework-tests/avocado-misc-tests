@@ -28,7 +28,7 @@ class Perf_crashevent(Test):
     """
     This series of test is meant to kernel against known issues,
     which might crash the unpatched kernels.
-    :avocado: tags=destructive
+    :avocado: tags=destructive,perf
     """
 
     @staticmethod

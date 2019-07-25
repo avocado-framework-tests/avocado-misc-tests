@@ -26,6 +26,7 @@ class hv_24x7_all_events(Test):
 
     """
     This tests all hv_24x7 events
+    :avocado: tags=perf,24x7,events
     """
     # Initializing fail command list
     fail_cmd = list()
