@@ -1,0 +1,7 @@
+interface:
+peer_ip:
+mtu: !mux
+    1500:
+        mtu: 1500
+    9000:
+        mtu: 9000

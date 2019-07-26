@@ -19,7 +19,6 @@
 import netifaces
 from avocado import main
 from avocado import Test
-from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 
 
@@ -33,13 +32,6 @@ class Bridging(Test):
             self.fail("Command %s failed" % cmd)
 
     def setUp(self):
-        '''
-        To check and install dependencies for the test
-        '''
-        smm = SoftwareManager()
-        if not smm.check_installed("bridge-utils") and not smm.install("bridge-utils"):
-            self.cancel("bridge-utils package is need to test")
-
         self.host_interface = self.params.get("interface",
                                               default=None)
         if not self.host_interface:
@@ -71,17 +63,17 @@ class Bridging(Test):
         Bridge Test
         Set up the ethernet bridge configuration in the linux kernel
         '''
-        self.check_failure('brctl addbr br0')
+        self.check_failure('ip link add dev br0 type bridge')
         check_flag = False
         check_br = process.system_output(
-            'brctl show', verbose=True, ignore_status=True)
+            'ip -d link show br0', verbose=True, ignore_status=True)
         for line in check_br.splitlines():
-            if line.startswith('br0'):
+            if line.find('bridge'):
                 check_flag = True
         if not check_flag:
             self.fail('Bridge interface is not created')
 
-        self.check_failure('brctl addif br0 %s' % self.host_interface)
+        self.check_failure('ip link set %s master br0' % self.host_interface)
         self.check_failure('ip addr flush dev %s' % self.host_interface)
         self.check_failure('ip addr add %s broadcast %s dev br0' %
                            (self.cidr, self.broadcast))
@@ -89,7 +81,8 @@ class Bridging(Test):
         if self.gateway:
             self.check_failure('ip route add default via %s' %
                                self.gateway)
-        if process.system('ping %s -I br0 -c 4' % self.peer_ip, shell=True, ignore_status=True):
+        if process.system('ping %s -I br0 -c 4' % self.peer_ip,
+           shell=True, ignore_status=True):
             self.fail('Ping using bridge failed')
 
     def tearDown(self):
@@ -97,14 +90,15 @@ class Bridging(Test):
         Set to original state
         '''
         self.check_failure('ip link set br0 down')
-        self.check_failure('brctl delbr br0')
+        self.check_failure('ip link del dev br0')
         self.check_failure('ip addr add %s broadcast %s dev %s' % (
             self.cidr, self.broadcast, self.host_interface))
         self.check_failure('ip link set %s up' % self.host_interface)
         if self.gateway:
             self.check_failure('ip route add default via %s' %
                                self.gateway)
-        if process.system('ping %s -c 4' % self.peer_ip, shell=True, ignore_status=True):
+        if process.system('ping %s -c 4' % self.peer_ip,
+           shell=True, ignore_status=True):
             self.fail('Ping failed when restoring back to provided interface')
 
 

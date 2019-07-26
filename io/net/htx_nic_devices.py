@@ -75,8 +75,6 @@ class HtxNicTest(Test):
         self.login(self.peer_ip, self.peer_user, self.peer_password)
         self.get_ips()
         self.get_peer_distro()
-        #if 'start' in str(self.name):
-        #    self.build_htx()
 
     def build_htx(self):
         """
@@ -98,6 +96,13 @@ class HtxNicTest(Test):
         for pkg in packages:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("Can not install %s" % pkg)
+            cmd = "ssh %s@%s \"%s install %s\"" % (self.peer_user,
+                                                   self.peer_ip,
+                                                   smm.backend.base_command,
+                                                   pkg)
+            if process.system(cmd, shell=True, ignore_status=True) != 0:
+                self.cancel("unable to install the package %s on peer machine "
+                            % pkg)
 
         url = "https://github.com/open-power/HTX/archive/master.zip"
         tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')

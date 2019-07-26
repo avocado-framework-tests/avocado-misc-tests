@@ -43,15 +43,17 @@ def clear_dmesg():
 def online(block):
     try:
         memory.hotplug(block)
+        return ""
     except IOError:
-        print "memory%s : Resource is busy" % block
+        return "memory%s : Resource is busy" % block
 
 
 def offline(block):
     try:
         memory.hotunplug(block)
+        return ""
     except IOError:
-        print "memory%s : Resource is busy" % block
+        return "memory%s : Resource is busy" % block
 
 
 def get_hotpluggable_blocks(path, ratio):
@@ -67,8 +69,8 @@ def get_hotpluggable_blocks(path, ratio):
         Return number of blocks in chunks of 100
         """
         if num % 2:
-            return num / 100 + 1
-        return num / 100
+            return num // 100 + 1
+        return num // 100
     count = chunks(len(mem_blocks) * ratio)
     return mem_blocks[:count]
 
@@ -122,17 +124,19 @@ class MemStress(Test):
                 self.hotplug_all(self.blocks_hotpluggable)
         clear_dmesg()
 
-    @staticmethod
-    def hotunplug_all(blocks):
+    def hotunplug_all(self, blocks):
         for block in blocks:
             if memory._check_memory_state(block):
-                offline(block)
+                err = offline(block)
+                if err:
+                    self.log.error(err)
 
-    @staticmethod
-    def hotplug_all(blocks):
+    def hotplug_all(self, blocks):
         for block in blocks:
             if not memory._check_memory_state(block):
-                online(block)
+                err = online(block)
+                if err:
+                    self.log.error(err)
 
     @staticmethod
     def __is_auto_online():
@@ -146,7 +150,7 @@ class MemStress(Test):
         logs = process.system_output("dmesg -Txl 1,2,3,4").splitlines()
         for error in ERRORLOG:
             for log in logs:
-                if error in log:
+                if error in log.decode():
                     err_list.append(log)
         if "\n".join(err_list):
             collect_dmesg(self)
@@ -172,23 +176,27 @@ class MemStress(Test):
         self.log.info("\nTEST: Memory toggle\n")
         for _ in range(self.iteration):
             for block in self.blocks_hotpluggable:
-                offline(block)
+                err = offline(block)
+                if err:
+                    self.log.error(err)
                 self.log.info("memory%s block hotunplugged", block)
                 self.run_stress()
-                online(block)
+                err = online(block)
+                if err:
+                    self.log.error(err)
                 self.log.info("memory%s block hotplugged", block)
         self.__error_check()
 
     def test_dlpar_mem_hotplug(self):
         if 'ppc' in platform.processor() and 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
-            if "mem_dlpar=yes" in process.system_output("drmgr -C", ignore_status=True, shell=True):
+            if b"mem_dlpar=yes" in process.system_output("drmgr -C", ignore_status=True, shell=True):
                 self.log.info("\nDLPAR remove memory operation\n")
-                for _ in range(len(self.blocks_hotpluggable) / 2):
+                for _ in range(len(self.blocks_hotpluggable) // 2):
                     process.run(
                         "drmgr -c mem -d 5 -w 30 -r", shell=True, ignore_status=True, sudo=True)
                 self.run_stress()
                 self.log.info("\nDLPAR add memory operation\n")
-                for _ in range(len(self.blocks_hotpluggable) / 2):
+                for _ in range(len(self.blocks_hotpluggable) // 2):
                     process.run(
                         "drmgr -c mem -d 5 -w 30 -a", shell=True, ignore_status=True, sudo=True)
                 self.__error_check()
@@ -209,7 +217,9 @@ class MemStress(Test):
             for block in mem_blocks:
                 self.log.info(
                     "offline memory%s in numa node%s", block, node)
-                offline(block)
+                err = offline(block)
+                if err:
+                    self.log.error(err)
             self.run_stress()
         self.__error_check()
 

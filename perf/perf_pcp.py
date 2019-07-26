@@ -29,6 +29,7 @@ class PCP(Test):
     3. Test pcp command
     4. Test 24x7 events
     5. Remove perfevent pmda
+    :avocado: tags=perf,pcp
     """
 
     def setUp(self):

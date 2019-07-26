@@ -46,7 +46,7 @@ class SoftwareRaid(Test):
 
         smm = SoftwareManager()
         if not smm.check_installed("mdadm"):
-            print "Mdadm must be installed before continuing the test"
+            self.log.info("Mdadm must be installed before continuing the test")
             if SoftwareManager().install("mdadm") is False:
                 self.cancel("Unable to install mdadm")
         cmd = "mdadm -V"

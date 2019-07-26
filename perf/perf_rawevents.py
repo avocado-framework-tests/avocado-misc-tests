@@ -33,6 +33,7 @@ class PerfRawevents(Test):
     """
     Tests raw events on Power8 and Power9 along with
     named events
+    :avocado: tags=perf,rawevents,events
     """
     # Initializing fail command list
     fail_cmd = list()

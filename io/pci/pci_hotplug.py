@@ -95,7 +95,7 @@ class PCIHotPlugTest(Test):
         if process.system_output(cmd, shell=True).strip('\n') is not '':
             self.return_code = 1
         else:
-            print "Adapter %s removed successfully" % self.device
+            self.log.info("Adapter %s removed successfully", self.device)
 
     def hotplug_add(self):
         """
@@ -107,7 +107,7 @@ class PCIHotPlugTest(Test):
         if process.system_output(cmd, shell=True).strip('\n') is '':
             self.return_code = 2
         else:
-            print "Adapter %s added back successfully" % self.device
+            self.log.info("Adapter %s added back successfully", self.device)
 
     def check_add_remove(self):
         """

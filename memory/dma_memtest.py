@@ -95,7 +95,7 @@ class DmaMemtest(Test):
            :param est_size: Estimated size of uncompressed linux tarball
         '''
         mem_str = process.system_output('grep MemTotal /proc/meminfo')
-        mem = int(re.search(r'\d+', mem_str).group(0))
+        mem = int(re.search(r'\d+', mem_str.decode()).group(0))
         mem = int(mem / 1024)
         sim_cps = (1.5 * mem) / est_size
 
@@ -152,7 +152,7 @@ class DmaMemtest(Test):
                 try:
                     self.log.info('Comparing linux.orig with %s', tmp_dir)
                     process.system('diff -U3 -rN linux.orig linux.%s' % j)
-                except process.CmdError, error:
+                except process.CmdError as error:
                     self.nfail += 1
                     self.log.info('Error comparing trees: %s', error)
 

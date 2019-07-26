@@ -1,7 +1,6 @@
-Interfaces: !mux
-    interface1:
-        interface: eth1
-Parameters: !mux
+interface:
+peer_ip:
+args: !mux
     Information:
         arg:
     Driver:
@@ -15,7 +14,7 @@ Parameters: !mux
     RegisterDump:
         arg: -d
     EEPROMDump:
-        arg: -e
+       arg: -e
     RingParameter:
         arg: -g
     ShowOffloadProtocolFeature:
@@ -27,3 +26,12 @@ Parameters: !mux
         arg: -S
     SelfTest:
         arg: -t
+    Show-permaddr:
+        arg: -P
+    Get-dump:
+        arg: -w
+    Show-time-stamping:
+        arg: -T
+    Get-phy-tunable:
+        arg: --get-phy-tunable
+        action_elapse: downshift

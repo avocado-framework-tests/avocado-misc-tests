@@ -23,6 +23,7 @@ from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
+from avoacdo.utils import pci
 
 
 class NetworkconfigTest(Test):
@@ -43,74 +44,80 @@ class NetworkconfigTest(Test):
         self.iface = self.params.get("interface")
         if self.iface not in interfaces:
             self.cancel("%s interface is not available" % self.iface)
+        cmd = "ethtool -i %s" % self.iface
+        for line in process.system_output(cmd, shell=True).splitlines():
+            if 'bus-info' in line:
+                self.businfo = line.split()[-1]
+        self.log.info(self.businfo)
+        self.driver = pci.get_driver(self.businfo)
 
-    def test_networkconfig(self):
+    def test_driver_check(self):
         '''
-        check Network_configuration
+        driver match check using lspci and ethtool
         '''
-        cmd = "ethtool -i %s | grep driver | awk '{print $2}'" % self.iface
-        driver = process.system_output(cmd, shell=True).strip()
+        cmd = "ethtool -i %s" % self.iface
+        for line in process.system_output(cmd, shell=True).splitlines():
+            if 'driver' in line:
+                driver = line.split()[-1]
         self.log.info(driver)
-        cmd = "ethtool -i %s | grep bus-info | awk '{print $2}'" % self.iface
-        businfo = process.system_output(cmd, shell=True).strip()
-        self.log.info(businfo)
-        cmd = "lspci -v"
-        bus_info = process.system_output(cmd, shell=True).strip()
-        bus_info = bus_info.split('\n\n')
-        self.log.info("Performing driver match check using lspci and ethtool")
-        self.log.info("-----------------------------------------------------")
-        for value in bus_info:
-            if value.startswith(businfo):
-                self.log.info("details are ---------> %s" % value)
-                tmp = value.split('\n')
-                for val in tmp:
-                    if 'Kernel driver in use' in val:
-                        cmd, driverinfo = val.split(': ')
-                        self.log.info(driverinfo)
-                        if driver != driverinfo:
-                            self.fail("mismatch in driver information")
-        cmd = r"cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/mtu" %\
-              (driver, driver, businfo, self.iface)
-        mtu = process.system_output(cmd, shell=True).strip()
+        if self.driver != driver:
+            self.fail("mismatch in driver information")
+
+    def get_network_sysfs_param(self, param):
+        '''
+        To finding the value for all parameters
+        '''
+        cmd = r"cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/%s" %\
+              (self.driver, self.driver, self.businfo, self.iface, param)
+        return process.system_output(cmd, shell=True).strip()
+
+    def test_mtu_check(self):
+        '''
+        comparing mtu value
+        '''
+        mtu = self.get_network_sysfs_param("mtu")
         self.log.info("mtu value is %s" % mtu)
-        cmd = r"cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/operstate" %\
-              (driver, driver, businfo, self.iface)
-        operstate = process.system_output(cmd, shell=True).strip()
-        self.log.info("operstate is %s" % operstate)
-        cmd = r"cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/duplex" %\
-              (driver, driver, businfo, self.iface)
-        duplex = process.system_output(cmd, shell=True).strip()
-        self.log.info("transmission mode is %s" % duplex)
-        cmd = r"cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/address" %\
-              (driver, driver, businfo, self.iface)
-        address = process.system_output(cmd, shell=True).strip()
-        self.log.info("mac address is %s" % address)
-        cmd = r"cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/speed" %\
-              (driver, driver, businfo, self.iface)
-        speed = process.system_output(cmd, shell=True).strip()
-        self.log.info("speed is %s" % speed)
-        cmd = "ethtool %s | grep Speed | awk '{print $2}'" % self.iface
-        eth_speed = process.system_output(cmd, shell=True).strip()
-        eth_speed = eth_speed.strip('Mb/s')
-        self.log.info("Performing Ethtool and interface checks for interface")
-        self.log.info("-----------------------------------------------------")
-        if speed != eth_speed:
-            self.fail("mis match in speed")
-        hw_addr = netifaces.ifaddresses(self.iface)[netifaces.AF_LINK]
-        hw_addr = hw_addr[0]['addr']
-        if hw_addr != address:
-            self.fail("mismatch in hardware address")
         mtuval = process.system_output("ip link show %s" % self.iface,
                                        shell=True).split()[4]
         self.log.info("through ip link show, mtu value is %s" % mtuval)
         if mtu != mtuval:
             self.fail("mismatch in mtu")
-        eth_state = process.system_output("ethtool %s | grep 'Link detected:'\
-                                          " % self.iface, shell=True)
-        if 'yes' in eth_state and operstate == 'down':
-            self.fail("mis match in link state")
-        if 'no' in eth_state and operstate == 'up':
-            self.fail("mis match in link state")
+
+    def test_speed_check(self):
+        '''
+        Comparing speed
+        '''
+        speed = self.get_network_sysfs_param("speed")
+        cmd = "ethtool %s" % self.iface
+        for line in process.system_output(cmd, shell=True).splitlines():
+            if 'Speed' in line:
+                eth_speed = line.split()[-1].strip('Mb/s')
+        if speed != eth_speed:
+            self.fail("mis match in speed")
+
+    def test_mac_aadr_check(self):
+        '''
+        comparing mac address
+        '''
+        address = self.get_network_sysfs_param("address")
+        self.log.info("mac address is %s" % address)
+        hw_addr = netifaces.ifaddresses(self.iface)[netifaces.AF_LINK]
+        hw_addr = hw_addr[0]['addr']
+        if hw_addr != address:
+            self.fail("mismatch in hardware address")
+
+    def test_duplex_check(self):
+        '''
+        comparing duplex
+        '''
+        duplex = self.get_network_sysfs_param("duplex")
+        self.log.info("transmission mode is %s" % duplex)
+        cmd = "ethtool %s" % self.iface
+        for line in process.system_output(cmd, shell=True).splitlines():
+            if 'Duplex' in line:
+                eth_duplex = line.split()[-1]
+        if str(duplex).capitalize() != eth_duplex:
+            self.fail("mismatch in duplex")
 
 
 if __name__ == "__main__":

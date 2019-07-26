@@ -64,9 +64,9 @@ class TcpdumpTest(Test):
         for line in process.run(cmd, shell=True,
                                 ignore_status=True).stderr.splitlines():
             if "packets dropped by interface" in line:
+                self.log.info(line)
                 if int(line[0]) >= (int(self.drop) * int(self.count) / 100):
                     self.fail("%s, more than %s percent" % (line, self.drop))
-                print line
         obj.stop()
 
 

@@ -28,6 +28,7 @@ class Perf_subsystem(Test):
     """
     This series of test is meant to validate
     that the perf_event subsystem is working
+    :avocado: tags=perf,events
     """
 
     @staticmethod

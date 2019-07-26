@@ -69,7 +69,7 @@ class NdctlTest(Test):
         """
         Get the value of a field in given json
         """
-        for key, value in json_op.iteritems():
+        for key, value in json_op.items():
             if key == field:
                 return value
         return None
@@ -82,12 +82,12 @@ class NdctlTest(Test):
             def_align = 16 * 1024 * 1024
         else:
             def_align = 2 * 1024 * 1024
-        if ((size / self.cnt) % def_align) != 0:
+        if ((size // self.cnt) % def_align) != 0:
             self.log.warn("Namespace would fail as it is not %sM "
                           "aligned! Changing the number of "
-                          "namespaces", def_align / (1024 * 1024))
+                          "namespaces", def_align // (1024 * 1024))
             for count in range(self.cnt, 1, -1):
-                if ((size / count) % def_align) == 0:
+                if ((size // count) % def_align) == 0:
                     self.log.info("Changing namespaces to %s", count)
                     return count
         return self.cnt
@@ -183,6 +183,9 @@ class NdctlTest(Test):
         self.dist = distro.detect()
         self.package = self.params.get('package', default='upstream')
         self.cnt = self.params.get('namespace_cnt', default=4)
+        self.preserve_setup = self.params.get('preserve_change', default=False)
+        self.size = self.params.get('size', default=None)
+        self.mode_to_use = self.params.get('modes', default='fsdax')
 
         if 'SuSE' not in self.dist.name:
             self.cancel('Unsupported OS %s' % self.dist.name)
@@ -220,6 +223,9 @@ class NdctlTest(Test):
                 self.cancel('%s is needed for the test to be run' % pkg)
         self.opt_dict = {'-B': 'provider',
                          '-D': 'dev', '-R': 'dev', '-N': 'dev'}
+        self.modes = ['raw', 'fsdax', 'devdax']
+        if self.dist.arch != 'ppc64le':
+            self.modes.extend(['blk'])
 
     def test_bus_ids(self):
         """
@@ -271,14 +277,13 @@ class NdctlTest(Test):
         """
         failed_modes = []
         self.enable_region()
-        region = self.get_json(short_opt='-R')[0]
+        region = self.params.get('region', default=None)
+        if not region:
+            region = self.get_json(short_opt='-R')[0]
         self.log.info("Using %s for different namespace modes", region)
         self.disable_namespace(region=region)
         self.destroy_namespace(region=region)
-        modes = ['raw', 'fsdax', 'devdax']
-        if self.dist.arch != 'ppc64le':
-            modes.extend(['blk'])
-        for mode in modes:
+        for mode in self.modes:
             self.create_namespace(region=region, mode=mode)
             ns_json = self.get_json()[0]
             created_mode = self.get_json_val(ns_json, 'mode')
@@ -299,18 +304,45 @@ class NdctlTest(Test):
         Test multiple namespace with single region
         """
         self.enable_region()
-        region = self.get_json(short_opt='-R')[0]
+        region = self.params.get('region', default=None)
+        if not region:
+            region = self.get_json(short_opt='-R')[0]
+        self.log.info("Using %s for muliple namespace regions", region)
+        self.disable_namespace(region=region)
+        self.destroy_namespace(region=region)
+        self.log.info("Creating %s namespaces", self.cnt)
+        if not self.size:
+            self.size = self.get_json_val(self.get_json(
+                long_opt='-r %s' % region)[0], 'size')
+            ch_cnt = self.get_aligned_count(self.size)
+            self.size = self.size // ch_cnt
+        else:
+            # Assuming self.cnt is aligned
+            ch_cnt = self.cnt
+        for nid in range(0, ch_cnt):
+            self.create_namespace(
+                region=region, mode=self.mode_to_use, size=self.size)
+            self.log.info("Namespace %s created", nid + 1)
+
+    def test_multiple_ns_modes_region(self):
+        """
+        Test multiple namespace modes with single region
+        """
+        self.enable_region()
+        region = self.params.get('region', default=None)
+        if not region:
+            region = self.get_json(short_opt='-R')[0]
         self.log.info("Using %s for muliple namespace regions", region)
         self.disable_namespace(region=region)
         self.destroy_namespace(region=region)
         size = self.get_json_val(self.get_json(
             long_opt='-r %s' % region)[0], 'size')
-        self.log.info("Creating %s namespaces", self.cnt)
-        ch_cnt = self.get_aligned_count(size)
-        for nid in range(0, ch_cnt):
+        if size < (len(self.modes) * 64 * 1024 * 1024):
+            self.cancel('Not enough memory to create namespaces')
+        for mode in self.modes:
             self.create_namespace(
-                region=region, mode='fsdax', size=size / ch_cnt)
-            self.log.info("Namespace %s created", nid + 1)
+                region=region, mode=mode, size='64M')
+            self.log.info("Namespace of type %s created", mode)
 
     def test_multiple_ns_multiple_region(self):
         """
@@ -324,13 +356,18 @@ class NdctlTest(Test):
         self.destroy_namespace()
         for region in regions:
             self.log.info("Using %s for muliple namespaces", region)
-            size = self.get_json_val(self.get_json(
-                long_opt='-r %s' % region)[0], 'size')
             self.log.info("Creating %s namespaces", self.cnt)
-            ch_cnt = self.get_aligned_count(size)
+            if not self.size:
+                self.size = self.get_json_val(self.get_json(
+                    long_opt='-r %s' % region)[0], 'size')
+                ch_cnt = self.get_aligned_count(self.size)
+                self.size = self.size // ch_cnt
+            else:
+                # Assuming size is aligned
+                ch_cnt = self.cnt
             for nid in range(0, ch_cnt):
                 self.create_namespace(
-                    region=region, mode='fsdax', size=size / ch_cnt)
+                    region=region, mode=self.mode_to_use, size=self.size)
                 self.log.info("Namespace %s created", nid + 1)
 
     def test_namespace_reconfigure(self):
@@ -338,7 +375,9 @@ class NdctlTest(Test):
         Test namespace reconfiguration
         """
         self.enable_region()
-        region = self.get_json(short_opt='-R')[0]
+        region = self.params.get('region', default=None)
+        if not region:
+            region = self.get_json(short_opt='-R')[0]
         self.log.info("Using %s for reconfiguring namespace", region)
         self.disable_namespace()
         self.destroy_namespace()
@@ -351,7 +390,7 @@ class NdctlTest(Test):
         new_ns = self.get_json()[0]
         self.log.info("Checking namespace changes")
         failed_vals = []
-        for key, val in new_ns.iteritems():
+        for key, val in new_ns.items():
             if key in list(set(old_ns.keys()) - set(['uuid', 'dev'])):
                 if old_ns[key] != val:
                     failed_vals.append({key: val})
@@ -365,7 +404,9 @@ class NdctlTest(Test):
         Verify metadata for sector mode namespaces
         """
         self.enable_region()
-        region = self.get_json(short_opt='-R')[0]
+        region = self.params.get('region', default=None)
+        if not region:
+            region = self.get_json(short_opt='-R')[0]
         self.disable_namespace()
         self.destroy_namespace()
         self.log.info("Creating sector namespace using %s", region)
@@ -378,9 +419,10 @@ class NdctlTest(Test):
             self.fail("Failed to check namespace metadata")
 
     def tearDown(self):
-        if self.get_json(short_opt='-N'):
-            self.destroy_namespace(force=True)
-        self.disable_region()
+        if not self.preserve_setup:
+            if self.get_json(short_opt='-N'):
+                self.destroy_namespace(force=True)
+            self.disable_region()
 
 
 if __name__ == "__main__":

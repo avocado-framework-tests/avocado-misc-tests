@@ -43,6 +43,8 @@ class Netperf(Test):
         """
         To check and install dependencies for the test
         """
+        self.peer_user = self.params.get("peer_user_name", default="root")
+        self.peer_ip = self.params.get("peer_ip", default="")
         smm = SoftwareManager()
         detected_distro = distro.detect()
         pkgs = ['gcc']
@@ -55,14 +57,19 @@ class Netperf(Test):
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
+            cmd = "ssh %s@%s \"%s install %s\"" % (self.peer_user,
+                                                   self.peer_ip,
+                                                   smm.backend.base_command,
+                                                   pkg)
+            if process.system(cmd, shell=True, ignore_status=True) != 0:
+                self.cancel("unable to install the package %s on peer machine "
+                            % pkg)
         interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface", default="")
-        self.peer_ip = self.params.get("peer_ip", default="")
         if self.iface not in interfaces:
             self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
             self.cancel("%s peer machine is not available" % self.peer_ip)
-        self.peer_user = self.params.get("peer_user_name", default="root")
         self.timeout = self.params.get("TIMEOUT", default="600")
         self.netperf_run = str(self.params.get("NETSERVER_RUN", default=0))
         self.netperf = os.path.join(self.teststmpdir, 'netperf')
@@ -120,8 +127,8 @@ class Netperf(Test):
             if line and 'Throughput' in line.split()[-1]:
                 tput = int(result.stdout.split()[-1].split('.')[0])
                 if tput < (int(self.expected_tp) * speed) / 100:
-                    self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%, \
-                              Throughput Actual value - %s "
+                    self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%"
+                              ", Throughput Actual value - %s "
                               % ((tput*100)/speed, self.expected_tp,
                                  str(tput)+'Mb/sec'))
 
