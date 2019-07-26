@@ -21,7 +21,7 @@ from avocado import skipIf
 from avocado.utils import process, distro, cpu
 from avocado.utils.software_manager import SoftwareManager
 
-IS_POWER_NV = 'PowerNV' in cpu._get_cpu_info()
+IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 
 
 class Cpufreq(Test):
