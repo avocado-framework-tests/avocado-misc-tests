@@ -42,10 +42,6 @@ class perf_c2c(Test):
         detected_distro = distro.detect()
         self.distro_name = detected_distro.name
 
-        if 'ppc64' not in detected_distro.arch:
-            self.cancel('This test is not supported on %s architecture'
-                        % detected_distro.arch)
-
         deps = ['gcc', 'make']
         if 'Ubuntu' in self.distro_name:
             deps.extend(['linux-tools-common', 'linux-tools-%s' %
