@@ -62,7 +62,7 @@ class Lshwrun(Test):
         dist = distro.detect()
         packages = ['lshw', 'net-tools', 'pciutils']
         if dist.name == "SuSE" and dist.version < 15:
-            self.cancel("lshw not supported on SUES-%s. Please run " +
+            self.cancel("lshw not supported on SLES-%s. Please run "
                         "on SLES15 or higher versions only " % dist.version)
         if (dist.name == 'Ubuntu' and dist.version.version >= 18) or dist.name == "SuSE":
             packages.extend(['iproute2'])
@@ -215,7 +215,7 @@ class Lshwrun(Test):
         self.error_check()
 
     @skipIf(process.system("lshw --help 2>&1 |grep notime",
-            ignore_status=True, sudo=True, shell=True) == 1,
+                           ignore_status=True, sudo=True, shell=True) == 1,
             "-notime option unsupported, skipping")
     def test_lshw_notime(self):
         """
