@@ -62,7 +62,7 @@ class Lshwrun(Test):
         dist = distro.detect()
         packages = ['lshw', 'net-tools', 'pciutils']
         if dist.name == "SuSE" and dist.version < 15:
-            self.cancel("lshw not supported on SUES-%s. Please run " +
+            self.cancel("lshw not supported on SUES-%s. Please run "
                         "on SLES15 or higher versions only " % dist.version)
         if (dist.name == 'Ubuntu' and dist.version.version >= 18) or dist.name == "SuSE":
             packages.extend(['iproute2'])
