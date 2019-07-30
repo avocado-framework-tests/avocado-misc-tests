@@ -24,8 +24,8 @@ from avocado.utils import process, distro, cpu, genio
 from avocado.utils.software_manager import SoftwareManager
 from avocado import skipIf
 
-IS_POWER_NV = 'PowerNV' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0')
-IS_KVM_GUEST = 'qemu' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0')
+IS_POWER_NV = 'PowerNV' in cpu._get_cpu_info()
+IS_KVM_GUEST = 'qemu' in cpu._get_cpu_info()
 
 
 class EliminateDomainSuffix(Test):

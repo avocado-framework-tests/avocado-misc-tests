@@ -18,12 +18,12 @@ import os
 from shutil import copyfile
 from avocado import Test
 from avocado import main
-from avocado.utils import process, distro
+from avocado.utils import process, distro, cpu
 from avocado import skipIf, skipUnless
 from avocado.utils.software_manager import SoftwareManager
 
-IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
-IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
+IS_POWER_NV = 'PowerNV' in cpu._get_cpu_info()
+IS_KVM_GUEST = 'qemu' in cpu._get_cpu_info()
 
 
 class RASTools(Test):

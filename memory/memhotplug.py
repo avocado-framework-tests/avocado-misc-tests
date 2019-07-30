@@ -20,7 +20,7 @@ import platform
 import multiprocessing
 from avocado import Test
 from avocado import main
-from avocado.utils import process, memory, build, archive
+from avocado.utils import process, memory, build, archive, cpu
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -188,7 +188,7 @@ class MemStress(Test):
         self.__error_check()
 
     def test_dlpar_mem_hotplug(self):
-        if 'ppc' in platform.processor() and 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
+        if 'ppc' in platform.processor() and 'PowerNV' not in cpu._get_cpu_info():
             if b"mem_dlpar=yes" in process.system_output("drmgr -C", ignore_status=True, shell=True):
                 self.log.info("\nDLPAR remove memory operation\n")
                 for _ in range(len(self.blocks_hotpluggable) // 2):

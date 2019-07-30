@@ -23,8 +23,7 @@ import platform
 from random import randint
 from avocado import Test
 from avocado import main
-from avocado.utils import process
-from avocado.utils import cpu
+from avocado.utils import process, cpu
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -267,7 +266,7 @@ class cpustresstest(Test):
         PowerVM and Guest only: Dynamic Resource Manager
         use drmgr command to hotplug and hotunplug cpus
         """
-        if 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
+        if 'PowerNV' not in cpu._get_cpu_info():
             if "cpu_dlpar=yes" in process.system_output("drmgr -C",
                                                         ignore_status=True,
                                                         shell=True):

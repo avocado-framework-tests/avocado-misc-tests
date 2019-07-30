@@ -21,9 +21,8 @@ Test for sensors command
 from avocado import Test
 from avocado import main
 from avocado.utils import process, linux_modules
-from avocado.utils import distro
+from avocado.utils import distro, cpu
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import cpu
 
 # TODO: Add possible errors of sensors command
 ERRORS = ['I/O error']
@@ -57,8 +56,7 @@ class Sensors(Test):
         s_mg = SoftwareManager()
         d_distro = distro.detect()
         if d_distro.arch in ["ppc64", "ppc64le"]:
-            if not cpu._list_matches(open('/proc/cpuinfo').readlines(),
-                                     'platform\t: PowerNV\n'):
+            if 'PowerNV' not in cpu._get_cpu_info():
                 self.cancel(
                     'sensors test is applicable to bare-metal environment.')
         if d_distro.name == "Ubuntu":

@@ -21,9 +21,8 @@ import os
 import ConfigParser
 from avocado import Test
 from avocado import main
-from avocado.utils import process
+from avocado.utils import process, cpu, distro
 from avocado.utils.service import SpecificServiceManager
-from avocado.utils import distro
 from avocado.utils.wait import wait_for
 from avocado.utils.software_manager import SoftwareManager
 
@@ -54,7 +53,7 @@ class service_check(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel(' %s is needed for the test to be run' % package)
 
-        if 'PowerNV' in open('/proc/cpuinfo', 'r').read():
+        if 'PowerNV' in cpu._get_cpu_info():
             services_list.extend(['opal_errd', 'opal-prd'])
             if os.path.exists('/proc/device-tree/bmc'):
                 services_list.remove('opal_errd')

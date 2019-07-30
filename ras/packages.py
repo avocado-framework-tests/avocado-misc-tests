@@ -17,7 +17,7 @@
 from avocado import Test
 from avocado import main
 from avocado.utils import process
-from avocado.utils import distro
+from avocado.utils import distro, cpu
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -30,7 +30,7 @@ class Package_check(Test):
         self.sm = SoftwareManager()
         self.packages = self.params.get(
             'packages', default=['powerpc-utils', 'ppc64-diag', 'lsvpd'])
-        if 'PowerNV' in open('/proc/cpuinfo', 'r').read():
+        if 'PowerNV' in cpu._get_cpu_info():
             self.packages.extend(['opal-prd'])
 
     def test(self):

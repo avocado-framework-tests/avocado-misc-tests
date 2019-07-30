@@ -19,7 +19,7 @@
 import os
 from avocado import Test
 from avocado import main
-from avocado.utils import process
+from avocado.utils import process, cpu
 from avocado.utils.service import ServiceManager
 from avocado.utils.software_manager import SoftwareManager
 
@@ -43,7 +43,7 @@ class servicelog(Test):
     def setUp(self):
         if "ppc" not in os.uname()[4]:
             self.cancel("supported only on Power platform")
-        if 'PowerNV' in open('/proc/cpuinfo', 'r').read():
+        if 'PowerNV' in cpu._get_cpu_info():
             self.cancel("servicelog: is not supported on the PowerNV platform")
         smm = SoftwareManager()
         for package in ("servicelog", "ppc64-diag"):

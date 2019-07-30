@@ -49,7 +49,7 @@ class nestEvents(Test):
         if cpu.get_cpu_arch().lower() == 'power8':
             self.cancel('This test not applies to Power8')
 
-        if 'PowerNV' not in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
+        if 'PowerNV' not in cpu._get_cpu_info():
             self.cancel('This test applies only to PowerNV')
 
         deps = ['gcc', 'make']

@@ -97,8 +97,7 @@ class SmtFolding(Test):
 
     def dlpar_cpu_hotplug(self):
 
-        if 'PowerNV' not in \
-                genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
+        if 'PowerNV' not in cpu._get_cpu_info():
             if "cpu_dlpar=yes" in process.system_output("drmgr -C",
                                                         ignore_status=True,
                                                         shell=True):

@@ -19,7 +19,7 @@ import glob
 import xml.etree.ElementTree
 from avocado import Test
 from avocado import main
-from avocado.utils import process, distro
+from avocado.utils import process, distro, cpu
 from avocado.utils import genio
 from avocado.utils.software_manager import SoftwareManager
 
@@ -78,7 +78,7 @@ class DiagEncl(Test):
             product_path = '/proc/device-tree/model'
             serial_path = '/proc/device-tree/system-id'
         product_name = genio.read_one_line(product_path).rstrip(' \t\r\n\0')
-        if 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
+        if 'PowerNV' not in cpu._get_cpu_info():
             product_name = product_name.split(',')[1]
         serial_num = genio.read_one_line(serial_path).rstrip(' \t\r\n\0')
         product_name_xml = "-".join((machine_type, machine_model))
