@@ -35,14 +35,6 @@ from avocado.utils.partition import Partition
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.partition import PartitionError
 
-# this block need to removed when test moved to python3
-try:
-    # Python 2
-    xrange
-except NameError:
-    # Python 3, xrange is now named range
-    xrange = range
-
 
 class Disktest(Test):
 
@@ -82,14 +74,14 @@ class Disktest(Test):
         self.dirs = self.params.get('dir', default=self.workdir)
         self.fstype = self.params.get('fs', default='ext4')
 
-        gigabytes = int(lv_utils.get_diskspace(self.disk)) / 1073741824
+        gigabytes = int(lv_utils.get_diskspace(self.disk)) // 1073741824
         memory_mb = memory.meminfo.MemTotal.m
         self.chunk_mb = gigabytes * 950
         if memory_mb > self.chunk_mb:
             self.cancel("Chunk size has to be greater or equal to RAM size. "
                         "(%s > %s)" % (self.chunk_mb, memory_mb))
 
-        self.no_chunks = 1024 * gigabytes / self.chunk_mb
+        self.no_chunks = 1024 * gigabytes // self.chunk_mb
         if self.no_chunks == 0:
             self.cancel("Free disk space is lower than chunk size (%s, %s)"
                         % (1024 * gigabytes, self.chunk_mb))
@@ -144,7 +136,7 @@ class Disktest(Test):
         """
         procs = []
         errors = []
-        for i in xrange(self.no_chunks):
+        for i in range(self.no_chunks):
             self.log.debug("Testing chunk %s...", i)
             procs.append(self.one_disk_chunk(self.dirs, i))
             for pid, proc in procs:

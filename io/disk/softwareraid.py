@@ -126,7 +126,7 @@ class SoftwareRaid(Test):
         output = process.run(cmd, ignore_status=True, shell=True)
         if output.exit_status != 0:
             self.fail("Failed to display MD device details")
-        return output.stdout.splitlines()
+        return output.stdout.decode("utf-8").splitlines()
 
     def is_mdadm_recovering(self):
         """

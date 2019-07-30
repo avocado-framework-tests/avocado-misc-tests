@@ -46,7 +46,7 @@ class HtxTest(Test):
         """
         Setup
         """
-        if 'ppc64' not in process.system_output('uname -a', shell=True):
+        if 'ppc64' not in distro.detect().arch:
             self.cancel("Platform does not supports")
 
         self.mdt_file = self.params.get('mdt_file', default='mdt.hd')
@@ -70,16 +70,16 @@ class HtxTest(Test):
         Builds HTX
         """
         packages = ['git', 'gcc', 'make']
-        detected_distro = distro.detect()
-        if detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
+        detected_distro = distro.detect().name
+        if detected_distro in ['centos', 'fedora', 'rhel', 'redhat']:
             packages.extend(['gcc-c++', 'ncurses-devel', 'tar'])
-        elif detected_distro.name == "Ubuntu":
+        elif detected_distro == "Ubuntu":
             packages.extend(['libncurses5', 'g++', 'ncurses-dev',
                              'libncurses-dev', 'tar'])
-        elif detected_distro.name == 'SuSE':
+        elif detected_distro == 'SuSE':
             packages.extend(['libncurses5', 'gcc-c++', 'ncurses-devel', 'tar'])
         else:
-            self.cancel("Test not supported in  %s" % detected_distro.name)
+            self.cancel("Test not supported in  %s" % detected_distro)
 
         smm = SoftwareManager()
         for pkg in packages:
@@ -166,7 +166,7 @@ class HtxTest(Test):
         self.log.info("checking if the given block_devices are present in %s",
                       self.mdt_file)
         cmd = "htxcmdline -query -mdt %s" % self.mdt_file
-        output = process.system_output(cmd)
+        output = process.system_output(cmd).decode("utf-8")
         device = []
         for disk in self.block_device.split(" "):
             if disk not in output:
@@ -193,7 +193,7 @@ class HtxTest(Test):
         self.log.info("checking whether all block_devices are active ot not")
         cmd = 'htxcmdline -query %s -mdt %s' % (self.block_device,
                                                 self.mdt_file)
-        output = process.system_output(cmd).split('\n')
+        output = process.system_output(cmd).decode("utf-8").split('\n')
         device_list = self.block_device.split(" ")
         active_devices = []
         for line in output:
@@ -224,7 +224,7 @@ class HtxTest(Test):
             process.system(cmd, ignore_status=True)
 
         daemon_state = process.system_output('/etc/init.d/htx.d status')
-        if daemon_state.split(" ")[-1] == 'running':
+        if daemon_state.decode("utf-8").split(" ")[-1] == 'running':
             process.system('/usr/lpp/htx/etc/scripts/htxd_shutdown')
 
     def tearDown(self):
