@@ -103,7 +103,7 @@ class MemStress(Test):
         smm = SoftwareManager()
         if not smm.check_installed('stress') and not smm.install('stress'):
             tarball = self.fetch_asset(
-                'https://people.seas.harvard.edu/~apw/stress/stress-1.0.4.tar.gz')
+                'https://fossies.org/linux/privat/stress-1.0.4.tar.gz')
             archive.extract(tarball, self.teststmpdir)
             self.sourcedir = os.path.join(
                 self.teststmpdir, os.path.basename(tarball.split('.tar.')[0]))
