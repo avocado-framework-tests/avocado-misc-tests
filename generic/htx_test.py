@@ -44,7 +44,7 @@ class HtxTest(Test):
         """
         Setup
         """
-        if 'ppc64' not in process.system_output('uname -a', shell=True):
+        if 'ppc64' not in distro.detect().arch:
             self.cancel("Supported only on Power Architecture")
 
         self.mdt_file = self.params.get('mdt_file', default='mdt.mem')
@@ -147,7 +147,7 @@ class HtxTest(Test):
         process.system(cmd, ignore_status=True)
 
         daemon_state = process.system_output('/etc/init.d/htx.d status')
-        if daemon_state.split(" ")[-1] == 'running':
+        if daemon_state.decode().split(" ")[-1] == 'running':
             process.system('/usr/lpp/htx/etc/scripts/htxd_shutdown')
 
     def tearDown(self):

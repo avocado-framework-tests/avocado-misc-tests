@@ -88,10 +88,10 @@ class Trinity(Test):
 
         # verify if system having issue after fuzzer run
 
-        match = re.search(r'unhandled', dmesg, re.M | re.I)
+        match = re.search(br'unhandled', dmesg, re.M | re.I)
         if match:
             self.log.info("Testcase failure as segfault")
-        match = re.search(r'Call Trace:', dmesg, re.M | re.I)
+        match = re.search(br'Call Trace:', dmesg, re.M | re.I)
         if match:
             self.log.info("some call traces seen please check")
 
