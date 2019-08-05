@@ -37,7 +37,7 @@ class Openblas(Test):
         if detected_distro.name == "Ubuntu":
             packages.append("gfortran")
         elif detected_distro.name == "SuSE":
-            packages.append(["gcc-fortran", "libgfortran4"])
+            packages.extend(["gcc-fortran", "libgfortran4"])
         else:
             packages.append("gcc-gfortran")
         for package in packages:
