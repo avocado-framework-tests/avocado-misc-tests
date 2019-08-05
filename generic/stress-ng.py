@@ -29,7 +29,7 @@ def clear_dmesg():
 
 
 def collect_dmesg(object):
-    return process.system_output("dmesg")
+    return process.system_output("dmesg").decode()
 
 
 class Stressng(Test):

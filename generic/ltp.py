@@ -35,7 +35,7 @@ def clear_dmesg():
 
 
 def collect_dmesg(obj):
-    obj.whiteboard = process.system_output("dmesg")
+    obj.whiteboard = process.system_output("dmesg").decode()
 
 
 class LTP(Test):
