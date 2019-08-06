@@ -19,12 +19,10 @@ Stress test for CPU
 """
 
 import multiprocessing
-import platform
 from random import randint
 from avocado import Test
 from avocado import main
-from avocado.utils import process
-from avocado.utils import cpu
+from avocado.utils import process, cpu, distro
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -65,12 +63,12 @@ class cpustresstest(Test):
         """
         Check required packages is installed, and get current SMT value.
         """
+        if 'ppc' not in distro.detect().arch:
+            self.cancel("Processor is not powerpc")
         sm = SoftwareManager()
         self.curr_smt = process.system_output(
             "ppc64_cpu --smt | awk -F'=' '{print $NF}' | awk '{print $NF}'",
             shell=True)
-        if 'ppc' not in platform.processor():
-            self.cancel("Processor is not powerpc")
         for pkg in ['util-linux', 'powerpc-utils', 'numactl']:
             if not sm.check_installed(pkg) and not sm.install(pkg):
                 self.cancel("%s is required to continue..." % pkg)
