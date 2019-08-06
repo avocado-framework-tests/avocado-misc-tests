@@ -74,9 +74,9 @@ class NVMeTest(Test):
             self.cancel("firmware url not given")
 
         cmd = "%s id-ctrl %s -H" % (self.binary, self.device)
-        self.id_ctrl = process.system_output(cmd, shell=True)
+        self.id_ctrl = process.system_output(cmd, shell=True).decode("utf-8")
         cmd = "%s show-regs %s -H" % (self.binary, self.device)
-        regs = process.system_output(cmd, shell=True)
+        regs = process.system_output(cmd, shell=True).decode("utf-8")
 
         test_dic = {'compare': 'Compare', 'formatnamespace': 'Format NVM',
                     'dsm': 'Data Set Management',
@@ -84,13 +84,22 @@ class NVMeTest(Test):
                     'firmware_upgrade': 'FW Commit and Download',
                     'writeuncorrectable': 'Write Uncorrectable',
                     'subsystemreset': 'NVM Subsystem Reset'}
-        for key, value in test_dic.iteritems():
+        for key, value in list(test_dic.items()):
             if key in str(self.name):
                 if "%s Supported" % value not in self.id_ctrl:
                     self.cancel("%s is not supported" % value)
                 # NVM Subsystem Reset Supported  (NSSRS): No
                 if "%s Supported   (NSSRS): No" % value in regs:
                     self.cancel("%s is not supported" % value)
+
+    @staticmethod
+    def run_cmd_return_output_list(cmd):
+        """
+        Runs the command, returns the output as a list, each of which is a line
+        in the output.
+        """
+        return process.system_output(cmd, ignore_status=True,
+                                     shell=True).decode("utf-8").splitlines()
 
     def get_id_ctrl_prop(self, prop):
         """
@@ -167,8 +176,7 @@ class NVMeTest(Test):
         """
         cmd = "%s list-ns %s" % (self.binary, self.device)
         namespaces = []
-        for line in process.system_output(cmd, shell=True,
-                                          ignore_status=True).splitlines():
+        for line in self.run_cmd_return_output_list(cmd):
             namespaces.append(int(line.split()[1].split(']')[0]) + 1)
         return namespaces
 
@@ -179,14 +187,16 @@ class NVMeTest(Test):
         cmd = "%s ns-rescan %s" % (self.binary, self.device)
         process.system(cmd, shell=True, ignore_status=True)
         cmd = "%s list" % self.binary
-        return process.system_output(cmd, shell=True, ignore_status=True)
+        return process.system_output(cmd, shell=True,
+                                     ignore_status=True).decode("utf-8")
 
     def get_ns_controller(self):
         """
         Returns the nvme controller id
         """
         cmd = "%s list-ctrl %s" % (self.binary, self.device)
-        output = process.system_output(cmd, shell=True, ignore_status=True)
+        output = process.system_output(cmd, shell=True,
+                                       ignore_status=True).decode("utf-8")
         if output:
             return output.split(':')[-1]
         return ""
@@ -200,8 +210,7 @@ class NVMeTest(Test):
         if namespace:
             namespace = namespace[0]
             cmd = "%s id-ns %sn%s" % (self.binary, self.device, namespace)
-            for line in process.system_output(cmd, shell=True,
-                                              ignore_status=True).splitlines():
+            for line in self.run_cmd_return_output_list(cmd):
                 if 'in use' in line:
                     return int(line.split()[1])
         return '0'
@@ -215,8 +224,7 @@ class NVMeTest(Test):
         if namespace:
             namespace = namespace[0]
             cmd = "%s id-ns %sn%s" % (self.binary, self.device, namespace)
-            for line in process.system_output(cmd, shell=True,
-                                              ignore_status=True).splitlines():
+            for line in self.run_cmd_return_output_list(cmd):
                 if 'in use' in line:
                     return pow(2, int(line.split()[4].split(':')[-1]))
         return 4096
@@ -240,16 +248,16 @@ class NVMeTest(Test):
         """
         Creates one namespace with full capacity
         """
-        max_ns_blocks = self.get_total_capacity() / self.get_block_size()
+        max_ns_blocks = self.get_total_capacity() // self.get_block_size()
         self.create_one_ns('1', max_ns_blocks, self.get_ns_controller())
 
     def create_max_ns(self):
         """
         Creates maximum number of namespaces, with equal capacity
         """
-        max_ns_blocks = self.get_total_capacity() / self.get_block_size()
+        max_ns_blocks = self.get_total_capacity() // self.get_block_size()
         max_ns_blocks_considered = 60 * max_ns_blocks / 100
-        per_ns_blocks = max_ns_blocks_considered / self.get_max_ns_count()
+        per_ns_blocks = max_ns_blocks_considered // self.get_max_ns_count()
         ns_controller = self.get_ns_controller()
         for ns_id in range(1, self.get_max_ns_count() + 1):
             self.create_one_ns(str(ns_id), per_ns_blocks, ns_controller)
