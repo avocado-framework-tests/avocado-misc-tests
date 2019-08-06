@@ -60,7 +60,8 @@ class DiskInfo(Test):
         if not self.disk:
             self.cancel("No disk input, please update yaml and re-run")
         cmd = "df --output=source"
-        if self.disk in process.system_output(cmd, ignore_status=True):
+        if self.disk in process.system_output(cmd, ignore_status=True) \
+                .decode("utf-8"):
             self.cancel("Given disk is os boot disk,"
                         "it will be harmful to run this test")
         pkg_list = ["lshw"]
@@ -109,12 +110,10 @@ class DiskInfo(Test):
         disk = (self.disk.split("/dev/"))[1]
         if process.system("ls /dev/disk/by-id -l| grep -i %s" % disk,
                           ignore_status=True, shell=True, sudo=True) != 0:
-            msg.append("Given disk %s is not present in /dev/disk/by-id",
-                       disk)
+            msg.append("Given disk %s is not in /dev/disk/by-id" % disk)
         if process.system("ls /dev/disk/by-path -l| grep -i %s" % disk,
                           ignore_status=True, shell=True, sudo=True) != 0:
-            msg.append("Given disk %s is not present in /dev/disk/by-path",
-                       disk)
+            msg.append("Given disk %s is not in /dev/disk/by-path" % disk)
 
         # Verify disk listed in all tools
         cmd_list = ["fdisk -l ", "parted -l", "lsblk ",
@@ -130,9 +129,11 @@ class DiskInfo(Test):
         # Get the size and UUID of the disk
         cmd = "lsblk -l %s --output SIZE -b |sed -n 2p" % self.disk
         output = process.system_output(cmd, ignore_status=True,
-                                       shell=True, sudo=True)
-        self.size_bytes = (output.strip("\n"))[0]
-        self.log.info("Disk: %s Size: %s", self.disk, self.size_bytes)
+                                       shell=True, sudo=True).decode("utf-8")
+        if not output:
+            self.cancel("No information available in lsblk")
+        self.size_b = (output.strip("\n"))[0]
+        self.log.info("Disk: %s Size: %s", self.disk, self.size_b)
 
         # Get the physical/logical and minimal/optimal sector sizes
         pbs_sysfs = "/sys/block/%s/queue/physical_block_size" % disk
@@ -150,7 +151,7 @@ class DiskInfo(Test):
                         "bytes / %s bytes" % (lbs, pbs)
         output = process.system_output("fdisk -l %s" % self.disk,
                                        ignore_status=True, shell=True,
-                                       sudo=True)
+                                       sudo=True).decode("utf-8")
         if sector_string not in output:
             msg.append("Mismatch in sector sizes of lbs,pbs in "
                        "fdisk o/p w.r.t sysfs paths")
@@ -162,14 +163,16 @@ class DiskInfo(Test):
 
         # Verify disk size in other tools
         cmd = "fdisk -l %s | grep -i %s" % (self.disk, self.disk)
-        if self.size_bytes not in process.system_output(cmd,
-                                                        ignore_status=True,
-                                                        shell=True, sudo=True):
+        if self.size_b not in process.system_output(cmd,
+                                                    ignore_status=True,
+                                                    shell=True,
+                                                    sudo=True).decode("utf-8"):
             msg.append("Size of disk %s mismatch in fdisk o/p" % self.disk)
         cmd = "sfdisk -l %s | grep -i %s" % (self.disk, self.disk)
-        if self.size_bytes not in process.system_output(cmd,
-                                                        ignore_status=True,
-                                                        shell=True, sudo=True):
+        if self.size_b not in process.system_output(cmd,
+                                                    ignore_status=True,
+                                                    shell=True,
+                                                    sudo=True).decode("utf-8"):
             msg.append("Size of disk %s mismatch in sfdisk o/p" % self.disk)
 
         # Mount
@@ -190,20 +193,20 @@ class DiskInfo(Test):
         # Get UUID of the disk for each filesystem mount
         cmd = "blkid %s | cut -d '=' -f 2" % self.disk
         output = process.system_output(cmd, ignore_status=True,
-                                       shell=True, sudo=True)
+                                       shell=True, sudo=True).decode("utf-8")
         self.uuid = output.split('"')[1]
         self.log.info("Disk: %s UUID: %s", self.disk, self.uuid)
 
         # Verify mount point, filesystem type and UUID for each test variant
         output = process.system_output("lsblk -l %s" % self.disk,
                                        ignore_status=True, shell=True,
-                                       sudo=True)
+                                       sudo=True).decode("utf-8")
         if self.dirs in output:
             self.log.info("Mount point %s for disk %s updated in lsblk o/p",
                           self.dirs, self.disk)
         output = process.system_output("df %s" % self.disk,
                                        ignore_status=True, shell=True,
-                                       sudo=True)
+                                       sudo=True).decode("utf-8")
         if self.dirs in output:
             self.log.info("Mount point %s for disk %s updated in df o/p",
                           self.dirs, self.disk)
@@ -214,7 +217,7 @@ class DiskInfo(Test):
 
         output = process.system_output("blkid %s" % self.disk,
                                        ignore_status=True, shell=True,
-                                       sudo=True)
+                                       sudo=True).decode("utf-8")
         if (self.disk in output and self.fstype in output and
                 self.uuid in output):
             self.log.info("Disk %s of file system %s and "

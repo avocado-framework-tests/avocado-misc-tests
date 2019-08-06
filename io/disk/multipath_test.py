@@ -73,7 +73,7 @@ class MultipathTest(Test):
         wwids_to_remove = []
         for wwid in self.wwids:
             if wwid not in system_wwids:
-                self.log.info("%s not present in the system" % wwid)
+                self.log.info("%s not present in the system", wwid)
                 wwids_to_remove.append(wwid)
         for wwid in wwids_to_remove:
             self.wwids.remove(wwid)
@@ -96,7 +96,7 @@ class MultipathTest(Test):
         for wwid in self.wwids:
             if wwid not in process.system_output('multipath -ll',
                                                  ignore_status=True,
-                                                 shell=True):
+                                                 shell=True).decode("utf-8"):
                 continue
             self.mpath_dic = {}
             self.mpath_dic["wwid"] = wwid

@@ -93,11 +93,11 @@ class Tiobench(Test):
         self.log.info("Test will run on %s", self.target)
         self.whiteboard = process.system_output('perl ./tiobench.pl '
                                                 '--target {} --block={} '
-                                                '--threads={} --size={} '
-                                                '--numruns={}'
+                                                '--threads={} --numruns={} '
+                                                '-size={}'
                                                 .format(self.target, blocks,
-                                                        threads, size,
-                                                        num_runs))
+                                                        threads, num_runs,
+                                                        size)).decode("utf-8")
 
     def tearDown(self):
         '''
