@@ -58,7 +58,7 @@ class kselftest(Test):
         if self.comp:
             self.comp = '-C %s' % self.comp
         detected_distro = distro.detect()
-        deps = ['gcc', 'make', 'automake', 'autoconf']
+        deps = ['gcc', 'make', 'automake', 'autoconf', 'rsync']
 
         if 'Ubuntu' in detected_distro.name:
             deps.extend(['libpopt0', 'libc6', 'libc6-dev', 'libcap-dev',
