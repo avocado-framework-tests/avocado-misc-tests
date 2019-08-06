@@ -2,6 +2,8 @@ ib_atomic_lat_basic:
 tool: ib_atomic_lat
 interface: ""
 peer_ip: ""
+peer_user: "root"
+peer_password: "passw0rd"
 CA_NAME: ""
 PORT_NUM: "1"
 PEERCA: ""

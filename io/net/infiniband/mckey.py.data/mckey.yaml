@@ -9,3 +9,5 @@ Parameters:
     ext_flag: "1"
     interface: "ib0"
     peer_ip: "13.13.13.15"
+    peer_user: "root"
+    peer_password: "passw0rd"

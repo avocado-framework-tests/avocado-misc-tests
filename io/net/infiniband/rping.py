@@ -20,6 +20,10 @@ Rping test
 """
 
 import time
+try:
+    import pxssh
+except ImportError:
+    from pexpect import pxssh
 import netifaces
 from netifaces import AF_INET
 from avocado import Test
@@ -73,6 +77,10 @@ class Rping(Test):
         self.local_ip = netifaces.ifaddresses(self.iface)[AF_INET][0]['addr']
         self.option = self.option.replace("peer_ipv6", self.ipv6_peer)
         self.option = self.option.replace("peer_ip", self.peer_ip)
+        self.peer_user = self.params.get("peer_user_name", default="root")
+        self.peer_password = self.params.get("peer_password", '*',
+                                             default="passw0rd")
+        self.peer_login(self.peer_ip, self.peer_user, self.peer_password)
         self.option = self.option.replace("interface", self.iface)
         self.option_list = self.option.split(",")
 
@@ -92,9 +100,53 @@ class Rping(Test):
             cmd = "service iptables stop"
         else:
             self.cancel("Distro not supported")
-        if process.system("%s && ssh %s %s" % (cmd, self.peer_ip, cmd),
-                          ignore_status=True, shell=True) != 0:
+        if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.cancel("Unable to disable firewall")
+        output, exitcode = self.run_command(cmd)
+        if exitcode != 0:
+            self.cancel("Unable to disable firewall on peer")
+
+    def peer_login(self, ip, username, password):
+        '''
+        SSH Login method for remote peer server
+        '''
+        pxh = pxssh.pxssh()
+        # Work-around for old pxssh not having options= parameter
+        pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
+        pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
+        pxh.force_password = True
+
+        pxh.login(ip, username, password)
+        pxh.sendline()
+        pxh.prompt(timeout=60)
+        pxh.sendline('exec bash --norc --noprofile')
+        # Ubuntu likes to be "helpful" and alias grep to
+        # include color, which isn't helpful at all. So let's
+        # go back to absolutely no messing around with the shell
+        pxh.set_unique_prompt()
+        self.pxssh = pxh
+
+    def run_command(self, command, timeout=300):
+        '''
+        SSH Run command method for running commands on remote server
+        '''
+        self.log.info("Running the command on peer lpar %s", command)
+        if not hasattr(self, 'pxssh'):
+            self.fail("SSH Console setup is not yet done")
+        con = self.pxssh
+        con.sendline(command)
+        con.expect("\n")  # from us
+        if command.endswith('&'):
+            return ("", 0)
+        con.expect(con.PROMPT, timeout=timeout)
+        output = con.before.splitlines()
+        con.sendline("echo $?")
+        con.prompt(timeout)
+        try:
+            exitcode = int(''.join(con.before.splitlines()[1:]))
+        except Exception as exc:
+            exitcode = 0
+        return (output, exitcode)
 
     def test(self):
         """
@@ -102,10 +154,10 @@ class Rping(Test):
         """
         self.log.info(self.test_name)
         logs = "> /tmp/ib_log 2>&1 &"
-        cmd = "ssh %s \" timeout %s %s -s %s %s\" " \
-            % (self.peer_ip, self.timeout, self.test_name,
-               self.option_list[0], logs)
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
+        cmd = "timeout %s %s -s %s %s" % (self.timeout, self.test_name,
+                                          self.option_list[0], logs)
+        output, exitcode = self.run_command(cmd)
+        if exitcode != 0:
             self.fail("SSH connection (or) Server command failed")
         time.sleep(5)
         self.log.info("Client data - %s(%s)" %
@@ -117,9 +169,10 @@ class Rping(Test):
         time.sleep(5)
         self.log.info("Server data - %s(%s)" %
                       (self.test_name, self.option_list[0]))
-        cmd = "ssh %s \" timeout %s cat /tmp/ib_log && rm -rf /tmp/ib_log\" " \
-            % (self.peer_ip, self.timeout)
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
+        cmd = "timeout %s cat /tmp/ib_log && rm -rf /tmp/ib_log" \
+            % (self.timeout)
+        output, exitcode = self.run_command(cmd)
+        if exitcode != 0:
             self.fail("Server output retrieval failed")
 
 
