@@ -34,7 +34,7 @@ class FsFuzz(Test):
         process.run("dmesg -C ", sudo=True)
 
     def verify_dmesg(self):
-        self.whiteboard = process.system_output("dmesg")
+        self.whiteboard = process.system_output("dmesg").decode()
         pattern = ['WARNING: CPU:', 'Oops',
                    'Segfault', 'soft lockup', 'Unable to handle']
         for fail_pattern in pattern:

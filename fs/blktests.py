@@ -56,7 +56,7 @@ class Blktests(Test):
         genio.write_one_line("/proc/sys/kernel/hung_task_timeout_secs", "0")
         process.system('./check', ignore_status=True)
         dmesg = process.system_output('dmesg')
-        match = re.search(r'Call Trace:', dmesg, re.M | re.I)
+        match = re.search(br'Call Trace:', dmesg, re.M | re.I)
         if match:
             self.fail("some call traces seen please check")
 
