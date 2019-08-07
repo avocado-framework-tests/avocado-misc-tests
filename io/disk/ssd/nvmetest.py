@@ -46,7 +46,7 @@ class NVMeTest(Test):
         self.device = self.params.get('device', default='nvme0')
         self.device = "/dev/%s" % self.device
         cmd = 'ls %s' % self.device
-        if process.system(cmd, ignore_status=True) is not 0:
+        if process.system(cmd, ignore_status=True):
             self.cancel("%s does not exist" % self.device)
 
         self.package = self.params.get('package', default='distro')
