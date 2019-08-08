@@ -356,23 +356,28 @@ class NetworkVirtualization(Test):
             self.fail("Client initiated Failover for Network virtualized \
                       device has failed")
 
-    def test_backingdevremove(self):
+    def test_vnic_auto_failover(self):
         '''
-        Removing Backing device for Network virtualized device
+        Set the priority for vNIC active and backing devices and check if autofailover works
         '''
-        if self.check_slot_availability():
-            self.fail("Slot does not exist")
-        self.update_backing_devices()
-        pre_remove = self.backing_dev_count()
-        for count in range(1, self.backingdev_count):
-            self.backing_dev_add_remove('remove', count)
-        post_remove = self.backing_dev_count()
-        post_remove_count = pre_remove - post_remove + 1
-        if post_remove_count != self.backingdev_count:
-            self.log.debug("Actual backing dev count: %d", post_remove_count)
-            self.log.debug("Expected backing dev count: %d",
-                           self.backingdev_count)
-            self.fail("Failed to remove backing device")
+        if len(self.backing_adapter) >= 2:
+            for _ in range(self.count):
+                self.update_backing_devices()
+                backing_logport = self.get_backing_device_logport()
+                active_logport = self.get_active_device_logport()
+                if self.enable_auto_failover():
+                    if not self.change_failover_priority(backing_logport, '1'):
+                        self.fail("Fail to change the priority for backing device %s", backing_logport)
+                    if not self.change_failover_priority(active_logport, '100'):
+                        self.fail("Fail to change the priority for active device %s", active_logport)
+                    if backing_logport != self.get_active_device_logport():
+                        self.fail("Auto failover of backing device failed")
+                    if not self.ping_check():
+                        self.fail("Auto failover has effected connectivity")
+                else:
+                    self.fail("Could not enable auto failover")
+        else:
+            self.cancel("Provide more backing device, only 1 given")
 
     def test_vnic_dlpar(self):
         '''
@@ -393,6 +398,24 @@ class NetworkVirtualization(Test):
                 self.fail("dlpar has affected Network connectivity")
         else:
             self.fail("slot not found")
+
+    def test_backingdevremove(self):
+        '''
+        Removing Backing device for Network virtualized device
+        '''
+        if self.check_slot_availability():
+            self.fail("Slot does not exist")
+        self.update_backing_devices()
+        pre_remove = self.backing_dev_count()
+        for count in range(1, self.backingdev_count):
+            self.backing_dev_add_remove('remove', count)
+        post_remove = self.backing_dev_count()
+        post_remove_count = pre_remove - post_remove + 1
+        if post_remove_count != self.backingdev_count:
+            self.log.debug("Actual backing dev count: %d", post_remove_count)
+            self.log.debug("Expected backing dev count: %d",
+                           self.backingdev_count)
+            self.fail("Failed to remove backing device")
 
     def test_remove(self):
         '''
@@ -570,6 +593,74 @@ class NetworkVirtualization(Test):
             self.fail("drmgr operation %s fails for vNIC device %s" %
                       (operation, slot))
 
+    def is_auto_failover_enabled(self):
+        """
+        Check if auto failover is enabled for the vNIC device
+        """
+        cmd = 'lshwres -r virtualio -m %s --rsubtype vnic \
+               --filter lpar_names=%s,slots=%s' \
+               % (self.server, self.lpar, self.slot_num)
+        try:
+            output = self.run_command(cmd)
+        except CommandFailed as cmdfail:
+            self.log.debug(str(cmdfail))
+        for entry in output:
+            if 'auto_priority_failover=1' in entry:
+                return True
+        return False
+
+    def enable_auto_failover(self):
+        """
+        Function to enable auto failover option
+        """
+        cmd = 'chhwres -r virtualio -m %s --rsubtype vnic \
+               -o s --id %s -s %s -a auto_priority_failover=1' \
+               % (self.server, self.lpar_id, self.slot_num)
+        try:
+            self.run_command(cmd)
+        except CommandFailed as cmdfail:
+            self.log.debug(str(cmdfail))
+        if not self.is_auto_failover_enabled():
+            return False
+        return True
+
+    def get_failover_priority(self, logport):
+        """
+        get the priority value for the given backing device
+        """
+        priority = None
+        cmd = 'lshwres -r virtualio -m %s --rsubtype vnic --level lpar \
+               --filter lpar_names=%s -F slot_num,backing_devices' \
+               % (self.server, self.lpar)
+        try:
+            output = self.run_command(cmd)
+        except CommandFailed as cmdfail:
+            self.log.debug(str(cmdfail))
+        for backing_dev in output:
+            if backing_dev.startswith('%s,' % self.slot_num):
+                backing_dev = backing_dev.strip('%s,"' % self.slot_num)
+                for entry in backing_dev.split(','):
+                    entry = entry.split('/')
+                    if logport in entry:
+                        priority = entry[8]
+                        break
+        return priority
+
+    def change_failover_priority(self, logport, priority):
+        """
+        Change the fail over priroity for given backing device
+        """
+        cmd = 'chhwres -r virtualio --rsubtype vnicbkdev -o s -m %s \
+               -s %s --id %s --logport %s -a failover_priority=%s' \
+               % (self.server, self.slot_num, self.lpar_id, logport, priority)
+        try:
+            self.run_command(cmd)
+        except CommandFailed as cmdfail:
+            self.log.debug(str(cmdfail))
+        if priority != self.get_failover_priority(logport):
+            return False
+        return True
+
     def configure_device(self):
         """
         Configures the Network virtualized device
@@ -618,9 +709,11 @@ class NetworkVirtualization(Test):
         device = self.configure_device()
         cmd = "ping -I %s %s -c 5"\
               % (device, self.peer_ip)
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
-            return False
-        return True
+        output = process.system_output(cmd)
+        for log in output.split('\n'):
+            if ' 0% packet loss' in log.split(','):
+                return True
+        return False
 
     def trigger_failover(self, logport):
         '''
