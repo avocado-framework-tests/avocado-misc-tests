@@ -25,7 +25,7 @@ import re
 import platform
 from avocado import Test
 from avocado import main
-from avocado.utils import process, linux_modules, genio, pci, cpu
+from avocado.utils import linux_modules, genio, pci, cpu
 
 
 class PCIHotPlugTest(Test):
@@ -47,13 +47,13 @@ class PCIHotPlugTest(Test):
             self.cancel("Test Unsupported! on this platform")
         if cpu._list_matches(open('/proc/cpuinfo').readlines(),
                              'platform\t: pSeries\n'):
-            PowerVM = True
+            power_vm = True
             for mdl in ['rpaphp', 'rpadlpar_io']:
                 if not linux_modules.module_is_loaded(mdl):
                     linux_modules.load_module(mdl)
         elif cpu._list_matches(open('/proc/cpuinfo').readlines(),
                                'platform\t: PowerNV\n'):
-            PowerVM = False
+            power_vm = False
             if not linux_modules.module_is_loaded("pnv_php"):
                 linux_modules.load_module("pnv_php")
         self.return_code = 0
@@ -61,7 +61,8 @@ class PCIHotPlugTest(Test):
         self.num_of_hotplug = int(self.params.get('num_of_hotplug', default='1'))
         if not os.path.isdir('/sys/bus/pci/devices/%s' % self.device):
             self.cancel("PCI device given does not exist")
-        if PowerVM:
+        self.num_of_hotplug = int(self.params.get('num_of_hotplug', default='1'))
+        if power_vm:
             devspec = genio.read_file("/sys/bus/pci/devices/%s/devspec"
                                       % self.device)
             self.slot = genio.read_file("/proc/device-tree/%s/ibm,loc-code"
@@ -80,7 +81,7 @@ class PCIHotPlugTest(Test):
         Creates namespace on the device.
         """
 
-        for i in range(self.num_of_hotplug):
+        for _ in range(self.num_of_hotplug):
             self.hotplug_remove()
             self.hotplug_add()
             self.check_add_remove()
@@ -91,8 +92,7 @@ class PCIHotPlugTest(Test):
         """
         genio.write_file("/sys/bus/pci/slots/%s/power" % self.slot, "0")
         time.sleep(5)
-        cmd = "lspci -k -s %s" % self.device
-        if process.system_output(cmd, shell=True).strip('\n') is not '':
+        if self.device in pci.get_pci_addresses():
             self.return_code = 1
         else:
             self.log.info("Adapter %s removed successfully", self.device)
@@ -103,8 +103,7 @@ class PCIHotPlugTest(Test):
         """
         genio.write_file("/sys/bus/pci/slots/%s/power" % self.slot, "1")
         time.sleep(5)
-        cmd = "lspci -k -s %s" % self.device
-        if process.system_output(cmd, shell=True).strip('\n') is '':
+        if self.device not in pci.get_pci_addresses():
             self.return_code = 2
         else:
             self.log.info("Adapter %s added back successfully", self.device)

@@ -115,7 +115,7 @@ class DlparPci(Test):
         '''
         for line in process.system_output('lsrsrc IBM.MCP %s' % component,
                                           ignore_status=True, shell=True,
-                                          sudo=True).splitlines():
+                                          sudo=True).decode("utf-8").splitlines():
             if component in line:
                 return line.split()[-1].strip('{}\"')
         return ''
@@ -124,7 +124,7 @@ class DlparPci(Test):
         '''
         SSH Login method for remote server
         '''
-        ssh = pxssh.pxssh()
+        ssh = pxssh.pxssh(encoding='utf-8')
         # Work-around for old pxssh not having options= parameter
         ssh.SSH_OPTS = ssh.SSH_OPTS + " -o 'StrictHostKeyChecking=no' "
         ssh.SSH_OPTS = ssh.SSH_OPTS + " -o 'UserKnownHostsFile /dev/null' "
@@ -195,7 +195,7 @@ class DlparPci(Test):
             self.cancel("Command startsrc -g rsct_rm failed")
 
         output = process.system_output("lssrc -a", ignore_status=True,
-                                       shell=True, sudo=True)
+                                       shell=True, sudo=True).decode("utf-8")
 
         if "inoperative" in output:
             self.cancel("Failed to start the rsct and rsct_rm services")
