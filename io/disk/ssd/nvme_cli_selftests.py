@@ -48,7 +48,7 @@ class NVMeCliSelfTest(Test):
         if not self.test:
             self.cancel('no test specified in yaml')
         cmd = 'ls %s' % self.device
-        if process.system(cmd, ignore_status=True) is not 0:
+        if process.system(cmd, ignore_status=True):
             self.cancel("%s does not exist" % self.device)
         smm = SoftwareManager()
         if not smm.check_installed("nvme-cli") and not \
@@ -80,7 +80,8 @@ class NVMeCliSelfTest(Test):
         """
         res = process.run("nose2 --verbose %s" %
                           self.test, shell=True, ignore_status=True)
-        if 'FAILED' in res.stdout or 'FAILED' in res.stderr:
+        res = [res.stdout.decode("utf-8"), res.stderr.decode("utf-8")]
+        if any('FAILED' in line for line in res):
             self.fail("Test Failed")
 
 
