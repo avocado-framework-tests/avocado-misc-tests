@@ -41,7 +41,7 @@ class Pjdfstest(Test):
         # Check for basic utilities
         smm = SoftwareManager()
 
-        for package in ['autoconf', 'automake', 'gcc', 'make', 'perl']:
+        for package in ['autoconf', 'automake', 'gcc', 'make', 'perl', 'openssl']:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
         locations = ['https://github.com/pjd/pjdfstest/archive/master.zip']
