@@ -264,6 +264,19 @@ class NetworkTest(Test):
                 return line.split()[-1]
         return ''
 
+    def test_promisc(self):
+        '''
+        promisc mode testing
+        '''
+        cmd = "ip link set %s promisc on" % self.iface
+        if process.system(cmd, shell=True, ignore_status=True) != 0:
+            self.fail("failed to enable promisc mode")
+        self.test_ping()
+        cmd = "ip link set %s promisc off" % self.iface
+        if process.system(cmd, shell=True, ignore_status=True) != 0:
+            self.fail("failed to disable promisc mode")
+        self.test_ping()
+
     def tearDown(self):
         '''
         Remove the files created
