@@ -18,6 +18,11 @@
 # to test we need to enable  multicast option on host
 # then ping from peer to multicast group
 
+
+try:
+    import pxssh
+except ImportError:
+    from pexpect import pxssh
 import netifaces
 from avocado import main
 from avocado import Test
@@ -36,6 +41,11 @@ class ReceiveMulticastTest(Test):
         '''
         To check and install dependencies for the test
         '''
+        self.peer = self.params.get("peer_ip", default="")
+        self.user = self.params.get("user_name", default="root")
+        self.peer_password = self.params.get("peer_password",
+                                             '*', default="passw0rd")
+        self.login(self.peer, self.user, self.peer_password)
         smm = SoftwareManager()
         pkgs = ["net-tools"]
         detected_distro = distro.detect()
@@ -52,13 +62,10 @@ class ReceiveMulticastTest(Test):
         self.iface = self.params.get("interface")
         if self.iface not in interfaces:
             self.cancel("%s interface is not available" % self.iface)
-        self.peer = self.params.get("peer_ip", default="")
         if self.peer == "":
             self.cancel("peer ip should specify in input")
-        self.user = self.params.get("user_name", default="root")
-        msg = "ip addr show  | grep %s | grep -oE '[^ ]+$'" % self.peer
-        cmd = "ssh %s@%s \"%s\"" % (self.user, self.peer, msg)
-        self.peerif = process.system_output(cmd, shell=True).strip()
+        cmd = "ip addr show  | grep %s | grep -oE '[^ ]+$'" % self.peer
+        self.peerif, exitcode = self.run_command(cmd)
         if self.peerif == "":
             self.cancel("unable to get peer interface")
         cmd = "ip -f inet -o addr show %s | awk '{print $4}' | cut -d / -f1"\
@@ -66,6 +73,50 @@ class ReceiveMulticastTest(Test):
         self.local_ip = process.system_output(cmd, shell=True).strip()
         if self.local_ip == "":
             self.cancel("unable to get local ip")
+
+    def login(self, ip, username, password):
+        '''
+        SSH Login method for remote server
+        '''
+        pxh = pxssh.pxssh()
+        # Work-around for old pxssh not having options= parameter
+        pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
+        pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
+        pxh.force_password = True
+
+        pxh.login(ip, username, password)
+        pxh.sendline()
+        pxh.prompt(timeout=60)
+        pxh.sendline('exec bash --norc --noprofile')
+        pxh.prompt(timeout=60)
+        # Ubuntu likes to be "helpful" and alias grep to
+        # include color, which isn't helpful at all. So let's
+        # go back to absolutely no messing around with the shell
+        pxh.set_unique_prompt()
+        pxh.prompt(timeout=60)
+        self.pxssh = pxh
+
+    def run_command(self, command, timeout=300):
+        '''
+        SSH Run command method for running commands on remote server
+        '''
+        self.log.info("Running the command on peer lpar: %s", command)
+        if not hasattr(self, 'pxssh'):
+            self.fail("SSH Console setup is not yet done")
+        con = self.pxssh
+        con.sendline(command)
+        con.expect("\n")  # from us
+        if command.endswith('&'):
+            return ("", 0)
+        con.expect(con.PROMPT, timeout=timeout)
+        output = con.before.splitlines()
+        con.sendline("echo $?")
+        con.prompt(timeout)
+        try:
+            exitcode = int(''.join(con.before.splitlines()[1:]))
+        except Exception as exc:
+            exitcode = 0
+        return (output, exitcode)
 
     def test_multicast(self):
         '''
@@ -79,25 +130,23 @@ class ReceiveMulticastTest(Test):
         if process.system(cmd, shell=True, verbose=True,
                           ignore_status=True) != 0:
             self.fail("unable to set all mulicast option to test interface")
-        msg = "ip route add 224.0.0.0/4 dev %s" % self.peerif
-        cmd = "ssh %s@%s \"%s\"" % (self.user, self.peer, msg)
-        if process.system(cmd, shell=True, verbose=True,
-                          ignore_status=True) != 0:
+        cmd = "ip route add 224.0.0.0/4 dev %s" % self.peer
+        output, exitcode = self.run_command(cmd)
+        if exitcode != 0:
             self.fail("Unable to add route for Peer interafce")
-        msg = "ping -I %s 224.0.0.1 -c 1 | grep %s" %\
+        cmd = "ping -I %s 224.0.0.1 -c 1 | grep %s" %\
               (self.peerif, self.local_ip)
-        cmd = "timeout 600 ssh %s@%s \"%s\"" % (self.user, self.peer, msg)
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
+        output, exitcode = self.run_command(cmd)
+        if exitcode != 0:
             self.fail("multicast test failed")
 
     def tearDown(self):
         '''
         delete multicast route and turn off multicast option
         '''
-        msg = "ip route del 224.0.0.0/4"
-        cmd = "ssh %s@%s \"%s\"" % (self.user, self.peer, msg)
-        if process.system(cmd, shell=True, verbose=True,
-                          ignore_status=True) != 0:
+        cmd = "ip route del 224.0.0.0/4"
+        output, exitcode = self.run_command(cmd)
+        if exitcode != 0:
             self.log.info("Unable to delete multicast route added for peer")
         cmd = "echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts"
         if process.system(cmd, shell=True, verbose=True,

@@ -16,6 +16,7 @@ Test: !mux
 bond_interfaces: ""
 peer_ip: ""
 peer_interfaces: ""
+peer_password: "passw0rd"
 bond_name: "bondtest"
 user_name: "root"
 peer_bond_needed: False 
