@@ -84,8 +84,9 @@ class ReceiveMulticastTest(Test):
         if process.system(cmd, shell=True, verbose=True,
                           ignore_status=True) != 0:
             self.fail("Unable to add route for Peer interafce")
-        msg = "ping -I %s 224.0.0.1 -c 1 | grep %s" %\
-              (self.peerif, self.local_ip)
+        success_mgs = "0% packet loss"
+        msg = "ping -I %s 224.0.0.1 -c 500000 -f | grep \'%s\'" %\
+              (self.peerif, success_mgs)
         cmd = "timeout 600 ssh %s@%s \"%s\"" % (self.user, self.peer, msg)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("multicast test failed")
