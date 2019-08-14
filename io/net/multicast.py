@@ -46,6 +46,7 @@ class ReceiveMulticastTest(Test):
         self.peer_password = self.params.get("peer_password",
                                              '*', default="passw0rd")
         self.login(self.peer, self.user, self.peer_password)
+        self.count = self.params.get("count", default="500000")
         smm = SoftwareManager()
         pkgs = ["net-tools"]
         detected_distro = distro.detect()
@@ -65,7 +66,9 @@ class ReceiveMulticastTest(Test):
         if self.peer == "":
             self.cancel("peer ip should specify in input")
         cmd = "ip addr show  | grep %s | grep -oE '[^ ]+$'" % self.peer
-        self.peerif, exitcode = self.run_command(cmd)
+        output, exitcode = self.run_command(cmd)
+        self.peerif = ""
+        self.peerif = self.peerif.join(output)
         if self.peerif == "":
             self.cancel("unable to get peer interface")
         cmd = "ip -f inet -o addr show %s | awk '{print $4}' | cut -d / -f1"\
@@ -130,12 +133,13 @@ class ReceiveMulticastTest(Test):
         if process.system(cmd, shell=True, verbose=True,
                           ignore_status=True) != 0:
             self.fail("unable to set all mulicast option to test interface")
-        cmd = "ip route add 224.0.0.0/4 dev %s" % self.peer
+        cmd = "ip route add 224.0.0.0/4 dev %s" % self.peerif
         output, exitcode = self.run_command(cmd)
         if exitcode != 0:
             self.fail("Unable to add route for Peer interafce")
-        cmd = "ping -I %s 224.0.0.1 -c 1 | grep %s" %\
-              (self.peerif, self.local_ip)
+        msg = "0% packet loss"
+        cmd = "ping -I %s 224.0.0.1 -c %s -f | grep \'%s\'" %\
+              (self.peerif, self.count, msg)
         output, exitcode = self.run_command(cmd)
         if exitcode != 0:
             self.fail("multicast test failed")
