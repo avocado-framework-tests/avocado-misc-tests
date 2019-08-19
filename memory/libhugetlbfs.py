@@ -108,7 +108,7 @@ class LibHugetlbfs(Test):
                             % (pages_available, pages_requested))
 
         git.get_repo('https://github.com/libhugetlbfs/libhugetlbfs.git',
-                     destination_dir=self.workdir)
+                     branch='next', destination_dir=self.workdir)
         os.chdir(self.workdir)
         patch = self.params.get('patch', default='elflink.patch')
         process.run('patch -p1 < %s' % self.get_data(patch), shell=True)
@@ -176,7 +176,8 @@ class LibHugetlbfs(Test):
         os.chdir(self.workdir)
 
         run_log = build.run_make(
-            self.workdir, extra_args='BUILDTYPE=NATIVEONLY check').stdout
+            self.workdir, extra_args='BUILDTYPE=NATIVEONLY check',
+            process_kwargs={'ignore_status': True}).stdout.decode('utf-8')
         parsed_results = []
         error = ""
         for idx, hp_size in enumerate(self.page_sizes):
