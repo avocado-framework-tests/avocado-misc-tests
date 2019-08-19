@@ -85,6 +85,7 @@ class LTP(Test):
         smg = SoftwareManager()
         dist = distro.detect()
         self.args = self.params.get('args', default='')
+        self.mem_leak = self.params.get('mem_leak', default=0)
 
         deps = ['gcc', 'make', 'automake', 'autoconf', 'psmisc']
         if dist.name == "Ubuntu":
@@ -125,9 +126,11 @@ class LTP(Test):
         logfile = os.path.join(self.logdir, 'ltp.log')
         failcmdfile = os.path.join(self.logdir, 'failcmdfile')
 
-        self.args += (" -q -p -l %s -C %s -d %s -S %s -M 3"
+        self.args += (" -q -p -l %s -C %s -d %s -S %s"
                       % (logfile, failcmdfile, self.workdir,
                          self.get_data('skipfile')))
+        if self.mem_leak:
+            self.args += " -M %s" % self.mem_leak
         self.ltpbin_dir = os.path.join(self.workdir, "ltp-master", 'bin')
         cmd = "%s %s" % (os.path.join(self.ltpbin_dir, 'runltp'), self.args)
         process.run(cmd, ignore_status=True)
