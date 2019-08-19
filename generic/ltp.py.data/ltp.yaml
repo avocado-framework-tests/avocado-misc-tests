@@ -1,4 +1,5 @@
 setup:
+    mem_leak: 0
     general: !mux
         runltp: !mux
             syscalls:
