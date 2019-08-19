@@ -46,7 +46,6 @@ class LibHugetlbfs(Test):
         smm = SoftwareManager()
         detected_distro = distro.detect()
         deps = ['gcc', 'make', 'patch']
-        cpuinfo = genio.read_file("/proc/cpuinfo").strip()
         if detected_distro.name == "Ubuntu":
             deps += ['libpthread-stubs0-dev', 'git']
         elif detected_distro.name == "SuSE":
