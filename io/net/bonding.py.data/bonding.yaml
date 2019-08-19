@@ -1,128 +1,23 @@
 Test: !mux
     round-robin:
         bonding_mode: "0"
-        igmp: !mux
-            igmp1:  
-                resend_igmp: "1"
-            igmp_max:
-                resend_igmp: "255"
-        packets_per_slave: !mux
-            packets_random:
-                packets_per_slave: "0"
-            packets_default:
-                packets_per_slave: "1"
     active-backup:
         bonding_mode: "1"
-        primary_param: !mux
-            primary_slave:
-                primary: "eth1"
-        primary_reselect_param: !mux
-            reselct_better:
-                primary_reselect: "1"
-            reselct_failure:
-                 primary_reselect: "2"
-            reselct_default:
-                 primary_reselect: "0"
-        igmp: !mux
-            igmp1:
-                resend_igmp: "1"
-            igmp_max:
-                resend_igmp: "255"
-        num_unsol_na_param:   !mux
-            num_unsol_na_default:
-                  num_unsol_na: "0"
-            num_unsol_na_max:
-                num_unsol_na: "255"
     balance-xor:
         bonding_mode: "2"
-        xmit_hash_policy_param: !mux
-            xhp_layer2:
-                xmit_hash_policy: "0"
-            xhp_layer2+3:
-                xmit_hash_policy: "2"
-            xhp_layer3+4:
-                xmit_hash_policy: "1"
-
     broadcast:
         bonding_mode: "3"
     802.3ad:
         bonding_mode: "4"
-        lacp_rate_param: !mux
-            lacp_rate_slow:
-                lacp_rate: "0"
-            lacp_rate_fast:
-                lacp_rate: "1"
-        xmit_hash_policy_param: !mux
-            xhp_layer2:
-                xmit_hash_policy: "0"
-            xhp_layer2+3:
-                xmit_hash_policy: "2"
     balance-tlb:
         bonding_mode: "5"
-        primary_param: !mux
-            primary_slave:
-                primary: "eth1"
-        primary_reselect_param: !mux
-            reselct_better:
-                primary_reselect: "1"
-            reselct_failure:
-                 primary_reselect: "2"
-            reselct_default:
-                primary_reselect: "0" 
-        xmit_hash_policy_param: !mux
-            xhp_layer2:
-                  xmit_hash_policy: "0"
-            xhp_layer2+3:
-                  xmit_hash_policy: "2"
-            xhp_layer3+4:     
-                  xmit_hash_policy: "1"
-        tlb_dynamic_lb_param:
-            tlb_dynamic_lb_1:
-                  tlb_dynamic_lb: "1"
-            tlb_dynamic_lb_0:
-                  tlb_dynamic_lb: "0"
-        igmp: !mux
-            igmp1:
-                resend_igmp: "1"
-            igmp_max:
-                resend_igmp: "255"
-        lp_interval_param: !mux
-            lp_default:
-                lp_interval: "1"        
-            lp_max:
-                lp_interval: "0x7fffffff"
     balance-alb:
         bonding_mode: "6"
-        primary_param: !mux
-            primary_slave:
-                primary: "eth1"
-        primary_reselect_param: !mux
-            reselct_better:
-                primary_reselect: "1"
-            reselct_failure:
-                primary_reselect: "2"
-            reselct_default:
-                primary_reselect: "0"
-        igmp: !mux
-            igmp1:
-                resend_igmp: "1"
-            igmp_max:
-                resend_igmp: "255"
-        lp_interval_param: !mux
-            lp_default:
-                lp_interval: "1"       
-            lp_max:
-                lp_interval: "0x7fffffff"
-
-bond_interfaces: "enP52p1s0f0,enP52p1s0f1"
-peer_ip: "111.111.111.11"
-peer_interfaces: "enP2p1s0f1"
+bond_interfaces: "eth10,eth9"
+peer_ip: "137.1.1.120"
+peer_interfaces: "enP49156p1s0f0,enP49157p1s0f0"
 bond_name: "bondtest"
 user_name: "root"
-peer_bond_needed: True
+peer_bond_needed: False 
 peer_wait_time: "10"
-sleep_time: "5"
-fail_over_mac: "2"
-downdelay: "200"
-miimon: "50"
-lacp_rate: "1"
+sleep_time: "10"

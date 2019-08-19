@@ -80,6 +80,24 @@ class Bonding(Test):
         self.peer_first_ipinterface = self.params.get("peer_ip", default="")
         if not self.peer_interfaces or self.peer_first_ipinterface == "":
             self.cancel("peer machine should available")
+
+        self.xmit_hash_policy = self.params.get("xmit_hash_policy",
+                                                default="1")
+        self.miimon = self.params.get("miimon", default="")
+        self.fail_over_mac = self.params.get("fail_over_mac",
+                                             default="2")
+        self.downdelay = self.params.get("downdelay", default="0")
+        self.packets_per_slave = self.params.get("packets_per_slave",
+                                                 default="2")
+        self.resend_igmp = self.params.get("resend_igmp", default="1")
+        self.tlb_dynamic_lb = self.params.get("tlb_dynamic_lb",
+                                              default="1")
+        self.primary = self.params.get("primary", default="")
+        self.primary_reselect = self.params.get("primary_reselect",
+                                                default="0")
+        self.num_unsol_na = self.params.get("num_unsol_na", default="1")
+        self.lp_interval = self.params.get("lp_interval", default="1")
+        self.primary = self.params.get("primary", default="")
         self.bond_name = self.params.get("bond_name", default="tempbond")
         self.net_path = "/sys/class/net/"
         self.bond_status = "/proc/net/bonding/%s" % self.bond_name
@@ -239,8 +257,34 @@ class Bonding(Test):
             linux_modules.load_module("bonding")
             genio.write_file(self.bonding_masters_file, "+%s" % self.bond_name)
             genio.write_file("%s/bonding/mode" % self.bond_dir, arg2)
-            genio.write_file("%s/bonding/miimon" % self.bond_dir, "100")
-            genio.write_file("%s/bonding/fail_over_mac" % self.bond_dir, "2")
+            genio.write_file("%s/bonding/miimon" % self.bond_dir,
+                             self.miimon)
+            genio.write_file("%s/bonding/fail_over_mac" % self.bond_dir,
+                             self.fail_over_mac)
+            genio.write_file("%s/bonding/downdelay" % self.bond_dir,
+                             self.downdelay)
+            if self.mode == '0':
+                genio.write_file("%s/bonding/packets_per_slave" % self.bond_dir,
+                                 self.packets_per_slave)
+            if self.mode == '1':
+                genio.write_file("%s/bonding/num_unsol_na" % self.bond_dir,
+                                 self.num_unsol_na)
+            if self.mode == '4':
+                genio.write_file("%s/bonding/lacp_rate" % self.bond_dir,
+                                 self.lacp_rate)
+            if self.mode == '5':
+                genio.write_file("%s/bonding/tlb_dynamic_lb" % self.bond_dir,
+                                 self.tlb_dynamic_lb)
+            if self.mode == '1' or self.mode == '5' or self.mode == '6':
+                genio.write_file("%s/bonding/primary" % self.bond_dir, self.primary)
+                genio.write_file("%s/bonding/primary_reselect" % self.bond_dir,
+                                 self.primary_reselect)
+            if self.mode == '0' or self.mode == '1' or self.mode == '5' or self.mode == '6':
+                genio.write_file("%s/bonding/resend_igmp" % self.bond_dir, self.resend_igmp)
+            if self.mode == '2' or self.mode == '4' or self.mode == '5':
+                genio.write_file("%s/bonding/xmit_hash_policy" % self.bond_dir, self.xmit_hash_policy)
+            if self.mode == '5' or self.mode == '6':
+                genio.write_file("%s/bonding/lp_interval" % self.bond_dir, self.lp_interval)
             for val in self.host_interfaces:
                 genio.write_file(self.bonding_slave_file, "+%s" % val)
                 time.sleep(2)
