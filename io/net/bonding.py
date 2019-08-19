@@ -83,7 +83,7 @@ class Bonding(Test):
 
         self.xmit_hash_policy = self.params.get("xmit_hash_policy",
                                                 default="1")
-        self.miimon = self.params.get("miimon", default="")
+        self.miimon = self.params.get("miimon", default="100")
         self.fail_over_mac = self.params.get("fail_over_mac",
                                              default="2")
         self.downdelay = self.params.get("downdelay", default="0")
@@ -97,7 +97,7 @@ class Bonding(Test):
                                                 default="0")
         self.num_unsol_na = self.params.get("num_unsol_na", default="1")
         self.lp_interval = self.params.get("lp_interval", default="1")
-        self.primary = self.params.get("primary", default="")
+        self.lacp_rate = self.params.get("lacp_rate", default="0")
         self.bond_name = self.params.get("bond_name", default="tempbond")
         self.net_path = "/sys/class/net/"
         self.bond_status = "/proc/net/bonding/%s" % self.bond_name

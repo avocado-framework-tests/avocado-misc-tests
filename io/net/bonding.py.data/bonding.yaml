@@ -13,11 +13,12 @@ Test: !mux
         bonding_mode: "5"
     balance-alb:
         bonding_mode: "6"
-bond_interfaces: "eth10,eth9"
-peer_ip: "137.1.1.120"
-peer_interfaces: "enP49156p1s0f0,enP49157p1s0f0"
+bond_interfaces: ""
+peer_ip: ""
+peer_interfaces: ""
+peer_password: "passw0rd"
 bond_name: "bondtest"
 user_name: "root"
 peer_bond_needed: False 
 peer_wait_time: "10"
-sleep_time: "10"
+sleep_time: "5"
