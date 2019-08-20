@@ -28,7 +28,7 @@ class Perf_subsystem(Test):
     """
     This series of test is meant to validate
     that the perf_event subsystem is working
-    :avocado: tags=perf,events
+    :avocado: tags=perf,events,privileged
     """
 
     @staticmethod
@@ -70,8 +70,8 @@ class Perf_subsystem(Test):
                                    'master.zip'], expire='7d')
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(self.workdir, 'perf_event_tests-master')
-        if build.make(self.sourcedir, extra_args="-s -S") > 0:
-            self.fail("Building perf even test suite failed")
+        if build.make(self.sourcedir, extra_args="-s -S"):
+            self.fail("Building of perf event test suite failed")
 
     def analyse_perf_output(self, output):
         self.is_fail = 0
