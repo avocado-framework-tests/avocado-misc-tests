@@ -20,6 +20,7 @@ This Suite works with various options of ndctl on a NVDIMM device.
 """
 
 import os
+import re
 import json
 import glob
 from avocado import Test
@@ -417,6 +418,16 @@ class NdctlTest(Test):
         if process.system("%s check-namespace %s" % (self.binary, ns_sec_dev),
                           ignore_status=True):
             self.fail("Failed to check namespace metadata")
+
+    def test_check_numa(self):
+        self.enable_region()
+        regions = self.get_json(short_opt='-R')
+        for reg in regions:
+            numa = genio.read_one_line('/sys/devices/ndbus%s/%s/numa_node'
+                                       % (re.findall(r'\d+', reg)[0], reg))
+            # Check numa config in ndctl and sys interface
+            if len(self.get_json(long_opt='-r %s -U %s' % (reg, numa))) != 1:
+                self.fail('Region mismatch between ndctl and sys interface')
 
     def tearDown(self):
         if not self.preserve_setup:
