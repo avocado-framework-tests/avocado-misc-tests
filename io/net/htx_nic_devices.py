@@ -67,7 +67,8 @@ class HtxNicTest(Test):
         Set up
         """
         if 'ppc64' not in process.system_output('uname -a', ignore_status=True,
-                                                shell=True, sudo=True):
+                                                shell=True,
+                                                sudo=True).decode("utf-8"):
             self.cancel("Platform does not support HTX tests")
 
         self.parameters()
@@ -158,7 +159,7 @@ class HtxNicTest(Test):
         '''
         SSH Login method for remote server
         '''
-        pxh = pxssh.pxssh()
+        pxh = pxssh.pxssh(encoding='utf-8')
         # Work-around for old pxssh not having options= parameter
         pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
         pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
@@ -201,7 +202,7 @@ class HtxNicTest(Test):
             cmd = "ip addr list %s |grep 'inet ' |cut -d' ' -f6| \
                   cut -d/ -f1" % intf
             ip = process.system_output(cmd, ignore_status=True,
-                                       shell=True, sudo=True)
+                                       shell=True, sudo=True).decode("utf-8")
             self.host_ips[intf] = ip
         self.peer_ips = {}
         for intf in self.peer_intfs:
@@ -473,7 +474,8 @@ class HtxNicTest(Test):
         '''
         self.log.info("Checking host_interfaces presence in %s",
                       self.mdt_file)
-        output = process.system_output(self.query_cmd, shell=True, sudo=True)
+        output = process.system_output(self.query_cmd, shell=True,
+                                       sudo=True).decode("utf-8")
         absent_devices = []
         for intf in self.host_intfs:
             if intf not in output:
@@ -612,7 +614,8 @@ class HtxNicTest(Test):
         self.log.info("Checking whether all net_devices are active or \
                       not in host ")
         output = process.system_output(self.query_cmd, ignore_status=True,
-                                       shell=True, sudo=True).split('\n')
+                                       shell=True,
+                                       sudo=True).decode("utf-8").split('\n')
         active_devices = []
         for line in output:
             for intf in self.host_intfs:
@@ -651,7 +654,8 @@ class HtxNicTest(Test):
         status_cmd = '/etc/init.d/htx.d status'
         shutdown_cmd = '/usr/lpp/htx/etc/scripts/htxd_shutdown'
         daemon_state = process.system_output(status_cmd, ignore_status=True,
-                                             shell=True, sudo=True)
+                                             shell=True,
+                                             sudo=True).decode("utf-8")
         if daemon_state.split(" ")[-1] == 'running':
             process.system(shutdown_cmd, ignore_status=True,
                            shell=True, sudo=True)
@@ -704,7 +708,7 @@ class HtxNicTest(Test):
 
         list = ["rhel", "fedora", "centos", "redhat", "SuSE"]
         if self.host_distro.name in list:
-            for intf, ip in self.host_ips.iteritems():
+            for intf, ip in self.host_ips.items():
                 file_name = "%s%s" % (base_name, intf)
                 with open(file_name, 'r') as file:
                     filedata = file.read()
@@ -728,7 +732,7 @@ class HtxNicTest(Test):
 
         list = ["rhel", "fedora", "centos", "redhat", "SuSE"]
         if self.peer_distro in list:
-            for intf, ip in self.peer_ips.iteritems():
+            for intf, ip in self.peer_ips.items():
                 file_name = "%s%s" % (base_name, intf)
                 filedata = self.run_command("cat %s" % file_name)
                 search_str = "IPADDR=.*"

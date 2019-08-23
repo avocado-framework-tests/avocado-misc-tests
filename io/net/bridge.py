@@ -48,15 +48,15 @@ class Bridging(Test):
         cmd = "ip addr show %s | sed -nr 's/.*inet ([^ ]+)."\
             "*/\\1/p'" % self.host_interface
         self.cidr = process.system_output(
-            '%s' % cmd, shell=True)
+            '%s' % cmd, shell=True).decode("utf-8")
         cmd = "route -n | grep %s | grep -w UG | awk "\
             "'{ print $2 }'" % self.host_interface
         self.gateway = process.system_output(
-            '%s' % cmd, shell=True)
+            '%s' % cmd, shell=True).decode("utf-8")
         cmd = "ip addr show %s | grep inet | grep brd | "\
             "awk '{ print $4 }'" % self.host_interface
         self.broadcast = process.system_output(
-            '%s' % cmd, shell=True)
+            '%s' % cmd, shell=True).decode("utf-8")
 
     def test(self):
         '''
@@ -65,8 +65,8 @@ class Bridging(Test):
         '''
         self.check_failure('ip link add dev br0 type bridge')
         check_flag = False
-        check_br = process.system_output(
-            'ip -d link show br0', verbose=True, ignore_status=True)
+        check_br = process.system_output('ip -d link show br0', verbose=True,
+                                         ignore_status=True).decode("utf-8")
         for line in check_br.splitlines():
             if line.find('bridge'):
                 check_flag = True
@@ -82,7 +82,7 @@ class Bridging(Test):
             self.check_failure('ip route add default via %s' %
                                self.gateway)
         if process.system('ping %s -I br0 -c 4' % self.peer_ip,
-           shell=True, ignore_status=True):
+                          shell=True, ignore_status=True):
             self.fail('Ping using bridge failed')
 
     def tearDown(self):
@@ -98,7 +98,7 @@ class Bridging(Test):
             self.check_failure('ip route add default via %s' %
                                self.gateway)
         if process.system('ping %s -c 4' % self.peer_ip,
-           shell=True, ignore_status=True):
+                          shell=True, ignore_status=True):
             self.fail('Ping failed when restoring back to provided interface')
 
 

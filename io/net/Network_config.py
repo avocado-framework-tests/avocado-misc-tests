@@ -45,7 +45,8 @@ class NetworkconfigTest(Test):
         if self.iface not in interfaces:
             self.cancel("%s interface is not available" % self.iface)
         cmd = "ethtool -i %s" % self.iface
-        for line in process.system_output(cmd, shell=True).splitlines():
+        for line in process.system_output(cmd, shell=True).decode("utf-8") \
+                                                          .splitlines():
             if 'bus-info' in line:
                 self.businfo = line.split()[-1]
         self.log.info(self.businfo)
@@ -56,7 +57,8 @@ class NetworkconfigTest(Test):
         driver match check using lspci and ethtool
         '''
         cmd = "ethtool -i %s" % self.iface
-        for line in process.system_output(cmd, shell=True).splitlines():
+        for line in process.system_output(cmd, shell=True).decode("utf-8") \
+                                                          .splitlines():
             if 'driver' in line:
                 driver = line.split()[-1]
         self.log.info(driver)
@@ -69,7 +71,7 @@ class NetworkconfigTest(Test):
         '''
         cmd = r"cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/%s" %\
               (self.driver, self.driver, self.businfo, self.iface, param)
-        return process.system_output(cmd, shell=True).strip()
+        return process.system_output(cmd, shell=True).decode("utf-8").strip()
 
     def test_mtu_check(self):
         '''
@@ -78,7 +80,7 @@ class NetworkconfigTest(Test):
         mtu = self.get_network_sysfs_param("mtu")
         self.log.info("mtu value is %s" % mtu)
         mtuval = process.system_output("ip link show %s" % self.iface,
-                                       shell=True).split()[4]
+                                       shell=True).decode("utf-8").split()[4]
         self.log.info("through ip link show, mtu value is %s" % mtuval)
         if mtu != mtuval:
             self.fail("mismatch in mtu")
@@ -89,7 +91,8 @@ class NetworkconfigTest(Test):
         '''
         speed = self.get_network_sysfs_param("speed")
         cmd = "ethtool %s" % self.iface
-        for line in process.system_output(cmd, shell=True).splitlines():
+        for line in process.system_output(cmd, shell=True).decode("utf-8") \
+                                                          .splitlines():
             if 'Speed' in line:
                 eth_speed = line.split()[-1].strip('Mb/s')
         if speed != eth_speed:
@@ -113,7 +116,8 @@ class NetworkconfigTest(Test):
         duplex = self.get_network_sysfs_param("duplex")
         self.log.info("transmission mode is %s" % duplex)
         cmd = "ethtool %s" % self.iface
-        for line in process.system_output(cmd, shell=True).splitlines():
+        for line in process.system_output(cmd, shell=True).decode("utf-8") \
+                                                          .splitlines():
             if 'Duplex' in line:
                 eth_duplex = line.split()[-1]
         if str(duplex).capitalize() != eth_duplex:

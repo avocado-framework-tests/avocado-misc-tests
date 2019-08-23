@@ -104,7 +104,7 @@ class Bonding(Test):
         '''
         SSH Login method for remote peer server
         '''
-        pxh = pxssh.pxssh()
+        pxh = pxssh.pxssh(encoding='utf-8')
         # Work-around for old pxssh not having options= parameter
         pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
         pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
@@ -160,11 +160,11 @@ class Bonding(Test):
         self.peer_interfaces.insert(0, self.peer_first_interface)
         self.net_mask = []
         stf = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        for val1, val2 in map(None, [interface], [self.local_ip]):
+        for val1, val2 in zip([interface], [self.local_ip]):
             mask = ""
             if val2:
-                tmp = fcntl.ioctl(stf.fileno(), 0x891b, struct.pack('256s',
-                                                                    val1))
+                tmp = fcntl.ioctl(stf.fileno(), 0x891b,
+                                  struct.pack('256s', val1.encode()))
                 mask = socket.inet_ntoa(tmp[20:24]).strip('\n')
             self.net_mask.append(mask)
         cmd = "route -n | grep %s | grep -w UG | awk "\
@@ -305,7 +305,7 @@ class Bonding(Test):
             process.system(cmd, shell=True, ignore_status=True)
             for _ in range(0, 600, 60):
                 if 'state UP' in process.system_output("ip link \
-                     show %s" % self.bond_name, shell=True):
+                     show %s" % self.bond_name, shell=True).decode("utf-8"):
                     self.log.info("Bonding setup is successful on\
                                   local machine")
                     break
@@ -380,7 +380,7 @@ class Bonding(Test):
             process.system(cmd, shell=True, ignore_status=True)
             for _ in range(0, 600, 60):
                 if 'state UP' in process.system_output("ip link \
-                     show %s" % val, shell=True):
+                     show %s" % val, shell=True).decode("utf-8"):
                     self.log.info("Interface %s is up", val)
                     break
                 time.sleep(60)

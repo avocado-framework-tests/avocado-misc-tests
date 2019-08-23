@@ -62,7 +62,8 @@ class TcpdumpTest(Test):
         cmd = "tcpdump -i %s -n -c %s -w '%s'" % (self.iface, self.count,
                                                   output_file)
         for line in process.run(cmd, shell=True,
-                                ignore_status=True).stderr.splitlines():
+                                ignore_status=True).stderr.decode("utf-8") \
+                                                   .splitlines():
             if "packets dropped by interface" in line:
                 self.log.info(line)
                 if int(line[0]) >= (int(self.drop) * int(self.count) / 100):

@@ -102,7 +102,7 @@ class Uperf(Test):
         '''
         SSH Login method for remote peer server
         '''
-        pxh = pxssh.pxssh()
+        pxh = pxssh.pxssh(encoding='utf-8')
         # Work-around for old pxssh not having options= parameter
         pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
         pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
@@ -152,7 +152,7 @@ class Uperf(Test):
         result = process.run(cmd, shell=True, ignore_status=True)
         if result.exit_status:
             self.fail("FAIL: Uperf Run failed")
-        for line in result.stdout.splitlines():
+        for line in result.stdout.decode("utf-8").splitlines():
             if self.peer_ip in line:
                 if 'Mb/s' in line:
                     tput = int(line.split()[3].split('.')[0])
@@ -164,7 +164,7 @@ class Uperf(Test):
                               ", Throughput Actual value - %s "
                               % ((tput*100)/speed, self.expected_tp,
                                  str(tput)+'Mb/sec'))
-        if 'WARNING' in result.stdout:
+        if 'WARNING' in result.stdout.decode("utf-8"):
             self.log.warn('Test completed with warning')
 
     def tearDown(self):

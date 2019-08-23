@@ -109,7 +109,7 @@ class Netperf(Test):
         '''
         SSH Login method for remote peer server
         '''
-        pxh = pxssh.pxssh()
+        pxh = pxssh.pxssh(encoding='utf-8')
         # Work-around for old pxssh not having options= parameter
         pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
         pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
@@ -170,16 +170,17 @@ class Netperf(Test):
         result = process.run(cmd, shell=True, ignore_status=True)
         if result.exit_status != 0:
             self.fail("FAIL: Run failed")
-        for line in result.stdout.splitlines():
+        for line in result.stdout.decode("utf-8").splitlines():
             if line and 'Throughput' in line.split()[-1]:
-                tput = int(result.stdout.split()[-1].split('.')[0])
+                tput = int(result.stdout.decode("utf-8").split()[-1].
+                           split('.')[0])
                 if tput < (int(self.expected_tp) * speed) / 100:
                     self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%"
                               ", Throughput Actual value - %s "
                               % ((tput*100)/speed, self.expected_tp,
                                  str(tput)+'Mb/sec'))
 
-        if 'WARNING' in result.stdout:
+        if 'WARNING' in result.stdout.decode("utf-8"):
             self.log.warn('Test completed with warning')
 
     def tearDown(self):
