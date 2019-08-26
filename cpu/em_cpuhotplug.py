@@ -63,7 +63,7 @@ class Cpuhotplug_Test(Test):
         process.run("dmesg -C ", sudo=True)
 
     def verify_dmesg(self):
-        whiteboard = process.system_output("dmesg")
+        whiteboard = process.system_output("dmesg").decode()
 
         pattern = ['WARNING: CPU:', 'Oops', 'Segfault', 'soft lockup',
                    'Unable to handle', 'ard LOCKUP']

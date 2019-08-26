@@ -62,12 +62,12 @@ class cpuidle(Test):
             states = process.system_output("cpupower -c %s idle-info --silent"
                                            " | grep 'Number of idle states:' |"
                                            "awk '{print $5}'"
-                                           % cpu_num, shell=True)
+                                           % cpu_num, shell=True).decode("utf-8")
             cpu_idle_states = []
             for i in range(1, int(states)):
                 val = process.system_output("cat /sys/devices/system/cpu/"
                                             "cpu%s/cpuidle/state%s/"
-                                            "name" % (cpu_num, i))
+                                            "name" % (cpu_num, i)).decode("utf-8")
                 if 'power8' in cpu.get_cpu_arch():
                     val = self.set_idle_states(val)
                 cpu_idle_states.append(val)
@@ -87,7 +87,7 @@ class cpuidle(Test):
         os.chdir('/proc/device-tree/ibm,opal/power-mgt')
         cmd_args = ['lsprop', 'ibm,cpu-idle-state-names']
         output_string = subprocess.Popen(
-            cmd_args, stdout=subprocess.PIPE).communicate()[0]
+            cmd_args, stdout=subprocess.PIPE).communicate()[0].decode("utf-8")
         output = re.findall('\"[a-zA-Z0-9_]+\"', output_string)
         output = [x.strip("\"") for x in output]
         if 'winkle' in output:
