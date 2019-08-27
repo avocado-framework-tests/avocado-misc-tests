@@ -20,6 +20,7 @@ This Suite works with various options of ndctl on a NVDIMM device.
 """
 
 import os
+import re
 import json
 import glob
 from avocado import Test
@@ -417,6 +418,57 @@ class NdctlTest(Test):
         if process.system("%s check-namespace %s" % (self.binary, ns_sec_dev),
                           ignore_status=True):
             self.fail("Failed to check namespace metadata")
+
+    def test_check_numa(self):
+        self.enable_region()
+        regions = self.get_json(short_opt='-R')
+        for reg in regions:
+            numa = genio.read_one_line('/sys/devices/ndbus%s/%s/numa_node'
+                                       % (re.findall(r'\d+', reg)[0], reg))
+            # Check numa config in ndctl and sys interface
+            if len(self.get_json(long_opt='-r %s -U %s' % (reg, numa))) != 1:
+                self.fail('Region mismatch between ndctl and sys interface')
+
+    def test_label_read_write(self):
+        self.enable_region()
+        region = self.params.get('region', default=None)
+        if not region:
+            region = self.get_json(short_opt='-R')[0]
+        nmem = "nmem%s" % re.findall(r'\d+', region)[0]
+
+        self.log.info("Using %s for testing labels", region)
+        self.disable_region(name=region)
+        self.log.info("Filling zeros to start test")
+        if process.system('%s zero-labels %s' % (self.binary, nmem), shell=True):
+            self.fail("Label zero-fill failed")
+
+        self.enable_region(name=region)
+        self.create_namespace(region=region)
+        self.log.info("Storing labels with a namespace")
+        old_op = process.system_output('%s check-labels %s' % (self.binary, nmem), shell=True)
+        if process.system('%s read-labels %s -o output' % (self.binary, nmem), shell=True):
+            self.fail("Label read failed")
+
+        self.log.info("Refilling zeroes before a restore")
+        self.disable_namespace(region=region)
+        self.destroy_namespace(region=region)
+        self.disable_region(name=region)
+        if process.system('%s zero-labels %s' % (self.binary, nmem), shell=True):
+            self.fail("Label zero-fill failed after read")
+
+        self.log.info("Re-storing labels with a namespace")
+        if process.system('%s write-labels %s -i output' % (self.binary, nmem), shell=True):
+            self.fail("Label write failed")
+        self.enable_region(name=region)
+
+        self.log.info("Checking mismatch after restore")
+        new_op = process.system_output('%s check-labels %s' % (self.binary, nmem), shell=True)
+        if new_op != old_op:
+            self.fail("Label read and write mismatch")
+
+        self.log.info("Checking created namespace after restore")
+        if len(self.get_json(long_opt='-r %s' % region)) != 1:
+            self.fail("Created namespace not found after label restore")
 
     def tearDown(self):
         if not self.preserve_setup:
