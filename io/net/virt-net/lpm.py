@@ -72,6 +72,7 @@ class LPM(Test):
             self.cancel("HMC IP not got from lsrsrc command")
         self.hmc_user = self.params.get("hmc_username", default='hscroot')
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default='abc123')
+        self.options = self.params.get("options", default='')
 
         self.lpar = self.get_mcp_component("NodeNameList").split('.')[0]
         if not self.lpar:
@@ -238,6 +239,8 @@ class LPM(Test):
         cmd = "migrlpar -o m -m %s -t %s -p %s %s" % (server,
                                                       remote_server,
                                                       lpar, params)
+        if self.options:
+            cmd = "%s %s" % (cmd, self.options)
         self.log.debug("\n".join(self.run_command(cmd)))
         time.sleep(10)
         if not self.is_lpar_in_server(remote_server, lpar):
