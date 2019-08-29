@@ -147,7 +147,6 @@ class Kernbench(Test):
         self.log.info("User      : %s", user_time)
         self.log.info("System    : %s", system_time)
         self.log.info("Elapsed   : %s", elapsed_time)
-        
         process.system("mv -f /tmp/config* /boot/", shell=True, sudo=True)
 
 
