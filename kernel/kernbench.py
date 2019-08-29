@@ -42,6 +42,7 @@ class Kernbench(Test):
     process.system("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYS/#&/g' /boot/config*", shell=True, sudo=True)
     process.system("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYRING/#&/g' /boot/config*", shell=True, sudo=True)
     process.system("sed -i 's/^.*CONFIG_MODULE_SIG_KEY/#&/g' /boot/config*", shell=True, sudo=True)
+
     def time_build(self, threads=None, timefile=None, make_opts=None):
         """
         Time the building of the kernel
