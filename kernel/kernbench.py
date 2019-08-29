@@ -21,6 +21,7 @@
 import os
 import re
 import platform
+import subprocess
 
 from avocado import Test
 from avocado import main
@@ -38,7 +39,10 @@ class Kernbench(Test):
     and compile it as per the configuration file. Performance figures will be
     shown in the log file.
     """
-
+    subprocess.call("cp /boot/config* /tmp", shell=True)
+    subprocess.call("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYS/#&/g' /boot/config*", shell=True)
+    subprocess.call("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYRING/#&/g' /boot/config*", shell=True)
+    subprocess.call("sed -i 's/^.*CONFIG_MODULE_SIG_KEY/#&/g' /boot/config*", shell=True)
     def time_build(self, threads=None, timefile=None, make_opts=None):
         """
         Time the building of the kernel
@@ -144,6 +148,7 @@ class Kernbench(Test):
         self.log.info("User      : %s", user_time)
         self.log.info("System    : %s", system_time)
         self.log.info("Elapsed   : %s", elapsed_time)
+        subprocess.call("mv -f /tmp/config* /boot/", shell=True)
 
 
 if __name__ == "__main__":
