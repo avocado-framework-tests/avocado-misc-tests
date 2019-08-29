@@ -95,7 +95,7 @@ class Iperf(Test):
         '''
         SSH Login method for remote peer server
         '''
-        pxh = pxssh.pxssh()
+        pxh = pxssh.pxssh(encoding='utf-8')
         # Work-around for old pxssh not having options= parameter
         pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
         pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
@@ -145,7 +145,7 @@ class Iperf(Test):
         result = process.run(cmd, shell=True, ignore_status=True)
         if result.exit_status:
             self.fail("FAIL: Iperf Run failed")
-        for line in result.stdout.splitlines():
+        for line in result.stdout.deocde("utf-8").splitlines():
             if 'sender' in line:
                 tput = int(line.split()[6].split('.')[0])
                 if tput < (int(self.expected_tp) * speed) / 100:

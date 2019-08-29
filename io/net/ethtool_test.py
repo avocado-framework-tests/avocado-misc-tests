@@ -80,7 +80,8 @@ class Ethtool(Test):
         '''
         cmd = "ethtool %s" % interface
         for line in process.system_output(cmd, shell=True,
-                                          ignore_status=True).splitlines():
+                                          ignore_status=True).decode("utf-8") \
+                                                             .splitlines():
             if 'Link detected' in line:
                 return line.split()[-1]
         return ''

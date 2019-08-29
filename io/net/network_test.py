@@ -194,7 +194,9 @@ class NetworkTest(Test):
         cmd = "ssh %s \"ip addr show\"" % self.peer
         peer_interface = ""
         try:
-            for line in process.system_output(cmd, shell=True).splitlines():
+            for line in process.system_output(cmd,
+                                              shell=True).decode("utf-8") \
+                                                         .splitlines():
                 if self.peer in line:
                     peer_interface = line.split()[-1]
         except process.CmdError:
@@ -256,7 +258,8 @@ class NetworkTest(Test):
         If any other error, we return ''.
         '''
         cmd = "ethtool -k %s" % self.iface
-        output = process.system_output(cmd, shell=True, ignore_status=True)
+        output = process.system_output(cmd, shell=True,
+                                       ignore_status=True).decode("utf-8")
         for line in output.splitlines():
             if ro_type_full in line:
                 if 'fixed' in line.split()[-1]:

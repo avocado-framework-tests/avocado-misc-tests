@@ -55,7 +55,7 @@ class MultiportStress(Test):
         Ping to multiple peers parallely
         '''
         parallel_procs = []
-        for host, peer in map(None, self.host_interfaces, self.peer_ips):
+        for host, peer in zip(self.host_interfaces, self.peer_ips):
             self.log.info('Starting Ping test')
             cmd = "ping -I %s %s -c %s %s" % (host, peer, self.count,
                                               ping_option)
@@ -70,7 +70,7 @@ class MultiportStress(Test):
         for proc in parallel_procs:
             out_buf = proc.get_stdout()
             out_buf += proc.get_stderr()
-            for val in out_buf.splitlines():
+            for val in out_buf.decode("utf-8").splitlines():
                 if 'packet loss' in val and ', 0% packet loss,' not in val:
                     errors.append(out_buf)
                     break
