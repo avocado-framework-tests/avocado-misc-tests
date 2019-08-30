@@ -43,7 +43,7 @@ class Sensors(Test):
         Checks any errors in command result
         """
         errs = []
-        s_output = process.run(cmd, ignore_status=True).stderr
+        s_output = process.run(cmd, ignore_status=True).stderr.decode("utf-8")
         for error in ERRORS:
             if error in s_output:
                 errs.append(error)
@@ -96,7 +96,7 @@ class Sensors(Test):
                     'Starting Service Failed. Make sure module is loaded')
         cmd = "yes | sudo sensors-detect"
         det_op = process.run(cmd, shell=True, ignore_status=True).stdout
-        if 'no sensors were detected' in det_op:
+        if b'no sensors were detected' in det_op:
             self.cancel('No sensors found to test !')
 
     def test(self):

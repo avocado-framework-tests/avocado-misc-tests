@@ -78,7 +78,8 @@ class Ebizzy(Test):
                                                       seconds, num_threads)
         args = args + ' ' + args2
 
-        results = process.system_output('%s/ebizzy %s' % (self.sourcedir, args))
+        results = process.system_output('%s/ebizzy %s'
+                                        % (self.sourcedir, args)).decode("utf-8")
         pattern = re.compile(r"(.*?) records/s")
         records = pattern.findall(results)[0]
         pattern = re.compile(r"real (.*?) s")

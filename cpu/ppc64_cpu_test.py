@@ -46,7 +46,7 @@ class PPC64Test(Test):
             if SoftwareManager().install("powerpc-utils") is False:
                 self.cancel("powerpc-utils is not installing")
         self.smt_str = "ppc64_cpu --smt"
-        smt_op = process.system_output(self.smt_str, shell=True)
+        smt_op = process.system_output(self.smt_str, shell=True).decode()
         if "is not SMT capable" in smt_op:
             self.cancel("Machine is not SMT capable")
         if "Inconsistent state" in smt_op:
@@ -91,7 +91,7 @@ class PPC64Test(Test):
         """
         for i in range(2, self.max_smt_value + 1):
             self.smt_values[i] = str(i)
-        for self.key, self.value in self.smt_values.iteritems():
+        for self.key, self.value in self.smt_values.items():
             process.system_output("%s=%s" % (self.smt_str,
                                              self.key), shell=True)
             process.system_output("ppc64_cpu --info")
@@ -113,7 +113,8 @@ class PPC64Test(Test):
         Tests the SMT in ppc64_cpu command.
         """
         op1 = process.system_output(
-            self.smt_str, shell=True).strip().split("=")[-1].split()[-1]
+            self.smt_str,
+            shell=True).decode("utf-8").strip().split("=")[-1].split()[-1]
         self.equality_check("SMT", op1, self.value)
 
     def core(self):
@@ -121,7 +122,8 @@ class PPC64Test(Test):
         Tests the core in ppc64_cpu command.
         """
         op1 = process.system_output(
-            "ppc64_cpu --cores-present", shell=True).strip().split()[-1]
+            "ppc64_cpu --cores-present",
+            shell=True).decode("utf-8").strip().split()[-1]
         op2 = cpu.online_cpus_count() / int(self.key)
         self.equality_check("Core", op1, op2)
 
@@ -130,7 +132,8 @@ class PPC64Test(Test):
         Tests the subcores in ppc64_cpu command.
         """
         op1 = process.system_output(
-            "ppc64_cpu --subcores-per-core", shell=True).strip().split()[-1]
+            "ppc64_cpu --subcores-per-core",
+            shell=True).decode("utf-8").strip().split()[-1]
         op2 = genio.read_file(
             "/sys/devices/system/cpu/subcores_per_core").strip()
         self.equality_check("Subcore", op1, op2)
@@ -140,8 +143,10 @@ class PPC64Test(Test):
         Tests the threads per core in ppc64_cpu command.
         """
         op1 = process.system_output(
-            "ppc64_cpu --threads-per-core", shell=True).strip().split()[-1]
-        op2 = process.system_output("ppc64_cpu --info", shell=True)
+            "ppc64_cpu --threads-per-core",
+            shell=True).decode("utf-8").strip().split()[-1]
+        op2 = process.system_output("ppc64_cpu --info",
+                                    shell=True).decode("utf-8")
         op2 = len(op2.strip().splitlines()[0].split(":")[-1].split())
         self.equality_check("Threads per core", op1, op2)
 
@@ -151,7 +156,8 @@ class PPC64Test(Test):
         """
         snz_content = set()
         op1 = process.system_output(
-            "ppc64_cpu --smt-snooze-delay", shell=True).strip().split()[-1]
+            "ppc64_cpu --smt-snooze-delay",
+            shell=True).decode("utf-8").strip().split()[-1]
         snz_delay = "cpu*/smt_snooze_delay"
         if os.path.isdir("/sys/bus/cpu/devices"):
             snz_delay = "/sys/bus/cpu/devices/%s" % snz_delay
@@ -167,7 +173,7 @@ class PPC64Test(Test):
         Tests the dscr in ppc64_cpu command.
         """
         op1 = process.system_output(
-            "ppc64_cpu --dscr", shell=True).strip().split()[-1]
+            "ppc64_cpu --dscr", shell=True).decode("utf-8").strip().split()[-1]
         op2 = int(genio.read_file(
             "/sys/devices/system/cpu/dscr_default").strip(), 16)
         self.equality_check("DSCR", op1, op2)
