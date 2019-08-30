@@ -98,6 +98,10 @@ class Kernbench(Test):
             deps.extend(['popt', 'glibc', 'glibc-devel', 'libcap-ng',
                          'libcap', 'libcap-devel', 'elfutils-libelf',
                          'elfutils-libelf-devel', 'openssl-devel'])
+            process.system("cp /boot/config* /tmp", shell=True, sudo=True)
+            process.system("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYS/#&/g' /boot/config*", shell=True, sudo=True)
+            process.system("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYRING/#&/g' /boot/config*", shell=True, sudo=True)
+            process.system("sed -i 's/^.*CONFIG_MODULE_SIG_KEY/#&/g' /boot/config*", shell=True, sudo=True)
 
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
@@ -144,6 +148,9 @@ class Kernbench(Test):
         self.log.info("User      : %s", user_time)
         self.log.info("System    : %s", system_time)
         self.log.info("Elapsed   : %s", elapsed_time)
+        detected_distro = distro.detect()
+        if detected_distro.name in ['centos', 'fedora', 'rhel']:
+            process.system("mv -f /tmp/config* /boot/", shell=True, sudo=True)
 
 
 if __name__ == "__main__":
