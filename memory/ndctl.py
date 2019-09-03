@@ -39,7 +39,6 @@ class NdctlTest(Test):
     Ndctl user space tooling for Linux, which handles NVDIMM devices.
 
     """
-
     def get_json(self, short_opt='', long_opt=''):
         """
         Get the json of each provided options
@@ -92,6 +91,13 @@ class NdctlTest(Test):
                     self.log.info("Changing namespaces to %s", count)
                     return count
         return self.cnt
+
+    def run_daxctl_list(self, options=''):
+        """
+        Run daxctl list command with option
+        """
+        return json.loads(process.system_output(
+            '%s list %s' % (self.daxctl, options), shell=True))
 
     @staticmethod
     def check_buses():
@@ -213,9 +219,11 @@ class NdctlTest(Test):
                         "/usr/lib64", shell=True, sudo=True)
             build.make(".")
             self.binary = './ndctl/ndctl'
+            self.daxctl = './daxctl/daxctl'
         else:
             deps.extend(['ndctl'])
             self.binary = 'ndctl'
+            self.daxctl = 'daxctl'
 
         smm = SoftwareManager()
         for pkg in deps:
@@ -469,6 +477,23 @@ class NdctlTest(Test):
         self.log.info("Checking created namespace after restore")
         if len(self.get_json(long_opt='-r %s' % region)) != 1:
             self.fail("Created namespace not found after label restore")
+
+    def test_daxctl_list(self):
+        """
+        Test daxctl list
+        """
+        self.enable_region()
+        region = self.params.get('region', default=None)
+        if not region:
+            region = self.get_json(short_opt='-R')[0]
+        self.disable_namespace(region=region)
+        self.destroy_namespace(region=region)
+        self.create_namespace(region=region, mode='devdax')
+        index = re.findall(r'\d+', region)[0]
+        vals = self.run_daxctl_list('-r %s' % (index))
+        if len(vals) != 1:
+            self.fail('Failed daxctl list')
+        self.log.info('Created dax device %s', vals)
 
     def tearDown(self):
         if not self.preserve_setup:
