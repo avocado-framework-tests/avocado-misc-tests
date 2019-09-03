@@ -17,7 +17,9 @@ duration		- duration to run each test (sec)
 minimum_iterations	- minimum iterations when trying to reach certain confidence levels
 maximum_iterations	- maximum iterations when trying to reach certain confidence levels
 option			- test and supporting parameters
-
+Host-IP                 - Specify the IP for ip configuration of host.
+Netmask                 - Specify the Netmask for ip Configuration of host.
+ 
 Requirements:
 -----------------------
 1.Generate sshkey for your test partner to run the test uninterrupted.

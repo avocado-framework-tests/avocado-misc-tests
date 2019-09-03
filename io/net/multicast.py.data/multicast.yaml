@@ -3,4 +3,6 @@ Parameters:
     user_name: "root"
     interface: ""
     peer_password: "passw0rd"
+    host_ip:
+    netmask:
     count: "500000"

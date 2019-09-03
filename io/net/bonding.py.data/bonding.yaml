@@ -19,6 +19,8 @@ peer_interfaces: ""
 peer_password: "passw0rd"
 bond_name: "bondtest"
 user_name: "root"
+host_ips: ""
+netmask: ""
 peer_bond_needed: False 
 peer_wait_time: "10"
 sleep_time: "5"

@@ -1,5 +1,7 @@
 interface: ""
 peer_ip: ""
+host_ip: ""
+netmask: ""
 peer_user_name: "root"
 peer_password: "passw0rd"
 EXPECTED_THROUGHPUT : 90

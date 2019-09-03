@@ -20,6 +20,7 @@ from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
+from avocado.utils import configure_network
 
 
 class MultiportStress(Test):
@@ -35,6 +36,10 @@ class MultiportStress(Test):
                                                default="").split(",")
         if not self.host_interfaces:
             self.cancel("user should specify host interfaces")
+        self.ipaddr = self.params.get("host_ips", default="").split(",")
+        self.netmask = self.params.get("netmask", default="")
+        for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
+            configure_network.set_ip(ipaddr, self.netmask, interface)
         smm = SoftwareManager()
         if distro.detect().name == 'Ubuntu':
             pkg = 'iputils-ping'
@@ -76,6 +81,8 @@ class MultiportStress(Test):
                     break
         if errors:
             self.fail("\n".join(errors))
+        for interface in self.host_interfaces:
+            configure_network.unset_ip(interface)
 
     def test_multiport_ping(self):
         self.multiport_ping('')

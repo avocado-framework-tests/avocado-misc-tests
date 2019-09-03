@@ -1,5 +1,7 @@
 interface:
 peer_ip:
+host_ip:
+network:
 mtu: !mux
     1500:
         mtu: 1500

@@ -39,6 +39,7 @@ from avocado.utils import distro
 from avocado.utils import process
 from avocado.utils import linux_modules
 from avocado.utils import genio
+from avocado.utils import configure_network
 
 
 class Bonding(Test):
@@ -51,6 +52,15 @@ class Bonding(Test):
         '''
         To check and install dependencies for the test
         '''
+        interfaces = netifaces.interfaces()
+        self.host_interfaces = self.params.get("bond_interfaces",
+                                               default="").split(",")
+        if not self.host_interfaces:
+            self.cancel("user should specify host interfaces")
+        self.ipaddr = self.params.get("host_ips", default="").split(",")
+        self.netmask = self.params.get("netmask", default="")
+        for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
+            configure_network.set_ip(ipaddr, self.netmask, interface)
         detected_distro = distro.detect()
         smm = SoftwareManager()
         depends = []
@@ -70,14 +80,9 @@ class Bonding(Test):
         if 'setup' in str(self.name) or 'run' in str(self.name):
             if not self.mode:
                 self.cancel("test skipped because mode not specified")
-        interfaces = netifaces.interfaces()
         self.user = self.params.get("user_name", default="root")
         self.password = self.params.get("peer_password", '*',
                                         default="passw0rd")
-        self.host_interfaces = self.params.get("bond_interfaces",
-                                               default="").split(",")
-        if not self.host_interfaces:
-            self.cancel("user should specify host interfaces")
         self.peer_interfaces = self.params.get("peer_interfaces",
                                                default="").split(",")
         for self.host_interface in self.host_interfaces:
@@ -402,6 +407,8 @@ class Bonding(Test):
                     self.log.warn("unable to bring to original state in peer")
                 time.sleep(self.sleep_time)
         self.error_check()
+        for interface in self.host_interfaces:
+            configure_network.unset_ip(interface)
 
     def error_check(self):
         if self.err:

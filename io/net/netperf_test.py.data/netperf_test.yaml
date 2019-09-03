@@ -2,6 +2,8 @@ interface: ""
 peer_ip: ""
 peer_user_name: "root"
 peer_password: "passw0rd"
+host_ip: ""
+netmask: ""
 TIMEOUT: "720"
 NETSERVER_RUN: 1
 EXPECTED_THROUGHPUT: 90
