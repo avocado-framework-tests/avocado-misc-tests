@@ -232,9 +232,7 @@ class NdctlTest(Test):
                 self.cancel('%s is needed for the test to be run' % pkg)
         self.opt_dict = {'-B': 'provider',
                          '-D': 'dev', '-R': 'dev', '-N': 'dev'}
-        self.modes = ['raw', 'fsdax', 'devdax']
-        if self.dist.arch != 'ppc64le':
-            self.modes.extend(['blk'])
+        self.modes = ['raw', 'sector', 'fsdax', 'devdax']
 
     def test_bus_ids(self):
         """
