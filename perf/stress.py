@@ -43,10 +43,10 @@ class Stress(Test):
         """
         Build 'stress'.
         Source:
-         http://people.seas.harvard.edu/~apw/stress/stress-1.0.4.tar.gz
+         https://fossies.org/linux/privat/stress-1.0.4.tar.gz
         """
         tarball = self.fetch_asset(
-            'http://people.seas.harvard.edu/~apw/stress/stress-1.0.4.tar.gz',
+            'https://fossies.org/linux/privat/stress-1.0.4.tar.gz',
             expire='7d')
         archive.extract(tarball, self.workdir)
         stress_version = os.path.basename(tarball.split('.tar.')[0])
