@@ -41,29 +41,18 @@ class NdctlTest(Test):
     Ndctl user space tooling for Linux, which handles NVDIMM devices.
 
     """
-    def get_json(self, short_opt='', long_opt=''):
+    def get_json(self, option=''):
         """
         Get the json of each provided options
 
         return: By default returns entire list of json objects
-        return: Empty list is no output is empty
+        return: Empty list if output is empty
         """
-        if short_opt:
-            option = short_opt
-        elif long_opt:
-            option = long_opt
-        else:
-            option = ''
         try:
             json_op = json.loads(process.system_output(
                 '%s list %s' % (self.binary, option), shell=True))
         except ValueError:
             json_op = []
-        if short_opt:
-            vals = []
-            for nid in json_op:
-                vals.append(self.get_json_val(nid, self.opt_dict[short_opt]))
-            return vals
         return json_op
 
     @staticmethod
@@ -75,6 +64,18 @@ class NdctlTest(Test):
             if key == field:
                 return value
         return None
+
+    def get_default_region(self):
+        """
+        Get the largest region if not provided
+        """
+        self.enable_region()
+        region = self.params.get('region', default=None)
+        if region:
+            return region
+        regions = self.get_json('-R')
+        regions = sorted(regions, key=lambda i: i['size'], reverse=True)
+        return self.get_json_val(regions[0], 'dev')
 
     def get_aligned_count(self, size):
         """
@@ -265,8 +266,8 @@ class NdctlTest(Test):
         """
         Test the bus id info
         """
-        vals = self.get_json(short_opt='-B')
-        if not vals:
+        vals = self.get_json('-B')
+        if not len(vals):
             self.fail('Failed to fetch bus IDs')
         self.log.info('Available Bus provider IDs: %s', vals)
 
@@ -274,8 +275,8 @@ class NdctlTest(Test):
         """
         Test the dimms info
         """
-        vals = self.get_json(short_opt='-D')
-        if not vals:
+        vals = self.get_json('-D')
+        if not len(vals):
             self.fail('Failed to fetch DIMMs')
         self.log.info('Available DIMMs: %s', vals)
 
@@ -284,9 +285,9 @@ class NdctlTest(Test):
         Test the regions info
         """
         self.disable_region()
-        old = self.get_json(short_opt='-R')
+        old = self.get_json('-R')
         self.enable_region()
-        new = self.get_json(short_opt='-R')
+        new = self.get_json('-R')
         if len(new) <= len(old):
             self.fail('Failed to fetch regions')
         self.log.info('Available regions: %s', new)
@@ -296,13 +297,14 @@ class NdctlTest(Test):
         Test namespace
         """
         self.enable_region()
-        regions = self.get_json(short_opt='-R')
-        for region in regions:
+        regions = self.get_json('-R')
+        for val in regions:
+            region = self.get_json_val(val, 'dev')
             self.disable_namespace(region=region)
             self.destroy_namespace(region=region)
             self.create_namespace(region=region)
 
-        namespaces = self.get_json(short_opt='-N')
+        namespaces = self.get_json('-N')
         self.log.info('Created namespace %s', namespaces)
 
     def test_namespace_modes(self):
@@ -310,10 +312,7 @@ class NdctlTest(Test):
         Create  different namespace types
         """
         failed_modes = []
-        self.enable_region()
-        region = self.params.get('region', default=None)
-        if not region:
-            region = self.get_json(short_opt='-R')[0]
+        region = self.get_default_region()
         self.log.info("Using %s for different namespace modes", region)
         self.disable_namespace(region=region)
         self.destroy_namespace(region=region)
@@ -337,17 +336,14 @@ class NdctlTest(Test):
         """
         Test multiple namespace with single region
         """
-        self.enable_region()
-        region = self.params.get('region', default=None)
-        if not region:
-            region = self.get_json(short_opt='-R')[0]
+        region = self.get_default_region()
         self.log.info("Using %s for muliple namespace regions", region)
         self.disable_namespace(region=region)
         self.destroy_namespace(region=region)
         self.log.info("Creating %s namespaces", self.cnt)
         if not self.size:
             self.size = self.get_json_val(self.get_json(
-                long_opt='-r %s' % region)[0], 'size')
+                '-r %s' % region)[0], 'size')
             ch_cnt = self.get_aligned_count(self.size)
             self.size = self.size // ch_cnt
         else:
@@ -362,15 +358,12 @@ class NdctlTest(Test):
         """
         Test multiple namespace modes with single region
         """
-        self.enable_region()
-        region = self.params.get('region', default=None)
-        if not region:
-            region = self.get_json(short_opt='-R')[0]
+        region = self.get_default_region()
         self.log.info("Using %s for muliple namespace regions", region)
         self.disable_namespace(region=region)
         self.destroy_namespace(region=region)
         size = self.get_json_val(self.get_json(
-            long_opt='-r %s' % region)[0], 'size')
+            '-r %s' % region)[0], 'size')
         if size < (len(self.modes) * 64 * 1024 * 1024):
             self.cancel('Not enough memory to create namespaces')
         for mode in self.modes:
@@ -383,17 +376,18 @@ class NdctlTest(Test):
         Test multiple namespace with multiple region
         """
         self.enable_region()
-        if len(self.get_json(short_opt='-R')) <= 1:
+        if len(self.get_json('-R')) <= 1:
             self.cancel("Test not applicable without multiple regions")
-        regions = self.get_json(short_opt='-R')
+        regions = self.get_json('-R')
         self.disable_namespace()
         self.destroy_namespace()
-        for region in regions:
+        for val in regions:
+            region = self.get_json_val(val, 'dev')
             self.log.info("Using %s for muliple namespaces", region)
             self.log.info("Creating %s namespaces", self.cnt)
             if not self.size:
                 self.size = self.get_json_val(self.get_json(
-                    long_opt='-r %s' % region)[0], 'size')
+                    '-r %s' % region)[0], 'size')
                 ch_cnt = self.get_aligned_count(self.size)
                 self.size = self.size // ch_cnt
             else:
@@ -408,10 +402,7 @@ class NdctlTest(Test):
         """
         Test namespace reconfiguration
         """
-        self.enable_region()
-        region = self.params.get('region', default=None)
-        if not region:
-            region = self.get_json(short_opt='-R')[0]
+        region = self.get_default_region()
         self.log.info("Using %s for reconfiguring namespace", region)
         self.disable_namespace()
         self.destroy_namespace()
@@ -437,10 +428,7 @@ class NdctlTest(Test):
         """
         Verify metadata for sector mode namespaces
         """
-        self.enable_region()
-        region = self.params.get('region', default=None)
-        if not region:
-            region = self.get_json(short_opt='-R')[0]
+        region = self.get_default_region()
         self.disable_namespace()
         self.destroy_namespace()
         self.log.info("Creating sector namespace using %s", region)
@@ -454,19 +442,17 @@ class NdctlTest(Test):
 
     def test_check_numa(self):
         self.enable_region()
-        regions = self.get_json(short_opt='-R')
-        for reg in regions:
+        regions = self.get_json('-R')
+        for val in regions:
+            reg = self.get_json_val(val, 'dev')
             numa = genio.read_one_line('/sys/devices/ndbus%s/%s/numa_node'
                                        % (re.findall(r'\d+', reg)[0], reg))
             # Check numa config in ndctl and sys interface
-            if len(self.get_json(long_opt='-r %s -U %s' % (reg, numa))) != 1:
+            if len(self.get_json('-r %s -U %s' % (reg, numa))) != 1:
                 self.fail('Region mismatch between ndctl and sys interface')
 
     def test_label_read_write(self):
-        self.enable_region()
-        region = self.params.get('region', default=None)
-        if not region:
-            region = self.get_json(short_opt='-R')[0]
+        region = self.get_default_region()
         nmem = "nmem%s" % re.findall(r'\d+', region)[0]
 
         self.log.info("Using %s for testing labels", region)
@@ -500,17 +486,14 @@ class NdctlTest(Test):
             self.fail("Label read and write mismatch")
 
         self.log.info("Checking created namespace after restore")
-        if len(self.get_json(long_opt='-r %s' % region)) != 1:
+        if len(self.get_json('-r %s' % region)) != 1:
             self.fail("Created namespace not found after label restore")
 
     def test_daxctl_list(self):
         """
         Test daxctl list
         """
-        self.enable_region()
-        region = self.params.get('region', default=None)
-        if not region:
-            region = self.get_json(short_opt='-R')[0]
+        region = self.get_default_region()
         self.disable_namespace(region=region)
         self.destroy_namespace(region=region)
         self.create_namespace(region=region, mode='devdax')
@@ -524,15 +507,12 @@ class NdctlTest(Test):
         """
         Test filesystem DAX with a FIO workload
         """
-        self.enable_region()
-        region = self.params.get('region', default=None)
-        if not region:
-            region = self.get_json(short_opt='-R')[0]
+        region = self.get_default_region()
         self.create_namespace(region=region, mode='fsdax')
         self.disk = '/dev/%s' % self.get_json_val(
-            self.get_json(long_opt="-N -r %s" % region)[0], 'blockdev')
+            self.get_json("-N -r %s" % region)[0], 'blockdev')
         size = self.get_json_val(self.get_json(
-            long_opt="-N -r %s" % region)[0], 'size')
+            "-N -r %s" % region)[0], 'size')
         self.part = partition.Partition(self.disk)
         self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512' %
                        memory.get_page_size())
@@ -551,13 +531,10 @@ class NdctlTest(Test):
         """
         Test device DAX with a daxio binary
         """
-        self.enable_region()
-        region = self.params.get('region', default=None)
-        if not region:
-            region = self.get_json(short_opt='-R')[0]
+        region = self.get_default_region()
         self.create_namespace(region=region, mode='devdax')
         daxdev = "/dev/%s" % self.get_json_val(
-            self.get_json(long_opt="-N -r %s" % region)[0], 'chardev')
+            self.get_json("-N -r %s" % region)[0], 'chardev')
         if process.system("%s -b no -i /dev/urandom -o %s" % (self.get_data("daxio.static"), daxdev), ignore_status=True):
             self.fail("DAXIO write on devdax failed")
 
@@ -571,7 +548,7 @@ class NdctlTest(Test):
                 self.fail("Failed to delete filesystem on %s" % self.disk)
 
         if not self.preserve_setup:
-            if self.get_json(short_opt='-N'):
+            if len(self.get_json('-N')):
                 self.destroy_namespace(force=True)
             self.disable_region()
 
