@@ -547,6 +547,20 @@ class NdctlTest(Test):
         if process.system(cmd, ignore_status=True):
             self.fail("FIO mmap workload on fsdax failed")
 
+    def test_devdax_write(self):
+        """
+        Test device DAX with a daxio binary
+        """
+        self.enable_region()
+        region = self.params.get('region', default=None)
+        if not region:
+            region = self.get_json(short_opt='-R')[0]
+        self.create_namespace(region=region, mode='devdax')
+        daxdev = "/dev/%s" % self.get_json_val(
+            self.get_json(long_opt="-N -r %s" % region)[0], 'chardev')
+        if process.system("%s -b no -i /dev/urandom -o %s" % (self.get_data("daxio.static"), daxdev), ignore_status=True):
+            self.fail("DAXIO write on devdax failed")
+
     def tearDown(self):
         if self.part:
             self.part.unmount()
