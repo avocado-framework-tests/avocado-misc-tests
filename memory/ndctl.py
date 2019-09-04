@@ -30,6 +30,8 @@ from avocado.utils import archive
 from avocado.utils import distro
 from avocado.utils import build
 from avocado.utils import genio
+from avocado.utils import memory
+from avocado.utils import partition
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -91,6 +93,29 @@ class NdctlTest(Test):
                     self.log.info("Changing namespaces to %s", count)
                     return count
         return self.cnt
+
+    def build_fio(self):
+        """
+        Install fio or build if not possible
+        """
+        pkg = "fio"
+        if process.system("which %s" % pkg, ignore_status=True):
+            if not self.smm.check_installed(pkg) \
+                    and not self.smm.install(pkg):
+                for package in ["autoconf", "libtool", "make"]:
+                    if not self.smm.check_installed(package) \
+                            and not self.smm.install(package):
+                        self.cancel(
+                            "Fail to install %s required for this test."
+                            "" % package)
+                tarball = self.fetch_asset(
+                    "http://brick.kernel.dk/snaps/fio-2.1.10.tar.gz")
+                archive.extract(tarball, self.teststmpdir)
+                fio_version = os.path.basename(tarball.split('.tar.')[0])
+                sourcedir = os.path.join(self.teststmpdir, fio_version)
+                build.make(sourcedir)
+                return os.path.join(sourcedir, "fio")
+        return pkg
 
     def run_daxctl_list(self, options=''):
         """
@@ -225,14 +250,16 @@ class NdctlTest(Test):
             self.binary = 'ndctl'
             self.daxctl = 'daxctl'
 
-        smm = SoftwareManager()
+        self.smm = SoftwareManager()
         for pkg in deps:
-            if not smm.check_installed(pkg) and not \
-                    smm.install(pkg):
+            if not self.smm.check_installed(pkg) and not \
+                    self.smm.install(pkg):
                 self.cancel('%s is needed for the test to be run' % pkg)
         self.opt_dict = {'-B': 'provider',
                          '-D': 'dev', '-R': 'dev', '-N': 'dev'}
         self.modes = ['raw', 'sector', 'fsdax', 'devdax']
+        self.part = None
+        self.disk = None
 
     def test_bus_ids(self):
         """
@@ -493,7 +520,42 @@ class NdctlTest(Test):
             self.fail('Failed daxctl list')
         self.log.info('Created dax device %s', vals)
 
+    def test_fsdax_write(self):
+        """
+        Test filesystem DAX with a FIO workload
+        """
+        self.enable_region()
+        region = self.params.get('region', default=None)
+        if not region:
+            region = self.get_json(short_opt='-R')[0]
+        self.create_namespace(region=region, mode='fsdax')
+        self.disk = '/dev/%s' % self.get_json_val(
+            self.get_json(long_opt="-N -r %s" % region)[0], 'blockdev')
+        size = self.get_json_val(self.get_json(
+            long_opt="-N -r %s" % region)[0], 'size')
+        self.part = partition.Partition(self.disk)
+        self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512' %
+                       memory.get_page_size())
+        mnt_path = self.params.get('mnt_point', default='/pmem')
+        if not os.path.exists(mnt_path):
+            os.makedirs(mnt_path)
+        self.part.mount(mountpoint=mnt_path, args='-o dax')
+        self.log.info("Test will run on %s", mnt_path)
+        fio_job = self.params.get('fio_job', default='ndctl-fio.job')
+        cmd = '%s --directory %s --filename mmap-pmem --size %s %s' % (
+            self.build_fio(), mnt_path, size // 2, self.get_data(fio_job))
+        if process.system(cmd, ignore_status=True):
+            self.fail("FIO mmap workload on fsdax failed")
+
     def tearDown(self):
+        if self.part:
+            self.part.unmount()
+        if self.disk:
+            self.log.info("Removing the FS meta created on %s", self.disk)
+            delete_fs = "dd if=/dev/zero bs=1M count=1024 of=%s" % self.disk
+            if process.system(delete_fs, shell=True, ignore_status=True):
+                self.fail("Failed to delete filesystem on %s" % self.disk)
+
         if not self.preserve_setup:
             if self.get_json(short_opt='-N'):
                 self.destroy_namespace(force=True)
