@@ -21,6 +21,8 @@ try:
 except ImportError:
     from pexpect import pxssh
 
+import paramiko
+
 from avocado import Test
 from avocado import main
 from avocado.utils import process
@@ -82,15 +84,17 @@ class VlanTest(Test):
 
     def switch_login(self, ip, username, password):
         '''
-        telnet Login method for remote fc switch
+        SSH Login method for remote fc/nic switch
         '''
-        self.tnc = telnetlib.Telnet(ip)
-        self.tnc.read_until('username:')
-        self.tnc.write(username + '\n')
-        self.tnc.read_until('password:')
-        self.tnc.write(password + '\n')
-        ret = self.tnc.read_until(self.prompt)
-        assert self.prompt in ret
+        self.ssc = paramiko.SSHClient()
+        self.ssc.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.ssc.connect(ip, username=username, password=password,
+                         look_for_keys=False, allow_agent=False)
+        print("SSH connection established to " + ip)
+        self.remote_conn = self.ssc.invoke_shell()
+        print("Interactive SSH session established")
+        assert self.remote_conn
+        self.remote_conn.send("iscli" + '\n')
 
     def _send_only_result(self, command, response):
         output = response.splitlines()
@@ -109,10 +113,10 @@ class VlanTest(Test):
         '''
         self.prompt = "#"
         self.log.info("Running the %s command on fc/nic switch", command)
-        if not hasattr(self, 'tnc'):
-            self.fail("telnet connection to the fc/nic switch not yet done")
-        self.tnc.write(command + '\n')
-        response = self.tnc.read_until(self.prompt)
+        if not hasattr(self, 'ssc'):
+            self.fail("SSH connection to the fc/nic switch not yet done")
+        self.remote_conn.send(command + '\n')
+        response = self.remote_conn.recv(1000)
         return self._send_only_result(command, response)
 
     def peer_login(self, ip, username, password):
@@ -180,7 +184,7 @@ class VlanTest(Test):
                                      shell=True, sudo=True)
 
     @staticmethod
-    def ping_check_host(self, intf, ip):
+    def ping_check_host(intf, ip):
         '''
         ping check for peer in host
         '''
@@ -211,10 +215,6 @@ class VlanTest(Test):
                                     self.ip_dic[self.peer_intf]):
             self.fail("Ping test failed for default vlan 1 in host")
         self.log.info("Ping test passed for default vlan 1 in host")
-        if not self.ping_check_peer(self.peer_intf,
-                                    self.ip_dic[self.host_intf]):
-            self.fail("Ping test failed for default vlan 1 in peer")
-        self.log.info("Ping test passed for default vlan 1 in peer")
 
     def test_vlan_1_2230(self):
         """
@@ -222,12 +222,11 @@ class VlanTest(Test):
                     Now ping. it should FAIL
         """
         self.vlan_port_conf("1", "2230")
+        time.sleep(10)
         if self.ping_check_host(self.host_intf, self.ip_dic[self.peer_intf]):
             self.fail("Ping test failed for vlan 1 & 2230 in host")
         self.log.info("Ping test passed for vlan 1 % 2230 in host")
-        if self.ping_check_host(self.peer_intf, self.ip_dic[self.host_intf]):
-            self.fail("Ping test failed for vlan 1 & 2230 in peer")
-        self.log.info("Ping test passed for vlan 1 % 2230 in peer")
+        self.vlan_port_conf("1", "1")
 
     def test_vlan_id(self):
         """
@@ -244,10 +243,8 @@ class VlanTest(Test):
                                     self.ip_dic[self.peer_intf]):
             self.fail("Ping test failed for vlan %s in host" % self.vlan_num)
         self.log.info("Ping test passed for vlan %s in host" % self.vlan_num)
-        if not self.ping_check_peer("%s.%s" % (self.peer_intf, self.vlan_num),
-                                    self.ip_dic[self.host_intf]):
-            self.fail("Ping test failed for vlan %s in peer" % self.vlan_num)
-        self.log.info("Ping test passed for vlan %s in peer" % self.vlan_num)
+        time.sleep(10)
+        self.vlan_port_conf("1", "1")
 
     def vlan_port_conf(self, host_vlan, peer_vlan):
         """
@@ -312,7 +309,7 @@ class VlanTest(Test):
         self.run_host_command(cmd)
         self.run_host_command("ip link set %s.%s up" % (self.host_intf,
                                                         vlan_num))
-        cmd = "ifconfig %s.%s" % (self.host_intf, vlan_num)
+        cmd = "ip addr show %s.%s" % (self.peer_intf, vlan_num)
         self.run_host_command(cmd)
 
     def conf_peer_vlan_intf(self, vlan_num):
@@ -329,7 +326,7 @@ class VlanTest(Test):
         self.run_peer_command(cmd)
         self.run_peer_command("ip link set %s.%s up" % (self.peer_intf,
                                                         vlan_num))
-        cmd = "ifconfig %s.%s" % (self.peer_intf, vlan_num)
+        cmd = "ip addr show %s.%s" % (self.peer_intf, vlan_num)
         self.run_peer_command(cmd)
 
     def restore_host_intf(self):
