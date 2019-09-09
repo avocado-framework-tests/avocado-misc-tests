@@ -28,6 +28,7 @@ from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
+from avocado.utils import configure_network
 
 
 class Ethtool(Test):
@@ -67,11 +68,13 @@ class Ethtool(Test):
         Set the interface state specified, and return True if done.
         Returns False otherwise.
         '''
+        conf_net = configure_network.interfacewait(interface)
         cmd = "ip link set dev %s %s" % (interface, state)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             return False
-        if status != self.interface_link_status(interface):
-            return False
+        if state == "up" and conf_net is True:
+            if status != self.interface_link_status(interface):
+                return False
         return True
 
     def interface_link_status(self, interface):
