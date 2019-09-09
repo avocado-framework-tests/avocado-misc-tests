@@ -17,7 +17,6 @@
 import os
 from shutil import copyfile
 from avocado import Test
-from avocado import main
 from avocado.utils import process, distro
 from avocado import skipIf, skipUnless
 from avocado.utils.software_manager import SoftwareManager
