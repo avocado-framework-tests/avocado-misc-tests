@@ -45,11 +45,11 @@ class Hwinfo(Test):
         self.clear_dmesg()
         self.disk_name = process.system_output("df -h | egrep '(s|v)d[a-z][1-8]' | "
                                                "tail -1 | cut -d' ' -f1",
-                                               shell=True).strip("12345")
+                                               shell=True).decode("utf-8").strip("12345")
         self.Unique_Id = process.system_output("hwinfo --disk --only %s | "
                                                "grep 'Unique' | head -1 | "
                                                "cut -d':' -f2" % self.disk_name,
-                                               shell=True)
+                                               shell=True).decode("utf-8")
 
     def test_list(self):
         lists = self.params.get('list', default=['--all', '--cpu', '--disk'])
@@ -96,7 +96,7 @@ class Hwinfo(Test):
     def test_save_config(self):
         self.run_cmd("hwinfo --disk --save-config=all")
         if "failed" in process.system_output("hwinfo --disk --save-config=all",
-                                             shell=True):
+                                             shell=True).decode("utf-8"):
             self.log.info("--save-config option failed")
             self.fail("hwinfo: --save-config option failed")
 

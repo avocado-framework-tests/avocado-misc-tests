@@ -38,7 +38,7 @@ class Uprobe(Test):
     @staticmethod
     def run_cmd_out(cmd):
         return process.system_output(cmd, shell=True, ignore_status=True,
-                                     sudo=True)
+                                     sudo=True).decode("utf-8")
 
     def clear_trace(self):
         self.debugfs = "/sys/kernel/debug/tracing/"

@@ -61,7 +61,7 @@ class Supportconfig(Test):
         ret = process.run("supportconfig",
                           sudo=True,
                           ignore_status=True)
-        logfile = re.search(r"Log file tar ball: (\S+)\n", ret.stdout).group(1)
+        logfile = re.search(r"Log file tar ball: (\S+)\n", ret.stdout.decode("utf-8")).group(1)
         if not os.path.exists(logfile) or ret.exit_status:
             self.fail("supportconfig failed to create log file")
 
@@ -73,7 +73,7 @@ class Supportconfig(Test):
                 ret = process.run("supportconfig -%s %s" % (option, feature),
                                   sudo=True,
                                   ignore_status=True)
-                if not re.search(r"%s...\s*Done" % feature, ret.stdout) \
+                if not re.search(r"%s...\s*Done" % feature, ret.stdout.decode("utf-8")) \
                    or ret.exit_status:
                     self.fail(
                         "Failed to verify the %s feature using supportconfig" %
@@ -86,7 +86,7 @@ class Supportconfig(Test):
                                   (option, self.workdir),
                                   sudo=True,
                                   ignore_status=True)
-                if self.workdir not in ret.stdout or ret.exit_status:
+                if self.workdir not in ret.stdout.decode("utf-8") or ret.exit_status:
                     self.fail(
                         "Failed to change the supportconfig output" +
                         " files directory")
@@ -117,7 +117,7 @@ class Supportconfig(Test):
         ret = process.run("supportconfig",
                           sudo=True,
                           ignore_status=True)
-        logfile = re.search(r"Log file tar ball: (\S+)\n", ret.stdout).group(1)
+        logfile = re.search(r"Log file tar ball: (\S+)\n", ret.stdout.decode("utf-8")).group(1)
         res = process.system("tar -tvf %s | grep 'plugin-pstree.txt'"
                              % logfile,
                              ignore_status=True,
@@ -128,7 +128,7 @@ class Supportconfig(Test):
         ret = process.run("supportconfig -p",
                           sudo=True,
                           ignore_status=True)
-        logfile = re.search(r"Log file tar ball: (\S+)\n", ret.stdout).group(1)
+        logfile = re.search(r"Log file tar ball: (\S+)\n", ret.stdout.decode("utf-8")).group(1)
         res = process.system("tar -tvf %s | grep 'plugin-pstree.txt'"
                              % logfile,
                              ignore_status=True,
