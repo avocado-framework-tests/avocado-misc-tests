@@ -1,0 +1,5 @@
+scenario:
+    max_freeze: 5
+    function: 6
+    pci_device: 
+    additional_command: nvme list
