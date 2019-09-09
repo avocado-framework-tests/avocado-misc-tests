@@ -158,7 +158,8 @@ class PowerVMEEH(Test):
         """
         cmd = "errinjct eeh -v -f %s -s %s/%s -a %s -m %s; echo $?"\
             % (func, pci_class_name, pci_interface, pci_mem_addr, pci_mask)
-        res = process.system_output(cmd, ignore_status=True, shell=True)
+        res = process.system_output(cmd, ignore_status=True,
+                                    shell=True).decode("utf-8")
         return int(res[-1])
 
     def check_eeh_pe_recovery(self, addr):
@@ -168,7 +169,8 @@ class PowerVMEEH(Test):
         cmd = "dmesg | grep -i 'EEH: Notify device driver to resume'; echo $?"
         tries = 60
         for _ in range(0, tries):
-            res = process.system_output(cmd, ignore_status=True, shell=True)
+            res = process.system_output(cmd, ignore_status=True,
+                                        shell=True).decode("utf-8")
             if int(res[-1]) != 0:
                 self.log.info("waiting for PE to recover %s" % self.addr)
                 time.sleep(1)
@@ -209,7 +211,8 @@ class PowerVMEEH(Test):
         tries = 10
         cmd = "dmesg | grep 'EEH: Frozen';echo $?"
         for _ in range(0, tries):
-            res = process.system_output(cmd, ignore_status=True, shell=True)
+            res = process.system_output(cmd, ignore_status=True,
+                                        shell=True).decode("utf-8")
             if int(res[-1]) == 0:
                 return True
             time.sleep(1)
@@ -223,7 +226,8 @@ class PowerVMEEH(Test):
         tries = 30
         for _ in range(0, tries):
             cmd = "(dmesg | grep 'permanently disabled'; echo $?)"
-            res = process.system_output(cmd, ignore_status=True, shell=True)
+            res = process.system_output(cmd, ignore_status=True,
+                                        shell=True).decode("utf-8")
             if int(res[-1]) == 0:
                 time.sleep(10)
                 return True
