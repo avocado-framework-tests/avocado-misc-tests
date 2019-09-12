@@ -36,7 +36,8 @@ class Sosreport(Test):
 
     @staticmethod
     def run_cmd_out(cmd):
-        return process.system_output(cmd, shell=True, ignore_status=True, sudo=True)
+        return process.system_output(cmd, shell=True, ignore_status=True,
+                                     sudo=True).decode("utf-8")
 
     def setUp(self):
         dist = distro.detect()
@@ -83,7 +84,8 @@ class Sosreport(Test):
             self.log.info("--case-id option failed")
 
         if 'testname' not in self.run_cmd_out("sosreport --batch --tmp-dir=%s "
-                                              "--name=testname | grep tar.xz" % directory_name):
+                                              "--name=testname | "
+                                              "grep tar.xz" % directory_name):
             self.is_fail += 1
             self.log.info("--name option failed")
 
@@ -128,11 +130,13 @@ class Sosreport(Test):
 
         self.run_cmd("sosreport --batch --tmp-dir=%s -e ntp,numa,snmp" % directory_name)
         if 'sendmail' not in self.run_cmd_out("sosreport --batch --tmp-dir=%s -e "
-                                              "sendmail | grep sendmail" % directory_name):
+                                              "sendmail | "
+                                              "grep sendmail" % directory_name):
             self.is_fail += 1
             self.log.info("--enable-plugins option failed")
 
-        if self.run_cmd_out("sosreport --batch --tmp-dir=%s -o cups | grep kernel" % directory_name):
+        if self.run_cmd_out("sosreport --batch --tmp-dir=%s -o cups | "
+                            "grep kernel" % directory_name):
             self.is_fail += 1
             self.log.info("--only-plugins option failed")
 
@@ -165,7 +169,8 @@ class Sosreport(Test):
             self.log.info("--profile option failed")
 
         dir_name = self.run_cmd_out("sosreport --batch --tmp-dir=%s --build | "
-                                    "grep located | cut -d':' -f2" % directory_name).strip()
+                                    "grep located | "
+                                    "cut -d':' -f2" % directory_name).strip()
         if not os.path.isdir(dir_name):
             self.is_fail += 1
             self.log.info("--build option failed")
@@ -182,7 +187,8 @@ class Sosreport(Test):
             self.is_fail += 1
             self.log.info("--tmp-dir option failed")
 
-        dir_name = self.run_cmd_out("sosreport --no-report --batch --build | grep located | "
+        dir_name = self.run_cmd_out("sosreport --no-report --batch --build | "
+                                    "grep located | "
                                     "cut -d':' -f2").strip()
         sosreport_dir = os.path.join(dir_name, 'sos_reports')
         if os.listdir(sosreport_dir) != []:
@@ -214,12 +220,15 @@ class Sosreport(Test):
             "===============Executing sosreport tool test (Archive)===============")
         directory_name = tempfile.mkdtemp()
         self.is_fail = 0
-        f_name = {'bzip2': 'file_name_bz2', 'gzip': 'file_name_gz', 'xz': 'file_name_xz', 'auto': 'file_name_xz2'}
-        archive = {'bzip2': 'tar.bz2', 'gzip': 'tar.gz', 'xz': 'tar.xz', 'auto': 'tar.xz'}
+        f_name = {'bzip2': 'file_name_bz2', 'gzip': 'file_name_gz',
+                  'xz': 'file_name_xz', 'auto': 'file_name_xz2'}
+        archive = {'bzip2': 'tar.bz2', 'gzip': 'tar.gz',
+                   'xz': 'tar.xz', 'auto': 'tar.xz'}
         for key, value in f_name.iteritems():
             file_name = str(f_name[key])
             file_name = self.run_cmd_out("sosreport --batch --tmp-dir=%s -z %s | grep %s" %
-                                         (directory_name, str(key), str(archive[key]))).strip()
+                                         (directory_name, str(key),
+                                          str(archive[key]))).strip()
             if not os.path.exists(file_name):
                 self.is_fail += 1
                 self.log.info("-z %s option failed" % str(key))

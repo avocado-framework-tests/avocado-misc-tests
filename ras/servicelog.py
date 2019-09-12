@@ -38,7 +38,8 @@ class servicelog(Test):
 
     @staticmethod
     def run_cmd_out(cmd):
-        return process.system_output(cmd, shell=True, ignore_status=True, sudo=True)
+        return process.system_output(cmd, shell=True, ignore_status=True,
+                                     sudo=True).decode("utf-8")
 
     def setUp(self):
         if "ppc" not in os.uname()[4]:
@@ -117,15 +118,15 @@ class servicelog(Test):
         self.log.info("=====6 - Checking if servicelog_notify --list, "
                       "lists the command just added  =======")
         for id in ids:
-            if id.strip():
-                self.run_cmd("servicelog_notify --list --id=%s" % id.strip())
+            if id:
+                self.run_cmd("servicelog_notify --list --id=%s" % id)
         self.log.info("=====7 - Checking if servicelog_notify --query, lists "
                       "the command just added =======")
         self.run_cmd("servicelog_notify --query --command=%s" % notify_script)
         self.log.info("=====8 - Checking servicelog_notify --remove =======")
         for id in ids:
-            if id.strip():
-                self.run_cmd("servicelog_notify --remove --id=%s" % id.strip())
+            if id:
+                self.run_cmd("servicelog_notify --remove --id=%s" % id)
         self.log.info("=====9 -  Cleaning events from the servicelog "
                       "database =======")
         self.run_cmd("servicelog_manage --truncate notify --force")
@@ -208,7 +209,8 @@ class servicelog(Test):
                       "repair action =========")
         self.run_cmd("servicelog --type=ppc64_rtas -v")
         location = self.run_cmd_out("servicelog --type=ppc64_rtas"
-                                    " -v | grep Location | cut -d\":\" -f2 | sed 's/^ *//'")
+                                    " -v | grep Location | "
+                                    "cut -d\":\" -f2 | sed 's/^ *//'")
         """
         The log_repair_action command creates an entry in the error log
         to indicate that the device at the specified location code has
