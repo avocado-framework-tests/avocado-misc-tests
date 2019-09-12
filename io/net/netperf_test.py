@@ -23,10 +23,6 @@ unidirectional throughput, and end-to-end latency.
 
 
 import os
-try:
-    import pxssh
-except ImportError:
-    from pexpect import pxssh
 import netifaces
 from avocado import main
 from avocado import Test
@@ -36,6 +32,7 @@ from avocado.utils import build
 from avocado.utils import archive
 from avocado.utils import process
 from avocado.utils.genio import read_file
+from avocado.utils.ssh import Session
 
 
 class Netperf(Test):
@@ -51,7 +48,8 @@ class Netperf(Test):
         self.peer_ip = self.params.get("peer_ip", default="")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="passw0rd")
-        self.peer_login(self.peer_ip, self.peer_user, self.peer_password)
+        self.session = Session(self.peer_ip, user=self.peer_user,
+                               password=self.peer_password)
         smm = SoftwareManager()
         detected_distro = distro.detect()
         pkgs = ['gcc']
@@ -65,8 +63,8 @@ class Netperf(Test):
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
             cmd = "%s install %s" % (smm.backend.base_command, pkg)
-            output, exitcode = self.run_command(cmd)
-            if exitcode != 0:
+            output = self.session.cmd(cmd)
+            if not output.exit_status == 0:
                 self.cancel("unable to install the package %s on peer machine "
                             % pkg)
         interfaces = netifaces.interfaces()
@@ -90,10 +88,9 @@ class Netperf(Test):
                                          self.peer_ip)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.cancel("unable to copy the netperf into peer machine")
-        tmp = "cd /tmp/%s;./configure ppc64le;make" % self.version
         cmd = "cd /tmp/%s;./configure ppc64le;make" % self.version
-        output, exitcode = self.run_command(cmd)
-        if exitcode != 0:
+        output = self.session.cmd(cmd)
+        if not output.exit_status == 0:
             self.fail("test failed because command failed in peer machine")
         os.chdir(self.neperf)
         process.system('./configure ppc64le', shell=True)
@@ -105,60 +102,18 @@ class Netperf(Test):
         self.max = self.params.get("maximum_iterations", default="15")
         self.option = self.params.get("option", default='')
 
-    def peer_login(self, ip, username, password):
-        '''
-        SSH Login method for remote peer server
-        '''
-        pxh = pxssh.pxssh(encoding='utf-8')
-        # Work-around for old pxssh not having options= parameter
-        pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
-        pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
-        pxh.force_password = True
-
-        pxh.login(ip, username, password)
-        pxh.sendline()
-        pxh.prompt(timeout=60)
-        pxh.sendline('exec bash --norc --noprofile')
-        # Ubuntu likes to be "helpful" and alias grep to
-        # include color, which isn't helpful at all. So let's
-        # go back to absolutely no messing around with the shell
-        pxh.set_unique_prompt()
-        self.pxssh = pxh
-
-    def run_command(self, command, timeout=300):
-        '''
-        SSH Run command method for running commands on remote server
-        '''
-        self.log.info("Running the command on peer lpar %s", command)
-        if not hasattr(self, 'pxssh'):
-            self.fail("SSH Console setup is not yet done")
-        con = self.pxssh
-        con.sendline(command)
-        con.expect("\n")  # from us
-        if command.endswith('&'):
-            return ("", 0)
-        con.expect(con.PROMPT, timeout=timeout)
-        output = con.before.splitlines()
-        con.sendline("echo $?")
-        con.prompt(timeout)
-        try:
-            exitcode = int(''.join(con.before.splitlines()[1:]))
-        except Exception as exc:
-            exitcode = 0
-        return (output, exitcode)
-
     def test(self):
         """
         netperf test
         """
         if self.netperf_run == '1':
             cmd = "chmod 777 /tmp/%s/src" % self.version
-            output, exitcode = self.run_command(cmd)
-            if exitcode != 0:
+            output = self.session.cmd(cmd)
+            if not output.exit_status == 0:
                 self.fail("test failed because netserver not available")
             cmd = "/tmp/%s/src/netserver" % self.version
-            output, exitcode = self.run_command(cmd)
-            if exitcode != 0:
+            output = self.session.cmd(cmd)
+            if not output.exit_status == 0:
                 self.fail("test failed because netserver not available")
         speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
         cmd = "timeout %s %s -H %s" % (self.timeout, self.perf,
@@ -188,8 +143,8 @@ class Netperf(Test):
         removing the data in peer machine
         """
         cmd = "pkill netserver; rm -rf /tmp/%s" % self.version
-        output, exitcode = self.run_command(cmd)
-        if exitcode != 0:
+        output = self.session.cmd(cmd)
+        if not output.exit_status == 0:
             self.fail("test failed because peer sys not connected")
 
 
