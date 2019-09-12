@@ -1,2 +1,3 @@
-time_limit: 2 # in minutes
+time_limit: 2
+time_unit: 'm' # m-minutes h-hours
 mdt_file: 'mdt.all'
