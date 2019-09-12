@@ -48,7 +48,7 @@ class Xfstests(Test):
         """
         self.use_dd = False
         root_fs = process.system_output(
-            "df -T / | awk 'END {print $2}'", shell=True)
+            "df -T / | awk 'END {print $2}'", shell=True).decode("utf-8")
         if root_fs in ['ext3', 'ext4']:
             self.use_dd = True
         sm = SoftwareManager()
@@ -289,7 +289,7 @@ class Xfstests(Test):
                 process.run('fallocate -o 0 -l %s %s/file-%s.img' %
                             (loop_size, self.disk_mnt, i), shell=True,
                             sudo=True)
-            dev = process.system_output('losetup -f').strip()
+            dev = process.system_output('losetup -f').decode("utf-8").strip()
             self.devices.append(dev)
             process.run('losetup %s %s/file-%s.img' %
                         (dev, self.disk_mnt, i), shell=True, sudo=True)
