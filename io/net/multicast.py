@@ -129,6 +129,9 @@ class ReceiveMulticastTest(Test):
         if process.system(cmd, shell=True, verbose=True,
                           ignore_status=True) != 0:
             self.fail("unable to set value to icmp_echo_ignore_broadcasts")
+        output, exitcode = self.run_command(cmd)
+        if exitcode != 0:
+            self.fail("Could not disable icmp_echo_ignore_broadcasts at peer")
         cmd = "ip link set %s allmulticast on" % self.iface
         if process.system(cmd, shell=True, verbose=True,
                           ignore_status=True) != 0:
@@ -156,6 +159,9 @@ class ReceiveMulticastTest(Test):
         if process.system(cmd, shell=True, verbose=True,
                           ignore_status=True) != 0:
             self.log.info("unable to unset all mulicast option")
+        output, exitcode = self.run_command(cmd)
+        if exitcode != 0:
+            self.log.info("Could not enable icmp_echo_ignore_broadcasts")
         cmd = "ip link set %s allmulticast off" % self.iface
         if process.system(cmd, shell=True, verbose=True,
                           ignore_status=True) != 0:
