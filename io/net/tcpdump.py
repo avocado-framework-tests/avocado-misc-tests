@@ -23,6 +23,9 @@ import netifaces
 from avocado import Test
 from avocado import main
 from avocado.utils import process
+from avocado.utils import distro
+from avocado.utils import archive
+from avocado.utils import build
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -39,6 +42,8 @@ class TcpdumpTest(Test):
         self.count = self.params.get("count", default="500")
         self.peer_ip = self.params.get("peer_ip", default="")
         self.drop = self.params.get("drop_accepted", default="10")
+        self.host_ip = self.params.get("host_ip", default="")
+        self.option = self.params.get("option", default='')
         # Check if interface exists in the system
         interfaces = netifaces.interfaces()
         if self.iface not in interfaces:
@@ -48,19 +53,45 @@ class TcpdumpTest(Test):
 
         # Install needed packages
         smm = SoftwareManager()
-        if not smm.check_installed("tcpdump") and not smm.install("tcpdump"):
-            self.cancel("Can not install tcpdump")
+        detected_distro = distro.detect()
+        pkgs = ['tcpdump', 'flex', 'bison', 'gcc-c++']
+        for pkg in pkgs:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
+                self.cancel("%s package Can not install" % pkg)
+        if detected_distro.name == "SuSE":
+            self.nmap = os.path.join(self.teststmpdir, 'nmap')
+            nmap_download = self.params.get("nmap_download", default="https:"
+                                            "//nmap.org/dist/"
+                                            "nmap-7.80.tar.bz2")
+            tarball = self.fetch_asset(nmap_download)
+            self.version = os.path.basename(tarball.split('.tar')[0])
+            self.n_map = os.path.join(self.nmap, self.version)
+            archive.extract(tarball, self.nmap)
+            os.chdir(self.n_map)
+            process.system('./configure', shell=True)
+            build.make(self.n_map)
+            process.system('./nping/nping -h', shell=True)
 
     def test(self):
         """
         Performs the tcpdump test.
         """
         cmd = "ping -I %s %s -c %s" % (self.iface, self.peer_ip, self.count)
-        obj = process.SubProcess(cmd, verbose=False, shell=True)
-        obj.start()
         output_file = os.path.join(self.outputdir, 'tcpdump')
-        cmd = "tcpdump -i %s -n -c %s -w '%s'" % (self.iface, self.count,
-                                                  output_file)
+        if self.option in ('tcp', 'udp', 'icmp'):
+            obj = self.nping(self.option)
+            obj.start()
+        else:
+            obj = process.SubProcess(cmd, verbose=False, shell=True)
+            obj.start()
+        cmd = "tcpdump -i %s -n -c %s" % (self.iface, self.count)
+        if self.option in ('host', 'src'):
+            cmd = "%s %s %s" % (cmd, self.option, self.host_ip)
+        elif self.option == "dst":
+            cmd = "%s %s %s" % (cmd, self.option, self.peer_ip)
+        else:
+            cmd = "%s %s" % (cmd, self.option)
+        cmd = "%s -w '%s'" % (cmd, output_file)
         for line in process.run(cmd, shell=True,
                                 ignore_status=True).stderr.decode("utf-8") \
                                                    .splitlines():
@@ -69,6 +100,13 @@ class TcpdumpTest(Test):
                 if int(line[0]) >= (int(self.drop) * int(self.count) / 100):
                     self.fail("%s, more than %s percent" % (line, self.drop))
         obj.stop()
+
+    def nping(self, param):
+        """
+        perform nping
+        """
+        cmd = "./nping/nping --%s %s -c %s" % (param, self.peer_ip, self.count)
+        return process.SubProcess(cmd, verbose=False, shell=True)
 
 
 if __name__ == "__main__":
