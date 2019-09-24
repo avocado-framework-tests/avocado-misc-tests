@@ -73,7 +73,7 @@ class MultipathTest(Test):
         wwids_to_remove = []
         for wwid in self.wwids:
             if wwid not in system_wwids:
-                self.log.info("%s not present in the system", wwid)
+                self.log.info("%s not present in the system" % wwid)
                 wwids_to_remove.append(wwid)
         for wwid in wwids_to_remove:
             self.wwids.remove(wwid)
@@ -185,8 +185,40 @@ class MultipathTest(Test):
             for path in path_dic['paths']:
                 if multipath.reinstate_path(path) is False:
                     msg += "%s did not recovered  in all path fail\n" % path
+
+            # Removing all paths for short time and adding back
+            self.log.info("Removing all paths and adding back")
+            for path in path_dic['paths']:
+                if multipath.remove_path(path) is False:
+                    msg += "%s did not removed \n" % path
+
+            time.sleep(180)
+            for path in path_dic['paths']:
+                if multipath.add_path(path) is False:
+                    msg += "could not add back: %s \n" % path
+
             self.mpath_svc.restart()
             wait.wait_for(self.mpath_svc.status, timeout=10)
+
+            # suspending the mpathX and Resume it Back
+            time.sleep(10)
+            self.log.info("Suspending mpaths and resuming them Back")
+            if multipath.suspend_mpath(path_dic['name']) is False:
+                msg += "failed to suspend mpath : %s \n" % path_dic['name']
+
+            time.sleep(180)
+            if multipath.resume_mpath(path_dic['name']) is False:
+                msg += "failed to resume mpath : %s \n" % path_dic['name']
+
+            # Removing the mpathX and Add it Back
+            time.sleep(180)
+            self.log.info("Removing and Adding Back mpaths")
+            if multipath.remove_mpath(path_dic['name']) is False:
+                msg += "failed to remove mpath : %s \n" % path_dic['name']
+
+            time.sleep(180)
+            if multipath.add_mpath(path_dic['name']) is False:
+                msg += "failed to add back mpath : %s \n" % path_dic['name']
 
         # Print errors
         if msg:
