@@ -104,7 +104,7 @@ class PingPong(Test):
         self.peer_iface = ''
         cmd = "ip addr show"
         output, exitcode = self.run_command(cmd)
-        for line in output.splitlines():
+        for line in str(output).splitlines():
             if self.peer_ip in line:
                 self.peer_iface = line.split()[-1]
                 break
