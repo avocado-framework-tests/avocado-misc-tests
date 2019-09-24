@@ -69,7 +69,7 @@ class Libpfm(Test):
                              shell=True, ignore_status=True)
         fail = False
         # Display the failed tests
-        for line in result.stdout.splitlines():
+        for line in result.stdout.decode("utf-8").splitlines():
             if 'Failed' in line:
                 self.log.error("Failed: %s", line)
                 fail = True
