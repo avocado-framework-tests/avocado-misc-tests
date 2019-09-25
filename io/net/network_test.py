@@ -284,9 +284,10 @@ class NetworkTest(Test):
         '''
         Remove the files created
         '''
-        process.run("rm -rf /tmp/tempfile")
-        cmd = "timeout 600 ssh %s \" rm -rf /tmp/tempfile\"" % self.peer
-        ret = process.system(cmd, shell=True, verbose=True, ignore_status=True)
+        if 'scp' in str(self.name.name):
+            process.run("rm -rf /tmp/tempfile")
+            cmd = "timeout 600 ssh %s \" rm -rf /tmp/tempfile\"" % self.peer
+            process.system(cmd, shell=True, verbose=True, ignore_status=True)
 
 
 if __name__ == "__main__":
