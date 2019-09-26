@@ -2,6 +2,8 @@ config:
     namespace_cnt: 4
     region: 'region0'
     preserve_change: True
+    mnt_point: '/mnt/pmem'
+    fio_job:
     version: !mux
         upstream:
             package : 'upstream'
