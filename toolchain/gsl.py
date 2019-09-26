@@ -46,9 +46,9 @@ class GSL(Test):
     def test(self):
         process.run("make -k check", ignore_status=True, sudo=True)
         logfile = os.path.join(self.logdir, "stdout")
-        if process.system_output("grep -Eai 'FAIL:  [1-9]' %s" %
+        if process.system_output("grep -Eai 'FAIL: [1-9]' %s" %
                                  logfile, shell=True, ignore_status=True):
-            process.run("grep -Eai 'Making check in|FAIL:  [1-9]' %s" % logfile,
+            process.run("grep -Eai 'Making check in|FAIL: [1-9]' %s" % logfile,
                         ignore_status=True, sudo=True)
             self.fail("test failed, Please check debug log for failed test cases")
 
