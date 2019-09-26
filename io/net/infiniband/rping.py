@@ -30,6 +30,7 @@ from avocado import Test
 from avocado import main
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process, distro
+from avocado.utils import configure_network
 
 
 class Rping(Test):
@@ -73,6 +74,10 @@ class Rping(Test):
             self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
             self.cancel("%s peer machine is not available" % self.peer_ip)
+        self.ipaddr = self.params.get("host_ip", default="")
+        self.netmask = self.params.get("netmask", default="")
+        configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
+                                 interface_type='infiniband')
         self.timeout = "2m"
         self.local_ip = netifaces.ifaddresses(self.iface)[AF_INET][0]['addr']
         self.option = self.option.replace("peer_ipv6", self.ipv6_peer)
@@ -174,6 +179,12 @@ class Rping(Test):
         output, exitcode = self.run_command(cmd)
         if exitcode != 0:
             self.fail("Server output retrieval failed")
+
+    def tearDown(self):
+        """
+        unset ip
+        """
+        configure_network.unset_ip(self.iface)
 
 
 if __name__ == "__main__":

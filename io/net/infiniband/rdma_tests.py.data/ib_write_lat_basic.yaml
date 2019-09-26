@@ -2,6 +2,8 @@ ib_write_lat_basic:
 tool: ib_write_lat
 interface: ""
 peer_ip: ""
+host_ip: ""
+netmask: ""
 peer_user: "root"
 peer_password: "passw0rd"
 CA_NAME: ""

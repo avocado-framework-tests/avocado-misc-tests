@@ -21,6 +21,8 @@ parameters:
     peer_ip: "13.13.13.15"
     peer_user: "root"
     peer_password: "passw0rd"
+    host_ip: ""
+    netmask: ""
     CA_NAME: "mlx4_0"
     GID_NUM: "0"
     PORT_NUM: "1"

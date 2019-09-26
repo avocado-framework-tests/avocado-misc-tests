@@ -2,6 +2,8 @@ ib_read_bw_extended:
 tool: ib_read_bw
 interface: ""
 peer_ip: ""
+host_ip: ""
+netmask: ""
 peer_user: "root"
 peer_password: "passw0rd"
 CA_NAME: ""

@@ -30,6 +30,7 @@ from avocado import Test
 from avocado import main
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process, distro
+from avocado.utils import configure_network
 
 
 class Udady(Test):
@@ -71,6 +72,10 @@ class Udady(Test):
         self.peer_user = self.params.get("peer_user_name", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="passw0rd")
+        self.ipaddr = self.params.get("host_ip", default="")
+        self.netmask = self.params.get("netmask", default="")
+        configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
+                                 interface_type='infiniband')
         self.peer_login(self.peer_ip, self.peer_user, self.peer_password)
         if self.iface not in interfaces:
             self.cancel("%s interface is not available" % self.iface)
@@ -168,6 +173,12 @@ class Udady(Test):
         output, exitcode = self.run_command(cmd)
         if exitcode != 0:
             self.fail("Server output retrieval failed")
+
+    def tearDown(self):
+        """
+        unset ip
+        """
+        configure_network.unset_ip(self.iface)
 
 
 if __name__ == "__main__":
