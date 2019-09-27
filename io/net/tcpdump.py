@@ -24,6 +24,7 @@ from avocado import Test
 from avocado import main
 from avocado.utils import process
 from avocado.utils.software_manager import SoftwareManager
+from avocado.utils import configure_network
 
 
 class TcpdumpTest(Test):
@@ -39,6 +40,10 @@ class TcpdumpTest(Test):
         self.count = self.params.get("count", default="500")
         self.peer_ip = self.params.get("peer_ip", default="")
         self.drop = self.params.get("drop_accepted", default="10")
+        self.ipaddr = self.params.get("host_ip", default="")
+        self.netmask = self.params.get("netmask", default="")
+        configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
+                                 interface_type=None)
         # Check if interface exists in the system
         interfaces = netifaces.interfaces()
         if self.iface not in interfaces:
@@ -69,6 +74,9 @@ class TcpdumpTest(Test):
                 if int(line[0]) >= (int(self.drop) * int(self.count) / 100):
                     self.fail("%s, more than %s percent" % (line, self.drop))
         obj.stop()
+
+    def tearDown(self):
+        configure_network.unset_ip(self.iface)
 
 
 if __name__ == "__main__":

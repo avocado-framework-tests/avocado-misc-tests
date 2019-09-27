@@ -24,6 +24,7 @@ from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import pci
+from avocado.utils import configure_network
 
 
 class NetworkconfigTest(Test):
@@ -44,6 +45,10 @@ class NetworkconfigTest(Test):
         self.iface = self.params.get("interface")
         if self.iface not in interfaces:
             self.cancel("%s interface is not available" % self.iface)
+        self.ipaddr = self.params.get("host_ip", default="")
+        self.netmask = self.params.get("netmask", default="")
+        configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
+                                 interface_type=None)
         cmd = "ethtool -i %s" % self.iface
         for line in process.system_output(cmd, shell=True).decode("utf-8") \
                                                           .splitlines():
@@ -122,6 +127,7 @@ class NetworkconfigTest(Test):
                 eth_duplex = line.split()[-1]
         if str(duplex).capitalize() != eth_duplex:
             self.fail("mismatch in duplex")
+        configure_network.unset_ip(self.iface)
 
 
 if __name__ == "__main__":

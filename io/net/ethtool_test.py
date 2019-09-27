@@ -28,6 +28,7 @@ from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
+from avocado.utils import configure_network
 
 
 class Ethtool(Test):
@@ -59,6 +60,10 @@ class Ethtool(Test):
         self.peer = self.params.get("peer_ip")
         if not self.peer:
             self.cancel("No peer provided")
+        self.ipaddr = self.params.get("host_ip", default="")
+        self.netmask = self.params.get("netmask", default="")
+        configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
+                                 interface_type=None)
         self.args = self.params.get("arg", default='')
         self.elapse = self.params.get("action_elapse", default='')
 
@@ -117,6 +122,7 @@ class Ethtool(Test):
         Set the interface up at the end of test.
         '''
         self.interface_state_change(self.iface, "up", "yes")
+        configure_network.unset_ip(self.iface)
 
 
 if __name__ == "__main__":

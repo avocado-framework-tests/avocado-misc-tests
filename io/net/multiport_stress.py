@@ -20,6 +20,7 @@ from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
+from avocado.utils import configure_network
 
 
 class MultiportStress(Test):
@@ -49,6 +50,11 @@ class MultiportStress(Test):
             if self.host_interface not in interfaces:
                 self.cancel("interface is not available")
         self.count = self.params.get("count", default="1000")
+        self.ipaddr = self.params.get("host_ip", default="").split(",")
+        self.netmask = self.params.get("netmask", default="")
+        for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
+            configure_network.set_ip(ipaddr, self.netmask, interface,
+                                     interface_type=None)
 
     def multiport_ping(self, ping_option):
         '''
@@ -82,6 +88,10 @@ class MultiportStress(Test):
 
     def test_multiport_floodping(self):
         self.multiport_ping('-f')
+
+    def tearDown(self):
+        for interface in self.host_interfaces:
+            configure_network.unset_ip(interface)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,7 @@
 interface:
 peer_ip:
+host_ip:
+netmask:
 args: !mux
     Information:
         arg:

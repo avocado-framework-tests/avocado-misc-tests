@@ -30,6 +30,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import build
 from avocado.utils import archive
 from avocado.utils.process import CmdError
+from avocado.utils import configure_network
 
 
 class CommandFailed(Exception):
@@ -70,8 +71,10 @@ class HtxNicTest(Test):
                                                 shell=True,
                                                 sudo=True).decode("utf-8"):
             self.cancel("Platform does not support HTX tests")
-
         self.parameters()
+        for ipaddr, interface in zip(self.ipaddr, self.host_intfs):
+            configure_network.set_ip(ipaddr, self.netmask, interface,
+                                     interface_type=None)
         self.host_distro = distro.detect()
         self.login(self.peer_ip, self.peer_user, self.peer_password)
         self.get_ips()
@@ -154,6 +157,8 @@ class HtxNicTest(Test):
         self.time_limit = int(self.params.get("time_limit",
                                               '*', default=2)) * 60
         self.query_cmd = "htxcmdline -query -mdt %s" % self.mdt_file
+        self.ipaddr = self.params.get("host_ips", default="").split(",")
+        self.netmask = self.params.get("netmask", default="")
 
     def login(self, ip, username, password):
         '''
