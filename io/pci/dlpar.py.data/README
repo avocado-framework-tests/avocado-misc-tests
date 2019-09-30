@@ -20,7 +20,7 @@ Please setup repo for rsct and DynamicRM packages that are required for dlpar,
 script will take care of installation part.
 
 input parameters
-hmc_pwd: abc1234
+hmc_pwd: 123456
 hmc_username: hscroot
 lpar_2: ltcalpine-lp8-venkat
 pci_device: "0017:01:00.0"

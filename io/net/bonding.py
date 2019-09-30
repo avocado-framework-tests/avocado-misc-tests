@@ -73,7 +73,7 @@ class Bonding(Test):
         interfaces = netifaces.interfaces()
         self.user = self.params.get("user_name", default="root")
         self.password = self.params.get("peer_password", '*',
-                                        default="passw0rd")
+                                        default="********")
         self.host_interfaces = self.params.get("bond_interfaces",
                                                default="").split(",")
         if not self.host_interfaces:

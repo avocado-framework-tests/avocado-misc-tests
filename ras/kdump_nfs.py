@@ -53,10 +53,10 @@ class KDUMP(Test):
         except socket.error:
             self.cancel("not ipv4 address")
         self.user_name = self.params.get('user_name', default='root')
-        self.password = self.params.get('password', default="passw0rd")
+        self.password = self.params.get('password', default="********")
         self.prompt = self.params.get('prompt', default='~]#')
         self.user_name_server = self.params.get('user_name_server', default='root')
-        self.password_server = self.params.get('password_server', default="passw0rd")
+        self.password_server = self.params.get('password_server', default="********")
         self.prompt_server = self.params.get('prompt_server', default='~]#')
         self.nfs_path = self.params.get('nfs_path', default='/home/mnt/testarea/nfs')
 
