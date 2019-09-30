@@ -67,7 +67,7 @@ class DlparPci(Test):
         if not self.hmc_ip:
             self.cancel("HMC IP not got")
         self.hmc_user = self.params.get("hmc_username", default='hscroot')
-        self.hmc_pwd = self.params.get("hmc_pwd", '*', default='abc123')
+        self.hmc_pwd = self.params.get("hmc_pwd", '*', default='********')
         self.lpar_1 = self.get_mcp_component("NodeNameList")
         if not self.lpar_1:
             self.cancel("LPAR Name not got")

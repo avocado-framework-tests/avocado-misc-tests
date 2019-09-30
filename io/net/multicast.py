@@ -44,7 +44,7 @@ class ReceiveMulticastTest(Test):
         self.peer = self.params.get("peer_ip", default="")
         self.user = self.params.get("user_name", default="root")
         self.peer_password = self.params.get("peer_password",
-                                             '*', default="passw0rd")
+                                             '*', default="********")
         self.login(self.peer, self.user, self.peer_password)
         self.count = self.params.get("count", default="500000")
         smm = SoftwareManager()

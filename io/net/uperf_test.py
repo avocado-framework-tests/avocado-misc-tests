@@ -48,7 +48,7 @@ class Uperf(Test):
         self.peer_ip = self.params.get("peer_ip", default="")
         self.peer_user = self.params.get("peer_user_name", default="root")
         self.peer_password = self.params.get("peer_password", '*',
-                                             default="passw0rd")
+                                             default="********")
         self.peer_login(self.peer_ip, self.peer_user, self.peer_password)
         smm = SoftwareManager()
         detected_distro = distro.detect()
