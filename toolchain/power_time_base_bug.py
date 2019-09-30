@@ -66,7 +66,7 @@ class PowerTimeBaseBug(Test):
         os.chdir(self.teststmpdir)
         for cmd in ['./print_power_time_base', 'valgrind ./print_power_time_base']:
             self.log.info("Running %s", cmd)
-            cmd_output = process.system_output(cmd)
+            cmd_output = process.system_output(cmd).decode('utf-8')
             self.log.info("Output of command %s=%s", cmd, cmd_output)
             for line in cmd_output.splitlines():
                 if 'timebase' in line:
