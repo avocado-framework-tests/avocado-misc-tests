@@ -23,7 +23,7 @@ from avocado.utils import distro, process
 from avocado.utils.software_manager import SoftwareManager
 
 
-class perf_c2c(Test):
+class Perf_c2c(Test):
 
     """
     Tests perf c2c and it's options namely
@@ -57,7 +57,7 @@ class perf_c2c(Test):
 
         # Check for c2c is available in the system.
         output = process.run('perf mem record -e list')
-        if 'ldlat-stores' in output.stderr or 'ldlat-loads' in output.stderr:
+        if b'ldlat-stores' in output.stderr or b'ldlat-loads' in output.stderr:
             self.log.info("perf c2c is available")
         else:
             self.cancel('perf c2c is not available')
@@ -73,7 +73,7 @@ class perf_c2c(Test):
         process.run("dmesg -C", sudo=True)
 
     def verify_dmesg(self):
-        self.whiteboard = process.system_output("dmesg")
+        self.whiteboard = process.system_output("dmesg").decode("utf-8")
         pattern = ['WARNING: CPU:', 'Oops',
                    'Segfault', 'soft lockup', 'Unable to handle']
         for fail_pattern in pattern:
