@@ -24,7 +24,7 @@ from avocado.utils import build, distro, process, genio
 from avocado.utils.software_manager import SoftwareManager
 
 
-class perfUprobe(Test):
+class PerfUprobe(Test):
 
     """
     Uprobe related test cases run through perf commands
@@ -72,10 +72,10 @@ class perfUprobe(Test):
 
     def test_uprobe(self):
         output = self.cmd_verify('%s /usr/bin/perf main' % self.cmdProbe)
-        if 'Added new event' not in output.stderr:
+        if 'Added new event' not in output.stderr.decode("utf-8"):
             self.fail("perf: probe of perf main failed")
         output = self.cmd_verify('perf probe -l')
-        if 'probe_perf:main' not in output.stdout:
+        if 'probe_perf:main' not in output.stdout.decode("utf-8"):
             self.fail("perf: probe of 'perf main' not found in list")
         sysfsfile = '/sys/kernel/debug/tracing/uprobe_events'
         if 'probe_perf' not in genio.read_file(
@@ -84,14 +84,14 @@ class perfUprobe(Test):
             self.fail("perf: sysfs file didn't reflect uprobe events")
         output = self.cmd_verify('perf record -o %s -e probe_perf:main -- '
                                  'perf list' % self.temp_file)
-        if 'samples' not in output.stderr:
+        if 'samples' not in output.stderr.decode("utf-8"):
             self.fail("perf: perf.data file not created")
         output = self.cmd_verify(self.report)
 
     def test_uprobe_return(self):
         output = self.cmd_verify('%s ./uprobe_test doit%%return'
                                  % self.cmdProbe)
-        if 'Added new event' not in output.stderr:
+        if 'Added new event' not in output.stderr.decode("utf-8"):
             self.fail("perf: probe of uprobe return failed")
         # RHEL
         if self.distro_name == "rhel":
@@ -99,19 +99,19 @@ class perfUprobe(Test):
                                      % self.recProbe)
         else:
             output = self.cmd_verify('%s -aR ./uprobe_test' % self.recProbe)
-        if 'samples' not in output.stderr:
+        if 'samples' not in output.stderr.decode("utf-8"):
             self.fail("perf: perf.data file not created")
         output = self.cmd_verify(self.report)
 
     def test_uprobe_variable(self):
         output = self.cmd_verify('%s ./uprobe_test "doit i"' % self.cmdProbe)
-        if 'Added new event' not in output.stderr:
+        if 'Added new event' not in output.stderr.decode("utf-8"):
             self.fail("perf: probe of uprobe variable failed")
         if self.distro_name == "rhel":
             output = self.cmd_verify('%s -- ./uprobe_test' % self.recProbe)
         else:
             output = self.cmd_verify('%s -aR ./uprobe_test' % self.recProbe)
-        if 'samples' not in output.stderr:
+        if 'samples' not in output.stderr.decode("utf-8"):
             self.fail("perf: perf.data file not created")
         output = self.cmd_verify(self.report)
 
