@@ -38,34 +38,34 @@ class Avago9361(Test):
         """
         self.controller = int(self.params.get('controller', default='0'))
         self.tool = str(self.params.get('tool_location'))
-        self.disk = str(self.params.get('disk')).split(" ")
+        self.disk_vd = str(self.params.get('disk_vd')).split(" ")
         self.raid_level = str(self.params.get('raid_level', default='0'))
         self.size = str(self.params.get('size', default='all'))
         self.on_off = str(self.params.get('on_off'))
         self.hotspare = str(self.params.get('hotspare'))
         self.copyback = self.on_off.replace("e", "").replace("s", "").replace(
             "/", ":")
-        self.add_disk = str(self.params.get('add_disk')).split(" ")
+        self.add_disk_vd = str(self.params.get('add_disk_vd')).split(" ")
         if not self.hotspare:
             self.cancel("Hotspare test needs a drive to create/test hotspare")
         if not self.on_off:
             self.cancel("Online/Offline test needs a drive to operate on")
-        if not self.disk:
-            self.cancel("Please provide disk to perform VD operations")
+        if not self.disk_vd:
+            self.cancel("Please provide disk_vd to perform VD operations")
         self.dict_raid = {'r0': [1, None], 'r1': [2, 'Multiple2'],
                           'r5': [3, None], 'r6': [3, None],
                           'r00': [4, 'Multiple2'], 'r10': [4, 'Multiple2'],
                           'r50': [6, 'Multiple3'], 'r60': [6, 'Multiple3']}
         self.value = self.dict_raid[self.raid_level]
 
-        if len(self.disk) < self.value[0]:
+        if len(self.disk_vd) < self.value[0]:
             self.cancel("Please give enough number of drives to create %s"
                         % self.raid_level)
         if self.value[1] is not None:
             multiple = int(self.value[1].split("Multiple")[-1])
-            self.disk = self.disk[:len(self.disk) -
-                                  (len(self.disk) % multiple)]
-        self.raid_disk = ",".join(self.disk).strip(" ")
+            self.disk_vd = self.disk_vd[:len(self.disk_vd) -
+                                  (len(self.disk_vd) % multiple)]
+        self.raid_disk_vd = ",".join(self.disk_vd).strip(" ")
         if self.raid_level == 'r10' or self.raid_level == 'r00':
             self.pdperarray = 2
         elif self.raid_level == 'r50' or self.raid_level == 'r60':
@@ -75,7 +75,7 @@ class Avago9361(Test):
                 if test in str(self.name):
                     self.cancel("Test not applicable for Raid0")
         if 'migrate' in str(self.name):
-            self.raid_disk = self.disk.pop()
+            self.raid_disk_vd = self.disk_vd.pop()
             if self.raid_level != 'r0':
                 self.cancel("Script runs for raid0")
         self.write_policy = ['WT', 'WB', 'AWB']
@@ -114,9 +114,9 @@ class Avago9361(Test):
                     self.change_vdpolicy(write, read, iopolicy)
         self.vd_delete()
         if self.raid_level == 'r0':
-            for disk in range(0, 4):
-                if disk < len(self.disk):
-                    self.raid_disk = self.disk[disk]
+            for disk_vd in range(0, 4):
+                if disk_vd < len(self.disk_vd):
+                    self.raid_disk_vd = self.disk_vd[disk_vd]
                     for _ in range(1, 17):
                         self.vd_create('WT', 'nora', 'direct', 512)
             self.vd_delete()
@@ -231,18 +231,18 @@ class Avago9361(Test):
         """
         self.vd_create('WT', 'NORA', 'direct', 256)
         for level in [1, 5, 6]:
-            if not self.add_disk:
+            if not self.add_disk_vd:
                 break
             cmd = "%s /c%d/v0 start migrate type=raid%s \
                    option=add drives=%s" % (self.tool, self.controller, level,
-                                            self.add_disk.pop())
+                                            self.add_disk_vd.pop())
             self.check_pass(cmd, "Failed to migrate")
             cmd = "%s /c%d/v0 show migrate" % (self.tool, self.controller)
             self.showprogress(cmd)
             self.sleep_function(cmd)
         self.vd_delete()
 
-    def rebuild(self, perform, disk=None):
+    def rebuild(self, perform, disk_vd=None):
         """
         Helper function of all types of rebuild operations
         """
@@ -255,7 +255,7 @@ class Avago9361(Test):
             self.sleep_function(cmd)
         elif perform.lower() == "progress":
             cmd = "%s /c%d/%s show rebuild" % (self.tool, self.controller,
-                                               disk)
+                                               disk_vd)
             self.showprogress(cmd)
             self.sleep_function(cmd)
 
@@ -313,14 +313,14 @@ class Avago9361(Test):
         if self.raid_level in ['r00', 'r10', 'r50', 'r60']:
             cmd = "%s /c%d add vd %s size=%s drives=%s PDperArray=%d %s %s %s \
                    strip=%d" % (self.tool, self.controller, self.raid_level,
-                                self.size, self.raid_disk, self.pdperarray,
+                                self.size, self.raid_disk_vd, self.pdperarray,
                                 write, read, iopolicy, stripe)
             self.check_pass(cmd, "Failed to create raid")
 
         else:
             cmd = "%s /c%d add vd %s size=%s drives=%s %s %s %s \
                    strip=%d" % (self.tool, self.controller, self.raid_level,
-                                self.size, self.raid_disk, write, read,
+                                self.size, self.raid_disk_vd, write, read,
                                 iopolicy, stripe)
             self.check_pass(cmd, "Failed to create raid")
         self.vd_details()
