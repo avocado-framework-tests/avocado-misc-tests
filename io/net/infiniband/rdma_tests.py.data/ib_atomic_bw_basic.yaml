@@ -3,7 +3,7 @@ tool: ib_atomic_bw
 interface: ""
 peer_ip: ""
 peer_user: "root"
-peer_password: "passw0rd"
+peer_password: "********"
 CA_NAME: ""
 PORT_NUM: "1"
 PEERCA: ""

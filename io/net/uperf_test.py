@@ -49,6 +49,7 @@ class Uperf(Test):
         self.peer_ip = self.params.get("peer_ip", default="")
         self.peer_user = self.params.get("peer_user_name", default="root")
         self.peer_password = self.params.get("peer_password", '*',
+<<<<<<< HEAD
                                              default="passw0rd")
         interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface", default="")
@@ -58,6 +59,9 @@ class Uperf(Test):
         self.netmask = self.params.get("netmask", default="")
         configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
                                  interface_type=None)
+=======
+                                             default="********")
+>>>>>>> upstream/master
         self.peer_login(self.peer_ip, self.peer_user, self.peer_password)
         smm = SoftwareManager()
         detected_distro = distro.detect()

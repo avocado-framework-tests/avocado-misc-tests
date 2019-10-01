@@ -2,7 +2,11 @@ Parameters:
     peer_ip: ""
     user_name: "root"
     interface: ""
+<<<<<<< HEAD
     host_ip: ""
     netmask: ""
     peer_password: "passw0rd"
+=======
+    peer_password: "********"
+>>>>>>> upstream/master
     count: "500000"

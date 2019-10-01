@@ -45,6 +45,7 @@ class ReceiveMulticastTest(Test):
         self.peer = self.params.get("peer_ip", default="")
         self.user = self.params.get("user_name", default="root")
         self.peer_password = self.params.get("peer_password",
+<<<<<<< HEAD
                                              '*', default="passw0rd")
         interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface")
@@ -54,6 +55,9 @@ class ReceiveMulticastTest(Test):
         self.netmask = self.params.get("netmask", default="")
         configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
                                  interface_type=None)
+=======
+                                             '*', default="********")
+>>>>>>> upstream/master
         self.login(self.peer, self.user, self.peer_password)
         self.count = self.params.get("count", default="500000")
         smm = SoftwareManager()

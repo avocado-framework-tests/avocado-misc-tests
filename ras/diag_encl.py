@@ -40,7 +40,8 @@ class DiagEncl(Test):
     @staticmethod
     def run_cmd_out(cmd):
         return process.system_output(cmd, shell=True,
-                                     ignore_status=True, sudo=True)
+                                     ignore_status=True,
+                                     sudo=True).decode("utf-8")
 
     def setUp(self):
         if "ppc" not in distro.detect().arch:
@@ -52,7 +53,7 @@ class DiagEncl(Test):
     def test_diag_encl(self):
         self.log.info("===========Executing diag_encl test==========")
         diag_path = '/var/log/ppc64-diag/diag_disk/'
-        if 'disk health' not in process.system_output("diag_encl -h"):
+        if 'disk health' not in self.run_cmd_out("diag_encl -h"):
             self.fail("'-d' option is not available in help message")
         self.run_cmd("vpdupdate")
         if not os.path.isdir(diag_path):
@@ -61,9 +62,9 @@ class DiagEncl(Test):
             self.run_cmd("diag_encl -d")
         no_of_files = len(glob.glob1(diag_path, "*diskAnalytics*"))
 
-        if no_of_files == '0':
+        if no_of_files == 0:
             self.fail("xml file not generated")
-        if no_of_files > '1':
+        if no_of_files > 1:
             self.fail("multiple xml files are generated")
         xml_file = os.listdir(diag_path)[0]
         xml_file = os.path.join(diag_path, xml_file)

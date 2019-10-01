@@ -3,7 +3,7 @@ peer_ip: ""
 host_ip: ""
 netmask: ""
 peer_user_name: "root"
-peer_password: "passw0rd"
+peer_password: "********"
 TIMEOUT: "720"
 NETSERVER_RUN: 1
 EXPECTED_THROUGHPUT: 90

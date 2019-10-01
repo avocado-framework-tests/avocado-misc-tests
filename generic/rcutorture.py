@@ -101,7 +101,7 @@ class Rcutorture(Test):
             self.cpus_toggle()
         linux_modules.unload_module('rcutorture')
 
-        dmesg = process.system_output('dmesg')
+        dmesg = process.system_output('dmesg').decode("utf-8")
 
         res = re.search(r'rcu-torture: Reader', dmesg, re.M | re.I)
 

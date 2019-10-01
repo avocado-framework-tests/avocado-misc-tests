@@ -17,7 +17,6 @@
 import os
 from shutil import copyfile
 from avocado import Test
-from avocado import main
 from avocado.utils import process, distro
 from avocado import skipIf, skipUnless
 from avocado.utils.software_manager import SoftwareManager
@@ -55,6 +54,12 @@ class RASTools(Test):
                 self.cancel("Fail to install %s required for this test." %
                             package)
 
+    @staticmethod
+    def run_cmd_out(cmd):
+        return process.system_output(cmd, shell=True,
+                                     ignore_status=True,
+                                     sudo=True).decode("utf-8").strip()
+
     @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
     def test1_set_poweron_time(self):
         """
@@ -90,14 +95,14 @@ class RASTools(Test):
         self.run_cmd("lsmcode -A")
         self.run_cmd("lsmcode -v")
         self.run_cmd("lsmcode -D")
-        path_db = process.system_output("find /var/lib/lsvpd/ -iname vpd.db | "
-                                        "head -1", shell=True).strip()
+        path_db = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.db"
+                                   " | head -1")
         if path_db:
             copyfile_path = os.path.join(self.outputdir, 'vpd.db')
             copyfile(path_db, copyfile_path)
             self.run_cmd("lsmcode --path=%s" % copyfile_path)
-        path_tar = process.system_output("find /var/lib/lsvpd/ -iname vpd.*.gz"
-                                         " | head -1", shell=True).strip()
+        path_tar = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.*.gz"
+                                    " | head -1")
         if path_tar:
             self.run_cmd("lsmcode --zip=%s" % path_tar)
         self.error_check()
@@ -111,10 +116,9 @@ class RASTools(Test):
                       "==")
         self.run_cmd("drmgr -h")
         self.run_cmd("drmgr -C")
-        lcpu_count = process.system_output("lparstat -i | "
-                                           "grep \"Online Virtual CPUs\" | "
-                                           "cut -d':' -f2",
-                                           shell=True).strip()
+        lcpu_count = self.run_cmd_out("lparstat -i | "
+                                      "grep \"Online Virtual CPUs\" | "
+                                      "cut -d':' -f2")
         if lcpu_count:
             lcpu_count = int(lcpu_count)
             if lcpu_count >= 2:
@@ -146,8 +150,8 @@ class RASTools(Test):
         if not IS_KVM_GUEST:
             self.run_cmd("lsslot -c cpu -b")
         self.run_cmd("lsslot -c pci -o")
-        slot = process.system_output("lsslot | cut -d' ' -f1 | head -2 | "
-                                     "tail -1", shell=True).strip()
+        slot = self.run_cmd_out("lsslot | cut -d' ' -f1 | head -2"
+                                " | tail -1")
         if slot:
             self.run_cmd("lsslot -s %s" % slot)
         self.error_check()
@@ -188,13 +192,15 @@ class RASTools(Test):
                       "=====")
         self.run_cmd("ofpathname -h")
         self.run_cmd("ofpathname -V")
-        disk_name = process.system_output("df -h | egrep '(s|v)da[1-8]' | "
-                                          "tail -1 | cut -d' ' -f1",
-                                          shell=True).strip()
+        disk_name = self.run_cmd_out("df -h | egrep '(s|v)da[1-8]' |"
+                                     " tail -1 | cut -d' ' -f1")
+        self.run_cmd("ofpathname -V")
+        disk_name = self.run_cmd_out("df -h | egrep '(s|v)da[1-8]' | "
+                                     "tail -1 | cut -d' ' -f1")
         if disk_name:
             self.run_cmd("ofpathname %s" % disk_name)
-            of_name = process.system_output("ofpathname %s"
-                                            % disk_name).strip()
+            of_name = self.run_cmd_out("ofpathname %s"
+                                       % disk_name)
             self.run_cmd("ofpathname -l %s" % of_name)
         self.error_check()
 
@@ -243,12 +249,10 @@ class RASTools(Test):
     def test13_rtas_event_decode(self):
         self.log.info("===============Executing rtas_event_decode tool test===="
                       "===========")
-        cmd = "rtas_event_decode -w 500 -dv -n 2302 < %s" % self.get_data('rtas')
-        cmd_result = process.run(cmd, ignore_status=True, sudo=True, shell=True)
+        cmd = "rtas_event_decode -w 500 -dv -n 2302 < %s" % self.get_data(
+            'rtas')
+        cmd_result = process.run(
+            cmd, ignore_status=True, sudo=True, shell=True)
         if cmd_result.exit_status != 17:
             self.fail("rtas_event_decode tool: %s command failed in "
                       "verification" % cmd)
-
-
-if __name__ == "__main__":
-    main()

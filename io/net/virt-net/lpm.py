@@ -71,7 +71,7 @@ class LPM(Test):
         if not self.hmc_ip:
             self.cancel("HMC IP not got from lsrsrc command")
         self.hmc_user = self.params.get("hmc_username", default='hscroot')
-        self.hmc_pwd = self.params.get("hmc_pwd", '*', default='abc123')
+        self.hmc_pwd = self.params.get("hmc_pwd", '*', default='********')
         self.options = self.params.get("options", default='')
 
         self.lpar = self.get_mcp_component("NodeNameList").split('.')[0]
