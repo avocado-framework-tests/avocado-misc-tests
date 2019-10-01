@@ -5,6 +5,8 @@ peer_password: "*******"
 peer_user: "root"
 host_interfaces: ""
 peer_interfaces: ""
+host_ips: ""
+netmask: ""
 net_ids: ""
 # time limit in minutes
 time_limit: 2
