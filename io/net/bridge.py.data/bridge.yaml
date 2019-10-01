@@ -1,2 +1,4 @@
 interface:
 peer_ip:
+host_ip:
+netmask:

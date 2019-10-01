@@ -9,6 +9,8 @@ Inputs
 interface: interface for which tcpdump is to be run
 count: number of packets
 drop_accepted: interface packet drop accepted in percentage (eg 10 for 10%)
+host-IP : Specify host-IP for ip configuration.
+netmask : specify netmask for ip configuration.
 
 Prerequisites
 -------------

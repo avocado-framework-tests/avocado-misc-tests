@@ -11,6 +11,8 @@ peer_ip			- IP of the Peer interface to be tested
 peer_user_name		- Username in Peer system to be used
 UPERF_SERVER_RUN	- Whether to run netserver in peer or not (1 to run, 0 to not run)
 EXPECTED_THROUGHPUT	- Expected Throughput as a percentage (1-100)
+host-IP                 - Specify host-IP for ip configuration.
+netmask                 - specify netmask for ip configuration.
 
 Requirements:
 -----------------------

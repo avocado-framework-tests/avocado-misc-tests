@@ -30,6 +30,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils import genio
+from avocado.utils import configure_network
 
 
 class NetworkTest(Test):
@@ -58,6 +59,9 @@ class NetworkTest(Test):
         if interface not in interfaces:
             self.cancel("%s interface is not available" % interface)
         self.iface = interface
+        self.ipaddr = self.params.get("host_ip", default="")
+        self.netmask = self.params.get("netmask", default="")
+        configure_network.set_ip(self.ipaddr, self.netmask, self.iface)
         self.peer = self.params.get("peer_ip")
         if not self.peer:
             self.cancel("No peer provided")
@@ -287,6 +291,7 @@ class NetworkTest(Test):
         process.run("rm -rf /tmp/tempfile")
         cmd = "timeout 600 ssh %s \" rm -rf /tmp/tempfile\"" % self.peer
         ret = process.system(cmd, shell=True, verbose=True, ignore_status=True)
+        configure_network.unset_ip(self.iface)
 
 
 if __name__ == "__main__":
