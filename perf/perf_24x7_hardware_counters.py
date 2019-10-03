@@ -46,7 +46,7 @@ class EliminateDomainSuffix(Test):
         """
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        if 'ppc' not in process.system_output("uname -p", ignore_status=True):
+        if 'ppc' not in process.system_output("uname -p", ignore_status=True).decode("utf-8"):
             self.cancel("Processor is not ppc64")
         deps = ['gcc', 'make']
         if 'Ubuntu' in detected_distro.name:
@@ -80,7 +80,7 @@ class EliminateDomainSuffix(Test):
         # Check if its enabled
         result_perf = process.run("%s,domain=2,core=1/ sleep 1"
                                   % self.perf_stat, ignore_status=True)
-        if "not supported" in result_perf.stderr:
+        if "not supported" in result_perf.stderr.decode("utf-8"):
             self.cancel("Please enable lpar to allow collecting"
                         " the 24x7 counters info")
 
@@ -90,7 +90,7 @@ class EliminateDomainSuffix(Test):
                              ' VCPU Home Core\n4: VCPU Home Chip\n5:'
                              ' VCPU Home Node\n6: VCPU Remote Node')
         result = process.run('cat %s/interface/domains' % self.event_sysfs)
-        result_search = pattern.search(result.stdout)
+        result_search = pattern.search(result.stdout.decode("utf-8"))
         if result_search:
             self.log.info('Displayed domain indices in sysfs')
         else:
@@ -98,7 +98,7 @@ class EliminateDomainSuffix(Test):
 
     def test_event_phys_core_param(self):
         result1 = self.event_stat('__PHYS_CORE,core=1/ sleep 1')
-        if "Invalid event/parameter" not in result1.stdout:
+        if "Invalid event/parameter" not in result1.stdout.decode("utf-8"):
             self.fail('perf unable to recognize'
                       ' hv_24x7/HPM_0THRD_NON_IDLE_CCYC__PHYS_CORE'
                       ' has invalid event')
@@ -107,8 +107,8 @@ class EliminateDomainSuffix(Test):
 
     def test_event_wo_domain_param(self):
         result1 = self.event_stat('/ sleep 1')
-        if "invalid or unsupported event" not in result1.stderr or "Required "\
-                "parameter 'domain' not specified" not in result1.stdout:
+        if "invalid or unsupported event" not in result1.stderr.decode("utf-8") or "Required "\
+                "parameter 'domain' not specified" not in result1.stdout.decode("utf-8"):
             self.fail('Domain is not specified, perf unable'
                       ' to recognize it has invalid event')
         else:
@@ -116,7 +116,7 @@ class EliminateDomainSuffix(Test):
 
     def test_event_w_domain_param(self):
         result1 = self.event_stat(',domain=2,core=1/ sleep 1')
-        if "Performance counter stats for" not in result1.stderr:
+        if "Performance counter stats for" not in result1.stderr.decode("utf-8"):
             self.fail('perf unable to recognize domain name'
                       ' in param=value format')
         else:
@@ -128,7 +128,7 @@ class EliminateDomainSuffix(Test):
     def test_check_all_domains(self):
         for domain in range(1, 6):
             result1 = self.event_stat(',domain=%s,core=1/ sleep 1' % domain)
-            if "Performance counter stats for" not in result1.stderr:
+            if "Performance counter stats for" not in result1.stderr.decode("utf-8"):
                 self.fail('perf unable to recognize domain name in'
                           ' param=value format for all domains')
             else:
@@ -138,7 +138,7 @@ class EliminateDomainSuffix(Test):
     def test_event_w_chip_param(self):
         event_out = process.run("cat %s/events/"
                                 "PM_PB_CYC" % self.event_sysfs)
-        if "chip=?" in event_out.stdout:
+        if "chip=?" in event_out.stdout.decode("utf-8"):
             self.log.info('sysfs entry has chip entry')
         else:
             self.fail('sysfs does not have chip entry')
@@ -151,14 +151,14 @@ class EliminateDomainSuffix(Test):
     def test_event_wo_chip_param(self):
         cmd = "hv_24x7/PM_PB_CYC,domain=1/ /bin/true"
         chip_miss = self.event_stat1(cmd)
-        if "Required parameter 'chip' not specified" not in chip_miss.stdout:
+        if "Required parameter 'chip' not specified" not in chip_miss.stdout.decode("utf-8"):
             self.fail('perf unable to detect chip'
                       ' parameter missing')
         else:
             self.log.info('perf detected chip parameter missing')
         cmd = "hv_24x7/PM_PB_CYC,domain=1,chip=1/ /bin/true"
         output_chip = self.event_stat1(cmd)
-        if "Performance counter stats for" not in output_chip.stderr:
+        if "Performance counter stats for" not in output_chip.stderr.decode("utf-8"):
             self.fail('performance counter stats for missing')
 
     def test_domain_chip_offset(self):
@@ -171,7 +171,7 @@ class EliminateDomainSuffix(Test):
         search_suffix = process.run('ls %s/events |grep -E '
                                     '%s' % (self.event_sysfs, event),
                                     ignore_status=True)
-        if search_suffix.stdout:
+        if search_suffix.stdout.decode("utf-8"):
             self.fail('Found %s  suffixes in event name' % event)
         else:
             self.log.info('No %s  suffixes in event name', event)
