@@ -38,14 +38,14 @@ class Avago9361(Test):
         """
         self.controller = int(self.params.get('controller', default='0'))
         self.tool = str(self.params.get('tool_location'))
-        self.disk = str(self.params.get('disk')).split(" ")
+        self.disk = str(self.params.get('vd_disk')).split(" ")
         self.raid_level = str(self.params.get('raid_level', default='0'))
         self.size = str(self.params.get('size', default='all'))
         self.on_off = str(self.params.get('on_off'))
         self.hotspare = str(self.params.get('hotspare'))
         self.copyback = self.on_off.replace("e", "").replace("s", "").replace(
             "/", ":")
-        self.add_disk = str(self.params.get('add_disk')).split(" ")
+        self.add_disk = str(self.params.get('add_vd_disk')).split(" ")
         if not self.hotspare:
             self.cancel("Hotspare test needs a drive to create/test hotspare")
         if not self.on_off:
