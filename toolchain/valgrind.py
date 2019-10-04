@@ -71,7 +71,7 @@ class Valgrind(Test):
         flag = False
         results = build.run_make(
             self.sourcedir, extra_args=cmd,
-            process_kwargs={'ignore_status': True}).stdout
+            process_kwargs={'ignore_status': True}).stdout.decode('utf-8')
         for line in results.splitlines():
             if line.startswith('==') and line.endswith('=='):
                 flag = True
