@@ -128,14 +128,14 @@ class Lvsetup(Test):
         self.create_lv()
         self.mount_unmount_lv()
 
-    @avocado.fail_on(lv_utils.LVException)
-    def test_vg_recreate(self):
-        """
-        Deactivate, export, import and activate a volume group.
-        """
-        self.create_lv()
-        lv_utils.vg_reactivate(self.vg_name, export=True)
-        self.mount_unmount_lv()
+#    @avocado.fail_on(lv_utils.LVException)
+#    def test_vg_recreate(self):
+#        """
+#        Deactivate, export, import and activate a volume group.
+#        """
+#        self.create_lv()
+#        lv_utils.vg_reactivate(self.vg_name, export=True)
+#        self.mount_unmount_lv()
 
     @avocado.fail_on(lv_utils.LVException)
     def test_lv_snapshot(self):
