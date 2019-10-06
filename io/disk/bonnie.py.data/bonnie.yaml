@@ -17,5 +17,5 @@ filesystem: !mux
         fs: 'ext4'
     xfs:
         fs: 'xfs'
-    btrfs:
-        fs: 'btrfs'
+#   btrfs:
+#       fs: 'btrfs'

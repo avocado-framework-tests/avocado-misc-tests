@@ -19,5 +19,5 @@ fs: !mux
         fs: 'ext2'
     xfs:
         fs: 'xfs'
-    btrfs:
-        fs: 'btrfs'
+#   btrfs:
+#       fs: 'btrfs'

@@ -5,8 +5,8 @@ filesystem: !mux
         fs: 'ext4'
     xfs:
         fs: 'xfs'
-    btrfs:
-        fs: 'btrfs'
+#   btrfs:
+#       fs: 'btrfs'
 block: !mux
     4096:
         blocks: 4096

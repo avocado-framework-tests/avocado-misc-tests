@@ -13,8 +13,8 @@ file_system_type: !mux
        fs: 'ext4'
     xfs:
         fs: 'xfs'
-    btrfs:
-        fs: 'btrfs'
+#   btrfs:
+#       fs: 'btrfs'
 seqread: !mux
     yes:
        seq_read: True
