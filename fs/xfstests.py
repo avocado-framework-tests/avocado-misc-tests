@@ -362,7 +362,7 @@ class Xfstests(Test):
         na_detail_re = re.compile(r'(\d{3})\s*(\[not run\])\s*(.*)')
         failed_re = re.compile(r'Failed \d+ of \d+ tests')
 
-        lines = output.split('\n')
+        lines = output.decode("utf-8").split('\n')
         result_line = lines[-3]
 
         error_msg = None
