@@ -32,6 +32,7 @@ from avocado.utils import build
 from avocado.utils import archive
 from avocado.utils import process
 from avocado.utils.genio import read_file
+from avocado.utils.configure_network import PeerInfo, HostInfo
 
 
 class Iperf(Test):
@@ -63,6 +64,14 @@ class Iperf(Test):
             self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
             self.cancel("%s peer machine is not available" % self.peer_ip)
+        self.mtu = self.params.get("mtu", default=1500)
+        self.peerinfo = PeerInfo(self.peer_ip, peer_user=self.peer_user,
+                                 peer_password=self.peer_password)
+        self.peer_interface = self.peerinfo.get_peer_interface(self.peer_ip)
+        if not self.peerinfo.set_mtu_peer(self.peer_interface, self.mtu):
+            self.cancel("Failed to set mtu in peer")
+        if not HostInfo.set_mtu_host(self, self.iface, self.mtu):
+            self.cancel("Failed to set mtu in host")
         iperf_download = self.params.get("iperf_download", default="https:"
                                          "//github.com/esnet/"
                                          "iperf/archive/master.zip")
@@ -163,6 +172,10 @@ class Iperf(Test):
         if exitcode != 0:
             self.fail("Either the ssh to peer machine machine\
                        failed or iperf process was not killed")
+        if not HostInfo.set_mtu_host(self, self.iface, '1500'):
+            self.cancel("Failed to set mtu in host")
+        if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
+            self.cancel("Failed to set mtu in peer")
 
 
 if __name__ == "__main__":
