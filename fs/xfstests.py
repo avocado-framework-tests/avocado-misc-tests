@@ -78,13 +78,15 @@ class Xfstests(Test):
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
                              'openssl-devel', 'xfsprogs-devel'])
 
-            if self.detected_distro.name == 'rhel' and\
-                    self.detected_distro.version.startswith('8'):
-                packages.remove('indent')
             if self.detected_distro.name == 'SuSE':
                 packages.extend(['libbtrfs-devel', 'libcap-progs'])
             else:
                 packages.extend(['btrfs-progs-devel'])
+
+            if self.detected_distro.name == 'rhel' and\
+                    self.detected_distro.version.startswith('8'):
+                packages.remove('indent')
+                packages.remove('btrfs-progs-devel')
 
             if self.detected_distro.name in ['centos', 'fedora']:
                 packages.extend(['fio', 'dbench'])
