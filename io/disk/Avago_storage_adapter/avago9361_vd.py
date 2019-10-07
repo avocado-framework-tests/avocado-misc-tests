@@ -38,14 +38,14 @@ class Avago9361(Test):
         """
         self.controller = int(self.params.get('controller', default='0'))
         self.tool = str(self.params.get('tool_location'))
-        self.disk = str(self.params.get('disk')).split(" ")
+        self.disk = str(self.params.get('vd_disk')).split(" ")
         self.raid_level = str(self.params.get('raid_level', default='0'))
         self.size = str(self.params.get('size', default='all'))
         self.on_off = str(self.params.get('on_off'))
         self.hotspare = str(self.params.get('hotspare'))
         self.copyback = self.on_off.replace("e", "").replace("s", "").replace(
             "/", ":")
-        self.add_disk = str(self.params.get('add_disk')).split(" ")
+        self.add_disk = str(self.params.get('add_vd_disk')).split(" ")
         if not self.hotspare:
             self.cancel("Hotspare test needs a drive to create/test hotspare")
         if not self.on_off:
@@ -84,6 +84,20 @@ class Avago9361(Test):
         self.stripe = [64, 128, 256, 512, 1024]
         self.state = ['start', 'stop', 'start', 'pause', 'resume']
         self.list_test = ['online_offline', 'rebuild']
+        cmd = "%s /c%d set jbod=on" % (self.tool, self.controller)
+        if process.system(cmd, shell=True, ignore_status=True) != 0:
+            self.log.info(" Good.. JBOD mode already set, Ignore the Error as it is pre-setup")
+        time.sleep(5)
+        cmd = "%s /c%d/vall delete force" % (self.tool, self.controller)
+        if process.system(cmd, shell=True, ignore_status=True) != 0:
+            self.log.info(" As required,  No Virtual Drives are Available. Ignore the Error as it is pre-setup")
+        cmd = "%s /c%d set jbod=off" % (self.tool, self.controller)
+        if process.system(cmd, shell=True, ignore_status=True) != 0:
+            self.log.info("As required, Controller is already in non-JBOD mode!!, Ignore the Error as it is pre-setup")
+        cmd = "%s /c%d/eall/sall set good force" % (self.tool, self.controller)
+        if process.system(cmd, shell=True, ignore_status=True) != 0:
+            self.log.info("As required Drives are Already Set to good!!, Ignore the Error as it is pre-setup")
+        time.sleep(10)
         if str(self.name) in self.list_test:
             cmd = "%s /c%d set autorebuild=off" % (self.tool, self.controller)
             self.check_pass(cmd, "Failed to set auto rebuild off")
@@ -146,12 +160,8 @@ class Avago9361(Test):
         self.check_pass(cmd, "Failed to set JBOD on")
         cmd = "%s /c%d show jbod" % (self.tool, self.controller)
         self.check_pass(cmd, "Failed to show the JBOD status")
-        cmd = "%s /c%d/eall/sall set jbod" % (self.tool, self.controller)
-        self.check_pass(cmd, "Failed to convert the drives to JBOD")
         cmd = "%s /c%d show " % (self.tool, self.controller)
         self.check_pass(cmd, "Failed to show the adapter details")
-        cmd = "%s /c0/eall/sall set good force" % self.tool
-        self.check_pass(cmd, "Failed to set JBOD drives to good")
 
     def test_online_offline(self):
         """
