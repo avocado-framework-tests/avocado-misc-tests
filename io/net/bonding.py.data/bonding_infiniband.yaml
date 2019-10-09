@@ -9,3 +9,4 @@ user_name: "root"
 peer_bond_needed: False 
 peer_wait_time: "10"
 sleep_time: "5"
+peer_password: "********"
