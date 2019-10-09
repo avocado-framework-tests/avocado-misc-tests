@@ -57,6 +57,10 @@ class Lvsetup(Test):
         if self.fs_name == 'xfs':
             pkg = 'xfsprogs'
         if self.fs_name == 'btrfs':
+            if distro.detect().name == "rhel" and \
+               int(distro.detect().version) >= 7 and \
+               int(distro.detect().release) >= 4 :
+                self.cancel("btrfs is not supported with RHEL 7.4 onwards")
             if distro.detect().name == 'SuSE':
                 pkg = 'btrfsprogs'
             else:
