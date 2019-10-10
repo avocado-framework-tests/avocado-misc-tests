@@ -41,7 +41,7 @@ class Oprofile(Test):
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        git.get_repo('git://git.code.sf.net/p/oprofile/oprofile-tests',
+        git.get_repo("https://git.code.sf.net/p/oprofile/oprofile-tests" ,
                      destination_dir=self.workdir)
         os.chdir(self.workdir)
         os.chdir("testsuite/")
