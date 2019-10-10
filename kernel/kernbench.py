@@ -49,6 +49,8 @@ class Kernbench(Test):
             build.make(self.sourcedir, extra_args='defconfig')
         else:
             build.make(self.sourcedir, extra_args='olddefconfig')
+        if 'rhel' in self.detected_distro.name:
+            self.rhel_config_fix()
         if make_opts:
             build_string = "/usr/bin/time -o %s make %s -j %s vmlinux" % (
                 timefile, make_opts, threads)
@@ -79,29 +81,38 @@ class Kernbench(Test):
             results.append(tuple([self.to_seconds(elt) for elt in result]))
         return results
 
+    def rhel_config_fix(self):
+        '''
+        In Rhel Based Distro kernel build is failing as system config file
+        has crypto module . This work around disabled those so it allow to
+        build kernel
+        '''
+        process.system("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYS/#&/g' .config",
+                       shell=True, sudo=True)
+        process.system("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYRING/#&/g' .config",
+                       shell=True, sudo=True)
+        process.system("sed -i 's/^.*CONFIG_MODULE_SIG_KEY/#&/g' .config",
+                       shell=True, sudo=True)
+
     def setUp(self):
         """
         Setting up the env for the kernel building
         """
         smg = SoftwareManager()
-        detected_distro = distro.detect()
+        self.detected_distro = distro.detect()
         deps = ['gcc', 'make', 'automake', 'autoconf', 'time', 'bison', 'flex']
-        if 'Ubuntu' in detected_distro.name:
+        if 'Ubuntu' in self.detected_distro.name:
             deps.extend(['libpopt0', 'libc6', 'libc6-dev', 'libpopt-dev',
                          'libcap-ng0', 'libcap-ng-dev', 'elfutils', 'libelf1',
                          'libnuma-dev', 'libfuse-dev', 'libssl-dev'])
-        elif 'SuSE' in detected_distro.name:
+        elif 'SuSE' in self.detected_distro.name:
             deps.extend(['libpopt0', 'glibc', 'glibc-devel',
                          'popt-devel', 'libcap2', 'libcap-devel',
                          'libcap-ng-devel', 'openssl-devel'])
-        elif detected_distro.name in ['centos', 'fedora', 'rhel']:
+        elif self.detected_distro.name in ['centos', 'fedora', 'rhel']:
             deps.extend(['popt', 'glibc', 'glibc-devel', 'libcap-ng',
                          'libcap', 'libcap-devel', 'elfutils-libelf',
                          'elfutils-libelf-devel', 'openssl-devel'])
-            process.system("cp /boot/config* /tmp", shell=True, sudo=True)
-            process.system("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYS/#&/g' /boot/config*", shell=True, sudo=True)
-            process.system("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYRING/#&/g' /boot/config*", shell=True, sudo=True)
-            process.system("sed -i 's/^.*CONFIG_MODULE_SIG_KEY/#&/g' /boot/config*", shell=True, sudo=True)
 
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
@@ -148,9 +159,6 @@ class Kernbench(Test):
         self.log.info("User      : %s", user_time)
         self.log.info("System    : %s", system_time)
         self.log.info("Elapsed   : %s", elapsed_time)
-        detected_distro = distro.detect()
-        if detected_distro.name in ['centos', 'fedora', 'rhel']:
-            process.system("mv -f /tmp/config* /boot/", shell=True, sudo=True)
 
 
 if __name__ == "__main__":
