@@ -48,8 +48,15 @@ class HtxTest(Test):
             self.cancel("Supported only on Power Architecture")
 
         self.mdt_file = self.params.get('mdt_file', default='mdt.mem')
-        self.time_limit = int(self.params.get('time_limit', default=2)) * 60
+        self.time_limit = int(self.params.get('time_limit', default=2))
+        self.time_unit = self.params.get('time_unit', default='m')
         self.failed = False
+        if self.time_unit == 'm':
+            self.time_limit = self.time_limit * 60
+        elif self.time_unit == 'h':
+            self.time_limit = self.time_limit * 3600
+        else:
+            self.cancel("running time unit is not proper, please pass as 'm' or 'h' ")
         if str(self.name.name).endswith('test_start'):
             # Build HTX only at the start phase of test
             self.setup_htx()
