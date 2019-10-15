@@ -61,7 +61,7 @@ class NetworkTest(Test):
         self.peer = self.params.get("peer_ip")
         if not self.peer:
             self.cancel("No peer provided")
-        if not self.ping_check("-c 2"):
+        if not self.ping_check("-c 10"):
             self.cancel("No connection to peer")
         self.mtu = self.params.get("mtu", default=1500)
 
@@ -111,7 +111,7 @@ class NetworkTest(Test):
         '''
         Flood ping to peer machine
         '''
-        if not self.ping_check("-c 1000 -f"):
+        if not self.ping_check("-c 5000 -f"):
             self.fail("flood ping test failed")
 
     def test_ssh(self):
@@ -148,7 +148,7 @@ class NetworkTest(Test):
         '''
         Test jumbo frames
         '''
-        if not self.ping_check("-i 0.1 -c 30 -s %d" % (int(self.mtu) - 28)):
+        if not self.ping_check("-i 0.1 -c 5000 -f -s %d" % (int(self.mtu) - 28)):
             self.fail("jumbo frame test failed")
 
     def test_statistics(self):
@@ -159,7 +159,7 @@ class NetworkTest(Test):
         tx_file = "/sys/class/net/%s/statistics/tx_packets" % self.iface
         rx_before = genio.read_file(rx_file)
         tx_before = genio.read_file(tx_file)
-        self.ping_check("-c 5")
+        self.ping_check("-c 5000 -f")
         rx_after = genio.read_file(rx_file)
         tx_after = genio.read_file(tx_file)
         if (rx_after <= rx_before) or (tx_after <= tx_before):
@@ -235,7 +235,7 @@ class NetworkTest(Test):
             if not self.receive_offload_state_change(ro_type,
                                                      ro_type_full, state):
                 self.fail("%s %s failed" % (ro_type, state))
-            if not self.ping_check("-c 5"):
+            if not self.ping_check("-c 50000 -f"):
                 self.fail("ping failed in %s %s" % (ro_type, state))
 
     def receive_offload_state_change(self, ro_type, ro_type_full, state):
