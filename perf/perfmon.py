@@ -50,7 +50,7 @@ class Perfmon(Test):
     def test(self):
 
         out = process.system_output('%s ' % os.path.join(
-            self.workdir, 'tests/validate'))
+            self.workdir, 'tests/validate')).decode("utf-8")
         if 'fail' in out:
             self.fail("test failed:check manually")
 
