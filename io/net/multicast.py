@@ -26,6 +26,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.ssh import Session
 from avocado.utils import process
 from avocado.utils import distro
+from avocado.utils import configure_network
 
 
 class ReceiveMulticastTest(Test):
@@ -42,6 +43,13 @@ class ReceiveMulticastTest(Test):
         self.user = self.params.get("user_name", default="root")
         self.peer_password = self.params.get("peer_password",
                                              '*', default="passw0rd")
+        interfaces = netifaces.interfaces()
+        self.iface = self.params.get("interface", default="")
+        if self.iface not in interfaces:
+            self.cancel("%s interface is not available" % self.iface)
+        self.ipaddr = self.params.get("host_ip", default="")
+        self.netmask = self.params.get("netmask", default="")
+        configure_network.set_ip(self.ipaddr, self.netmask, self.iface)
         self.session = Session(self.peer, user=self.user,
                                password=self.peer_password)
         self.count = self.params.get("count", default="500000")
@@ -57,10 +65,6 @@ class ReceiveMulticastTest(Test):
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
-        interfaces = netifaces.interfaces()
-        self.iface = self.params.get("interface")
-        if self.iface not in interfaces:
-            self.cancel("%s interface is not available" % self.iface)
         if self.peer == "":
             self.cancel("peer ip should specify in input")
         cmd = "ip addr show  | grep %s" % self.peer
@@ -114,6 +118,7 @@ class ReceiveMulticastTest(Test):
         if process.system(cmd, shell=True, verbose=True,
                           ignore_status=True) != 0:
             self.log.info("unable to unset all mulicast option")
+        configure_network.unset_ip(self.iface)
 
 
 if __name__ == "__main__":

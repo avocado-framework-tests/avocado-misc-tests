@@ -31,6 +31,7 @@ from avocado.utils import archive
 from avocado.utils import process
 from avocado.utils.ssh import Session
 from avocado.utils.genio import read_file
+from avocado.utils import configure_network
 
 
 class Uperf(Test):
@@ -46,6 +47,13 @@ class Uperf(Test):
         self.peer_user = self.params.get("peer_user_name", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="passw0rd")
+        interfaces = netifaces.interfaces()
+        self.iface = self.params.get("interface", default="")
+        if self.iface not in interfaces:
+            self.cancel("%s interface is not available" % self.iface)
+        self.ipaddr = self.params.get("host_ip", default="")
+        self.netmask = self.params.get("netmask", default="")
+        configure_network.set_ip(self.ipaddr, self.netmask, self.iface)
         self.session = Session(self.peer_ip, user=self.peer_user,
                                password=self.peer_password)
         smm = SoftwareManager()
@@ -63,10 +71,6 @@ class Uperf(Test):
             if not output.exit_status == 0:
                 self.cancel("unable to install the package %s on peer machine "
                             % pkg)
-        interfaces = netifaces.interfaces()
-        self.iface = self.params.get("interface", default="")
-        if self.iface not in interfaces:
-            self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
             self.cancel("%s peer machine is not available" % self.peer_ip)
         uperf_download = self.params.get("uperf_download", default="https:"
@@ -132,6 +136,7 @@ class Uperf(Test):
         if not output.exit_status == 0:
             self.fail("Either the ssh to peer machine machine\
                        failed or uperf process was not killed")
+        configure_network.unset_ip(self.iface)
 
 
 if __name__ == "__main__":

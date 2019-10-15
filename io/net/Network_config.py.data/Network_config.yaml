@@ -1,2 +1,4 @@
 Parameters:
     interface: "enP3p1s0f0"
+    host_ip: ""
+    netmask: ""
