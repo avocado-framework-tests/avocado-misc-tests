@@ -72,14 +72,14 @@ class Perftool(Test):
         '''
         count = 0
         # Built in perf test
-        for string in process.run("perf test", ignore_status=True).stderr.splitlines():
+        for string in process.run("perf test", ignore_status=True).stderr.decode("utf-8").splitlines():
             if 'FAILED' in string:
                 self.log.info("Test case failed is %s" % string)
 
         # perf testsuite
         for line in build.run_make(self.sourcedir, extra_args='check',
                                    process_kwargs={'ignore_status': True}
-                                   ).stdout.splitlines():
+                                   ).stdout.decode("utf-8").splitlines():
             if '-- [ FAIL ] --' in line:
                 count += 1
                 self.log.info(line)

@@ -57,7 +57,7 @@ class perf_c2c(Test):
 
         # Check for c2c is available in the system.
         output = process.run('perf mem record -e list')
-        if 'ldlat-stores' in output.stderr or 'ldlat-loads' in output.stderr:
+        if 'ldlat-stores' in output.stderr.decode("utf-8") or 'ldlat-loads' in output.stderr.decode("utf-8"):
             self.log.info("perf c2c is available")
         else:
             self.cancel('perf c2c is not available')
@@ -73,11 +73,11 @@ class perf_c2c(Test):
         process.run("dmesg -C", sudo=True)
 
     def verify_dmesg(self):
-        self.whiteboard = process.system_output("dmesg")
+        self.whiteboard = process.system_output("dmesg").decode("utf-8")
         pattern = ['WARNING: CPU:', 'Oops',
                    'Segfault', 'soft lockup', 'Unable to handle']
         for fail_pattern in pattern:
-            if fail_pattern in self.whiteboard:
+            if 'fail_pattern' in self.whiteboard:
                 self.fail("Test Failed : %s in dmesg" % fail_pattern)
 
     def run_cmd(self, cmd):

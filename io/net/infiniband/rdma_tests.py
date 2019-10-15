@@ -21,15 +21,12 @@ RDMA test for infiniband adaptors
 
 
 import time
-try:
-    import pxssh
-except ImportError:
-    from pexpect import pxssh
 import netifaces
 from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process, distro
+from avocado.utils.ssh import Session
 
 
 class RDMA(Test):
@@ -59,8 +56,9 @@ class RDMA(Test):
         self.peer_ip = self.params.get("peer_ip", default="")
         self.peer_user = self.params.get("peer_user_name", default="root")
         self.peer_password = self.params.get("peer_password", '*',
-                                             default="********")
-        self.peer_login(self.peer_ip, self.peer_user, self.peer_password)
+                                             default="passw0rd")
+        self.session = Session(self.peer_ip, user=self.peer_user,
+                               password=self.peer_password)
         if self.iface not in interfaces:
             self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
@@ -94,51 +92,9 @@ class RDMA(Test):
             self.cancel("Distro not supported")
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.cancel("Unable to disable firewall")
-        output, exitcode = self.run_command(cmd)
-        if exitcode != 0:
+        output = self.session.cmd(cmd)
+        if not output.exit_status == 0:
             self.cancel("Unable to disable firewall on peer")
-
-    def peer_login(self, ip, username, password):
-        '''
-        SSH Login method for remote peer server
-        '''
-        pxh = pxssh.pxssh()
-        # Work-around for old pxssh not having options= parameter
-        pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
-        pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
-        pxh.force_password = True
-
-        pxh.login(ip, username, password)
-        pxh.sendline()
-        pxh.prompt(timeout=60)
-        pxh.sendline('exec bash --norc --noprofile')
-        # Ubuntu likes to be "helpful" and alias grep to
-        # include color, which isn't helpful at all. So let's
-        # go back to absolutely no messing around with the shell
-        pxh.set_unique_prompt()
-        self.pxssh = pxh
-
-    def run_command(self, command, timeout=300):
-        '''
-        SSH Run command method for running commands on remote server
-        '''
-        self.log.info("Running the command on peer lpar %s", command)
-        if not hasattr(self, 'pxssh'):
-            self.fail("SSH Console setup is not yet done")
-        con = self.pxssh
-        con.sendline(command)
-        con.expect("\n")  # from us
-        if command.endswith('&'):
-            return ("", 0)
-        con.expect(con.PROMPT, timeout=timeout)
-        output = con.before.splitlines()
-        con.sendline("echo $?")
-        con.prompt(timeout)
-        try:
-            exitcode = int(''.join(con.before.splitlines()[1:]))
-        except Exception as exc:
-            exitcode = 0
-        return (output, exitcode)
 
     def rdma_exec(self, arg1, arg2, arg3):
         '''
@@ -148,8 +104,8 @@ class RDMA(Test):
         logs = "> /tmp/ib_log 2>&1 &"
         cmd = "timeout %s %s -d %s -i %s %s %s %s" \
             % (self.tmo, arg1, self.peer_ca, self.peer_port, arg2, arg3, logs)
-        output, exitcode = self.run_command(cmd)
-        if exitcode != 0:
+        output = self.session.cmd(cmd)
+        if not output.exit_status == 0:
             self.fail("ssh failed to remote machine\
                       or  faing data from remote machine failed")
         time.sleep(2)
@@ -161,8 +117,8 @@ class RDMA(Test):
             flag = 1
         self.log.info("server data for %s(%s)", arg1, arg2)
         cmd = "timeout %s cat /tmp/ib_log && rm -rf /tmp/ib_log" % (self.tmo)
-        output, exitcode = self.run_command(cmd)
-        if exitcode != 0:
+        output = self.session.cmd(cmd)
+        if not output.exit_status == 0:
             self.fail("ssh failed to remote machine\
                       or fetching data from remote machine failed")
         return flag

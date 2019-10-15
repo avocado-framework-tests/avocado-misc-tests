@@ -118,7 +118,7 @@ class Lshwrun(Test):
         which produces similar info of hardware.
         """
         # verifying mac address
-        mac = self.run_cmd_out("ip addr | awk '/ether/ {print $2} | head -1")
+        mac = self.run_cmd_out("ip addr | awk '/ether/ {print $2}' | head -1")
         if mac not in self.run_cmd_out("lshw"):
             self.fail("lshw failed to show correct mac address")
 

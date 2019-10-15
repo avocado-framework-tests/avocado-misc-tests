@@ -62,7 +62,7 @@ class PCP(Test):
     def test_pmcd_daemon(self):
         output = process.run("systemctl start pmcd", shell=True)
         output = process.run("systemctl status pmcd", shell=True)
-        if "active (running)" not in output.stdout:
+        if "active (running)" not in output.stdout.decode("utf-8"):
             self.fail("PCP: Can not start pmcd daemon")
 
     def test_pmda_perfevent_install(self):
@@ -71,16 +71,16 @@ class PCP(Test):
         os.chdir("/var/lib/pcp/pmdas/perfevent/")
         cmd = "echo pipe | ./Install"
         output = process.run(cmd, shell=True)
-        if "Check perfevent metrics have appeared" not in output.stdout:
+        if "Check perfevent metrics have appeared" not in output.stdout.decode("utf-8"):
             self.fail("PCP: perfevent pmda install failed.")
         process.run("systemctl restart pmcd", shell=True)
         output = process.run("systemctl status pmcd", shell=True)
-        if "active (running)" and "pmdaperfevent" not in output.stdout:
+        if "active (running)" and "pmdaperfevent" not in output.stdout.decode("utf-8"):
             self.fail("PCP: perfevent pmda not reflected in pmcd daemon")
 
     def test_pcp_cmd(self):
         output = process.run("pcp", shell=True)
-        if "Cannot connect to PMCD" in output.stdout:
+        if "Cannot connect to PMCD" in output.stdout.decode("utf-8"):
             self.fail("PCP: pmcd daemon dead")
 
     def test_perfevent_24x7_events(self):
@@ -98,11 +98,11 @@ class PCP(Test):
         os.chdir("/var/lib/pcp/pmdas/perfevent/")
         cmd = "./Remove"
         output = process.run(cmd, shell=True)
-        if "perfevent metrics have gone away ... OK" not in output.stdout:
+        if "perfevent metrics have gone away ... OK" not in output.stdout.decode("utf-8"):
             self.fail("PCP: perfevent pmda removal failed.")
         process.run("systemctl restart pmcd", shell=True)
         output = process.run("systemctl status pmcd", shell=True)
-        if "active (running)" and "pmdaperfevent" in output.stdout:
+        if "active (running)" and "pmdaperfevent" in output.stdout.decode("utf-8"):
             self.fail("PCP: perfevent pmda not removed from pmcd daemon")
 
 

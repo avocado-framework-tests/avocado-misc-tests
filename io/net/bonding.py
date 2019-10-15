@@ -27,10 +27,6 @@ import os
 import socket
 import fcntl
 import struct
-try:
-    import pxssh
-except ImportError:
-    from pexpect import pxssh
 import netifaces
 from avocado import main
 from avocado import Test
@@ -39,6 +35,7 @@ from avocado.utils import distro
 from avocado.utils import process
 from avocado.utils import linux_modules
 from avocado.utils import genio
+from avocado.utils.ssh import Session
 
 
 class Bonding(Test):
@@ -73,7 +70,7 @@ class Bonding(Test):
         interfaces = netifaces.interfaces()
         self.user = self.params.get("user_name", default="root")
         self.password = self.params.get("peer_password", '*',
-                                        default="********")
+                                        default="passw0rd")
         self.host_interfaces = self.params.get("bond_interfaces",
                                                default="").split(",")
         if not self.host_interfaces:
@@ -96,51 +93,10 @@ class Bonding(Test):
                                                 default=False)
         self.peer_wait_time = self.params.get("peer_wait_time", default=5)
         self.sleep_time = int(self.params.get("sleep_time", default=5))
-        self.peer_login(self.peer_first_ipinterface, self.user, self.password)
+        self.session = Session(self.peer_first_ipinterface, user=self.user,
+                               password=self.password)
         self.setup_ip()
         self.err = []
-
-    def peer_login(self, ip, username, password):
-        '''
-        SSH Login method for remote peer server
-        '''
-        pxh = pxssh.pxssh(encoding='utf-8')
-        # Work-around for old pxssh not having options= parameter
-        pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
-        pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
-        pxh.force_password = True
-
-        pxh.login(ip, username, password)
-        pxh.sendline()
-        pxh.prompt(timeout=60)
-        pxh.sendline('exec bash --norc --noprofile')
-        # Ubuntu likes to be "helpful" and alias grep to
-        # include color, which isn't helpful at all. So let's
-        # go back to absolutely no messing around with the shell
-        pxh.set_unique_prompt()
-        self.pxssh = pxh
-
-    def run_command(self, command, timeout=300):
-        '''
-        SSH Run command method for running commands on remote server
-        '''
-        self.log.info("Running the command on peer lpar %s", command)
-        if not hasattr(self, 'pxssh'):
-            self.fail("SSH Console setup is not yet done")
-        con = self.pxssh
-        con.sendline(command)
-        con.expect("\n")  # from us
-        if command.endswith('&'):
-            return ("", 0)
-        con.expect(con.PROMPT, timeout=timeout)
-        output = con.before.splitlines()
-        con.sendline("echo $?")
-        con.prompt(timeout)
-        try:
-            exitcode = int(''.join(con.before.splitlines()[1:]))
-        except Exception as exc:
-            exitcode = 0
-        return (output, exitcode)
 
     def setup_ip(self):
         '''
@@ -150,9 +106,11 @@ class Bonding(Test):
             interface = self.host_interfaces[0]
         else:
             interface = self.bond_name
-        cmd = "ip addr show  | grep %s | grep -oE '[^ ]+$'"\
-              % self.peer_first_ipinterface
-        self.peer_first_interface = self.run_command(cmd)[0]
+        cmd = "ip addr show  | grep %s" % self.peer_first_ipinterface
+        output = self.session.cmd(cmd)
+        result = ""
+        result = result.join(output.stdout.decode("utf-8"))
+        self.peer_first_interface = result.split()[0]
         if self.peer_first_interface == "":
             self.fail("test failed because peer interface can not retrieved")
         self.peer_ips = [self.peer_first_ipinterface]
@@ -205,8 +163,8 @@ class Bonding(Test):
             cmd += 'ip addr add %s/%s dev %s;ip link set %s up;sleep 5;'\
                    % (self.peer_first_ipinterface, self.net_mask[0],
                       self.peer_first_interface, self.peer_first_interface)
-            output, exitcode = self.run_command(cmd)
-            if exitcode != 0:
+            output = self.session.cmd(cmd)
+            if not output.exit_status == 0:
                 self.log.info("bond removing command failed in peer machine")
 
     def ping_check(self):
@@ -341,8 +299,8 @@ class Bonding(Test):
             cmd += 'ip addr add %s/%s dev %s;ip link set %s up;sleep 5;'\
                    % (self.peer_first_ipinterface, self.net_mask[0],
                       self.bond_name, self.bond_name)
-            output, exitcode = self.run_command(cmd)
-            if exitcode != 0:
+            output = self.session.cmd(cmd)
+            if not output.exit_status == 0:
                 self.fail("bond setup command failed in peer machine")
 
     def test_setup(self):
@@ -351,8 +309,8 @@ class Bonding(Test):
         work for multiple interfaces on both host and peer
         '''
         cmd = "[ -d %s ]" % self.bond_dir
-        output, exitcode = self.run_command(cmd)
-        if exitcode == 0:
+        output = self.session.cmd(cmd)
+        if output.exit_status == 0:
             self.fail("bond name already exists on peer machine")
         if os.path.isdir(self.bond_dir):
             self.fail("bond name already exists on local machine")
@@ -397,8 +355,8 @@ class Bonding(Test):
             for val in self.peer_interfaces:
                 cmd = "ip link set %s up; ifup %s; sleep %s"\
                       % (val, val, self.peer_wait_time)
-                output, exitcode = self.run_command(cmd)
-                if exitcode != 0:
+                output = self.session.cmd(cmd)
+                if not output.exit_status == 0:
                     self.log.warn("unable to bring to original state in peer")
                 time.sleep(self.sleep_time)
         self.error_check()
