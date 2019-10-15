@@ -23,6 +23,7 @@ This test needs to be run as root.
 """
 
 import netifaces
+import time
 from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
@@ -70,6 +71,16 @@ class Ethtool(Test):
         cmd = "ip link set dev %s %s" % (interface, state)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             return False
+        if state == "up":
+            for _ in range(0, 120, 10):
+                self.log.info("Waiting for Interface %s to come up \
+                     (Max wait 2 min)", interface)
+                if 'state UP' in process.system_output("ip link \
+                        show %s" % interface, shell=True):
+                    self.log.info("Interface %s is successful Up",\
+                        interface)
+                    break
+                time.sleep(10)
         if status != self.interface_link_status(interface):
             return False
         return True
