@@ -46,7 +46,7 @@ class Uperf(Test):
         self.peer_ip = self.params.get("peer_ip", default="")
         self.peer_user = self.params.get("peer_user_name", default="root")
         self.peer_password = self.params.get("peer_password", '*',
-                                             default="passw0rd")
+                                             default="None")
         interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface", default="")
         if self.iface not in interfaces:

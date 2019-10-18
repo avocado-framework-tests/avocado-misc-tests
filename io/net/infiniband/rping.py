@@ -81,7 +81,7 @@ class Rping(Test):
         self.option = self.option.replace("peer_ip", self.peer_ip)
         self.peer_user = self.params.get("peer_user_name", default="root")
         self.peer_password = self.params.get("peer_password", '*',
-                                             default="passw0rd")
+                                             default="None")
         self.session = Session(self.peer_ip, user=self.peer_user,
                                password=self.peer_password)
         self.option = self.option.replace("interface", self.iface)
