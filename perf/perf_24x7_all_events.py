@@ -26,7 +26,6 @@ class hv_24x7_all_events(Test):
 
     """
     This tests all hv_24x7 events
-    :avocado: tags=perf,24x7,events
     """
     # Initializing fail command list
     fail_cmd = list()
@@ -96,7 +95,7 @@ class hv_24x7_all_events(Test):
 
         # Collect all hv_24x7 events
         self.list_of_hv_24x7_events = []
-        for line in process.get_perf_events('hv_24x7'):
+        for line in process.get_command_output_matching('perf list', 'hv_24x7'):
             line = line.split(',')[0].split('/')[1]
             self.list_of_hv_24x7_events.append(line)
 
