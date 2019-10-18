@@ -105,7 +105,7 @@ class Iperf(Test):
         result = process.run(cmd, shell=True, ignore_status=True)
         if result.exit_status:
             self.fail("FAIL: Iperf Run failed")
-        for line in result.stdout.deocde("utf-8").splitlines():
+        for line in result.stdout.decode("utf-8").splitlines():
             if 'sender' in line:
                 tput = int(line.split()[6].split('.')[0])
                 if tput < (int(self.expected_tp) * speed) / 100:
