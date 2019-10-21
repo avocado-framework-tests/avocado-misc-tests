@@ -14,6 +14,7 @@
 # Copyright: 2016 IBM
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 
+import re
 import os
 from avocado import Test
 from avocado import main
@@ -46,10 +47,8 @@ class GSL(Test):
     def test(self):
         process.run("make -k check", ignore_status=True, sudo=True)
         logfile = os.path.join(self.logdir, "stdout")
-        if process.system_output("grep -Eai 'FAIL:  [1-9]' %s" %
-                                 logfile, shell=True, ignore_status=True):
-            process.run("grep -Eai 'Making check in|FAIL:  [1-9]' %s" % logfile,
-                        ignore_status=True, sudo=True)
+        match = re.search(r'FAIL:\s+[1-9]', logfile, re.M | re.I)
+        if match:    
             self.fail("test failed, Please check debug log for failed test cases")
 
 
