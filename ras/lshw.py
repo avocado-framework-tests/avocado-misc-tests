@@ -37,7 +37,8 @@ class Lshwrun(Test):
     interface = process.system_output("ip route show")
     active_interface = process.system_output(
         "ip link ls up  | awk -F: '$0 !~ \"lo|vir|^[^0-9]\"{print $2}'"
-        " | cut -d  \" \" -f2 | head -1", shell=True).strip().split()[0]
+        " | cut -d  \" \" -f2 | head -1",
+        shell=True).decode("utf-8").strip().split()[0]
     fail_cmd = list()
 
     def run_cmd(self, cmd):
@@ -54,7 +55,8 @@ class Lshwrun(Test):
     @staticmethod
     def run_cmd_out(cmd):
         return process.system_output(cmd, shell=True,
-                                     ignore_status=True, sudo=True)
+                                     ignore_status=True,
+                                     sudo=True).decode("utf-8")
 
     def setUp(self):
         sm = SoftwareManager()
@@ -116,14 +118,13 @@ class Lshwrun(Test):
         which produces similar info of hardware.
         """
         # verifying mac address
-        mac = process.system_output("ip addr | awk '/ether/ {print $2}'"
-                                    " | head -1", shell=True).strip()
-        if mac not in process.system_output("lshw"):
+        mac = self.run_cmd_out("ip addr | awk '/ether/ {print $2}' | head -1")
+        if mac not in self.run_cmd_out("lshw"):
             self.fail("lshw failed to show correct mac address")
 
         # verify network
         if self.active_interface\
-                not in process.system_output("lshw -class network"):
+                not in self.run_cmd_out("lshw -class network"):
             self.fail("lshw failed to show correct active network interface")
 
     def test_gen_rep(self):
@@ -146,8 +147,8 @@ class Lshwrun(Test):
 
         # verifying the bus info for active network
         if_present = 0
-        lspci_out = process.system_output("lspci -v ")
-        for line in (bus_info.stdout).splitlines():
+        lspci_out = self.run_cmd_out("lspci -v ")
+        for line in (bus_info.stdout.decode("utf-8")).splitlines():
             get_bus_info_act_inter = line.split(' ')[0]
             if get_bus_info_act_inter in lspci_out:
                 if_present = 1
@@ -158,8 +159,8 @@ class Lshwrun(Test):
         """
         sanitize output(remove sensitive information like serial numbers,etc.)
         """
-        out_with_sanitize = process.system_output("lshw -sanitize")
-        for line in process.system_output("lshw").strip('\t\n\r').splitlines():
+        out_with_sanitize = self.run_cmd_out("lshw -sanitize")
+        for line in self.run_cmd_out("lshw").strip('\t\n\r').splitlines():
             if ("serial:" in line) and (line in out_with_sanitize):
                 self.fail("Sensitive data is present in output")
 

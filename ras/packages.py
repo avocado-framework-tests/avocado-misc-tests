@@ -43,7 +43,8 @@ class Package_check(Test):
             for package in self.packages:
                 if "anaconda" in process.system_output("yum list installed "
                                                        "| grep %s | tail -1"
-                                                       % package, shell=True):
+                                                       % package,
+                                                       shell=True).decode("utf-8"):
                     self.log.info(
                         "%s package is installed by default" % package)
                 else:

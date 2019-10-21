@@ -48,7 +48,7 @@ class Xfstests(Test):
         """
         self.use_dd = False
         root_fs = process.system_output(
-            "df -T / | awk 'END {print $2}'", shell=True)
+            "df -T / | awk 'END {print $2}'", shell=True).decode("utf-8")
         if root_fs in ['ext3', 'ext4']:
             self.use_dd = True
         sm = SoftwareManager()
@@ -78,13 +78,15 @@ class Xfstests(Test):
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
                              'openssl-devel', 'xfsprogs-devel'])
 
-            if self.detected_distro.name == 'rhel' and\
-                    self.detected_distro.version.startswith('8'):
-                packages.remove('indent')
             if self.detected_distro.name == 'SuSE':
                 packages.extend(['libbtrfs-devel', 'libcap-progs'])
             else:
                 packages.extend(['btrfs-progs-devel'])
+
+            if self.detected_distro.name == 'rhel' and\
+                    self.detected_distro.version.startswith('8'):
+                packages.remove('indent')
+                packages.remove('btrfs-progs-devel')
 
             if self.detected_distro.name in ['centos', 'fedora']:
                 packages.extend(['fio', 'dbench'])
@@ -289,7 +291,7 @@ class Xfstests(Test):
                 process.run('fallocate -o 0 -l %s %s/file-%s.img' %
                             (loop_size, self.disk_mnt, i), shell=True,
                             sudo=True)
-            dev = process.system_output('losetup -f').strip()
+            dev = process.system_output('losetup -f').decode("utf-8").strip()
             self.devices.append(dev)
             process.run('losetup %s %s/file-%s.img' %
                         (dev, self.disk_mnt, i), shell=True, sudo=True)
@@ -362,7 +364,7 @@ class Xfstests(Test):
         na_detail_re = re.compile(r'(\d{3})\s*(\[not run\])\s*(.*)')
         failed_re = re.compile(r'Failed \d+ of \d+ tests')
 
-        lines = output.split('\n')
+        lines = output.decode("utf-8").split('\n')
         result_line = lines[-3]
 
         error_msg = None

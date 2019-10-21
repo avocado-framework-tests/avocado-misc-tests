@@ -14,3 +14,5 @@ Input Needed (in multiplexer file):
 Interfaces     -   Specify the interface for which the test needs to be run.
 arg            -   Specify the argument that needs to be tested.
 action_elapse  -   Specify action elapse for those arguments that need it.
+host-IP        -   Specify host-IP for ip configuration.
+netmask        -   specify netmask for ip configuration.

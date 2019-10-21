@@ -7,6 +7,8 @@ Inputs Needed To Run Tests:
 peerip ---> IP of the Peer interface to be tested
 user_name---> name of the user
 interface --> host interface through which we get host_ip
+host-IP  ---> Specify host-IP for ip configuration.
+netmask  ---> specify netmask for ip configuration.
 -----------------------
 Requirements:
 -----------------------

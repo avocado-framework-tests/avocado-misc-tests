@@ -34,7 +34,7 @@ class Sysbench(Test):
         process.run("dmesg -C ", sudo=True)
 
     def verify_dmesg(self):
-        self.whiteboard = process.system_output("dmesg")
+        self.whiteboard = process.system_output("dmesg").decode("utf-8")
         pattern = ['WARNING: CPU:', 'Oops',
                    'Segfault', 'soft lockup', 'Unable to handle']
         for fail_pattern in pattern:

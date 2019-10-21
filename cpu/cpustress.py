@@ -37,7 +37,7 @@ errorlog = ['WARNING: CPU:', 'Oops',
 
 
 def collect_dmesg(object):
-    object.whiteboard = process.system_output("dmesg")
+    object.whiteboard = process.system_output("dmesg").decode('utf-8')
 
 
 class cpustresstest(Test):
@@ -68,7 +68,7 @@ class cpustresstest(Test):
         sm = SoftwareManager()
         self.curr_smt = process.system_output(
             "ppc64_cpu --smt | awk -F'=' '{print $NF}' | awk '{print $NF}'",
-            shell=True)
+            shell=True).decode("utf-8")
         for pkg in ['util-linux', 'powerpc-utils', 'numactl']:
             if not sm.check_installed(pkg) and not sm.install(pkg):
                 self.cancel("%s is required to continue..." % pkg)
@@ -82,7 +82,8 @@ class cpustresstest(Test):
     @staticmethod
     def __error_check():
         ERROR = []
-        logs = process.system_output("dmesg -Txl 1,2,3,4").splitlines()
+        logs = process.system_output("dmesg -Txl 1,2,3,4"
+                                     "").decode("utf-8").splitlines()
         for error in errorlog:
             for log in logs:
                 if error in log:
@@ -91,7 +92,8 @@ class cpustresstest(Test):
 
     @staticmethod
     def __isSMT():
-        if 'is not SMT capable' in process.system_output("ppc64_cpu --smt"):
+        if 'is not SMT capable' in process.system_output("ppc64_cpu --smt"
+                                                         "").decode("utf-8"):
             return False
         return True
 
@@ -268,7 +270,7 @@ class cpustresstest(Test):
         if 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
             if "cpu_dlpar=yes" in process.system_output("drmgr -C",
                                                         ignore_status=True,
-                                                        shell=True):
+                                                        shell=True).decode("utf-8"):
                 for _ in range(self.iteration):
                     self.log.info("DLPAR remove cpu operation")
                     init_count = int(multiprocessing.cpu_count())

@@ -75,7 +75,7 @@ class Perf_subsystem(Test):
 
     def analyse_perf_output(self, output):
         self.is_fail = 0
-        for testcase in self.output.splitlines():
+        for testcase in self.output.decode("utf-8").splitlines():
             if "FAILED" in testcase:
                 self.is_fail += 1
             if "UNEXPLAINED" in testcase:

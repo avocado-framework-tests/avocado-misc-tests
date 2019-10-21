@@ -24,16 +24,14 @@ ibv_srq_pingpong
 
 
 import time
-try:
-    import pxssh
-except ImportError:
-    from pexpect import pxssh
 import netifaces
 from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
+from avocado.utils.ssh import Session
+from avocado.utils import configure_network
 
 
 class PingPong(Test):
@@ -53,7 +51,12 @@ class PingPong(Test):
         self.peer_user = self.params.get("peer_user_name", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="passw0rd")
-        self.peer_login(self.peer_ip, self.peer_user, self.peer_password)
+        self.ipaddr = self.params.get("host_ip", default="")
+        self.netmask = self.params.get("netmask", default="")
+        configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
+                                 interface_type='infiniband')
+        self.session = Session(self.peer_ip, user=self.peer_user,
+                               password=self.peer_password)
         if self.iface not in interfaces:
             self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
@@ -91,8 +94,8 @@ class PingPong(Test):
             self.cancel("Distro not supported")
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.cancel("Unable to disable firewall")
-        output, exitcode = self.run_command(cmd)
-        if exitcode != 0:
+        output = self.session.cmd(cmd)
+        if not output.exit_status == 0:
             self.cancel("Unable to disable firewall on peer")
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
@@ -103,53 +106,11 @@ class PingPong(Test):
         self.log.info("test with %s", self.tool_name)
         self.peer_iface = ''
         cmd = "ip addr show"
-        output, exitcode = self.run_command(cmd)
-        for line in output.splitlines():
+        output = self.session.cmd(cmd)
+        for line in output.stdout.decode("utf-8").splitlines():
             if self.peer_ip in line:
                 self.peer_iface = line.split()[-1]
                 break
-
-    def peer_login(self, ip, username, password):
-        '''
-        SSH Login method for remote peer server
-        '''
-        pxh = pxssh.pxssh()
-        # Work-around for old pxssh not having options= parameter
-        pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
-        pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
-        pxh.force_password = True
-
-        pxh.login(ip, username, password)
-        pxh.sendline()
-        pxh.prompt(timeout=60)
-        pxh.sendline('exec bash --norc --noprofile')
-        # Ubuntu likes to be "helpful" and alias grep to
-        # include color, which isn't helpful at all. So let's
-        # go back to absolutely no messing around with the shell
-        pxh.set_unique_prompt()
-        self.pxssh = pxh
-
-    def run_command(self, command, timeout=300):
-        '''
-        SSH Run command method for running commands on remote server
-        '''
-        self.log.info("Running the command on peer lpar %s", command)
-        if not hasattr(self, 'pxssh'):
-            self.fail("SSH Console setup is not yet done")
-        con = self.pxssh
-        con.sendline(command)
-        con.expect("\n")  # from us
-        if command.endswith('&'):
-            return ("", 0)
-        con.expect(con.PROMPT, timeout=timeout)
-        output = con.before.splitlines()
-        con.sendline("echo $?")
-        con.prompt(timeout)
-        try:
-            exitcode = int(''.join(con.before.splitlines()[1:]))
-        except Exception as exc:
-            exitcode = 0
-        return (output, exitcode)
 
     def pingpong_exec(self, arg1, arg2, arg3):
         '''
@@ -162,8 +123,8 @@ class PingPong(Test):
         cmd = "timeout %s %s -d %s -g %d -i %d %s %s %s" \
             % (self.tmo, arg1, self.peer_ca, self.peer_gid, self.peer_port,
                test, arg3, logs)
-        output, exitcode = self.run_command(cmd)
-        if exitcode != 0:
+        output = self.session.cmd(cmd)
+        if not output.exit_status == 0:
             self.fail("ssh failed to remote machine")
         time.sleep(2)
         self.log.info("client data for %s(%s)", arg1, arg2)
@@ -179,8 +140,8 @@ class PingPong(Test):
                       self.peer_gid, self.peer_port, test, arg3)
         cmd = "timeout %s cat /tmp/ib_log && rm -rf /tmp/ib_log" \
             % self.tmo
-        output, exitcode = self.run_command(cmd)
-        if exitcode != 0:
+        output = self.session.cmd(cmd)
+        if not output.exit_status == 0:
             self.fail("test failed")
 
     def test_ib_pingpong(self):
@@ -213,8 +174,9 @@ class PingPong(Test):
         # change MTU back to 1500 for non-IB tests
         if "ib" not in self.iface and self.tool_name == "ibv_ud_pingpong":
             cmd = "ip link set %s mtu 1500" % (self.peer_iface)
-            self.run_command(cmd)
+            self.session.cmd(cmd)
             time.sleep(10)
+        configure_network.unset_ip(self.iface)
 
 
 if __name__ == "__main__":

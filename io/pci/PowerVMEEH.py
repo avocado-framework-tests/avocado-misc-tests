@@ -65,6 +65,7 @@ class PowerVMEEH(Test):
             self.cancel("EEH is not enabled, please enable via FSP")
         self.max_freeze = self.params.get('max_freeze', default=1)
         self.pci_addr = [self.params.get('pci_device', default='')]
+        self.add_cmd = self.params.get('additional_command', default='')
         if not self.pci_addr:
             self.cancel("No PCI Device specified")
         cmd = "echo %d > /sys/kernel/debug/powerpc/eeh_max_freezes"\
@@ -100,7 +101,8 @@ class PowerVMEEH(Test):
                                                      self.pci_class_name,
                                                      self.pci_interface,
                                                      self.pci_mem_addr,
-                                                     self.pci_mask)
+                                                     self.pci_mask,
+                                                     self.add_cmd)
                         if return_code == EEH_MISS:
                             num_of_miss += 1
                             self.log.info("number of miss is %d"
@@ -132,7 +134,7 @@ class PowerVMEEH(Test):
                     self.fail("PE %s not removed after max hit" % self.addr)
 
     def basic_eeh(self, func, pci_class_name, pci_interface,
-                  pci_mem_addr, pci_mask):
+                  pci_mem_addr, pci_mask, add_cmd):
         """
         Injects Error, and checks for PE recovery
         returns True, if recovery is success, else Flase
@@ -140,7 +142,7 @@ class PowerVMEEH(Test):
         self.clear_dmesg_logs()
         return_code = self.error_inject(func, pci_class_name,
                                         pci_interface, pci_mem_addr,
-                                        pci_mask)
+                                        pci_mask, add_cmd)
         if return_code != EEH_HIT:
             self.log.info("Skipping verification, as command failed")
         if not self.check_eeh_hit():
@@ -152,13 +154,16 @@ class PowerVMEEH(Test):
 
     @classmethod
     def error_inject(cls, func, pci_class_name, pci_interface, pci_mem_addr,
-                     pci_mask):
+                     pci_mask, add_cmd):
         """
         Form a command to inject the error
         """
         cmd = "errinjct eeh -v -f %s -s %s/%s -a %s -m %s; echo $?"\
             % (func, pci_class_name, pci_interface, pci_mem_addr, pci_mask)
-        res = process.system_output(cmd, ignore_status=True, shell=True)
+        res = process.system_output(cmd, ignore_status=True,
+                                    shell=True).decode("utf-8")
+        if add_cmd:
+            process.run(add_cmd, ignore_status=True, shell=True)
         return int(res[-1])
 
     def check_eeh_pe_recovery(self, addr):
@@ -168,7 +173,8 @@ class PowerVMEEH(Test):
         cmd = "dmesg | grep -i 'EEH: Notify device driver to resume'; echo $?"
         tries = 60
         for _ in range(0, tries):
-            res = process.system_output(cmd, ignore_status=True, shell=True)
+            res = process.system_output(cmd, ignore_status=True,
+                                        shell=True).decode("utf-8")
             if int(res[-1]) != 0:
                 self.log.info("waiting for PE to recover %s" % self.addr)
                 time.sleep(1)
@@ -209,7 +215,8 @@ class PowerVMEEH(Test):
         tries = 10
         cmd = "dmesg | grep 'EEH: Frozen';echo $?"
         for _ in range(0, tries):
-            res = process.system_output(cmd, ignore_status=True, shell=True)
+            res = process.system_output(cmd, ignore_status=True,
+                                        shell=True).decode("utf-8")
             if int(res[-1]) == 0:
                 return True
             time.sleep(1)
@@ -223,7 +230,8 @@ class PowerVMEEH(Test):
         tries = 30
         for _ in range(0, tries):
             cmd = "(dmesg | grep 'permanently disabled'; echo $?)"
-            res = process.system_output(cmd, ignore_status=True, shell=True)
+            res = process.system_output(cmd, ignore_status=True,
+                                        shell=True).decode("utf-8")
             if int(res[-1]) == 0:
                 time.sleep(10)
                 return True

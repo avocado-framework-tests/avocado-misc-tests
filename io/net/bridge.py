@@ -20,6 +20,7 @@ import netifaces
 from avocado import main
 from avocado import Test
 from avocado.utils import process
+from avocado.utils import configure_network
 
 
 class Bridging(Test):
@@ -44,6 +45,10 @@ class Bridging(Test):
         self.peer_ip = self.params.get("peer_ip", default=None)
         if not self.peer_ip:
             self.cancel("User should specify peer IP")
+        self.ipaddr = self.params.get("host_ip", default="")
+        self.netmask = self.params.get("netmask", default="")
+        configure_network.set_ip(self.ipaddr, self.netmask,
+                                 self.host_interface)
 
         cmd = "ip addr show %s | sed -nr 's/.*inet ([^ ]+)."\
             "*/\\1/p'" % self.host_interface
@@ -100,6 +105,7 @@ class Bridging(Test):
         if process.system('ping %s -c 4' % self.peer_ip,
                           shell=True, ignore_status=True):
             self.fail('Ping failed when restoring back to provided interface')
+        configure_network.unset_ip(self.host_interface)
 
 
 if __name__ == "__main__":

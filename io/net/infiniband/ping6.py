@@ -20,16 +20,14 @@ Ping6 - Send ICMP ECHO_REQUEST to network hosts.
 """
 
 import time
-try:
-    import pxssh
-except ImportError:
-    from pexpect import pxssh
 import netifaces
 from netifaces import AF_INET, AF_INET6
 from avocado import Test
 from avocado import main
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process, distro
+from avocado.utils import configure_network
+from avocado.utils.ssh import Session
 
 
 class Ping6(Test):
@@ -73,7 +71,12 @@ class Ping6(Test):
         self.peer_user = self.params.get("peer_user_name", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="passw0rd")
-        self.peer_login(self.peer_ip, self.peer_user, self.peer_password)
+        self.ipaddr = self.params.get("host_ip", default="")
+        self.netmask = self.params.get("netmask", default="")
+        configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
+                                 interface_type='infiniband')
+        self.session = Session(self.peer_ip, user=self.peer_user,
+                               password=self.peer_password)
         if self.iface not in interfaces:
             self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
@@ -110,51 +113,9 @@ class Ping6(Test):
             self.cancel("Distro not supported")
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.cancel("Unable to disable firewall")
-        output, exitcode = self.run_command(cmd)
-        if exitcode != 0:
+        output = self.session.cmd(cmd)
+        if not output.exit_status == 0:
             self.cancel("Unable to disable firewall on peer")
-
-    def peer_login(self, ip, username, password):
-        '''
-        SSH Login method for remote peer server
-        '''
-        pxh = pxssh.pxssh()
-        # Work-around for old pxssh not having options= parameter
-        pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
-        pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
-        pxh.force_password = True
-
-        pxh.login(ip, username, password)
-        pxh.sendline()
-        pxh.prompt(timeout=60)
-        pxh.sendline('exec bash --norc --noprofile')
-        # Ubuntu likes to be "helpful" and alias grep to
-        # include color, which isn't helpful at all. So let's
-        # go back to absolutely no messing around with the shell
-        pxh.set_unique_prompt()
-        self.pxssh = pxh
-
-    def run_command(self, command, timeout=300):
-        '''
-        SSH Run command method for running commands on remote server
-        '''
-        self.log.info("Running the command on peer lpar %s", command)
-        if not hasattr(self, 'pxssh'):
-            self.fail("SSH Console setup is not yet done")
-        con = self.pxssh
-        con.sendline(command)
-        con.expect("\n")  # from us
-        if command.endswith('&'):
-            return ("", 0)
-        con.expect(con.PROMPT, timeout=timeout)
-        output = con.before.splitlines()
-        con.sendline("echo $?")
-        con.prompt(timeout)
-        try:
-            exitcode = int(''.join(con.before.splitlines()[1:]))
-        except Exception as exc:
-            exitcode = 0
-        return (output, exitcode)
 
     def test(self):
         """
@@ -164,8 +125,8 @@ class Ping6(Test):
         logs = "> /tmp/ib_log 2>&1 &"
         cmd = " timeout %s %s %s %s" % (self.timeout, self.test_name,
                                         self.option_list[0], logs)
-        output, exitcode = self.run_command(cmd)
-        if exitcode != 0:
+        output = self.session.cmd(cmd)
+        if not output.exit_status == 0:
             self.fail("SSH connection (or) Server command failed")
         time.sleep(5)
         self.log.info("Client data - %s(%s)" %
@@ -179,9 +140,15 @@ class Ping6(Test):
                       (self.test_name, self.option_list[1]))
         cmd = "timeout %s cat /tmp/ib_log && rm -rf /tmp/ib_log" \
             % (self.timeout)
-        output, exitcode = self.run_command(cmd)
-        if exitcode != 0:
+        output = self.session.cmd(cmd)
+        if not output.exit_status == 0:
             self.fail("Server output retrieval failed")
+
+    def tearDown(self):
+        """
+        unset ip
+        """
+        configure_network.unset_ip(self.iface)
 
 
 if __name__ == "__main__":

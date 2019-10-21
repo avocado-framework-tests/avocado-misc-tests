@@ -1,0 +1,10 @@
+option: !mux
+    slot_info:
+        option: 'pci'
+    host_bridges:
+        option: 'phb'
+    hotplug_slot:
+        option: 'pci -a'
+    occupied slots:
+        option: 'pci -o'
+

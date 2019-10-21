@@ -27,6 +27,7 @@ from avocado.utils import distro
 from avocado.utils import archive
 from avocado.utils import build
 from avocado.utils.software_manager import SoftwareManager
+from avocado.utils import configure_network
 
 
 class TcpdumpTest(Test):
@@ -50,6 +51,9 @@ class TcpdumpTest(Test):
             self.cancel("%s interface is not available" % self.iface)
         if not self.peer_ip:
             self.cancel("peer ip should specify in input")
+        self.ipaddr = self.params.get("host_ip", default="")
+        self.netmask = self.params.get("netmask", default="")
+        configure_network.set_ip(self.ipaddr, self.netmask, self.iface)
 
         # Install needed packages
         smm = SoftwareManager()
@@ -107,6 +111,12 @@ class TcpdumpTest(Test):
         """
         cmd = "./nping/nping --%s %s -c %s" % (param, self.peer_ip, self.count)
         return process.SubProcess(cmd, verbose=False, shell=True)
+
+    def tearDown(self):
+        '''
+        unset ip for host interface
+        '''
+        configure_network.unset_ip(self.iface)
 
 
 if __name__ == "__main__":

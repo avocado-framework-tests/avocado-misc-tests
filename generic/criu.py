@@ -57,7 +57,7 @@ class CRIU(Test):
                     ignore_status=True, sudo=True)
         logfile = os.path.join(self.logdir, "stdout")
         failed_tests = process.system_output(
-            "grep -w FAIL %s" % logfile, shell=True, ignore_status=True)
+            "grep -w FAIL %s" % logfile, shell=True, ignore_status=True).decode("utf-8")
         if failed_tests:
             self.fail("test failed, Please check debug log for failed test cases")
 

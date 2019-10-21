@@ -2,5 +2,7 @@ Parameters:
     peer_ip: ""
     user_name: "root"
     interface: ""
-    peer_password: "passw0rd"
+    host_ip: ""
+    netmask: ""
+    peer_password: "********"
     count: "500000"

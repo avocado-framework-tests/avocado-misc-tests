@@ -47,6 +47,12 @@ class RASTools(Test):
                 self.cancel("Fail to install %s required for this"
                             " test." % package)
 
+    @staticmethod
+    def run_cmd_out(cmd):
+        return process.system_output(cmd, shell=True,
+                                     ignore_status=True,
+                                     sudo=True).decode("utf-8").strip()
+
     @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
     def test1_uesensor(self):
         self.log.info("===============Executing uesensor tool test===="
@@ -113,12 +119,11 @@ class RASTools(Test):
         for list_item in list:
             cmd = "lsdevinfo %s" % list_item
             self.run_cmd(cmd)
-        interface = process.system_output("ifconfig | head -1 | cut -d':' -f1",
-                                          shell=True).strip()
+        interface = self.run_cmd_out(
+            "ifconfig | head -1 | cut -d':' -f1")
         self.run_cmd("lsdevinfo -q name=%s" % interface)
-        disk_name = process.system_output("df -h | egrep '(s|v)d[a-z][1-8]' | "
-                                          "tail -1 | cut -d' ' -f1",
-                                          shell=True).strip("12345")
+        disk_name = self.run_cmd_out("df -h | egrep '(s|v)d[a-z][1-8]' | "
+                                     "tail -1 | cut -d' ' -f1").strip("12345")
         self.run_cmd("lsdevinfo -q name=%s" % disk_name)
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in lsdevinfo tool "
@@ -145,11 +150,10 @@ class RASTools(Test):
         for list_item in list:
             cmd = "bootlist %s" % list_item
             self.run_cmd(cmd)
-        interface = process.system_output("ifconfig | head -1 | cut -d':' -f1",
-                                          shell=True).strip()
-        disk_name = process.system_output("df -h | egrep '(s|v)d[a-z][1-8]' | "
-                                          "tail -1 | cut -d' ' -f1",
-                                          shell=True).strip("12345")
+        interface = self.run_cmd_out(
+            "ifconfig | head -1 | cut -d':' -f1")
+        disk_name = self.run_cmd_out("df -h | egrep '(s|v)d[a-z][1-8]' | "
+                                     "tail -1 | cut -d' ' -f1").strip("12345")
         file_path = os.path.join(self.workdir, 'file')
         process.run("echo %s > %s" %
                     (disk_name, file_path), ignore_status=True, sudo=True, shell=True)
@@ -169,8 +173,8 @@ class RASTools(Test):
         for list_item in list:
             cmd = "vpdupdate %s" % list_item
             self.run_cmd(cmd)
-        path_db = process.system_output("find /var/lib/lsvpd/ -iname vpd.db | "
-                                        "head -1", shell=True).strip()
+        path_db = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.db | "
+                                   "head -1")
         if path_db:
             copyfile_path = os.path.join(self.outputdir, 'vpd.db')
             shutil.copyfile(path_db, copyfile_path)
@@ -187,9 +191,9 @@ class RASTools(Test):
         process.run("rm -f /var/lib/lsvpd/vpd.db; touch /var/lib/lsvpd/vpd.db",
                     shell=True)
         for command in ["lsvpd", "lscfg", "lsmcode"]:
-            if not process.system_output("%s | grep run | grep vpdupdate" % command,
-                                         shell=True, ignore_status=True).strip():
-                self.fail("Error message is not displayed when vpd.db is corrupted.")
+            if not self.run_cmd_out("%s | grep run | grep vpdupdate" % command):
+                self.fail(
+                    "Error message is not displayed when vpd.db is corrupted.")
         self.run_cmd("vpdupdate")
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in vpdupdate tool "
@@ -206,14 +210,14 @@ class RASTools(Test):
         for list_item in list:
             cmd = "lsvpd %s" % list_item
             self.run_cmd(cmd)
-        path_db = process.system_output("find /var/lib/lsvpd/ -iname vpd.db | "
-                                        "head -1", shell=True).strip()
+        path_db = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.db | "
+                                   "head -1").strip()
         if path_db:
             copyfile_path = os.path.join(self.outputdir, 'vpd.db')
             shutil.copyfile(path_db, copyfile_path)
             self.run_cmd("lsvpd --path=%s" % copyfile_path)
-        path_tar = process.system_output("find /var/lib/lsvpd/ -iname vpd.*.gz"
-                                         " | head -1", shell=True).strip()
+        path_tar = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.*.gz"
+                                    " | head -1")
         if path_tar:
             self.run_cmd("lsvpd --zip=%s" % path_tar)
         if self.is_fail >= 1:
@@ -226,21 +230,21 @@ class RASTools(Test):
                       "==")
         self.run_cmd("lscfg")
         list = ['--debug', '--version', '-p']
-        device = process.system_output('lscfg', shell=True).splitlines()[-1]
+        device = self.run_cmd_out('lscfg').splitlines()[-1]
         if device.startswith("+"):
             list.append("-l%s" % device.split(" ")[1])
 
         for list_item in list:
             cmd = "lscfg %s" % list_item
             self.run_cmd(cmd)
-        path_db = process.system_output("find /var/lib/lsvpd/ -iname vpd.db | "
-                                        "head -1", shell=True).strip()
+        path_db = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.db | "
+                                   "head -1")
         if path_db:
             copyfile_path = os.path.join(self.outputdir, 'vpd.db')
             shutil.copyfile(path_db, copyfile_path)
             self.run_cmd("lscfg --data=%s" % copyfile_path)
-        path_tar = process.system_output("find /var/lib/lsvpd/ -iname vpd.*.gz"
-                                         " | head -1", shell=True).strip()
+        path_tar = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.*.gz"
+                                    " | head -1")
         if path_tar:
             self.run_cmd("lscfg --zip=%s" % path_tar)
         if self.is_fail >= 1:

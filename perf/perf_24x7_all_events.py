@@ -81,13 +81,13 @@ class hv_24x7_all_events(Test):
         # Check if its enabled
         result_perf = process.run("%s,domain=2,core=1/ sleep 1"
                                   % self.perf_stat, ignore_status=True)
-        if "not supported" in result_perf.stderr:
+        if "not supported" in result_perf.stderr.decode("utf-8"):
             self.cancel("Please enable LPAR to allow collecting"
                         " the 24x7 counters info")
 
         # Getting the number of cores
         output = process.run("lscpu")
-        for line in output.stdout.split('\n'):
+        for line in output.stdout.decode("utf-8").split('\n'):
             if 'Core(s) per socket:' in line:
                 self.cores = int(line.split(':')[1].strip())
 
