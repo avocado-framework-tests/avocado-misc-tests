@@ -94,7 +94,7 @@ class Ethtool(Test):
         '''
         Test the ethtool args provided
         '''
-        for state, status in map(None, ["down", "up"], ["no", "yes"]):
+        for state, status in zip(["down", "up"], ["no", "yes"]):
             if not self.interface_state_change(self.iface, state, status):
                 self.fail("interface %s failed" % state)
             cmd = "ethtool %s %s %s" % (self.args, self.iface, self.elapse)
