@@ -61,12 +61,16 @@ class FioTest(Test):
         self.sourcedir = os.path.join(self.teststmpdir, fio_version)
         build.make(self.sourcedir)
 
+        pkg_list = ['libaio', 'libaio-devel']
         smm = SoftwareManager()
         if fstype == 'btrfs':
             if distro.detect().name == 'Ubuntu':
-                if not smm.check_installed("btrfs-tools") and not \
-                        smm.install("btrfs-tools"):
-                    self.cancel('btrfs-tools is needed for the test to be run')
+                pkg_list.append('btrfs-tools')
+
+        for pkg in pkg_list:
+            if pkg and not smm.check_installed(pkg) and not smm.install(pkg):
+                self.cancel("Package %s is missing and could not be installed"
+                            % pkg)
 
         if self.disk is not None:
             self.part_obj = Partition(self.disk, mountpoint=self.dirs)

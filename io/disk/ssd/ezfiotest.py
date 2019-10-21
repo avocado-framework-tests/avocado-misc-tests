@@ -64,6 +64,13 @@ class EzfioTest(Test):
         # Not a package that must be installed, so not skipping.
         if not smm.check_installed("sdparm") and not smm.install("sdparm"):
             self.log.debug("Can not install sdparm")
+        pkg_list = ['libaio', 'libaio-devel']
+        smm = SoftwareManager()
+        for pkg in pkg_list:
+            if pkg and not smm.check_installed(pkg) and not smm.install(pkg):
+                self.cancel("Package %s is missing and could not be installed"
+                            % pkg)
+
         self.cwd = os.getcwd()
 
     def test(self):
