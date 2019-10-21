@@ -31,5 +31,3 @@ test: !mux
         test: nvme_smart_log_test
     nvme_test:
         test: nvme_test
-    nvme_format_test:
-        test: nvme_format_test
