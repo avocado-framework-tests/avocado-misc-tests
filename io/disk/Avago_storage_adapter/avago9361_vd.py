@@ -84,12 +84,26 @@ class Avago9361(Test):
         self.stripe = [64, 128, 256, 512, 1024]
         self.state = ['start', 'stop', 'start', 'pause', 'resume']
         self.list_test = ['online_offline', 'rebuild']
+        self.pre_check()
         if str(self.name) in self.list_test:
             cmd = "%s /c%d set autorebuild=off" % (self.tool, self.controller)
-            self.check_pass(cmd, "Failed to set auto rebuild off")
+            self.check_pass(cmd, False, "Failed to set auto rebuild off")
         if 'ghs_dhs' in str(self.name):
             cmd = "%s /c%d set autorebuild=on" % (self.tool, self.controller)
-            self.check_pass(cmd, "Failed to set auto rebuild on")
+            self.check_pass(cmd, False, "Failed to set auto rebuild on")
+
+    def pre_check(self):
+        """
+        Function to which sets up the test environment
+        The error conditions will be ignored as it is pre-requisite check
+        """
+        cmd = "%s /c%d/vall delete force" % (self.tool, self.controller)
+        self.check_pass(cmd, True,"")
+        cmd = "%s /c%d set jbod=off" % (self.tool, self.controller)
+        self.check_pass(cmd, True,"")
+        cmd = "%s /c%d/eall/sall set good force" % (self.tool, self.controller)
+        self.check_pass(cmd, True,"")
+        self.log.info("SETTING UP ENVIRONMENT DONE: Ignore above Error(If any) ")
 
     def test_createall(self):
         """
@@ -138,21 +152,6 @@ class Avago9361(Test):
         self.cc_operations()
         self.vd_delete()
 
-    def test_jbod(self):
-        """
-        Function to format a drive to JBOD
-        """
-        cmd = "%s /c%d set jbod=on" % (self.tool, self.controller)
-        self.check_pass(cmd, "Failed to set JBOD on")
-        cmd = "%s /c%d show jbod" % (self.tool, self.controller)
-        self.check_pass(cmd, "Failed to show the JBOD status")
-        cmd = "%s /c%d/eall/sall set jbod" % (self.tool, self.controller)
-        self.check_pass(cmd, "Failed to convert the drives to JBOD")
-        cmd = "%s /c%d show " % (self.tool, self.controller)
-        self.check_pass(cmd, "Failed to show the adapter details")
-        cmd = "%s /c0/eall/sall set good force" % self.tool
-        self.check_pass(cmd, "Failed to set JBOD drives to good")
-
     def test_online_offline(self):
         """
         Test to run drive Online/Offline
@@ -173,14 +172,14 @@ class Avago9361(Test):
             cmd = "%s /c%d/%s add hotsparedrive %s" % (self.tool,
                                                        self.controller,
                                                        self.hotspare, spare)
-            self.check_pass(cmd, "Failed to create")
+            self.check_pass(cmd, False, "Failed to create")
             self.set_online_offline('offline')
             self.rebuild('progress', self.hotspare)
             self.copyback_operation()
             cmd = "%s /c%d/%s delete hotsparedrive" % (self.tool,
                                                        self.controller,
                                                        self.hotspare)
-            self.check_pass(cmd, "Failed to delete hotsparedrive")
+            self.check_pass(cmd, False, "Failed to delete hotsparedrive")
         self.vd_delete()
 
     def copyback_state(self, state):
@@ -195,7 +194,7 @@ class Avago9361(Test):
         else:
             cmd = "%s /c%d/%s %s copyback" % (self.tool, self.controller,
                                               self.on_off, state)
-        self.check_pass(cmd, "Failed to %s copyback" % state)
+        self.check_pass(cmd, False, "Failed to %s copyback" % state)
 
     def copyback_operation(self):
         """
@@ -236,7 +235,7 @@ class Avago9361(Test):
             cmd = "%s /c%d/v0 start migrate type=raid%s \
                    option=add drives=%s" % (self.tool, self.controller, level,
                                             self.add_disk.pop())
-            self.check_pass(cmd, "Failed to migrate")
+            self.check_pass(cmd, False, "Failed to migrate")
             cmd = "%s /c%d/v0 show migrate" % (self.tool, self.controller)
             self.showprogress(cmd)
             self.sleep_function(cmd)
@@ -273,7 +272,7 @@ class Avago9361(Test):
         """
         cmd = "%s /c%d/%s %s rebuild" % (self.tool, self.controller,
                                          self.on_off, state)
-        self.check_pass(cmd, "Failed to %s Rebuild" % state)
+        self.check_pass(cmd, False, "Failed to %s Rebuild" % state)
         time.sleep(10)
 
     def set_online_offline(self, state):
@@ -282,7 +281,7 @@ class Avago9361(Test):
         """
         cmd = "%s /c%d/%s set %s" % (self.tool, self.controller,
                                      self.on_off, state)
-        self.check_pass(cmd, "Failed to set drive to %s state" % state)
+        self.check_pass(cmd, False, "Failed to set drive to %s state" % state)
         self.rebuild('progress', self.hotspare)
 
     def jbod_show(self):
@@ -290,21 +289,21 @@ class Avago9361(Test):
         Helper function to show JBOD details
         """
         cmd = "%s /c%d show jbod" % (self.tool, self.controller)
-        self.check_pass(cmd, "Failed to show the JBOD status")
+        self.check_pass(cmd, False, "Failed to show the JBOD status")
 
     def vd_details(self):
         """
         Function to display the VD details
         """
         cmd = "%s /c%d/vall show" % (self.tool, self.controller)
-        self.check_pass(cmd, "Failed to display VD configuration")
+        self.check_pass(cmd, False, "Failed to display VD configuration")
 
     def vd_delete(self):
         """
         Function to delete the VD
         """
         cmd = "%s /c%d/vall delete force" % (self.tool, self.controller)
-        self.check_pass(cmd, "Failed to delete VD")
+        self.check_pass(cmd, False, "Failed to delete VD")
 
     def vd_create(self, write, read, iopolicy, stripe):
         """
@@ -315,21 +314,23 @@ class Avago9361(Test):
                    strip=%d" % (self.tool, self.controller, self.raid_level,
                                 self.size, self.raid_disk, self.pdperarray,
                                 write, read, iopolicy, stripe)
-            self.check_pass(cmd, "Failed to create raid")
+            self.check_pass(cmd, False, "Failed to create raid")
 
         else:
             cmd = "%s /c%d add vd %s size=%s drives=%s %s %s %s \
                    strip=%d" % (self.tool, self.controller, self.raid_level,
                                 self.size, self.raid_disk, write, read,
                                 iopolicy, stripe)
-            self.check_pass(cmd, "Failed to create raid")
+            self.check_pass(cmd, False, "Failed to create raid")
         self.vd_details()
 
-    def check_pass(self, cmd, errmsg):
+    def check_pass(self, cmd, ignore_val, errmsg):
         """
         Helper function to check, if the cmd is passed or failed
         """
-        if process.system(cmd, ignore_status=True, shell=True) != 0:
+        if ignore_val:
+            process.system(cmd, shell=True, ignore_status=True)
+        elif process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail(errmsg)
 
     def showprogress(self, cmd):
@@ -363,7 +364,7 @@ class Avago9361(Test):
                                               state)
         else:
             cmd = "%s /c%d/v0 %s cc" % (self.tool, self.controller, state)
-        self.check_pass(cmd, "Failed to %s CC" % state)
+        self.check_pass(cmd, False, "Failed to %s CC" % state)
         time.sleep(10)
 
     def pr_operations(self):
@@ -373,14 +374,14 @@ class Avago9361(Test):
         for state in self.state:
             self.pr_state(state)
             cmd = "%s /c%d show patrolread" % (self.tool, self.controller)
-            self.check_pass(cmd, "Failed to show the PR progress")
+            self.check_pass(cmd, False, "Failed to show the PR progress")
 
     def pr_state(self, state):
         """
         Helper function for all PR operatoins
         """
         cmd = "%s /c%d %s patrolread" % (self.tool, self.controller, state)
-        self.check_pass(cmd, "Failed to %s PR" % state)
+        self.check_pass(cmd, False, "Failed to %s PR" % state)
         time.sleep(10)
 
     def full_init(self):
@@ -388,7 +389,7 @@ class Avago9361(Test):
         Helper function to start Fast/Full init
         """
         cmd = "%s /c%d/vall start init full" % (self.tool, self.controller)
-        self.check_pass(cmd, "Failed to start init")
+        self.check_pass(cmd, False, "Failed to start init")
         cmd = "%s /c%d/vall show init" % (self.tool, self.controller)
         self.showprogress(cmd)
         self.sleep_function(cmd)
@@ -399,13 +400,13 @@ class Avago9361(Test):
         """
         cmd = "%s /c%d/vall set wrcache=%s" % (self.tool, self.controller,
                                                write)
-        self.check_pass(cmd, "Failed to change the write policy")
+        self.check_pass(cmd, False, "Failed to change the write policy")
         cmd = "%s /c%d/vall set rdcache=%s" % (self.tool, self.controller,
                                                read)
-        self.check_pass(cmd, "Failed to change the read policy")
+        self.check_pass(cmd, False, "Failed to change the read policy")
         cmd = "%s /c%d/vall set iopolicy=%s" % (self.tool, self.controller,
                                                 iopolicy)
-        self.check_pass(cmd, "Failed to change the IO policy")
+        self.check_pass(cmd, False, "Failed to change the IO policy")
 
     def tearDown(self):
         """
@@ -413,10 +414,10 @@ class Avago9361(Test):
         """
         if str(self.name) in self.list_test:
             cmd = "%s /c%d set autorebuild=on" % (self.tool, self.controller)
-            self.check_pass(cmd, "Failed to set auto rebuild on")
+            self.check_pass(cmd, False, "Failed to set auto rebuild on")
         if 'ghs_dhs' in str(self.name):
             cmd = "%s /c%d set autorebuild=off" % (self.tool, self.controller)
-            self.check_pass(cmd, "Failed to set auto rebuild off")
+            self.check_pass(cmd, False, "Failed to set auto rebuild off")
 
 
 if __name__ == "__main__":
