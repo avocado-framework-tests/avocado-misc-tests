@@ -536,6 +536,32 @@ class NdctlTest(Test):
             self.fail('Failed daxctl list')
         self.log.info('Created dax device %s', vals)
 
+    def test_sector_write(self):
+        """
+        Test write on a sector mode device
+        """
+        region = self.get_default_region()
+        self.disable_namespace(region=region)
+        self.destroy_namespace(region=region)
+        self.create_namespace(region=region, mode='sector', sector_size='512')
+        self.disk = '/dev/%s' % self.get_json_val(
+            self.get_json("-N -r %s" % region)[0], 'blockdev')
+        size = self.get_json_val(self.get_json(
+            "-N -r %s" % region)[0], 'size')
+        self.part = partition.Partition(self.disk)
+        self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512' %
+                       memory.get_page_size())
+        mnt_path = self.params.get('mnt_point', default='/pmemS')
+        if not os.path.exists(mnt_path):
+            os.makedirs(mnt_path)
+        self.part.mount(mountpoint=mnt_path)
+        self.log.info("Test will run on %s", mnt_path)
+        fio_job = self.params.get('fio_job', default='sector-fio.job')
+        cmd = '%s --directory %s --filename mmap-pmem --size %s %s' % (
+            self.build_fio(), mnt_path, size // 2, self.get_data(fio_job))
+        if process.system(cmd, ignore_status=True):
+            self.fail("FIO mmap workload on fsdax failed")
+
     def test_fsdax_write(self):
         """
         Test filesystem DAX with a FIO workload
