@@ -42,7 +42,7 @@ class ReceiveMulticastTest(Test):
         self.peer = self.params.get("peer_ip", default="")
         self.user = self.params.get("user_name", default="root")
         self.peer_password = self.params.get("peer_password",
-                                             '*', default="passw0rd")
+                                             '*', default="None")
         interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface", default="")
         if self.iface not in interfaces:

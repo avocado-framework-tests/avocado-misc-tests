@@ -50,7 +50,7 @@ class PingPong(Test):
         self.peer_ip = self.params.get("peer_ip", default="")
         self.peer_user = self.params.get("peer_user_name", default="root")
         self.peer_password = self.params.get("peer_password", '*',
-                                             default="passw0rd")
+                                             default="None")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
