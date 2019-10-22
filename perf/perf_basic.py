@@ -103,8 +103,6 @@ class PerfBasic(Test):
         self.run_cmd("perf bench sched")
 
     def tearDown(self):
-        self.variant = getattr(self.job.args, "avocado_variants", None)
-        self.variant.parse(self.job.args)
         if self.name.uid == 10:
             self.run_cmd("rm -f perf.data")
 
