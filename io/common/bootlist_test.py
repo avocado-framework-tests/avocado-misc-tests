@@ -9,6 +9,8 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #
+# Author: Bimurti Bidhibrata Pattjoshi <bbidhibr@in.ibm.com>
+#
 
 """
 Bootlist Test
@@ -18,6 +20,9 @@ import netifaces
 from avocado import main
 from avocado import Test
 from avocado.utils import process
+from avocado import skipUnless
+
+IS_POWER_VM = 'pSeries' in open('/proc/cpuinfo', 'r').read()
 
 
 class BootlisTest(Test):
@@ -25,31 +30,33 @@ class BootlisTest(Test):
     Displays and alters the list of boot devices available
     to the system
     '''
-
+    @skipUnless(IS_POWER_VM,
+                "supported only on PowerVM platform")
     def setUp(self):
         '''
         To check and interfaces
         '''
         self.host_interfaces = self.params.get("host_interfaces",
-                                               default="").split(",")
-        if not self.host_interfaces:
-            self.cancel("user should specify host interfaces")
-        self.interfaces = ""
-        interfaces = netifaces.interfaces()
-        for host_interface in self.host_interfaces:
-            if host_interface not in interfaces:
-                self.cancel("interface is not available")
-            self.interfaces = '%s %s' % (self.interfaces, host_interface)
-        cmd = "cat /proc/cpuinfo | grep \'pSeries\'"
-        if process.system(cmd, shell=True, verbose=True,
-                          ignore_status=True):
-            self.cancel("Test not supported on the PowerNV Host platform")
+                                               default=None)
+        self.disk_names = self.params.get("disks", default=None)
+        if self.host_interfaces is not None:
+            if not self.host_interfaces:
+                self.cancel("user should specify host interfaces")
+            self.names = self.host_interfaces.replace(',', ' ')
+            interfaces = netifaces.interfaces()
+            for host_interface in self.host_interfaces.split(","):
+                if host_interface not in interfaces:
+                    self.cancel("interface is not available")
+        elif self.disk_names is not None:
+            if not self.disk_names:
+                self.cancel("user should specify disk name")
+            self.names = self.disk_names.replace(',', ' ')
 
     def bootlist_mode(self, param):
         '''
         converting into different mode
         '''
-        cmd = "bootlist -m %s %s" % (param, self.interfaces)
+        cmd = "bootlist -m %s %s" % (param, self.names)
         if process.system(cmd, shell=True, verbose=True,
                           ignore_status=True):
             self.fail("%s bootlist fail" % param)
