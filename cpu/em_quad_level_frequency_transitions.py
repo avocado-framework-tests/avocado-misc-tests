@@ -129,9 +129,9 @@ class freq_transitions(Test):
                     freq_max = self.max_freq_dict[chip][quad]
                     diff = float(freq_max) - float(freq_get)
                     if diff > self.threshold:
-                        self.cancel("Quad level max frequency %s is not set on"
-                                    "this cpu %s"
-                                    % (self.max_freq_dict[chip][quad], cpu))
+                        self.fail("Quad level max frequency %s is not set on"
+                                  "this cpu %s"
+                                  % (self.max_freq_dict[chip][quad], cpu))
             self.log.info("Quad level max frequency %s is set on this quad"
                           "%s" % (self.max_freq_dict[chip][quad], quad))
 
