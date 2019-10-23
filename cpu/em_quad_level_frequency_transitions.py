@@ -85,7 +85,8 @@ class freq_transitions(Test):
 
     def run_cmd(self, cmdline):
         try:
-            return process.run(cmdline, ignore_status=True, sudo=True, shell=True)
+            return process.run(cmdline, ignore_status=True,
+                               sudo=True, shell=True)
         except process.CmdError as details:
             self.fail("test  failed: %s" % details)
 
