@@ -19,6 +19,8 @@ import time
 import os
 import random
 import platform
+import re
+
 from avocado import Test
 from avocado import main
 from avocado.utils import process, distro, cpu, genio
@@ -49,7 +51,6 @@ class freq_transitions(Test):
 
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        self.threshold = int(self.params.get("threshold", default=300000))
         if 'Ubuntu' in detected_distro.name:
             deps = ['linux-tools-common', 'linux-tools-%s'
                     % platform.uname()[2]]
@@ -61,6 +62,20 @@ class freq_transitions(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
+        fre_min = 0
+        fre_max = 0
+        freq_info = process.system_output(
+            "cpupower frequency-info", shell=True).decode("utf-8")
+        for line in str(freq_info).splitlines():
+            if re.search('hardware limits:', line, re.IGNORECASE):
+                frq = line.split(":")[1]
+                frq_init = frq.split('-')[0]
+                frq_last = frq.split('-')[1]
+                fre_min = float(frq_init.split('GHz')[0])
+                fre_max = float(frq_last.split('GHz')[0])
+                break
+        threshold = (fre_max - fre_min) * (10 ** 6)
+        self.threshold = int(self.params.get("threshold", default=threshold))
         self.cpus = cpu.total_cpus_count()
         self.cpu_num = 0
         self.max_freq = 0
