@@ -2,8 +2,8 @@ setup:
     component: !mux
         vm:
             comp: "vm"
-        power:
-            comp: "powerpc"
+#        power:
+#            comp: "powerpc"
         mem_plug:
             comp: "memory-hotplug"
     run_type: !mux
