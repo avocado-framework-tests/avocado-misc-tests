@@ -95,6 +95,21 @@ class NdctlTest(Test):
                     return count
         return self.cnt
 
+    def get_slot_count(self, region):
+        """
+        Get max slot count in the index area for a  dimm backing a region
+        We use region0 - > nmem0
+        """
+        nmem = "nmem%s" % re.findall(r'\d+', region)[0]
+        try:
+            json_op = json.loads(process.system_output(
+                '%s read-labels -j %s ' % (self.binary, nmem), shell=True))
+        except ValueError:
+            json_op = []
+        first_dict = json_op[0]
+        index_dict = self.get_json_val(first_dict, 'index')[0]
+        return self.get_json_val(index_dict, 'nslot')
+
     def build_fio(self):
         """
         Install fio or build if not possible
@@ -398,6 +413,24 @@ class NdctlTest(Test):
                     region=region, mode=self.mode_to_use, size=self.size)
                 self.log.info("Namespace %s created", nid + 1)
 
+    def test_nslot_namespace(self):
+        """
+        Test max namespace with nslot value
+        """
+        region = self.get_default_region()
+        self.log.info("Using %s for max namespace creation", region)
+        self.disable_namespace()
+        self.destroy_namespace()
+        region_size = self.get_json_val(self.get_json(
+            '-r %s' % region)[0], 'size')
+        namespace_size = 1 << 30
+        count = region_size // namespace_size
+        count = min(count, self.get_slot_count(region)) - 1
+        self.log.info("Creating %s namespace", count)
+        for nid in range(1, count + 1):
+            self.create_namespace(region=region, mode='fsdax', size='1G')
+            self.log.info("Namespace %s created", nid)
+
     def test_namespace_reconfigure(self):
         """
         Test namespace reconfiguration
@@ -502,6 +535,32 @@ class NdctlTest(Test):
         if len(vals) != 1:
             self.fail('Failed daxctl list')
         self.log.info('Created dax device %s', vals)
+
+    def test_sector_write(self):
+        """
+        Test write on a sector mode device
+        """
+        region = self.get_default_region()
+        self.disable_namespace(region=region)
+        self.destroy_namespace(region=region)
+        self.create_namespace(region=region, mode='sector', sector_size='512')
+        self.disk = '/dev/%s' % self.get_json_val(
+            self.get_json("-N -r %s" % region)[0], 'blockdev')
+        size = self.get_json_val(self.get_json(
+            "-N -r %s" % region)[0], 'size')
+        self.part = partition.Partition(self.disk)
+        self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512' %
+                       memory.get_page_size())
+        mnt_path = self.params.get('mnt_point', default='/pmemS')
+        if not os.path.exists(mnt_path):
+            os.makedirs(mnt_path)
+        self.part.mount(mountpoint=mnt_path)
+        self.log.info("Test will run on %s", mnt_path)
+        fio_job = self.params.get('fio_job', default='sector-fio.job')
+        cmd = '%s --directory %s --filename mmap-pmem --size %s %s' % (
+            self.build_fio(), mnt_path, size // 2, self.get_data(fio_job))
+        if process.system(cmd, ignore_status=True):
+            self.fail("FIO mmap workload on fsdax failed")
 
     def test_fsdax_write(self):
         """
