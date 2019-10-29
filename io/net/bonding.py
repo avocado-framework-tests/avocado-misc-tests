@@ -90,6 +90,11 @@ class Bonding(Test):
                                                 default=False)
         self.peer_wait_time = self.params.get("peer_wait_time", default=5)
         self.sleep_time = int(self.params.get("sleep_time", default=5))
+        self.password = self.params.get("password", '*', default=None)
+        self.ib = False
+        if self.host_interface[0:2] == 'ib':
+            self.ib = True
+        self.log.info("Bond Test on IB Interface? = %s", self.ib)
         self.setup_ip()
         self.err = []
 
@@ -125,6 +130,20 @@ class Bonding(Test):
         self.gateway = process.system_output(
             '%s' % cmd, shell=True)
 
+    def bond_ib_conf(self, bond_name, arg1, arg2):
+        '''
+        configure slaves for IB cards
+        '''
+        cmd = 'ip link set %s up;' % (bond_name)
+        if process.system(cmd, shell=True, ignore_status=True) != 0:
+            self.cancel("unable to bring Bond interface %s up" % bond_name)
+        if arg2 == "ATTACH":
+            cmd = 'ifenslave %s %s -f;' % (bond_name, arg1)
+        else:
+            cmd = 'ifenslave %s -d %s ;' % (bond_name, arg1)
+        if process.system(cmd, shell=True, ignore_status=True) != 0:
+            self.cancel("unable to %s IB interface " % arg2)
+
     def bond_remove(self, arg1):
         '''
         bond_remove
@@ -136,7 +155,10 @@ class Bonding(Test):
                 cmd = "ip link set %s down" % ifs
                 if process.system(cmd, shell=True, ignore_status=True) != 0:
                     self.log.info("unable to bring down the interface")
-                genio.write_file(self.bonding_slave_file, "-%s" % ifs)
+                if self.ib:
+                    self.bond_ib_conf(self.bond_name, ifs, "REMOVE")
+                else:
+                    genio.write_file(self.bonding_slave_file, "-%s" % ifs)
             genio.write_file(self.bonding_masters_file, "-%s" % self.bond_name)
             self.log.info("Removing bonding module")
             linux_modules.unload_module("bonding")
@@ -151,7 +173,10 @@ class Bonding(Test):
             for val in self.peer_interfaces:
                 cmd += 'ip addr flush dev %s;' % val
             for val in self.peer_interfaces:
-                cmd += 'echo "-%s" > %s;' % (val, self.bonding_slave_file)
+                if self.ib:
+                    self.bond_ib_conf(self.bond_name, val, "REMOVE")
+                else:
+                    cmd += 'echo "-%s" > %s;' % (val, self.bonding_slave_file)
             cmd += 'echo "-%s" > %s;' % (self.bond_name,
                                          self.bonding_masters_file)
             cmd += 'rmmod bonding;'
@@ -242,7 +267,10 @@ class Bonding(Test):
             genio.write_file("%s/bonding/miimon" % self.bond_dir, "100")
             genio.write_file("%s/bonding/fail_over_mac" % self.bond_dir, "2")
             for val in self.host_interfaces:
-                genio.write_file(self.bonding_slave_file, "+%s" % val)
+                if self.ib:
+                    self.bond_ib_conf(self.bond_name, val, "ATTACH")
+                else:
+                    genio.write_file(self.bonding_slave_file, "+%s" % val)
                 time.sleep(2)
             bond_name_val = ''
             for line in genio.read_file(self.bond_status).splitlines():
@@ -289,7 +317,10 @@ class Bonding(Test):
             cmd += 'echo 2 > %s/bonding/fail_over_mac;'\
                    % self.bond_dir
             for val in self.peer_interfaces:
-                cmd += 'echo "+%s" > %s;' % (val, self.bonding_slave_file)
+                if self.ib:
+                    self.bond_ib_conf(self.bond_name, val, "ATTACH")
+                else:
+                    cmd += 'echo "+%s" > %s;' % (val, self.bonding_slave_file)
             for val in self.peer_interfaces:
                 cmd += 'ip link set %s up;' % val
             cmd += 'ip addr add %s/%s dev %s;ip link set %s up;sleep 5;'\
