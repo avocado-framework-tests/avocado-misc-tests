@@ -73,7 +73,12 @@ class Disktest(Test):
         self.disk = self.params.get('disk', default=None)
         self.dirs = self.params.get('dir', default=self.workdir)
         self.fstype = self.params.get('fs', default='ext4')
-
+        if self.fstype == 'btrfs':
+	    if distro.detect().name == 'rhel':
+	        if (int(distro.detect().version) == 7 and \
+		    int(distro.detect().release) >= 4) or \
+		    int(distro.detect().version) > 7:
+		     self.cancel("btrfs is not supported with RHEL7.4 onwards")
         gigabytes = int(lv_utils.get_diskspace(self.disk)) / 1073741824
         memory_mb = memory.meminfo.MemTotal.m
         self.chunk_mb = gigabytes * 950
