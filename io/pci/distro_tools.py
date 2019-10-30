@@ -15,7 +15,7 @@
 #
 
 """
-Tests the different tool
+Test the different tools
 """
 
 from avocado import main
@@ -30,26 +30,63 @@ class DisrtoTool(Test):
     '''
     to test different type of tool
     '''
-    @skipUnless(IS_POWER_VM,
-                "supported only on PowerVM platform")
+
     def setUp(self):
         '''
-        to check host platform
+        get all parameters
         '''
-        self.option = self.params.get("option", default='')
+        self.option = self.params.get("test_opt", default='').split(",")
+        self.tool = self.params.get("tool", default='')
 
-    def test(self):
+    @skipUnless(IS_POWER_VM,
+                "supported only on PowerVM platform")
+    def lsslot(self, option):
         '''
-        test the lsslot tool
+        run lsslot
         '''
         cmd = "lsslot"
-        if self.option == "pci":
-            cmd = "%s -d %s" % (cmd, self.option)
+        if option == "pci":
+            cmd = "%s -d %s" % (cmd, option)
         else:
-            cmd = "%s -c %s" % (cmd, self.option)
+            cmd = "%s -c %s" % (cmd, option)
         result = process.run(cmd, shell=True, ignore_status=True)
         if result.exit_status != 0:
             self.fail("Failed to display hot plug slots")
+
+    def netstat(self, option):
+        '''
+        run netstat
+        '''
+        cmd = "netstat -%s" % option
+        result = process.run(cmd, shell=True, ignore_status=True)
+        if result.exit_status != 0:
+            self.fail("Failed to monitoring network connections")
+
+    def lsprop(self, option):
+        '''
+        run lsprop
+        '''
+        if option == "r":
+            cmd = "lsprop --%s" % option
+        else:
+            cmd = "lsprop -%s" % option
+        result = process.run(cmd, shell=True, ignore_status=True)
+        if result.exit_status != 0:
+            self.fail("lsprop failed")
+
+    def test(self):
+        '''
+        test different distro tools
+        '''
+        if self.tool == "lsslot":
+            for val in self.option:
+                self.lsslot(val)
+        elif self.tool == "netstat":
+            for val in self.option:
+                self.netstat(val)
+        elif self.tool == "lsprop":
+            for val in self.option:
+                self.lsprop(val)
 
 
 if __name__ == "__main__":
