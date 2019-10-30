@@ -28,3 +28,6 @@ Requirements:
 command: pip install netifaces
 2. Generate sshkey for your test partner to run the test uninterrupted.(Have a passwordless ssh between the peers)
 3. Make sure IPs are set for interfaces to be used, via configuration file. ifup / ifdown should set the IPs back.
+
+Note:
+1. For Infiniband based devices only mode 1 (Active backup) is supported. Due to which the expectation is that test environment is allways connected via Switch (i.e peer_bond_needed is set to False).
