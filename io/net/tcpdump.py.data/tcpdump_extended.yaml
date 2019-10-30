@@ -1,0 +1,83 @@
+interface:
+peer_ip:
+host_ip:
+netmask:
+count: 100
+# interface packet drop accepted in percentage (eg 10 for 10%)
+drop_accepted: 10
+nmap_download: "https://nmap.org/dist/nmap-7.80.tar.bz2"
+options: !mux
+    PrintAllPacket:
+        option: '-A'
+    PrintASDOT:
+        option: '-b'
+    BufferSize:
+        option: '-B 2048'
+    dump_humanreadable:
+        option: '-d'
+    dump_Cfragment:
+        option: '-dd'
+    dump_decimal:
+        option: '-ddd'
+    linkheader:
+        option: '-e'
+    decrypt:
+        option: '-E algo:secret'
+    IPv4_numeric:
+        option: '-f'
+    802.11_header:
+        option: '-H'
+    immediate-mode:
+        option: '--immediate-mode'
+    ignore_checksum:
+        option: '-K'
+    stdout_buffered:
+        option: '-l'
+    TCP-MD5:
+        option: '-M secret'
+    no_domain_name:
+        option: '-N'
+    avoid_DNS_lookups:
+        option: '-n'
+    No_convert_protocol:
+        option: '-nn'
+    No_promiscuous:
+        option: '-p'
+    Print_packet_number:
+        option: '--number'
+    No_optimize:
+        option: '-O'
+    Quiet:
+        option: '-q'
+    Absolute_tcp:
+        option: '-S'
+    No_timestamp:
+        option: '-t'
+    fraction_timestamp:
+        option: '-tt'
+    delta_timestamp:
+        option: '-ttt'
+    timestamp_since_midnight:
+        option: '-tttt'
+    microsecond_timestamp:
+        option: '-ttttt'
+    undecoded_NFS:
+        option: '-u'
+    verbose_lvl1:
+        option: '-v'
+    verbose_lvl2:
+        option: '-vv'
+    verbose_lvl3:
+        option: '-vvv'
+    print_data:
+        option: '-x'
+    Prin_data_linkheaders:
+        option: '-xx'
+    without_linkheaders:
+        option: '-X icmp'
+    withlinkheaders:
+        option: '-XX'
+    Ad-hoc:
+        option: '-T aodv'
+    direction:
+        option: '-Q in'
