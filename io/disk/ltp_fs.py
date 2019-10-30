@@ -53,6 +53,13 @@ class LtpFs(Test):
         fstype = self.params.get('fs', default='ext4')
         self.args = self.params.get('args', default='')
 
+        if fstype == 'btrfs':
+	    if distro.detect().name == 'rhel':
+	        if (int(distro.detect().version) == 7 and \
+		    int(distro.detect().release) >= 4) or \
+		    int(distro.detect().version) > 7:
+		     self.cancel("btrfs is not supported with RHEL 7.4 onwards")
+
         if self.disk is not None:
             self.part_obj = Partition(self.disk, mountpoint=self.mount_point)
             self.log.info("Unmounting the disk/dir if it is already mounted")

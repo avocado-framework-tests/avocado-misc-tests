@@ -61,6 +61,11 @@ class FSMark(Test):
         self.fstype = self.params.get('fs', default='ext4')
 
         if self.fstype == 'btrfs':
+            if distro.detect().name == 'rhel':
+                if (int(distro.detect().version) == 7 and \
+                   int(distro.detect().release) >= 4) or \
+                   int(distro.detect().version) > 7:
+                    self.cancel("btrfs is not supported with RHEL 7.4 onwards")
             if distro.detect().name == 'Ubuntu':
                 if not smm.check_installed("btrfs-tools") and not \
                         smm.install("btrfs-tools"):
