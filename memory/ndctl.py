@@ -164,7 +164,7 @@ class NdctlTest(Test):
             self.fail("Failed to enable %s region(s)" % name)
 
     def disable_namespace(self, namespace='all', region='', bus='',
-                          force=False):
+                          verbose=False):
         """
         Disable namepsaces
         """
@@ -173,12 +173,12 @@ class NdctlTest(Test):
             args = '%s -r %s' % (args, region)
         if bus:
             args = '%s -b %s' % (args, bus)
-        if force:
-            args = '%s -f' % args
+        if verbose:
+            args = '%s -v' % args
 
         if process.system('%s disable-namespace %s' % (self.binary, args),
                           shell=True, ignore_status=True):
-            self.fail('Namespace disble command failed')
+            self.fail('Namespace disable failed for "%s"' % namespace)
 
     def enable_namespace(self, namespace='all', region='', bus='',
                          verbose=False):
