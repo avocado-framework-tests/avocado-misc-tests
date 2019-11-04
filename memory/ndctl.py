@@ -180,6 +180,23 @@ class NdctlTest(Test):
                           shell=True, ignore_status=True):
             self.fail('Namespace disble command failed')
 
+    def enable_namespace(self, namespace='all', region='', bus='',
+                         verbose=False):
+        """
+        Enable namepsaces
+        """
+        args = namespace
+        if region:
+            args = '%s -r %s' % (args, region)
+        if bus:
+            args = '%s -b %s' % (args, bus)
+        if verbose:
+            args = '%s -v' % args
+
+        if process.system('%s enable-namespace %s' % (self.binary, args),
+                          shell=True, ignore_status=True):
+            self.fail('Namespace enable failed for "%s"' % namespace)
+
     def create_namespace(self, region='', bus='', n_type='pmem', mode='fsdax',
                          memmap='dev', name='', size='', uuid='',
                          sector_size='', align='', reconfig='', force=False,
@@ -321,6 +338,23 @@ class NdctlTest(Test):
 
         namespaces = self.get_json('-N')
         self.log.info('Created namespace %s', namespaces)
+
+    def test_disable_enable_ns(self):
+        """
+        Test enable disable namespace
+        """
+        region = self.get_default_region()
+        for _ in range(0, 3):
+            self.create_namespace(region=region, size='128M')
+        namespaces = self.get_json('-N')
+        ns_names = []
+        for ns in namespaces:
+            ns_names.append(self.get_json_val(ns, 'dev'))
+        ns_names.append('all')
+
+        for namespace in ns_names:
+            self.disable_namespace(namespace=namespace)
+            self.enable_namespace(namespace=namespace)
 
     def test_namespace_modes(self):
         """
