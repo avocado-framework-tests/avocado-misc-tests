@@ -86,7 +86,7 @@ class Perffuzzer(Test):
         self.perf_fuzzer = os.path.join(self.sourcedir, "fuzzer/perf_fuzzer")
         if not os.path.exists(self.perf_fuzzer):
             self.cancel("fuzzer not found at %s" % self.perf_fuzzer)
-        self.output = self.run_cmd_out(self.perf_fuzzer)
+        self.output = self.run_cmd_out(self.perf_fuzzer).decode("utf-8")
 
     def test(self):
         '''

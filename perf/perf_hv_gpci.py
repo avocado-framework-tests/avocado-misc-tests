@@ -61,7 +61,7 @@ class perf_hv_gpci(Test):
 
         # Collect all hv_gpci events
         self.list_of_hv_gpci_events = []
-        for line in process.get_perf_events('hv_gpci'):
+        for line in process.get_command_output_matching('perf list', 'hv_gpci'):
             line = line.split(',')[0].split('/')[1]
             self.list_of_hv_gpci_events.append(line)
 

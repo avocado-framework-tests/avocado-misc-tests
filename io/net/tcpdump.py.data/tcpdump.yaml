@@ -1,5 +1,25 @@
 interface: net0
 peer_ip:
+host_ip:
+netmask:
 count: 100
 # interface packet drop accepted in percentage (eg 10 for 10%)
 drop_accepted: 10
+nmap_download: "https://nmap.org/dist/nmap-7.80.tar.bz2"
+options: !mux
+    generic:
+        option: ''
+    generic_host:
+        option: 'host'
+    generic_src:
+        option: 'src'
+    generic_dst:
+        option: 'dst'
+    protocol_tcp:
+        option: 'tcp'
+    protocol_udp:
+        option: 'udp'
+    protocol_icmp:
+        option: 'icmp'
+
+

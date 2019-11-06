@@ -70,7 +70,7 @@ class Hackbench(Test):
         perf_json = {}
         for run in range(self._iterations):
             self.log.info("Iteration " + str(run+1))
-            self.results = process.system_output(cmd, shell=True)
+            self.results = process.system_output(cmd, shell=True).decode("utf-8")
             for line in self.results.split('\n'):
                 if line.startswith('Time:'):
                     time_spent += float(line.split()[1])

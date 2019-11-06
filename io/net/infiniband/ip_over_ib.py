@@ -30,6 +30,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import build
 from avocado.utils import archive
 from avocado.utils import process, distro
+from avocado.utils import configure_network
 
 
 class IPOverIB(Test):
@@ -62,6 +63,10 @@ class IPOverIB(Test):
             self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
             self.cancel("%s peer machine is not available" % self.peer_ip)
+        self.ipaddr = self.params.get("host_ip", default="")
+        self.netmask = self.params.get("netmask", default="")
+        configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
+                                 'infiniband')
         self.tmo = self.params.get("TIMEOUT", default="600")
         self.iperf_run = self.params.get("IPERF_RUN", default="0")
         self.netserver_run = self.params.get("NETSERVER_RUN", default="0")
@@ -231,6 +236,7 @@ class IPOverIB(Test):
         cmd = "ssh %s \"%s\"" % (self.peer_ip, msg)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("test failed because peer sys not connected")
+        configure_network.unset_ip(self.iface)
 
 
 if __name__ == "__main__":

@@ -17,6 +17,8 @@ duration		- duration to run each test (sec)
 minimum_iterations	- minimum iterations when trying to reach certain confidence levels
 maximum_iterations	- maximum iterations when trying to reach certain confidence levels
 option			- test and supporting parameters
+host-IP                 - Specify host-IP for ip configuration.
+netmask                 - specify netmask for ip configuration.
 
 Requirements:
 -----------------------

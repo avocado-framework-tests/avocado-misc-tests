@@ -23,6 +23,7 @@ test lro and gro and interface
 
 import time
 import hashlib
+import paramiko
 import netifaces
 from avocado import main
 from avocado import Test
@@ -31,6 +32,7 @@ from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils import genio
 from avocado.utils.configure_network import PeerInfo, HostInfo
+from avocado.utils import configure_network
 
 
 class NetworkTest(Test):
@@ -59,6 +61,9 @@ class NetworkTest(Test):
         if interface not in interfaces:
             self.cancel("%s interface is not available" % interface)
         self.iface = interface
+        self.ipaddr = self.params.get("host_ip", default="")
+        self.netmask = self.params.get("netmask", default="")
+        configure_network.set_ip(self.ipaddr, self.netmask, self.iface)
         self.peer = self.params.get("peer_ip")
         if not self.peer:
             self.cancel("No peer provided")
@@ -72,6 +77,73 @@ class NetworkTest(Test):
                                  peer_password=self.peer_password)
         self.peer_interface = self.peerinfo.get_peer_interface(self.peer)
         self.mtu_set()
+        self.switch_name = self.params.get("switch_name", '*', default="")
+        self.userid = self.params.get("userid", '*', default="")
+        self.password = self.params.get("password", '*', default="")
+        self.port_id = self.params.get("port_id", default="")
+        if not self.port_id:
+            self.cancel("user should specify port id")
+        if not self.ping_check("-c 2"):
+            self.cancel("No connection to peer")
+        self.mtu = self.params.get("mtu", default=1500)
+        self.switch_login(self.switch_name, self.userid, self.password)
+
+    def switch_login(self, ip, username, password):
+        '''
+        Login method for remote fc switch
+        '''
+        self.tnc = paramiko.SSHClient()
+        self.tnc.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.tnc.connect(ip, username=username, password=password,
+                         look_for_keys=False, allow_agent=False)
+        print("SSH connection established to " + ip)
+        self.remote_conn = self.tnc.invoke_shell()
+        print("Interactive SSH session established")
+        assert self.remote_conn
+        self.remote_conn.send("iscli" + '\n')
+
+    def _send_only_result(self, command, response):
+        output = response.decode("utf-8").splitlines()
+        if command in output[0]:
+            output.pop(0)
+        output.pop()
+        output = [element.lstrip() + '\n' for element in output]
+        response = ''.join(output)
+        response = response.strip()
+        self.log.info(''.join(response))
+        return ''.join(response)
+
+    def run_switch_command(self, command, timeout=300):
+        '''
+        Run command method for running commands on fc switch
+        '''
+        self.prompt = "#"
+        self.log.info("Running the %s command on fc/nic switch", command)
+        if not hasattr(self, 'tnc'):
+            self.fail("telnet connection to the fc/nic switch not yet done")
+        self.remote_conn.send(command + '\n')
+        response = self.remote_conn.recv(1000)
+        return self._send_only_result(command, response)
+
+    def test_switch_port(self):
+        '''
+        switch port enable and disable test
+        '''
+        self.log.info("Enabling the privilege mode")
+        self.run_switch_command("enable")
+        self.log.info("Entering configuration mode")
+        self.run_switch_command("conf t")
+        cmd = "interface port %s" % self.port_id
+        self.run_switch_command(cmd)
+        self.run_switch_command("shutdown")
+        time.sleep(5)
+        if self.ping_check("-c 5"):
+            self.fail("pinging after disable port")
+        self.run_switch_command("no shutdown")
+        time.sleep(5)
+        if not self.ping_check("-c 5"):
+            self.fail("ping test failed")
+        self.run_switch_command("end")
 
     def mtu_set(self):
         '''
@@ -240,6 +312,7 @@ class NetworkTest(Test):
         '''
         Remove the files created
         '''
+        configure_network.unset_ip(self.iface)
         if 'scp' in str(self.name.name):
             process.run("rm -rf /tmp/tempfile")
             cmd = "timeout 600 ssh %s \" rm -rf /tmp/tempfile\"" % self.peer

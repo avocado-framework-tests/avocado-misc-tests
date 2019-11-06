@@ -13,3 +13,5 @@ Input Needed (in multiplexer file):
 Interface - Specify the interface with which the bridge interface needs to
             be created.
 Peer-IP   - Specify the IP for ping test after bridge interface is created
+host-IP   - Specify the IP for ip configuration for interface.
+Netmask   - Specify the netmask for ip configuration for interface.
