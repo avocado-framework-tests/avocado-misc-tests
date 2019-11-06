@@ -31,6 +31,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils import genio
+from avocado.utils.configure_network import PeerInfo, HostInfo
 from avocado.utils import configure_network
 
 
@@ -66,6 +67,16 @@ class NetworkTest(Test):
         self.peer = self.params.get("peer_ip")
         if not self.peer:
             self.cancel("No peer provided")
+        if not HostInfo.ping_check(self, self.iface, self.peer, "2"):
+            self.cancel("No connection to peer")
+        self.mtu = self.params.get("mtu", default=1500)
+        self.peer_user = self.params.get("peer_user", default="root")
+        self.peer_password = self.params.get("peer_password", '*',
+                                             default=None)
+        self.peerinfo = PeerInfo(self.peer, peer_user=self.peer_user,
+                                 peer_password=self.peer_password)
+        self.peer_interface = self.peerinfo.get_peer_interface(self.peer)
+        self.mtu_set()
         self.switch_name = self.params.get("switch_name", '*', default="")
         self.userid = self.params.get("userid", '*', default="")
         self.password = self.params.get("password", '*', default="")
@@ -134,16 +145,14 @@ class NetworkTest(Test):
             self.fail("ping test failed")
         self.run_switch_command("end")
 
-    def test_mtu_set(self):
+    def mtu_set(self):
         '''
         set mtu size
         '''
-        if not self.set_mtu_peer(self.mtu):
-            self.fail("Failed to set mtu in peer")
-        time.sleep(10)
-        if not self.set_mtu_host(self.mtu):
-            self.fail("Failed to set mtu in host")
-        time.sleep(10)
+        if not self.peerinfo.set_mtu_peer(self.peer_interface, self.mtu):
+            self.cancel("Failed to set mtu in peer")
+        if not HostInfo.set_mtu_host(self, self.iface, self.mtu):
+            self.cancel("Failed to set mtu in host")
 
     def test_gro(self):
         '''
@@ -173,14 +182,15 @@ class NetworkTest(Test):
         '''
         ping to peer machine
         '''
-        if not self.ping_check("-c 5"):
+        if not HostInfo.ping_check(self, self.iface, self.peer, '5'):
             self.fail("ping test failed")
 
     def test_floodping(self):
         '''
         Flood ping to peer machine
         '''
-        if not self.ping_check("-c 1000 -f"):
+        if not HostInfo.ping_check(self, self.iface, self.peer, '1000',
+                                   flood=True):
             self.fail("flood ping test failed")
 
     def test_ssh(self):
@@ -217,7 +227,9 @@ class NetworkTest(Test):
         '''
         Test jumbo frames
         '''
-        if not self.ping_check("-i 0.1 -c 30 -s %d" % (int(self.mtu) - 28)):
+        if not HostInfo.ping_check(self,  self.iface, self.peer, "30",
+                                   option='-i 0.1 -s %d'
+                                   % (int(self.mtu) - 28)):
             self.fail("jumbo frame test failed")
 
     def test_statistics(self):
@@ -228,7 +240,7 @@ class NetworkTest(Test):
         tx_file = "/sys/class/net/%s/statistics/tx_packets" % self.iface
         rx_before = genio.read_file(rx_file)
         tx_before = genio.read_file(tx_file)
-        self.ping_check("-c 5")
+        HostInfo.ping_check(self, self.iface, self.peer, "5")
         rx_after = genio.read_file(rx_file)
         tx_after = genio.read_file(tx_file)
         if (rx_after <= rx_before) or (tx_after <= tx_before):
@@ -236,67 +248,14 @@ class NetworkTest(Test):
             self.log.debug("After\nrx: %s tx: %s" % (rx_after, tx_after))
             self.fail("Statistics not incremented properly")
 
-    def test_mtu_set_back(self):
+    def mtu_set_back(self):
         '''
         Test set mtu back to 1500
         '''
-        if not self.set_mtu_host('1500'):
-            self.fail("Failed to set mtu in host")
-        if not self.set_mtu_peer('1500'):
-            self.fail("Failed to set mtu in peer")
-
-    def ping_check(self, options):
-        '''
-        Checks if the ping to peer works. Returns True if it works.
-        Returns False otherwise.
-        '''
-        cmd = "ping -I %s %s %s" % (self.iface, options, self.peer)
-        if process.system(cmd, shell=True, verbose=True,
-                          ignore_status=True) != 0:
-            return False
-        return True
-
-    def set_mtu_peer(self, mtu):
-        '''
-        set mtu size in peer
-        '''
-        cmd = "ssh %s \"ip addr show\"" % self.peer
-        peer_interface = ""
-        try:
-            for line in process.system_output(cmd,
-                                              shell=True).decode("utf-8") \
-                                                         .splitlines():
-                if self.peer in line:
-                    peer_interface = line.split()[-1]
-        except process.CmdError:
-            self.log.debug("failed to get info of peer interface")
-            return False
-        if not peer_interface:
-            self.log.debug("failed to get info of peer interface")
-            return False
-        cmd = "ssh %s \"ip link set %s mtu %s\"" % (self.peer,
-                                                    peer_interface,
-                                                    mtu)
-        try:
-            process.system(cmd, shell=True)
-        except process.CmdError:
-            self.log.debug("setting mtu value %s in peer failed", mtu)
-            return False
-        else:
-            return True
-
-    def set_mtu_host(self, mtu):
-        '''
-        set mtu size in host
-        '''
-        con_cmd = "ip link set %s mtu %s" % (self.iface, mtu)
-        try:
-            process.system(con_cmd, shell=True)
-        except process.CmdError:
-            self.log.debug("setting mtu value %s in host failed", mtu)
-            return False
-        else:
-            return True
+        if not HostInfo.set_mtu_host(self, self.iface, '1500'):
+            self.cancel("Failed to set mtu in host")
+        if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
+            self.cancel("Failed to set mtu in peer")
 
     def receive_offload_toggle_test(self, ro_type, ro_type_full):
         '''
@@ -306,7 +265,7 @@ class NetworkTest(Test):
             if not self.receive_offload_state_change(ro_type,
                                                      ro_type_full, state):
                 self.fail("%s %s failed" % (ro_type, state))
-            if not self.ping_check("-c 5"):
+            if not HostInfo.ping_check(self, self.iface, self.peer, "5"):
                 self.fail("ping failed in %s %s" % (ro_type, state))
 
     def receive_offload_state_change(self, ro_type, ro_type_full, state):
@@ -343,11 +302,11 @@ class NetworkTest(Test):
         cmd = "ip link set %s promisc on" % self.iface
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("failed to enable promisc mode")
-        self.test_ping()
+        HostInfo.ping_check(self, self.iface, self.peer, "5")
         cmd = "ip link set %s promisc off" % self.iface
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("failed to disable promisc mode")
-        self.test_ping()
+        HostInfo.ping_check(self, self.iface, self.peer, "5")
 
     def tearDown(self):
         '''
@@ -358,6 +317,7 @@ class NetworkTest(Test):
             process.run("rm -rf /tmp/tempfile")
             cmd = "timeout 600 ssh %s \" rm -rf /tmp/tempfile\"" % self.peer
             process.system(cmd, shell=True, verbose=True, ignore_status=True)
+        self.mtu_set_back()
 
 
 if __name__ == "__main__":
