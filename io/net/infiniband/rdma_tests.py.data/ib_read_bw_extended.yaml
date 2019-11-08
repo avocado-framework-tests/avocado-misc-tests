@@ -44,8 +44,8 @@ test_opt: !mux
         test_opt: -R -f 5s -D 11s
     -R_-l_2:
         test_opt: -R -l 2
-    -R_-m_2048:
-        test_opt: -R -m 2048
+    -R_-m_1024:
+        test_opt: -R -m 1024
     -R_-n_100000:
         test_opt: -R -n 100000
     -R_-N:
@@ -60,8 +60,8 @@ test_opt: !mux
         test_opt: -R -s 9000
     -R_-S_1:
         test_opt: -R -S 1
-    -R_-t_2048:
-        test_opt: -R -t 2048
+    -R_-t_1024:
+        test_opt: -R -t 1024
     -R_-T_128:
         test_opt: -R -T 128
     -R_-w_10M:
