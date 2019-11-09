@@ -70,6 +70,13 @@ class ParallelDd(Test):
         self.dd_roptions = self.params.get('dd_roptions', default='')
         self.fs_dd_woptions = self.params.get('fs_dd_woptions', default='')
         self.fs_dd_roptions = self.params.get('fs_dd_roptions', default='')
+        if self.fstype == 'btrfs':
+	    if distro.detect().name == 'rhel':
+                if (int(distro.detect().version) == 7 and \
+		    int(distro.detect().release) >= 4) or \
+		    int(distro.detect().version) > 7:
+		     self.cancel("btrfs is not supported with RHEL 7.4 onwards")
+
         if not self.blocks:
             self.blocks = self.megabytes * 256
 
