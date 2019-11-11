@@ -60,8 +60,12 @@ class RDMA(Test):
                                              default="None")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
-                                 interface_type='infiniband')
+        if self.iface[0:2] == 'ib':
+            configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
+                                     interface_type='Infiniband')
+        else:
+            configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
+                                     interface_type='Ethernet')
         self.session = Session(self.peer_ip, user=self.peer_user,
                                password=self.peer_password)
         if self.iface not in interfaces:
