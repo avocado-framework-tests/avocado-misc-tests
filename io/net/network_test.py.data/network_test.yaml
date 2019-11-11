@@ -1,13 +1,9 @@
 interface:
 peer_ip:
-peer_passw0rd: "root"
+peer_password: "root"
 peer_user: "********"
 host_ip:
 netmask:
-switch_name:
-userid:
-password:
-port_id:
 mtu: !mux
     1500:
         mtu: "1500"
