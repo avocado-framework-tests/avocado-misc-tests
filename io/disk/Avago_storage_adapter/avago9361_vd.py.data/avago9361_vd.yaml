@@ -1,4 +1,4 @@
-cenario:
+Scenario:
     controller: 0
     tool_location: /root/storcli64
     vd_disk: 16:5 16:6 16:7
