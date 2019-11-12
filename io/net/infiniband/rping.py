@@ -73,8 +73,12 @@ class Rping(Test):
             self.cancel("%s peer machine is not available" % self.peer_ip)
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
-                                 interface_type='infiniband')
+        if self.iface[0:2] == 'ib':
+            configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
+                                     interface_type='Infiniband')
+        else:
+            configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
+                                     interface_type='Ethernet')
         self.timeout = "2m"
         self.local_ip = netifaces.ifaddresses(self.iface)[AF_INET][0]['addr']
         self.option = self.option.replace("peer_ipv6", self.ipv6_peer)
