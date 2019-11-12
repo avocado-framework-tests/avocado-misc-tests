@@ -10,10 +10,14 @@ The modes are:
     mode=5 (Balance TLB)
     mode=6 (Balance ALB)
 In this test we enable mode 0 in peer machine and enable all modes in host machine.
+Note:
+1. For Infiniband based devices only mode 1 (Active backup) is supported. Due to which the expectation is that test environment is allways connected via Switch (i.e peer_bond_needed is set to False).
+
 -----------------------------
 Inputs Needed To Run Tests:
 ------------------------------
 bond_interfaces --> Interfaces in the Host machine requird for Bonding
+Note: example bond_interfaces = "ib0,ib1", No Space between the interface names
 peerip --> peer ip address
 peer_interfaces --> This is needed only if a Bond interface is to be created in the Peer machine.
 bond_name --> to create bond
