@@ -1,7 +1,7 @@
 Test: !mux
     options: !mux
         first:
-            basic_option: -m 224.0.0.IPVAL -b PEERIP -c 100 -C 300 -S 2048 , -m 224.0.0.IPVAL -b LOCALIP -c 100 -C 300 -S 2048 -s 
+            basic_option: -m 224.0.0.IPVAL -b PEERIP -c 100 -C 300 -S 1024 , -m 224.0.0.IPVAL -b LOCALIP -c 100 -C 300 -S 1024 -s
 # Placeholder for exended option
 #        fourth:
 #            ext_option:
