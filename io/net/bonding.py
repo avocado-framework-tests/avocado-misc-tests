@@ -39,6 +39,7 @@ from avocado.utils import distro
 from avocado.utils import process
 from avocado.utils import linux_modules
 from avocado.utils import genio
+from avocado.utils.configure_network import PeerInfo, HostInfo
 
 
 class Bonding(Test):
@@ -96,6 +97,7 @@ class Bonding(Test):
                                                 default=False)
         self.peer_wait_time = self.params.get("peer_wait_time", default=5)
         self.sleep_time = int(self.params.get("sleep_time", default=5))
+        self.mtu = self.params.get("mtu", default=1500)
         self.peer_login(self.peer_first_ipinterface, self.user, self.password)
         self.setup_ip()
         self.err = []
@@ -316,6 +318,8 @@ class Bonding(Test):
                 cmd = 'ip route add default via %s dev %s' % \
                     (self.gateway, self.bond_name)
                 process.system(cmd, shell=True, ignore_status=True)
+            if not HostInfo.set_mtu_host(self, self.bond_name, self.mtu):
+                self.cancel("Failed to set mtu in host")
 
         else:
             self.log.info("Configuring Bonding on Peer machine")

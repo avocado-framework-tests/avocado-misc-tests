@@ -1,0 +1,28 @@
+bonding_mode: "4"
+bond_interfaces: ""
+peer_ip: ""
+peer_interfaces: ""
+bond_name: "bondtest"
+user_name: "root"
+peer_bond_needed: False 
+peer_wait_time: "10"
+sleep_time: "5"
+mtu: !mux
+    1500:
+        mtu: "1500"
+    2000:
+        mtu: "2000"
+    3000:
+        mtu: "3000"
+    4000:
+        mtu: "4000"
+    5000:
+        mtu: "5000"
+    6000:
+        mtu: "6000"
+    7000:
+        mtu: "7000"
+    8000:
+        mtu: "8000"
+    9000:
+        mtu: "9000"
