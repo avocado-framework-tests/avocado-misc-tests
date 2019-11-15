@@ -36,6 +36,7 @@ from avocado.utils import process
 from avocado.utils import linux_modules
 from avocado.utils import genio
 from avocado.utils.ssh import Session
+from avocado.utils.configure_network import PeerInfo, HostInfo
 
 
 class Bonding(Test):
@@ -93,6 +94,7 @@ class Bonding(Test):
                                                 default=False)
         self.peer_wait_time = self.params.get("peer_wait_time", default=5)
         self.sleep_time = int(self.params.get("sleep_time", default=5))
+        self.mtu = self.params.get("mtu", default=1500)
         self.ib = False
         if self.host_interface[0:2] == 'ib':
             self.ib = True
@@ -299,8 +301,15 @@ class Bonding(Test):
                 self.fail("Bonding setup on local machine has failed")
             if self.gateway:
                 cmd = 'ip route add default via %s dev %s' % \
-                    (self.gateway, self.bond_name)
+                       (self.gateway, self.bond_name)
                 process.system(cmd, shell=True, ignore_status=True)
+            if not HostInfo.set_mtu_host(self, self.bond_name, self.mtu):
+                self.cancel("Failed to set mtu in host")
+            self.peer = PeerInfo.get_peer_interface(self,
+                                                    self.peer_first_ipinterface
+                                                    )
+            if not PeerInfo.set_mtu_peer(self, self.peer, self.mtu):
+                self.cancel("Failed to set mtu in peer")
 
         else:
             self.log.info("Configuring Bonding on Peer machine")
@@ -390,6 +399,10 @@ class Bonding(Test):
                     self.log.warn("unable to bring to original state in peer")
                 time.sleep(self.sleep_time)
         self.error_check()
+        self.peer = PeerInfo.get_peer_interface(self,
+                                                self.peer_first_ipinterface)
+        if not PeerInfo.set_mtu_peer(self, self.peer, '1500'):
+            self.cancel("Failed to set mtu in peer")
 
     def error_check(self):
         if self.err:
