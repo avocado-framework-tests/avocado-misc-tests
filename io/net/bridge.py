@@ -47,27 +47,14 @@ class Bridging(Test):
             self.cancel("User should specify peer IP")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        configure_network.set_ip(self.ipaddr, self.netmask,
-                                 self.host_interface)
 
-        cmd = "ip addr show %s | sed -nr 's/.*inet ([^ ]+)."\
-            "*/\\1/p'" % self.host_interface
-        self.cidr = process.system_output(
-            '%s' % cmd, shell=True).decode("utf-8")
-        cmd = "route -n | grep %s | grep -w UG | awk "\
-            "'{ print $2 }'" % self.host_interface
-        self.gateway = process.system_output(
-            '%s' % cmd, shell=True).decode("utf-8")
-        cmd = "ip addr show %s | grep inet | grep brd | "\
-            "awk '{ print $4 }'" % self.host_interface
-        self.broadcast = process.system_output(
-            '%s' % cmd, shell=True).decode("utf-8")
-
-    def test(self):
+    def test_bridgeCreate(self):
         '''
         Bridge Test
         Set up the ethernet bridge configuration in the linux kernel
         '''
+        configure_network.set_ip(self.ipaddr, self.netmask,
+                                 self.host_interface)
         self.check_failure('ip link add dev br0 type bridge')
         check_flag = False
         check_br = process.system_output('ip -d link show br0', verbose=True,
@@ -80,28 +67,22 @@ class Bridging(Test):
 
         self.check_failure('ip link set %s master br0' % self.host_interface)
         self.check_failure('ip addr flush dev %s' % self.host_interface)
-        self.check_failure('ip addr add %s broadcast %s dev br0' %
-                           (self.cidr, self.broadcast))
+        self.check_failure('ip addr add %s/%s dev br0' %
+                           (self.ipaddr, self.netmask))
         self.check_failure('ip link set br0 up')
-        if self.gateway:
-            self.check_failure('ip route add default via %s' %
-                               self.gateway)
         if process.system('ping %s -I br0 -c 4' % self.peer_ip,
                           shell=True, ignore_status=True):
             self.fail('Ping using bridge failed')
 
-    def tearDown(self):
+    def test_bridgeDelete(self):
         '''
         Set to original state
         '''
         self.check_failure('ip link set br0 down')
         self.check_failure('ip link del dev br0')
-        self.check_failure('ip addr add %s broadcast %s dev %s' % (
-            self.cidr, self.broadcast, self.host_interface))
+        self.check_failure('ip addr add %s/%s dev %s' % (
+            self.ipaddr, self.netmask, self.host_interface))
         self.check_failure('ip link set %s up' % self.host_interface)
-        if self.gateway:
-            self.check_failure('ip route add default via %s' %
-                               self.gateway)
         if process.system('ping %s -c 4' % self.peer_ip,
                           shell=True, ignore_status=True):
             self.fail('Ping failed when restoring back to provided interface')
