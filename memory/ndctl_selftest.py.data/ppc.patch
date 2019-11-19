@@ -1,0 +1,153 @@
+diff --git a/test/btt-check.sh b/test/btt-check.sh
+index c91a5ad..f601412 100755
+--- a/test/btt-check.sh
++++ b/test/btt-check.sh
+@@ -33,11 +33,11 @@ trap 'err $LINENO' ERR
+ #   "blockdev":"pmem5s"
+ # }
+ 
+-check_min_kver "4.14" || do_skip "may not support badblocks clearing on pmem via btt"
++check_min_kver "4.12" || do_skip "may not support badblocks clearing on pmem via btt"
+ 
+ create()
+ {
+-	json=$($NDCTL create-namespace -b $TEST_BUS0 -t pmem -m sector)
++	json=$($NDCTL create-namespace -b $TEST_BUS0 -t pmem -m sector -s 1G)
+ 	rc=2
+ 	eval "$(echo "$json" | json2var)"
+ 	[ -n "$dev" ] || err "$LINENO"
+@@ -166,7 +166,10 @@ do_tests()
+ }
+ 
+ # setup (reset nfit_test dimms, create the BTT namespace)
+-modprobe nfit_test
++if [ -z "$WITHOUT_NFIT" ]; then
++    modprobe nfit_test
++fi
++
+ rc=1
+ reset && create
+ do_tests
+diff --git a/test/create.sh b/test/create.sh
+index afc34ac..a5133b2 100755
+--- a/test/create.sh
++++ b/test/create.sh
+@@ -38,6 +38,10 @@ dev="x"
+ json=$($NDCTL create-namespace -b $TEST_BUS0 -t pmem -m raw)
+ eval $(echo $json | json2var )
+ [ $dev = "x" ] && echo "fail: $LINENO" && exit 1
++echo 1 > /sys/bus/nd/devices/$dev/force_raw
++cat /sys/bus/nd/devices/$dev/force_raw
++json=$($NDCTL list -n $dev)
++eval $(echo $json | json2var )
+ [ $mode != "raw" ] && echo "fail: $LINENO" &&  exit 1
+ 
+ # convert pmem to fsdax mode
+@@ -56,9 +60,12 @@ $NDCTL destroy-namespace -f $dev
+ 
+ # create blk
+ dev="x"
+-json=$($NDCTL create-namespace -b $TEST_BUS0 -t blk -m raw -v)
++json=$($NDCTL create-namespace -b $TEST_BUS0 -t pmem -m raw -v)
+ eval $(echo $json | json2var)
+ [ $dev = "x" ] && echo "fail: $LINENO" && exit 1
++echo 1 > /sys/bus/nd/devices/$dev/force_raw
++json=$($NDCTL list -n $dev)
++eval $(echo $json | json2var )
+ [ $mode != "raw" ] && echo "fail: $LINENO" &&  exit 1
+ 
+ # convert blk to sector mode
+diff --git a/test/max_available_extent_ns.sh b/test/max_available_extent_ns.sh
+index 5701195..b18571c 100755
+--- a/test/max_available_extent_ns.sh
++++ b/test/max_available_extent_ns.sh
+@@ -9,7 +9,7 @@ rc=77
+ 
+ trap 'err $LINENO' ERR
+ 
+-check_min_kver "4.19" || do_skip "kernel $KVER may not support max_available_size"
++check_min_kver "4.12" || do_skip "kernel $KVER may not support max_available_size"
+ 
+ init()
+ {
+@@ -28,7 +28,7 @@ do_test()
+ 	NS=()
+ 	for ((i=0; i<3; i++))
+ 	do
+-		NS[$i]=$($NDCTL create-namespace -r $region -t pmem -s $size | jq -r .dev)
++		NS[$i]=$($NDCTL create-namespace -r $region -t pmem -s $size -a 64k | jq -r .dev)
+ 		[[ -n ${NS[$i]} ]]
+ 	done
+ 
+@@ -38,7 +38,10 @@ do_test()
+ 	$NDCTL create-namespace -r $region -t pmem
+ }
+ 
+-modprobe nfit_test
++if [ -z "$WITHOUT_NFIT" ]; then
++    modprobe nfit_test
++fi
++
+ rc=1
+ init
+ do_test
+diff --git a/test/multi-dax.sh b/test/multi-dax.sh
+index 1dca352..f77f992 100755
+--- a/test/multi-dax.sh
++++ b/test/multi-dax.sh
+@@ -17,12 +17,15 @@ rc=77
+ 
+ . ./common
+ 
+-check_min_kver "4.13" || do_skip "may lack multi-dax support"
++check_min_kver "4.12" || do_skip "may lack multi-dax support"
+ 
+ trap 'err $LINENO' ERR
+ 
+ # setup (reset nfit_test dimms)
+-modprobe nfit_test
++if [ -z "$WITHOUT_NFIT" ]; then
++    modprobe nfit_test
++fi
++
+ $NDCTL disable-region -b $TEST_BUS0 all
+ $NDCTL zero-labels -b $TEST_BUS0 all
+ $NDCTL enable-region -b $TEST_BUS0 all
+@@ -31,9 +34,9 @@ rc=1
+ query=". | sort_by(.available_size) | reverse | .[0].dev"
+ region=$($NDCTL list -b $TEST_BUS0 -t pmem -Ri | jq -r "$query")
+ 
+-json=$($NDCTL create-namespace -b $TEST_BUS0 -r $region -t pmem -m devdax -a 4096 -s 16M)
++json=$($NDCTL create-namespace -b $TEST_BUS0 -r $region -t pmem -m devdax -a 65536 -s 64M)
+ chardev1=$(echo $json | jq ". | select(.mode == \"devdax\") | .daxregion.devices[0].chardev")
+-json=$($NDCTL create-namespace -b $TEST_BUS0 -r $region -t pmem -m devdax -a 4096 -s 16M)
++json=$($NDCTL create-namespace -b $TEST_BUS0 -r $region -t pmem -m devdax -a 65536 -s 64M)
+ chardev2=$(echo $json | jq ". | select(.mode == \"devdax\") | .daxregion.devices[0].chardev")
+ 
+ _cleanup
+diff --git a/test/rescan-partitions.sh b/test/rescan-partitions.sh
+index 5e01665..b880e1b 100755
+--- a/test/rescan-partitions.sh
++++ b/test/rescan-partitions.sh
+@@ -20,7 +20,7 @@ trap 'err $LINENO' ERR
+ #  "blockdev":"pmem5s",
+ #}
+ 
+-check_min_kver "4.16" || do_skip "may not contain fixes for partition rescanning"
++check_min_kver "4.12" || do_skip "may not contain fixes for partition rescanning"
+ 
+ check_prereq "parted"
+ check_prereq "blockdev"
+@@ -72,7 +72,11 @@ test_mode()
+ 	$NDCTL destroy-namespace $dev
+ }
+ 
+-modprobe nfit_test
++# setup (reset nfit_test dimms)
++if [ -z "$WITHOUT_NFIT" ]; then
++    modprobe nfit_test
++fi
++
+ rc=1
+ reset
+ test_mode "raw"
