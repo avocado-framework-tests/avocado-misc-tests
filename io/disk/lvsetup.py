@@ -50,7 +50,7 @@ class Lvsetup(Test):
         """
         pkg = ""
         smm = SoftwareManager()
-        self.disk = self.params.get('disks', default=None)
+        self.disk = self.params.get('lv_disks', default=None)
         vg_name = self.params.get('vg_name', default='avocado_vg')
         lv_name = self.params.get('lv_name', default='avocado_lv')
         self.fs_name = self.params.get('fs', default='ext4').lower()
