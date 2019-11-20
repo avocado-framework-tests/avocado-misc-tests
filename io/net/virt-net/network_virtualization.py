@@ -163,7 +163,8 @@ class NetworkVirtualization(Test):
         '''
         for line in process.system_output('lsrsrc IBM.MCP %s' % component,
                                           ignore_status=True, shell=True,
-                                          sudo=True).splitlines():
+                                          sudo=True).decode("utf-8") \
+                                                    .splitlines():
             if component in line:
                 return line.split()[-1].strip('{}\"')
         return ''
@@ -172,7 +173,7 @@ class NetworkVirtualization(Test):
         '''
         SSH Login method for remote server
         '''
-        pxh = pxssh.pxssh()
+        pxh = pxssh.pxssh(encoding='utf-8')
         # Work-around for old pxssh not having options= parameter
         pxh.SSH_OPTS = pxh.SSH_OPTS + " -o 'StrictHostKeyChecking=no'"
         pxh.SSH_OPTS = pxh.SSH_OPTS + " -o 'UserKnownHostsFile /dev/null' "
@@ -231,7 +232,7 @@ class NetworkVirtualization(Test):
 
         output = process.system_output("lssrc -a", ignore_status=True,
                                        shell=True, sudo=True)
-        if "inoperative" in output:
+        if "inoperative" in output.decode("utf-8"):
             self.cancel("Failed to start the rsct and rsct_rm services")
 
     def install_packages(self):
@@ -688,7 +689,7 @@ class NetworkVirtualization(Test):
         device_id = process.system_output("ls -l /sys/class/net/ | \
                                            grep %s | cut -d '/' -f \
                                            5" % device,
-                                          shell=True).strip()
+                                          shell=True).decode("utf-8").strip()
         return device_id
 
     def find_virtual_slot(self, dev_id):
@@ -697,7 +698,7 @@ class NetworkVirtualization(Test):
         """
         output = process.system_output("lsslot", ignore_status=True,
                                        shell=True, sudo=True)
-        for slot in output.split('\n'):
+        for slot in output.decode("utf-8").split('\n'):
             if dev_id in slot:
                 return slot.split(' ')[0]
         return False
