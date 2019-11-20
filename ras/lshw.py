@@ -212,7 +212,7 @@ class Lshwrun(Test):
             if not self.run_cmd_out("lshw"
                                     " -numeric | grep HCI | cut -d':' -f3"):
                 self.is_fail += 1
-            self.fail_cmd.append("lshw -numeric | grep HCI | cut -d':' -f3")
+                self.fail_cmd.append("lshw -numeric | grep HCI | cut -d':' -f3")
         self.error_check()
 
     @skipIf(process.system("lshw --help 2>&1 |grep notime",
