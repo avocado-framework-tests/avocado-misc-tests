@@ -1,12 +1,10 @@
 Port bounce Testcase:
-
-this testcase mainly depends on the setup of fc or fcoe switch to
-connect different adapters to different ports in respective switches.
+This testcase mainly depends on the type of fc switch configured.
+As the commands are different on different switch. And also some time
+the type of FSPs used on switch port or on adapter ports for connections.
 And also this test applicable only for Brocade Switches.
 
 parameters:
-type <fc/fcoe> : type of switch fc/fcoe <in small case>
-fcoe_fc <yes/no> : If port is an FC port in FCOE switch
 switch_name : FC Switch name/ip
 userid : FC switch user name to login
 password : FC switch password to login
