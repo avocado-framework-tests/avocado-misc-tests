@@ -75,8 +75,6 @@ class NetworkTest(Test):
                                  peer_password=self.peer_password)
         self.peer_interface = self.peerinfo.get_peer_interface(self.peer)
         self.mtu_set()
-        if not self.ping_check("-c 2"):
-            self.cancel("No connection to peer")
         self.mtu = self.params.get("mtu", default=1500)
 
     def mtu_set(self):
