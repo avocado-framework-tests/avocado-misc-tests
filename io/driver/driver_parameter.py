@@ -119,8 +119,7 @@ class Moduleparameter(Test):
         if linux_modules.unload_module(mod1) is False:
             self.fail("Unloading Module %s failed" % mod1)
         time.sleep(self.load_unload_sleep_time)
-        cmd = "%s %s=%s" % \
-               (mod1, self.param_name, self.param_value)
+        cmd = "%s %s=%s" % (mod1, self.param_name, self.param_value)
         if linux_modules.load_module(cmd) is False:
             self.fail("Param %s = Value %s Failed for Module %s" %
                       (self.param_name, self.param_value, mod1))
