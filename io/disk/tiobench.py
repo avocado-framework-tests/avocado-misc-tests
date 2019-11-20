@@ -49,10 +49,10 @@ class Tiobench(Test):
         smm = SoftwareManager()
         packages = ['gcc']
         if self.fstype == 'btrfs':
+            ver = int(distro.detect().version)
+            rel = int(distro.detect().release)
             if distro.detect().name == 'rhel':
-                if (int(distro.detect().version) == 7 and \
-                   int(distro.detect().release) >= 4) or \
-                   int(distro.detect().version) > 7:
+                if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with RHEL 7.4 onwards")
             if distro.detect().name == 'Ubuntu':
                 packages.extend(['btrfs-tools'])

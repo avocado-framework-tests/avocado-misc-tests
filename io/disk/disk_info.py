@@ -73,11 +73,12 @@ class DiskInfo(Test):
         if self.fstype == 'xfs':
             pkg_list.append('xfsprogs')
         if self.fstype == 'btrfs':
+            ver = int(distro.detect().version)
+            rel = int(distro.detect().release)
             if distro.detect().name == 'rhel':
-                if (int(distro.detect().version) == 7 and \
-                   int(distro.detect().release) >= 4) or \
-                   int(distro.detect().version) > 7:
-                    self.cancel("btrfs is not supported with RHEL 7.4 onwards")
+                if (ver == 7 and rel >= 4) or ver > 7:
+                    self.cancel("btrfs is not supported with \
+                                RHEL 7.4 onwards")
             if self.distro == 'Ubuntu':
                 pkg_list.append("btrfs-tools")
         for pkg in pkg_list:
