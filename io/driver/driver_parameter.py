@@ -23,6 +23,7 @@ from avocado import main
 from avocado.utils import process
 from avocado.utils import linux_modules, genio
 from avocado.utils import configure_network
+from avocado.utils.configure_network import HostInfo
 from avocado import Test
 
 
@@ -59,6 +60,12 @@ class Moduleparameter(Test):
         self.error_modules = []
         self.mod_list = []
         self.uname = linux_modules.platform.uname()[2]
+        if self.built_in_module(self.module) is True:
+            self.cancel("Module %s is Built-in Skipping " %
+                        self.module)
+        if self.param_check() is False:
+            self.cancel("Param %s is not Valid for Module %s" %
+                        (self.param_name, self.module))
 
     def built_in_module(self, module):
         """
@@ -70,17 +77,6 @@ class Moduleparameter(Test):
             if module == out.split('.'[0]):
                 return True
             return False
-
-    def ping_check(self, options):
-        '''
-        Checks if the ping to peer works. Returns True if it works.
-        Returns False otherwise.
-        '''
-        cmd = "ping -I %s %s %s" % (self.ifaces, options, self.peer)
-        if process.system(cmd, shell=True, verbose=True,
-                          ignore_status=True) != 0:
-            return False
-        return True
 
     def sysfs_value_check(self):
         '''
@@ -120,35 +116,25 @@ class Moduleparameter(Test):
                 if linux_modules.module_is_loaded(mod) is True:
                     self.error_modules.append(mod)
                     break
-        cmd = "rmmod %s" % mod1
-        if process.system(cmd, shell=True, verbose=True,
-                          ignore_status=True) != 0:
+        if linux_modules.unload_module(mod1) is False:
             self.fail("Unloading Module %s failed" % mod1)
         time.sleep(self.load_unload_sleep_time)
-        location = process.system_output('/sbin/modinfo -n %s' %
-                                         self.module).decode('utf-8')
-        cmd1 = "insmod %s %s=%s" % \
-               (location, self.param_name, self.param_value)
-        if process.system(cmd1, shell=True, verbose=True,
-                          ignore_status=True) != 0:
+        cmd = "%s %s=%s" % \
+               (mod1, self.param_name, self.param_value)
+        if linux_modules.load_module(cmd) is False:
             self.fail("Param %s = Value %s Failed for Module %s" %
                       (self.param_name, self.param_value, mod1))
         if self.sysfs_chk:
             if self.sysfs_value_check() is False:
                 self.fail("Sysfs check failed ")
-        if not self.ping_check("-c 1000 -f"):
+        if not HostInfo.ping_check(self, self.ifaces, self.peer, '1000',
+                                   flood=True):
             self.fail("ping test failed")
 
     def test(self):
         """
         Test Begins here
         """
-        if self.built_in_module(self.module) is True:
-            self.cancel("Module %s is Built-in Skipping " %
-                        self.module)
-        if self.param_check() is False:
-            self.cancel("Param %s is not Valid for Module %s" %
-                        (self.param_name, self.module))
         self.module_load_unload(self.module)
         if self.error_modules:
             self.fail("Failed Modules: %s" % self.error_modules)
