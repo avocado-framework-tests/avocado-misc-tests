@@ -50,7 +50,7 @@ class Lvsetup(Test):
         """
         pkg = ""
         smm = SoftwareManager()
-        self.disk = self.params.get('disks', default=None)
+        self.disk = self.params.get('lv_disks', default=None)
         vg_name = self.params.get('vg_name', default='avocado_vg')
         lv_name = self.params.get('lv_name', default='avocado_lv')
         self.fs_name = self.params.get('fs', default='ext4').lower()
@@ -63,6 +63,7 @@ class Lvsetup(Test):
                 pkg = 'btrfs-progs'
         if pkg and not smm.check_installed(pkg) and not smm.install(pkg):
             self.cancel("Package %s could not be installed" % pkg)
+
         lv_snapshot_name = self.params.get(
             'lv_snapshot_name', default='avocado_sn')
         self.ramdisk_basedir = self.params.get(
@@ -70,14 +71,16 @@ class Lvsetup(Test):
         self.ramdisk_sparse_filename = self.params.get(
             'ramdisk_sparse_filename', default='virtual_hdd')
 
-        if lv_utils.vg_check(vg_name):
-            self.cancel('Volume group %s already exists' % vg_name)
         self.vg_name = vg_name
-        if lv_utils.lv_check(vg_name, lv_name):
-            self.cancel('Logical Volume %s already exists' % lv_name)
         self.lv_name = lv_name
-        if lv_utils.lv_check(vg_name, lv_snapshot_name):
-            self.cancel('Snapshot %s already exists' % lv_snapshot_name)
+        if 'delete' not in str(self.name.name):
+            if lv_utils.vg_check(vg_name):
+                self.cancel('Volume group %s already exists' % vg_name)
+            if lv_utils.lv_check(vg_name, lv_name):
+                self.cancel('Logical Volume %s already exists' % lv_name)
+            if lv_utils.lv_check(vg_name, lv_snapshot_name):
+                self.cancel('Snapshot %s already exists' % lv_snapshot_name)
+
         self.mount_loc = os.path.join(self.workdir, 'mountpoint')
         if not os.path.isdir(self.mount_loc):
             os.makedirs(self.mount_loc)
@@ -93,6 +96,10 @@ class Lvsetup(Test):
                                                 default=self.lv_size)
         self.ramdisk_vg_size = self.params.get('ramdisk_vg_size',
                                                default=self.lv_size)
+        self.ramdisks.append(lv_utils.vg_ramdisk(self.disk, self.vg_name,
+                                                 self.ramdisk_vg_size,
+                                                 self.ramdisk_basedir,
+                                                 self.ramdisk_sparse_filename))
 
     @avocado.fail_on(lv_utils.LVException)
     def create_lv(self):
@@ -102,14 +109,25 @@ class Lvsetup(Test):
         A volume group with given name is created in the ramdisk. It then
         creates a logical volume.
         """
-        self.ramdisks.append(lv_utils.vg_ramdisk(self.disk, self.vg_name,
-                                                 self.ramdisk_vg_size,
-                                                 self.ramdisk_basedir,
-                                                 self.ramdisk_sparse_filename))
         lv_utils.lv_create(self.vg_name, self.lv_name, self.lv_size)
         lv_utils.lv_mount(self.vg_name, self.lv_name, self.mount_loc,
                           create_filesystem=self.fs_name)
         lv_utils.lv_umount(self.vg_name, self.lv_name)
+
+    @avocado.fail_on(lv_utils.LVException)
+    def delete_lv(self):
+        """
+        Clear all PV,VG, LV and snapshots created by the test.
+        """
+        # Remove created VG and unmount from base directory
+        errs = []
+        for ramdisk in self.ramdisks:
+            try:
+                lv_utils.vg_ramdisk_cleanup(*ramdisk)
+            except Exception as exc:
+                errs.append("Fail to cleanup ramdisk %s: %s" % (ramdisk, exc))
+        if errs:
+            self.fail("\n".join(errs))
 
     @avocado.fail_on(lv_utils.LVException)
     def mount_unmount_lv(self):
@@ -127,6 +145,7 @@ class Lvsetup(Test):
         """
         self.create_lv()
         self.mount_unmount_lv()
+        self.delete_lv()
 
     @avocado.fail_on(lv_utils.LVException)
     def test_vg_recreate(self):
@@ -136,6 +155,7 @@ class Lvsetup(Test):
         self.create_lv()
         lv_utils.vg_reactivate(self.vg_name, export=True)
         self.mount_unmount_lv()
+        self.delete_lv()
 
     @avocado.fail_on(lv_utils.LVException)
     def test_lv_snapshot(self):
@@ -149,20 +169,22 @@ class Lvsetup(Test):
                                   self.lv_snapshot_size)
         lv_utils.lv_revert(self.vg_name, self.lv_name, self.lv_snapshot_name)
         self.mount_unmount_lv()
+        self.delete_lv()
 
-    def tearDown(self):
+    @avocado.fail_on(lv_utils.LVException)
+    def test_create_lv(self):
         """
-        Clear all PV,VG, LV and snapshots created by the test.
+        A volume group with given name is created in the ramdisk. It then
+        creates a logical volume on it.
         """
-        # Remove created VG and unmount from base directory
-        errs = []
-        for ramdisk in self.ramdisks:
-            try:
-                lv_utils.vg_ramdisk_cleanup(*ramdisk)
-            except Exception as exc:
-                errs.append("Fail to cleanup ramdisk %s: %s" % (ramdisk, exc))
-        if errs:
-            self.error("\n".join(errs))
+        self.create_lv()
+
+    @avocado.fail_on(lv_utils.LVException)
+    def test_delete_lv(self):
+        """
+        A volume group with given name is deleted in the ramdisk
+        """
+        self.delete_lv()
 
 
 if __name__ == "__main__":
