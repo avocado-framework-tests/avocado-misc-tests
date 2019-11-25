@@ -155,7 +155,8 @@ class LPM(Test):
         '''
         for line in process.system_output('lsrsrc IBM.MCP %s' % component,
                                           ignore_status=True, shell=True,
-                                          sudo=True).splitlines():
+                                          sudo=True).decode("utf-8") \
+                                                    .splitlines():
             if component in line:
                 return line.split()[-1].strip('{}\"')
         return ''
@@ -167,7 +168,9 @@ class LPM(Test):
         '''
 
         for line in process.system_output('lparstat -i', ignore_status=True,
-                                          shell=True, sudo=True).splitlines():
+                                          shell=True,
+                                          sudo=True).decode("utf-8") \
+                                                    .splitlines():
             if component in line:
                 return line.split(':')[-1].strip()
         return ''
@@ -176,7 +179,7 @@ class LPM(Test):
         '''
         SSH Login method for remote server
         '''
-        pxh = pxssh.pxssh()
+        pxh = pxssh.pxssh(encoding='utf-8')
         # Work-around for old pxssh not having options= parameter
         pxh.SSH_OPTS = pxh.SSH_OPTS + " -o 'StrictHostKeyChecking=no'"
         pxh.SSH_OPTS = pxh.SSH_OPTS + " -o 'UserKnownHostsFile /dev/null' "
@@ -219,7 +222,7 @@ class LPM(Test):
             self.fail("Starting service %s failed", svc)
 
         output = process.system_output("lssrc -a", ignore_status=True,
-                                       shell=True, sudo=True)
+                                       shell=True, sudo=True).decode("utf-8")
         if "inoperative" in output:
             self.fail("Failed to start the rsct and rsct_rm services")
 

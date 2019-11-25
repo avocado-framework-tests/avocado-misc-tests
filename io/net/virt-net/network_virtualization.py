@@ -184,7 +184,9 @@ class NetworkVirtualization(Test):
         '''
 
         for line in process.system_output('lparstat -i', ignore_status=True,
-                                          shell=True, sudo=True).splitlines():
+                                          shell=True,
+                                          sudo=True).decode("utf-8") \
+                                                    .splitlines():
             if component in line:
                 return line.split(':')[-1].strip()
         return ''
