@@ -41,14 +41,14 @@ class Package_check(Test):
                 'packages_rhel', default=['lshw', 'librtas'])
             self.packages.extend(packages_rhel)
             for package in self.packages:
-                if "anaconda" in process.system_output("yum list installed "
-                                                       "| grep %s | tail -1"
-                                                       % package, shell=True):
+                if process.system_output("yum list installed "
+                                         "| grep %s | tail -1"
+                                         % package, shell=True):
                     self.log.info(
-                        "%s package is installed by default" % package)
+                        "%s package is installed" % package)
                 else:
                     self.log.info(
-                        "%s package is not installed by default" % package)
+                        "%s package is not installed" % package)
                     is_fail += 1
         elif dist.name == 'Ubuntu':
             packages_ubuntu = self.params.get(
@@ -58,10 +58,10 @@ class Package_check(Test):
                 if process.system_output("apt-mark showauto %s" % package,
                                          shell=True):
                     self.log.info(
-                        "%s package is installed by default" % package)
+                        "%s package is installed" % package)
                 else:
                     self.log.info(
-                        "%s package is not installed by default" % package)
+                        "%s package is not installed" % package)
                     is_fail += 1
         else:
             for package in self.packages:
@@ -70,7 +70,7 @@ class Package_check(Test):
                 else:
                     self.log.info("%s package is not installed" % package)
         if is_fail >= 1:
-            self.fail("%s package(s) not installed by default" % is_fail)
+            self.fail("%s package(s) not installed" % is_fail)
 
 
 if __name__ == "__main__":
