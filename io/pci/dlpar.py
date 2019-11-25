@@ -68,9 +68,9 @@ class DlparPci(Test):
             self.cancel("HMC IP not got")
         self.hmc_user = self.params.get("hmc_username", default='hscroot')
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default='********')
-        self.lpar_1 = self.get_mcp_component("NodeNameList")
+        self.lpar_1 = self.get_partition_name("Partition Name")
         if not self.lpar_1:
-            self.cancel("LPAR Name not got")
+            self.cancel("LPAR Name not got from lparstat command")
         self.login(self.hmc_ip, self.hmc_user, self.hmc_pwd)
         cmd = 'lssyscfg -r sys  -F name'
         output = self.run_command(cmd)
@@ -118,6 +118,18 @@ class DlparPci(Test):
                                           sudo=True).decode("utf-8").splitlines():
             if component in line:
                 return line.split()[-1].strip('{}\"')
+        return ''
+
+    @staticmethod
+    def get_partition_name(component):
+        '''
+        get partition name from lparstat -i
+        '''
+
+        for line in process.system_output('lparstat -i', ignore_status=True,
+                                          shell=True, sudo=True).splitlines():
+            if component in line:
+                return line.split(':')[-1].strip()
         return ''
 
     def login(self, ip_addr, username, password):

@@ -81,9 +81,9 @@ class NetworkVirtualization(Test):
             self.cancel("HMC IP not got")
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default=None)
         self.hmc_username = self.params.get("hmc_username", '*', default=None)
-        self.lpar = self.get_mcp_component("NodeNameList").split('.')[0]
+        self.lpar = self.get_partition_name("Partition Name")
         if not self.lpar:
-            self.cancel("LPAR Name not got from lsrsrc command")
+            self.cancel("LPAR Name not got from lparstat command")
         self.login(self.hmc_ip, self.hmc_username, self.hmc_pwd)
         cmd = 'lssyscfg -r sys  -F name'
         output = self.run_command(cmd)
@@ -175,6 +175,18 @@ class NetworkVirtualization(Test):
                                                     .splitlines():
             if component in line:
                 return line.split()[-1].strip('{}\"')
+        return ''
+
+    @staticmethod
+    def get_partition_name(component):
+        '''
+        get partition name from lparstat -i
+        '''
+
+        for line in process.system_output('lparstat -i', ignore_status=True,
+                                          shell=True, sudo=True).splitlines():
+            if component in line:
+                return line.split(':')[-1].strip()
         return ''
 
     def login(self, ipaddr, username, password):
