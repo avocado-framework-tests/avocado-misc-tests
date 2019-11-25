@@ -94,7 +94,7 @@ class MultiportStress(Test):
                     errors.append(out_buf)
                     break
         if errors:
-            self.fail("\n".join(errors))
+            self.fail(b"\n".join(errors))
 
     def test_multiport_ping(self):
         self.multiport_ping('')
