@@ -19,7 +19,7 @@
 import os
 import shutil
 from avocado import Test
-from avocado import main
+from avocado import main, skipUnless
 from avocado.utils import process, build, memory
 from avocado.utils.software_manager import SoftwareManager
 
@@ -36,6 +36,8 @@ class HugepageSanity(Test):
         shutil.copyfile(self.get_data(file_name),
                         os.path.join(self.teststmpdir, file_name))
 
+    @skipUnless('Hugepagesize' in dict(memory.meminfo),
+                "Hugepagesize not defined in kernel.")
     def setUp(self):
         smm = SoftwareManager()
         self.hpagesize = int(self.params.get('hpagesize', default=memory.get_huge_page_size()/1024))
