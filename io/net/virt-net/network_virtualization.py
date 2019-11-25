@@ -296,6 +296,11 @@ class NetworkVirtualization(Test):
                 self.log.debug(output)
                 self.fail("lshwres fails to list Network virtualized device \
                            after add operation")
+            if mac not in str(output):
+                self.log.debug(output)
+                self.fail("MAC address in HMC differs")
+            if not self.find_device(mac):
+                self.fail("MAC address differs in linux")
             self.configure_device(device_ip, netmask, mac)
 
     def test_backingdevadd(self):
@@ -621,6 +626,7 @@ class NetworkVirtualization(Test):
         for device in devices:
             if mac in netifaces.ifaddresses(device)[17][0]['addr']:
                 return device
+        return ''
 
     def interfacewait(self, mac):
         """
