@@ -45,7 +45,10 @@ class PPC64Test(Test):
         if SoftwareManager().check_installed("powerpc-utils") is False:
             if SoftwareManager().install("powerpc-utils") is False:
                 self.cancel("powerpc-utils is not installing")
-        self.smt_str = "ppc64_cpu --smt"
+        self.smt_str = "ppc64_cpu --smt
+        # Dynamically set max SMT specified at boot time
+        process.system("%s=on" % self.smt_str, shell=True)
+        # and get its value
         smt_op = process.system_output(self.smt_str, shell=True).decode()
         if "is not SMT capable" in smt_op:
             self.cancel("Machine is not SMT capable")
@@ -61,14 +64,7 @@ class PPC64Test(Test):
         self.smt_values = {1: "off"}
         self.key = 0
         self.value = ""
-        self.max_smt_value = 4
-        if cpu.get_cpu_arch().lower() == 'power9':
-            if 'Hash' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
-                self.max_smt_value = 8
-        if cpu.get_cpu_arch().lower() == 'power8':
-            self.max_smt_value = 8
-        if cpu.get_cpu_arch().lower() == 'power6':
-            self.max_smt_value = 2
+        self.max_smt_value =  int(self.curr_smt)
 
     def equality_check(self, test_name, cmd1, cmd2):
         """
@@ -89,7 +85,7 @@ class PPC64Test(Test):
         """
         Sets the SMT value, and calls each of the test, for each value.
         """
-        for i in range(2, self.max_smt_value + 1):
+        for i in range(2, self.max_smt_value):
             self.smt_values[i] = str(i)
         for self.key, self.value in self.smt_values.items():
             process.system_output("%s=%s" % (self.smt_str,
