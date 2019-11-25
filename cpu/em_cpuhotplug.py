@@ -53,7 +53,7 @@ class Cpuhotplug_Test(Test):
         genio.write_one_line('/proc/sys/kernel/printk', "8")
         # Set SMT to max SMT value (restricted at boot time) and get its value
         process.system("ppc64_cpu --smt=%s" % "on", shell=True)
-        self.max_smt_s=process.system_output("ppc64_cpu --smt", shell=True).decode()
+        self.max_smt_s = process.system_output("ppc64_cpu --smt", shell=True).decode()
         self.max_smt = int(self.max_smt_s[4:])
         self.path = "/sys/devices/system/cpu"
 
