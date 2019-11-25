@@ -2,4 +2,25 @@ host_interfaces: "enP4p1s0f1,enP4p1s0f2"
 peer_ips: "100.10.10.12,200.20.20.22"
 count: "1100"
 host_ips: ""
-netmask: "" 
+netmask: ""
+peer_user: ""
+peer_password: ""
+mtu: !mux
+    1500:
+        mtu: "1500"
+    2000:
+        mtu: "2000"
+    3000:
+        mtu: "3000"
+    4000:
+        mtu: "4000"
+    5000:
+        mtu: "5000"
+    6000:
+        mtu: "6000"
+    7000:
+        mtu: "7000"
+    8000:
+        mtu: "8000"
+    9000:
+        mtu: "9000"

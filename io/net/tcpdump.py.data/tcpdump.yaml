@@ -2,6 +2,8 @@ interface: net0
 peer_ip:
 host_ip:
 netmask:
+peer_user:
+peer_password:
 count: 100
 # interface packet drop accepted in percentage (eg 10 for 10%)
 drop_accepted: 10
@@ -21,5 +23,22 @@ options: !mux
         option: 'udp'
     protocol_icmp:
         option: 'icmp'
-
-
+mtu: !mux
+    1500:
+        mtu: "1500"
+    2000:
+        mtu: "2000"
+    3000:
+        mtu: "3000"
+    4000:
+        mtu: "4000"
+    5000:
+        mtu: "5000"
+    6000:
+        mtu: "6000"
+    7000:
+        mtu: "7000"
+    8000:
+        mtu: "8000"
+    9000:
+        mtu: "9000"
