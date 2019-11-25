@@ -18,7 +18,7 @@
 import os
 from avocado import Test
 from avocado import main
-from avocado import skipIf
+from avocado import skipIf, skipUnless
 from avocado.utils import process
 from avocado.utils import memory
 from avocado.core import data_dir
@@ -38,6 +38,9 @@ class Thp(Test):
     '''
 
     @skipIf(PAGESIZE, "No THP support for kernel with 4K PAGESIZE")
+    @skipUnless('Hugepagesize' in dict(memory.meminfo),
+                "Hugepagesize not defined in kernel.")
+        
     def setUp(self):
         '''
         Sets all the reqd parameter and also
