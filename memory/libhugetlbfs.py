@@ -107,7 +107,7 @@ class LibHugetlbfs(Test):
                             % (pages_available, pages_requested))
 
         git.get_repo('https://github.com/libhugetlbfs/libhugetlbfs.git',
-                     branch='next', destination_dir=self.workdir)
+                     destination_dir=self.workdir)
         os.chdir(self.workdir)
         patch = self.params.get('patch', default='elflink.patch')
         process.run('patch -p1 < %s' % self.get_data(patch), shell=True)
