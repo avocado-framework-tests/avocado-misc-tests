@@ -75,7 +75,7 @@ class NetworkTest(Test):
                                  peer_password=self.peer_password)
         self.peer_interface = self.peerinfo.get_peer_interface(self.peer)
         self.mtu_set()
-        if not self.ping_check("-c 2"):
+        if not HostInfo.ping_check(self, self.iface, self.peer, "2"):
             self.cancel("No connection to peer")
         self.mtu = self.params.get("mtu", default=1500)
 
@@ -106,6 +106,18 @@ class NetworkTest(Test):
         '''
         ro_type = "lro"
         ro_type_full = "large-receive-offload"
+        if not self.receive_offload_state(ro_type_full):
+            self.fail("Could not get state of %s" % ro_type)
+        if self.receive_offload_state(ro_type_full) == 'fixed':
+            self.fail("Can not change the state of %s" % ro_type)
+        self.receive_offload_toggle_test(ro_type, ro_type_full)
+
+    def test_tso(self):
+        '''
+        Test TSO
+        '''
+        ro_type = "tso"
+        ro_type_full = "tcp-segmentation-offload"
         if not self.receive_offload_state(ro_type_full):
             self.fail("Could not get state of %s" % ro_type)
         if self.receive_offload_state(ro_type_full) == 'fixed':
@@ -204,7 +216,7 @@ class NetworkTest(Test):
 
     def receive_offload_state_change(self, ro_type, ro_type_full, state):
         '''
-        Change the state of LRO / GRO to specified state
+        Change the state of LRO / GRO / TSO to specified state
         '''
         cmd = "ethtool -K %s %s %s" % (self.iface, ro_type, state)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
@@ -215,7 +227,7 @@ class NetworkTest(Test):
 
     def receive_offload_state(self, ro_type_full):
         '''
-        Return the state of LRO / GRO.
+        Return the state of LRO / GRO / TSO.
         If the state can not be changed, we return 'fixed'.
         If any other error, we return ''.
         '''
