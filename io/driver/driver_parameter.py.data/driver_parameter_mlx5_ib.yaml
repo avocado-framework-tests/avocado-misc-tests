@@ -1,13 +1,16 @@
-module: "mlx5_ib"
-interface:
+module: mlx5_ib
+interface: ib0
 host_ip:
 netmask:
 peer_ip:
 sysfs_check_required: 0
-module_param: !mux
-    dc_cnak_qp_depth:
-        module_param_name: "dc_cnak_qp_depth"
-        module_param_value: "1"
-    dc_cnak_qp_depth_100:
-        module_param_name: "dc_cnak_qp_depth"
-        module_param_value: "100"
+module_param_name: "dc_cnak_qp_depth"
+value: !mux
+    1:
+       module_param_value: "1"
+    1024:
+       module_param_value: "1024"
+    4096:
+       module_param_value: "4096"
+    8192:
+       module_param_value: "8192"
