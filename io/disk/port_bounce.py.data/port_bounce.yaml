@@ -1,0 +1,7 @@
+switch_name: "9.40.192.74"
+userid: "admin"
+password: "passw0rd"
+pci_device: "0014:70:00.0,0014:70:00.1"
+sbt: 60
+lbt: 120
+count: 1
