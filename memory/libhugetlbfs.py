@@ -21,7 +21,7 @@ import os
 import glob
 
 from avocado import Test
-from avocado import main
+from avocado import main, skipUnless
 from avocado.utils import process
 from avocado.utils import build
 from avocado.utils import kernel
@@ -40,6 +40,8 @@ class LibHugetlbfs(Test):
     :avocado: tags=memory,privileged,hugepage
     '''
 
+    @skipUnless('Hugepagesize' in dict(memory.meminfo),
+                "Hugepagesize not defined in kernel.")
     def setUp(self):
 
         # Check for basic utilities
