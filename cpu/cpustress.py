@@ -244,7 +244,7 @@ class cpustresstest(Test):
         self.log.info("\nSet all process affine to single NUMA node")
         nodes = process.system_output(
             "numactl --hardware | grep cpus:",  shell=True)
-        nodes = nodes.split('\n')
+        nodes = nodes.decode().split('\n')
         for node in nodes:
             cores = node.split(': ')[-1].replace(" ", ",")
             if cores:

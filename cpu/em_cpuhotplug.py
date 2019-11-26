@@ -84,7 +84,9 @@ class Cpuhotplug_Test(Test):
                 self.log.info("Offlining the threads : %s for "
                               "the core : %s" % (cpu_list, core))
                 for cpu_num in cpu_list:
-                    self.offline_cpu(cpu_num)
+                    # If only one core then don't disable cpu 0 - busy
+                    if core != 0 or (core == 0 and cpu_num != 0):
+                        self.offline_cpu(cpu_num)
                 cpu_list = self.random_gen_cpu(core)
                 self.log.info("Onlining the threads : %s for "
                               "the core : %s" % (cpu_list, core))

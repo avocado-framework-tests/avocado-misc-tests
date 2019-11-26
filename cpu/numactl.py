@@ -43,7 +43,7 @@ class Numactl(Test):
 
         detected_distro = distro.detect()
         deps = ['gcc', 'libtool', 'autoconf', 'automake', 'make']
-        if detected_distro.name == "Ubuntu":
+        if detected_distro.name in ["Ubuntu", 'debian']:
             deps.extend(['libnuma-dev'])
         elif detected_distro.name in ["centos", "rhel", "fedora"]:
             deps.extend(['numactl-devel'])

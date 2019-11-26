@@ -27,6 +27,7 @@ from avocado.utils import cpu
 from avocado.utils import distro
 from avocado.utils import genio
 from avocado.utils.software_manager import SoftwareManager
+from math import ceil
 
 
 class PPC64Test(Test):
@@ -121,7 +122,7 @@ class PPC64Test(Test):
             "ppc64_cpu --cores-present",
             shell=True).decode("utf-8").strip().split()[-1]
         op2 = cpu.online_cpus_count() / int(self.key)
-        self.equality_check("Core", op1, op2)
+        self.equality_check("Core", op1, ceil(op2))
 
     def subcore(self):
         """
@@ -132,7 +133,7 @@ class PPC64Test(Test):
             shell=True).decode("utf-8").strip().split()[-1]
         op2 = genio.read_file(
             "/sys/devices/system/cpu/subcores_per_core").strip()
-        self.equality_check("Subcore", op1, op2)
+        self.equality_check("Subcore", op1, ceil(op2))
 
     def threads_per_core(self):
         """
@@ -144,7 +145,7 @@ class PPC64Test(Test):
         op2 = process.system_output("ppc64_cpu --info",
                                     shell=True).decode("utf-8")
         op2 = len(op2.strip().splitlines()[0].split(":")[-1].split())
-        self.equality_check("Threads per core", op1, op2)
+        self.equality_check("Threads per core", op1, ceil(op2))
 
     def smt_snoozedelay(self):
         """
