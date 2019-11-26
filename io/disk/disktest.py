@@ -29,7 +29,7 @@ from avocado import Test
 from avocado import main
 from avocado.utils import build
 from avocado.utils import memory
-from avocado.utils import process
+from avocado.utils import process, distro
 from avocado.utils import lv_utils
 from avocado.utils.partition import Partition
 from avocado.utils.software_manager import SoftwareManager
@@ -73,7 +73,13 @@ class Disktest(Test):
         self.disk = self.params.get('disk', default=None)
         self.dirs = self.params.get('dir', default=self.workdir)
         self.fstype = self.params.get('fs', default='ext4')
-
+        if self.fstype == 'btrfs':
+            ver = int(distro.detect().version)
+            rel = int(distro.detect().release)
+            if distro.detect().name == 'rhel':
+                if (ver == 7 and rel >= 4) or ver > 7:
+                    self.cancel("btrfs is not supported with \
+                                RHEL 7.4 onwards")
         gigabytes = int(lv_utils.get_diskspace(self.disk)) // 1073741824
         memory_mb = memory.meminfo.MemTotal.m
         self.chunk_mb = gigabytes * 950

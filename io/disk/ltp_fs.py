@@ -26,7 +26,7 @@ LTP Filesystem tests
 import os
 from avocado import Test
 from avocado import main
-from avocado.utils import build
+from avocado.utils import build, distro
 from avocado.utils import process, archive
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.partition import Partition
@@ -53,6 +53,13 @@ class LtpFs(Test):
         fstype = self.params.get('fs', default='ext4')
         self.args = self.params.get('args', default='')
 
+        if fstype == 'btrfs':
+            ver = int(distro.detect().version)
+            rel = int(distro.detect().release)
+            if distro.detect().name == 'rhel':
+                if (ver == 7 and rel >= 4) or ver > 7:
+                    self.cancel("btrfs is not supported with \
+                                RHEL 7.4 onwards")
         if self.disk is not None:
             self.part_obj = Partition(self.disk, mountpoint=self.mount_point)
             self.log.info("Unmounting the disk/dir if it is already mounted")
