@@ -29,6 +29,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils import configure_network
+from avocado.utils import wait
 
 
 class Ethtool(Test):
@@ -74,36 +75,32 @@ class Ethtool(Test):
         cmd = "ip link set dev %s %s" % (interface, state)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             return False
-        if status != self.interface_link_status(interface):
+        if not wait.wait_for(configure_network.interface_link_up,
+                             timeout=120, args=[self.iface]):
             return False
         return True
-
-    def interface_link_status(self, interface):
-        '''
-        Return the status of the interface link from ethtool.
-        '''
-        cmd = "ethtool %s" % interface
-        for line in process.system_output(cmd, shell=True,
-                                          ignore_status=True).decode("utf-8") \
-                                                             .splitlines():
-            if 'Link detected' in line:
-                return line.split()[-1]
-        return ''
 
     def test_ethtool(self):
         '''
         Test the ethtool args provided
         '''
-        for state, status in zip(["down", "up"], ["no", "yes"]):
-            if not self.interface_state_change(self.iface, state, status):
-                self.fail("interface %s failed" % state)
+        if not wait.wait_for(configure_network.interface_link_up,
+                             timeout=120, args=[self.iface]):
+            self.fail("interface UP failed")
+        else:
             cmd = "ethtool %s %s %s" % (self.args, self.iface, self.elapse)
             ret = process.run(cmd, shell=True, verbose=True,
                               ignore_status=True)
             if ret.exit_status != 0:
                 self.fail("failed")
-        if not self.ping_check('-c 5'):
-            self.fail("ping failed after interface is up")
+            if not wait.wait_for(configure_network.interface_link_up,
+                                 timeout=120, args=[self.iface]):
+                print("Link is taking longer time to link up after \
+                      running ethtool command")
+                return False
+            else:
+                if not self.ping_check('-c 5'):
+                    self.fail("ping failed after interface is up")
 
     def ping_check(self, options):
         '''
