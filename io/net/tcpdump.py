@@ -58,7 +58,7 @@ class TcpdumpTest(Test):
         # Install needed packages
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        pkgs = ['tcpdump', 'flex', 'bison', 'gcc-c++']
+        pkgs = ['tcpdump', 'flex', 'bison', 'gcc', 'gcc-c++']
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package Can not install" % pkg)
@@ -72,7 +72,7 @@ class TcpdumpTest(Test):
             self.n_map = os.path.join(self.nmap, self.version)
             archive.extract(tarball, self.nmap)
             os.chdir(self.n_map)
-            process.system('./configure', shell=True)
+            process.system('./configure ppc64le', shell=True)
             build.make(self.n_map)
             process.system('./nping/nping -h', shell=True)
 
