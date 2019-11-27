@@ -55,7 +55,7 @@ class Dwh(Test):
 
         dist = distro.detect()
         packages = ['gcc', 'patch']
-        if dist.name == 'Ubuntu':
+        if dist.name in ['Ubuntu', 'debian']:
             packages.extend(['g++'])
         elif dist.name in ['SuSE', 'fedora', 'rhel']:
             packages.extend(['gcc-c++'])

@@ -1,0 +1,14 @@
+Port bounce Testcase:
+This testcase mainly depends on the type of fc switch configured.
+As the commands are different on different switch. And also some time
+the type of FSPs used on switch port or on adapter ports for connections.
+And also this test applicable only for Brocade Switches.
+
+parameters:
+switch_name : FC Switch name/ip
+userid : FC switch user name to login
+password : FC switch password to login
+sbt: short bounce time in seconds
+lbt: long bounce time in seconds
+count : Number of times test to run
+pci_device: pci_bus_adress of adapter

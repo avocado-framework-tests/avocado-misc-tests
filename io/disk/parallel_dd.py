@@ -30,7 +30,7 @@ import sys
 import json
 from avocado import Test
 from avocado import main
-from avocado.utils import process
+from avocado.utils import process, distro
 from avocado.utils import partition as partition_lib
 
 
@@ -70,6 +70,13 @@ class ParallelDd(Test):
         self.dd_roptions = self.params.get('dd_roptions', default='')
         self.fs_dd_woptions = self.params.get('fs_dd_woptions', default='')
         self.fs_dd_roptions = self.params.get('fs_dd_roptions', default='')
+        if self.fstype == 'btrfs':
+            ver = int(distro.detect().version)
+            rel = int(distro.detect().release)
+            if distro.detect().name == 'rhel':
+                if (ver == 7 and rel >= 4) or ver > 7:
+                    self.cancel("btrfs is not supported with RHEL 7.4 onwards")
+
         if not self.blocks:
             self.blocks = self.megabytes * 256
 

@@ -51,12 +51,10 @@ class Cpuhotplug_Test(Test):
                       % (self.T_CORES, self.THREADS))
 
         genio.write_one_line('/proc/sys/kernel/printk', "8")
-        self.max_smt = 4
-        if cpu.get_cpu_arch().lower() == 'power8':
-            self.max_smt = 8
-        if cpu.get_cpu_arch().lower() == 'power6':
-            self.max_smt = 2
-        process.system("ppc64_cpu --smt=%s" % self.max_smt, shell=True)
+        # Set SMT to max SMT value (restricted at boot time) and get its value
+        process.system("ppc64_cpu --smt=%s" % "on", shell=True)
+        self.max_smt_s = process.system_output("ppc64_cpu --smt", shell=True).decode()
+        self.max_smt = int(self.max_smt_s[4:])
         self.path = "/sys/devices/system/cpu"
 
     def clear_dmesg(self):
@@ -86,7 +84,9 @@ class Cpuhotplug_Test(Test):
                 self.log.info("Offlining the threads : %s for "
                               "the core : %s" % (cpu_list, core))
                 for cpu_num in cpu_list:
-                    self.offline_cpu(cpu_num)
+                    # If only one core then don't disable cpu 0 - busy
+                    if core != 0 or (core == 0 and cpu_num != 0):
+                        self.offline_cpu(cpu_num)
                 cpu_list = self.random_gen_cpu(core)
                 self.log.info("Onlining the threads : %s for "
                               "the core : %s" % (cpu_list, core))
