@@ -18,7 +18,7 @@
 import os
 from avocado import Test
 from avocado import main
-from avocado import skipIf
+from avocado import skipIf, skipUnless
 from avocado.utils import process
 from avocado.utils import memory
 from avocado.core import data_dir
@@ -38,6 +38,8 @@ class Thp(Test):
     '''
 
     @skipIf(PAGESIZE, "No THP support for kernel with 4K PAGESIZE")
+    @skipUnless('Hugepagesize' in dict(memory.meminfo),
+                "Hugepagesize not defined in kernel.")
     def setUp(self):
         '''
         Sets all the reqd parameter and also
@@ -59,7 +61,7 @@ class Thp(Test):
 
         # Set block size as hugepage size * 2
         self.block_size = memory.meminfo.Hugepagesize.m * 2
-        self.count = free_mem / self.block_size
+        self.count = free_mem // self.block_size
 
         # Mount device as per free memory size
         if not os.path.exists(self.mem_path):
