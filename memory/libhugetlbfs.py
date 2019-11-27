@@ -21,7 +21,7 @@ import os
 import glob
 
 from avocado import Test
-from avocado import main
+from avocado import main, skipUnless
 from avocado.utils import process
 from avocado.utils import build
 from avocado.utils import kernel
@@ -40,13 +40,14 @@ class LibHugetlbfs(Test):
     :avocado: tags=memory,privileged,hugepage
     '''
 
+    @skipUnless('Hugepagesize' in dict(memory.meminfo),
+                "Hugepagesize not defined in kernel.")
     def setUp(self):
 
         # Check for basic utilities
         smm = SoftwareManager()
         detected_distro = distro.detect()
         deps = ['gcc', 'make', 'patch']
-        cpuinfo = genio.read_file("/proc/cpuinfo").strip()
         if detected_distro.name == "Ubuntu":
             deps += ['libpthread-stubs0-dev', 'git']
         elif detected_distro.name == "SuSE":
@@ -108,7 +109,7 @@ class LibHugetlbfs(Test):
                             % (pages_available, pages_requested))
 
         git.get_repo('https://github.com/libhugetlbfs/libhugetlbfs.git',
-                     destination_dir=self.workdir)
+                     branch='next', destination_dir=self.workdir)
         os.chdir(self.workdir)
         patch = self.params.get('patch', default='elflink.patch')
         process.run('patch -p1 < %s' % self.get_data(patch), shell=True)
@@ -176,7 +177,8 @@ class LibHugetlbfs(Test):
         os.chdir(self.workdir)
 
         run_log = build.run_make(
-            self.workdir, extra_args='BUILDTYPE=NATIVEONLY check').stdout
+            self.workdir, extra_args='BUILDTYPE=NATIVEONLY check',
+            process_kwargs={'ignore_status': True}).stdout.decode('utf-8')
         parsed_results = []
         error = ""
         for idx, hp_size in enumerate(self.page_sizes):
