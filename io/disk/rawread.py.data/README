@@ -1,0 +1,6 @@
+This test attempts to read from the given disk. script test only the 
+basic functionality or disk capability using different values of 
+option t which is a sequential write() test and then reads the same.
+
+Parameter:
+disk : any disk from /dev/ dir like USB/scsi/SAN etc
