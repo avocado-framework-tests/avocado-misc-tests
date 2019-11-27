@@ -1,0 +1,21 @@
+interface:
+peer_ip:
+host_ip:
+netmask:
+args: !mux
+    Information:
+        arg:
+    Driver:
+        arg: -i
+    Coalescing:
+        arg: -c
+    RingParameter:
+        arg: -g
+    ShowOffloadProtocolFeature:
+        arg: -k
+    Statistics:
+        arg: -S
+    Show-permaddr:
+        arg: -P
+    Show-time-stamping:
+        arg: -T
