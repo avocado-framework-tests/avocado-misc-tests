@@ -51,8 +51,8 @@ class Lvsetup(Test):
         pkg = ""
         smm = SoftwareManager()
         self.disk = self.params.get('lv_disks', default=None)
-        vg_name = self.params.get('vg_name', default='avocado_vg')
-        lv_name = self.params.get('lv_name', default='avocado_lv')
+        self.vg_name = self.params.get('vg_name', default='avocado_vg')
+        self.lv_name = self.params.get('lv_name', default='avocado_lv')
         self.fs_name = self.params.get('fs', default='ext4').lower()
         if self.fs_name == 'xfs':
             pkg = 'xfsprogs'
@@ -69,27 +69,24 @@ class Lvsetup(Test):
         if pkg and not smm.check_installed(pkg) and not smm.install(pkg):
             self.cancel("Package %s could not be installed" % pkg)
 
-        lv_snapshot_name = self.params.get(
+        self.lv_snap_name = self.params.get(
             'lv_snapshot_name', default='avocado_sn')
         self.ramdisk_basedir = self.params.get(
             'ramdisk_basedir', default=os.path.join(self.workdir, 'ramdisk'))
         self.ramdisk_sparse_filename = self.params.get(
             'ramdisk_sparse_filename', default='virtual_hdd')
 
-        self.vg_name = vg_name
-        self.lv_name = lv_name
         if 'delete' not in str(self.name.name):
-            if lv_utils.vg_check(vg_name):
-                self.cancel('Volume group %s already exists' % vg_name)
-            if lv_utils.lv_check(vg_name, lv_name):
-                self.cancel('Logical Volume %s already exists' % lv_name)
-            if lv_utils.lv_check(vg_name, lv_snapshot_name):
-                self.cancel('Snapshot %s already exists' % lv_snapshot_name)
+            if lv_utils.vg_check(self.vg_name):
+                self.cancel('Volume group %s already exists' % self.vg_name)
+            if lv_utils.lv_check(self.vg_name, self.lv_name):
+                self.cancel('Logical Volume %s already exists' % self.lv_name)
+            if lv_utils.lv_check(self.vg_name, self.lv_snap_name):
+                self.cancel('Snapshot %s already exists' % self.lv_snap_name)
 
         self.mount_loc = os.path.join(self.workdir, 'mountpoint')
         if not os.path.isdir(self.mount_loc):
             os.makedirs(self.mount_loc)
-        self.lv_snapshot_name = lv_snapshot_name
 
         if self.disk:
             # converting bytes to megabytes, and using only 45% of the size
@@ -115,9 +112,6 @@ class Lvsetup(Test):
         creates a logical volume.
         """
         lv_utils.lv_create(self.vg_name, self.lv_name, self.lv_size)
-        lv_utils.lv_mount(self.vg_name, self.lv_name, self.mount_loc,
-                          create_filesystem=self.fs_name)
-        lv_utils.lv_umount(self.vg_name, self.lv_name)
 
     @avocado.fail_on(lv_utils.LVException)
     def delete_lv(self):
@@ -149,6 +143,9 @@ class Lvsetup(Test):
         creates a logical volume, mounts and unmounts it.
         """
         self.create_lv()
+        lv_utils.lv_mount(self.vg_name, self.lv_name, self.mount_loc,
+                          create_filesystem=self.fs_name)
+        lv_utils.lv_umount(self.vg_name, self.lv_name)
         self.mount_unmount_lv()
         self.delete_lv()
 
@@ -158,6 +155,9 @@ class Lvsetup(Test):
         Deactivate, export, import and activate a volume group.
         """
         self.create_lv()
+        lv_utils.lv_mount(self.vg_name, self.lv_name, self.mount_loc,
+                          create_filesystem=self.fs_name)
+        lv_utils.lv_umount(self.vg_name, self.lv_name)
         lv_utils.vg_reactivate(self.vg_name, export=True)
         self.mount_unmount_lv()
         self.delete_lv()
@@ -169,10 +169,13 @@ class Lvsetup(Test):
         logical volume.
         """
         self.create_lv()
+        lv_utils.lv_mount(self.vg_name, self.lv_name, self.mount_loc,
+                          create_filesystem=self.fs_name)
+        lv_utils.lv_umount(self.vg_name, self.lv_name)
         lv_utils.lv_take_snapshot(self.vg_name, self.lv_name,
-                                  self.lv_snapshot_name,
+                                  self.lv_snap_name,
                                   self.lv_snapshot_size)
-        lv_utils.lv_revert(self.vg_name, self.lv_name, self.lv_snapshot_name)
+        lv_utils.lv_revert(self.vg_name, self.lv_name, self.lv_snap_name)
         self.mount_unmount_lv()
         self.delete_lv()
 

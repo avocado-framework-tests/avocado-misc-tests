@@ -1,5 +1,6 @@
 # btrfs needs minimum LV size of 641M
 lv_disks:
 lv_size:
+vg_name:
 lv_name:
 fs: xfs
