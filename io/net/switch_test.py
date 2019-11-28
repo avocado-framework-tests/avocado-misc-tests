@@ -68,7 +68,7 @@ class SwitchTest(Test):
                          look_for_keys=False, allow_agent=False)
         self.log.info("SSH connection established to " + ip)
         self.remote_conn = self.tnc.invoke_shell()
-        self.log.onfo("Interactive SSH session established")
+        self.log.info("Interactive SSH session established")
         assert self.remote_conn
         self.remote_conn.send("iscli" + '\n')
 
