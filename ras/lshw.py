@@ -66,10 +66,13 @@ class Lshwrun(Test):
         if dist.name == "SuSE" and dist.version < 15:
             self.cancel("lshw not supported on SLES-%s. Please run "
                         "on SLES15 or higher versions only " % dist.version)
-        if (dist.name == 'Ubuntu' and dist.version.version >= 18) or dist.name == "SuSE":
+        if (dist.name == 'Ubuntu' and dist.version.version >= 18) or
+        dist.name == "SuSE":
             packages.extend(['iproute2'])
         else:
             packages.extend(['iproute'])
+        if 'IBM' in process.system_output('lshw -class system', shell='true').decode():
+            packages.extend = ['powerpc-ibm-utils']
 
         for package in packages:
             if not sm.check_installed(package) and not sm.install(package):
@@ -123,9 +126,10 @@ class Lshwrun(Test):
             self.fail("lshw failed to show correct mac address")
 
         # verify network
-        if self.active_interface\
-                not in self.run_cmd_out("lshw -class network"):
-            self.fail("lshw failed to show correct active network interface")
+        if 'ppc64le' not in distro.detect().arch:
+            if self.active_interface
+            not in self.run_cmd_out("lshw -class network"):
+                self.fail("lshw failed to show correct active network interface")
 
     def test_gen_rep(self):
         """
@@ -207,8 +211,8 @@ class Lshwrun(Test):
             self.fail_cmd.append("lshw -enable network|grep -i interface")
 
         self.run_cmd("lshw -class -quiet")
-        if 'PowerVM'\
-                not in self.run_cmd_out("pseries_platform"):
+        if 'PowerNV'\
+                in self.run_cmd_out("pseries_platform"):
             if not self.run_cmd_out("lshw"
                                     " -numeric | grep HCI | cut -d':' -f3"):
                 self.is_fail += 1
