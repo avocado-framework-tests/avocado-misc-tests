@@ -1,7 +1,7 @@
 disk:  
 dir:
 fio_job: 'fio-simple.job'
-fio_tool_url: 'http://brick.kernel.dk/snaps/fio-2.1.10.tar.gz'
+fio_tool_url: 'https://brick.kernel.dk/snaps/fio-git-latest.tar.gz'
 filesystem: !mux
     ext4:
         fs: 'ext4'
