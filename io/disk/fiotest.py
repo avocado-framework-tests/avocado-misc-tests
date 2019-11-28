@@ -50,15 +50,14 @@ class FioTest(Test):
         """
         Build 'fio'.
         """
-        default_url = "http://brick.kernel.dk/snaps/fio-2.1.10.tar.gz"
+        default_url = "https://brick.kernel.dk/snaps/fio-git-latest.tar.gz"
         url = self.params.get('fio_tool_url', default=default_url)
         self.disk = self.params.get('disk', default=None)
         self.dirs = self.params.get('dir', default=self.workdir)
         fstype = self.params.get('fs', default='ext4')
         tarball = self.fetch_asset(url)
         archive.extract(tarball, self.teststmpdir)
-        fio_version = os.path.basename(tarball.split('.tar.')[0])
-        self.sourcedir = os.path.join(self.teststmpdir, fio_version)
+        self.sourcedir = os.path.join(self.teststmpdir, "fio")
         build.make(self.sourcedir)
 
         pkg_list = ['libaio', 'libaio-devel']

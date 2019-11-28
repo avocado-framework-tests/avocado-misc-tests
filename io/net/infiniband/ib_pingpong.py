@@ -32,6 +32,7 @@ from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils.ssh import Session
 from avocado.utils import configure_network
+from avocado.utils.configure_network import PeerInfo, HostInfo
 
 
 class PingPong(Test):
@@ -72,7 +73,10 @@ class PingPong(Test):
         self.peer_gid = int(self.params.get("PEERGID", default="0"))
         self.peer_port = int(self.params.get("PEERPORT", default="1"))
         self.tmo = self.params.get("TIMEOUT", default="120")
-
+        self.mtu = self.params.get("mtu", default=1500)
+        self.peerinfo = PeerInfo(self.peer_ip, peer_user=self.peer_user,
+                                 peer_password=self.peer_password)
+        self.peer_interface = self.peerinfo.get_peer_interface(self.peer_ip)
         smm = SoftwareManager()
         detected_distro = distro.detect()
         pkgs = []
@@ -155,9 +159,12 @@ class PingPong(Test):
         '''
         # change MTU to 9000 for non-IB tests
         if "ib" not in self.iface and self.tool_name == "ibv_ud_pingpong":
-            cmd = "ip link set %s mtu 9000" % (self.peer_iface)
-            self.run_command(cmd)
-            time.sleep(10)
+            self.mtu = "9000"
+        if not self.peerinfo.set_mtu_peer(self.peer_interface, self.mtu):
+            self.cancel("Failed to set mtu in peer")
+        if not HostInfo.set_mtu_host(self, self.iface, self.mtu):
+            self.cancel("Failed to set mtu in host")
+        time.sleep(10)
         val1 = ""
         val2 = ""
         test_op = self.params.get("test_opt", default="").split(",")
@@ -175,11 +182,11 @@ class PingPong(Test):
             self.log.info("Extended test option skipped")
 
     def tearDown(self):
-        # change MTU back to 1500 for non-IB tests
-        if "ib" not in self.iface and self.tool_name == "ibv_ud_pingpong":
-            cmd = "ip link set %s mtu 1500" % (self.peer_iface)
-            self.session.cmd(cmd)
-            time.sleep(10)
+        if not HostInfo.set_mtu_host(self, self.iface, '1500'):
+            self.cancel("Failed to set mtu in host")
+        if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
+            self.cancel("Failed to set mtu in peer")
+        time.sleep(10)
         configure_network.unset_ip(self.iface)
 
 
