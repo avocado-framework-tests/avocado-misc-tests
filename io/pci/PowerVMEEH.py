@@ -61,7 +61,8 @@ class PowerVMEEH(Test):
             self.cancel("Processor is not ppc64")
         if 'PowerNV' in genio.read_file("/proc/cpuinfo").strip():
             self.cancel("Test not supported on bare-metal")
-        if '0x1' not in genio.read_file("/sys/kernel/debug/powerpc/eeh_enable").strip():
+        eeh_enable_file = "/sys/kernel/debug/powerpc/eeh_enable"
+        if '0x1' not in genio.read_file(eeh_enable_file).strip():
             self.cancel("EEH is not enabled, please enable via FSP")
         self.max_freeze = self.params.get('max_freeze', default=1)
         self.pci_addr = [self.params.get('pci_device', default='')]
@@ -85,6 +86,8 @@ class PowerVMEEH(Test):
             self.pci_mem_addr = pci.get_memory_address(self.addr)
             self.pci_mask = pci.get_mask(self.addr)
             self.pci_class_name = pci.get_pci_class_name(self.addr)
+            if self.pci_class_name == 'fc_host':
+                self.pci_class_name = 'scsi_host'
             self.pci_interface = pci.get_interfaces_in_pci_address(
                 self.addr, self.pci_class_name)[-1]
             self.log.info("PCI addr = %s" % self.addr)
