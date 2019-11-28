@@ -29,6 +29,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils import configure_network
+from avocado.utils.configure_network import HostInfo
 
 
 class Ethtool(Test):
@@ -59,12 +60,26 @@ class Ethtool(Test):
         self.iface = interface
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        configure_network.set_ip(self.ipaddr, self.netmask, self.iface)
         self.peer = self.params.get("peer_ip")
         if not self.peer:
             self.cancel("No peer provided")
+        if self.iface[0:2] == 'ib':
+            configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
+                                     interface_type='Infiniband')
+        else:
+            configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
+                                     interface_type='Ethernet')
+        if not HostInfo.ping_check(self, self.iface, self.peer, "5"):
+            self.cancel("No connection to peer")
         self.args = self.params.get("arg", default='')
         self.elapse = self.params.get("action_elapse", default='')
+        self.priv_test = self.params.get("privflag_test", default=False)
+        if self.priv_test:
+            cmd = "ethtool --show-priv-flags %s" % (self.iface)
+            self.ret_val = process.run(cmd, shell=True, verbose=True,
+                                       ignore_status=True)
+            if self.ret_val.exit_status:
+                self.cancel("Device Doesn't support Private flags")
 
     def interface_state_change(self, interface, state, status):
         '''
@@ -102,19 +117,41 @@ class Ethtool(Test):
                               ignore_status=True)
             if ret.exit_status != 0:
                 self.fail("failed")
-        if not self.ping_check('-c 5'):
-            self.fail("ping failed after interface is up")
+        if not HostInfo.ping_check(self, self.iface, self.peer, '10000',
+                                   flood=True):
+            self.fail("flood ping test failed")
+        if self.priv_test:
+            self.ethtool_toggle_priv_flags()
 
-    def ping_check(self, options):
+    def ethtool_toggle_priv_flags(self):
         '''
-        Checks if ping to peer works fine and returns True.
-        Returns False otherwise.
+        Toggle the priv flag settings of the driver.
         '''
-        cmd = "ping -I %s %s %s" % (self.iface, options, self.peer)
-        if process.system(cmd, shell=True, verbose=True,
-                          ignore_status=True) != 0:
-            return False
-        return True
+        priv_pass = []
+        priv_fail = []
+        for oper in ('toggle', 'setback'):
+            for line in self.ret_val.stdout_text.splitlines():
+                if "off" in line:
+                    val = "on"
+                else:
+                    val = "off"
+                if "flags" not in line:
+                    priv_flag = line.split(':')[0]
+                    cmd = "ethtool --set-priv-flags %s \"%s\" %s" % \
+                          (self.iface, priv_flag.rstrip(), val)
+                    ret1 = process.run(cmd, shell=True, verbose=True,
+                                       ignore_status=True)
+                    if ret1.exit_status == 0 or 'supported' in \
+                       ret1.stderr_text:
+                        priv_pass.append(priv_flag.rstrip())
+                    else:
+                        priv_fail.append(priv_flag.rstrip())
+            if not HostInfo.ping_check(self, self.iface,
+                                       self.peer, '500000', flood=True):
+                self.fail("Ping failed oper = %s" % oper)
+        if priv_fail:
+            self.fail("Private flags could not be toggled: %s" %
+                      ",".join(list(set(priv_fail))))
 
     def tearDown(self):
         '''

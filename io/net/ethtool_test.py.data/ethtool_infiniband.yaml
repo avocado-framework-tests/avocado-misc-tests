@@ -1,4 +1,4 @@
-interface:
+interface: ib0
 peer_ip:
 host_ip:
 netmask:
@@ -7,8 +7,6 @@ args: !mux
         privflag_test: True
     Driver:
         arg: -i
-    PauseParameter:
-        arg: -a
     Coalescing:
         arg: -c
     RingParameter:
