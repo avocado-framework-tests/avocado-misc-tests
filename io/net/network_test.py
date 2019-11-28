@@ -65,8 +65,6 @@ class NetworkTest(Test):
         self.peer = self.params.get("peer_ip")
         if not self.peer:
             self.cancel("No peer provided")
-        if not HostInfo.ping_check(self, self.iface, self.peer, "2"):
-            self.cancel("No connection to peer")
         self.mtu = self.params.get("mtu", default=1500)
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
@@ -76,6 +74,8 @@ class NetworkTest(Test):
         self.peer_interface = self.peerinfo.get_peer_interface(self.peer)
         self.mtu_set()
         self.mtu = self.params.get("mtu", default=1500)
+        if not HostInfo.ping_check(self, self.iface, self.peer, "2"):
+            self.cancel("No connection to peer")
 
     def mtu_set(self):
         '''
@@ -244,12 +244,12 @@ class NetworkTest(Test):
         '''
         Remove the files created
         '''
-        configure_network.unset_ip(self.iface)
+        self.mtu_set_back()
         if 'scp' in str(self.name.name):
             process.run("rm -rf /tmp/tempfile")
             cmd = "timeout 600 ssh %s \" rm -rf /tmp/tempfile\"" % self.peer
             process.system(cmd, shell=True, verbose=True, ignore_status=True)
-        self.mtu_set_back()
+        configure_network.unset_ip(self.iface)
 
 
 if __name__ == "__main__":
