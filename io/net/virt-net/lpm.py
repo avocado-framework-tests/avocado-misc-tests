@@ -74,9 +74,9 @@ class LPM(Test):
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default='********')
         self.options = self.params.get("options", default='')
 
-        self.lpar = self.get_mcp_component("NodeNameList").split('.')[0]
+        self.lpar = self.get_partition_name("Partition Name")
         if not self.lpar:
-            self.cancel("LPAR Name not got from lsrsrc command")
+            self.cancel("LPAR Name not got from lparstat command")
 
         self.login(self.hmc_ip, self.hmc_user, self.hmc_pwd)
         cmd = 'lssyscfg -r sys -F name'
@@ -155,16 +155,31 @@ class LPM(Test):
         '''
         for line in process.system_output('lsrsrc IBM.MCP %s' % component,
                                           ignore_status=True, shell=True,
-                                          sudo=True).splitlines():
+                                          sudo=True).decode("utf-8") \
+                                                    .splitlines():
             if component in line:
                 return line.split()[-1].strip('{}\"')
+        return ''
+
+    @staticmethod
+    def get_partition_name(component):
+        '''
+        get partition name from lparstat -i
+        '''
+
+        for line in process.system_output('lparstat -i', ignore_status=True,
+                                          shell=True,
+                                          sudo=True).decode("utf-8") \
+                                                    .splitlines():
+            if component in line:
+                return line.split(':')[-1].strip()
         return ''
 
     def login(self, ipaddr, username, password):
         '''
         SSH Login method for remote server
         '''
-        pxh = pxssh.pxssh()
+        pxh = pxssh.pxssh(encoding='utf-8')
         # Work-around for old pxssh not having options= parameter
         pxh.SSH_OPTS = pxh.SSH_OPTS + " -o 'StrictHostKeyChecking=no'"
         pxh.SSH_OPTS = pxh.SSH_OPTS + " -o 'UserKnownHostsFile /dev/null' "
@@ -207,7 +222,7 @@ class LPM(Test):
             self.fail("Starting service %s failed", svc)
 
         output = process.system_output("lssrc -a", ignore_status=True,
-                                       shell=True, sudo=True)
+                                       shell=True, sudo=True).decode("utf-8")
         if "inoperative" in output:
             self.fail("Failed to start the rsct and rsct_rm services")
 

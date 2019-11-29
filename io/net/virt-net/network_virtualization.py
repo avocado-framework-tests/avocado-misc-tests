@@ -81,9 +81,9 @@ class NetworkVirtualization(Test):
             self.cancel("HMC IP not got")
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default=None)
         self.hmc_username = self.params.get("hmc_username", '*', default=None)
-        self.lpar = self.get_mcp_component("NodeNameList").split('.')[0]
+        self.lpar = self.get_partition_name("Partition Name")
         if not self.lpar:
-            self.cancel("LPAR Name not got from lsrsrc command")
+            self.cancel("LPAR Name not got from lparstat command")
         self.login(self.hmc_ip, self.hmc_username, self.hmc_pwd)
         cmd = 'lssyscfg -r sys  -F name'
         output = self.run_command(cmd)
@@ -175,6 +175,20 @@ class NetworkVirtualization(Test):
                                                     .splitlines():
             if component in line:
                 return line.split()[-1].strip('{}\"')
+        return ''
+
+    @staticmethod
+    def get_partition_name(component):
+        '''
+        get partition name from lparstat -i
+        '''
+
+        for line in process.system_output('lparstat -i', ignore_status=True,
+                                          shell=True,
+                                          sudo=True).decode("utf-8") \
+                                                    .splitlines():
+            if component in line:
+                return line.split(':')[-1].strip()
         return ''
 
     def login(self, ipaddr, username, password):
@@ -282,6 +296,11 @@ class NetworkVirtualization(Test):
                 self.log.debug(output)
                 self.fail("lshwres fails to list Network virtualized device \
                            after add operation")
+            if mac not in str(output):
+                self.log.debug(output)
+                self.fail("MAC address in HMC differs")
+            if not self.find_device(mac):
+                self.fail("MAC address differs in linux")
             self.configure_device(device_ip, netmask, mac)
 
     def test_backingdevadd(self):
@@ -607,6 +626,7 @@ class NetworkVirtualization(Test):
         for device in devices:
             if mac in netifaces.ifaddresses(device)[17][0]['addr']:
                 return device
+        return ''
 
     def interfacewait(self, mac):
         """
