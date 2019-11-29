@@ -1,5 +1,5 @@
-ib_read_lat_extended:
-tool: ib_read_lat
+ib_send_lat_extended:
+tool: ib_send_lat
 interface: ""
 peer_ip: ""
 peer_user: "root"
@@ -12,10 +12,10 @@ PEERCA: ""
 PEERPORT: "1"
 TIMEOUT: "600"
 test_opt: !mux
+    -c_UC:
+        test_opt: -c UC
     -c_RC:
         test_opt: -c RC
-    -D_10s:
-        test_opt: -D 10s
     -Q_5:
         test_opt: -Q 5
     -w_100M:
@@ -24,8 +24,18 @@ test_opt: !mux
         test_opt: -y 10G
     -z:
         test_opt: -z
-    --burst_size=2G_--rate_limit=10:
-        test_opt: --burst_size=2G --rate_limit=10
+    -D_10s:
+        test_opt: -D 10s
+    -a:
+        test_opt: -a
+    -c_XRC:
+        test_opt: -c XRC
+    -c_UD:
+        test_opt: -c UD
+    -e:
+        test_opt: -e
+    -g_x:
+        test_opt: -g -x 0
     -R:
         test_opt: -R
     -R_-a:
@@ -60,3 +70,22 @@ test_opt: !mux
         test_opt: -R -y 4G
     -R_-z:
         test_opt: -R -z
+mtu: !mux
+    1500:
+        mtu: "1500"
+    2000:
+        mtu: "2000"
+    3000:
+        mtu: "3000"
+    4000:
+        mtu: "4000"
+    5000:
+        mtu: "5000"
+    6000:
+        mtu: "6000"
+    7000:
+        mtu: "7000"
+    8000:
+        mtu: "8000"
+    9000:
+        mtu: "9000"

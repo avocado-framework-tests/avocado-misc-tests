@@ -1,0 +1,79 @@
+ib_write_lat_extended:
+tool: ib_write_lat
+interface: ""
+peer_ip: ""
+peer_user: "root"
+peer_password: "********"
+host_ip: ""
+netmask: ""
+CA_NAME: ""
+PORT_NUM: "1"
+PEERCA: ""
+PEERPORT: "1"
+TIMEOUT: "600"
+test_opt: !mux
+    -D_10s:
+        test_opt: -D 10s
+    -Q_5:
+        test_opt: -Q 5
+    -w_100M:
+        test_opt: -w 100M
+    -y_10G:
+        test_opt: -y 10G
+    -z:
+        test_opt: -z
+    --burst_size=2G_--rate_limit=10:
+        test_opt: --burst_size=2G --rate_limit=10
+    -R:
+        test_opt: -R
+    -R_-a:
+        test_opt: -R -a
+    -R_-c_RC:
+        test_opt: -R -c RC
+    -R_-D_30s:
+        test_opt: -R -D 30s
+    -R_-f_5s_-D_11s:
+        test_opt: -R -f 5s -D 11s
+    -R_-m_1024:
+        test_opt: -R -m 1024
+    -R_-n_100000:
+        test_opt: -R -n 100000
+    -R_-p_18600:
+        test_opt: -R -p 18600
+    -R_-Q_10:
+        test_opt: -R -Q 10
+    -R_-s_9000:
+        test_opt: -R -s 9000
+    -R_-S_1:
+        test_opt: -R -S 1
+    -R_-t_1024:
+        test_opt: -R -t 1024
+    -R_-T_128:
+        test_opt: -R -T 128
+    -R_-w_10M:
+        test_opt: -R -w 10M
+    -R_-x_1:
+        test_opt: -R -x 1
+    -R_-y_4G:
+        test_opt: -R -y 4G
+    -R_-z:
+        test_opt: -R -z
+mtu: !mux
+    1500:
+        mtu: "1500"
+    2000:
+        mtu: "2000"
+    3000:
+        mtu: "3000"
+    4000:
+        mtu: "4000"
+    5000:
+        mtu: "5000"
+    6000:
+        mtu: "6000"
+    7000:
+        mtu: "7000"
+    8000:
+        mtu: "8000"
+    9000:
+        mtu: "9000"

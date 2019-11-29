@@ -27,6 +27,7 @@ from avocado import main
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process, distro
 from avocado.utils import configure_network
+from avocado.utils.configure_network import PeerInfo, HostInfo
 from avocado.utils.ssh import Session
 
 
@@ -86,6 +87,10 @@ class Ucmatose(Test):
             self.cancel("%s peer machine is not available" % self.peer_ip)
         self.timeout = "2m"
         self.local_ip = netifaces.ifaddresses(self.iface)[AF_INET][0]['addr']
+        self.mtu = self.params.get("mtu", default=1500)
+        self.peerinfo = PeerInfo(self.peer_ip, peer_user=self.peer_user,
+                                 peer_password=self.peer_password)
+        self.peer_interface = self.peerinfo.get_peer_interface(self.peer_ip)
 
         if detected_distro.name == "Ubuntu":
             cmd = "service ufw stop"
@@ -113,6 +118,10 @@ class Ucmatose(Test):
         """
         Test ucmatose
         """
+        if not self.peerinfo.set_mtu_peer(self.peer_interface, self.mtu):
+            self.fail("Failed to set mtu in peer")
+        if not HostInfo.set_mtu_host(self, self.iface, self.mtu):
+            self.fail("Failed to set mtu in host")
         self.log.info(self.test_name)
         logs = "> /tmp/ib_log 2>&1 &"
         cmd = " timeout %s %s -b %s %s %s" % (self.timeout, self.test_name,
@@ -139,6 +148,10 @@ class Ucmatose(Test):
         """
         unset ip
         """
+        if not HostInfo.set_mtu_host(self, self.iface, '1500'):
+            self.fail("Failed to set mtu in host")
+        if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
+            self.fail("Failed to set mtu in peer")
         configure_network.unset_ip(self.iface)
 
 

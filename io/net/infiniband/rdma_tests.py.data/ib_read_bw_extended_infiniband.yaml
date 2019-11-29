@@ -72,3 +72,12 @@ test_opt: !mux
         test_opt: -R -y 4G
     -R_-z:
         test_opt: -R -z
+mtu: !mux
+    1500:
+        mtu: "1500"
+    2000:
+        mtu: "2000"
+    3000:
+        mtu: "3000"
+    4000:
+        mtu: "4000"
