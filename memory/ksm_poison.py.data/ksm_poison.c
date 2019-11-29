@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 		printf("Usage : <./poison> -n <nr_pages> -t -h[hardoffline or -s for softofflining]\n");
 		exit(-1);
 	}
-	while((c = getopt(argc, argv,"n:t:hs")) != -1){
+	while((c = getopt(argc, argv,"n:ths")) != -1){
         	switch(c) {
 		case 'n' :
                 	nr_pages = atoi(optarg);
