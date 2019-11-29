@@ -1,8 +1,10 @@
 interface:
 peer_ip:
+host_ip:
+netmask:
 args: !mux
-    Information:
-        arg:
+    PrivateFlag:
+        privflag_test: True
     Driver:
         arg: -i
     RingParameter:
