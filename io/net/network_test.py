@@ -72,8 +72,8 @@ class NetworkTest(Test):
         self.peerinfo = PeerInfo(self.peer, peer_user=self.peer_user,
                                  peer_password=self.peer_password)
         self.peer_interface = self.peerinfo.get_peer_interface(self.peer)
-        self.mtu_set()
         self.mtu = self.params.get("mtu", default=1500)
+        self.mtu_set()
         if not HostInfo.ping_check(self, self.iface, self.peer, "2"):
             self.cancel("No connection to peer")
 
@@ -92,11 +92,23 @@ class NetworkTest(Test):
         '''
         ro_type = "gro"
         ro_type_full = "generic-receive-offload"
-        if not self.receive_offload_state(ro_type_full):
+        if not self.offload_state(ro_type_full):
             self.fail("Could not get state of %s" % ro_type)
-        if self.receive_offload_state(ro_type_full) == 'fixed':
+        if self.offload_state(ro_type_full) == 'fixed':
             self.fail("Can not change the state of %s" % ro_type)
-        self.receive_offload_toggle_test(ro_type, ro_type_full)
+        self.offload_toggle_test(ro_type, ro_type_full)
+
+    def test_gso(self):
+        '''
+        Test GSO
+        '''
+        ro_type = "gso"
+        ro_type_full = "generic-segmentation-offload"
+        if not self.offload_state(ro_type_full):
+            self.fail("Could not get state of %s" % ro_type)
+        if self.offload_state(ro_type_full) == 'fixed':
+            self.fail("Can not change the state of %s" % ro_type)
+        self.offload_toggle_test(ro_type, ro_type_full)
 
     def test_lro(self):
         '''
@@ -104,11 +116,23 @@ class NetworkTest(Test):
         '''
         ro_type = "lro"
         ro_type_full = "large-receive-offload"
-        if not self.receive_offload_state(ro_type_full):
+        if not self.offload_state(ro_type_full):
             self.fail("Could not get state of %s" % ro_type)
-        if self.receive_offload_state(ro_type_full) == 'fixed':
+        if self.offload_state(ro_type_full) == 'fixed':
             self.fail("Can not change the state of %s" % ro_type)
-        self.receive_offload_toggle_test(ro_type, ro_type_full)
+        self.offload_toggle_test(ro_type, ro_type_full)
+
+    def test_tso(self):
+        '''
+        Test TSO
+        '''
+        ro_type = "tso"
+        ro_type_full = "tcp-segmentation-offload"
+        if not self.offload_state(ro_type_full):
+            self.fail("Could not get state of %s" % ro_type)
+        if self.offload_state(ro_type_full) == 'fixed':
+            self.fail("Can not change the state of %s" % ro_type)
+        self.offload_toggle_test(ro_type, ro_type_full)
 
     def test_ping(self):
         '''
@@ -189,31 +213,31 @@ class NetworkTest(Test):
         if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
             self.cancel("Failed to set mtu in peer")
 
-    def receive_offload_toggle_test(self, ro_type, ro_type_full):
+    def offload_toggle_test(self, ro_type, ro_type_full):
         '''
-        Check to toggle the LRO and GRO
+        Check to toggle the LRO / GRO / GSO / TSO
         '''
         for state in ["off", "on"]:
-            if not self.receive_offload_state_change(ro_type,
-                                                     ro_type_full, state):
+            if not self.offload_state_change(ro_type,
+                                             ro_type_full, state):
                 self.fail("%s %s failed" % (ro_type, state))
             if not HostInfo.ping_check(self, self.iface, self.peer, "5"):
                 self.fail("ping failed in %s %s" % (ro_type, state))
 
-    def receive_offload_state_change(self, ro_type, ro_type_full, state):
+    def offload_state_change(self, ro_type, ro_type_full, state):
         '''
-        Change the state of LRO / GRO to specified state
+        Change the state of LRO / GRO / GSO / TSO to specified state
         '''
         cmd = "ethtool -K %s %s %s" % (self.iface, ro_type, state)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             return False
-        if self.receive_offload_state(ro_type_full) != state:
+        if self.offload_state(ro_type_full) != state:
             return False
         return True
 
-    def receive_offload_state(self, ro_type_full):
+    def offload_state(self, ro_type_full):
         '''
-        Return the state of LRO / GRO.
+        Return the state of LRO / GRO / GSO / TSO.
         If the state can not be changed, we return 'fixed'.
         If any other error, we return ''.
         '''
