@@ -74,7 +74,7 @@ class NetworkTest(Test):
         self.peer_interface = self.peerinfo.get_peer_interface(self.peer)
         self.mtu = self.params.get("mtu", default=1500)
         self.mtu_set()
-        if not HostInfo.ping_check(self, self.iface, self.peer, "2"):
+        if not HostInfo.ping_check(self, self.iface, self.peer, "5"):
             self.cancel("No connection to peer")
 
     def mtu_set(self):
@@ -138,15 +138,15 @@ class NetworkTest(Test):
         '''
         ping to peer machine
         '''
-        if not HostInfo.ping_check(self, self.iface, self.peer, '5'):
+        if not HostInfo.ping_check(self, self.iface, self.peer, '10'):
             self.fail("ping test failed")
 
     def test_floodping(self):
         '''
         Flood ping to peer machine
         '''
-        if not HostInfo.ping_check(self, self.iface, self.peer, '1000',
-                                   flood=True):
+        if not HostInfo.ping_check(self, self.iface, self.peer,
+                                   '500000', flood=True):
             self.fail("flood ping test failed")
 
     def test_ssh(self):
@@ -196,7 +196,7 @@ class NetworkTest(Test):
         tx_file = "/sys/class/net/%s/statistics/tx_packets" % self.iface
         rx_before = genio.read_file(rx_file)
         tx_before = genio.read_file(tx_file)
-        HostInfo.ping_check(self, self.iface, self.peer, "5")
+        HostInfo.ping_check(self, self.iface, self.peer, "500000", flood=True)
         rx_after = genio.read_file(rx_file)
         tx_after = genio.read_file(tx_file)
         if (rx_after <= rx_before) or (tx_after <= tx_before):
@@ -221,7 +221,8 @@ class NetworkTest(Test):
             if not self.offload_state_change(ro_type,
                                              ro_type_full, state):
                 self.fail("%s %s failed" % (ro_type, state))
-            if not HostInfo.ping_check(self, self.iface, self.peer, "5"):
+            if not HostInfo.ping_check(self, self.iface, self.peer,
+                                       "500000", flood=True):
                 self.fail("ping failed in %s %s" % (ro_type, state))
 
     def offload_state_change(self, ro_type, ro_type_full, state):
@@ -258,7 +259,8 @@ class NetworkTest(Test):
         cmd = "ip link set %s promisc on" % self.iface
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("failed to enable promisc mode")
-        HostInfo.ping_check(self, self.iface, self.peer, "5")
+        HostInfo.ping_check(self, self.iface, self.peer,
+                            "100000", flood=True)
         cmd = "ip link set %s promisc off" % self.iface
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("failed to disable promisc mode")
