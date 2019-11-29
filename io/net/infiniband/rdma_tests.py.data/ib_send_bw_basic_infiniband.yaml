@@ -1,5 +1,5 @@
-ib_atomic_bw_basic:
-tool: ib_atomic_bw
+ib_send_bw_basic:
+tool: ib_send_bw
 interface: ""
 peer_ip: ""
 peer_user: "root"
@@ -24,3 +24,12 @@ test_opt: !mux
         test_opt: -t 1024
     -p_18200:
         test_opt: -p 18200
+mtu: !mux
+    1500:
+        mtu: "1500"
+    2000:
+        mtu: "2000"
+    3000:
+        mtu: "3000"
+    4000:
+        mtu: "4000"

@@ -1,5 +1,5 @@
-ib_send_bw_extended:
-tool: ib_send_bw
+ib_read_lat_extended:
+tool: ib_read_lat
 interface: ""
 peer_ip: ""
 peer_user: "root"
@@ -12,14 +12,10 @@ PEERCA: ""
 PEERPORT: "1"
 TIMEOUT: "600"
 test_opt: !mux
-    -b:
-        test_opt: -b
-    -N:
-        test_opt: -N
-    -c_UC:
-        test_opt: -c UC
     -c_RC:
         test_opt: -c RC
+    -D_10s:
+        test_opt: -D 10s
     -Q_5:
         test_opt: -Q 5
     -w_100M:
@@ -28,44 +24,24 @@ test_opt: !mux
         test_opt: -y 10G
     -z:
         test_opt: -z
-    -D_10s:
-        test_opt: -D 10s
-    -l_4:
-        test_opt: -l 4
-    -a:
-        test_opt: -a
-    -c_XRC:
-        test_opt: -c XRC
-    -c_UD:
-        test_opt: -c UD
-    -e:
-        test_opt: -e
-    -g_x:
-        test_opt: -g -x 0
-    -r_1024:
-        test_opt: -r 1024
+    --burst_size=2G_--rate_limit=10:
+        test_opt: --burst_size=2G --rate_limit=10
     -R:
         test_opt: -R
     -R_-a:
         test_opt: -R -a
-    -R_-b:
-        test_opt: -R -b
     -R_-c_RC:
         test_opt: -R -c RC
     -R_-D_30s:
         test_opt: -R -D 30s
-    -R_-l_2:
-        test_opt: -R -l 2
+    -R_-f_5s_-D_11s:
+        test_opt: -R -f 5s -D 11s
     -R_-m_1024:
         test_opt: -R -m 1024
     -R_-n_100000:
         test_opt: -R -n 100000
-    -R_-N:
-        test_opt: -R -N
     -R_-p_18600:
         test_opt: -R -p 18600
-    -R_-q_1:
-        test_opt: -R -q 1
     -R_-Q_10:
         test_opt: -R -Q 10
     -R_-s_9000:
@@ -84,3 +60,22 @@ test_opt: !mux
         test_opt: -R -y 4G
     -R_-z:
         test_opt: -R -z
+mtu: !mux
+    1500:
+        mtu: "1500"
+    2000:
+        mtu: "2000"
+    3000:
+        mtu: "3000"
+    4000:
+        mtu: "4000"
+    5000:
+        mtu: "5000"
+    6000:
+        mtu: "6000"
+    7000:
+        mtu: "7000"
+    8000:
+        mtu: "8000"
+    9000:
+        mtu: "9000"

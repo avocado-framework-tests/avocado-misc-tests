@@ -1,0 +1,29 @@
+Test: !mux
+    options: !mux
+        first:
+            basic_option: -v -C 5 -S 1024 -d , -a peer_ip -v -C 5 -S 1024 -d
+        second:
+            basic_option: -v -C 100 -S 1024 , -a peer_ip -v -C 100 -S 1024
+        third:
+            basic_option: -a ::0 , -C300 -a peer_ipv6%interface -v
+# Placeholder for exended option
+#        fourth:
+#            ext_option:
+Parameters:
+    ext_flag: "1"
+    interface: "ib0"
+    peer_ip:
+    peer_user:
+    peer_password:
+    host_ip:
+    netmask:
+    peer_ipv6: "fe80::526b:4b03:f:daa8"
+mtu: !mux
+    1500:
+        mtu: "1500"
+    2000:
+        mtu: "2000"
+    3000:
+        mtu: "3000"
+    4000:
+        mtu: "4000"

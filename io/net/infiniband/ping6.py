@@ -25,6 +25,7 @@ from netifaces import AF_INET, AF_INET6
 from avocado import Test
 from avocado import main
 from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.configure_network import PeerInfo, HostInfo
 from avocado.utils import process, distro
 from avocado.utils import configure_network
 from avocado.utils.ssh import Session
@@ -98,6 +99,10 @@ class Ping6(Test):
         self.option = self.option.replace("local_ip", self.local_ip)
         self.option = self.option.replace("peer_ip", self.peer_ip)
         self.option_list = self.option.split(",")
+        self.mtu = self.params.get("mtu", default=1500)
+        self.peerinfo = PeerInfo(self.peer_ip, peer_user=self.peer_user,
+                                 peer_password=self.peer_password)
+        self.peer_interface = self.peerinfo.get_peer_interface(self.peer_ip)
 
         if detected_distro.name == "Ubuntu":
             cmd = "service ufw stop"
@@ -125,6 +130,10 @@ class Ping6(Test):
         """
         Test ping6
         """
+        if not self.peerinfo.set_mtu_peer(self.peer_interface, self.mtu):
+            self.fail("Failed to set mtu in peer")
+        if not HostInfo.set_mtu_host(self, self.iface, self.mtu):
+            self.fail("Failed to set mtu in host")
         self.log.info(self.test_name)
         logs = "> /tmp/ib_log 2>&1 &"
         cmd = " timeout %s %s %s %s" % (self.timeout, self.test_name,
@@ -152,6 +161,10 @@ class Ping6(Test):
         """
         unset ip
         """
+        if not HostInfo.set_mtu_host(self, self.iface, '1500'):
+            self.fail("Failed to set mtu in host")
+        if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
+            self.fail("Failed to set mtu in peer")
         configure_network.unset_ip(self.iface)
 
 

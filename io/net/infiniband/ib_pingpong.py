@@ -161,9 +161,9 @@ class PingPong(Test):
         if "ib" not in self.iface and self.tool_name == "ibv_ud_pingpong":
             self.mtu = "9000"
         if not self.peerinfo.set_mtu_peer(self.peer_interface, self.mtu):
-            self.cancel("Failed to set mtu in peer")
+            self.fail("Failed to set mtu in peer")
         if not HostInfo.set_mtu_host(self, self.iface, self.mtu):
-            self.cancel("Failed to set mtu in host")
+            self.fail("Failed to set mtu in host")
         time.sleep(10)
         val1 = ""
         val2 = ""
@@ -183,9 +183,9 @@ class PingPong(Test):
 
     def tearDown(self):
         if not HostInfo.set_mtu_host(self, self.iface, '1500'):
-            self.cancel("Failed to set mtu in host")
+            self.fail("Failed to set mtu in host")
         if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
-            self.cancel("Failed to set mtu in peer")
+            self.fail("Failed to set mtu in peer")
         time.sleep(10)
         configure_network.unset_ip(self.iface)
 
