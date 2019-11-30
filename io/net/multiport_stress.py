@@ -21,6 +21,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils import configure_network
+from avocado.utils.configure_network import PeerInfo, HostInfo
 
 
 class MultiportStress(Test):
@@ -54,6 +55,19 @@ class MultiportStress(Test):
         self.netmask = self.params.get("netmask", default="")
         for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
             configure_network.set_ip(ipaddr, self.netmask, interface)
+        self.peer_user = self.params.get("peer_user", default="root")
+        self.peer_password = self.params.get("peer_password", '*',
+                                             default="None")
+        self.mtu = self.params.get("mtu", default=1500)
+        self.peerinfo = PeerInfo(self.peer_ips[0], peer_user=self.peer_user,
+                                 peer_password=self.peer_password)
+        for peer_ip in self.peer_ips:
+            self.peer_interface = self.peerinfo.get_peer_interface(peer_ip)
+            if not self.peerinfo.set_mtu_peer(self.peer_interface, self.mtu):
+                self.cancel("Failed to set mtu in peer")
+        for host_interface in self.host_interfaces:
+            if not HostInfo.set_mtu_host(self, host_interface, self.mtu):
+                self.cancel("Failed to set mtu in host")
 
     def multiport_ping(self, ping_option):
         '''
@@ -80,7 +94,7 @@ class MultiportStress(Test):
                     errors.append(out_buf)
                     break
         if errors:
-            self.fail("\n".join(errors))
+            self.fail(b"\n".join(errors))
 
     def test_multiport_ping(self):
         self.multiport_ping('')
@@ -92,6 +106,13 @@ class MultiportStress(Test):
         '''
         unset ip for host interface
         '''
+        for host_interface in self.host_interfaces:
+            if not HostInfo.set_mtu_host(self, host_interface, '1500'):
+                self.cancel("Failed to set mtu in host")
+        for peer_ip in self.peer_ips:
+            self.peer_interface = self.peerinfo.get_peer_interface(peer_ip)
+            if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
+                self.cancel("Failed to set mtu in peer")
         for interface in self.host_interfaces:
             configure_network.unset_ip(interface)
 

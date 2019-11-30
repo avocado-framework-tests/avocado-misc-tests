@@ -28,6 +28,7 @@ from avocado.utils import archive
 from avocado.utils import build
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import configure_network
+from avocado.utils.configure_network import PeerInfo, HostInfo
 
 
 class TcpdumpTest(Test):
@@ -54,11 +55,22 @@ class TcpdumpTest(Test):
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         configure_network.set_ip(self.ipaddr, self.netmask, self.iface)
+        self.peer_user = self.params.get("peer_user", default="root")
+        self.peer_password = self.params.get("peer_password", '*',
+                                             default="None")
+        self.mtu = self.params.get("mtu", default=1500)
+        self.peerinfo = PeerInfo(self.peer_ip, peer_user=self.peer_user,
+                                 peer_password=self.peer_password)
+        self.peer_interface = self.peerinfo.get_peer_interface(self.peer_ip)
+        if not self.peerinfo.set_mtu_peer(self.peer_interface, self.mtu):
+            self.cancel("Failed to set mtu in peer")
+        if not HostInfo.set_mtu_host(self, self.iface, self.mtu):
+            self.cancel("Failed to set mtu in host")
 
         # Install needed packages
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        pkgs = ['tcpdump', 'flex', 'bison', 'gcc-c++']
+        pkgs = ['tcpdump', 'flex', 'bison', 'gcc', 'gcc-c++']
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package Can not install" % pkg)
@@ -72,7 +84,7 @@ class TcpdumpTest(Test):
             self.n_map = os.path.join(self.nmap, self.version)
             archive.extract(tarball, self.nmap)
             os.chdir(self.n_map)
-            process.system('./configure', shell=True)
+            process.system('./configure ppc64le', shell=True)
             build.make(self.n_map)
             process.system('./nping/nping -h', shell=True)
 
@@ -116,6 +128,10 @@ class TcpdumpTest(Test):
         '''
         unset ip for host interface
         '''
+        if not HostInfo.set_mtu_host(self, self.iface, '1500'):
+            self.cancel("Failed to set mtu in host")
+        if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
+            self.cancel("Failed to set mtu in peer")
         configure_network.unset_ip(self.iface)
 
 
