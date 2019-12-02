@@ -34,7 +34,7 @@ class Openblas(Test):
         smm = SoftwareManager()
         detected_distro = distro.detect()
         packages = ['make', 'gcc']
-        if detected_distro.name == "Ubuntu":
+        if detected_distro.name in ["Ubuntu", 'debian']:
             packages.append("gfortran")
         elif detected_distro.name == "SuSE":
             packages.extend(["gcc-fortran", "libgfortran4"])
