@@ -31,7 +31,7 @@ from avocado.utils import archive
 from avocado.utils import process
 from avocado.utils.ssh import Session
 from avocado.utils.genio import read_file
-from avocado.utils.configure_network import PeerInfo, HostInfo
+from avocado.utils.configure_network import PeerInfo
 from avocado.utils import configure_network
 
 
@@ -80,7 +80,7 @@ class Uperf(Test):
         self.peer_interface = self.peerinfo.get_peer_interface(self.peer_ip)
         if not self.peerinfo.set_mtu_peer(self.peer_interface, self.mtu):
             self.cancel("Failed to set mtu in peer")
-        if not HostInfo.set_mtu_host(self, self.iface, self.mtu):
+        if not configure_network.set_mtu_host(self.iface, self.mtu):
             self.cancel("Failed to set mtu in host")
         uperf_download = self.params.get("uperf_download", default="https:"
                                          "//github.com/uperf/uperf/"
@@ -145,7 +145,7 @@ class Uperf(Test):
         if not output.exit_status == 0:
             self.fail("Either the ssh to peer machine machine\
                        failed or uperf process was not killed")
-        if not HostInfo.set_mtu_host(self, self.iface, '1500'):
+        if not configure_network.set_mtu_host(self.iface, '1500'):
             self.cancel("Failed to set mtu in host")
         if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
             self.cancel("Failed to set mtu in peer")
