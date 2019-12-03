@@ -1,0 +1,160 @@
+module: "mlx4_core"
+interface: eth3
+host_ip:
+netmask:
+peer_ip:
+sysfs_check_required: 1
+value: !mux
+    mlx4_en_only_mode_0:
+       module_param_name: "mlx4_en_only_mode"
+       module_param_value: "0"
+    mlx4_en_only_mode_1:
+       module_param_name: "mlx4_en_only_mode"
+       module_param_value: "1"
+    debug_level_0:
+       module_param_name: "debug_level"
+       module_param_value: "0"
+    debug_level_1:
+       module_param_name: "debug_level"
+       module_param_value: "1"
+    msi_x_0:
+       module_param_name: "msi_x"
+       module_param_value: "0"
+    msi_x_1:
+       module_param_name: "msi_x"
+       module_param_value: "1"
+    msi_x_5:
+       module_param_name: "msi_x"
+       module_param_value: "5"
+    block_loopback_0:
+       module_param_name: "block_loopback"
+       module_param_value: "0"
+    block_loopback_5:
+       module_param_name: "block_loopback"
+       module_param_value: "5"
+    ingress_parser_mode_0:
+       module_param_name: "ingress_parser_mode"
+       module_param_value: "0"
+    ingress_parser_mode_1:
+       module_param_name: "ingress_parser_mode"
+       module_param_value: "1"
+    roce_mode_0:
+       module_param_name: "roce_mode"
+       module_param_value: "0"
+    roce_mode_1:
+       module_param_name: "roce_mode"
+       module_param_value: "1"
+    roce_mode_2:
+       module_param_name: "roce_mode"
+       module_param_value: "2"
+    ud_gid_type_0:
+       module_param_name: "ud_gid_type"
+       module_param_value: "0"
+    ud_gid_type_2:
+       module_param_name: "ud_gid_type"
+       module_param_value: "2"
+    num_vfs_5:
+       module_param_name: "num_vfs"
+       module_param_value: "5"
+    probe_vf_5:
+       module_param_name: "probe_vf"
+       module_param_value: "5"
+    log_num_mgm_entry_size_0:
+       module_param_name: "log_num_mgm_entry_size"
+       module_param_value: "0"
+    log_num_mgm_entry_size_1:
+       module_param_name: "log_num_mgm_entry_size"
+       module_param_value: "1"
+    log_num_mgm_entry_size_2:
+       module_param_name: "log_num_mgm_entry_size"
+       module_param_value: "2"
+    log_num_mgm_entry_size_3:
+       module_param_name: "log_num_mgm_entry_size"
+       module_param_value: "3"
+    log_num_mgm_entry_size_4:
+       module_param_name: "log_num_mgm_entry_size"
+       module_param_value: "4"
+    log_num_mgm_entry_size_5:
+       module_param_name: "log_num_mgm_entry_size"
+       module_param_value: "5"
+    log_num_mgm_entry_size_6:
+       module_param_name: "log_num_mgm_entry_size"
+       module_param_value: "6"
+    fast_drop_0:
+       module_param_name: "fast_drop"
+       module_param_value: "0"
+    fast_drop_1:
+       module_param_name: "fast_drop"
+       module_param_value: "1"
+    enable_64b_cqe_eqe_0:
+       module_param_name: "enable_64b_cqe_eqe"
+       module_param_value: "0"
+    enable_64b_cqe_eqe_1:
+       module_param_name: "enable_64b_cqe_eqe"
+       module_param_value: "1"
+    enable_4k_uar_0:
+       module_param_name: "enable_4k_uar"
+       module_param_value: "0"
+    enable_4k_uar_1:
+       module_param_name: "enable_4k_uar"
+       module_param_value: "1"
+    log_num_mac_1:
+       module_param_name: "log_num_mac"
+       module_param_value: "1"
+    log_num_mac_7:
+       module_param_name: "log_num_mac"
+       module_param_value: "7"
+    log_num_vlan_0:
+       module_param_name: "log_num_vlan"
+       module_param_value: "1"
+    log_num_vlan_7:
+       module_param_name: "log_num_vlan`"
+       module_param_value: "7"
+    log_mtts_per_seg_0:
+       module_param_name: "log_mtts_per_seg"
+       module_param_value: "0"
+    log_mtts_per_seg_7:
+       module_param_name: "log_mtts_per_seg"
+       module_param_value: "7"
+    port_type_array:
+       module_param_name: "port_type_array"
+       module_param_value: "1,2"
+    log_num_qp:
+       module_param_name: "log_num_qp"
+       module_param_value: "90"
+    log_num_srq:
+       module_param_name: "log_num_srq"
+       module_param_value: "90"
+    log_rdmarc_per_qp:
+       module_param_name: "log_rdmarc_per_qp"
+       module_param_value: "90"
+    log_num_cq:
+       module_param_name: "log_num_cq"
+       module_param_value: "90"
+    log_num_mcg:
+       module_param_name: "log_num_mcg"
+       module_param_value: "90"
+    log_num_mpt:
+       module_param_name: "log_num_mpt"
+       module_param_value: "90"
+    log_num_mtt:
+       module_param_name: "log_num_mtt"
+       module_param_value: "90"
+    enable_qos_0:
+       module_param_name: "enable_qos"
+       module_param_value: "0"
+    enable_qos_1:
+       module_param_name: "enable_qos"
+       module_param_value: "1"
+    enable_vfs_qos_0:
+       module_param_name: "enable_vfs_qos"
+       module_param_value: "0"
+    enable_vfs_qos_1:
+       module_param_name: "enable_vfs_qos"
+       module_param_value: "1"
+    internal_err_reset_0:
+       module_param_name: "internal_err_reset"
+       module_param_value: "0"
+    internal_err_reset_1:
+       module_param_name: "internal_err_reset"
+       module_param_value: "1"

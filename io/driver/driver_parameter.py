@@ -111,7 +111,7 @@ class Moduleparameter(Test):
             time.sleep(self.load_unload_sleep_time)
         sub_mod = linux_modules.get_submodules(mod1)
         if sub_mod:
-            for mod in sub_mod.split(' '):
+            for mod in sub_mod:
                 linux_modules.unload_module(mod)
                 if linux_modules.module_is_loaded(mod) is True:
                     self.error_modules.append(mod)

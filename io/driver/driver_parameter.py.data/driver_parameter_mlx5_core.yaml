@@ -1,0 +1,43 @@
+module: "mlx5_core"
+interface: eth3
+host_ip:
+netmask:
+peer_ip:
+sysfs_check_required: 1
+value: !mux
+    out_ifname:
+       module_param_name: "out_ifname"
+       module_param_value: "eth1"
+    guids:
+       module_param_name: "guids"
+       module_param_value: "0x506b4b030039d4f2"
+    debug_mask_0:
+       module_param_name: "debug_mask"
+       module_param_value: "0"
+    debug_mask_1:
+       module_param_name: "debug_mask"
+       module_param_value: "1"
+    debug_mask_2:
+       module_param_name: "debug_mask"
+       module_param_value: "2"
+    debug_mask_3:
+       module_param_name: "debug_mask"
+       module_param_value: "3"
+    prof_sel_0:
+       module_param_name: "prof_sel"
+       module_param_value: "0"
+    prof_sel_1:
+       module_param_name: "prof_sel"
+       module_param_value: "1"
+    prof_sel_2:
+       module_param_name: "prof_sel"
+       module_param_value: "2"
+    prof_sel_3:
+       module_param_name: "prof_sel"
+       module_param_value: "3"
+    probe_vf_0:
+       module_param_name: "probe_vf"
+       module_param_value: "0"
+    probe_vf_1:
+       module_param_name: "probe_vf"
+       module_param_value: "1"
