@@ -86,7 +86,7 @@ class PPC64Test(Test):
         """
         Sets the SMT value, and calls each of the test, for each value.
         """
-        for i in range(2, self.max_smt_value + 1):
+        for i in range(2, self.max_smt_value):
             self.smt_values[i] = str(i)
         for self.key, self.value in self.smt_values.items():
             process.system_output("%s=%s" % (self.smt_str,
