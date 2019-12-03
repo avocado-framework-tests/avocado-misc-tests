@@ -56,7 +56,8 @@ class Connectathon(Test):
 
         if detected_distro.name == "SuSE":
             packages.extend(['git-core'])
-
+        elif detected_distro.name == "centos":
+            packages.extend(['libtirpc-devel'])
         else:
             packages.extend(['git'])
 
