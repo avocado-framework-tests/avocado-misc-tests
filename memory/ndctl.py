@@ -279,7 +279,7 @@ class NdctlTest(Test):
             self.binary = './ndctl/ndctl'
             self.daxctl = './daxctl/daxctl'
         else:
-            deps.extend(['ndctl'])
+            deps.extend(['ndctl', 'daxctl'])
             self.binary = 'ndctl'
             self.daxctl = 'daxctl'
 
