@@ -55,7 +55,7 @@ class Kretprobe(Test):
         smg = SoftwareManager()
         detected_distro = distro.detect()
         deps = ['gcc', 'make', 'automake', 'autoconf', 'time', 'bison', 'flex']
-        if 'Ubuntu' in detected_distro.name:
+        if detected_distro.name in ['Ubuntu', 'debian']:
             linux_headers = 'linux-headers-%s' % os.uname()[2]
             deps.extend(['libpopt0', 'libc6', 'libc6-dev', 'libpopt-dev',
                          'libcap-ng0', 'libcap-ng-dev', 'elfutils', 'libelf1',
