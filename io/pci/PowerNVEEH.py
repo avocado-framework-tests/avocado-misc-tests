@@ -76,7 +76,8 @@ class PowerNVEEH(Test):
         self.err = 0
         for line in process.system_output('lspci -vs %s' % self.pci_device,
                                           ignore_status=True,
-                                          shell=True).splitlines():
+                                          shell=True).decode("utf-8\
+                                          ").splitlines():
             if 'Memory' in line and '64-bit, prefetchable' in line:
                 self.err = 1
                 break
@@ -150,7 +151,7 @@ class PowerNVEEH(Test):
         cmd = "echo %s:%s:%s:%s:%s > /sys/kernel/debug/powerpc/PCI%s/err_injct \
                && lspci; echo $?" % (addr, err, func, mem_addr, mask, phb)
         return int(process.system_output(cmd, ignore_status=True,
-                                         shell=True)[-1])
+                                         shell=True).decode("utf-8")[-1])
 
     def check_eeh_pe_recovery(self):
         """
@@ -159,7 +160,8 @@ class PowerNVEEH(Test):
         cmd = "dmesg | grep -i 'EEH: Notify device driver to resume'; echo $?"
         tries = 60
         for _ in range(0, tries):
-            res = process.system_output(cmd, ignore_status=True, shell=True)
+            res = process.system_output(cmd, ignore_status=True,
+                                        shell=True).decode("utf-8")
             if int(res[-1]) != 0:
                 self.log.info("waiting for PE to recover %s", self.pci_device)
                 time.sleep(1)
@@ -201,7 +203,7 @@ class PowerNVEEH(Test):
         cmd = "dmesg | grep 'EEH: Frozen';echo $?"
         for _ in range(0, tries):
             if int(process.system_output(cmd, ignore_status=True,
-                                         shell=True)[-1]) == 0:
+                                         shell=True).decode("utf-8")[-1]) == 0:
                 return True
             time.sleep(1)
         return False
@@ -215,7 +217,7 @@ class PowerNVEEH(Test):
         for _ in range(0, tries):
             cmd = "dmesg | grep 'permanently disabled'; echo $?"
             if int(process.system_output(cmd, ignore_status=True,
-                                         shell=True)[-1]) == 0:
+                                         shell=True).decode("utf-8")[-1]) == 0:
                 time.sleep(10)
                 return True
             time.sleep(1)
