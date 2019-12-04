@@ -444,20 +444,22 @@ class NdctlTest(Test):
         self.disable_namespace()
         self.destroy_namespace()
         for val in regions:
+            ns_size = None
             region = self.get_json_val(val, 'dev')
             self.log.info("Using %s for muliple namespaces", region)
             self.log.info("Creating %s namespaces", self.cnt)
             if not self.size:
-                self.size = self.get_json_val(self.get_json(
+                ns_size = self.get_json_val(self.get_json(
                     '-r %s' % region)[0], 'size')
-                ch_cnt = self.get_aligned_count(self.size)
-                self.size = self.size // ch_cnt
+                ch_cnt = self.get_aligned_count(ns_size)
+                ns_size = ns_size // ch_cnt
             else:
                 # Assuming size is aligned
+                ns_size = self.size
                 ch_cnt = self.cnt
             for nid in range(0, ch_cnt):
                 self.create_namespace(
-                    region=region, mode=self.mode_to_use, size=self.size)
+                    region=region, mode=self.mode_to_use, size=ns_size)
                 self.log.info("Namespace %s created", nid + 1)
 
     def test_nslot_namespace(self):
