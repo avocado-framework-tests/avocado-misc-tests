@@ -76,7 +76,8 @@ class PowerNVEEH(Test):
         self.err = 0
         for line in process.system_output('lspci -vs %s' % self.pci_device,
                                           ignore_status=True,
-                                          shell=True).splitlines():
+                                          shell=True).decode("utf-8\
+                                          ").splitlines():
             if 'Memory' in line and '64-bit, prefetchable' in line:
                 self.err = 1
                 break
