@@ -27,7 +27,7 @@ from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process, distro
 from avocado.utils import configure_network
-from avocado.utils.configure_network import PeerInfo, HostInfo
+from avocado.utils.configure_network import PeerInfo
 from avocado.utils.ssh import Session
 
 
@@ -143,7 +143,7 @@ class RDMA(Test):
         '''
         if not self.peerinfo.set_mtu_peer(self.peer_interface, self.mtu):
             self.fail("Failed to set mtu in peer")
-        if not HostInfo.set_mtu_host(self, self.iface, self.mtu):
+        if not configure_network.set_mtu_host(self.iface, self.mtu):
             self.fail("Failed to set mtu in host")
         if self.rdma_exec(self.tool_name, self.test_op, "") != 0:
             self.fail("Client cmd: %s %s" % (self.tool_name, self.test_op))
@@ -152,7 +152,7 @@ class RDMA(Test):
         """
         unset ip
         """
-        if not HostInfo.set_mtu_host(self, self.iface, '1500'):
+        if not configure_network.set_mtu_host(self.iface, '1500'):
             self.fail("Failed to set mtu in host")
         if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
             self.fail("Failed to set mtu in peer")

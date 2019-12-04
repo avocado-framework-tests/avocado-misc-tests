@@ -23,7 +23,6 @@ from avocado import main
 from avocado.utils import process
 from avocado.utils import linux_modules, genio
 from avocado.utils import configure_network
-from avocado.utils.configure_network import HostInfo
 from avocado import Test
 
 
@@ -126,8 +125,8 @@ class Moduleparameter(Test):
         if self.sysfs_chk:
             if self.sysfs_value_check() is False:
                 self.fail("Sysfs check failed ")
-        if not HostInfo.ping_check(self, self.ifaces, self.peer, '1000',
-                                   flood=True):
+        if not configure_network.ping_check(self.ifaces, self.peer, '1000',
+                                            flood=True):
             self.fail("ping test failed")
 
     def test(self):

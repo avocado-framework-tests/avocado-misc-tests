@@ -32,7 +32,7 @@ from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils.ssh import Session
 from avocado.utils import configure_network
-from avocado.utils.configure_network import PeerInfo, HostInfo
+from avocado.utils.configure_network import PeerInfo
 
 
 class PingPong(Test):
@@ -162,7 +162,7 @@ class PingPong(Test):
             self.mtu = "9000"
         if not self.peerinfo.set_mtu_peer(self.peer_interface, self.mtu):
             self.fail("Failed to set mtu in peer")
-        if not HostInfo.set_mtu_host(self, self.iface, self.mtu):
+        if not configure_network.set_mtu_host(self.iface, self.mtu):
             self.fail("Failed to set mtu in host")
         time.sleep(10)
         val1 = ""
@@ -182,7 +182,7 @@ class PingPong(Test):
             self.log.info("Extended test option skipped")
 
     def tearDown(self):
-        if not HostInfo.set_mtu_host(self, self.iface, '1500'):
+        if not configure_network.set_mtu_host(self.iface, '1500'):
             self.fail("Failed to set mtu in host")
         if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
             self.fail("Failed to set mtu in peer")

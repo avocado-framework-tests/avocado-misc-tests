@@ -21,7 +21,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils import configure_network
-from avocado.utils.configure_network import PeerInfo, HostInfo
+from avocado.utils.configure_network import PeerInfo
 
 
 class MultiportStress(Test):
@@ -66,7 +66,7 @@ class MultiportStress(Test):
             if not self.peerinfo.set_mtu_peer(self.peer_interface, self.mtu):
                 self.cancel("Failed to set mtu in peer")
         for host_interface in self.host_interfaces:
-            if not HostInfo.set_mtu_host(self, host_interface, self.mtu):
+            if not configure_network.set_mtu_host(host_interface, self.mtu):
                 self.cancel("Failed to set mtu in host")
 
     def multiport_ping(self, ping_option):
@@ -107,7 +107,7 @@ class MultiportStress(Test):
         unset ip for host interface
         '''
         for host_interface in self.host_interfaces:
-            if not HostInfo.set_mtu_host(self, host_interface, '1500'):
+            if not configure_network.set_mtu_host(host_interface, '1500'):
                 self.cancel("Failed to set mtu in host")
         for peer_ip in self.peer_ips:
             self.peer_interface = self.peerinfo.get_peer_interface(peer_ip)
