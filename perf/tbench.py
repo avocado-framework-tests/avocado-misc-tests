@@ -20,7 +20,7 @@
 
 import os
 import signal
-import commands
+import subprocess
 import re
 from avocado import Test
 from avocado import main
@@ -60,7 +60,7 @@ class tbench(Test):
     def test(self):
         # only supports combined server+client model at the moment
         # should support separate I suppose, but nobody uses it
-        nprocs = self.params.get('nprocs', default=commands.getoutput("nproc"))
+        nprocs = self.params.get('nprocs', default=subprocess.getoutput("nproc"))
         args = self.params.get('args',  default=None)
         args = '%s %s' % (args, nprocs)
         pid = os.fork()
@@ -70,7 +70,7 @@ class tbench(Test):
             cmd = os.path.join(self.sourcedir, "tbench") + " " + args
             # Standard output is verbose and merely makes our debug logs huge
             # so we don't retain it.  It gets parsed for the results.
-            self.results = process.system_output(cmd, shell=True)
+            self.results = process.system_output(cmd, shell=True).decode()
             os.kill(pid, signal.SIGTERM)    # clean up the server
         else:                           # child
             server = os.path.join(self.sourcedir, 'tbench_srv')
