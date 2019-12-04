@@ -258,6 +258,7 @@ class NdctlTest(Test):
         if not self.check_buses():
             self.cancel("Test needs atleast one region")
 
+        self.smm = SoftwareManager()
         if self.package == 'upstream':
             deps.extend(['gcc', 'make', 'automake', 'autoconf'])
             if self.dist.name == 'SuSE':
@@ -265,6 +266,10 @@ class NdctlTest(Test):
                              'libkmod-devel', 'libudev-devel',
                              'libuuid-devel-static', 'libjson-c-devel',
                              'systemd-devel', 'kmod-bash-completion'])
+            for pkg in deps:
+                if not self.smm.check_installed(pkg) and not \
+                        self.smm.install(pkg):
+                    self.cancel('%s is needed for the test to be run' % pkg)
 
             locations = ["https://github.com/pmem/ndctl/archive/master.zip"]
             tarball = self.fetch_asset("ndctl.zip", locations=locations,
@@ -279,15 +284,13 @@ class NdctlTest(Test):
             self.binary = './ndctl/ndctl'
             self.daxctl = './daxctl/daxctl'
         else:
-            deps.extend(['ndctl', 'daxctl'])
+            for pkg in ['ndctl', 'daxctl']:
+                if not self.smm.check_installed(pkg) and not \
+                        self.smm.install(pkg):
+                    self.cancel('%s is needed for the test to be run' % pkg)
             self.binary = 'ndctl'
             self.daxctl = 'daxctl'
 
-        self.smm = SoftwareManager()
-        for pkg in deps:
-            if not self.smm.check_installed(pkg) and not \
-                    self.smm.install(pkg):
-                self.cancel('%s is needed for the test to be run' % pkg)
         self.opt_dict = {'-B': 'provider',
                          '-D': 'dev', '-R': 'dev', '-N': 'dev'}
         self.modes = ['raw', 'sector', 'fsdax', 'devdax']
