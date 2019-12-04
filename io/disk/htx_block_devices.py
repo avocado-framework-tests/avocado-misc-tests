@@ -63,7 +63,6 @@ class HtxTest(Test):
             for disk in self.block_devices.split():
                 self.block_device.append(disk.rsplit("/")[-1])
             self.block_device = " ".join(self.block_device)
-        self.failed = False
 
     def setup_htx(self):
         """
@@ -115,7 +114,6 @@ class HtxTest(Test):
         process.run('htxcmdline -createmdt')
 
         if not os.path.exists("/usr/lpp/htx/mdt/%s" % self.mdt_file):
-            self.failed = True
             self.fail("MDT file %s not found" % self.mdt_file)
 
         self.log.info("selecting the mdt file ")
@@ -124,7 +122,6 @@ class HtxTest(Test):
 
         if not self.all:
             if self.is_block_device_in_mdt() is False:
-                self.failed = True
                 self.fail("Block devices %s are not available in %s",
                           self.block_device, self.mdt_file)
 
@@ -136,7 +133,6 @@ class HtxTest(Test):
         process.system(cmd, ignore_status=True)
         if not self.all:
             if self.is_block_device_active() is False:
-                self.failed = True
                 self.fail("Block devices failed to activate")
 
         self.log.info("Running the HTX on %s", self.block_device)
@@ -151,7 +147,6 @@ class HtxTest(Test):
             self.log.info("HTX Error logs")
             process.run('htxcmdline -geterrlog')
             if os.stat('/tmp/htxerr').st_size != 0:
-                self.failed = True
                 self.fail("check errorlogs for exact error and failure")
             self.log.info("status of block devices after every 60 sec")
             cmd = 'htxcmdline -query %s -mdt %s' % (self.block_device,
@@ -221,18 +216,11 @@ class HtxTest(Test):
             self.suspend_all_block_device()
             self.log.info("shutting down the %s ", self.mdt_file)
             cmd = "htxcmdline -shutdown -mdt %s" % self.mdt_file
-            process.system(cmd, ignore_status=True)
+            process.system(cmd, timeout=120, ignore_status=True)
 
         daemon_state = process.system_output('/etc/init.d/htx.d status')
         if daemon_state.decode("utf-8").split(" ")[-1] == 'running':
             process.system('/usr/lpp/htx/etc/scripts/htxd_shutdown')
-
-    def tearDown(self):
-        """
-        tearDown
-        """
-        if self.failed:
-            self.stop_htx()
 
 
 if __name__ == "__main__":

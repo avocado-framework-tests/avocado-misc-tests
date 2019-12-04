@@ -583,7 +583,7 @@ class HtxNicTest(Test):
     def shutdown_active_mdt(self):
         self.log.info("Shutdown active mdt in host")
         cmd = "htxcmdline -shutdown"
-        process.run(cmd, ignore_status=True, shell=True, sudo=True)
+        process.run(cmd, timeout=120, ignore_status=True, shell=True, sudo=True)
         self.log.info("Shutdown active mdt in peer")
         try:
             self.run_command(cmd)
@@ -690,7 +690,7 @@ class HtxNicTest(Test):
             self.suspend_all_net_devices_in_host()
             self.log.info("Shutting down the %s in host", self.mdt_file)
             cmd = 'htxcmdline -shutdown -mdt %s' % self.mdt_file
-            process.system(cmd, ignore_status=True, shell=True, sudo=True)
+            process.system(cmd, timeout=120, ignore_status=True, shell=True, sudo=True)
 
         if self.is_net_device_active_in_peer():
             self.suspend_all_net_devices_in_peer()
