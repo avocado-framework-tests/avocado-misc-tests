@@ -35,7 +35,8 @@ class EliminateDomainSuffix(Test):
     :avocado: tags=perf,24x7,events
     """
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or Power non-virtualized platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or Power non-virtualized platform")
     def setUp(self):
         """
         Setup checks :
@@ -46,12 +47,16 @@ class EliminateDomainSuffix(Test):
         """
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        if 'ppc' not in process.system_output("uname -p", ignore_status=True).decode("utf-8"):
-            self.cancel("Processor is not ppc64")
+        processor = process.system_output("uname -p", ignore_status=True).decode("utf-8")
+        if 'ppc' not in processor:
+            if 'unknown' in processor and 'ppc' not in os.uname():
+                self.cancel("Processor is not ppc64")
         deps = ['gcc', 'make']
         if 'Ubuntu' in detected_distro.name:
             deps.extend(['linux-tools-common', 'linux-tools-%s'
                          % platform.uname()[2]])
+        elif detected_distro.name in ['debian']:
+            deps.extend(['linux-perf', 'perf-tools-unstable'])
         elif detected_distro.name in ['rhel', 'SuSE', 'fedora', 'centos']:
             deps.extend(['perf'])
         else:
@@ -81,6 +86,9 @@ class EliminateDomainSuffix(Test):
         result_perf = process.run("%s,domain=2,core=1/ sleep 1"
                                   % self.perf_stat, ignore_status=True)
         if "not supported" in result_perf.stderr.decode("utf-8"):
+            self.cancel("Please enable lpar to allow collecting"
+                        " the 24x7 counters info")
+        if "You may not have permission to collect stats." in result_perf.stderr.decode("utf-8"):
             self.cancel("Please enable lpar to allow collecting"
                         " the 24x7 counters info")
 
@@ -168,10 +176,9 @@ class EliminateDomainSuffix(Test):
 
     # Helper functions
     def event_helper(self, event):
-        search_suffix = process.run('ls %s/events |grep -E '
-                                    '%s' % (self.event_sysfs, event),
+        search_suffix = process.run('ls %s/events' % (self.event_sysfs),
                                     ignore_status=True)
-        if search_suffix.stdout.decode("utf-8"):
+        if event in search_suffix.stdout.decode("utf-8"):
             self.fail('Found %s  suffixes in event name' % event)
         else:
             self.log.info('No %s  suffixes in event name', event)
