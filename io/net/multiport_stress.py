@@ -51,7 +51,7 @@ class MultiportStress(Test):
             if self.host_interface not in interfaces:
                 self.cancel("interface is not available")
         self.count = self.params.get("count", default="1000")
-        self.ipaddr = self.params.get("host_ip", default="").split(",")
+        self.ipaddr = self.params.get("host_ips", default="").split(",")
         self.netmask = self.params.get("netmask", default="")
         for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
             configure_network.set_ip(ipaddr, self.netmask, interface)
