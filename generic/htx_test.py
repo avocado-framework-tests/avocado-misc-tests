@@ -50,7 +50,6 @@ class HtxTest(Test):
         self.mdt_file = self.params.get('mdt_file', default='mdt.mem')
         self.time_limit = int(self.params.get('time_limit', default=2))
         self.time_unit = self.params.get('time_unit', default='m')
-        self.failed = False
         if self.time_unit == 'm':
             self.time_limit = self.time_limit * 60
         elif self.time_unit == 'h':
@@ -133,7 +132,6 @@ class HtxTest(Test):
             self.log.info("HTX Error logs")
             process.system('htxcmdline -geterrlog', ignore_status=True)
             if os.stat('/tmp/htxerr').st_size != 0:
-                self.failed = True
                 self.fail("check errorlogs for exact error and failure")
             cmd = 'htxcmdline -query  -mdt %s' % self.mdt_file
             process.system(cmd, ignore_status=True)
@@ -151,18 +149,11 @@ class HtxTest(Test):
         """
         self.log.info("shutting down the %s ", self.mdt_file)
         cmd = 'htxcmdline -shutdown -mdt %s' % self.mdt_file
-        process.system(cmd, ignore_status=True)
+        process.system(cmd, timeout=120, ignore_status=True)
 
         daemon_state = process.system_output('/etc/init.d/htx.d status')
         if daemon_state.decode().split(" ")[-1] == 'running':
             process.system('/usr/lpp/htx/etc/scripts/htxd_shutdown')
-
-    def tearDown(self):
-        """
-        tearDown
-        """
-        if self.failed:
-            self.stop_htx()
 
 
 if __name__ == "__main__":
