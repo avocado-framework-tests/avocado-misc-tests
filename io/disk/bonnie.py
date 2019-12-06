@@ -50,42 +50,37 @@ class Bonnie(Test):
         """
         fstype = self.params.get('fs', default='ext4')
 
+        smm = SoftwareManager()
+        # Install the package from web
+        deps = ['gcc', 'make']
+        if distro.detect().name == 'Ubuntu':
+            deps.extend(['g++'])
+        else:
+            deps.extend(['gcc-c++'])
+        if fstype == 'btrfs':
+            ver = int(distro.detect().version)
+            rel = int(distro.detect().release)
+            if distro.detect().name == 'rhel':
+                if (ver == 7 and rel >= 4) or ver > 7:
+                    self.cancel("btrfs not supported with RHEL 7.4 onwards")
+            elif distro.detect().name == 'Ubuntu':
+                deps.extend(['btrfs-tools'])
+
+        for package in deps:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel("%s package required for this test" % package)
+
         if process.system("which bonnie++", ignore_status=True):
-            smm = SoftwareManager()
-            if not smm.check_installed('bonnie++')\
-                    and not smm.check_installed('bonnie++'):
-                # Install the package from web
-                deps = ['gcc', 'make']
-                if distro.detect().name == 'Ubuntu':
-                    deps.extend(['g++'])
-                else:
-                    deps.extend(['gcc-c++'])
-                if fstype == 'btrfs':
-                    ver = int(distro.detect().version)
-                    rel = int(distro.detect().release)
-                    if distro.detect().name == 'rhel':
-                        if (ver == 7 and rel >= 4) or ver > 7:
-                            self.cancel("btrfs is not supported with \
-                                        RHEL 7.4 onwards")
-                    if distro.detect().name == 'Ubuntu':
-                        deps.extend(['btrfs-tools'])
-
-                for package in deps:
-                    if not smm.check_installed(package)\
-                            and not smm.install(package):
-                        self.cancel("Fail to install/check %s, which is"
-                                    " needed for Bonnie test to run" % package)
-
-                tarball = self.fetch_asset('http://www.coker.com.au/bonnie++/'
-                                           'bonnie++-1.03e.tgz', expire='7d')
-                archive.extract(tarball, self.teststmpdir)
-                self.source = os.path.join(self.teststmpdir,
-                                           os.path.basename(
-                                               tarball.split('.tgz')[0]))
-                os.chdir(self.source)
-                process.run('./configure')
-                build.make(self.source)
-                build.make(self.source, extra_args='install')
+            tarball = self.fetch_asset('http://www.coker.com.au/bonnie++/'
+                                       'bonnie++-1.03e.tgz', expire='7d')
+            archive.extract(tarball, self.teststmpdir)
+            self.source = os.path.join(self.teststmpdir,
+                                       os.path.basename(
+                                           tarball.split('.tgz')[0]))
+            os.chdir(self.source)
+            process.run('./configure')
+            build.make(self.source)
+            build.make(self.source, extra_args='install')
 
         self.disk = self.params.get('disk', default=None)
         self.scratch_dir = self.params.get('dir', default=self.workdir)
