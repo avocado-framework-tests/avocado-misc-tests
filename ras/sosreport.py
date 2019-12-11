@@ -224,7 +224,7 @@ class Sosreport(Test):
                   'xz': 'file_name_xz', 'auto': 'file_name_xz2'}
         archive = {'bzip2': 'tar.bz2', 'gzip': 'tar.gz',
                    'xz': 'tar.xz', 'auto': 'tar.xz'}
-        for key, value in f_name.iteritems():
+        for key, value in f_name.items():
             file_name = str(f_name[key])
             file_name = self.run_cmd_out("sosreport --batch --tmp-dir=%s -z %s | grep %s" %
                                          (directory_name, str(key),
