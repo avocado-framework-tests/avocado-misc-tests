@@ -24,7 +24,7 @@ from avocado.utils import build, distro, process, genio
 from avocado.utils.software_manager import SoftwareManager
 
 
-class perfUprobe(Test):
+class PerfUprobe(Test):
 
     """
     Uprobe related test cases run through perf commands
@@ -39,8 +39,8 @@ class perfUprobe(Test):
 
         # Check for basic utilities
         smm = SoftwareManager()
-        detected_distro = distro.detect()
-        self.distro_name = detected_distro.name
+        self.detected_distro = distro.detect()
+        self.distro_name = self.detected_distro.name
         deps = ['gcc', 'make']
         if 'Ubuntu' in self.distro_name:
             deps.extend(['linux-tools-common', 'linux-tools-%s' %
@@ -49,7 +49,7 @@ class perfUprobe(Test):
             deps.extend(['perf'])
         else:
             self.cancel("Install the package for perf supported\
-                      by %s" % detected_distro.name)
+                      by %s" % self.detected_distro.name)
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
@@ -94,7 +94,7 @@ class perfUprobe(Test):
         if 'Added new event' not in output.stderr:
             self.fail("perf: probe of uprobe return failed")
         # RHEL
-        if self.distro_name == "rhel":
+        if self.distro_name == "rhel" and self.detected_distro.version > "7":
             output = self.cmd_verify('%s__return -- ./uprobe_test'
                                      % self.recProbe)
         else:
