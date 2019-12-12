@@ -251,13 +251,19 @@ class NdctlTest(Test):
         self.preserve_setup = self.params.get('preserve_change', default=False)
         self.size = self.params.get('size', default=None)
         self.mode_to_use = self.params.get('modes', default='fsdax')
+        self.reflink = ''
 
-        if 'SuSE' not in self.dist.name:
+        if self.dist.name not in ['SuSE', 'rhel']:
             self.cancel('Unsupported OS %s' % self.dist.name)
+        else:
+            if self.dist.name == 'rhel':
+                # DAX wont work with reflink, disabling here
+                self.reflink = '-m reflink=0'
 
         if not self.check_buses():
             self.cancel("Test needs atleast one region")
 
+        self.smm = SoftwareManager()
         if self.package == 'upstream':
             deps.extend(['gcc', 'make', 'automake', 'autoconf'])
             if self.dist.name == 'SuSE':
@@ -265,6 +271,15 @@ class NdctlTest(Test):
                              'libkmod-devel', 'libudev-devel',
                              'libuuid-devel-static', 'libjson-c-devel',
                              'systemd-devel', 'kmod-bash-completion'])
+            elif self.dist.name == 'rhel':
+                deps.extend(['rubygem-asciidoctor', 'automake', 'libtool',
+                             'kmod-devel', 'libuuid-devel', 'json-c-devel',
+                             'systemd-devel', 'keyutils-libs-devel', 'jq',
+                             'parted', 'libtool'])
+            for pkg in deps:
+                if not self.smm.check_installed(pkg) and not \
+                        self.smm.install(pkg):
+                    self.cancel('%s is needed for the test to be run' % pkg)
 
             locations = ["https://github.com/pmem/ndctl/archive/master.zip"]
             tarball = self.fetch_asset("ndctl.zip", locations=locations,
@@ -279,15 +294,13 @@ class NdctlTest(Test):
             self.binary = './ndctl/ndctl'
             self.daxctl = './daxctl/daxctl'
         else:
-            deps.extend(['ndctl'])
+            for pkg in ['ndctl', 'daxctl']:
+                if not self.smm.check_installed(pkg) and not \
+                        self.smm.install(pkg):
+                    self.cancel('%s is needed for the test to be run' % pkg)
             self.binary = 'ndctl'
             self.daxctl = 'daxctl'
 
-        self.smm = SoftwareManager()
-        for pkg in deps:
-            if not self.smm.check_installed(pkg) and not \
-                    self.smm.install(pkg):
-                self.cancel('%s is needed for the test to be run' % pkg)
         self.opt_dict = {'-B': 'provider',
                          '-D': 'dev', '-R': 'dev', '-N': 'dev'}
         self.modes = ['raw', 'sector', 'fsdax', 'devdax']
@@ -431,20 +444,22 @@ class NdctlTest(Test):
         self.disable_namespace()
         self.destroy_namespace()
         for val in regions:
+            ns_size = None
             region = self.get_json_val(val, 'dev')
             self.log.info("Using %s for muliple namespaces", region)
             self.log.info("Creating %s namespaces", self.cnt)
             if not self.size:
-                self.size = self.get_json_val(self.get_json(
+                ns_size = self.get_json_val(self.get_json(
                     '-r %s' % region)[0], 'size')
-                ch_cnt = self.get_aligned_count(self.size)
-                self.size = self.size // ch_cnt
+                ch_cnt = self.get_aligned_count(ns_size)
+                ns_size = ns_size // ch_cnt
             else:
                 # Assuming size is aligned
+                ns_size = self.size
                 ch_cnt = self.cnt
             for nid in range(0, ch_cnt):
                 self.create_namespace(
-                    region=region, mode=self.mode_to_use, size=self.size)
+                    region=region, mode=self.mode_to_use, size=ns_size)
                 self.log.info("Namespace %s created", nid + 1)
 
     def test_nslot_namespace(self):
@@ -607,8 +622,8 @@ class NdctlTest(Test):
         size = self.get_json_val(self.get_json(
             "-N -r %s" % region)[0], 'size')
         self.part = partition.Partition(self.disk)
-        self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512' %
-                       memory.get_page_size())
+        self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512 %s' %
+                       (memory.get_page_size(), self.reflink))
         mnt_path = self.params.get('mnt_point', default='/pmem')
         if not os.path.exists(mnt_path):
             os.makedirs(mnt_path)
