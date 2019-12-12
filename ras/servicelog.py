@@ -115,6 +115,7 @@ class servicelog(Test):
         ids = self.run_cmd_out("servicelog_notify --list --command=%s | "
                                "grep \"Servicelog ID:\" | cut -d\":\" -f2 | sed 's/^ *//'" %
                                notify_script)
+        ids = ids.split()
         self.log.info("=====6 - Checking if servicelog_notify --list, "
                       "lists the command just added  =======")
         for id in ids:
