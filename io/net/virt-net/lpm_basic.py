@@ -94,6 +94,10 @@ class LPM(Test):
         if not self.server:
             self.cancel("Managed System not got")
 
+        self.source_server = self.params.get("source_server", default=None)
+        if not self.source_server:
+            self.cancel("No Source Server specified for LPM")
+
         self.remote_server = self.params.get("remote_server", default=None)
         if not self.remote_server:
             self.cancel("No Remote Server specified for LPM")
@@ -255,7 +259,7 @@ class LPM(Test):
         Migrate the LPAR from given remote server back to server.
         No additional param required for basic lpm.
         '''
-        self.do_migrate(self.remote_server, self.server, self.lpar, ' ')
+        self.do_migrate(self.remote_server, self.source_server, self.lpar, ' ')
 
     def tearDown(self):
         if self.pxssh.isalive():
