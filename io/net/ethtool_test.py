@@ -29,7 +29,6 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils import configure_network
-from avocado.utils.configure_network import HostInfo
 
 
 class Ethtool(Test):
@@ -69,7 +68,7 @@ class Ethtool(Test):
         else:
             configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
                                      interface_type='Ethernet')
-        if not HostInfo.ping_check(self, self.iface, self.peer, "5"):
+        if not configure_network.ping_check(self.iface, self.peer, "5"):
             self.cancel("No connection to peer")
         self.args = self.params.get("arg", default='')
         self.elapse = self.params.get("action_elapse", default='')
@@ -117,8 +116,8 @@ class Ethtool(Test):
                               ignore_status=True)
             if ret.exit_status != 0:
                 self.fail("failed")
-        if not HostInfo.ping_check(self, self.iface, self.peer, '10000',
-                                   flood=True):
+        if not configure_network.ping_check(self.iface, self.peer,
+                                            '10000', flood=True):
             self.fail("flood ping test failed")
         if self.priv_test:
             self.ethtool_toggle_priv_flags()
@@ -146,8 +145,8 @@ class Ethtool(Test):
                         priv_pass.append(priv_flag.rstrip())
                     else:
                         priv_fail.append(priv_flag.rstrip())
-            if not HostInfo.ping_check(self, self.iface,
-                                       self.peer, '500000', flood=True):
+            if not configure_network.ping_check(self.iface, self.peer,
+                                                '500000', flood=True):
                 self.fail("Ping failed oper = %s" % oper)
         if priv_fail:
             self.fail("Private flags could not be toggled: %s" %
