@@ -70,7 +70,7 @@ class TcpdumpTest(Test):
         # Install needed packages
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        pkgs = ['tcpdump', 'flex', 'bison', 'gcc', 'gcc-c++']
+        pkgs = ['tcpdump', 'flex', 'bison', 'gcc', 'gcc-c++', 'nmap']
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package Can not install" % pkg)
