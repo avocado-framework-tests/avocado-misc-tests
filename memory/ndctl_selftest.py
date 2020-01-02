@@ -56,11 +56,18 @@ class NdctlTest(Test):
         self.branch = self.params.get('branch', default='master')
         deps = ['gcc', 'make', 'automake', 'autoconf', 'patch']
         detected_distro = distro.detect()
-        if 'SuSE' in detected_distro.name:
-            deps.extend(['ruby2.5-rubygem-asciidoctor', 'libtool',
-                         'libkmod-devel', 'libudev-devel', 'keyutils-devel',
-                         'libuuid-devel-static', 'libjson-c-devel',
-                         'systemd-devel', 'kmod-bash-completion'])
+        if detected_distro.name in ['SuSE', 'rhel']:
+            if detected_distro.name == 'SuSE':
+                deps.extend(['ruby2.5-rubygem-asciidoctor', 'libtool',
+                             'libkmod-devel', 'libudev-devel',
+                             'keyutils-devel', 'libuuid-devel-static',
+                             'libjson-c-devel', 'systemd-devel',
+                             'kmod-bash-completion'])
+            else:
+                deps.extend(['rubygem-asciidoctor', 'automake', 'libtool',
+                             'kmod-devel', 'libuuid-devel', 'json-c-devel',
+                             'systemd-devel', 'keyutils-libs-devel', 'jq',
+                             'parted', 'libtool'])
         else:
             # TODO: Add RHEL when support arrives
             self.cancel('Unsupported OS %s' % detected_distro.name)
