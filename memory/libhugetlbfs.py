@@ -19,6 +19,7 @@
 
 import os
 import glob
+import tempfile
 
 from avocado import Test
 from avocado import main, skipUnless
@@ -74,7 +75,6 @@ class LibHugetlbfs(Test):
         self.page_sizes = [str(each // 1024) for each in page_sizes]
 
         # Get arguments:
-        self.hugetlbfs_dir = self.params.get('hugetlbfs_dir', default=None)
         pages_requested = self.params.get('pages_requested',
                                           default=20)
 
@@ -89,24 +89,38 @@ class LibHugetlbfs(Test):
         else:
             self.cancel("Kernel does not support hugepages")
 
-        if not self.hugetlbfs_dir:
-            self.hugetlbfs_dir = os.path.join(self.teststmpdir, 'hugetlbfs')
-            os.makedirs(self.hugetlbfs_dir)
+        self.configured_page_sizes = []
+        self.hugetlbfs_dir = {}
 
         for hp_size in self.page_sizes:
-            if process.system('mount -t hugetlbfs -o pagesize=%sM none %s' %
-                              (hp_size, self.hugetlbfs_dir), sudo=True,
-                              ignore_status=True):
-                self.cancel("hugetlbfs mount failed")
-            genio.write_file(
-                '/sys/kernel/mm/hugepages/hugepages-%skB/nr_hugepages' %
-                str(int(hp_size) * 1024), str(pages_requested))
+            try:
+                genio.write_file(
+                    '/sys/kernel/mm/hugepages/hugepages-%skB/nr_hugepages' %
+                    str(int(hp_size) * 1024), str(pages_requested))
+            except OSError:
+                if (int(hp_size) * 1024) == 16777216:
+                    self.log.warn('Running 16GB hugepages')
+                else:
+                    self.cancel('Writing to hugepage file failed')
             pages_available = int(genio.read_file(
                 '/sys/kernel/mm/hugepages/huge'
                 'pages-%skB/nr_hugepages' % str(int(hp_size) * 1024).strip()))
             if pages_available < pages_requested:
-                self.cancel('%d pages available, < %d pages requested'
-                            % (pages_available, pages_requested))
+                self.log.warn('%d pages available, < %d pages '
+                              'requested', pages_available, pages_requested)
+
+            if pages_available:
+                self.hugetlbfs_dir.update(
+                    {hp_size: tempfile.mkdtemp(dir=self.teststmpdir,
+                                               prefix='avocado_' + __name__)})
+                if process.system('mount -t hugetlbfs -o pagesize=%sM none %s' %
+                                  (hp_size, self.hugetlbfs_dir[hp_size]), sudo=True,
+                                  ignore_status=True):
+                    self.cancel("hugetlbfs mount failed")
+                self.configured_page_sizes.append(hp_size)
+
+        if not self.configured_page_sizes:
+            self.cancel("No hugepage size configured")
 
         git.get_repo('https://github.com/libhugetlbfs/libhugetlbfs.git',
                      destination_dir=self.workdir)
@@ -181,7 +195,7 @@ class LibHugetlbfs(Test):
             process_kwargs={'ignore_status': True}).stdout.decode('utf-8')
         parsed_results = []
         error = ""
-        for idx, hp_size in enumerate(self.page_sizes):
+        for idx, hp_size in enumerate(self.configured_page_sizes):
             parsed_results.append(self._log_parser(run_log, idx * 2))
 
             if parsed_results[idx][32]['FAIL']:
@@ -196,9 +210,9 @@ class LibHugetlbfs(Test):
             self.fail(error)
 
     def tearDown(self):
-        for _ in range(0, len(self.page_sizes)):
+        for hp_size in self.configured_page_sizes:
             if process.system('umount %s' %
-                              self.hugetlbfs_dir, ignore_status=True):
+                              self.hugetlbfs_dir[hp_size], ignore_status=True):
                 self.log.warn("umount of hugetlbfs dir failed")
 
 
