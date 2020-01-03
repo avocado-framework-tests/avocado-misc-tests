@@ -41,37 +41,45 @@ class DriverBindTest(Test):
         Setup the device.
         """
         self.return_code = 0
-        self.slot = self.params.get('pci_device', default='0001:01:00.0')
-        self.driver = pci.get_driver(self.slot)
-        if not self.driver:
-            self.cancel("%s does not exist" % self.slot)
+        self.pci_devices = self.params.get('pci_device', default=None)
+        self.count = int(self.params.get('count', default=1))
+        if not self.pci_devices:
+            self.cancel("No pci_adresses Given")
 
     def test(self):
         """
         Creates namespace on the device.
         """
-        cmd = "echo -n %s > /sys/bus/pci/drivers/%s/unbind" \
-            % (self.slot, self.driver)
-        process.run(cmd, shell=True, sudo=True)
-        time.sleep(5)
-        cmd = 'ls /sys/bus/pci/drivers/%s' % self.driver
-        process.run(cmd, shell=True)
-        if os.path.exists("/sys/bus/pci/drivers/%s/%s"
-                          % (self.driver, self.slot)):
-            self.return_code = 1
-        cmd = "echo -n %s > /sys/bus/pci/drivers/%s/bind" \
-            % (self.slot, self.driver)
-        process.run(cmd, shell=True, sudo=True)
-        time.sleep(5)
-        cmd = 'ls /sys/bus/pci/drivers/%s' % self.driver
-        process.run(cmd, shell=True)
-        if not os.path.exists("/sys/bus/pci/drivers/%s/%s"
-                              % (self.driver, self.slot)):
-            self.return_code = 2
-        if self.return_code == 1:
-            self.fail('%s not unbound' % self.slot)
-        if self.return_code == 2:
-            self.fail('%s not bound back' % self.slot)
+        for pci_addr in self.pci_devices.split(","):
+            driver = pci.get_driver(pci_addr)
+            for _ in range(self.count):
+                self.log.info("iteration:%s for PCI_ID = %s" % (_, pci_addr))
+                cmd = "echo -n %s > /sys/bus/pci/drivers/%s/unbind" \
+                    % (pci_addr, driver)
+                process.run(cmd, shell=True, sudo=True)
+                time.sleep(5)
+                cmd = 'ls /sys/bus/pci/drivers/%s' % driver
+                process.run(cmd, shell=True)
+                if os.path.exists("/sys/bus/pci/drivers/%s/%s"
+                                  % (driver, pci_addr)):
+                    self.return_code = 1
+                else:
+                    self.log.info("successfully unbinded %s" % pci_addr)
+                cmd = "echo -n %s > /sys/bus/pci/drivers/%s/bind" \
+                    % (pci_addr, driver)
+                process.run(cmd, shell=True, sudo=True)
+                time.sleep(5)
+                cmd = 'ls /sys/bus/pci/drivers/%s' % driver
+                process.run(cmd, shell=True)
+                if not os.path.exists("/sys/bus/pci/drivers/%s/%s"
+                                      % (driver, pci_addr)):
+                    self.return_code = 2
+                else:
+                    self.log.info("successfully binded back %s" % pci_addr)
+                if self.return_code == 1:
+                    self.fail('%s not unbound in itertion=%s' % (pci_addr, _))
+                if self.return_code == 2:
+                    self.fail('%s not bound back itertion=%s' % (pci_addr, _))
 
 
 if __name__ == "__main__":
