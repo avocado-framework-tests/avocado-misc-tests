@@ -115,7 +115,8 @@ class DlparPci(Test):
         '''
         for line in process.system_output('lsrsrc IBM.MCP %s' % component,
                                           ignore_status=True, shell=True,
-                                          sudo=True).decode("utf-8").splitlines():
+                                          sudo=True).decode("utf-8") \
+                                                    .splitlines():
             if component in line:
                 return line.split()[-1].strip('{}\"')
         return ''
@@ -126,8 +127,10 @@ class DlparPci(Test):
         get partition name from lparstat -i
         '''
 
-        for line in process.system_output('lparstat -i', ignore_status=True,
-                                          shell=True, sudo=True).splitlines():
+        for line in process.system_output('lparstat -i',
+                                          ignore_status=True, shell=True,
+                                          sudo=True).decode("utf-8") \
+                                                    .splitlines():
             if component in line:
                 return line.split(':')[-1].strip()
         return ''
