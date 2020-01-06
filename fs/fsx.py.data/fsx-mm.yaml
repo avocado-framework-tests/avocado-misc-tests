@@ -1,0 +1,2 @@
+thp_page_cache: True
+tmpfs_mount_dir: '/mnt/tmpfs/'

@@ -16,8 +16,9 @@
 import os
 from avocado import Test
 from avocado import main
-from avocado.utils import process
+from avocado.utils import process, genio
 from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.partition import Partition
 
 
 class Fsx(Test):
@@ -26,6 +27,39 @@ class Fsx(Test):
 
     :avocado: tags=fs
     '''
+
+    @staticmethod
+    def mount_point(mount_dir):
+        lines = genio.read_file('/proc/mounts').rstrip('\t\r\0').splitlines()
+        for substr in lines:
+            mop = substr.split(" ")[1]
+            if mop == mount_dir:
+                return True
+        return False
+
+    def check_thp(self):
+        if 'thp_file_alloc' in genio.read_file('/proc/vm'
+                                               'stat').rstrip('\t\r\n\0'):
+            self.thp = True
+        return self.thp
+
+    def setup_tmpfs_dir(self):
+        # check for THP page cache
+        self.check_thp()
+
+        if not os.path.isdir(self.mount_dir):
+            os.makedirs(self.mount_dir)
+
+        self.device = None
+        if not self.mount_point(self.mount_dir):
+            if self.thp:
+                self.device = Partition(
+                    device="none", mountpoint=self.mount_dir,
+                    mount_options="huge=always")
+            else:
+                self.device = Partition(
+                    device="none", mountpoint=self.mount_dir)
+            self.device.mount(mountpoint=self.mount_dir, fstype="tmpfs")
 
     def setUp(self):
         '''
@@ -41,6 +75,7 @@ class Fsx(Test):
             'master/testcases/kernel/fs/fsx-linux/fsx-linux.c', expire='7d')
         os.chdir(self.workdir)
         process.system('gcc -o fsx %s' % fsx, shell=True, ignore_status=True)
+        self.thp = False
 
     def test(self):
         '''
@@ -50,6 +85,17 @@ class Fsx(Test):
         op_ub = self.params.get('op_ub', default='1000000')
         output = self.params.get('output_file', default='/tmp/result')
         num_times = self.params.get('num_times', default='10000')
+        self.mount_dir = self.params.get('tmpfs_mount_dir', default=None)
+        thp_page_cache = self.params.get('thp_page_cache', default=None)
+
+        if thp_page_cache:
+            if self.mount_dir:
+                self.setup_tmpfs_dir()
+                output = os.path.join(self.mount_dir, 'result')
+            else:
+                self.cancel("tmpfs_mount_dir not specified")
+        else:
+            output = self.params.get('output_file', default='/tmp/result')
 
         results = process.system_output(
             './fsx   -l %s -o %s -n -s 1 -N %s -d %s'
@@ -57,6 +103,10 @@ class Fsx(Test):
 
         if b'All operations completed' not in results.splitlines()[-1]:
             self.fail('Fsx test failed')
+
+    def tearDown(self):
+        if self.mount_dir:
+            self.device.unmount()
 
 
 if __name__ == "__main__":
