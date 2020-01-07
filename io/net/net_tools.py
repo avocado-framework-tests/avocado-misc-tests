@@ -51,7 +51,7 @@ class Hostname(Test):
         install_dependencies()
         self.restore_hostname = False
         # Get Hostname
-        hostname = process.system_output("hostname").strip('\n')
+        hostname = process.system_output("hostname").decode("utf-8").strip("\n")
         if not hostname:
             # set hostname if not set
             process.system("hostname localhost.localdomain", sudo=True)
@@ -90,7 +90,7 @@ class Hostname(Test):
                        sudo=True)
         self.restore_hostname = True
         if myhostname not in process.system_output("hostname",
-                                                   env={"LANG": "C"}):
+                                                   env={"LANG": "C"}).decode("utf-8"):
             self.fail("unexpected response from hostname -F command and " +
                       "hostname -F didn't set hostname")
 
@@ -100,7 +100,7 @@ class Hostname(Test):
             process.system("hostname %s" % self.hostname,
                            sudo=True)
             if self.hostname not in process.system_output("hostname",
-                                                          env={"LANG": "C"}):
+                                                          env={"LANG": "C"}).decode("utf-8"):
                 self.error("Failed to restore Hostname")
 
 
@@ -114,7 +114,7 @@ class Ifconfig(Test):
         if process.system("ping -c 5 -w 5 localhost", ignore_status=True):
             self.cancel("Unable to ping localhost")
         self.lo_up = True
-        if "lo:1" in process.system_output("ifconfig", env={"LANG": "C"}):
+        if "lo:1" in process.system_output("ifconfig", env={"LANG": "C"}).decode("utf-8"):
             self.cancel("alias for an loopback interface is configured")
         self.alias = None
         install_dependencies()
@@ -128,17 +128,17 @@ class Ifconfig(Test):
         Verify the functionality of the ifconfig
         """
         output = process.run("ifconfig", env={"LANG": "C"})
-        if "Local Loopback" not in output.stdout:
+        if "Local Loopback" not in output.stdout.decode("utf-8"):
             self.fail("unexpected output of ifconfig")
         if self.ipv6:
-            if "inet6" not in output.stdout:
+            if "inet6" not in output.stdout.decode("utf-8"):
                 self.fail("Did not see IPV6 info")
         # setup and verify an alias interface
         self.alias = "lo:1"
         process.system("ifconfig %s 127.0.0.240 netmask 255.0.0.0" %
                        self.alias,
                        sudo=True)
-        if "lo:1" not in process.system_output("ifconfig", env={"LANG": "C"}):
+        if "lo:1" not in process.system_output("ifconfig", env={"LANG": "C"}).decode("utf-8"):
             self.fail("Failed to configure alias for loopback")
 
         self._remove_alias(self.alias)
@@ -153,7 +153,7 @@ class Ifconfig(Test):
     def _remove_alias(name):
         process.system("ifconfig %s down" % name,
                        sudo=True)
-        if "lo:1" in process.system_output("ifconfig", env={"LANG": "C"}):
+        if "lo:1" in process.system_output("ifconfig", env={"LANG": "C"}).decode("utf-8"):
             raise AssertionError("Failed to remove alias for loopback")
 
     @staticmethod
@@ -185,7 +185,7 @@ class Arp(Test):
 
     def setUp(self):
         interface_out = process.system_output("ip route show default",
-                                              env={"LANG": "C"})
+                                              env={"LANG": "C"}).decode("utf-8")
         if "default via" not in interface_out:
             self.cancel("No active interface with deafult gateway configured")
         install_dependencies()
@@ -203,7 +203,7 @@ class Arp(Test):
                              env={"LANG": "C"})
         if output.exit_status:
             self.fail("Arp reported non zero exit status")
-        if self.default_router not in output.stdout:
+        if self.default_router not in output.stdout.decode("utf-8"):
             self.fail("unexpected response from arp")
 
     def tearDown(self):
@@ -231,7 +231,7 @@ class NetworkUtilities(Test):
         ret = process.run(cmd="traceroute localhost",
                           env={"LANG": "C"})
         no_of_hops = re.search(r"(\d+)\s+\S+\s*\(127.0.0.1\)",
-                               ret.stdout).group(1)
+                               ret.stdout.decode("utf-8")).group(1)
         # Only one hop is required to get to localhost.
         if str(no_of_hops) != '1':
             self.fail("traceroute did not show 1 hop for localhost")
@@ -245,7 +245,7 @@ class NetworkUtilities(Test):
                 ret = process.run(cmd="traceroute6 localhost6",
                                   env={"LANG": "C"})
             no_of_hops = re.search(r"(\d+)\s+\S+\s*\(::1\)",
-                                   ret.stdout).group(1)
+                                   ret.stdout.decode("utf-8")).group(1)
             if str(no_of_hops) != '1':
                 self.fail("traceroute6 did not show 1 hop for "
                           "localhost6/ipv6-localhost")
@@ -297,7 +297,7 @@ class NetworkUtilities(Test):
             if ret.exit_status:
                 self.fail("ipmaddr reported non-zero exit status %s"
                           % ret.exit_status)
-            if not ret.stdout:
+            if not ret.stdout.decode("utf-8"):
                 self.fail("No output for ipmaddr command")
 
     def tearDown(self):
@@ -312,12 +312,12 @@ class Iptunnel(Test):
 
     def setUp(self):
         self.tunnel = None
-        ret = process.system_output("ps -aef", env={"LANG": "C"})
+        ret = process.system_output("ps -aef", env={"LANG": "C"}).decode("utf-8")
         if 'dhclient' in ret:
             self.cancel("Test not supported on systems running dhclient")
         install_dependencies()
         pre = process.system_output("iptunnel show")
-        if "sit1" in pre:
+        if "sit1" in pre.decode("utf-8"):
             self.cancel("'sit1' already configured in iptunnel: %s" % pre)
 
     @avocado.fail_on(process.CmdError)
@@ -329,7 +329,7 @@ class Iptunnel(Test):
         process.system("iptunnel add sit1 mode sit local 127.0.0.1 ttl 64",
                        sudo=True)
         ret = process.run("iptunnel show")
-        if "sit1" not in ret.stdout:
+        if "sit1" not in ret.stdout.decode("utf-8"):
             self.fail("sit1 not listed in:\n%s" % ret)
         self._remove_tunnel("sit1")
         self.tunnel = None
@@ -338,7 +338,7 @@ class Iptunnel(Test):
     def _remove_tunnel(name):
         process.system("iptunnel del %s" % name, sudo=True)
         ret = process.run("iptunnel show")
-        if name in ret.stdout:
+        if name in ret.stdout.decode("utf-8"):
             raise AssertionError("Unable to clear tunnel %s\n %s still in the"
                                  " list:\n%s" % (name, name, ret.stdout))
 
