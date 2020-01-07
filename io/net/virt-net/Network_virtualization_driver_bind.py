@@ -48,7 +48,7 @@ class NetworkVirtualizationDriverBindTest(Test):
         self.device = process.system_output("ls -l /sys/class/net/ | \
                                              grep %s | cut -d '/' -f \
                                              5" % self.interface,
-                                            shell=True).strip()
+                                            shell=True).decode("utf-8").strip()
         self.count = int(self.params.get('count', default="1"))
         self.peer_ip = self.params.get('peer_ip', default=None)
 
