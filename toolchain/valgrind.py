@@ -37,7 +37,7 @@ class Valgrind(Test):
 
         dist = distro.detect()
         deps = ['gcc', 'make']
-        if dist.name == 'Ubuntu':
+        if dist.name in ['Ubuntu', 'debian']:
             deps.extend(['g++'])
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
@@ -50,7 +50,7 @@ class Valgrind(Test):
         run_type = self.params.get('type', default='upstream')
         if run_type == "upstream":
             url = self.params.get('url', default="ftp://sourceware.org/pub/"
-                                  "valgrind/valgrind-3.13.0.tar.bz2")
+                                  "valgrind/valgrind-3.15.0.tar.bz2")
             tarball = self.fetch_asset(url)
             archive.extract(tarball, self.workdir)
             version = os.path.basename(tarball.split('.tar.')[0])
