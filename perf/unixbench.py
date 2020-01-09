@@ -35,7 +35,7 @@ class Unixbench(Test):
         self.tmpdir = data_dir.get_tmp_dir()
         self.report_data = self.err = None
         self.build_dir = self.params.get('build_dir', default=self.tmpdir)
-        for package in ['gcc', 'make']:
+        for package in ['gcc', 'make', 'patch']:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
         url = 'https://github.com/kdlucas/byte-unixbench/archive/master.zip'
@@ -45,6 +45,8 @@ class Unixbench(Test):
         self.sourcedir = os.path.join(self.workdir,
                                       "byte-unixbench-master/UnixBench")
         os.chdir(self.sourcedir)
+        makefile_patch = 'patch -p0 < %s' % self.get_data('make1.patch')
+        process.run(makefile_patch, shell=True)
         build.make(self.sourcedir)
 
     def test(self):
