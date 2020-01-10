@@ -190,8 +190,12 @@ class LibHugetlbfs(Test):
     def test(self):
         os.chdir(self.workdir)
 
+        functional_test = self.params.get('functional_test', default=False)
+        test_type = 'check'
+        if functional_test:
+            test_type = 'func'
         run_log = build.run_make(
-            self.workdir, extra_args='BUILDTYPE=NATIVEONLY check',
+            self.workdir, extra_args='BUILDTYPE=NATIVEONLY %s' % test_type,
             process_kwargs={'ignore_status': True}).stdout.decode('utf-8')
         parsed_results = []
         error = ""
