@@ -1,0 +1,11 @@
+--- Makefile.orig   2020-01-09 18:35:13.509293580 +0100
++++ Makefile    2020-01-09 18:33:49.723976623 +0100
+@@ -89,7 +89,7 @@
+ 
+   ## OS detection.  Comment out if gmake syntax not supported by other 'make'. 
+   OSNAME:=$(shell uname -s)
+-  ARCH := $(shell uname -p)
++  ARCH := $(shell uname -m)
+   ifeq ($(OSNAME),Linux)
+     # Not all CPU architectures support "-march" or "-march=native".
+     #   - Supported    : x86, x86_64, ARM, AARCH64, etc..
