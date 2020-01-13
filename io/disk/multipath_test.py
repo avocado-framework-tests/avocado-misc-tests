@@ -55,7 +55,7 @@ class MultipathTest(Test):
         dist = distro.detect()
         pkg_name = ""
         svc_name = ""
-        if dist.name == 'Ubuntu':
+        if dist.name in ['Ubuntu', 'debian']:
             pkg_name += "multipath-tools"
             svc_name = "multipath-tools"
         elif dist.name == 'SuSE':
@@ -79,7 +79,7 @@ class MultipathTest(Test):
                 wwids_to_remove.append(wwid)
         for wwid in wwids_to_remove:
             self.wwids.remove(wwid)
-        if self.wwids == []:
+        if self.wwids == ['']:
             self.cancel("No Multipath Devices Given")
 
         # Create service object
