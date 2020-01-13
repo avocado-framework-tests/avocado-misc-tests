@@ -44,6 +44,7 @@ class ScsiAddRemove(Test):
             self.cancel("lsscsi is not installed")
         self.wwids = self.params.get('wwids', default='')
         self.pci_device = self.params.get("pci_device", default='')
+        self.count = int(self.params.get("count", default=1))
         system_pci_adress = pci.get_pci_addresses()
         system_wwids = multipath.get_multipath_wwids()
         if self.wwids:
@@ -99,24 +100,25 @@ class ScsiAddRemove(Test):
         for device in self.device_list:
             scsi_id = self.get_scsi_id(device)
             process.run("\nlsscsi\n")
-            self.log.info("\nDeleting %s = %s\n" % (device, scsi_id))
-            genio.write_file("/sys/block/%s/device/delete" % device, "1")
-            time.sleep(5)
-            if self.is_exists_scsi_device(device) is True:
-                self.log.info("failed to remove device: %s", device)
-                self.err_paths.append(device)
-            else:
-                self.log.info("\n%s = %s deleted\n" % (device, scsi_id))
-            self.log.info("\nadding back %s = %s\n" % (device, scsi_id))
-            part = "scsi add-single-device %s" % scsi_id
-            genio.write_file("/proc/scsi/scsi", part)
-            time.sleep(5)
-            if self.is_exists_scsi_device(device) is False:
-                self.log.info("failed to add Back: %s ", device)
-                self.err_paths.append(device)
-            else:
-                process.run("\nlsscsi\n")
-                self.log.info("\n%s = %s Added back\n" % (device, scsi_id))
+            for _ in range(self.count):
+                self.log.info("\nDeleting %s = %s\n" % (device, scsi_id))
+                genio.write_file("/sys/block/%s/device/delete" % device, "1")
+                time.sleep(5)
+                if self.is_exists_scsi_device(device) is True:
+                    self.log.info("failed to remove device: %s", device)
+                    self.err_paths.append(device)
+                else:
+                    self.log.info("\n%s = %s deleted\n" % (device, scsi_id))
+                self.log.info("\nadding back %s = %s\n" % (device, scsi_id))
+                part = "scsi add-single-device %s" % scsi_id
+                genio.write_file("/proc/scsi/scsi", part)
+                time.sleep(5)
+                if self.is_exists_scsi_device(device) is False:
+                    self.log.info("failed to add Back: %s ", device)
+                    self.err_paths.append(device)
+                else:
+                    process.run("\nlsscsi\n")
+                    self.log.info("\n%s = %s Added back\n" % (device, scsi_id))
 
     def tearDown(self):
         '''
