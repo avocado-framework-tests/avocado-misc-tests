@@ -9,7 +9,6 @@ args: !mux
         arg: -i
     RingParameter:
         arg: -g
-        action_elapse: 3
     ShowOffloadProtocolFeature:
         arg: -k
     Statistics:
