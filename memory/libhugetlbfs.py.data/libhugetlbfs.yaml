@@ -1,4 +1,5 @@
 setup:
+    functional_test: True
     mount_dir: !mux
         default:
             hugetlbfs_dir: null
