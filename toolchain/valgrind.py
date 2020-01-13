@@ -37,7 +37,7 @@ class Valgrind(Test):
 
         dist = distro.detect()
         deps = ['gcc', 'make']
-        if dist.name == 'Ubuntu':
+        if dist.name in ['Ubuntu', 'debian']:
             deps.extend(['g++'])
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
@@ -73,7 +73,7 @@ class Valgrind(Test):
             self.sourcedir, extra_args=cmd,
             process_kwargs={'ignore_status': True}).stdout
         for line in results.splitlines():
-            if line.startswith('==') and line.endswith('=='):
+            if line.startswith(b'==') and line.endswith(b'=='):
                 flag = True
             if flag:
                 summary += '%s\n' % line
