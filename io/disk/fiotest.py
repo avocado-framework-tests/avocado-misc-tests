@@ -60,7 +60,6 @@ class FioTest(Test):
         self.sourcedir = os.path.join(self.teststmpdir, "fio")
         build.make(self.sourcedir)
 
-        pkg_list = ['libaio', 'libaio-devel']
         smm = SoftwareManager()
         if fstype == 'btrfs':
             ver = int(distro.detect().version)
@@ -69,8 +68,13 @@ class FioTest(Test):
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
-            if distro.detect().name == 'Ubuntu':
-                pkg_list.append('btrfs-tools')
+
+        if distro.detect().name in ['Ubuntu', 'debian']:
+            pkg_list = ['libaio-dev']
+            if fstype == 'btrfs':
+                pkg_list.append('btrfs-progs')
+        else:
+            pkg_list = ['libaio', 'libaio-devel']
 
         for pkg in pkg_list:
             if pkg and not smm.check_installed(pkg) and not smm.install(pkg):
