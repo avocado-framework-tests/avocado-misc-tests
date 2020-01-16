@@ -31,6 +31,7 @@ from avocado.utils import distro
 from avocado.utils import genio
 from avocado.utils.configure_network import PeerInfo
 from avocado.utils import configure_network
+from avocado.utils import wait
 
 
 class NetworkTest(Test):
@@ -62,6 +63,9 @@ class NetworkTest(Test):
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         configure_network.set_ip(self.ipaddr, self.netmask, self.iface)
+        if not wait.wait_for(configure_network.is_interface_link_up,
+                             timeout=120, args=[self.iface]):
+            self.fail("Link up of interface is taking longer than 120 seconds")
         self.peer = self.params.get("peer_ip")
         if not self.peer:
             self.cancel("No peer provided")
@@ -74,6 +78,9 @@ class NetworkTest(Test):
         self.peer_interface = self.peerinfo.get_peer_interface(self.peer)
         self.mtu = self.params.get("mtu", default=1500)
         self.mtu_set()
+        if not wait.wait_for(configure_network.is_interface_link_up,
+                             timeout=120, args=[self.iface]):
+            self.fail("Link up of interface is taking longer than 120 seconds")
         if not configure_network.ping_check(self.iface, self.peer, "5"):
             self.cancel("No connection to peer")
 
