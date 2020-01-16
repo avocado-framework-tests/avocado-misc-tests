@@ -1,8 +1,9 @@
 BIN=numa_test
-all: ${BIN}
+OFFL=softoffline
+all: ${BIN} ${OFFL}
 
 %: %.c util.c
 	cc -o $@ $^ -lpthread -lnuma -lhugetlbfs
 
 clean:
-	rm ${BIN}
+	rm ${BIN} ${OFFL}

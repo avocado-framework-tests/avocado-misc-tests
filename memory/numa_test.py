@@ -81,12 +81,13 @@ class NumaTest(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
-        for file_name in ['util.c', 'numa_test.c', 'Makefile']:
+        for file_name in ['util.c', 'numa_test.c', 'softoffline.c',
+                          'Makefile']:
             self.copyutil(file_name)
 
         build.make(self.teststmpdir)
 
-    def test(self):
+    def test_movepages(self):
         os.chdir(self.teststmpdir)
         self.log.info("Starting test...")
         cmd = './numa_test -m %s -n %s' % (self.map_type, self.nr_pages)
@@ -96,6 +97,19 @@ class NumaTest(Test):
         if ret == 255:
             self.cancel("Environment prevents test! Check logs for issues")
         elif ret != 0:
+            self.fail('Please check the logs for failure')
+
+    def test_softoffline(self):
+        """
+        Test PFN's before and after offlining
+        """
+        self.nr_pages = self.params.get(
+            'nr_pages', default=50)
+        os.chdir(self.teststmpdir)
+        self.log.info("Starting test...")
+        cmd = './softoffline -m %s -n %s' % (self.map_type, self.nr_pages)
+        ret = process.system(cmd, shell=True, sudo=True, ignore_status=True)
+        if ret != 0:
             self.fail('Please check the logs for failure')
 
 
