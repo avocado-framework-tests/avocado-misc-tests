@@ -73,7 +73,7 @@ class Valgrind(Test):
             self.sourcedir, extra_args=cmd,
             process_kwargs={'ignore_status': True}).stdout
         for line in results.splitlines():
-            if line.startswith('==') and line.endswith('=='):
+            if line.startswith(b'==') and line.endswith(b'=='):
                 flag = True
             if flag:
                 summary += '%s\n' % line

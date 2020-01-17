@@ -48,14 +48,14 @@ class Lvsetup(Test):
         """
         Check existence of input PV,VG, LV and snapshots prior to Test.
         """
-        pkg = ""
+        pkgs = [""]
         smm = SoftwareManager()
         self.disk = self.params.get('lv_disks', default=None)
         self.vg_name = self.params.get('vg_name', default='avocado_vg')
         self.lv_name = self.params.get('lv_name', default='avocado_lv')
         self.fs_name = self.params.get('fs', default='ext4').lower()
         if self.fs_name == 'xfs':
-            pkg = 'xfsprogs'
+            pkgs = ['xfsprogs']
         if self.fs_name == 'btrfs':
             ver = int(distro.detect().version)
             rel = int(distro.detect().release)
@@ -63,11 +63,15 @@ class Lvsetup(Test):
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with RHEL 7.4 onwards")
             if distro.detect().name == 'SuSE':
-                pkg = 'btrfsprogs'
+                pkgs = ['btrfsprogs']
             else:
-                pkg = 'btrfs-progs'
-        if pkg and not smm.check_installed(pkg) and not smm.install(pkg):
-            self.cancel("Package %s could not be installed" % pkg)
+                pkgs = ['btrfs-progs']
+        if distro.detect().name in ['Ubuntu', 'debian']:
+            pkgs.extend(['lvm2'])
+
+        for pkg in pkgs:
+            if pkg and not smm.check_installed(pkg) and not smm.install(pkg):
+                self.cancel("Package %s could not be installed" % pkg)
 
         self.lv_snap_name = self.params.get(
             'lv_snapshot_name', default='avocado_sn')

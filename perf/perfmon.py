@@ -19,7 +19,7 @@ import os
 
 from avocado import Test
 from avocado import main
-from avocado.utils import process, build, git
+from avocado.utils import process, build, git, distro
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -34,8 +34,13 @@ class Perfmon(Test):
 
         # Check for basic utilities
         smm = SoftwareManager()
+        dist = distro.detect()
 
-        for package in ("gcc", "make"):
+        deps = ["gcc", "make"]
+        if dist.name in ['Ubuntu', 'debian']:
+            deps.extend(['libncurses-dev'])
+
+        for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel(
                     "Fail to install %s required for this test." % package)
