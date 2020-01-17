@@ -1,9 +1,10 @@
 BIN=numa_test
 OFFL=softoffline
-all: ${BIN} ${OFFL}
+BENCH=bench_movepages
+all: ${BIN} ${OFFL} ${BENCH}
 
 %: %.c util.c
 	cc -o $@ $^ -lpthread -lnuma -lhugetlbfs
 
 clean:
-	rm ${BIN} ${OFFL}
+	rm ${BIN} ${OFFL} ${BENCH}

@@ -82,7 +82,7 @@ class NumaTest(Test):
                 self.cancel('%s is needed for the test to be run' % package)
 
         for file_name in ['util.c', 'numa_test.c', 'softoffline.c',
-                          'Makefile']:
+                          'bench_movepages.c', 'Makefile']:
             self.copyutil(file_name)
 
         build.make(self.teststmpdir)
@@ -108,6 +108,19 @@ class NumaTest(Test):
         os.chdir(self.teststmpdir)
         self.log.info("Starting test...")
         cmd = './softoffline -m %s -n %s' % (self.map_type, self.nr_pages)
+        ret = process.system(cmd, shell=True, sudo=True, ignore_status=True)
+        if ret != 0:
+            self.fail('Please check the logs for failure')
+
+    def test_thp_compare(self):
+        """
+        Test PFN's before and after offlining
+        """
+        self.nr_pages = self.params.get(
+            'nr_pages', default=100)
+        os.chdir(self.teststmpdir)
+        self.log.info("Starting test...")
+        cmd = './bench_movepages -n %s' % self.nr_pages
         ret = process.system(cmd, shell=True, sudo=True, ignore_status=True)
         if ret != 0:
             self.fail('Please check the logs for failure')
