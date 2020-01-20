@@ -19,10 +19,17 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <numa.h>
+#include <numaif.h>
 
 #define PMAP_ENTRY_SIZE		sizeof(unsigned long)
 #define PM_PFRAME_MASK		0x007FFFFFFFFFFFFFUL
 #define PM_PRESENT		0x8000000000000000UL
+#define KPFLAGS_ENTRY_SIZE	sizeof(unsigned long)
+#define KPF_THP_FLAG   		(1UL<<22)
+
+
+static int pagemap_fd = -1;
+static int kpageflags_fd = -1;
 
 unsigned long get_pfn(unsigned long addr)
 {
@@ -84,4 +91,56 @@ int *get_numa_nodes_to_use(int max_node, unsigned long memory_to_use)
 		exit(255);
 	}
 	return nodes_to_use;
+}
+
+int is_thp(unsigned long pfn)
+{
+	unsigned long page_flags_entry;
+	unsigned long page_flags_offset;
+
+
+	if (kpageflags_fd == -1) {
+		kpageflags_fd = open("/proc/kpageflags", O_RDONLY);
+		if (kpageflags_fd == -1)
+			return 0;
+	}
+
+	page_flags_offset = pfn * KPFLAGS_ENTRY_SIZE;
+
+	if (pread(kpageflags_fd, &page_flags_entry, KPFLAGS_ENTRY_SIZE, page_flags_offset) == -1) {
+		printf("%s Failed to read\n", __func__);
+		goto err_out;
+	}
+	return !!(page_flags_entry & KPF_THP_FLAG);
+
+err_out:
+	return 0;
+}
+
+unsigned long get_next_mem_node(unsigned long node)
+{
+
+	long node_size;
+	unsigned long i;
+        unsigned long max_node = numa_max_node();
+        /*
+	 * start from node and find the next memory node
+	 */
+restart:
+        for (i = node + 1; i <= max_node; i++) {
+		node_size = numa_node_size(i, NULL);
+		if (node_size > 0)
+			return i;
+        }
+        /* But how can we run without memory? */
+        if (node == -1)
+		return 0;
+
+	node = -1;
+	goto restart;
+}
+
+unsigned long get_first_mem_node(void)
+{
+	return get_next_mem_node(-1);
 }
