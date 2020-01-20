@@ -23,6 +23,7 @@ import os
 import re
 import json
 import glob
+import shutil
 from avocado import Test
 from avocado import main
 from avocado.utils import process
@@ -655,6 +656,29 @@ class NdctlTest(Test):
             self.build_fio(), mnt_path, size // 2, self.get_data(fio_job))
         if process.system(cmd, ignore_status=True):
             self.fail("FIO mmap workload on fsdax failed")
+
+    def test_map_sync(self):
+        """
+        Test MAP_SYNC flag with sample mmap write
+        """
+        region = self.get_default_region()
+        self.create_namespace(region=region, mode='fsdax')
+        self.disk = '/dev/%s' % self.run_ndctl_list_val(
+            self.run_ndctl_list("-N -r %s" % region)[0], 'blockdev')
+        self.part = partition.Partition(self.disk)
+        self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512 %s' %
+                       (memory.get_page_size(), self.reflink))
+        mnt_path = self.params.get('mnt_point', default='/pmem_map')
+        if not os.path.exists(mnt_path):
+            os.makedirs(mnt_path)
+        self.part.mount(mountpoint=mnt_path, args='-o dax')
+        self.log.info("Testing MAP_SYNC on %s", mnt_path)
+        src_file = os.path.join(self.teststmpdir, 'map_sync.c')
+        shutil.copyfile(self.get_data('map_sync.c'), src_file)
+        process.system('gcc %s -o map_sync' % src_file)
+        process.system('fallocate -l 64k %s/new_file' % mnt_path)
+        if process.system('./map_sync %s/new_file' % mnt_path, ignore_status=True):
+            self.fail('Write with MAP_SYNC flag failed')
 
     def test_devdax_write(self):
         """
