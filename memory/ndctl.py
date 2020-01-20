@@ -275,9 +275,9 @@ class NdctlTest(Test):
             deps.extend(['gcc', 'make', 'automake', 'autoconf'])
             if self.dist.name == 'SuSE':
                 deps.extend(['ruby2.5-rubygem-asciidoctor', 'libtool',
-                             'libkmod-devel', 'libudev-devel',
+                             'libkmod-devel', 'libudev-devel', 'systemd-devel',
                              'libuuid-devel-static', 'libjson-c-devel',
-                             'systemd-devel', 'kmod-bash-completion'])
+                             'keyutils-devel', 'kmod-bash-completion'])
             elif self.dist.name == 'rhel':
                 deps.extend(['rubygem-asciidoctor', 'automake', 'libtool',
                              'kmod-devel', 'libuuid-devel', 'json-c-devel',
