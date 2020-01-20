@@ -72,6 +72,8 @@ class MultipathTest(Test):
         # Check if given multipath devices are present in system
         self.wwids = self.params.get('wwids', default='').split(',')
         system_wwids = multipath.get_multipath_wwids()
+        if self.wwids == ['']:
+            self.cancel("No System Multipath Devices available")
         wwids_to_remove = []
         for wwid in self.wwids:
             if wwid not in system_wwids:
