@@ -301,7 +301,10 @@ class NdctlTest(Test):
             self.binary = './ndctl/ndctl'
             self.daxctl = './daxctl/daxctl'
         else:
-            for pkg in ['ndctl', 'daxctl']:
+            deps.extend(['ndctl'])
+            if self.dist.name == 'rhel':
+                deps.extend(['daxctl'])
+            for pkg in deps:
                 if not self.smm.check_installed(pkg) and not \
                         self.smm.install(pkg):
                     self.cancel('%s is needed for the test to be run' % pkg)
