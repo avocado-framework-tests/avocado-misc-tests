@@ -1,3 +1,7 @@
 setup:
- memory_size: 10 # in MB
- induce_err: 1
+ memory_size: 100 # in MB
+ error: !mux
+     wo_err:
+         induce_err: 0
+     with_err:
+         induce_err: 1

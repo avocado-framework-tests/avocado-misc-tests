@@ -43,7 +43,7 @@ class MemorySyscall(Test):
     def setUp(self):
         smm = SoftwareManager()
         self.memsize = int(self.params.get(
-            'memory_size', default=memory.meminfo.MemFree.m) * 1048576 * 0.5)
+            'memory_size', default=(memory.meminfo.MemFree.m * 0.5)) * 1048576)
         self.induce_err = self.params.get('induce_err', default=0)
 
         for package in ['gcc', 'make']:
@@ -54,7 +54,7 @@ class MemorySyscall(Test):
 
         build.make(self.teststmpdir)
 
-    def test(self):
+    def test_memapi(self):
         os.chdir(self.teststmpdir)
         proc = process.SubProcess('./memory_api %s %s' % (self.memsize, self.induce_err),
                                   shell=True, allow_output_check='both')
@@ -62,12 +62,7 @@ class MemorySyscall(Test):
         while proc.poll() is None:
             pass
 
-        ret = process.system('./memory_api %s 1' % self.memsize,
-                             shell=True, ignore_status=True)
-        if ret == 255:
-            self.log.info("Error obtained as expected")
-
-        if proc.poll() != 0:
+        if proc.poll() not in [0, 255]:
             self.fail("Unexpected application abort, check for possible issues")
 
     def test_mremap(self):
