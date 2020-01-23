@@ -23,11 +23,11 @@ from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
-from avocado.utils import pci
 from avocado.utils import configure_network
 
 
 class NetworkconfigTest(Test):
+
     '''
     check Network_configuration
     using ethtool and lspci
@@ -48,13 +48,30 @@ class NetworkconfigTest(Test):
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         configure_network.set_ip(self.ipaddr, self.netmask, self.iface)
-        cmd = "ethtool -i %s" % self.iface
-        for line in process.system_output(cmd, shell=True).decode("utf-8") \
-                                                          .splitlines():
-            if 'bus-info' in line:
-                self.businfo = line.split()[-1]
-        self.log.info(self.businfo)
-        self.driver = pci.get_driver(self.businfo)
+        cmd = "basename /sys/class/net/%s/device/driver/module/drivers/*" % self.iface
+        self.iface_type, self.driver = process.system_output(
+            cmd, shell=True).decode("utf-8").split(':')
+        self.businfo = self.get_bus_info(self.iface, self.iface_type)
+
+    @staticmethod
+    def get_bus_info(iface, iface_type):
+        if iface_type == 'vio':
+            cmd = "lscfg -vl %s" % iface
+            for line in process.system_output(cmd, shell=True).decode("utf-8") \
+                                                              .splitlines():
+                if iface in line:
+                    loc_id = line.split()[-1]
+            for line in process.system_output("lsslot", shell=True).decode("utf-8") \
+                                                                   .splitlines():
+                if loc_id in line:
+                    return line.split()[-2]
+
+        else:
+            cmd = "ethtool -i %s" % iface
+            for line in process.system_output(cmd, shell=True).decode("utf-8") \
+                                                              .splitlines():
+                if 'bus-info' in line:
+                    return line.split()[-1]
 
     def test_driver_check(self):
         '''
@@ -73,8 +90,9 @@ class NetworkconfigTest(Test):
         '''
         To finding the value for all parameters
         '''
-        cmd = r"cat /sys/module/%s/drivers/pci\:%s/%s/net/%s/%s" %\
-              (self.driver, self.driver, self.businfo, self.iface, param)
+        cmd = r"cat /sys/module/%s/drivers/%s:%s/%s/net/%s/%s" % \
+            (self.driver, self.iface_type, self.driver,
+             self.businfo, self.iface, param)
         return process.system_output(cmd, shell=True).decode("utf-8").strip()
 
     def test_mtu_check(self):
