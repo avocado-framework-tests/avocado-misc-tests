@@ -79,7 +79,7 @@ class Dbench(Test):
                                                      seconds)
         process.run(cmd)
 
-        self.results = process.system_output(cmd)
+        self.results = process.system_output(cmd).decode("utf-8")
         pattern = re.compile(r"Throughput (.*?) MB/sec (.*?) procs")
         (throughput, procs) = pattern.findall(self.results)[0]
         self.whiteboard = json.dumps({'throughput': throughput,
