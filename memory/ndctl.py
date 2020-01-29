@@ -494,7 +494,7 @@ class NdctlTest(Test):
 
         self.log.info("Creating %s namespace", slot_count)
         for count in range(0, slot_count):
-            self.create_namespace(region=region, mode='fsdax', size='1G')
+            self.create_namespace(region=region, mode='fsdax', size=namespace_size)
             self.log.info("Namespace %s created", count)
 
     def test_namespace_reconfigure(self):
