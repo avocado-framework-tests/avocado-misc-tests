@@ -122,11 +122,13 @@ class NdctlTest(Test):
                         self.smm.install(pkg):
                     self.cancel('%s is needed for the test to be run' % pkg)
 
-            locations = ["https://github.com/pmem/ndctl/archive/master.zip"]
-            tarball = self.fetch_asset("ndctl.zip", locations=locations,
+            git_branch = self.params.get('git_branch', default='pending')
+            location = "https://github.com/pmem/ndctl/archive/"
+            location = location + git_branch + ".zip"
+            tarball = self.fetch_asset("ndctl.zip", locations=location,
                                        expire='7d')
             archive.extract(tarball, self.teststmpdir)
-            os.chdir("%s/ndctl-master" % self.teststmpdir)
+            os.chdir("%s/ndctl-%s" % (self.teststmpdir, git_branch))
             process.run('./autogen.sh', sudo=True, shell=True)
             process.run("./configure CFLAGS='-g -O2' --prefix=/usr "
                         "--sysconfdir=/etc --libdir="
