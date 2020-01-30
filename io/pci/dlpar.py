@@ -88,6 +88,11 @@ class DlparPci(Test):
         if not self.server:
             self.cancel("Managed System not got")
         self.lpar_2 = self.params.get("lpar_2", '*', default=None)
+        if self.lpar_2 is not None:
+            cmd = 'lshwres -r io -m %s --rsubtype slot --filter lpar_names=%s ' \
+                   '-F lpar_id' % (self.server, self.lpar_2)
+            output = self.run_command(cmd)
+            self.lpar2_id = output[0]
         self.pci_device = self.params.get("pci_device", '*', default=None)
         self.loc_code = pci.get_slot_from_sysfs(self.pci_device)
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
@@ -291,9 +296,8 @@ class DlparPci(Test):
 
         self.changehwres(self.server, 'm', self.lpar_id, self.lpar_2,
                          self.drc_index, 'move')
-
         output = self.listhwres(self.server, self.lpar_1, self.drc_index)
-        if self.drc_index in output[0]:
+        if self.drc_index in output:
             self.log.debug(output)
             self.fail("lshwres still lists the drc in lpar_1 after \
                       dlpar move to lpar_2")
@@ -305,7 +309,7 @@ class DlparPci(Test):
                        dlpar move")
 
         # dlpar move operation from lpar2 to lpar1
-        self.changehwres(self.server, 'm', self.lpar_id, self.lpar_1,
+        self.changehwres(self.server, 'm', self.lpar2_id, self.lpar_1,
                          self.drc_index, 'move')
 
         output = self.listhwres(self.server, self.lpar_1, self.drc_index)
@@ -315,7 +319,7 @@ class DlparPci(Test):
                        dlpar move")
 
         output = self.listhwres(self.server, self.lpar_2, self.drc_index)
-        if self.drc_index in output[0]:
+        if self.drc_index in output:
             self.log.debug(output)
             self.fail("lshwres still lists the drc in lpar_2 after \
                       dlpar move to lpar_1")
