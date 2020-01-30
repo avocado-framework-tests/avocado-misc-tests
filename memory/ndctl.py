@@ -546,6 +546,8 @@ class NdctlTest(Test):
     def test_check_numa(self):
         self.enable_region()
         regions = self.run_ndctl_list('-R')
+        if not os.path.exists('/sys/devices/ndbus0/region0/numa_node'):
+            self.fail("Numa node entries not found!")
         for val in regions:
             reg = self.run_ndctl_list_val(val, 'dev')
             numa = genio.read_one_line('/sys/devices/ndbus%s/%s/numa_node'
