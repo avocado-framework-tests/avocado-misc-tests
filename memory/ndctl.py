@@ -589,7 +589,7 @@ class NdctlTest(Test):
             self.fail("Label read and write mismatch")
 
         self.log.info("Checking created namespace after restore")
-        if len(self.run_ndctl_list('-r %s' % region)) != 1:
+        if len(self.run_ndctl_list('-N -r %s' % region)) != 1:
             self.fail("Created namespace not found after label restore")
 
     def test_daxctl_list(self):
