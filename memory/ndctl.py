@@ -103,6 +103,16 @@ class NdctlTest(Test):
         index_dict = self.run_ndctl_list_val(first_dict, 'index')[0]
         return self.run_ndctl_list_val(index_dict, 'nslot') - 1
 
+    def is_region_legacy(self, region):
+        """
+        Check whether we have label index namespace. If legacy we can't create
+        new namespaces.
+        """
+        nstype = genio.read_file("/sys/bus/nd/devices/" + region + "/nstype").rstrip("\n")
+        if (nstype == "4"):
+            return True
+        return False
+
     def build_fio(self):
         """
         Install fio or build if not possible
@@ -212,6 +222,10 @@ class NdctlTest(Test):
             if option:
                 args += ' %s' % minor_dict[option]
 
+        if (self.is_region_legacy(region) and not reconfig):
+            namespace = "namespace%s.0" % re.findall(r'\d+', region)[0]
+            args += " -f -e " + namespace
+
         if process.system('%s create-namespace %s' % (self.binary, args),
                           shell=True, ignore_status=True):
             self.fail('Namespace create command failed')
@@ -221,6 +235,10 @@ class NdctlTest(Test):
         """
         Destroy namepsaces
         """
+
+        if (region and self.is_region_legacy(region)):
+            return
+
         args = namespace
         args_dict = {region: '-r', bus: '-b'}
         for option in list(args_dict.keys()):
@@ -345,8 +363,9 @@ class NdctlTest(Test):
         Test enable disable namespace
         """
         region = self.get_default_region()
-        for _ in range(0, 3):
-            self.create_namespace(region=region, size='128M')
+        if (not self.is_region_legacy(region)):
+            for _ in range(0, 3):
+                self.create_namespace(region=region, size='128M')
         namespaces = self.run_ndctl_list('-N')
         ns_names = []
         for ns in namespaces:
@@ -416,6 +435,8 @@ class NdctlTest(Test):
         Test multiple namespace with single region
         """
         region = self.get_default_region()
+        if (self.is_region_legacy(region)):
+            self.cancel("Legacy config skipping the test")
         self.multiple_namespaces_region(region)
 
     def test_multiple_ns_multiple_region(self):
@@ -430,6 +451,8 @@ class NdctlTest(Test):
         self.destroy_namespace()
         for val in regions:
             region = self.run_ndctl_list_val(val, 'dev')
+            if (self.is_region_legacy(region)):
+                self.cancel("Legacy config skipping the test")
             self.multiple_namespaces_region(region)
 
     def test_multiple_ns_modes_region(self):
@@ -437,6 +460,8 @@ class NdctlTest(Test):
         Test multiple namespace modes with single region
         """
         region = self.get_default_region()
+        if (self.is_region_legacy(region)):
+            self.cancel("Legacy config skipping the test")
         self.log.info("Using %s for muliple namespace regions", region)
         self.disable_namespace(region=region)
         self.destroy_namespace(region=region)
@@ -454,6 +479,8 @@ class NdctlTest(Test):
         Test max namespace with nslot value
         """
         region = self.get_default_region()
+        if (self.is_region_legacy(region)):
+            self.cancel("Legacy config skipping the test")
         size_align = self.get_size_alignval()
         slot_count = self.get_slot_count(region)
         self.log.info("Using %s for max namespace creation", region)
@@ -467,7 +494,7 @@ class NdctlTest(Test):
 
         self.log.info("Creating %s namespace", slot_count)
         for count in range(0, slot_count):
-            self.create_namespace(region=region, mode='fsdax', size='1G')
+            self.create_namespace(region=region, mode='fsdax', size=namespace_size)
             self.log.info("Namespace %s created", count)
 
     def test_namespace_reconfigure(self):
@@ -525,8 +552,10 @@ class NdctlTest(Test):
 
     def test_label_read_write(self):
         region = self.get_default_region()
-        nmem = "nmem%s" % re.findall(r'\d+', region)[0]
+        if (self.is_region_legacy(region)):
+            self.cancel("Legacy config skipping the test")
 
+        nmem = "nmem%s" % re.findall(r'\d+', region)[0]
         self.log.info("Using %s for testing labels", region)
         self.disable_region(name=region)
         self.log.info("Filling zeros to start test")
@@ -560,7 +589,7 @@ class NdctlTest(Test):
             self.fail("Label read and write mismatch")
 
         self.log.info("Checking created namespace after restore")
-        if len(self.run_ndctl_list('-r %s' % region)) != 1:
+        if len(self.run_ndctl_list('-N -r %s' % region)) != 1:
             self.fail("Created namespace not found after label restore")
 
     def test_daxctl_list(self):
