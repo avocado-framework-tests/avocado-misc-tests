@@ -55,9 +55,11 @@ class PerfRawevents(Test):
             self.cancel('This test is not supported on %s architecture'
                         % detected_distro.arch)
         deps = ['gcc', 'make']
-        if 'Ubuntu' in self.distro_name:
+        if self.distro_name in ['Ubuntu']:
             deps.extend(['linux-tools-common', 'linux-tools-%s' %
                          platform.uname()[2]])
+        elif self.distro_name in ['debian']:
+            deps.extend(['linux-tools-%s' % platform.uname()[2][3]])
         elif self.distro_name in ['rhel', 'SuSE', 'fedora', 'centos']:
             deps.extend(['perf'])
         else:

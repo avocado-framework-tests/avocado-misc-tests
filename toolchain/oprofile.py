@@ -30,14 +30,16 @@ class Oprofile(Test):
         # Check for basic utilities
         sm = SoftwareManager()
         detected_distro = distro.detect()
-        deps = ['oprofile', 'dejagnu', 'expect']
+        deps = ['dejagnu', 'expect']
         if detected_distro.name == "SuSE":
             deps.append("git-core")
         else:
             deps.append("git")
-        if detected_distro.name == "Ubuntu":
+        if detected_distro.name in ["Ubuntu", 'debian']:
             deps.append("libxml2-utils")
             deps.append("tclsh")
+        else:
+            deps.append("oprofile")
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)

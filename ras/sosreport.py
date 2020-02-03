@@ -42,12 +42,12 @@ class Sosreport(Test):
     def setUp(self):
         dist = distro.detect()
         sm = SoftwareManager()
-        if dist.name == 'Ubuntu':
+        if dist.name in ['Ubuntu', 'debian']:
             sos_pkg = 'sosreport'
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
-        elif dist.name in ['rhel', 'redhat']:
+        elif dist.name in ['rhel', 'redhat', 'centos']:
             sos_pkg = 'sos'
         else:
             self.cancel("sosreport is not supported on %s" % dist.name)
@@ -84,10 +84,10 @@ class Sosreport(Test):
             self.log.info("--case-id option failed")
 
         if 'testname' not in self.run_cmd_out("sosreport --batch --tmp-dir=%s "
-                                              "--name=testname | "
+                                              "--label=testname | "
                                               "grep tar.xz" % directory_name):
             self.is_fail += 1
-            self.log.info("--name option failed")
+            self.log.info("--label option failed")
 
         shutil.rmtree(directory_name)
         if self.is_fail >= 1:
@@ -175,9 +175,10 @@ class Sosreport(Test):
             self.is_fail += 1
             self.log.info("--build option failed")
 
-        if self.run_cmd_out("sosreport --batch --tmp-dir=%s --quiet -e ntp,numa1" % directory_name):
+        if self.run_cmd_out("sosreport --batch --tmp-dir=%s --quiet "
+                            "--no-report -e ntp,numa1" % directory_name):
             self.is_fail += 1
-            self.log.info("--quiet option failed")
+            self.log.info("--quiet --no-report option failed")
         self.run_cmd("sosreport --batch --tmp-dir=%s --debug" % directory_name, None)
 
         self.run_cmd("sosreport --batch --tmp-dir=%s --config-file=/etc/sos.conf" % directory_name)
