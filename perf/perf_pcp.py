@@ -38,6 +38,8 @@ class PCP(Test):
         self.dist = distro.detect()
         if self.dist.name in ['centos', 'fedora', 'rhel', 'SuSE']:
             pkgs = ['pcp', 'pcp-pmda-perfevent']
+        elif self.dist.name in ['Ubuntu', 'debian']:
+            pkgs = ['pcp']
         else:
             self.cancel("PCP is not supported on %s" % self.dist.name)
 

@@ -57,14 +57,14 @@ class Xfstests(Test):
 
         packages = ['e2fsprogs', 'automake', 'gcc', 'quota', 'attr',
                     'make', 'xfsprogs', 'gawk']
-        if 'Ubuntu' in self.detected_distro.name:
+        if self.detected_distro.name in ['Ubuntu', 'debian']:
             packages.extend(
                 ['xfslibs-dev', 'uuid-dev', 'libuuid1',
                  'libattr1-dev', 'libacl1-dev', 'libgdbm-dev',
-                 'uuid-runtime', 'libaio-dev', 'fio', 'dbench', 'btrfs-tools'])
-            if '14' in self.detected_distro.version:
+                 'uuid-runtime', 'libaio-dev', 'fio', 'dbench', 'libbtrfs-dev'])
+            if self.detected_distro.version in ['14']:
                 packages.extend(['libtool'])
-            elif '18' in self.detected_distro.version:
+            elif self.detected_distro.version in ['18', '20']:
                 packages.extend(['libtool-bin', 'libgdbm-compat-dev'])
             else:
                 packages.extend(['libtool-bin'])

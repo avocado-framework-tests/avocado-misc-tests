@@ -47,7 +47,7 @@ class EliminateDomainSuffix(Test):
         """
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        processor = process.system_output("uname -p", ignore_status=True).decode("utf-8")
+        processor = process.system_output("uname -m", ignore_status=True).decode("utf-8")
         if 'ppc' not in processor:
             if 'unknown' in processor and 'ppc' not in os.uname():
                 self.cancel("Processor is not ppc64")

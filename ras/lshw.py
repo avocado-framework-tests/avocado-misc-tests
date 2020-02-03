@@ -67,12 +67,12 @@ class Lshwrun(Test):
             self.cancel("lshw not supported on SLES-%s. Please run "
                         "on SLES15 or higher versions only " % dist.version)
         if ((dist.name == 'Ubuntu' and int(dist.version) >= 18) or
-                (dist.name == "SuSE")):
+                (dist.name in ["SuSE", 'debian'])):
             packages.extend(['iproute2'])
         else:
             packages.extend(['iproute'])
         if 'IBM' in process.system_output('lshw -class system', shell='true').decode():
-            packages.extend = ['powerpc-ibm-utils']
+            packages.extend(['powerpc-ibm-utils'])
 
         for package in packages:
             if not sm.check_installed(package) and not sm.install(package):
