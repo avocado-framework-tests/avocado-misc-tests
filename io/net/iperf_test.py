@@ -74,29 +74,27 @@ class Iperf(Test):
             self.cancel("Failed to set mtu in peer")
         if not configure_network.set_mtu_host(self.iface, self.mtu):
             self.cancel("Failed to set mtu in host")
+        self.iperf = os.path.join(self.teststmpdir, 'iperf')
         iperf_download = self.params.get("iperf_download", default="https:"
-                                         "//github.com/esnet/"
-                                         "iperf/archive/master.zip")
-        tarball = self.fetch_asset("iperf.zip", locations=[iperf_download],
-                                   expire='7d')
-        archive.extract(tarball, self.teststmpdir)
-        self.iperf_dir = os.path.join(self.teststmpdir, "iperf-master")
+                                         "//excellmedia.dl.sourceforge.net/"
+                                         "project/iperf2/iperf-2.0.13.tar.gz")
+        tarball = self.fetch_asset(iperf_download, expire='7d')
+        archive.extract(tarball, self.iperf)
+        self.version = os.path.basename(tarball.split('.tar')[0])
+        self.iperf_dir = os.path.join(self.iperf, self.version)
         cmd = "scp -r %s %s@%s:/tmp" % (self.iperf_dir, self.peer_user,
                                         self.peer_ip)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.cancel("unable to copy the iperf into peer machine")
-        cmd = "cd /tmp/iperf-master;./bootstrap.sh;./configure;make"
+        cmd = "cd /tmp/%s;./configure ppc64le;make" % self.version
         output = self.session.cmd(cmd)
         if not output.exit_status == 0:
             self.cancel("Unable to compile Iperf into peer machine")
         self.iperf_run = str(self.params.get("IPERF_SERVER_RUN", default=0))
         if self.iperf_run == '1':
-            cmd = "/tmp/iperf-master/src/iperf3 -s &"
-            output = self.session.cmd(cmd)
-            if not output.exit_status == 0:
-                self.log.debug("Command %s failed %s", cmd, output)
+            cmd = "/tmp/%s/src/iperf -s" % self.version
+            self.session.cmd(cmd)
         os.chdir(self.iperf_dir)
-        process.system('./bootstrap.sh', shell=True)
         process.system('./configure', shell=True)
         build.make(self.iperf_dir)
         self.iperf = os.path.join(self.iperf_dir, 'src')
@@ -110,7 +108,7 @@ class Iperf(Test):
         """
         speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
         os.chdir(self.iperf)
-        cmd = "./iperf3 -c %s" % self.peer_ip
+        cmd = "./iperf -c %s" % self.peer_ip
         result = process.run(cmd, shell=True, ignore_status=True)
         if result.exit_status:
             self.fail("FAIL: Iperf Run failed")
@@ -127,7 +125,7 @@ class Iperf(Test):
         """
         Killing Iperf process in peer machine
         """
-        cmd = "pkill iperf; rm -rf /tmp/iperf-master"
+        cmd = "pkill iperf; rm -rf /tmp/%s" % self.version
         output = self.session.cmd(cmd)
         if not output.exit_status == 0:
             self.fail("Either the ssh to peer machine machine\
