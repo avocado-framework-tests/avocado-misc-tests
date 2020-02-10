@@ -113,7 +113,7 @@ class freq_transitions(Test):
                     self.run_cmd("cpupower -c %s frequency-set -f %s"
                                  % (self.cpu_num, self.get_random_freq()))
                     time.sleep(1)
-                    freq_set = self.cpu_freq_path('cpuinfo_cur_freq')
+                    freq_set = float(self.cpu_freq_path('cpuinfo_cur_freq'))
                     if self.max_freq < freq_set:
                         self.max_freq = freq_set
                 if chip not in self.max_freq_dict.keys():
@@ -178,7 +178,7 @@ class freq_transitions(Test):
         output = self.run_cmd(cmd)
         self.log.info("output : %s" % output.stderr)
         output = output.stderr.splitlines()[3].split('#')[
-            1].strip().split(' ')[0]
+            1].strip().split(' ')[0].encode('utf-8')
         output = float(output) * (10 ** 6)
         return output
 
