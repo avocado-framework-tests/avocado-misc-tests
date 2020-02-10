@@ -54,7 +54,7 @@ class NdctlTest(Test):
         self.url = self.params.get(
             'url', default="https://github.com/pmem/ndctl.git")
         self.branch = self.params.get('branch', default='master')
-        deps = ['gcc', 'make', 'automake', 'autoconf', 'patch']
+        deps = ['gcc', 'make', 'automake', 'autoconf', 'patch', 'jq']
         detected_distro = distro.detect()
         if detected_distro.name in ['SuSE', 'rhel']:
             if detected_distro.name == 'SuSE':
