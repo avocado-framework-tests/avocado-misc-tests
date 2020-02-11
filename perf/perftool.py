@@ -37,16 +37,18 @@ class Perftool(Test):
         # Check for basic utilities
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        deps = ['gcc', 'make', 'gcc-c++']
+        deps = ['gcc', 'make']
         if 'Ubuntu' in detected_distro.name:
             deps.extend(['linux-tools-common', 'linux-tools-%s' %
                          platform.uname()[2]])
+        elif 'debian' in detected_distro.name:
+            deps.extend(['linux-tools-%s' % platform.uname()[2][3]])
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
         elif detected_distro.name in ['rhel', 'SuSE', 'fedora',
                                       'centos', 'redhat']:
-            deps.extend(['perf'])
+            deps.extend(['perf', 'gcc-g++'])
         else:
             self.cancel("Install the package for perf supported\
                       by %s" % detected_distro.name)

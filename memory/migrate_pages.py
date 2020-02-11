@@ -53,7 +53,7 @@ class MigratePages(Test):
 
         dist = distro.detect()
         pkgs = ['gcc', 'make']
-        if dist.name == "Ubuntu":
+        if dist.name in ["Ubuntu", 'debian']:
             pkgs.extend(['libpthread-stubs0-dev',
                          'libnuma-dev', 'libhugetlbfs-dev'])
         elif dist.name in ["centos", "rhel", "fedora"]:

@@ -65,7 +65,7 @@ class NumaTest(Test):
                     '/nr_hugepages' % (node, str(hp_size))).strip())
             if hp_check < self.nr_pages:
                 self.cancel('Not enough pages to be configured on nodes')
-        if dist.name == "Ubuntu":
+        if dist.name in ["Ubuntu", 'debian']:
             pkgs.extend(['libpthread-stubs0-dev',
                          'libnuma-dev', 'libhugetlbfs-dev'])
         elif dist.name in ["centos", "rhel", "fedora"]:

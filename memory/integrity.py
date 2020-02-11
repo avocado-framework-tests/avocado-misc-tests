@@ -49,7 +49,7 @@ class Integrity(Test):
             self.cancel("Test need to skip as scenario needs to be 1-3")
         detected_distro = distro.detect()
         deps = ['gcc', 'make']
-        if detected_distro.name == "Ubuntu":
+        if detected_distro.name in ["Ubuntu", 'debian']:
             deps.extend(['libnuma-dev'])
         elif detected_distro.name in ["centos", "rhel", "fedora"]:
             deps.extend(['numactl-devel'])

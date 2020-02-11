@@ -18,7 +18,7 @@ import re
 
 from avocado import Test
 from avocado import main
-from avocado.utils import process, build, archive, genio
+from avocado.utils import process, build, archive, genio, distro
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -35,7 +35,13 @@ class Blktests(Test):
         Setup Blktests
         '''
         smm = SoftwareManager()
-        for package in ['gcc', 'make', 'util-linux', 'fio', 'device-mapper', 'gcc-c++']:
+        dist = distro.detect()
+        if dist.name in ['Ubuntu', 'debian']:
+            packages = ['gcc', 'make', 'util-linux', 'fio', 'libdevmapper-dev', 'g++']
+        else:
+            packages = ['gcc', 'make', 'util-linux', 'fio', 'device-mapper', 'gcc-c++']
+
+        for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel(package + ' is needed for the test to be run')
 
