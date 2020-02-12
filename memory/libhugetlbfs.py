@@ -49,7 +49,7 @@ class LibHugetlbfs(Test):
         smm = SoftwareManager()
         detected_distro = distro.detect()
         deps = ['gcc', 'make', 'patch']
-        if detected_distro.name == "Ubuntu":
+        if detected_distro.name in ["Ubuntu", 'debian']:
             deps += ['libpthread-stubs0-dev', 'git']
         elif detected_distro.name == "SuSE":
             deps += ['glibc-devel-static', 'git-core']
@@ -62,7 +62,7 @@ class LibHugetlbfs(Test):
 
         kernel.check_version("2.6.16")
 
-        if detected_distro.name == "Ubuntu":
+        if detected_distro.name in ["Ubuntu", 'debian']:
             out = glob.glob("/usr/lib/*/libpthread.a")
         else:
             out = glob.glob("/usr/lib*/libpthread.a")

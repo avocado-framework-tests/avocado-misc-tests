@@ -177,8 +177,10 @@ class freq_transitions(Test):
                 %s yes>/dev/null" % cpu
         output = self.run_cmd(cmd)
         self.log.info("output : %s" % output.stderr)
+
         output = output.stderr.splitlines()[3].split('#')[
             1].strip().split(' ')[0].encode('utf-8')
+
         output = float(output) * (10 ** 6)
         return output
 

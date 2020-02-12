@@ -47,6 +47,8 @@ class SmtFolding(Test):
         if 'Ubuntu' in detected_distro.name:
             deps.extend(['linux-tools-common', 'linux-tools-%s'
                          % platform.uname()[2]])
+        elif 'debian' in detected_distro.name:
+            deps.extend(['linux-tools-%s' % platform.uname()[2][3]])
         elif detected_distro.name == "SuSE":
             deps.extend(['cpupower'])
         else:
