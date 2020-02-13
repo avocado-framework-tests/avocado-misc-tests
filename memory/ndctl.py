@@ -571,14 +571,13 @@ class NdctlTest(Test):
     def test_check_numa(self):
         self.enable_region()
         regions = self.run_ndctl_list('-R')
-        if not os.path.exists('/sys/devices/ndbus0/region0/numa_node'):
+        if not os.path.exists('/sys/bus/nd/devices/region0/numa_node'):
             self.fail("Numa node entries not found!")
         for val in regions:
             reg = self.run_ndctl_list_val(val, 'dev')
-            numa = genio.read_one_line('/sys/devices/ndbus%s/%s/numa_node'
-                                       % (re.findall(r'\d+', reg)[0], reg))
+            numa = genio.read_one_line('/sys/bus/nd/devices/%s/numa_node' % reg)
             # Check numa config in ndctl and sys interface
-            if len(self.run_ndctl_list('-r %s -U %s' % (reg, numa))) != 1:
+            if len(self.run_ndctl_list('-r %s -R -U %s' % (reg, numa))) != 1:
                 self.fail('Region mismatch between ndctl and sys interface')
 
     def test_label_read_write(self):
