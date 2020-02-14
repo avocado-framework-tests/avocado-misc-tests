@@ -60,7 +60,7 @@ class Uprobe(Test):
     def setUp(self):
         dist = distro.detect()
         smg = SoftwareManager()
-        if dist.name == "Ubuntu" or dist.name == "unknown":
+        if dist.name in ["Ubuntu", "unknown", 'debian']:
             deps = ['libc-bin']
         else:
             deps = ['glibc-common']

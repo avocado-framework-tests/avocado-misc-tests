@@ -82,7 +82,7 @@ class VirtualFC(Test):
         output = self.run_command(cmd)
         self.server = ''
         for line in output:
-            if line in "ltcfleet2-lp10-Naresh":
+            if line in self.lpar:
                 self.server = line
         if not self.server:
             self.cancel("Managed System not got")

@@ -84,7 +84,7 @@ class Tlbflush(Test):
 
         cmd = '%s -n %s -t %s' % (tlbflush, self.nr_entries, self.nr_threads)
 
-        out = process.system_output(cmd)
+        out = process.system_output(cmd).decode("utf-8")
 
         return out
 

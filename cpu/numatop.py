@@ -44,11 +44,11 @@ class Numatop(Test):
         # TODO: Add support for other distributions
         self.numa_pid = None
         detected_distro = distro.detect().name.lower()
-        if not detected_distro == "ubuntu":
+        if detected_distro not in ["ubuntu", 'debian']:
             self.cancel("Upsupported OS %s" % detected_distro)
         smm = SoftwareManager()
         for package in ['gcc', 'numatop', 'make', 'libnuma-dev',
-                        'libncurses-dev']:
+                        'libncurses-dev', 'check']:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("Failed to install %s, which is needed for"
                             "the test to be run" % package)
