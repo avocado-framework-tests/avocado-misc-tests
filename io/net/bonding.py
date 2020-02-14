@@ -128,12 +128,11 @@ class Bonding(Test):
         output = self.session.cmd(cmd)
         result = ""
         result = result.join(output.stdout.decode("utf-8"))
-        self.peer_first_interface = result.split()[0]
+        self.peer_first_interface = result.split()[-1]
         if self.peer_first_interface == "":
             self.fail("test failed because peer interface can not retrieved")
         self.peer_ips = [self.peer_first_ipinterface]
         self.local_ip = netifaces.ifaddresses(interface)[2][0]['addr']
-        self.peer_interfaces.insert(0, self.peer_first_interface)
         self.net_mask = []
         stf = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         for val1, val2 in zip([interface], [self.local_ip]):
@@ -186,7 +185,7 @@ class Bonding(Test):
             cmd += 'rmmod bonding;'
             cmd += 'ip addr add %s/%s dev %s;ip link set %s up;sleep 5;'\
                    % (self.peer_first_ipinterface, self.net_mask[0],
-                      self.peer_first_interface, self.peer_first_interface)
+                      self.peer_interfaces[0], self.peer_interfaces[0])
             output = self.session.cmd(cmd)
             if not output.exit_status == 0:
                 self.log.info("bond removing command failed in peer machine")
@@ -195,6 +194,8 @@ class Bonding(Test):
         '''
         ping check
         '''
+        # need some time for specific interface before ping
+        time.sleep(10)
         cmd = "ping -I %s %s -c 5"\
               % (self.bond_name, self.peer_first_ipinterface)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
@@ -355,6 +356,7 @@ class Bonding(Test):
         self.bond_fail(self.mode)
         self.log.info("Mode %s OK", self.mode)
         self.error_check()
+        time.sleep(5)
 
     def test_cleanup(self):
         '''
@@ -362,9 +364,7 @@ class Bonding(Test):
         '''
         self.bond_remove("local")
         for val in self.host_interfaces:
-            cmd = "ip link set %s up" % val
-            process.system(cmd, shell=True, ignore_status=True)
-            cmd = "ifup %s" % val
+            cmd = "ifdown %s; ifup %s" % (val, val)
             process.system(cmd, shell=True, ignore_status=True)
             for _ in range(0, 600, 60):
                 if 'state UP' in process.system_output("ip link \
@@ -383,7 +383,7 @@ class Bonding(Test):
         if self.peer_bond_needed:
             self.bond_remove("peer")
             for val in self.peer_interfaces:
-                cmd = "ip link set %s up; ifup %s; sleep %s"\
+                cmd = "ifdown %s; ifup %s; sleep %s"\
                       % (val, val, self.peer_wait_time)
                 output = self.session.cmd(cmd)
                 if not output.exit_status == 0:
