@@ -22,6 +22,7 @@ from avocado import main
 from avocado import Test
 from avocado.utils import process
 from avocado import skipUnless
+from avocado.utils import pci
 
 IS_POWER_VM = 'pSeries' in open('/proc/cpuinfo', 'r').read()
 
@@ -37,6 +38,7 @@ class DisrtoTool(Test):
         '''
         self.option = self.params.get("test_opt", default='').split(",")
         self.tool = self.params.get("tool", default='')
+        self.pci_device = self.params.get("pci_device", default='')
 
     @skipUnless(IS_POWER_VM,
                 "supported only on PowerVM platform")
@@ -74,6 +76,61 @@ class DisrtoTool(Test):
         if result.exit_status != 0:
             self.fail("lsprop failed")
 
+    def lsvio(self, option):
+        '''
+        run lsvio aaplicable only for PowerVM
+        '''
+        cmd = "lsvio -%s" % option
+        result = process.run(cmd, shell=True, ignore_status=True)
+        if result.exit_status != 0:
+            self.fail("lsvio failed")
+
+    def lsdevinfo(self, option):
+        '''
+        run lsdevinfo
+        '''
+        cmd = "lsdevinfo -%s" % option
+        result = process.run(cmd, shell=True, ignore_status=True)
+        if result.exit_status != 0:
+            self.fail("lsdevinfo failed")
+
+    def usys(self, tool, option, pci_device):
+        '''
+        run usysident and usysattn
+        '''
+        location_code = pci.get_slot_from_sysfs(pci_device)
+        interface = pci.get_interfaces_in_pci_address(pci_device, "net")[0]
+        if option == "-P -s identify":
+            cmd = "%s %s -l %s" % (tool, option, location_code)
+        elif option == "-t -s normal":
+            cmd = "%s %s -d %s" % (tool, option, interface)
+        elif option == "-P -s normal":
+            cmd = "%s %s -l %s" % (tool, option, location_code)
+        elif "-t -s identify":
+            cmd = "%s %s -d %s" % (tool, option, interface)
+
+        result = process.run(cmd, shell=True, ignore_status=True)
+        if result.exit_status != 0:
+            self.fail("%s option %s failed" % (tool, option))
+
+    def usysattn(self, option, pci_device):
+        self.usys(self.tool, option, pci_device)
+        return
+
+    def usysident(self, option, pci_device):
+        self.usys(self.tool, option, pci_device)
+        return
+
+    def ofpathname(self, option, pci_device):
+        '''
+        run ofpathname aaplicable only for PowerVM
+        '''
+        interface = pci.get_interfaces_in_pci_address(pci_device, "net")[0]
+        cmd = "ofpathname -%s %s" % (option, interface)
+        result = process.run(cmd, shell=True, ignore_status=True)
+        if result.exit_status != 0:
+            self.fail("ofpathname failed")
+
     def test(self):
         '''
         test different distro tools
@@ -87,6 +144,21 @@ class DisrtoTool(Test):
         elif self.tool == "lsprop":
             for val in self.option:
                 self.lsprop(val)
+        elif self.tool == "lsvio":
+            for val in self.option:
+                self.lsvio(val)
+        elif self.tool == "lsdevinfo":
+            for val in self.option:
+                self.lsdevinfo(val)
+        elif self.tool == "usysident":
+            for val in self.option:
+                self.usysident(val, self.pci_device)
+        elif self.tool == "usysattn":
+            for val in self.option:
+                self.usysattn(val, self.pci_device)
+        elif self.tool == "ofpathname":
+            for val in self.option:
+                self.ofpathname(val, self.pci_device)
 
 
 if __name__ == "__main__":
