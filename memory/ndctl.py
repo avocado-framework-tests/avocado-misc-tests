@@ -102,7 +102,8 @@ class NdctlTest(Test):
             json_op = []
         first_dict = json_op[0]
         index_dict = self.run_ndctl_list_val(first_dict, 'index')[0]
-        return self.run_ndctl_list_val(index_dict, 'nslot') - 1
+        # 0 - [ slotcount - 1] including idle namespace
+        return self.run_ndctl_list_val(index_dict, 'nslot') - 2
 
     def is_region_legacy(self, region):
         """
