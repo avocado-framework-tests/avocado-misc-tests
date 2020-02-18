@@ -24,7 +24,6 @@ import paramiko
 import netifaces
 from avocado import main
 from avocado import Test
-from avocado.utils.configure_network import HostInfo
 from avocado.utils import configure_network
 
 
@@ -48,7 +47,7 @@ class SwitchTest(Test):
         self.peer = self.params.get("peer_ip")
         if not self.peer:
             self.cancel("No peer provided")
-        if not HostInfo.ping_check(self, self.iface, self.peer, "2"):
+        if not configure_network.ping_check(self.iface, self.peer, "2"):
             self.cancel("No connection to peer")
         self.switch_name = self.params.get("switch_name", '*', default="")
         self.userid = self.params.get("userid", '*', default="")
@@ -107,11 +106,11 @@ class SwitchTest(Test):
         self.run_switch_command(cmd)
         self.run_switch_command("shutdown")
         time.sleep(5)
-        if HostInfo.ping_check(self, self.iface, self.peer, "5"):
+        if configure_network.ping_check(self.iface, self.peer, "5"):
             self.fail("pinging after disable port")
         self.run_switch_command("no shutdown")
         time.sleep(5)
-        if not HostInfo.ping_check(self, self.iface, self.peer, "5"):
+        if not configure_network.ping_check(self.iface, self.peer, "5"):
             self.fail("ping test failed")
         self.run_switch_command("end")
 

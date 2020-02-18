@@ -29,6 +29,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils import configure_network
+from avocado.utils import wait
 
 
 class Ethtool(Test):
@@ -68,6 +69,9 @@ class Ethtool(Test):
         else:
             configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
                                      interface_type='Ethernet')
+        if not wait.wait_for(configure_network.is_interface_link_up,
+                             timeout=120, args=[self.iface]):
+            self.cancel("Link up of interface is taking longer than 120s")
         if not configure_network.ping_check(self.iface, self.peer, "5"):
             self.cancel("No connection to peer")
         self.args = self.params.get("arg", default='')
@@ -86,8 +90,15 @@ class Ethtool(Test):
         Returns False otherwise.
         '''
         cmd = "ip link set dev %s %s" % (interface, state)
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
-            return False
+        if state == "up":
+            if process.system(cmd, shell=True, ignore_status=True) != 0:
+                return False
+            if not wait.wait_for(configure_network.is_interface_link_up,
+                                 timeout=120, args=[self.iface]):
+                self.fail("Link up of interface is taking longer than 120s")
+        else:
+            if process.system(cmd, shell=True, ignore_status=True) != 0:
+                return False
         if status != self.interface_link_status(interface):
             return False
         return True

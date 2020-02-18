@@ -74,7 +74,7 @@ class Tlbflush(Test):
             if self.nr_entries > max_entries:
                 self.nr_entries = max_entries
 
-            out = self.run().decode()
+            out = self.run()
             self.perf_json.append({'Test time' + str(ite): out})
         self.whiteboard = json.dumps(self.perf_json)
 
@@ -84,7 +84,7 @@ class Tlbflush(Test):
 
         cmd = '%s -n %s -t %s' % (tlbflush, self.nr_entries, self.nr_threads)
 
-        out = process.system_output(cmd)
+        out = process.system_output(cmd).decode("utf-8")
 
         return out
 

@@ -60,7 +60,7 @@ class kselftest(Test):
         detected_distro = distro.detect()
         deps = ['gcc', 'make', 'automake', 'autoconf', 'rsync']
 
-        if 'Ubuntu' in detected_distro.name:
+        if detected_distro.name in ['Ubuntu', 'debian']:
             deps.extend(['libpopt0', 'libc6', 'libc6-dev', 'libcap-dev',
                          'libpopt-dev', 'libcap-ng0', 'libcap-ng-dev',
                          'libnuma-dev', 'libfuse-dev', 'elfutils', 'libelf1'])
@@ -97,7 +97,7 @@ class kselftest(Test):
                 self.buldir = smg.get_source(src_name, self.workdir)
                 self.buldir = os.path.join(
                     self.buldir, os.listdir(self.buldir)[0])
-            elif 'Ubuntu' in detected_distro.name:
+            elif detected_distro.name in ['Ubuntu', 'debian']:
                 self.buldir = smg.get_source('linux', self.workdir)
             elif 'SuSE' in detected_distro.name:
                 smg._source_install('kernel-default')
