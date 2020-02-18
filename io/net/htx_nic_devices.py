@@ -107,40 +107,47 @@ class HtxNicTest(Test):
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.cancel("unable to install the package %s on peer machine "
                             % pkg)
-
-        url = "https://github.com/open-power/HTX/archive/master.zip"
-        tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')
-        archive.extract(tarball, self.teststmpdir)
-        htx_path = os.path.join(self.teststmpdir, "HTX-master")
-        os.chdir(htx_path)
-
-        exercisers = ["hxecapi_afu_dir", "hxecapi", "hxeocapi"]
-        if not smm.check_installed('dapl-devel'):
-            exercisers.append("hxedapl")
-        for exerciser in exercisers:
-            process.run("sed -i 's/%s//g' %s/bin/Makefile" % (exerciser,
-                                                              htx_path))
-        build.make(htx_path, extra_args='all')
-        build.make(htx_path, extra_args='tar')
-        process.run('tar --touch -xvzf htx_package.tar.gz')
-        os.chdir('htx_package')
-        if process.system('./installer.sh -f'):
-            self.fail("Installation of htx fails:please refer job.log")
-
-        try:
-            self.run_command("wget %s -O /tmp/master.zip" % url)
+        if self.htx_url:
+            htx = self.htx_url.split("/")[-1]
+            htx_rpm = self.fetch_asset(self.htx_url)
+            process.system("rpm -ivh --force %s" % htx_rpm)
+            self.run_command("wget %s -O /tmp/%s" % (self.htx_url, htx))
             self.run_command("cd /tmp")
-            self.run_command("unzip master.zip")
-            self.run_command("cd HTX-master")
+            self.run_command("rpm -ivh --force %s" % htx)
+        else:
+            url = "https://github.com/open-power/HTX/archive/master.zip"
+            tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')
+            archive.extract(tarball, self.teststmpdir)
+            htx_path = os.path.join(self.teststmpdir, "HTX-master")
+            os.chdir(htx_path)
+
+            exercisers = ["hxecapi_afu_dir", "hxecapi", "hxeocapi"]
+            if not smm.check_installed('dapl-devel'):
+                exercisers.append("hxedapl")
             for exerciser in exercisers:
-                self.run_command("sed -i 's/%s//g' bin/Makefile" % exerciser)
-            self.run_command("make all")
-            self.run_command("make tar")
-            self.run_command("tar --touch -xvzf htx_package.tar.gz")
-            self.run_command("cd htx_package")
-            self.run_command("./installer.sh -f")
-        except CommandFailed:
-            self.cancel("HTX is not installed on Peer")
+                process.run("sed -i 's/%s//g' %s/bin/Makefile" % (exerciser,
+                                                                  htx_path))
+            build.make(htx_path, extra_args='all')
+            build.make(htx_path, extra_args='tar')
+            process.run('tar --touch -xvzf htx_package.tar.gz')
+            os.chdir('htx_package')
+            if process.system('./installer.sh -f'):
+                self.fail("Installation of htx fails:please refer job.log")
+
+            try:
+                self.run_command("wget %s -O /tmp/master.zip" % url)
+                self.run_command("cd /tmp")
+                self.run_command("unzip master.zip")
+                self.run_command("cd HTX-master")
+                for exerciser in exercisers:
+                    self.run_command("sed -i 's/%s//g' bin/Makefile" % exerciser)
+                self.run_command("make all")
+                self.run_command("make tar")
+                self.run_command("tar --touch -xvzf htx_package.tar.gz")
+                self.run_command("cd htx_package")
+                self.run_command("./installer.sh -f")
+            except CommandFailed:
+                self.cancel("HTX is not installed on Peer")
 
     def parameters(self):
         self.host_ip = self.params.get("host_public_ip", '*', default=None)
@@ -159,6 +166,7 @@ class HtxNicTest(Test):
         self.query_cmd = "htxcmdline -query -mdt %s" % self.mdt_file
         self.ipaddr = self.params.get("host_ips", default="").split(",")
         self.netmask = self.params.get("netmask", default="")
+        self.htx_url = self.params.get("htx_rpm", default="")
 
     def login(self, ip, username, password):
         '''
