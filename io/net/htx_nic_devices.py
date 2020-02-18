@@ -73,8 +73,9 @@ class HtxNicTest(Test):
             self.cancel("Platform does not support HTX tests")
 
         self.parameters()
-        for ipaddr, interface in zip(self.ipaddr, self.host_intfs):
-            configure_network.set_ip(ipaddr, self.netmask, interface)
+        if 'start' in str(self.name.name):
+            for ipaddr, interface in zip(self.ipaddr, self.host_intfs):
+                configure_network.set_ip(ipaddr, self.netmask, interface)
         self.host_distro = distro.detect()
         self.login(self.peer_ip, self.peer_user, self.peer_password)
         self.get_ips()
@@ -439,9 +440,16 @@ class HtxNicTest(Test):
                     self.log.debug("Command %s failed %s", cf.command,
                                    cf.output)
             if "All networks ping Ok" not in output.decode("utf-8"):
-                self.run_command("systemctl restart network", timeout=300)
-                process.system("systemctl restart network", shell=True,
-                               ignore_status=True)
+                if self.peer_distro == "rhel":
+                    self.run_command("systemctl start NetworkManager", timeout=300)
+                else:
+                    self.run_command("systemctl restart network", timeout=300)
+                if self.host_distro == "rhel":
+                    process.system("systemctl start NetworkManager", shell=True,
+                                   ignore_status=True)
+                else:
+                    process.system("systemctl restart network", shell=True,
+                                   ignore_status=True)
                 output = process.system_output("pingum", ignore_status=True,
                                                shell=True, sudo=True)
             else:
@@ -579,7 +587,7 @@ class HtxNicTest(Test):
             process.run(cmd, ignore_status=True,
                         shell=True, sudo=True)
             if os.stat('/tmp/htxerr').st_size != 0:
-                self.fail("Check errorlogs for exact error/failure in host")
+                self.fail("Their are errors while htx run in host")
             self.log.info("Monitoring HTX Error logs in Peer")
             self.run_command(cmd)
             try:
@@ -591,7 +599,7 @@ class HtxNicTest(Test):
                 output = self.run_command("cat /tmp/htxerr")
                 self.log.debug("HTX error log in peer: %s\n",
                                "\n".join(output))
-                self.fail("Check errorlogs for exact error/failure in peer")
+                self.fail("Their are errors while htx run in peer")
             self.log.info("Status of N/W devices after every 60 sec")
             process.system(self.query_cmd, ignore_status=True,
                            shell=True, sudo=True)
@@ -746,7 +754,10 @@ class HtxNicTest(Test):
                 with open(file_name, 'w') as file:
                     for line in filedata:
                         file.write(line)
-            cmd = "systemctl restart network"
+            if self.host_distro == "rhel":
+                cmd = "systemctl start NetworkManager"
+            else:
+                cmd = "systemctl restart network"
             process.run(cmd, ignore_status=True, shell=True, sudo=True)
 
     def bring_up_peer_interfaces(self):
@@ -772,7 +783,10 @@ class HtxNicTest(Test):
                         filedata[idx] = replace_str
                 filedata = "\n".join(filedata)
                 self.run_command("echo \'%s\' > %s" % (filedata, file_name))
-            cmd = "systemctl restart network"
+            if self.peer_distro == "rhel":
+                cmd = "systemctl start NetworkManager"
+            else:
+                cmd = "systemctl restart network"
             self.run_command(cmd)
 
     def htx_cleanup(self):

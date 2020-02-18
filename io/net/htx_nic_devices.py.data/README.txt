@@ -12,6 +12,7 @@ This test assumes below packages to be installed on both host & peer
 	htx
 
 The net_id should be >= 100 and  <= 223
+htx_rpm :  provide .rpm url for htx installation
 
 Hostname for the host and the peer servers must always be set to the
 fully qualified domain name of the server IP. If not, set it using
