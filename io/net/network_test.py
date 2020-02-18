@@ -32,6 +32,7 @@ from avocado.utils import genio
 from avocado.utils.configure_network import PeerInfo
 from avocado.utils import configure_network
 from avocado.utils import wait
+from avocado.utils import ssh
 
 
 class NetworkTest(Test):
@@ -273,6 +274,27 @@ class NetworkTest(Test):
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("failed to disable promisc mode")
         configure_network.ping_check(self.iface, self.peer, "5")
+
+    def test_ping6(self):
+        '''
+        IPV6 ping test to peer machine
+        '''
+        with ssh.Session(self.peer, user='root',
+                         password=self.peer_password) as session:
+            cmd = "ip addr show %s" % self.peer_interface
+            result = session.cmd(cmd)
+            if result.exit_status == 0:
+                result_ip = result.stdout_text
+                try:
+                    for line in result_ip.splitlines():
+                        if "inet6" in line:
+                            ipv6 = line.split()[1].split('/')[0]
+                except UnboundLocalError:
+                    if ipv6 == "":
+                        self.error("unable to get IPV6 of peer")
+                        return False
+        if not self.networkinterface.ping_check(self.iface, ipv6, '10'):
+            self.fail("ping test fail")
 
     def tearDown(self):
         '''
