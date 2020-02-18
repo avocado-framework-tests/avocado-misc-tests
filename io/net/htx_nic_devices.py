@@ -402,6 +402,17 @@ class HtxNicTest(Test):
         filedata = "\n".join(filedata)
         self.run_command("echo \'%s\' > %s" % (filedata, self.bpt_file))
 
+    def ip_config(self):
+        for (host_intf, net_id) in zip(self.host_intfs, self.net_ids):
+            ip_addr = "%s.1.1.%s" % (net_id, self.host_ip.split('.')[-1])
+            configure_network.set_ip(ip_addr, self.netmask, host_intf)
+        for (peer_intf, net_id) in zip(self.peer_intfs, self.net_ids):
+            ip_addr = "%s.1.1.%s" % (net_id, self.peer_ip.split('.')[-1])
+            cmd = "ip addr add dev %s %s/%s" % (peer_intf, ip_addr, self.netmask)
+            self.run_command(cmd)
+            cmd = "ip link set dev %s up" % peer_intf
+            self.run_command(cmd)
+
     def htx_configure_net(self):
         self.log.info("Starting the N/W ping test for HTX in Host")
         cmd = "build_net %s" % self.bpt_file
@@ -416,7 +427,7 @@ class HtxNicTest(Test):
                     output_peer = cf.output
                     self.log.debug("Command %s failed %s", cf.command,
                                    cf.output)
-            if "All networks ping Ok" not in output:
+            if "All networks ping Ok" not in output.decode("utf-8"):
                 self.run_command("systemctl restart network", timeout=300)
                 process.system("systemctl restart network", shell=True,
                                ignore_status=True)
@@ -426,7 +437,8 @@ class HtxNicTest(Test):
                 break
             time.sleep(30)
         else:
-            self.fail("N/W ping test for HTX failed in Host(pingum)")
+            self.log.info("manually configuring ip because of pingum failed")
+            self.ip_config()
 
         self.log.info("Starting the N/W ping test for HTX in Peer")
         for count in range(11):
