@@ -1,5 +1,7 @@
 config:
     region: 'region0'
+    size:
+    map:
     preserve_change: True
     mnt_point: '/mnt/pmem'
     fio_job:

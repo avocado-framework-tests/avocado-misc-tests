@@ -102,7 +102,8 @@ class NdctlTest(Test):
             json_op = []
         first_dict = json_op[0]
         index_dict = self.run_ndctl_list_val(first_dict, 'index')[0]
-        return self.run_ndctl_list_val(index_dict, 'nslot') - 1
+        # 0 - [ slotcount - 1] including idle namespace
+        return self.run_ndctl_list_val(index_dict, 'nslot') - 2
 
     def is_region_legacy(self, region):
         """
@@ -405,6 +406,31 @@ class NdctlTest(Test):
         if failed_modes:
             self.fail("Namespace for %s mode failed!" % failed_modes)
 
+    def test_namespace_devmap(self):
+        """
+        Test metadata device mapping option with a namespace
+        """
+        region = self.get_default_region()
+        m_map = self.params.get('map', default='mem')
+        size_align = self.get_size_alignval()
+        # Size input in MB
+        namespace_size = int(self.params.get('size', default=128) * 1048576)
+        if namespace_size and (namespace_size % size_align):
+            self.cancel("Size value %s not %s aligned \n"
+                        % (namespace_size, size_align))
+        self.log.info("Using %s for checking device mapping", region)
+        self.disable_namespace(region=region)
+        self.destroy_namespace(region=region)
+        self.create_namespace(region=region, mode=self.mode_to_use,
+                              memmap=m_map, size='%s' % namespace_size)
+        self.log.info("Validating device mapping")
+        map_val = self.run_ndctl_list_val(self.run_ndctl_list(
+            '-r %s -N' % region)[0], 'map')
+        if map_val != m_map:
+            self.fail("Expected map:%s, Got %s" % (m_map, map_val))
+        else:
+            self.log.info("Metadata mapped as expected")
+
     def multiple_namespaces_region(self, region):
         """
         Test multiple namespace with single region
@@ -546,14 +572,13 @@ class NdctlTest(Test):
     def test_check_numa(self):
         self.enable_region()
         regions = self.run_ndctl_list('-R')
-        if not os.path.exists('/sys/devices/ndbus0/region0/numa_node'):
+        if not os.path.exists('/sys/bus/nd/devices/region0/numa_node'):
             self.fail("Numa node entries not found!")
         for val in regions:
             reg = self.run_ndctl_list_val(val, 'dev')
-            numa = genio.read_one_line('/sys/devices/ndbus%s/%s/numa_node'
-                                       % (re.findall(r'\d+', reg)[0], reg))
+            numa = genio.read_one_line('/sys/bus/nd/devices/%s/numa_node' % reg)
             # Check numa config in ndctl and sys interface
-            if len(self.run_ndctl_list('-r %s -U %s' % (reg, numa))) != 1:
+            if len(self.run_ndctl_list('-r %s -R -U %s' % (reg, numa))) != 1:
                 self.fail('Region mismatch between ndctl and sys interface')
 
     def test_label_read_write(self):
