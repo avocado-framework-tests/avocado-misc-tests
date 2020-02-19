@@ -1,4 +1,2 @@
-Devices: !mux
-    pci_device1:
-        pci_device: "0001:01:00.0"
-        num_of_hotplug:
+pci_device: "001b:62:00.0,001b:62:00.1"
+count: 10
