@@ -1,0 +1,15 @@
+setup:
+ opt: !mux
+ basic:
+         option: ''
+ list:
+         option: '-l'
+ recovery:
+         option: '-r'
+ plugin_kdump:
+         option: '-p'
+         ##this only can be used with -p option
+         plugin_val: 'kdump'
+  plugin_htx:
+         option: '-p'
+         plugin_val: 'htx'
