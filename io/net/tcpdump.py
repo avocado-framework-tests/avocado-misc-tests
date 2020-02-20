@@ -43,6 +43,7 @@ class TcpdumpTest(Test):
         """
         self.iface = self.params.get("interface", default="")
         self.count = self.params.get("count", default="500")
+        self.nping_count = self.params.get("nping_count", default="")
         self.peer_ip = self.params.get("peer_ip", default="")
         self.drop = self.params.get("drop_accepted", default="10")
         self.host_ip = self.params.get("host_ip", default="")
@@ -115,7 +116,7 @@ class TcpdumpTest(Test):
         for line in process.run(cmd, shell=True,
                                 ignore_status=True).stderr.decode("utf-8") \
                                                    .splitlines():
-            if "packets dropped by interface" in line:
+            if "packets dropped by kernel" in line:
                 self.log.info(line)
                 if int(line[0]) >= (int(self.drop) * int(self.count) / 100):
                     self.fail("%s, more than %s percent" % (line, self.drop))
@@ -128,10 +129,10 @@ class TcpdumpTest(Test):
         detected_distro = distro.detect()
         if detected_distro.name == "SuSE":
             cmd = "./nping/nping --%s %s -c %s" % (param,
-                                                   self.peer_ip, self.count+5)
+                                                   self.peer_ip, self.nping_count)
             return process.SubProcess(cmd, verbose=False, shell=True)
         else:
-            cmd = "nping --%s %s -c %s" % (param, self.peer_ip, self.count+5)
+            cmd = "nping --%s %s -c %s" % (param, self.peer_ip, self.nping_count)
             return process.SubProcess(cmd, verbose=False, shell=True)
 
     def tearDown(self):
