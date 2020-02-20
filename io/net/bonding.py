@@ -36,6 +36,7 @@ from avocado.utils import process
 from avocado.utils import linux_modules
 from avocado.utils import genio
 from avocado.utils.ssh import Session
+from avocado.utils import configure_network
 
 
 class Bonding(Test):
@@ -83,6 +84,11 @@ class Bonding(Test):
         self.peer_first_ipinterface = self.params.get("peer_ip", default="")
         if not self.peer_interfaces or self.peer_first_ipinterface == "":
             self.cancel("peer machine should available")
+        self.ipaddr = self.params.get("host_ips", default="").split(",")
+        self.netmask = self.params.get("netmask", default="")
+        if 'setup' in str(self.name.name):
+            for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
+                configure_network.set_ip(ipaddr, self.netmask, interface)
         self.bond_name = self.params.get("bond_name", default="tempbond")
         self.net_path = "/sys/class/net/"
         self.bond_status = "/proc/net/bonding/%s" % self.bond_name
@@ -391,6 +397,8 @@ class Bonding(Test):
                     self.log.warn("unable to bring to original state in peer")
                 time.sleep(self.sleep_time)
         self.error_check()
+        for interface in self.host_interfaces:
+            configure_network.unset_ip(interface)
 
     def error_check(self):
         if self.err:

@@ -2,6 +2,8 @@ Test: !mux
     active-backup:
         bonding_mode: "1"
 bond_interfaces: ""
+host_ips: ""
+netmask: ""
 peer_ip: ""
 peer_password: "*******"
 peer_interfaces: ""
