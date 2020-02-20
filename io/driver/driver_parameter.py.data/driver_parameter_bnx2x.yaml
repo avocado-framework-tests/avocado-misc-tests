@@ -1,0 +1,64 @@
+#parm:           num_queues: Set number of queues (default is as a number of CPUs) (int)
+#parm:           disable_tpa: Disable the TPA (LRO) feature (int)
+#parm:           int_mode: Force interrupt mode other than MSI-X (1 INT#x; 2 MSI) (int)
+#parm:           dropless_fc: Pause on exhausted host ring (int)
+#parm:           mrrs: Force Max Read Req Size (0..3) (for debug) (int)
+#parm:           debug: Default debug msglevel (int)
+module: bnx2x
+interface: eth1
+host_ip: 
+netmask: 
+peer_ip: 
+sysfs_check_required: 0
+Test: !mux
+    num_queue:
+        module_param_name: "num_queues"
+        value: !mux
+            num_que_0:
+                module_param_value: "0"
+            num_que_1:
+                module_param_value: "1"
+            num_que_8:
+                module_param_value: "8"
+            num_que_64:
+                module_param_value: "64"
+            num_que_1024:
+                module_param_value: "1024"
+    disable_tpa:
+        module_param_name: "disable_tpa"
+        value: !mux
+            dis_tpa_1:
+                module_param_value: "1"
+            dis_tpa_0:
+                module_param_value: "0"
+    int_mode:
+        module_param_name: "int_mode"
+        value: !mux
+            int_1:
+                module_param_value: "1"
+            int_2:
+                module_param_value: "2"
+    mrrs:
+        module_param_name: "mrrs"
+        value: !mux
+            mrrs_0:
+                module_param_value: "0"
+            mrrs_1:
+                module_param_value: "1"
+            mrrs_2:
+                module_param_value: "2"
+            mrrs_3:
+                module_param_value: "3"
+    debug:
+        module_param_name: "debug"
+        value: !mux
+            debug_0:
+                module_param_value: "0"
+            debug_1:  
+                module_param_value: "1"
+    dropless_fc:
+        module_param_name: "dropless_fc"
+        value: !mux
+            dropless_fc_1:
+                module_param_value: "1"
+
