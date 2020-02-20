@@ -14,6 +14,8 @@ Test: !mux
     balance-alb:
         bonding_mode: "6"
 bond_interfaces: ""
+host_ips: ""
+netmask: ""
 peer_ip: ""
 peer_interfaces: ""
 peer_password: "********"
