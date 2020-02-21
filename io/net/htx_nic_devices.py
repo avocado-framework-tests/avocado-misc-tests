@@ -73,8 +73,9 @@ class HtxNicTest(Test):
             self.cancel("Platform does not support HTX tests")
 
         self.parameters()
-        for ipaddr, interface in zip(self.ipaddr, self.host_intfs):
-            configure_network.set_ip(ipaddr, self.netmask, interface)
+        if 'start' in str(self.name.name):
+            for ipaddr, interface in zip(self.ipaddr, self.host_intfs):
+                configure_network.set_ip(ipaddr, self.netmask, interface)
         self.host_distro = distro.detect()
         self.login(self.peer_ip, self.peer_user, self.peer_password)
         self.get_ips()
@@ -107,40 +108,47 @@ class HtxNicTest(Test):
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.cancel("unable to install the package %s on peer machine "
                             % pkg)
-
-        url = "https://github.com/open-power/HTX/archive/master.zip"
-        tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')
-        archive.extract(tarball, self.teststmpdir)
-        htx_path = os.path.join(self.teststmpdir, "HTX-master")
-        os.chdir(htx_path)
-
-        exercisers = ["hxecapi_afu_dir", "hxecapi", "hxeocapi"]
-        if not smm.check_installed('dapl-devel'):
-            exercisers.append("hxedapl")
-        for exerciser in exercisers:
-            process.run("sed -i 's/%s//g' %s/bin/Makefile" % (exerciser,
-                                                              htx_path))
-        build.make(htx_path, extra_args='all')
-        build.make(htx_path, extra_args='tar')
-        process.run('tar --touch -xvzf htx_package.tar.gz')
-        os.chdir('htx_package')
-        if process.system('./installer.sh -f'):
-            self.fail("Installation of htx fails:please refer job.log")
-
-        try:
-            self.run_command("wget %s -O /tmp/master.zip" % url)
+        if self.htx_url:
+            htx = self.htx_url.split("/")[-1]
+            htx_rpm = self.fetch_asset(self.htx_url)
+            process.system("rpm -ivh --force %s" % htx_rpm)
+            self.run_command("wget %s -O /tmp/%s" % (self.htx_url, htx))
             self.run_command("cd /tmp")
-            self.run_command("unzip master.zip")
-            self.run_command("cd HTX-master")
+            self.run_command("rpm -ivh --force %s" % htx)
+        else:
+            url = "https://github.com/open-power/HTX/archive/master.zip"
+            tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')
+            archive.extract(tarball, self.teststmpdir)
+            htx_path = os.path.join(self.teststmpdir, "HTX-master")
+            os.chdir(htx_path)
+
+            exercisers = ["hxecapi_afu_dir", "hxecapi", "hxeocapi"]
+            if not smm.check_installed('dapl-devel'):
+                exercisers.append("hxedapl")
             for exerciser in exercisers:
-                self.run_command("sed -i 's/%s//g' bin/Makefile" % exerciser)
-            self.run_command("make all")
-            self.run_command("make tar")
-            self.run_command("tar --touch -xvzf htx_package.tar.gz")
-            self.run_command("cd htx_package")
-            self.run_command("./installer.sh -f")
-        except CommandFailed:
-            self.cancel("HTX is not installed on Peer")
+                process.run("sed -i 's/%s//g' %s/bin/Makefile" % (exerciser,
+                                                                  htx_path))
+            build.make(htx_path, extra_args='all')
+            build.make(htx_path, extra_args='tar')
+            process.run('tar --touch -xvzf htx_package.tar.gz')
+            os.chdir('htx_package')
+            if process.system('./installer.sh -f'):
+                self.fail("Installation of htx fails:please refer job.log")
+
+            try:
+                self.run_command("wget %s -O /tmp/master.zip" % url)
+                self.run_command("cd /tmp")
+                self.run_command("unzip master.zip")
+                self.run_command("cd HTX-master")
+                for exerciser in exercisers:
+                    self.run_command("sed -i 's/%s//g' bin/Makefile" % exerciser)
+                self.run_command("make all")
+                self.run_command("make tar")
+                self.run_command("tar --touch -xvzf htx_package.tar.gz")
+                self.run_command("cd htx_package")
+                self.run_command("./installer.sh -f")
+            except CommandFailed:
+                self.cancel("HTX is not installed on Peer")
 
     def parameters(self):
         self.host_ip = self.params.get("host_public_ip", '*', default=None)
@@ -159,6 +167,7 @@ class HtxNicTest(Test):
         self.query_cmd = "htxcmdline -query -mdt %s" % self.mdt_file
         self.ipaddr = self.params.get("host_ips", default="").split(",")
         self.netmask = self.params.get("netmask", default="")
+        self.htx_url = self.params.get("htx_rpm", default="")
 
     def login(self, ip, username, password):
         '''
@@ -402,6 +411,20 @@ class HtxNicTest(Test):
         filedata = "\n".join(filedata)
         self.run_command("echo \'%s\' > %s" % (filedata, self.bpt_file))
 
+    def ip_config(self):
+        """
+        configuring ip for host and peer interfaces
+        """
+        for (host_intf, net_id) in zip(self.host_intfs, self.net_ids):
+            ip_addr = "%s.1.1.%s" % (net_id, self.host_ip.split('.')[-1])
+            configure_network.set_ip(ip_addr, self.netmask, host_intf)
+        for (peer_intf, net_id) in zip(self.peer_intfs, self.net_ids):
+            ip_addr = "%s.1.1.%s" % (net_id, self.peer_ip.split('.')[-1])
+            cmd = "ip addr add dev %s %s/%s" % (peer_intf, ip_addr, self.netmask)
+            self.run_command(cmd)
+            cmd = "ip link set dev %s up" % peer_intf
+            self.run_command(cmd)
+
     def htx_configure_net(self):
         self.log.info("Starting the N/W ping test for HTX in Host")
         cmd = "build_net %s" % self.bpt_file
@@ -416,17 +439,25 @@ class HtxNicTest(Test):
                     output_peer = cf.output
                     self.log.debug("Command %s failed %s", cf.command,
                                    cf.output)
-            if "All networks ping Ok" not in output:
-                self.run_command("systemctl restart network", timeout=300)
-                process.system("systemctl restart network", shell=True,
-                               ignore_status=True)
+            if "All networks ping Ok" not in output.decode("utf-8"):
+                if self.peer_distro == "rhel":
+                    self.run_command("systemctl start NetworkManager", timeout=300)
+                else:
+                    self.run_command("systemctl restart network", timeout=300)
+                if self.host_distro == "rhel":
+                    process.system("systemctl start NetworkManager", shell=True,
+                                   ignore_status=True)
+                else:
+                    process.system("systemctl restart network", shell=True,
+                                   ignore_status=True)
                 output = process.system_output("pingum", ignore_status=True,
                                                shell=True, sudo=True)
             else:
                 break
             time.sleep(30)
         else:
-            self.fail("N/W ping test for HTX failed in Host(pingum)")
+            self.log.info("manually configuring ip because of pingum failed.")
+            self.ip_config()
 
         self.log.info("Starting the N/W ping test for HTX in Peer")
         for count in range(11):
@@ -556,7 +587,7 @@ class HtxNicTest(Test):
             process.run(cmd, ignore_status=True,
                         shell=True, sudo=True)
             if os.stat('/tmp/htxerr').st_size != 0:
-                self.fail("Check errorlogs for exact error/failure in host")
+                self.fail("Their are errors while htx run in host")
             self.log.info("Monitoring HTX Error logs in Peer")
             self.run_command(cmd)
             try:
@@ -568,7 +599,7 @@ class HtxNicTest(Test):
                 output = self.run_command("cat /tmp/htxerr")
                 self.log.debug("HTX error log in peer: %s\n",
                                "\n".join(output))
-                self.fail("Check errorlogs for exact error/failure in peer")
+                self.fail("Their are errors while htx run in peer")
             self.log.info("Status of N/W devices after every 60 sec")
             process.system(self.query_cmd, ignore_status=True,
                            shell=True, sudo=True)
@@ -723,7 +754,10 @@ class HtxNicTest(Test):
                 with open(file_name, 'w') as file:
                     for line in filedata:
                         file.write(line)
-            cmd = "systemctl restart network"
+            if self.host_distro == "rhel":
+                cmd = "systemctl start NetworkManager"
+            else:
+                cmd = "systemctl restart network"
             process.run(cmd, ignore_status=True, shell=True, sudo=True)
 
     def bring_up_peer_interfaces(self):
@@ -749,7 +783,10 @@ class HtxNicTest(Test):
                         filedata[idx] = replace_str
                 filedata = "\n".join(filedata)
                 self.run_command("echo \'%s\' > %s" % (filedata, file_name))
-            cmd = "systemctl restart network"
+            if self.peer_distro == "rhel":
+                cmd = "systemctl start NetworkManager"
+            else:
+                cmd = "systemctl restart network"
             self.run_command(cmd)
 
     def htx_cleanup(self):

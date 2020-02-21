@@ -10,3 +10,4 @@ netmask: ""
 net_ids: ""
 # time limit in minutes
 time_limit: 2
+htx_rpm: ""
