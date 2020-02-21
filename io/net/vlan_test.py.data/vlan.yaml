@@ -6,7 +6,7 @@ host_port: 38
 peer_port: 45
 interface: "enp128s0f4d1"
 peer_interface: "enP4p1s0f2"
-peer_ip: "x.xx.xx.xxx"
+peer_public_ip: "x.xx.xx.xxx"
 peer_user: "root"
 peer_password: "********"
 cidr_value: "24"
