@@ -73,7 +73,7 @@ class VlanTest(Test):
         self.peer_port = self.params.get("peer_port", '*', default=None)
         self.host_intf = self.params.get("interface", '*', default=None)
         self.peer_intf = self.params.get("peer_interface", '*', default=None)
-        self.peer_ip = self.params.get("peer_ip", '*', default=None)
+        self.peer_ip = self.params.get("peer_public_ip", '*', default=None)
         self.peer_user = self.params.get("peer_user", '*', default=None)
         self.peer_password = self.params.get("peer_password", '*',
                                              default=None)
