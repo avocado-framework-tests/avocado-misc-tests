@@ -1,3 +1,5 @@
 interface:
+host_ip:
+netmask:
 count:
 peer_ip:
