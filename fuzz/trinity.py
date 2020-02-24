@@ -76,7 +76,7 @@ class Trinity(Test):
         '''
         Trinity need to run as non root user
         '''
-
+        process.run("dmesg -C", sudo=True)
         args = self.params.get('runargs', default=' ')
 
         if process.system('su - trinity -c " %s  %s  %s"' %
