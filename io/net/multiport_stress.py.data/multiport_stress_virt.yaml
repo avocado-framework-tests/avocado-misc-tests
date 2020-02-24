@@ -1,0 +1,12 @@
+host_interfaces: "enP4p1s0f1,enP4p1s0f2"
+peer_ips: ""
+peer_user: ""
+peer_password: ""
+count: "1100"
+host_ips: ""
+netmask: ""
+mtu: !mux
+    1500:
+        mtu: "1500"
+    9000:
+        mtu: "9000"
