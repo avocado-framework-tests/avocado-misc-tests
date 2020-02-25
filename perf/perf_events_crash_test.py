@@ -33,7 +33,7 @@ class Perf_crashevent(Test):
 
     @staticmethod
     def run_cmd_out(cmd):
-        return process.system_output(cmd, shell=True, ignore_status=True, sudo=True)
+        return process.system_output(cmd, shell=True, ignore_status=True, sudo=True).decode("utf-8")
 
     def setUp(self):
         '''
