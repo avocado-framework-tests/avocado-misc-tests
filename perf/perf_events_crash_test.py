@@ -33,7 +33,8 @@ class Perf_crashevent(Test):
 
     @staticmethod
     def run_cmd_out(cmd):
-        return process.system_output(cmd, shell=True, ignore_status=True, sudo=True).decode("utf-8")
+        return process.system_output(cmd, shell=True, ignore_status=True,
+                                     sudo=True).decode("utf-8")
 
     def setUp(self):
         '''
@@ -70,7 +71,7 @@ class Perf_crashevent(Test):
                                    'master.zip'], expire='7d')
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(self.workdir, 'perf_event_tests-master')
-        if build.make(self.sourcedir, extra_args="-s -S") > 0:
+        if build.make(self.sourcedir, extra_args="-s -S"):
             self.fail("Building perf even test suite failed")
 
     def execute_perf_test(self):
@@ -79,9 +80,10 @@ class Perf_crashevent(Test):
         self.run_cmd_out("sleep 180")
         os.chdir(self.sourcedir)
         self.run_cmd_out("echo -1 >/proc/sys/kernel/perf_event_paranoid")
-        if "-1" not in self.run_cmd_out("cat /proc/sys/kernel/perf_event_paranoid"):
+        if "-1" not in self.run_cmd_out("cat /proc/sys/kernel/"
+                                        "perf_event_paranoid"):
             self.error("Unable to set perf_event_paranoid to -1 ")
-        self.output = self.run_cmd_out("./run_crash_tests.sh")
+        self.run_cmd_out("./run_crash_tests.sh")
 
     def test(self):
         '''
