@@ -31,6 +31,7 @@ from avocado.utils.genio import read_file
 from avocado.utils.configure_network import PeerInfo
 from avocado.utils import configure_network
 from avocado.utils.ssh import Session
+from avocado.utils.process import SubProcess
 
 
 class Iperf(Test):
@@ -93,7 +94,9 @@ class Iperf(Test):
         self.iperf_run = str(self.params.get("IPERF_SERVER_RUN", default=0))
         if self.iperf_run == '1':
             cmd = "/tmp/%s/src/iperf -s" % self.version
-            self.session.cmd(cmd)
+            cmd = self.session.get_raw_ssh_command(cmd)
+            self.obj = SubProcess(cmd)
+            self.obj.start()
         os.chdir(self.iperf_dir)
         process.system('./configure', shell=True)
         build.make(self.iperf_dir)
@@ -125,6 +128,7 @@ class Iperf(Test):
         """
         Killing Iperf process in peer machine
         """
+        self.obj.stop()
         cmd = "pkill iperf; rm -rf /tmp/%s" % self.version
         output = self.session.cmd(cmd)
         if not output.exit_status == 0:

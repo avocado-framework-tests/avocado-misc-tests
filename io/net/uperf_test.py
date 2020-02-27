@@ -33,6 +33,7 @@ from avocado.utils.ssh import Session
 from avocado.utils.genio import read_file
 from avocado.utils.configure_network import PeerInfo
 from avocado.utils import configure_network
+from avocado.utils.process import SubProcess
 
 
 class Uperf(Test):
@@ -100,9 +101,9 @@ class Uperf(Test):
         self.uperf_run = str(self.params.get("UPERF_SERVER_RUN", default=0))
         if self.uperf_run == '1':
             cmd = "/tmp/uperf-master/src/uperf -s &"
-            output = self.session.cmd(cmd)
-            if not output.exit_status == 0:
-                self.log.debug("Command %s failed %s", cmd, output)
+            cmd = self.session.get_raw_ssh_command(cmd)
+            self.obj = SubProcess(cmd)
+            self.obj.start()
         os.chdir(self.uperf_dir)
         process.system('autoreconf -fi', shell=True)
         process.system('./configure ppc64le', shell=True)
@@ -140,6 +141,7 @@ class Uperf(Test):
         """
         Killing Uperf process in peer machine
         """
+        self.obj.stop()
         cmd = "pkill uperf; rm -rf /tmp/uperf-master"
         output = self.session.cmd(cmd)
         if not output.exit_status == 0:
