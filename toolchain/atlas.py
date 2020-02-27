@@ -40,29 +40,25 @@ class Atlas(Test):
             # FIXME: "redhat" as the distro name for RHEL is deprecated
             # on Avocado versions >= 50.0.  This is a temporary compatibility
             # enabler for older runners, but should be removed soon
-            if detected_distro.name in ["rhel", "redhat"] and package == "gfortran":
+            if detected_distro.name in ["rhel", "redhat", 'centos'] and package == "gfortran":
                 package = 'gcc-gfortran'
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
         atlas_url = 'https://sourceforge.net/projects/'\
                     'math-atlas/files/Stable/3.10.3/atlas3.10.3.tar.bz2'
-        lapack_url = 'http://www.netlib.org/lapack/lapack-3.6.1.tgz'
         atlas_url = self.params.get('atlas_url', default=atlas_url)
-        lapack_url = self.params.get('lapack_url', default=lapack_url)
         atlas_tarball = self.fetch_asset(atlas_url, expire='7d')
         archive.extract(atlas_tarball, self.workdir)
         self.atlas_dir = os.path.join(self.workdir, 'ATLAS')
         self.atlas_build_dir = os.path.join(self.atlas_dir, 'atlas_build_dir')
         os.makedirs(self.atlas_build_dir)
-        lapack_tarball = self.fetch_asset(lapack_url, expire='7d')
         os.chdir(self.atlas_build_dir)
-        config_args = '--shared -b 64 '\
-                      '--with-netlib-lapack-tarfile=%s '\
-                      '--cripple-atlas-performance' % lapack_tarball
+        config_args = '-Si archdef 0 -v0 -t 1'\
+                      '--cripple-atlas-performance'
         config_args = self.params.get('config_args', default=config_args)
         process.system('../configure %s' % config_args)
         # Tune and compile library
-        build.make(self.atlas_build_dir)
+        process.system('make  %s' % 'GCCFLAGS=-O')
 
     def test(self):
         '''
