@@ -1,0 +1,13 @@
+This test unmap and map back the vfc interfaces for given number of times.
+unmap/map operations are done on corresponding vios from HMC CLI. test will
+run for all the vfc interfaces mapped to the lpar. it works fine for dual vios setup also.
+
+parameter:
+vioses :      vios lpar name(s) on which the unmap/map operations are done
+hmc_ip :      HMC IP or host name (9.XX.XXX.XXX)
+hmc_username: username of the HMC
+hmc_pwd:      password of the HMC
+count:        Number of times the vfc interfaces has to remove and add back
+vfchost_id:   range of number of vfchosts separated by "-". (ex: 100-150). make sure that the range is conitenuous 
+vfc_count:    Number of vfchost to be created per vios.
+
