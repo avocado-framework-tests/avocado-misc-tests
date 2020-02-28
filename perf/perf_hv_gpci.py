@@ -43,7 +43,7 @@ class perf_hv_gpci(Test):
         if 'ppc64' not in detected_distro.arch:
             self.cancel('This test is not supported on %s architecture'
                         % detected_distro.arch)
-        if 'PowerNV' in cpu._get_cpu_info():
+        if 'PowerNV' in cpu._get_info():
             self.cancel('This test is only supported on LPAR')
 
         deps = ['gcc', 'make']

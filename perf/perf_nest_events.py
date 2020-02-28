@@ -46,7 +46,7 @@ class nestEvents(Test):
             self.cancel('This test is not supported on %s architecture'
                         % detected_distro.arch)
 
-        if cpu.get_cpu_arch().lower() == 'power8':
+        if cpu.get_family() == 'power8':
             self.cancel('This test not applies to Power8')
 
         if 'PowerNV' not in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
