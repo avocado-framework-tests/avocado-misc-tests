@@ -13,8 +13,10 @@ setup:
             #share_exclude: '1-600'
         fs_xfs:
             fs: 'xfs'
-            mkfs_opt: '-b size=65536 -s size=4096'
-    disk_type: !mux
-        type: 'disk'
-        disk_test: /dev/pmem0
-        disk_scratch: /dev/pmem0.1
+            mkfs_opt: '-b size=65536 -s size=4096 -m reflink=0'
+            exclude:
+            gen_exclude:
+    disk_type:
+        type: 'nvdimm'
+        disk_test:
+        disk_scratch:

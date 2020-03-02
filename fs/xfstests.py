@@ -29,7 +29,7 @@ import shutil
 from avocado import Test
 from avocado import main
 from avocado.utils import process, build, git, distro, partition
-from avocado.utils import disk, data_structures
+from avocado.utils import disk, data_structures, pmem
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -51,6 +51,8 @@ class Xfstests(Test):
             "df -T / | awk 'END {print $2}'", shell=True).decode("utf-8")
         if root_fs in ['ext3', 'ext4']:
             self.use_dd = True
+        self.dev_type = self.params.get('type', default='loop')
+
         sm = SoftwareManager()
 
         self.detected_distro = distro.detect()
@@ -73,6 +75,10 @@ class Xfstests(Test):
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
         elif self.detected_distro.name in ['centos', 'fedora', 'rhel', 'SuSE']:
+            if self.dev_type == 'nvdimm':
+                packages.extend(['ndctl', 'parted'])
+                if self.detected_distro.name == 'rhel':
+                    packages.extend(['daxctl'])
             packages.extend(['acl', 'bc', 'dump', 'indent', 'libtool', 'lvm2',
                              'xfsdump', 'psmisc', 'sed', 'libacl-devel',
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
@@ -97,15 +103,14 @@ class Xfstests(Test):
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel("Fail to install %s required for this test." %
                             package)
-
         self.skip_dangerous = self.params.get('skip_dangerous', default=True)
         self.test_range = self.params.get('test_range', default=None)
         self.scratch_mnt = self.params.get(
             'scratch_mnt', default='/mnt/scratch')
         self.test_mnt = self.params.get('test_mnt', default='/mnt/test')
         self.disk_mnt = self.params.get('disk_mnt', default='/mnt/loop_device')
-        self.dev_type = self.params.get('type', default='loop')
         self.fs_to_test = self.params.get('fs', default='ext4')
+
         if process.system('which mkfs.%s' % self.fs_to_test,
                           ignore_status=True):
             self.cancel('Unknown filesystem %s' % self.fs_to_test)
@@ -129,6 +134,59 @@ class Xfstests(Test):
                 else:
                     self.cancel('Need %s GB to create loop devices' % check)
             self._create_loop_device(base_disk, loop_size, mount)
+        elif self.dev_type == 'nvdimm':
+            self.test_dev = self.params.get('disk_test', default=None)
+            self.scratch_dev = self.params.get('disk_scratch', default=None)
+            self.log_test = self.params.get('log_test', default='')
+            self.log_scratch = self.params.get('log_scratch', default='')
+            logflag = self.params.get('logdev', default=False)
+            self.plib = pmem.PMem()
+            regions = sorted(self.plib.run_ndctl_list(
+                '-R'), key=lambda i: i['size'], reverse=True)
+            if not (self.test_dev and self.scratch_dev):
+                if not regions:
+                    self.plib.enable_region()
+                    regions = sorted(self.plib.run_ndctl_list(
+                        '-R'), key=lambda i: i['size'], reverse=True)
+                region = self.plib.run_ndctl_list_val(regions[0], 'dev')
+                if not self.plib.is_region_legacy(region):
+                    self.plib.destroy_namespace(region=region, force=True)
+                    self.plib.create_namespace(
+                        region=region, size='21G', sector_size='512')
+                    pmem_dev = self.plib.run_ndctl_list_val(
+                        self.plib.run_ndctl_list('-N -r %s' % region)[0], 'blockdev')
+                    if logflag:
+                        if not (self.log_test and self.log_scratch):
+                            self.plib.create_namespace(
+                                region=region, size='3G', mode='sector', sector_size='512')
+                            log_dev = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
+                                '-N -r %s -m sector' % region)[0], 'blockdev')
+                else:
+                    self.plib.enable_region()
+                    if not len(regions) > 1 and logflag:
+                        self.cancel("Cannot use logdev with one region")
+                    else:
+                        reg_2 = self.plib.run_ndctl_list_val(regions[1], 'dev')
+                        self.plib.create_namespace(
+                            region=reg_2, size='3G', mode='sector', sector_size='512')
+                        log_dev = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
+                            ' -N -r %s -m sector' % reg_2)[0], 'blockdev')
+                    pmem_dev = self.plib.run_ndctl_list_val(
+                        self.plib.run_ndctl_list('-N -r %s' % region)[0], 'blockdev')
+                if process.system('parted -s -a optimal /dev/%s mklabel gpt --'
+                                  ' mkpart primary xfs 1MiB 10GiB mkpart '
+                                  'primary xfs 10GiB 20GiB' % pmem_dev, shell=True):
+                    self.cancel("Failed to setup PMEM partitions")
+                self.test_dev = "/dev/%sp1" % pmem_dev
+                self.scratch_dev = "/dev/%sp2" % pmem_dev
+            self.devices.extend([self.test_dev, self.scratch_dev])
+            if logflag and not (self.log_test and self.log_scratch):
+                if process.system('parted -s -a optimal /dev/%s mklabel gpt --'
+                                  ' mkpart primary xfs 1MiB 1GiB mkpart '
+                                  'primary xfs 1GiB 2GiB' % log_dev, shell=True):
+                    self.cancel("Failed to setup logdev partitions")
+                self.log_test = "/dev/%s1" % log_dev
+                self.log_scratch = "/dev/%s2" % log_dev
         else:
             self.test_dev = self.params.get('disk_test', default=None)
             self.scratch_dev = self.params.get('disk_scratch', default=None)
@@ -138,8 +196,6 @@ class Xfstests(Test):
             cfg_file = os.path.join(self.teststmpdir, 'local.config')
             self.mkfs_opt = self.params.get('mkfs_opt', default='')
             self.mount_opt = self.params.get('mount_opt', default='')
-            self.log_test = self.params.get('log_test', default='')
-            self.log_scratch = self.params.get('log_scratch', default='')
             with open(cfg_file, "r") as sources:
                 lines = sources.readlines()
             with open(cfg_file, "w") as sources:
@@ -166,10 +222,12 @@ class Xfstests(Test):
                         break
             with open(cfg_file, "a") as sources:
                 if self.log_test:
+                    sources.write('export USE_EXTERNAL=yes\n')
                     sources.write('export TEST_LOGDEV="%s"\n' % self.log_test)
                     self.log_devices.append(self.log_test)
                 if self.log_scratch:
-                    sources.write('export SCRATCH_LOGDEV="%s"\n' % self.log_scratch)
+                    sources.write('export SCRATCH_LOGDEV="%s"\n' %
+                                  self.log_scratch)
                     self.log_devices.append(self.log_scratch)
                 if self.mkfs_opt:
                     sources.write('MKFS_OPTIONS="%s"\n' % self.mkfs_opt)
@@ -182,7 +240,8 @@ class Xfstests(Test):
             for ite, dev in enumerate(self.devices):
                 dev_obj = partition.Partition(dev)
                 if self.logdev_opt:
-                    dev_obj.mkfs(fstype=self.fs_to_test, args='%s %s=%s' % (self.mkfs_opt, self.logdev_opt, self.log_devices[ite]))
+                    dev_obj.mkfs(fstype=self.fs_to_test, args='%s %s=%s' % (
+                        self.mkfs_opt, self.logdev_opt, self.log_devices[ite]))
                 else:
                     dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
 
