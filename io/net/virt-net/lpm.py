@@ -22,6 +22,7 @@ import time
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import distro
+from avocado.utils import wait
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.ssh import Session
 from avocado.utils.process import CmdError
@@ -32,6 +33,7 @@ IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
 
 
 class LPM(Test):
+
     '''
     Performs LPM from source server to remote server, and back.
     '''
@@ -56,7 +58,9 @@ class LPM(Test):
         self.lpar = self.get_partition_name("Partition Name")
         if not self.lpar:
             self.cancel("LPAR Name not got from lparstat command")
-
+        self.lpar_ip = self.get_mcp_component("MNName")
+        if not self.lpar_ip:
+            self.cancel("LPAR IP not got from lsrsrc command")
         self.session = Session(self.hmc_ip, user=self.hmc_user,
                                password=self.hmc_pwd)
         if not self.session.connect():
@@ -167,6 +171,32 @@ class LPM(Test):
         if "inoperative" in output:
             self.fail("Failed to start the rsct and rsct_rm services")
 
+    def is_RMC_active(self, server):
+        '''
+        Get the state of the RMC connection for the given parition
+        '''
+        cmd = "diagrmc -m %s --ip %s -p %s --autocorrect" % (
+            server, self.lpar_ip, self.lpar)
+        output = self.session.cmd(cmd)
+        for line in output.stdout_text.splitlines():
+            if "%s has RMC connection." % self.lpar_ip in line:
+                return True
+        return False
+
+    def rmc_service_start(self, server):
+        '''
+        Start RMC services which is needed for LPM migration
+        '''
+        for svc in ["-z", "-A", "-p"]:
+            process.run('/opt/rsct/bin/rmcctrl %s' %
+                        svc, shell=True, sudo=True)
+        if not wait.wait_for(self.is_RMC_active(server), timeout=60):
+            process.run(
+                '/usr/sbin/rsct/install/bin/recfgct', shell=True, sudo=True)
+            process.run('/opt/rsct/bin/rmcctrl -p', shell=True, sudo=True)
+            if not wait.wait_for(self.is_RMC_active(server), timeout=300):
+                self.fail("ERROR : RMC connection is down !!")
+
     def install_packages(self):
         '''
         Install required packages
@@ -192,6 +222,9 @@ class LPM(Test):
         Migrate the LPAR from server to remote server, with additional
         params specified.
         '''
+        if not self.is_RMC_active(server):
+            self.warn("RMC service is inactive..!")
+            self.rmc_service_start(server)
         cmd = "migrlpar -o m -m %s -t %s -p %s %s" % (server,
                                                       remote_server,
                                                       lpar, params)
