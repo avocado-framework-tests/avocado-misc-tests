@@ -1,0 +1,69 @@
+module: ''
+multipath_enabled: False
+disk: ''
+Test: !mux
+    init_timeout:
+        module_param_name: "init_timeout"
+        value: !mux
+            init_timeout_1:
+                module_param_value: "1"
+            init_timeout_600:
+                module_param_value: "600"
+            init_timeout_1200:
+                module_param_value: "1200"
+    default_timeout:
+        module_param_name: "default_timeout"
+        value: !mux
+            default_timeout_1:
+                module_param_value: "1"
+            default_timeout_200:
+                module_param_value: "200"
+            default_timeout_600:
+                module_param_value: "600"
+    max_requests:
+        module_param_name: "max_requests"
+        value: !mux
+            max_requests_1:
+                module_param_value: "1"
+            max_requests_500:
+                module_param_value: "500"
+            max_requests_1000:
+                module_param_value: "1000"
+    max_lun:
+        module_param_name: "max_lun"
+        value: !mux
+            max_lun_0:
+                module_param_value: "0"
+            max_lun_2:
+                module_param_value: "2"
+            max_lun_3:
+                module_param_value: "3"
+            max_lun_256:
+                module_param_value: "256"
+    debug:
+        module_param_name: "debug"
+        value: !mux
+            debug_0:
+                module_param_value: "0"
+            debug_1:
+                module_param_value: "1"
+    max_targets:
+        module_param_name: "max_targets"
+        value: !mux
+            max_targets_1:
+                module_param_value: "1"
+            max_targets_512:
+                module_param_value: "512"
+            max_targets_10240:
+                module_param_value: "10240"
+    disc_threads:
+        module_param_name: "disc_threads"
+        value: !mux
+            disc_threads_0:
+                module_param_value: "0"
+            disc_threads_2:
+                module_param_value: "2"
+            disc_threads_10:
+                module_param_value: "10"
+            disc_threads_40:
+                module_param_value: "40"
