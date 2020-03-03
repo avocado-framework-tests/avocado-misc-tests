@@ -1,0 +1,78 @@
+pci_device: ""
+Test: !mux
+    lsslot:
+        tool: lsslot
+        test_opt: !mux
+            lsslot_pci:
+                test_opt: pci
+            lsslot_pci_-a:
+                test_opt: pci -a
+            lsslot_phb:
+                test_opt: phb
+            lsslot_pci_-o:
+                test_opt: pci -o
+            lsslot_slot:
+                test_opt: slot
+    netstat:
+        tool: netstat
+        test_opt: !mux
+            netstat_a:
+                test_opt: a
+            netstat_l:
+                test_opt: l
+            netstat_s:
+                test_opt: s
+            netstat_r:
+                test_opt: r
+            netstat_i:
+                test_opt: i
+    lsprop:
+        tool: lsprop
+        test_opt: !mux
+            lsprop_R:
+                test_opt: R
+            lsprop_r:
+                test_opt: r
+    lsvio:
+        tool: lsvio
+        test_opt: !mux
+            lsvio_s:
+                test_opt: s
+            lsvio_e:
+                test_opt: e
+            lsvio_D:
+                test_opt: D
+            lsvio_d:
+                test_opt: d
+    lsdevinfo:
+        tool: lsdevinfo
+        test_opt: !mux
+            lsdevinfo_:
+                test_opt: 
+            lsdevinfo_R:
+                test_opt: R
+            lsdevinfo_c:
+                test_opt: c
+    usysident: 
+        tool: usysident
+        test_opt: !mux
+            usysident_identify_l:
+                test_opt: -P -s identify
+            usysident_identify_d:
+                test_opt: -t -s identify
+            usysident_normal_l:
+                test_opt: -P -s normal
+            usysident_normal_d:
+                test_opt: -t -s normal
+    usysattn:
+        tool: usysattn
+        test_opt: !mux
+            usysattn_normal_l:
+                test_opt: -P -s normal
+    ofpathname:
+        tool: ofpathname
+        test_opt: !mux
+            ofpathname_l:
+                test_opt: l
+            ofpathname_a:
+                test_opt: a
