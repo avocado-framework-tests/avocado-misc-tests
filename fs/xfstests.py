@@ -270,11 +270,15 @@ class Xfstests(Test):
                     self._create_test_list(self.share_exclude, "shared",
                                            dangerous=False)
         if self.detected_distro.name is not 'SuSE':
-            process.run('useradd 123456-fsgqa', sudo=True)
-            process.run('useradd fsgqa', sudo=True)
+            if process.system('useradd 123456-fsgqa', sudo=True, ignore_status=True):
+                self.log.warn('useradd 123456-fsgqa failed')
+            if process.system('useradd fsgqa', sudo=True, ignore_status=True):
+                self.log.warn('useradd fsgqa failed')
         else:
-            process.run('useradd -m -U fsgqa', sudo=True)
-            process.run('groupadd sys', sudo=True)
+            if process.system('useradd -m -U fsgqa', sudo=True, ignore_status=True):
+                self.log.warn('useradd fsgqa failed')
+            if process.system('groupadd sys', sudo=True, ignore_status=True):
+                self.log.warn('groupadd sys failed')
         if not os.path.exists(self.scratch_mnt):
             os.makedirs(self.scratch_mnt)
         if not os.path.exists(self.test_mnt):
@@ -324,9 +328,9 @@ class Xfstests(Test):
         process.system('umount %s %s' % (self.scratch_mnt, self.test_mnt),
                        sudo=True, ignore_status=True)
         if os.path.exists(self.scratch_mnt):
-            os.rmdir(self.scratch_mnt)
+            shutil.rmtree(self.scratch_mnt)
         if os.path.exists(self.test_mnt):
-            os.rmdir(self.test_mnt)
+            shutil.rmtree(self.test_mnt)
         if self.dev_type == 'loop':
             for dev in self.devices:
                 process.system('losetup -d %s' % dev, shell=True,
