@@ -89,6 +89,10 @@ class Bonding(Test):
         if 'setup' in str(self.name.name):
             for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
                 configure_network.set_ip(ipaddr, self.netmask, interface)
+        self.miimon = self.params.get("miimon", default="100")
+        self.fail_over_mac = self.params.get("fail_over_mac",
+                                             default="2")
+        self.downdelay = self.params.get("downdelay", default="0")
         self.bond_name = self.params.get("bond_name", default="tempbond")
         self.net_path = "/sys/class/net/"
         self.bond_status = "/proc/net/bonding/%s" % self.bond_name
@@ -274,8 +278,26 @@ class Bonding(Test):
             linux_modules.load_module("bonding")
             genio.write_file(self.bonding_masters_file, "+%s" % self.bond_name)
             genio.write_file("%s/bonding/mode" % self.bond_dir, arg2)
-            genio.write_file("%s/bonding/miimon" % self.bond_dir, "100")
-            genio.write_file("%s/bonding/fail_over_mac" % self.bond_dir, "2")
+            genio.write_file("%s/bonding/miimon" % self.bond_dir,
+                             self.miimon)
+            genio.write_file("%s/bonding/fail_over_mac" % self.bond_dir,
+                             self.fail_over_mac)
+            genio.write_file("%s/bonding/downdelay" % self.bond_dir,
+                             self.downdelay)
+            dict = {'0': ['packets_per_slave', 'resend_igmp'],
+                    '1': ['num_unsol_na', 'primary', 'primary_reselect',
+                          'resend_igmp'],
+                    '2': ['xmit_hash_policy'],
+                    '4': ['lacp_rate', 'xmit_hash_policy'],
+                    '5': ['tlb_dynamic_lb', 'primary', 'primary_reselect',
+                          'resend_igmp', 'xmit_hash_policy', 'lp_interval'],
+                    '6': ['primary', 'primary_reselect', 'resend_igmp',
+                          'lp_interval']}
+            if self.mode in dict.keys():
+                for param in dict[self.mode]:
+                    param_value = self.params.get(param, default='')
+                    if param_value:
+                        genio.write_file("%s/bonding/%s" % (self.bond_dir, param), param_value)
             for val in self.host_interfaces:
                 if self.ib:
                     self.bond_ib_conf(self.bond_name, val, "ATTACH")
