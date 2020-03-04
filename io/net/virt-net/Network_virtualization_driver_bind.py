@@ -23,6 +23,7 @@ from avocado import main
 from avocado.utils import process
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.process import CmdError
+from avocado.utils import configure_network
 
 
 class NetworkVirtualizationDriverBindTest(Test):
@@ -51,6 +52,9 @@ class NetworkVirtualizationDriverBindTest(Test):
                                             shell=True).decode("utf-8").strip()
         self.count = int(self.params.get('count', default="1"))
         self.peer_ip = self.params.get('peer_ip', default=None)
+        self.ipaddr = self.params.get("host_ip", default="")
+        self.netmask = self.params.get("netmask", default="")
+        configure_network.set_ip(self.ipaddr, self.netmask, self.interface)
 
     def ping_check(self):
         """
@@ -66,6 +70,9 @@ class NetworkVirtualizationDriverBindTest(Test):
         """
         Performs driver unbind and bind for the Network virtualized device
         """
+        if not self.ping_check():
+            self.cancel("Please make sure the network peer is configured ?")
+
         try:
             for _ in range(self.count):
                 for operation in ["unbind", "bind"]:
