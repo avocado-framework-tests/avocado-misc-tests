@@ -2,3 +2,4 @@ interface:
 peer_ip:
 host_ip:
 netmask:
+bridge_interface: "br0"
