@@ -22,8 +22,11 @@ import re
 import avocado
 from avocado import Test
 from avocado import main
+from avocado import skipUnless
 from avocado.utils import process, distro
 from avocado.utils.software_manager import SoftwareManager
+
+release = "%s%s" % (distro.detect().name, distro.detect().version)
 
 
 def install_dependencies():
@@ -76,7 +79,7 @@ class Hostname(Test):
                 self.fail("Hostname reported non-zero status %s for option %s"
                           % (ret.exit_status, option))
             if not ret.stdout:
-                self.fail("No output for %s option" % (option))
+                self.log.warn("No output for %s option" % (option))
 
         # Test to change hostname
         myhostname_file = os.path.join(self.workdir, "MYHOSTNAME")
@@ -110,6 +113,7 @@ class Ifconfig(Test):
     Test to verify the ifconfig functionality.
     """
 
+    @skipUnless("SuSE15" not in release, "ifconfig tool is deprecated now")
     def setUp(self):
         if process.system("ping -c 5 -w 5 localhost", ignore_status=True):
             self.cancel("Unable to ping localhost")
@@ -182,7 +186,7 @@ class Arp(Test):
     """
     arp: run it with different options. Check the return code.
     """
-
+    @skipUnless("SuSE15" not in release, "arp tool is deprecated now")
     def setUp(self):
         interface_out = process.system_output("ip route show default",
                                               env={"LANG": "C"}).decode("utf-8")
@@ -217,6 +221,7 @@ class NetworkUtilities(Test):
     ipmaddr: run it and check the return code.
     """
 
+    @skipUnless("SuSE15" not in release, "net-tools is deprecated now")
     def setUp(self):
         install_dependencies()
         self.ipv6 = False
@@ -310,6 +315,7 @@ class Iptunnel(Test):
               check it is removed from the list.
     """
 
+    @skipUnless("SuSE15" not in release, "iptunnel is deprecated")
     def setUp(self):
         self.tunnel = None
         ret = process.system_output("ps -aef", env={"LANG": "C"}).decode("utf-8")
