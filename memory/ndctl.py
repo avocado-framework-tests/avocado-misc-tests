@@ -433,6 +433,30 @@ class NdctlTest(Test):
                 self.fail('Region mismatch between ndctl and sys interface')
 
     @avocado.fail_on(pmem.PMemException)
+    def test_check_ns_numa(self):
+        self.plib.enable_region()
+        regions = self.plib.run_ndctl_list('-R')
+        for dev in regions:
+            region = self.plib.run_ndctl_list_val(dev, 'dev')
+            if not self.plib.is_region_legacy(region):
+                self.plib.disable_namespace(region=region)
+                self.plib.destroy_namespace(region=region)
+                for _ in range(3):
+                    self.plib.create_namespace(
+                        region=region, mode='fsdax', size='128M')
+
+            namespaces = self.plib.run_ndctl_list('-N -r %s' % region)
+            if not os.path.exists('/sys/bus/nd/devices/namespace0.0/numa_node'):
+                self.fail("Numa node entries not found!")
+            for val in namespaces:
+                ns_name = self.plib.run_ndctl_list_val(val, 'dev')
+                numa = genio.read_one_line(
+                    '/sys/bus/nd/devices/%s/numa_node' % ns_name)
+                # Check numa config in ndctl and sys interface
+                if len(self.plib.run_ndctl_list('-N -n %s -U %s' % (ns_name, numa))) != 1:
+                    self.fail('Numa mismatch between ndctl and sys interface')
+
+    @avocado.fail_on(pmem.PMemException)
     def test_label_read_write(self):
         region = self.get_default_region()
         if (self.plib.is_region_legacy(region)):
