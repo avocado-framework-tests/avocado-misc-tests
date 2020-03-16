@@ -108,12 +108,12 @@ class NdctlTest(Test):
         if self.package == 'upstream':
             deps.extend(['gcc', 'make', 'automake', 'autoconf'])
             if self.dist.name == 'SuSE':
-                deps.extend(['ruby2.5-rubygem-asciidoctor', 'libtool',
+                deps.extend(['libtool',
                              'libkmod-devel', 'libudev-devel', 'systemd-devel',
                              'libuuid-devel-static', 'libjson-c-devel',
                              'keyutils-devel', 'kmod-bash-completion'])
             elif self.dist.name == 'rhel':
-                deps.extend(['rubygem-asciidoctor', 'automake', 'libtool',
+                deps.extend(['libtool',
                              'kmod-devel', 'libuuid-devel', 'json-c-devel',
                              'systemd-devel', 'keyutils-libs-devel', 'jq',
                              'parted', 'libtool'])
@@ -131,6 +131,7 @@ class NdctlTest(Test):
             os.chdir("%s/ndctl-%s" % (self.teststmpdir, git_branch))
             process.run('./autogen.sh', sudo=True, shell=True)
             process.run("./configure CFLAGS='-g -O2' --prefix=/usr "
+                        "--disable-docs "
                         "--sysconfdir=/etc --libdir="
                         "/usr/lib64", shell=True, sudo=True)
             build.make(".")
