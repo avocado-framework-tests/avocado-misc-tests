@@ -258,17 +258,11 @@ class NdctlTest(Test):
         """
         region = self.get_default_region()
         m_map = self.params.get('map', default='mem')
-        size_align = self.get_size_alignval()
-        # Size input in MB
-        namespace_size = int(self.params.get('size', default=128) * 1048576)
-        if namespace_size and (namespace_size % size_align):
-            self.cancel("Size value %s not %s aligned \n"
-                        % (namespace_size, size_align))
         self.log.info("Using %s for checking device mapping", region)
         self.plib.disable_namespace(region=region)
         self.plib.destroy_namespace(region=region)
         self.plib.create_namespace(region=region, mode=self.mode_to_use,
-                                   memmap=m_map, size='%s' % namespace_size)
+                                   memmap=m_map)
         self.log.info("Validating device mapping")
         map_val = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
             '-r %s -N' % region)[0], 'map')
