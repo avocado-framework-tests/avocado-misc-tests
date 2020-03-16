@@ -122,6 +122,9 @@ class Xfstests(Test):
         shutil.copyfile(self.get_data('group'),
                         os.path.join(self.teststmpdir, 'group'))
 
+        self.log_test = self.params.get('log_test', default='')
+        self.log_scratch = self.params.get('log_scratch', default='')
+
         if self.dev_type == 'loop':
             base_disk = self.params.get('disk', default=None)
             loop_size = self.params.get('loop_size', default='7GiB')
@@ -137,8 +140,6 @@ class Xfstests(Test):
         elif self.dev_type == 'nvdimm':
             self.test_dev = self.params.get('disk_test', default=None)
             self.scratch_dev = self.params.get('disk_scratch', default=None)
-            self.log_test = self.params.get('log_test', default='')
-            self.log_scratch = self.params.get('log_scratch', default='')
             logflag = self.params.get('logdev', default=False)
             self.plib = pmem.PMem()
             regions = sorted(self.plib.run_ndctl_list(
