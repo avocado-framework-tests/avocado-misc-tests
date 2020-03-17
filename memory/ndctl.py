@@ -108,12 +108,12 @@ class NdctlTest(Test):
         if self.package == 'upstream':
             deps.extend(['gcc', 'make', 'automake', 'autoconf'])
             if self.dist.name == 'SuSE':
-                deps.extend(['ruby2.5-rubygem-asciidoctor', 'libtool',
+                deps.extend(['libtool',
                              'libkmod-devel', 'libudev-devel', 'systemd-devel',
                              'libuuid-devel-static', 'libjson-c-devel',
                              'keyutils-devel', 'kmod-bash-completion'])
             elif self.dist.name == 'rhel':
-                deps.extend(['rubygem-asciidoctor', 'automake', 'libtool',
+                deps.extend(['libtool',
                              'kmod-devel', 'libuuid-devel', 'json-c-devel',
                              'systemd-devel', 'keyutils-libs-devel', 'jq',
                              'parted', 'libtool'])
@@ -122,13 +122,16 @@ class NdctlTest(Test):
                         self.smm.install(pkg):
                     self.cancel('%s is needed for the test to be run' % pkg)
 
-            locations = ["https://github.com/pmem/ndctl/archive/master.zip"]
-            tarball = self.fetch_asset("ndctl.zip", locations=locations,
+            git_branch = self.params.get('git_branch', default='pending')
+            location = "https://github.com/pmem/ndctl/archive/"
+            location = location + git_branch + ".zip"
+            tarball = self.fetch_asset("ndctl.zip", locations=location,
                                        expire='7d')
             archive.extract(tarball, self.teststmpdir)
-            os.chdir("%s/ndctl-master" % self.teststmpdir)
+            os.chdir("%s/ndctl-%s" % (self.teststmpdir, git_branch))
             process.run('./autogen.sh', sudo=True, shell=True)
             process.run("./configure CFLAGS='-g -O2' --prefix=/usr "
+                        "--disable-docs "
                         "--sysconfdir=/etc --libdir="
                         "/usr/lib64", shell=True, sudo=True)
             build.make(".")
@@ -255,17 +258,11 @@ class NdctlTest(Test):
         """
         region = self.get_default_region()
         m_map = self.params.get('map', default='mem')
-        size_align = self.get_size_alignval()
-        # Size input in MB
-        namespace_size = int(self.params.get('size', default=128) * 1048576)
-        if namespace_size and (namespace_size % size_align):
-            self.cancel("Size value %s not %s aligned \n"
-                        % (namespace_size, size_align))
         self.log.info("Using %s for checking device mapping", region)
         self.plib.disable_namespace(region=region)
         self.plib.destroy_namespace(region=region)
         self.plib.create_namespace(region=region, mode=self.mode_to_use,
-                                   memmap=m_map, size='%s' % namespace_size)
+                                   memmap=m_map)
         self.log.info("Validating device mapping")
         map_val = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
             '-r %s -N' % region)[0], 'map')
