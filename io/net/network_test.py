@@ -25,7 +25,6 @@ import hashlib
 import netifaces
 from avocado import main
 from avocado import Test
-from avocado import skipIf
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
@@ -33,8 +32,6 @@ from avocado.utils import genio
 from avocado.utils.configure_network import PeerInfo
 from avocado.utils import configure_network
 from avocado.utils import wait
-
-IS_VNIC = 'vnic' in open('/sys/class/net/eth1/device/name', 'r').read()
 
 
 class NetworkTest(Test):
@@ -120,13 +117,15 @@ class NetworkTest(Test):
             self.fail("Can not change the state of %s" % ro_type)
         self.offload_toggle_test(ro_type, ro_type_full)
 
-    @skipIf(IS_VNIC, "Test not supported for vNIC")
     def test_lro(self):
         '''
         Test LRO
         '''
         ro_type = "lro"
         ro_type_full = "large-receive-offload"
+        path = '/sys/class/net/%s/device/name' % self.iface
+        if 'vnic' in open(path, 'r').read():
+            self.cancel("Unsupported on vNIC")
         if not self.offload_state(ro_type_full):
             self.fail("Could not get state of %s" % ro_type)
         if self.offload_state(ro_type_full) == 'fixed':
