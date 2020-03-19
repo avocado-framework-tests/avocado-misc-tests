@@ -28,7 +28,8 @@ from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
-from avocado.utils import configure_network
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.network.hosts import LocalHost
 from avocado.utils import wait
 
 
@@ -63,16 +64,26 @@ class Ethtool(Test):
         self.peer = self.params.get("peer_ip")
         if not self.peer:
             self.cancel("No peer provided")
+        local = LocalHost()
         if self.iface[0:2] == 'ib':
-            configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
-                                     interface_type='Infiniband')
+            self.networkinterface = NetworkInterface(self.iface, local,
+                                                     if_type='Infiniband')
+            try:
+                self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+                self.networkinterface.save(self.ipaddr, self.netmask)
+            except Exception:
+                self.networkinterface.save(self.ipaddr, self.netmask)
         else:
-            configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
-                                     interface_type='Ethernet')
-        if not wait.wait_for(configure_network.is_interface_link_up,
-                             timeout=120, args=[self.iface]):
+            self.networkinterface = NetworkInterface(self.iface, local)
+            try:
+                self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+                self.networkinterface.save(self.ipaddr, self.netmask)
+            except Exception:
+                self.networkinterface.save(self.ipaddr, self.netmask)
+        self.networkinterface.bring_up()
+        if not wait.wait_for(self.networkinterface.is_link_up, timeout=120):
             self.cancel("Link up of interface is taking longer than 120s")
-        if not configure_network.ping_check(self.iface, self.peer, "5"):
+        if self.networkinterface.ping_check(self.peer, count=5) is not None:
             self.cancel("No connection to peer")
         self.args = self.params.get("arg", default='')
         self.elapse = self.params.get("action_elapse", default='')
@@ -93,8 +104,8 @@ class Ethtool(Test):
         if state == "up":
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 return False
-            if not wait.wait_for(configure_network.is_interface_link_up,
-                                 timeout=120, args=[self.iface]):
+            if not wait.wait_for(self.networkinterface.is_link_up,
+                                 timeout=120):
                 self.fail("Link up of interface is taking longer than 120s")
         else:
             if process.system(cmd, shell=True, ignore_status=True) != 0:
@@ -127,8 +138,8 @@ class Ethtool(Test):
                               ignore_status=True)
             if ret.exit_status != 0:
                 self.fail("failed")
-        if not configure_network.ping_check(self.iface, self.peer,
-                                            '10000', flood=True):
+        if self.networkinterface.ping_check(self.peer, count=10000,
+                                            options='-f') is not None:
             self.fail("flood ping test failed")
         if self.priv_test:
             self.ethtool_toggle_priv_flags()
@@ -156,8 +167,8 @@ class Ethtool(Test):
                         priv_pass.append(priv_flag.rstrip())
                     else:
                         priv_fail.append(priv_flag.rstrip())
-            if not configure_network.ping_check(self.iface, self.peer,
-                                                '500000', flood=True):
+            if self.networkinterface.ping_check(self.peer, count=500000,
+                                                options='-f') is not None:
                 self.fail("Ping failed oper = %s" % oper)
         if priv_fail:
             self.fail("Private flags could not be toggled: %s" %
@@ -168,7 +179,7 @@ class Ethtool(Test):
         Set the interface up at the end of test.
         '''
         self.interface_state_change(self.iface, "up", "yes")
-        configure_network.unset_ip(self.iface)
+        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
 
 
 if __name__ == "__main__":

@@ -20,7 +20,8 @@ import netifaces
 from avocado import main
 from avocado import Test
 from avocado.utils import process
-from avocado.utils import configure_network
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.network.hosts import LocalHost
 
 
 class Bridging(Test):
@@ -47,7 +48,8 @@ class Bridging(Test):
             self.cancel("User should specify peer IP")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        self.bridge_interface = self.params.get("bridge_interface", default="br0")
+        self.bridge_interface = self.params.get("bridge_interface",
+                                                default="br0")
 
     def test_bridge_create(self):
         '''
@@ -72,13 +74,15 @@ class Bridging(Test):
         '''
         run bridge test
         '''
-        configure_network.set_ip(self.ipaddr, self.netmask,
-                                 self.bridge_interface,
-                                 interface_type="Bridge")
-        if not configure_network.ping_check(self.bridge_interface,
-                                            self.peer_ip, "5"):
+        local = LocalHost()
+        networkinterface = NetworkInterface(self.bridge_interface, local,
+                                            if_type="Bridge")
+        networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+        networkinterface.bring_up()
+        networkinterface.save(self.ipaddr, self.netmask)
+        if networkinterface.ping_check(self.peer_ip, count=5) is not None:
             self.fail('Ping using bridge failed')
-        configure_network.unset_ip(self.bridge_interface)
+        networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
 
     def test_bridge_delete(self):
         '''

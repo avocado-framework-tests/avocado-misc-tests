@@ -27,8 +27,8 @@ from avocado.utils import distro
 from avocado.utils import archive
 from avocado.utils import build
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import configure_network
-from avocado.utils.configure_network import PeerInfo
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.network.hosts import LocalHost, RemoteHost
 from avocado.utils import wait
 
 
@@ -56,20 +56,28 @@ class TcpdumpTest(Test):
             self.cancel("peer ip should specify in input")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        configure_network.set_ip(self.ipaddr, self.netmask, self.iface)
-        if not wait.wait_for(configure_network.is_interface_link_up,
-                             timeout=120, args=[self.iface]):
+        localhost = LocalHost()
+        self.networkinterface = NetworkInterface(self.iface, localhost)
+        try:
+            self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        except Exception:
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        self.networkinterface.bring_up()
+        if not wait.wait_for(self.networkinterface.is_link_up, timeout=120):
             self.cancel("Link up of interface is taking longer than 120 seconds")
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
         self.mtu = self.params.get("mtu", default=1500)
-        self.peerinfo = PeerInfo(self.peer_ip, peer_user=self.peer_user,
-                                 peer_password=self.peer_password)
-        self.peer_interface = self.peerinfo.get_peer_interface(self.peer_ip)
-        if not self.peerinfo.set_mtu_peer(self.peer_interface, self.mtu):
+        remotehost = RemoteHost(self.peer_ip, self.peer_user,
+                                password=self.peer_password)
+        self.peer_interface = remotehost.get_interface_by_ipaddr(self.peer_ip).name
+        self.peer_networkinterface = NetworkInterface(self.peer_interface,
+                                                      remotehost)
+        if self.peer_networkinterface.set_mtu(self.mtu) is not None:
             self.cancel("Failed to set mtu in peer")
-        if not configure_network.set_mtu_host(self.iface, self.mtu):
+        if self.networkinterface.set_mtu(self.mtu) is not None:
             self.cancel("Failed to set mtu in host")
 
         # Install needed packages
@@ -139,11 +147,11 @@ class TcpdumpTest(Test):
         '''
         unset ip for host interface
         '''
-        if not configure_network.set_mtu_host(self.iface, '1500'):
+        if self.networkinterface.set_mtu('1500') is not None:
             self.cancel("Failed to set mtu in host")
-        if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
+        if self.peer_networkinterface.set_mtu('1500') is not None:
             self.cancel("Failed to set mtu in peer")
-        configure_network.unset_ip(self.iface)
+        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
 
 
 if __name__ == "__main__":

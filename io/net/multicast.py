@@ -26,7 +26,8 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.ssh import Session
 from avocado.utils import process
 from avocado.utils import distro
-from avocado.utils import configure_network
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.network.hosts import LocalHost
 
 
 class ReceiveMulticastTest(Test):
@@ -49,7 +50,15 @@ class ReceiveMulticastTest(Test):
             self.cancel("%s interface is not available" % self.iface)
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        configure_network.set_ip(self.ipaddr, self.netmask, self.iface)
+        local = LocalHost()
+        self.networkinterface = NetworkInterface(self.iface, local)
+        try:
+            self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        except Exception:
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        self.networkinterface.bring_up()
+
         self.session = Session(self.peer, user=self.user,
                                password=self.peer_password)
         self.count = self.params.get("count", default="500000")
@@ -118,7 +127,7 @@ class ReceiveMulticastTest(Test):
         if process.system(cmd, shell=True, verbose=True,
                           ignore_status=True) != 0:
             self.log.info("unable to unset all mulicast option")
-        configure_network.unset_ip(self.iface)
+        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
 
 
 if __name__ == "__main__":

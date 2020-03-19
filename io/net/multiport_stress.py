@@ -20,8 +20,8 @@ from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
-from avocado.utils import configure_network
-from avocado.utils.configure_network import PeerInfo
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.network.hosts import LocalHost, RemoteHost
 
 
 class MultiportStress(Test):
@@ -53,20 +53,30 @@ class MultiportStress(Test):
         self.count = self.params.get("count", default="1000")
         self.ipaddr = self.params.get("host_ips", default="").split(",")
         self.netmask = self.params.get("netmask", default="")
+        self.local = LocalHost()
         for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
-            configure_network.set_ip(ipaddr, self.netmask, interface)
+            networkinterface = NetworkInterface(interface, self.local)
+            try:
+                networkinterface.add_ipaddr(ipaddr, self.netmask)
+                networkinterface.save(ipaddr, self.netmask)
+            except Exception:
+                networkinterface.save(ipaddr, self.netmask)
+            networkinterface.bring_up()
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
         self.mtu = self.params.get("mtu", default=1500)
-        self.peerinfo = PeerInfo(self.peer_ips[0], peer_user=self.peer_user,
-                                 peer_password=self.peer_password)
+        self.remotehost = RemoteHost(self.peer_ips[0], username=self.peer_user,
+                                     password=self.peer_password)
         for peer_ip in self.peer_ips:
-            self.peer_interface = self.peerinfo.get_peer_interface(peer_ip)
-            if not self.peerinfo.set_mtu_peer(self.peer_interface, self.mtu):
+            peer_interface = self.remotehost.get_interface_by_ipaddr(peer_ip).name
+            peer_networkinterface = NetworkInterface(peer_interface,
+                                                     self.remotehost)
+            if peer_networkinterface.set_mtu(self.mtu) is not None:
                 self.cancel("Failed to set mtu in peer")
         for host_interface in self.host_interfaces:
-            if not configure_network.set_mtu_host(host_interface, self.mtu):
+            self.networkinterface = NetworkInterface(host_interface, self.local)
+            if self.networkinterface.set_mtu(self.mtu) is not None:
                 self.cancel("Failed to set mtu in host")
 
     def multiport_ping(self, ping_option):
@@ -107,14 +117,18 @@ class MultiportStress(Test):
         unset ip for host interface
         '''
         for host_interface in self.host_interfaces:
-            if not configure_network.set_mtu_host(host_interface, '1500'):
+            networkinterface = NetworkInterface(host_interface, self.local)
+            if networkinterface.set_mtu("1500") is not None:
                 self.cancel("Failed to set mtu in host")
         for peer_ip in self.peer_ips:
-            self.peer_interface = self.peerinfo.get_peer_interface(peer_ip)
-            if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
+            peer_interface = self.remotehost.get_interface_by_ipaddr(peer_ip).name
+            peer_networkinterface = NetworkInterface(peer_interface,
+                                                     self.remotehost)
+            if peer_networkinterface.set_mtu("1500") is not None:
                 self.cancel("Failed to set mtu in peer")
-        for interface in self.host_interfaces:
-            configure_network.unset_ip(interface)
+        for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
+            networkinterface = NetworkInterface(interface, self.local)
+            networkinterface.remove_ipaddr(ipaddr, self.netmask)
 
 
 if __name__ == "__main__":
