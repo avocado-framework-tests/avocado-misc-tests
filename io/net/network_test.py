@@ -223,10 +223,10 @@ class NetworkTest(Test):
         '''
         Test set mtu back to 1500
         '''
-        if self.peer_networkinterface.set_mtu('1500') is not None:
+        if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
             self.cancel("Failed to set mtu in peer")
-        if self.networkinterface.set_mtu('1500') is not None:
-            self.cancel("Failed to set mtu in peer")
+        if not configure_network.set_mtu_host(self.iface, '1500'):
+            self.cancel("Failed to set mtu in host")
 
     def offload_toggle_test(self, ro_type, ro_type_full):
         '''
