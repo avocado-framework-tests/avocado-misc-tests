@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
 	thp_time = test_migration(hp, "THP migration");
 	bp_time = test_migration(p, "Base migration");
 
-	if (bp_time >= thp_time)
-		errmsg("Base page migration took more time\n");
+	if (bp_time < thp_time)
+		errmsg("THP page migration took more time\n");
 	return 0;
 }
