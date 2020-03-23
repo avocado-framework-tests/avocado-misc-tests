@@ -26,10 +26,12 @@ import glob
 import re
 import shutil
 
+import avocado
 from avocado import Test
 from avocado import main
 from avocado.utils import process, build, git, distro, partition
 from avocado.utils import disk, data_structures, pmem
+from avocado.utils import genio
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -40,6 +42,79 @@ class Xfstests(Test):
 
     :avocado: tags=fs,privileged
     """
+    @staticmethod
+    def get_size_alignval():
+        """
+        Return the size align restriction based on platform
+        """
+        if 'Hash' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
+            def_align = 16 * 1024 * 1024
+        else:
+            def_align = 2 * 1024 * 1024
+        return def_align
+
+    def get_half_region_size(self, region):
+        size_align = self.get_size_alignval()
+        region_size = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
+            '-r %s' % region)[0], 'size')
+
+        namespace_size = region_size // 2
+        namespace_size = (namespace_size // size_align) * size_align
+        return namespace_size
+
+    @avocado.fail_on(pmem.PMemException)
+    def setup_nvdimm(self):
+        logflag = self.params.get('logdev', default=False)
+
+        self.plib = pmem.PMem()
+        self.plib.enable_region()
+        regions = sorted(self.plib.run_ndctl_list('-R'),
+                         key=lambda i: i['size'], reverse=True)
+        if not regions:
+            self.cancel("Nvdimm test with no region support")
+
+        if logflag and not len(regions) > 1:
+            self.cancel("Nvdimm test with log flag need two region support")
+
+        region = self.plib.run_ndctl_list_val(regions[0], 'dev')
+        if self.plib.is_region_legacy(region):
+            self.cancel("Not supported with legacy regions")
+
+        if logflag:
+            region_ldev = self.plib.run_ndctl_list_val(regions[1], 'dev')
+            if self.plib.is_region_legacy(region_ldev):
+                self.cancel("Not supported with legacy regions")
+
+        self.plib.destroy_namespace(region=region, force=True)
+        namespace_size = self.get_half_region_size(region)
+        self.plib.create_namespace(region=region, size=namespace_size)
+        self.plib.create_namespace(region=region, size=namespace_size)
+        namespaces = self.plib.run_ndctl_list('-N -r %s' % region)
+        pmem_dev = self.plib.run_ndctl_list_val(namespaces[0], 'blockdev')
+        self.test_dev = "/dev/%s" % pmem_dev
+        pmem_dev = self.plib.run_ndctl_list_val(namespaces[1], 'blockdev')
+        self.scratch_dev = "/dev/%s" % pmem_dev
+        self.devices.extend([self.test_dev, self.scratch_dev])
+
+        if logflag:
+            # log device to be created in sector mode
+            self.plib.destroy_namespace(region=region_ldev, force=True)
+            namespace_size = self.get_half_region_size(region=region_ldev)
+            # XFS restrict max log size to 2136997888
+            namespace_size = min(namespace_size, 2136997888)
+            self.plib.create_namespace(region=region_ldev, mode='sector',
+                                       sector_size='512', size=namespace_size)
+            self.plib.create_namespace(region=region_ldev, mode='sector',
+                                       sector_size='512', size=namespace_size)
+
+            namespaces = self.plib.run_ndctl_list('-N -r %s' % region_ldev)
+            log_dev = self.plib.run_ndctl_list_val(namespaces[0], 'blockdev')
+            self.log_test = "/dev/%s" % log_dev
+            log_dev = self.plib.run_ndctl_list_val(namespaces[1], 'blockdev')
+            self.log_scratch = "/dev/%s" % log_dev
+        else:
+            self.log_test = None
+            self.log_scratch = None
 
     def setUp(self):
         """
@@ -138,56 +213,7 @@ class Xfstests(Test):
                     self.cancel('Need %s GB to create loop devices' % check)
             self._create_loop_device(base_disk, loop_size, mount)
         elif self.dev_type == 'nvdimm':
-            self.test_dev = self.params.get('disk_test', default=None)
-            self.scratch_dev = self.params.get('disk_scratch', default=None)
-            logflag = self.params.get('logdev', default=False)
-            self.plib = pmem.PMem()
-            regions = sorted(self.plib.run_ndctl_list(
-                '-R'), key=lambda i: i['size'], reverse=True)
-            if not (self.test_dev and self.scratch_dev):
-                if not regions:
-                    self.plib.enable_region()
-                    regions = sorted(self.plib.run_ndctl_list(
-                        '-R'), key=lambda i: i['size'], reverse=True)
-                region = self.plib.run_ndctl_list_val(regions[0], 'dev')
-                if not self.plib.is_region_legacy(region):
-                    self.plib.destroy_namespace(region=region, force=True)
-                    self.plib.create_namespace(
-                        region=region, size='21G', sector_size='512')
-                    pmem_dev = self.plib.run_ndctl_list_val(
-                        self.plib.run_ndctl_list('-N -r %s' % region)[0], 'blockdev')
-                    if logflag:
-                        if not (self.log_test and self.log_scratch):
-                            self.plib.create_namespace(
-                                region=region, size='3G', mode='sector', sector_size='512')
-                            log_dev = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
-                                '-N -r %s -m sector' % region)[0], 'blockdev')
-                else:
-                    self.plib.enable_region()
-                    if not len(regions) > 1 and logflag:
-                        self.cancel("Cannot use logdev with one region")
-                    else:
-                        reg_2 = self.plib.run_ndctl_list_val(regions[1], 'dev')
-                        self.plib.create_namespace(
-                            region=reg_2, size='3G', mode='sector', sector_size='512')
-                        log_dev = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
-                            ' -N -r %s -m sector' % reg_2)[0], 'blockdev')
-                    pmem_dev = self.plib.run_ndctl_list_val(
-                        self.plib.run_ndctl_list('-N -r %s' % region)[0], 'blockdev')
-                if process.system('parted -s -a optimal /dev/%s mklabel gpt --'
-                                  ' mkpart primary xfs 1MiB 10GiB mkpart '
-                                  'primary xfs 10GiB 20GiB' % pmem_dev, shell=True):
-                    self.cancel("Failed to setup PMEM partitions")
-                self.test_dev = "/dev/%sp1" % pmem_dev
-                self.scratch_dev = "/dev/%sp2" % pmem_dev
-            self.devices.extend([self.test_dev, self.scratch_dev])
-            if logflag and not (self.log_test and self.log_scratch):
-                if process.system('parted -s -a optimal /dev/%s mklabel gpt --'
-                                  ' mkpart primary xfs 1MiB 1GiB mkpart '
-                                  'primary xfs 1GiB 2GiB' % log_dev, shell=True):
-                    self.cancel("Failed to setup logdev partitions")
-                self.log_test = "/dev/%s1" % log_dev
-                self.log_scratch = "/dev/%s2" % log_dev
+            self.setup_nvdimm()
         else:
             self.test_dev = self.params.get('disk_test', default=None)
             self.scratch_dev = self.params.get('disk_scratch', default=None)
