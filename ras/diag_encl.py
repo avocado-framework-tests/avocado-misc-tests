@@ -17,11 +17,13 @@
 import os
 import glob
 import xml.etree.ElementTree
-from avocado import Test
+from avocado import Test, skipIf
 from avocado import main
 from avocado.utils import process, distro
 from avocado.utils import genio
 from avocado.utils.software_manager import SoftwareManager
+
+IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
 
 
 class DiagEncl(Test):
@@ -43,6 +45,7 @@ class DiagEncl(Test):
                                      ignore_status=True,
                                      sudo=True).decode("utf-8")
 
+    @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def setUp(self):
         if "ppc" not in distro.detect().arch:
             self.cancel("supported only on Power platform")

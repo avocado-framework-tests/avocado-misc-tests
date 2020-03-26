@@ -21,9 +21,9 @@ This Suite works with various options of ndctl on a NVDIMM device.
 
 import os
 import re
-import json
-import glob
 import shutil
+
+import avocado
 from avocado import Test
 from avocado import main
 from avocado.utils import process
@@ -33,6 +33,7 @@ from avocado.utils import build
 from avocado.utils import genio
 from avocado.utils import memory
 from avocado.utils import partition
+from avocado.utils import pmem
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -40,43 +41,19 @@ class NdctlTest(Test):
 
     """
     Ndctl user space tooling for Linux, which handles NVDIMM devices.
-
     """
-    def run_ndctl_list(self, option=''):
-        """
-        Get the json of each provided options
-
-        return: By default returns entire list of json objects
-        return: Empty list if output is empty
-        """
-        try:
-            json_op = json.loads(process.system_output(
-                '%s list %s' % (self.binary, option), shell=True))
-        except ValueError:
-            json_op = []
-        return json_op
-
-    @staticmethod
-    def run_ndctl_list_val(json_op, field):
-        """
-        Get the value of a field in given json
-        """
-        for key, value in json_op.items():
-            if key == field:
-                return value
-        return None
 
     def get_default_region(self):
         """
         Get the largest region if not provided
         """
-        self.enable_region()
+        self.plib.enable_region()
         region = self.params.get('region', default=None)
         if region:
             return region
-        regions = self.run_ndctl_list('-R')
+        regions = self.plib.run_ndctl_list('-R')
         regions = sorted(regions, key=lambda i: i['size'], reverse=True)
-        return self.run_ndctl_list_val(regions[0], 'dev')
+        return self.plib.run_ndctl_list_val(regions[0], 'dev')
 
     @staticmethod
     def get_size_alignval():
@@ -88,31 +65,6 @@ class NdctlTest(Test):
         else:
             def_align = 2 * 1024 * 1024
         return def_align
-
-    def get_slot_count(self, region):
-        """
-        Get max slot count in the index area for a  dimm backing a region
-        We use region0 - > nmem0
-        """
-        nmem = "nmem%s" % re.findall(r'\d+', region)[0]
-        try:
-            json_op = json.loads(process.system_output(
-                '%s read-labels -j %s ' % (self.binary, nmem), shell=True))
-        except ValueError:
-            json_op = []
-        first_dict = json_op[0]
-        index_dict = self.run_ndctl_list_val(first_dict, 'index')[0]
-        return self.run_ndctl_list_val(index_dict, 'nslot') - 1
-
-    def is_region_legacy(self, region):
-        """
-        Check whether we have label index namespace. If legacy we can't create
-        new namespaces.
-        """
-        nstype = genio.read_file("/sys/bus/nd/devices/" + region + "/nstype").rstrip("\n")
-        if (nstype == "4"):
-            return True
-        return False
 
     def build_fio(self):
         """
@@ -137,121 +89,6 @@ class NdctlTest(Test):
                 return os.path.join(sourcedir, "fio")
         return pkg
 
-    def run_daxctl_list(self, options=''):
-        """
-        Run daxctl list command with option
-        """
-        return json.loads(process.system_output(
-            '%s list %s' % (self.daxctl, options), shell=True))
-
-    @staticmethod
-    def check_buses():
-        """
-        Get buses from sys subsystem to verify persisment devices exist
-        """
-        return glob.glob('/sys/bus/nd/drivers/nd_bus/ndbus*')
-
-    def disable_region(self, name='all'):
-        """
-        Disable given region
-        """
-        if process.system('%s disable-region %s' % (self.binary, name),
-                          shell=True, ignore_status=True):
-            self.fail("Failed to disable %s region(s)" % name)
-
-    def enable_region(self, name='all'):
-        """
-        Enable given region
-        """
-        if process.system('%s enable-region %s' % (self.binary, name),
-                          shell=True, ignore_status=True):
-            self.fail("Failed to enable %s region(s)" % name)
-
-    def disable_namespace(self, namespace='all', region='', bus='',
-                          verbose=False):
-        """
-        Disable namepsaces
-        """
-        args = namespace
-        if region:
-            args = '%s -r %s' % (args, region)
-        if bus:
-            args = '%s -b %s' % (args, bus)
-        if verbose:
-            args = '%s -v' % args
-
-        if process.system('%s disable-namespace %s' % (self.binary, args),
-                          shell=True, ignore_status=True):
-            self.fail('Namespace disable failed for "%s"' % namespace)
-
-    def enable_namespace(self, namespace='all', region='', bus='',
-                         verbose=False):
-        """
-        Enable namepsaces
-        """
-        args = namespace
-        if region:
-            args = '%s -r %s' % (args, region)
-        if bus:
-            args = '%s -b %s' % (args, bus)
-        if verbose:
-            args = '%s -v' % args
-
-        if process.system('%s enable-namespace %s' % (self.binary, args),
-                          shell=True, ignore_status=True):
-            self.fail('Namespace enable failed for "%s"' % namespace)
-
-    def create_namespace(self, region='', bus='', n_type='pmem', mode='fsdax',
-                         memmap='dev', name='', size='', uuid='',
-                         sector_size='', align='', reconfig='', force=False,
-                         autolabel=False):
-        """
-        Creates namespace with specified options
-        """
-        args_dict = {region: '-r', bus: '-b', name: '-n', size: '-s',
-                     uuid: '-u', sector_size: '-l', align: '-a',
-                     reconfig: '-e'}
-        minor_dict = {force: '-f', autolabel: '-L'}
-        args = '-t %s -m %s ' % (n_type, mode)
-
-        if mode in ['fsdax', 'devdax']:
-            args += ' -M %s' % memmap
-        for option in list(args_dict.keys()):
-            if option:
-                args += ' %s %s' % (args_dict[option], option)
-        for option in list(minor_dict.keys()):
-            if option:
-                args += ' %s' % minor_dict[option]
-
-        if (self.is_region_legacy(region) and not reconfig):
-            namespace = "namespace%s.0" % re.findall(r'\d+', region)[0]
-            args += " -f -e " + namespace
-
-        if process.system('%s create-namespace %s' % (self.binary, args),
-                          shell=True, ignore_status=True):
-            self.fail('Namespace create command failed')
-
-    def destroy_namespace(self, namespace='all', region='', bus='',
-                          force=False):
-        """
-        Destroy namepsaces
-        """
-
-        if (region and self.is_region_legacy(region)):
-            return
-
-        args = namespace
-        args_dict = {region: '-r', bus: '-b'}
-        for option in list(args_dict.keys()):
-            if option:
-                args += ' %s %s' % (args_dict[option], option)
-        if force:
-            args += ' -f'
-
-        if process.system('%s destroy-namespace %s' % (self.binary, args),
-                          shell=True, ignore_status=True):
-            self.fail('Namespace destroy command failed')
-
     def setUp(self):
         """
         Build 'ndctl' and setup the binary.
@@ -267,19 +104,16 @@ class NdctlTest(Test):
 
         # DAX wont work with reflink, disabling here
         self.reflink = '-m reflink=0'
-        if not self.check_buses():
-            self.cancel("Test needs atleast one region")
-
         self.smm = SoftwareManager()
         if self.package == 'upstream':
             deps.extend(['gcc', 'make', 'automake', 'autoconf'])
             if self.dist.name == 'SuSE':
-                deps.extend(['ruby2.5-rubygem-asciidoctor', 'libtool',
+                deps.extend(['libtool',
                              'libkmod-devel', 'libudev-devel', 'systemd-devel',
                              'libuuid-devel-static', 'libjson-c-devel',
                              'keyutils-devel', 'kmod-bash-completion'])
             elif self.dist.name == 'rhel':
-                deps.extend(['rubygem-asciidoctor', 'automake', 'libtool',
+                deps.extend(['libtool',
                              'kmod-devel', 'libuuid-devel', 'json-c-devel',
                              'systemd-devel', 'keyutils-libs-devel', 'jq',
                              'parted', 'libtool'])
@@ -288,18 +122,21 @@ class NdctlTest(Test):
                         self.smm.install(pkg):
                     self.cancel('%s is needed for the test to be run' % pkg)
 
-            locations = ["https://github.com/pmem/ndctl/archive/master.zip"]
-            tarball = self.fetch_asset("ndctl.zip", locations=locations,
+            git_branch = self.params.get('git_branch', default='pending')
+            location = "https://github.com/pmem/ndctl/archive/"
+            location = location + git_branch + ".zip"
+            tarball = self.fetch_asset("ndctl.zip", locations=location,
                                        expire='7d')
             archive.extract(tarball, self.teststmpdir)
-            os.chdir("%s/ndctl-master" % self.teststmpdir)
+            os.chdir("%s/ndctl-%s" % (self.teststmpdir, git_branch))
             process.run('./autogen.sh', sudo=True, shell=True)
             process.run("./configure CFLAGS='-g -O2' --prefix=/usr "
+                        "--disable-docs "
                         "--sysconfdir=/etc --libdir="
                         "/usr/lib64", shell=True, sudo=True)
             build.make(".")
-            self.binary = './ndctl/ndctl'
-            self.daxctl = './daxctl/daxctl'
+            self.ndctl = os.path.abspath('./ndctl/ndctl')
+            self.daxctl = os.path.abspath('./daxctl/daxctl')
         else:
             deps.extend(['ndctl'])
             if self.dist.name == 'rhel':
@@ -308,7 +145,7 @@ class NdctlTest(Test):
                 if not self.smm.check_installed(pkg) and not \
                         self.smm.install(pkg):
                     self.cancel('%s is needed for the test to be run' % pkg)
-            self.binary = 'ndctl'
+            self.ndctl = 'ndctl'
             self.daxctl = 'daxctl'
 
         self.opt_dict = {'-B': 'provider',
@@ -316,70 +153,79 @@ class NdctlTest(Test):
         self.modes = ['raw', 'sector', 'fsdax', 'devdax']
         self.part = None
         self.disk = None
+        self.plib = pmem.PMem(self.ndctl, self.daxctl)
+        if not self.plib.check_buses():
+            self.cancel("Test needs atleast one region")
 
+    @avocado.fail_on(pmem.PMemException)
     def test_bus_ids(self):
         """
         Test the bus id info
         """
-        vals = self.run_ndctl_list('-B')
+        vals = self.plib.run_ndctl_list('-B')
         if not vals:
             self.fail('Failed to fetch bus IDs')
         self.log.info('Available Bus provider IDs: %s', vals)
 
+    @avocado.fail_on(pmem.PMemException)
     def test_dimms(self):
         """
         Test the dimms info
         """
-        vals = self.run_ndctl_list('-D')
+        vals = self.plib.run_ndctl_list('-D')
         if not vals:
             self.fail('Failed to fetch DIMMs')
         self.log.info('Available DIMMs: %s', vals)
 
+    @avocado.fail_on(pmem.PMemException)
     def test_regions(self):
         """
         Test the regions info
         """
-        self.disable_region()
-        old = self.run_ndctl_list('-R')
-        self.enable_region()
-        new = self.run_ndctl_list('-R')
+        self.plib.disable_region()
+        old = self.plib.run_ndctl_list('-R')
+        self.plib.enable_region()
+        new = self.plib.run_ndctl_list('-R')
         if len(new) <= len(old):
             self.fail('Failed to fetch regions')
         self.log.info('Available regions: %s', new)
 
+    @avocado.fail_on(pmem.PMemException)
     def test_namespace(self):
         """
         Test namespace
         """
-        self.enable_region()
-        regions = self.run_ndctl_list('-R')
+        self.plib.enable_region()
+        regions = self.plib.run_ndctl_list('-R')
         for val in regions:
-            region = self.run_ndctl_list_val(val, 'dev')
-            self.disable_namespace(region=region)
-            self.destroy_namespace(region=region)
-            self.create_namespace(region=region)
+            region = self.plib.run_ndctl_list_val(val, 'dev')
+            self.plib.disable_namespace(region=region)
+            self.plib.destroy_namespace(region=region)
+            self.plib.create_namespace(region=region)
 
-        namespaces = self.run_ndctl_list('-N')
+        namespaces = self.plib.run_ndctl_list('-N')
         self.log.info('Created namespace %s', namespaces)
 
+    @avocado.fail_on(pmem.PMemException)
     def test_disable_enable_ns(self):
         """
         Test enable disable namespace
         """
         region = self.get_default_region()
-        if (not self.is_region_legacy(region)):
+        if (not self.plib.is_region_legacy(region)):
             for _ in range(0, 3):
-                self.create_namespace(region=region, size='128M')
-        namespaces = self.run_ndctl_list('-N')
+                self.plib.create_namespace(region=region, size='128M')
+        namespaces = self.plib.run_ndctl_list('-N')
         ns_names = []
         for ns in namespaces:
-            ns_names.append(self.run_ndctl_list_val(ns, 'dev'))
+            ns_names.append(self.plib.run_ndctl_list_val(ns, 'dev'))
         ns_names.append('all')
 
         for namespace in ns_names:
-            self.disable_namespace(namespace=namespace)
-            self.enable_namespace(namespace=namespace)
+            self.plib.disable_namespace(namespace=namespace)
+            self.plib.enable_namespace(namespace=namespace)
 
+    @avocado.fail_on(pmem.PMemException)
     def test_namespace_modes(self):
         """
         Create  different namespace types
@@ -387,23 +233,43 @@ class NdctlTest(Test):
         failed_modes = []
         region = self.get_default_region()
         self.log.info("Using %s for different namespace modes", region)
-        self.disable_namespace(region=region)
-        self.destroy_namespace(region=region)
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
         for mode in self.modes:
-            self.create_namespace(region=region, mode=mode)
-            ns_json = self.run_ndctl_list()[0]
-            created_mode = self.run_ndctl_list_val(ns_json, 'mode')
+            self.plib.create_namespace(region=region, mode=mode)
+            ns_json = self.plib.run_ndctl_list()[0]
+            created_mode = self.plib.run_ndctl_list_val(ns_json, 'mode')
             if mode != created_mode:
                 failed_modes.append(mode)
                 self.log.error("Expected mode %s, Got %s", mode, created_mode)
             else:
                 self.log.info("Namespace with %s mode: %s", mode, ns_json)
-            ns_name = self.run_ndctl_list_val(ns_json, 'dev')
-            self.disable_namespace(namespace=ns_name, region=region)
-            self.destroy_namespace(namespace=ns_name, region=region)
+            ns_name = self.plib.run_ndctl_list_val(ns_json, 'dev')
+            self.plib.disable_namespace(namespace=ns_name, region=region)
+            self.plib.destroy_namespace(namespace=ns_name, region=region)
 
         if failed_modes:
             self.fail("Namespace for %s mode failed!" % failed_modes)
+
+    @avocado.fail_on(pmem.PMemException)
+    def test_namespace_devmap(self):
+        """
+        Test metadata device mapping option with a namespace
+        """
+        region = self.get_default_region()
+        m_map = self.params.get('map', default='mem')
+        self.log.info("Using %s for checking device mapping", region)
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
+        self.plib.create_namespace(region=region, mode=self.mode_to_use,
+                                   memmap=m_map)
+        self.log.info("Validating device mapping")
+        map_val = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
+            '-r %s -N' % region)[0], 'map')
+        if map_val != m_map:
+            self.fail("Expected map:%s, Got %s" % (m_map, map_val))
+        else:
+            self.log.info("Metadata mapped as expected")
 
     def multiple_namespaces_region(self, region):
         """
@@ -411,15 +277,15 @@ class NdctlTest(Test):
         """
         namespace_size = self.params.get('size', default=None)
         size_align = self.get_size_alignval()
-        slot_count = self.get_slot_count(region)
+        slot_count = self.plib.get_slot_count(region)
         self.log.info("Using %s for muliple namespace regions", region)
-        self.disable_namespace(region=region)
-        self.destroy_namespace(region=region)
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
         if namespace_size and ((namespace_size % size_align) != 0):
             self.cancel("Size value not %d aligned %d \n",
                         size_align, namespace_size)
 
-        region_size = self.run_ndctl_list_val(self.run_ndctl_list(
+        region_size = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
             '-r %s' % region)[0], 'size')
         if not namespace_size:
             namespace_size = region_size // slot_count
@@ -430,67 +296,71 @@ class NdctlTest(Test):
 
         self.log.info("Creating %s namespaces", slot_count)
         for count in range(0, slot_count):
-            self.create_namespace(
+            self.plib.create_namespace(
                 region=region, mode=self.mode_to_use, size=namespace_size)
             self.log.info("Namespace %s created", count + 1)
 
+    @avocado.fail_on(pmem.PMemException)
     def test_multiple_namespaces_region(self):
         """
         Test multiple namespace with single region
         """
         region = self.get_default_region()
-        if (self.is_region_legacy(region)):
+        if (self.plib.is_region_legacy(region)):
             self.cancel("Legacy config skipping the test")
         self.multiple_namespaces_region(region)
 
+    @avocado.fail_on(pmem.PMemException)
     def test_multiple_ns_multiple_region(self):
         """
         Test multiple namespace with multiple region
         """
-        self.enable_region()
-        if len(self.run_ndctl_list('-R')) <= 1:
+        self.plib.enable_region()
+        if len(self.plib.run_ndctl_list('-R')) <= 1:
             self.cancel("Test not applicable without multiple regions")
-        regions = self.run_ndctl_list('-R')
-        self.disable_namespace()
-        self.destroy_namespace()
+        regions = self.plib.run_ndctl_list('-R')
+        self.plib.disable_namespace()
+        self.plib.destroy_namespace()
         for val in regions:
-            region = self.run_ndctl_list_val(val, 'dev')
-            if (self.is_region_legacy(region)):
+            region = self.plib.run_ndctl_list_val(val, 'dev')
+            if (self.plib.is_region_legacy(region)):
                 self.cancel("Legacy config skipping the test")
             self.multiple_namespaces_region(region)
 
+    @avocado.fail_on(pmem.PMemException)
     def test_multiple_ns_modes_region(self):
         """
         Test multiple namespace modes with single region
         """
         region = self.get_default_region()
-        if (self.is_region_legacy(region)):
+        if (self.plib.is_region_legacy(region)):
             self.cancel("Legacy config skipping the test")
         self.log.info("Using %s for muliple namespace regions", region)
-        self.disable_namespace(region=region)
-        self.destroy_namespace(region=region)
-        size = self.run_ndctl_list_val(self.run_ndctl_list(
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
+        size = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
             '-r %s' % region)[0], 'size')
         if size < (len(self.modes) * 64 * 1024 * 1024):
             self.cancel('Not enough memory to create namespaces')
         for mode in self.modes:
-            self.create_namespace(
+            self.plib.create_namespace(
                 region=region, mode=mode, size='64M')
             self.log.info("Namespace of type %s created", mode)
 
+    @avocado.fail_on(pmem.PMemException)
     def test_nslot_namespace(self):
         """
         Test max namespace with nslot value
         """
         region = self.get_default_region()
-        if (self.is_region_legacy(region)):
+        if (self.plib.is_region_legacy(region)):
             self.cancel("Legacy config skipping the test")
         size_align = self.get_size_alignval()
-        slot_count = self.get_slot_count(region)
+        slot_count = self.plib.get_slot_count(region)
         self.log.info("Using %s for max namespace creation", region)
-        self.disable_namespace()
-        self.destroy_namespace()
-        region_size = self.run_ndctl_list_val(self.run_ndctl_list(
+        self.plib.disable_namespace()
+        self.plib.destroy_namespace()
+        region_size = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
             '-r %s' % region)[0], 'size')
         namespace_size = region_size // slot_count
         # Now align the namespace size
@@ -498,24 +368,26 @@ class NdctlTest(Test):
 
         self.log.info("Creating %s namespace", slot_count)
         for count in range(0, slot_count):
-            self.create_namespace(region=region, mode='fsdax', size=namespace_size)
+            self.plib.create_namespace(region=region, mode='fsdax',
+                                       size=namespace_size)
             self.log.info("Namespace %s created", count)
 
+    @avocado.fail_on(pmem.PMemException)
     def test_namespace_reconfigure(self):
         """
         Test namespace reconfiguration
         """
         region = self.get_default_region()
         self.log.info("Using %s for reconfiguring namespace", region)
-        self.disable_namespace()
-        self.destroy_namespace()
-        self.create_namespace(region=region, mode='fsdax', align='64k')
-        old_ns = self.run_ndctl_list()[0]
-        old_ns_dev = self.run_ndctl_list_val(old_ns, 'dev')
+        self.plib.disable_namespace()
+        self.plib.destroy_namespace()
+        self.plib.create_namespace(region=region, mode='fsdax', align='64k')
+        old_ns = self.plib.run_ndctl_list()[0]
+        old_ns_dev = self.plib.run_ndctl_list_val(old_ns, 'dev')
         self.log.info("Re-configuring namespace %s", old_ns_dev)
-        self.create_namespace(region=region, mode='fsdax',
-                              name='test_ns', reconfig=old_ns_dev, force=True)
-        new_ns = self.run_ndctl_list()[0]
+        self.plib.create_namespace(region=region, mode='fsdax', name='test_ns',
+                                   reconfig=old_ns_dev, force=True)
+        new_ns = self.plib.run_ndctl_list()[0]
         self.log.info("Checking namespace changes")
         failed_vals = []
         for key, val in new_ns.items():
@@ -527,102 +399,131 @@ class NdctlTest(Test):
         if failed_vals:
             self.fail("New namespace unexpected change(s): %s" % failed_vals)
 
+    @avocado.fail_on(pmem.PMemException)
     def test_check_namespace(self):
         """
         Verify metadata for sector mode namespaces
         """
         region = self.get_default_region()
-        self.disable_namespace()
-        self.destroy_namespace()
+        self.plib.disable_namespace()
+        self.plib.destroy_namespace()
         self.log.info("Creating sector namespace using %s", region)
-        self.create_namespace(region=region, mode='sector')
-        ns_sec_dev = self.run_ndctl_list_val(self.run_ndctl_list()[0], 'dev')
-        self.disable_namespace(namespace=ns_sec_dev)
+        self.plib.create_namespace(region=region, mode='sector')
+        ns_sec_dev = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list()[0], 'dev')
+        self.plib.disable_namespace(namespace=ns_sec_dev)
         self.log.info("Checking BTT metadata")
-        if process.system("%s check-namespace %s" % (self.binary, ns_sec_dev),
+        if process.system("%s check-namespace %s" % (self.ndctl, ns_sec_dev),
                           ignore_status=True):
             self.fail("Failed to check namespace metadata")
 
+    @avocado.fail_on(pmem.PMemException)
     def test_check_numa(self):
-        self.enable_region()
-        regions = self.run_ndctl_list('-R')
-        if not os.path.exists('/sys/devices/ndbus0/region0/numa_node'):
+        self.plib.enable_region()
+        regions = self.plib.run_ndctl_list('-R')
+        if not os.path.exists('/sys/bus/nd/devices/region0/numa_node'):
             self.fail("Numa node entries not found!")
         for val in regions:
-            reg = self.run_ndctl_list_val(val, 'dev')
-            numa = genio.read_one_line('/sys/devices/ndbus%s/%s/numa_node'
-                                       % (re.findall(r'\d+', reg)[0], reg))
+            reg = self.plib.run_ndctl_list_val(val, 'dev')
+            numa = genio.read_one_line('/sys/bus/nd/devices/%s/numa_node' % reg)
             # Check numa config in ndctl and sys interface
-            if len(self.run_ndctl_list('-r %s -U %s' % (reg, numa))) != 1:
+            if len(self.plib.run_ndctl_list('-r %s -R -U %s' % (reg, numa))) != 1:
                 self.fail('Region mismatch between ndctl and sys interface')
 
+    @avocado.fail_on(pmem.PMemException)
+    def test_check_ns_numa(self):
+        self.plib.enable_region()
+        regions = self.plib.run_ndctl_list('-R')
+        for dev in regions:
+            region = self.plib.run_ndctl_list_val(dev, 'dev')
+            if not self.plib.is_region_legacy(region):
+                self.plib.disable_namespace(region=region)
+                self.plib.destroy_namespace(region=region)
+                for _ in range(3):
+                    self.plib.create_namespace(
+                        region=region, mode='fsdax', size='128M')
+
+            namespaces = self.plib.run_ndctl_list('-N -r %s' % region)
+            if not os.path.exists('/sys/bus/nd/devices/namespace0.0/numa_node'):
+                self.fail("Numa node entries not found!")
+            for val in namespaces:
+                ns_name = self.plib.run_ndctl_list_val(val, 'dev')
+                numa = genio.read_one_line(
+                    '/sys/bus/nd/devices/%s/numa_node' % ns_name)
+                # Check numa config in ndctl and sys interface
+                if len(self.plib.run_ndctl_list('-N -n %s -U %s' % (ns_name, numa))) != 1:
+                    self.fail('Numa mismatch between ndctl and sys interface')
+
+    @avocado.fail_on(pmem.PMemException)
     def test_label_read_write(self):
         region = self.get_default_region()
-        if (self.is_region_legacy(region)):
+        if (self.plib.is_region_legacy(region)):
             self.cancel("Legacy config skipping the test")
 
         nmem = "nmem%s" % re.findall(r'\d+', region)[0]
         self.log.info("Using %s for testing labels", region)
-        self.disable_region(name=region)
+        self.plib.disable_region(name=region)
         self.log.info("Filling zeros to start test")
-        if process.system('%s zero-labels %s' % (self.binary, nmem), shell=True):
+        if process.system('%s zero-labels %s' % (self.ndctl, nmem), shell=True):
             self.fail("Label zero-fill failed")
 
-        self.enable_region(name=region)
-        self.create_namespace(region=region)
+        self.plib.enable_region(name=region)
+        self.plib.create_namespace(region=region)
         self.log.info("Storing labels with a namespace")
         old_op = process.system_output(
-            '%s check-labels %s' % (self.binary, nmem), shell=True)
-        if process.system('%s read-labels %s -o output' % (self.binary, nmem), shell=True):
+            '%s check-labels %s' % (self.ndctl, nmem), shell=True)
+        if process.system('%s read-labels %s -o output' % (self.ndctl, nmem), shell=True):
             self.fail("Label read failed")
 
         self.log.info("Refilling zeroes before a restore")
-        self.disable_namespace(region=region)
-        self.destroy_namespace(region=region)
-        self.disable_region(name=region)
-        if process.system('%s zero-labels %s' % (self.binary, nmem), shell=True):
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
+        self.plib.disable_region(name=region)
+        if process.system('%s zero-labels %s' % (self.ndctl, nmem), shell=True):
             self.fail("Label zero-fill failed after read")
 
         self.log.info("Re-storing labels with a namespace")
-        if process.system('%s write-labels %s -i output' % (self.binary, nmem), shell=True):
+        if process.system('%s write-labels %s -i output' % (self.ndctl, nmem), shell=True):
             self.fail("Label write failed")
-        self.enable_region(name=region)
+        self.plib.enable_region(name=region)
 
         self.log.info("Checking mismatch after restore")
         new_op = process.system_output(
-            '%s check-labels %s' % (self.binary, nmem), shell=True)
+            '%s check-labels %s' % (self.ndctl, nmem), shell=True)
         if new_op != old_op:
             self.fail("Label read and write mismatch")
 
         self.log.info("Checking created namespace after restore")
-        if len(self.run_ndctl_list('-N -r %s' % region)) != 1:
+        if len(self.plib.run_ndctl_list('-N -r %s' % region)) != 1:
             self.fail("Created namespace not found after label restore")
 
+    @avocado.fail_on(pmem.PMemException)
     def test_daxctl_list(self):
         """
         Test daxctl list
         """
         region = self.get_default_region()
-        self.disable_namespace(region=region)
-        self.destroy_namespace(region=region)
-        self.create_namespace(region=region, mode='devdax')
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
+        self.plib.create_namespace(region=region, mode='devdax')
         index = re.findall(r'\d+', region)[0]
-        vals = self.run_daxctl_list('-r %s' % (index))
+        vals = self.plib.run_daxctl_list('-r %s' % (index))
         if len(vals) != 1:
             self.fail('Failed daxctl list')
         self.log.info('Created dax device %s', vals)
 
+    @avocado.fail_on(pmem.PMemException)
     def test_sector_write(self):
         """
         Test write on a sector mode device
         """
         region = self.get_default_region()
-        self.disable_namespace(region=region)
-        self.destroy_namespace(region=region)
-        self.create_namespace(region=region, mode='sector', sector_size='512')
-        self.disk = '/dev/%s' % self.run_ndctl_list_val(
-            self.run_ndctl_list("-N -r %s" % region)[0], 'blockdev')
-        size = self.run_ndctl_list_val(self.run_ndctl_list(
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
+        self.plib.create_namespace(region=region, mode='sector',
+                                   sector_size='512')
+        self.disk = '/dev/%s' % self.plib.run_ndctl_list_val(
+            self.plib.run_ndctl_list("-N -r %s" % region)[0], 'blockdev')
+        size = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
             "-N -r %s" % region)[0], 'size')
         self.part = partition.Partition(self.disk)
         self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512' %
@@ -638,15 +539,16 @@ class NdctlTest(Test):
         if process.system(cmd, ignore_status=True):
             self.fail("FIO mmap workload on fsdax failed")
 
+    @avocado.fail_on(pmem.PMemException)
     def test_fsdax_write(self):
         """
         Test filesystem DAX with a FIO workload
         """
         region = self.get_default_region()
-        self.create_namespace(region=region, mode='fsdax')
-        self.disk = '/dev/%s' % self.run_ndctl_list_val(
-            self.run_ndctl_list("-N -r %s" % region)[0], 'blockdev')
-        size = self.run_ndctl_list_val(self.run_ndctl_list(
+        self.plib.create_namespace(region=region, mode='fsdax')
+        self.disk = '/dev/%s' % self.plib.run_ndctl_list_val(
+            self.plib.run_ndctl_list("-N -r %s" % region)[0], 'blockdev')
+        size = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
             "-N -r %s" % region)[0], 'size')
         self.part = partition.Partition(self.disk)
         self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512 %s' %
@@ -662,14 +564,15 @@ class NdctlTest(Test):
         if process.system(cmd, ignore_status=True):
             self.fail("FIO mmap workload on fsdax failed")
 
+    @avocado.fail_on(pmem.PMemException)
     def test_map_sync(self):
         """
         Test MAP_SYNC flag with sample mmap write
         """
         region = self.get_default_region()
-        self.create_namespace(region=region, mode='fsdax')
-        self.disk = '/dev/%s' % self.run_ndctl_list_val(
-            self.run_ndctl_list("-N -r %s" % region)[0], 'blockdev')
+        self.plib.create_namespace(region=region, mode='fsdax')
+        self.disk = '/dev/%s' % self.plib.run_ndctl_list_val(
+            self.plib.run_ndctl_list("-N -r %s" % region)[0], 'blockdev')
         self.part = partition.Partition(self.disk)
         self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512 %s' %
                        (memory.get_page_size(), self.reflink))
@@ -685,18 +588,19 @@ class NdctlTest(Test):
         if process.system('./map_sync %s/new_file' % mnt_path, ignore_status=True):
             self.fail('Write with MAP_SYNC flag failed')
 
+    @avocado.fail_on(pmem.PMemException)
     def test_devdax_write(self):
         """
         Test device DAX with a daxio binary
         """
         region = self.get_default_region()
-        self.create_namespace(region=region, mode='devdax')
-        daxdev = "/dev/%s" % self.run_ndctl_list_val(
-            self.run_ndctl_list("-N -r %s" % region)[0], 'chardev')
-        if process.system("%s -b no -i /dev/urandom "
-                          "-o %s" % (self.get_data("daxio.static"), daxdev), ignore_status=True):
+        self.plib.create_namespace(region=region, mode='devdax')
+        daxdev = "/dev/%s" % self.plib.run_ndctl_list_val(
+            self.plib.run_ndctl_list("-N -r %s" % region)[0], 'chardev')
+        if process.system("%s -b no -i /dev/urandom -o %s" % (self.get_data("daxio.static"), daxdev), ignore_status=True):
             self.fail("DAXIO write on devdax failed")
 
+    @avocado.fail_on(pmem.PMemException)
     def tearDown(self):
         if self.part:
             self.part.unmount()
@@ -707,9 +611,9 @@ class NdctlTest(Test):
                 self.fail("Failed to delete filesystem on %s" % self.disk)
 
         if not self.preserve_setup:
-            if self.run_ndctl_list('-N'):
-                self.destroy_namespace(force=True)
-            self.disable_region()
+            if self.plib.run_ndctl_list('-N'):
+                self.plib.destroy_namespace(force=True)
+            self.plib.disable_region()
 
 
 if __name__ == "__main__":

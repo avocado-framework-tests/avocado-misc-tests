@@ -71,8 +71,9 @@ class Lshwrun(Test):
             packages.extend(['iproute2'])
         else:
             packages.extend(['iproute'])
-        if 'IBM' in process.system_output('lshw -class system', shell='true').decode():
-            packages.extend(['powerpc-ibm-utils'])
+        if dist.name in ['Ubuntu', 'debian']:
+            if 'IBM' in process.system_output('lshw -class system', shell='true').decode():
+                packages.extend(['powerpc-ibm-utils'])
 
         for package in packages:
             if not sm.check_installed(package) and not sm.install(package):
@@ -214,7 +215,8 @@ class Lshwrun(Test):
             lshw_out = self.run_cmd_out("lshw -numeric")
             if 'usb' in lshw_out and 'HCI' not in lshw_out:
                 self.is_fail += 1
-                self.fail_cmd.append("lshw -numeric | grep HCI | cut -d':' -f3")
+                self.fail_cmd.append(
+                    "lshw -numeric | grep HCI | cut -d':' -f3")
         self.error_check()
 
     @skipIf(process.system("lshw --help 2>&1 |grep notime",

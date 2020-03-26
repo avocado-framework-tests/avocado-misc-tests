@@ -15,7 +15,7 @@
 # VLAN Testcase
 
 import time
-import telnetlib
+import paramiko
 try:
     import pxssh
 except ImportError:
@@ -73,7 +73,7 @@ class VlanTest(Test):
         self.peer_port = self.params.get("peer_port", '*', default=None)
         self.host_intf = self.params.get("interface", '*', default=None)
         self.peer_intf = self.params.get("peer_interface", '*', default=None)
-        self.peer_ip = self.params.get("peer_ip", '*', default=None)
+        self.peer_ip = self.params.get("peer_public_ip", '*', default=None)
         self.peer_user = self.params.get("peer_user", '*', default=None)
         self.peer_password = self.params.get("peer_password", '*',
                                              default=None)
@@ -82,18 +82,20 @@ class VlanTest(Test):
 
     def switch_login(self, ip, username, password):
         '''
-        telnet Login method for remote fc switch
+        Login method for remote fc switch
         '''
-        self.tnc = telnetlib.Telnet(ip)
-        self.tnc.read_until('username:')
-        self.tnc.write(username + '\n')
-        self.tnc.read_until('password:')
-        self.tnc.write(password + '\n')
-        ret = self.tnc.read_until(self.prompt)
-        assert self.prompt in ret
+        self.tnc = paramiko.SSHClient()
+        self.tnc.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.tnc.connect(ip, username=username, password=password,
+                         look_for_keys=False, allow_agent=False)
+        self.log.info("SSH connection established to " + ip)
+        self.remote_conn = self.tnc.invoke_shell()
+        self.log.info("Interactive SSH session established")
+        assert self.remote_conn
+        self.remote_conn.send("iscli" + '\n')
 
     def _send_only_result(self, command, response):
-        output = response.splitlines()
+        output = response.decode("utf-8").splitlines()
         if command in output[0]:
             output.pop(0)
         output.pop()
@@ -105,21 +107,21 @@ class VlanTest(Test):
 
     def run_switch_command(self, command, timeout=300):
         '''
-        Telnet Run command method for running commands on fc switch
+        Run command method for running commands on fc switch
         '''
         self.prompt = "#"
         self.log.info("Running the %s command on fc/nic switch", command)
         if not hasattr(self, 'tnc'):
             self.fail("telnet connection to the fc/nic switch not yet done")
-        self.tnc.write(command + '\n')
-        response = self.tnc.read_until(self.prompt)
+        self.remote_conn.send(command + '\n')
+        response = self.remote_conn.recv(1000)
         return self._send_only_result(command, response)
 
     def peer_login(self, ip, username, password):
         '''
         SSH Login method for remote peer server
         '''
-        pxh = pxssh.pxssh()
+        pxh = pxssh.pxssh(encoding='utf-8')
         # Work-around for old pxssh not having options= parameter
         pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
         pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
@@ -177,10 +179,10 @@ class VlanTest(Test):
         Execute the command and return output
         """
         return process.system_output(cmd, ignore_status=True,
-                                     shell=True, sudo=True)
+                                     shell=True, sudo=True).decode("utf-8")
 
     @staticmethod
-    def ping_check_host(self, intf, ip):
+    def ping_check_host(intf, ip):
         '''
         ping check for peer in host
         '''
@@ -222,6 +224,8 @@ class VlanTest(Test):
                     Now ping. it should FAIL
         """
         self.vlan_port_conf("1", "2230")
+        # before ping need few sec for interface to set vlan
+        time.sleep(5)
         if self.ping_check_host(self.host_intf, self.ip_dic[self.peer_intf]):
             self.fail("Ping test failed for vlan 1 & 2230 in host")
         self.log.info("Ping test passed for vlan 1 % 2230 in host")
@@ -329,6 +333,7 @@ class VlanTest(Test):
         self.run_peer_command(cmd)
         self.run_peer_command("ip link set %s.%s up" % (self.peer_intf,
                                                         vlan_num))
+        cmd = "ip link set %s.%s up" % (self.peer_intf, vlan_num)
         cmd = "ip addr show %s.%s" % (self.peer_intf, vlan_num)
         self.run_peer_command(cmd)
 

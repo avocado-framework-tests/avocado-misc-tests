@@ -12,6 +12,7 @@
 # See LICENSE for more details.
 # Copyright: 2017 IBM
 # Author: Pridhiviraj Paidipeddi <ppaidipe@linux.vnet.ibm.com>
+# Author: Naresh Bannoth <nbannoth@in.ibm.com>
 # this script runs portbounce test on different ports of fc or fcoe switches.
 
 import re
@@ -21,8 +22,9 @@ from avocado import Test
 from avocado import main
 import paramiko
 from avocado.utils import process
-from avocado.utils import genio, pci
+from avocado.utils import genio
 from avocado.utils import multipath
+from avocado.utils import wait
 # import shutil
 # try:
 #    import pxssh
@@ -64,18 +66,33 @@ class PortBounceTest(Test):
         self.switch_name = self.params.get("switch_name", '*', default=None)
         self.userid = self.params.get("userid", '*', default=None)
         self.password = self.params.get("password", '*', default=None)
-        self.pci_adrs = self.params.get("pci_device", default=None).split(",")
+        self.wwids = self.params.get("wwids", default=None).split(",")
         self.sbt = int(self.params.get("sbt", '*', default=10))
         self.lbt = int(self.params.get("lbt", '*', default=250))
         self.count = int(self.params.get("count", '*', default="2"))
         self.prompt = ">"
         self.verify_sleep_time = 20
         self.port_ids = []
+        self.host = []
         self.dic = {}
-        for pci_id in self.pci_adrs:
-            port_id = self.get_switch_port(pci_id)
+        system_wwids = multipath.get_multipath_wwids()
+        for wwid in self.wwids:
+            paths = []
+            if wwid not in system_wwids:
+                self.wwids.remove(wwid)
+                continue
+            paths = multipath.get_paths(wwid)
+            for path in paths:
+                self.host.append(self.get_fc_host(path))
+        self.host = list(dict.fromkeys(self.host))
+        self.log.info("AllHostValues: %s" % self.host)
+
+        self.switch_login(self.switch_name, self.userid, self.password)
+        for host in self.host:
+            port_id = self.get_switch_port(host)
             self.port_ids.append(port_id)
-            self.dic[port_id] = pci_id
+            self.dic[port_id] = host
+        self.log.info("AllSwitchPorts:%s " % self.port_ids)
 
     def switch_login(self, ip, username, password):
         '''
@@ -131,6 +148,7 @@ class PortBounceTest(Test):
         bounce_time = [self.sbt, self.lbt]
         self.log.info("short/long port bounce for individual ports:")
         for b_time in bounce_time:
+            self.log.info("test is running for %s bounce time" % b_time)
             for port in self.port_ids:
                 # appending the each port into list and sending same list
                 # element for port_toggle which are usefull in verification
@@ -143,7 +161,6 @@ class PortBounceTest(Test):
         self.log.info("port bounce for all ports:")
         for _ in range(self.count):
             self.porttoggle(self.port_ids, 300)
-            time.sleep(self.verify_sleep_time)
 
     def porttoggle(self, test_ports, sleep_time):
         '''
@@ -155,7 +172,7 @@ class PortBounceTest(Test):
         self.verify_switch_port_state(test_ports, 'Disabled')
         self.verify_port_host_state(test_ports, "Linkdown")
         self.mpath_state_check(test_ports, "failed", "faulty")
-        time.sleep(self.verify_sleep_time)
+        time.sleep(sleep_time)
 
         # Port Enable and verification both in switch and OS
         self.port_enable_disable(test_ports, 'enable')
@@ -205,35 +222,58 @@ class PortBounceTest(Test):
         """
         for port in test_ports:
             self.log.info("OS host check for %s", status)
-            pci_id = self.dic[port]
-            fc_host = self.get_fc_host(pci_id)
             state = genio.read_file("/sys/class/fc_host/%s/port_state"
-                                    % fc_host).rstrip("\n")
-            if state == status:
-                self.log.info("PCI_BUS: %s, port status %s got reflected",
-                              pci_id, state)
+                                    % self.dic[port]).rstrip("\n")
+            if status == "Linkdown":
+                if state == status or state == "Offline":
+                    self.log.info("host:%s verify status:%s success",
+                                  self.dic[port], state)
+                else:
+                    self.fail("port state not changed in host expected \
+                              state: %s,actual_state: %s" % (status, state))
+            elif state == status:
+                self.log.info("host:%s verify status:%s success",
+                              self.dic[port], state)
             else:
-                self.fail("port state not changed in host expected state: %s, \
-                          actual_state: %s", status, state)
+                self.fail("port state not changed in host expected \
+                          state: %s,actual_state: %s" % (status, state))
 
     def mpath_state_check(self, ports, state1, state2):
         '''
         checking mpath disk status after disabling the switch port
         '''
+        curr_path = ''
+
+        def is_path_online():
+            path_stat = multipath.get_path_status(curr_path)
+            if path_stat[0] != state1 or path_stat[2] != state2:
+                return False
+            return True
+
         for port in ports:
-            pci_id = self.dic[port]
-            paths = pci.get_disks_in_pci_address(pci_id)
+            paths = self.get_paths(self.dic[port])
             err_paths = []
             self.log.info("verify %s path status for port %s in %s",
                           state1, port, ports)
             for path in paths:
-                path_stat = multipath.get_path_status(path.split("/")[-1])
-                if path_stat[0] != state1 or path_stat[2] != state2:
-                    err_paths.append(path)
+                curr_path = path
+                if not wait.wait_for(is_path_online, timeout=10):
+                    err_paths.append("%s:%s" % (port, curr_path))
         if err_paths:
             self.error("following paths not %s: %s" % (state1, err_paths))
         else:
-            self.log.info("%s of path verification is success", state1)
+            self.log.info("%s path verification is success", state1)
+
+    def get_paths(self, fc_host):
+        '''
+        returns the list of paths coressponding to the given fc_host
+        '''
+        paths = []
+        cmd = 'ls -l /sys/block/ | grep -i %s' % fc_host
+        for line in process.getoutput(cmd):
+            if "/%s/" % fc_host in line:
+                paths.append(line.split("/")[-1])
+        return paths
 
     def get_wwpn(self, fc_host):
         '''
@@ -244,31 +284,26 @@ class PortBounceTest(Test):
         wwpn = ':'.join([wwpn[i:i+2] for i in range(0, len(wwpn), 2)])
         return wwpn
 
-    def get_fc_host(self, pci_addr):
+    def get_fc_host(self, path):
         '''
-        find and returns fc_host for given pci_address
+        find and returns fc_host for given disk
         '''
-        cmd = "ls -l /sys/class/fc_host/ | grep -i %s" % pci_addr
-        return process.getoutput(cmd).split("/")[-1]
+        cmd = 'ls -l /sys/block/ | grep -i %s' % path
+        out = process.getoutput(cmd)
+        for line in out.split("/"):
+            if "host" in line:
+                return line
 
-    def get_switch_port(self, pci_addr):
+    def get_switch_port(self, host):
         '''
-        finds and returns the switch port number for given pci_address
+        finds and returns the switch port number for given fc_host
         '''
-        fc_host = self.get_fc_host(pci_addr)
-        wwpn = self.get_wwpn(fc_host)
+        wwpn = self.get_wwpn(host)
         self.log.info("value of wwpn=%s", wwpn)
-        self.switch_login(self.switch_name, self.userid, self.password)
-        cmd = "switchshow"
+        cmd = 'nodefind %s | grep -i "Port Index"' % wwpn
         switch_info = self.run_command(cmd)
         self.log.info("switchinfo = \n %s\n", switch_info)
-        string_line = ".*%s.*" % wwpn
-        line = re.search(string_line, switch_info)
-        line = line.group(0)
-        self.log.info("linevalue : %s", line)
-        port_id = line.split("  ")[1]
-        self.log.info("port_id value= %s", port_id)
-        return port_id
+        return switch_info.split(" ")[-1]
 
     def tearDown(self):
         '''

@@ -29,6 +29,7 @@ from avocado.utils import build
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import configure_network
 from avocado.utils.configure_network import PeerInfo
+from avocado.utils import wait
 
 
 class TcpdumpTest(Test):
@@ -42,6 +43,7 @@ class TcpdumpTest(Test):
         """
         self.iface = self.params.get("interface", default="")
         self.count = self.params.get("count", default="500")
+        self.nping_count = self.params.get("nping_count", default="")
         self.peer_ip = self.params.get("peer_ip", default="")
         self.drop = self.params.get("drop_accepted", default="10")
         self.host_ip = self.params.get("host_ip", default="")
@@ -55,6 +57,9 @@ class TcpdumpTest(Test):
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         configure_network.set_ip(self.ipaddr, self.netmask, self.iface)
+        if not wait.wait_for(configure_network.is_interface_link_up,
+                             timeout=120, args=[self.iface]):
+            self.cancel("Link up of interface is taking longer than 120 seconds")
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
@@ -111,7 +116,7 @@ class TcpdumpTest(Test):
         for line in process.run(cmd, shell=True,
                                 ignore_status=True).stderr.decode("utf-8") \
                                                    .splitlines():
-            if "packets dropped by interface" in line:
+            if "packets dropped by kernel" in line:
                 self.log.info(line)
                 if int(line[0]) >= (int(self.drop) * int(self.count) / 100):
                     self.fail("%s, more than %s percent" % (line, self.drop))
@@ -121,8 +126,14 @@ class TcpdumpTest(Test):
         """
         perform nping
         """
-        cmd = "./nping/nping --%s %s -c %s" % (param, self.peer_ip, self.count)
-        return process.SubProcess(cmd, verbose=False, shell=True)
+        detected_distro = distro.detect()
+        if detected_distro.name == "SuSE":
+            cmd = "./nping/nping --%s %s -c %s" % (param,
+                                                   self.peer_ip, self.nping_count)
+            return process.SubProcess(cmd, verbose=False, shell=True)
+        else:
+            cmd = "nping --%s %s -c %s" % (param, self.peer_ip, self.nping_count)
+            return process.SubProcess(cmd, verbose=False, shell=True)
 
     def tearDown(self):
         '''

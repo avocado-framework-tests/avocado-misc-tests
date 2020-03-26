@@ -26,10 +26,12 @@ import glob
 import re
 import shutil
 
+import avocado
 from avocado import Test
 from avocado import main
 from avocado.utils import process, build, git, distro, partition
-from avocado.utils import disk, data_structures
+from avocado.utils import disk, data_structures, pmem
+from avocado.utils import genio
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -40,6 +42,79 @@ class Xfstests(Test):
 
     :avocado: tags=fs,privileged
     """
+    @staticmethod
+    def get_size_alignval():
+        """
+        Return the size align restriction based on platform
+        """
+        if 'Hash' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
+            def_align = 16 * 1024 * 1024
+        else:
+            def_align = 2 * 1024 * 1024
+        return def_align
+
+    def get_half_region_size(self, region):
+        size_align = self.get_size_alignval()
+        region_size = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
+            '-r %s' % region)[0], 'size')
+
+        namespace_size = region_size // 2
+        namespace_size = (namespace_size // size_align) * size_align
+        return namespace_size
+
+    @avocado.fail_on(pmem.PMemException)
+    def setup_nvdimm(self):
+        logflag = self.params.get('logdev', default=False)
+
+        self.plib = pmem.PMem()
+        self.plib.enable_region()
+        regions = sorted(self.plib.run_ndctl_list('-R'),
+                         key=lambda i: i['size'], reverse=True)
+        if not regions:
+            self.cancel("Nvdimm test with no region support")
+
+        if logflag and not len(regions) > 1:
+            self.cancel("Nvdimm test with log flag need two region support")
+
+        region = self.plib.run_ndctl_list_val(regions[0], 'dev')
+        if self.plib.is_region_legacy(region):
+            self.cancel("Not supported with legacy regions")
+
+        if logflag:
+            region_ldev = self.plib.run_ndctl_list_val(regions[1], 'dev')
+            if self.plib.is_region_legacy(region_ldev):
+                self.cancel("Not supported with legacy regions")
+
+        self.plib.destroy_namespace(region=region, force=True)
+        namespace_size = self.get_half_region_size(region)
+        self.plib.create_namespace(region=region, size=namespace_size)
+        self.plib.create_namespace(region=region, size=namespace_size)
+        namespaces = self.plib.run_ndctl_list('-N -r %s' % region)
+        pmem_dev = self.plib.run_ndctl_list_val(namespaces[0], 'blockdev')
+        self.test_dev = "/dev/%s" % pmem_dev
+        pmem_dev = self.plib.run_ndctl_list_val(namespaces[1], 'blockdev')
+        self.scratch_dev = "/dev/%s" % pmem_dev
+        self.devices.extend([self.test_dev, self.scratch_dev])
+
+        if logflag:
+            # log device to be created in sector mode
+            self.plib.destroy_namespace(region=region_ldev, force=True)
+            namespace_size = self.get_half_region_size(region=region_ldev)
+            # XFS restrict max log size to 2136997888
+            namespace_size = min(namespace_size, 2136997888)
+            self.plib.create_namespace(region=region_ldev, mode='sector',
+                                       sector_size='512', size=namespace_size)
+            self.plib.create_namespace(region=region_ldev, mode='sector',
+                                       sector_size='512', size=namespace_size)
+
+            namespaces = self.plib.run_ndctl_list('-N -r %s' % region_ldev)
+            log_dev = self.plib.run_ndctl_list_val(namespaces[0], 'blockdev')
+            self.log_test = "/dev/%s" % log_dev
+            log_dev = self.plib.run_ndctl_list_val(namespaces[1], 'blockdev')
+            self.log_scratch = "/dev/%s" % log_dev
+        else:
+            self.log_test = None
+            self.log_scratch = None
 
     def setUp(self):
         """
@@ -51,6 +126,8 @@ class Xfstests(Test):
             "df -T / | awk 'END {print $2}'", shell=True).decode("utf-8")
         if root_fs in ['ext3', 'ext4']:
             self.use_dd = True
+        self.dev_type = self.params.get('type', default='loop')
+
         sm = SoftwareManager()
 
         self.detected_distro = distro.detect()
@@ -73,6 +150,10 @@ class Xfstests(Test):
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
         elif self.detected_distro.name in ['centos', 'fedora', 'rhel', 'SuSE']:
+            if self.dev_type == 'nvdimm':
+                packages.extend(['ndctl', 'parted'])
+                if self.detected_distro.name == 'rhel':
+                    packages.extend(['daxctl'])
             packages.extend(['acl', 'bc', 'dump', 'indent', 'libtool', 'lvm2',
                              'xfsdump', 'psmisc', 'sed', 'libacl-devel',
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
@@ -97,15 +178,14 @@ class Xfstests(Test):
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel("Fail to install %s required for this test." %
                             package)
-
         self.skip_dangerous = self.params.get('skip_dangerous', default=True)
         self.test_range = self.params.get('test_range', default=None)
         self.scratch_mnt = self.params.get(
             'scratch_mnt', default='/mnt/scratch')
         self.test_mnt = self.params.get('test_mnt', default='/mnt/test')
         self.disk_mnt = self.params.get('disk_mnt', default='/mnt/loop_device')
-        self.dev_type = self.params.get('type', default='loop')
         self.fs_to_test = self.params.get('fs', default='ext4')
+
         if process.system('which mkfs.%s' % self.fs_to_test,
                           ignore_status=True):
             self.cancel('Unknown filesystem %s' % self.fs_to_test)
@@ -116,6 +196,9 @@ class Xfstests(Test):
                         os.path.join(self.teststmpdir, 'local.config'))
         shutil.copyfile(self.get_data('group'),
                         os.path.join(self.teststmpdir, 'group'))
+
+        self.log_test = self.params.get('log_test', default='')
+        self.log_scratch = self.params.get('log_scratch', default='')
 
         if self.dev_type == 'loop':
             base_disk = self.params.get('disk', default=None)
@@ -129,6 +212,8 @@ class Xfstests(Test):
                 else:
                     self.cancel('Need %s GB to create loop devices' % check)
             self._create_loop_device(base_disk, loop_size, mount)
+        elif self.dev_type == 'nvdimm':
+            self.setup_nvdimm()
         else:
             self.test_dev = self.params.get('disk_test', default=None)
             self.scratch_dev = self.params.get('disk_scratch', default=None)
@@ -138,8 +223,6 @@ class Xfstests(Test):
             cfg_file = os.path.join(self.teststmpdir, 'local.config')
             self.mkfs_opt = self.params.get('mkfs_opt', default='')
             self.mount_opt = self.params.get('mount_opt', default='')
-            self.log_test = self.params.get('log_test', default='')
-            self.log_scratch = self.params.get('log_scratch', default='')
             with open(cfg_file, "r") as sources:
                 lines = sources.readlines()
             with open(cfg_file, "w") as sources:
@@ -166,10 +249,12 @@ class Xfstests(Test):
                         break
             with open(cfg_file, "a") as sources:
                 if self.log_test:
+                    sources.write('export USE_EXTERNAL=yes\n')
                     sources.write('export TEST_LOGDEV="%s"\n' % self.log_test)
                     self.log_devices.append(self.log_test)
                 if self.log_scratch:
-                    sources.write('export SCRATCH_LOGDEV="%s"\n' % self.log_scratch)
+                    sources.write('export SCRATCH_LOGDEV="%s"\n' %
+                                  self.log_scratch)
                     self.log_devices.append(self.log_scratch)
                 if self.mkfs_opt:
                     sources.write('MKFS_OPTIONS="%s"\n' % self.mkfs_opt)
@@ -182,7 +267,8 @@ class Xfstests(Test):
             for ite, dev in enumerate(self.devices):
                 dev_obj = partition.Partition(dev)
                 if self.logdev_opt:
-                    dev_obj.mkfs(fstype=self.fs_to_test, args='%s %s=%s' % (self.mkfs_opt, self.logdev_opt, self.log_devices[ite]))
+                    dev_obj.mkfs(fstype=self.fs_to_test, args='%s %s=%s' % (
+                        self.mkfs_opt, self.logdev_opt, self.log_devices[ite]))
                 else:
                     dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
 
@@ -211,11 +297,15 @@ class Xfstests(Test):
                     self._create_test_list(self.share_exclude, "shared",
                                            dangerous=False)
         if self.detected_distro.name is not 'SuSE':
-            process.run('useradd 123456-fsgqa', sudo=True)
-            process.run('useradd fsgqa', sudo=True)
+            if process.system('useradd 123456-fsgqa', sudo=True, ignore_status=True):
+                self.log.warn('useradd 123456-fsgqa failed')
+            if process.system('useradd fsgqa', sudo=True, ignore_status=True):
+                self.log.warn('useradd fsgqa failed')
         else:
-            process.run('useradd -m -U fsgqa', sudo=True)
-            process.run('groupadd sys', sudo=True)
+            if process.system('useradd -m -U fsgqa', sudo=True, ignore_status=True):
+                self.log.warn('useradd fsgqa failed')
+            if process.system('groupadd sys', sudo=True, ignore_status=True):
+                self.log.warn('groupadd sys failed')
         if not os.path.exists(self.scratch_mnt):
             os.makedirs(self.scratch_mnt)
         if not os.path.exists(self.test_mnt):
@@ -265,9 +355,9 @@ class Xfstests(Test):
         process.system('umount %s %s' % (self.scratch_mnt, self.test_mnt),
                        sudo=True, ignore_status=True)
         if os.path.exists(self.scratch_mnt):
-            os.rmdir(self.scratch_mnt)
+            shutil.rmtree(self.scratch_mnt)
         if os.path.exists(self.test_mnt):
-            os.rmdir(self.test_mnt)
+            shutil.rmtree(self.test_mnt)
         if self.dev_type == 'loop':
             for dev in self.devices:
                 process.system('losetup -d %s' % dev, shell=True,

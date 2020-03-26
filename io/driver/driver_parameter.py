@@ -24,6 +24,7 @@ from avocado.utils import process
 from avocado.utils import linux_modules, genio
 from avocado.utils import configure_network
 from avocado import Test
+from avocado.utils import wait
 
 
 class Moduleparameter(Test):
@@ -125,6 +126,9 @@ class Moduleparameter(Test):
         if self.sysfs_chk:
             if self.sysfs_value_check() is False:
                 self.fail("Sysfs check failed ")
+        if not wait.wait_for(configure_network.is_interface_link_up,
+                             timeout=120, args=[self.ifaces]):
+            self.fail("Link up of interface is taking longer than 120s")
         if not configure_network.ping_check(self.ifaces, self.peer, '1000',
                                             flood=True):
             self.fail("ping test failed")

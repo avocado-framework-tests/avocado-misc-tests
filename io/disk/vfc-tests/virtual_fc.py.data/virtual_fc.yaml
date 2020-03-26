@@ -1,0 +1,6 @@
+vioses: "ltcfleet2-vios1,ltcfleet2-vios2"
+hmc_pwd: 'abc123'
+hmc_username: 'hscroot'
+count: 1
+vfchost_id: '100-150'
+vfc_count: 3

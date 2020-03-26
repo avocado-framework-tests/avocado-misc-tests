@@ -1,5 +1,8 @@
 config:
     region: 'region0'
+    size:
+    map:
+    git_branch: 'pending'
     preserve_change: True
     mnt_point: '/mnt/pmem'
     fio_job:

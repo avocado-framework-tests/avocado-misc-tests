@@ -44,7 +44,6 @@ class Flail(Test):
         os.chdir(self.build_dir)
         # -lm needs to be placed at end of line
         process.system("sed -i 's/.*-lm.*/& -lm' Makefile")
-
         build.make(self.build_dir)
 
     def test(self):

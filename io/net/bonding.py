@@ -36,6 +36,7 @@ from avocado.utils import process
 from avocado.utils import linux_modules
 from avocado.utils import genio
 from avocado.utils.ssh import Session
+from avocado.utils import configure_network
 
 
 class Bonding(Test):
@@ -83,6 +84,15 @@ class Bonding(Test):
         self.peer_first_ipinterface = self.params.get("peer_ip", default="")
         if not self.peer_interfaces or self.peer_first_ipinterface == "":
             self.cancel("peer machine should available")
+        self.ipaddr = self.params.get("host_ips", default="").split(",")
+        self.netmask = self.params.get("netmask", default="")
+        if 'setup' in str(self.name.name):
+            for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
+                configure_network.set_ip(ipaddr, self.netmask, interface)
+        self.miimon = self.params.get("miimon", default="100")
+        self.fail_over_mac = self.params.get("fail_over_mac",
+                                             default="2")
+        self.downdelay = self.params.get("downdelay", default="0")
         self.bond_name = self.params.get("bond_name", default="tempbond")
         self.net_path = "/sys/class/net/"
         self.bond_status = "/proc/net/bonding/%s" % self.bond_name
@@ -128,12 +138,11 @@ class Bonding(Test):
         output = self.session.cmd(cmd)
         result = ""
         result = result.join(output.stdout.decode("utf-8"))
-        self.peer_first_interface = result.split()[0]
+        self.peer_first_interface = result.split()[-1]
         if self.peer_first_interface == "":
             self.fail("test failed because peer interface can not retrieved")
         self.peer_ips = [self.peer_first_ipinterface]
         self.local_ip = netifaces.ifaddresses(interface)[2][0]['addr']
-        self.peer_interfaces.insert(0, self.peer_first_interface)
         self.net_mask = []
         stf = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         for val1, val2 in zip([interface], [self.local_ip]):
@@ -186,7 +195,7 @@ class Bonding(Test):
             cmd += 'rmmod bonding;'
             cmd += 'ip addr add %s/%s dev %s;ip link set %s up;sleep 5;'\
                    % (self.peer_first_ipinterface, self.net_mask[0],
-                      self.peer_first_interface, self.peer_first_interface)
+                      self.peer_interfaces[0], self.peer_interfaces[0])
             output = self.session.cmd(cmd)
             if not output.exit_status == 0:
                 self.log.info("bond removing command failed in peer machine")
@@ -195,6 +204,8 @@ class Bonding(Test):
         '''
         ping check
         '''
+        # need some time for specific interface before ping
+        time.sleep(10)
         cmd = "ping -I %s %s -c 5"\
               % (self.bond_name, self.peer_first_ipinterface)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
@@ -267,8 +278,26 @@ class Bonding(Test):
             linux_modules.load_module("bonding")
             genio.write_file(self.bonding_masters_file, "+%s" % self.bond_name)
             genio.write_file("%s/bonding/mode" % self.bond_dir, arg2)
-            genio.write_file("%s/bonding/miimon" % self.bond_dir, "100")
-            genio.write_file("%s/bonding/fail_over_mac" % self.bond_dir, "2")
+            genio.write_file("%s/bonding/miimon" % self.bond_dir,
+                             self.miimon)
+            genio.write_file("%s/bonding/fail_over_mac" % self.bond_dir,
+                             self.fail_over_mac)
+            genio.write_file("%s/bonding/downdelay" % self.bond_dir,
+                             self.downdelay)
+            dict = {'0': ['packets_per_slave', 'resend_igmp'],
+                    '1': ['num_unsol_na', 'primary', 'primary_reselect',
+                          'resend_igmp'],
+                    '2': ['xmit_hash_policy'],
+                    '4': ['lacp_rate', 'xmit_hash_policy'],
+                    '5': ['tlb_dynamic_lb', 'primary', 'primary_reselect',
+                          'resend_igmp', 'xmit_hash_policy', 'lp_interval'],
+                    '6': ['primary', 'primary_reselect', 'resend_igmp',
+                          'lp_interval']}
+            if self.mode in dict.keys():
+                for param in dict[self.mode]:
+                    param_value = self.params.get(param, default='')
+                    if param_value:
+                        genio.write_file("%s/bonding/%s" % (self.bond_dir, param), param_value)
             for val in self.host_interfaces:
                 if self.ib:
                     self.bond_ib_conf(self.bond_name, val, "ATTACH")
@@ -355,6 +384,8 @@ class Bonding(Test):
         self.bond_fail(self.mode)
         self.log.info("Mode %s OK", self.mode)
         self.error_check()
+        # need few sec for interface to not lost the connection to peer
+        time.sleep(5)
 
     def test_cleanup(self):
         '''
@@ -362,9 +393,7 @@ class Bonding(Test):
         '''
         self.bond_remove("local")
         for val in self.host_interfaces:
-            cmd = "ip link set %s up" % val
-            process.system(cmd, shell=True, ignore_status=True)
-            cmd = "ifup %s" % val
+            cmd = "ifdown %s; ifup %s" % (val, val)
             process.system(cmd, shell=True, ignore_status=True)
             for _ in range(0, 600, 60):
                 if 'state UP' in process.system_output("ip link \
@@ -383,13 +412,15 @@ class Bonding(Test):
         if self.peer_bond_needed:
             self.bond_remove("peer")
             for val in self.peer_interfaces:
-                cmd = "ip link set %s up; ifup %s; sleep %s"\
+                cmd = "ifdown %s; ifup %s; sleep %s"\
                       % (val, val, self.peer_wait_time)
                 output = self.session.cmd(cmd)
                 if not output.exit_status == 0:
                     self.log.warn("unable to bring to original state in peer")
                 time.sleep(self.sleep_time)
         self.error_check()
+        for interface in self.host_interfaces:
+            configure_network.unset_ip(interface)
 
     def error_check(self):
         if self.err:

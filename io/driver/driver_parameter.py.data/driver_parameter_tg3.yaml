@@ -1,0 +1,13 @@
+module: tg3
+interface: eth1
+host_ip:
+netmask:
+peer_ip:
+sysfs_check_required: 0
+module_param_name: "tg3_debug"
+value: !mux
+    tg3_debug_0:
+       module_param_value: "0"
+    tg3_debug_1:
+       module_param_value: "1"
+
