@@ -31,16 +31,17 @@
 static int pagemap_fd = -1;
 static int kpageflags_fd = -1;
 
-unsigned long get_pfn(unsigned long addr)
+int get_pfn(unsigned long addr,  unsigned long *pfn)
 {
 	int fd;
 	unsigned long pmap_entry;
 	unsigned long pmap_offset;
 	int page_size = getpagesize();
 
+	*pfn = 0;
 	fd = open("/proc/self/pagemap", O_RDONLY);
 	if (fd == -1)
-		return 0;
+		return -1;
 
 	pmap_offset = (addr / page_size)*PMAP_ENTRY_SIZE;
 
@@ -54,16 +55,15 @@ unsigned long get_pfn(unsigned long addr)
 		goto err_out;
 	}
 
-	if (!(pmap_entry & PM_PRESENT)) {
-		goto err_out;
-	}
+	if (pmap_entry & PM_PRESENT)
+		*pfn = pmap_entry & PM_PFRAME_MASK;
 
 	close(fd);
-	return pmap_entry & PM_PFRAME_MASK;
+	return 0;
 
 err_out:
 	close(fd);
-	return 0;
+	return -1;
 }
 
 int *get_numa_nodes_to_use(int max_node, unsigned long memory_to_use)
