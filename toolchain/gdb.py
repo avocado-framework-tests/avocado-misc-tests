@@ -31,7 +31,7 @@ class GDB(Test):
         sm = SoftwareManager()
         dist = distro.detect()
         packages = ['gcc', 'dejagnu', 'flex', 'bison', 'texinfo']
-        if dist.name == 'Ubuntu':
+        if dist.name in ['Ubuntu','debian']:
             packages.extend(['g++', 'binutils-dev'])
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
