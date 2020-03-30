@@ -26,8 +26,8 @@ from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process, distro
-from avocado.utils import configure_network
-from avocado.utils.configure_network import PeerInfo
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.network.hosts import LocalHost, RemoteHost
 from avocado.utils.ssh import Session
 
 
@@ -61,12 +61,23 @@ class RDMA(Test):
                                              default="None")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
+        local = LocalHost()
         if self.iface[0:2] == 'ib':
-            configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
-                                     interface_type='Infiniband')
+            self.networkinterface = NetworkInterface(self.iface, local,
+                                                     if_type='Infiniband')
+            try:
+                self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+                self.networkinterface.save(self.ipaddr, self.netmask)
+            except Exception:
+                self.networkinterface.save(self.ipaddr, self.netmask)
         else:
-            configure_network.set_ip(self.ipaddr, self.netmask, self.iface,
-                                     interface_type='Ethernet')
+            self.networkinterface = NetworkInterface(self.iface, local)
+            try:
+                self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+                self.networkinterface.save(self.ipaddr, self.netmask)
+            except Exception:
+                self.networkinterface.save(self.ipaddr, self.netmask)
+        self.networkinterface.bring_up()
         self.session = Session(self.peer_ip, user=self.peer_user,
                                password=self.peer_password)
         if self.iface not in interfaces:
@@ -84,9 +95,11 @@ class RDMA(Test):
         self.log.info("test with %s", self.tool_name)
         self.test_op = self.params.get("test_opt", default="")
         self.mtu = self.params.get("mtu", default=1500)
-        self.peerinfo = PeerInfo(self.peer_ip, peer_user=self.peer_user,
-                                 peer_password=self.peer_password)
-        self.peer_interface = self.peerinfo.get_peer_interface(self.peer_ip)
+        remotehost = RemoteHost(self.peer_ip, self.peer_user,
+                                password=self.peer_password)
+        self.peer_interface = remotehost.get_interface_by_ipaddr(self.peer_ip).name
+        self.peer_networkinterface = NetworkInterface(self.peer_interface,
+                                                      remotehost)
 
         if detected_distro.name == "Ubuntu":
             cmd = "service ufw stop"
@@ -141,9 +154,9 @@ class RDMA(Test):
         '''
         test options are mandatory
         '''
-        if not self.peerinfo.set_mtu_peer(self.peer_interface, self.mtu):
+        if self.peer_networkinterface.set_mtu(self.mtu) is not None:
             self.fail("Failed to set mtu in peer")
-        if not configure_network.set_mtu_host(self.iface, self.mtu):
+        if self.networkinterface.set_mtu(self.mtu) is not None:
             self.fail("Failed to set mtu in host")
         if self.rdma_exec(self.tool_name, self.test_op, "") != 0:
             self.fail("Client cmd: %s %s" % (self.tool_name, self.test_op))
@@ -152,11 +165,10 @@ class RDMA(Test):
         """
         unset ip
         """
-        if not configure_network.set_mtu_host(self.iface, '1500'):
+        if self.networkinterface.set_mtu('1500') is not None:
             self.fail("Failed to set mtu in host")
-        if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
+        if self.peer_networkinterface.set_mtu('1500') is not None:
             self.fail("Failed to set mtu in peer")
-        configure_network.unset_ip(self.iface)
 
 
 if __name__ == "__main__":
