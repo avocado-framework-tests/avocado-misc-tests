@@ -180,7 +180,7 @@ class DlparPci(Test):
         '''
         smm = SoftwareManager()
         packages = ['ksh', 'src', 'rsct.basic', 'rsct.core.utils',
-                    'rsct.core', 'DynamicRM']
+                    'rsct.core', 'DynamicRM', 'pciutils']
         detected_distro = distro.detect()
         if detected_distro.name == "Ubuntu":
             packages.extend(['python-paramiko'])

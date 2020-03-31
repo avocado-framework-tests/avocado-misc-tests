@@ -27,6 +27,7 @@ from avocado import Test
 from avocado import main
 from avocado.utils import wait
 from avocado.utils import linux_modules, genio, pci, cpu
+from avocado.utils.software_manager import SoftwareManager
 
 
 class PCIHotPlugTest(Test):
@@ -61,6 +62,9 @@ class PCIHotPlugTest(Test):
         self.count = int(self.params.get('count', default='1'))
         if not self.device:
             self.cancel("PCI_address not given")
+        smm = SoftwareManager()
+        if not smm.check_installed("pciutils") and not smm.install("pciutils"):
+            self.cancel("pciutils package is need to test")
         for pci_addr in self.device:
             if not os.path.isdir('/sys/bus/pci/devices/%s' % pci_addr):
                 self.cancel("%s not present in device path" % pci_addr)

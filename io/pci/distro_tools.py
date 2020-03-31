@@ -23,6 +23,7 @@ from avocado import Test
 from avocado.utils import process
 from avocado import skipUnless
 from avocado.utils import pci
+from avocado.utils.software_manager import SoftwareManager
 
 IS_POWER_VM = 'pSeries' in open('/proc/cpuinfo', 'r').read()
 
@@ -39,6 +40,9 @@ class DisrtoTool(Test):
         self.option = self.params.get("test_opt", default='')
         self.tool = self.params.get("tool", default='')
         self.pci_device = self.params.get("pci_device", default='')
+        smm = SoftwareManager()
+        if not smm.check_installed("pciutils") and not smm.install("pciutils"):
+            self.cancel("pciutils package is need to test")
 
     @skipUnless(IS_POWER_VM,
                 "supported only on PowerVM platform")
