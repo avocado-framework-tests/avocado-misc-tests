@@ -12,6 +12,6 @@ converting in to the different mode.
 
 Input Needed (in yaml file)
 ---------------------------
-Interfaces - Specify the interfaces for which the test needs to be run.
-disks - specify the disks for which the test needs to be run.
+Interfaces - Specify the interfaces(space separated) for which the test needs to be run. like eth8 eth9
+disks - specify the disks (space separated) for which the test needs to be run .like /dev/sda /dev/sdb
 
