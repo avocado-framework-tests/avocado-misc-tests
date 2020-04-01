@@ -31,7 +31,7 @@
 #define PROTFLAG PROT_READ|PROT_WRITE
 
 extern int *get_numa_nodes_to_use(int max_node, unsigned long size);
-extern unsigned long get_pfn(void *addr);
+extern int get_pfn(void *addr, unsigned long *);
 unsigned long i;
 
 struct testcase {
@@ -102,7 +102,7 @@ int test_func(unsigned long nr_nodes, int mapflag, unsigned long nr_pages, unsig
 			nodes[i] = node_list[1];
 			status[i] = 0;
 		}
-		old_pfn[i] = get_pfn(p + i* page_size);
+		get_pfn(p + i* page_size, &old_pfn[i]);
 	}
 	printf("Executing %s\n", msg);
 	if (id == 1)
@@ -122,8 +122,10 @@ int test_func(unsigned long nr_nodes, int mapflag, unsigned long nr_pages, unsig
 	printf("Checking PFN's\n");
 
 	for (i = 0; i < nr_pages; i++) {
-		if(old_pfn[i]!=0){
-			if(old_pfn[i] == get_pfn(p + i* page_size)){
+		unsigned long pfn;
+		if(old_pfn[i] != 0) {
+			get_pfn(p + i* page_size, &pfn);
+			if(old_pfn[i] == pfn) {
 				same_pfn++;
 			}
 		}

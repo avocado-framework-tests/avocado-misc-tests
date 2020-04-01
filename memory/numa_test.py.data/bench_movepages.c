@@ -30,7 +30,7 @@
 #define errmsg(x, ...) fprintf(stderr, x, ##__VA_ARGS__),exit(1)
 
 extern int is_thp(unsigned long pfn);
-extern unsigned long get_pfn(void *addr);
+extern int get_pfn(void *addr, unsigned long *);
 extern unsigned long get_first_mem_node(void);
 extern unsigned long get_next_mem_node(unsigned long node);
 
@@ -44,7 +44,8 @@ int *status, *nodes;
 
 double test_migration(void *p, char *msg)
 {
-	int non_thp = 0;
+	int thp_pages = 0;
+	int non_thp_pages = 0;
 	int i, thp, ret;
 	unsigned long pfn;
 	double time;
@@ -56,10 +57,14 @@ double test_migration(void *p, char *msg)
 		addrs[i] = p + (i * page_size);
 		nodes[i] = dest_node;
 		status[i] = 0;
-		pfn =  get_pfn(p + (i* page_size));
+		ret =  get_pfn(p + (i* page_size), &pfn);
+		if (ret)
+			continue;
 		if (pfn) {
-			if (!non_thp && !is_thp(pfn))
-				non_thp = 1;
+			if (is_thp(pfn))
+				thp_pages++;
+			else
+				non_thp_pages++;
 			if (verbose)
 				fprintf(stderr, "pfn before move_pages 0x%lx is_thp %d\n",
 					pfn, is_thp(pfn));
@@ -73,12 +78,15 @@ double test_migration(void *p, char *msg)
 	clock_gettime(CLOCK_MONOTONIC, &ts_end);
 
 	for (i = 0; i < nr_pages; i++) {
-		pfn = get_pfn(p + (i* page_size));
+		ret = get_pfn(p + (i* page_size), &pfn);
+		if (ret)
+			continue;
 		if (pfn && verbose)
 			fprintf(stderr, "pfn after move_pages 0x%lx is_thp %d\n", pfn, is_thp(pfn));
 	}
 	time = ts_end.tv_sec - ts_start.tv_sec + (ts_end.tv_nsec - ts_start.tv_nsec) / 1e9;
-	printf("%s time(seconds) (Non THP = %d) = %.6f\n", msg, non_thp, time);
+	printf("%s time(seconds) (thp_pages %d non_thp_pages = %d) = %.6f\n",
+	       msg, thp_pages, non_thp_pages, time);
 	return time;
 }
 
@@ -123,7 +131,8 @@ int main(int argc, char *argv[])
 	old_nodes = numa_bitmask_alloc(nr_nodes);
         src_node = get_first_mem_node();
         dest_node = get_next_mem_node(src_node);
-	printf("src node = %ld and dest node = %ld\n", src_node, dest_node);
+	printf("src node = %ld and dest node = %ld pages %d\n",
+	       src_node, dest_node, nr_pages);
 
         numa_bitmask_setbit(all_nodes, src_node);
 	numa_bitmask_setbit(all_nodes, dest_node);
@@ -153,7 +162,7 @@ int main(int argc, char *argv[])
 	thp_time = test_migration(hp, "THP migration");
 	bp_time = test_migration(p, "Base migration");
 
-	if (bp_time >= thp_time)
-		errmsg("Base page migration took more time\n");
+	if (bp_time < thp_time)
+		errmsg("THP page migration took more time\n");
 	return 0;
 }
