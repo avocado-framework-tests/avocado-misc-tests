@@ -43,7 +43,7 @@ class ScsiAddRemove(Test):
         if not smm.check_installed("lsscsi") and not smm.install("lsscsi"):
             self.cancel("lsscsi is not installed")
         self.wwids = self.params.get('wwids', default='')
-        self.pci_device = self.params.get("pci_device", default='')
+        self.pci_device = self.params.get("pci_devices", default='')
         self.count = int(self.params.get("count", default=1))
         system_pci_adress = pci.get_pci_addresses()
         system_wwids = multipath.get_multipath_wwids()
