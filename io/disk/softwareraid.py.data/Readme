@@ -2,7 +2,7 @@ mdadm - manage MD devices aka Linux Software RAID
 
 Values to be passed in yaml file:
 
-* Devices on which this scripts should be run.
+* Devices on which this scripts should be run. disks: "/dev/sdx /dev/sdy ..." (comman separated disks)
 
 * Raid Name to be created, optional parameter.
 
