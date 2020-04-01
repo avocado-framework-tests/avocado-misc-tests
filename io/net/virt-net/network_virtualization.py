@@ -35,6 +35,9 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.process import CmdError
 from avocado import skipIf, skipUnless
 from avocado.utils import genio
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.network.hosts import LocalHost
+from avocado.utils import wait
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
@@ -166,6 +169,7 @@ class NetworkVirtualization(Test):
             if 'backing' in str(self.name.name) or \
                'failover' in str(self.name.name):
                 self.cancel("this test is not needed")
+        self.local = LocalHost()
 
     @staticmethod
     def get_mcp_component(component):
@@ -304,7 +308,17 @@ class NetworkVirtualization(Test):
                 self.fail("MAC address in HMC differs")
             if not self.find_device(mac):
                 self.fail("MAC address differs in linux")
-            self.configure_device(device_ip, netmask, mac)
+            device = self.find_device(mac)
+            networkinterface = NetworkInterface(device, self.local)
+            try:
+                networkinterface.add_ipaddr(device_ip, netmask)
+                networkinterface.save(device_ip, netmask)
+            except Exception:
+                networkinterface.save(device_ip, netmask)
+            networkinterface.bring_up()
+            if not wait.wait_for(networkinterface.is_link_up, timeout=120):
+                self.fail("Unable to bring up the link on the Network \
+                       virtualized device")
 
     def test_backingdevadd(self):
         '''
@@ -339,8 +353,9 @@ class NetworkVirtualization(Test):
             self.log.debug("Active backing device: %s", after)
             if before == after:
                 self.fail("No failover happened")
-            if not self.ping_check(self.device_ip[0], self.netmask[0],
-                                   self.mac_id[0], self.peer_ip[0]):
+            device = self.find_device(self.mac_id[0])
+            networkinterface = NetworkInterface(device, self.local)
+            if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
                 self.fail("Failover has affected Network connectivity")
         if original != self.get_active_device_logport(self.slot_num[0]):
             self.trigger_failover(original)
@@ -366,7 +381,16 @@ class NetworkVirtualization(Test):
                         time.sleep(10)
                     self.log.info("Running a ping test to check if unbind/bind \
                                         affected newtwork connectivity")
-                    if not self.ping_check(device_ip, netmask, mac, peer_ip):
+                    device = self.find_device(mac)
+                    networkinterface = NetworkInterface(device, self.local)
+                    try:
+                        networkinterface.add_ipaddr(device_ip, netmask)
+                    except Exception:
+                        networkinterface.save(device_ip, netmask)
+                    if not wait.wait_for(networkinterface.is_link_up, timeout=120):
+                        self.fail("Unable to bring up the link on the Network \
+                                  virtualized device")
+                    if networkinterface.ping_check(peer_ip, count=5) is not None:
                         self.fail("Ping test failed. Network virtualized"
                                   "unbind/bind has affected"
                                   "Network connectivity")
@@ -390,8 +414,9 @@ class NetworkVirtualization(Test):
                     time.sleep(10)
                     self.log.info("Running a ping test to check if failover \
                                     affected Network connectivity")
-                    if not self.ping_check(self.device_ip[0], self.netmask[0],
-                                           self.mac_id[0], self.peer_ip[0]):
+                    device = self.find_device(self.mac_id[0])
+                    networkinterface = NetworkInterface(device, self.local)
+                    if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
                         self.fail("Ping test failed. Network virtualized \
                                    failover has affected Network connectivity")
         except CmdError as details:
@@ -413,10 +438,12 @@ class NetworkVirtualization(Test):
                         self.fail("Fail to change the priority for backing device %s", backing_logport)
                     if not self.change_failover_priority(active_logport, '100'):
                         self.fail("Fail to change the priority for active device %s", active_logport)
+                    time.sleep(10)
                     if backing_logport != self.get_active_device_logport(self.slot_num[0]):
                         self.fail("Auto failover of backing device failed")
-                    if not self.ping_check(self.device_ip[0], self.netmask[0],
-                                           self.mac_id[0], self.peer_ip[0]):
+                    device = self.find_device(self.mac_id[0])
+                    networkinterface = NetworkInterface(device, self.local)
+                    if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
                         self.fail("Auto failover has effected connectivity")
                 else:
                     self.fail("Could not enable auto failover")
@@ -456,8 +483,9 @@ class NetworkVirtualization(Test):
             self.validate_vios_command('mkdev -l %s' % vnic_backing_device, 'Available')
         self.validate_vios_command('mkdev -l %s' % vnic_server, 'Available')
 
-        if not self.ping_check(self.device_ip[0], self.netmask[0],
-                               self.mac_id[0], self.peer_ip[0]):
+        device = self.find_device(self.mac_id[0])
+        networkinterface = NetworkInterface(device, self.local)
+        if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
             self.fail("Ping test failed. Network virtualized \
                       vios failover has affected Network connectivity")
 
@@ -483,7 +511,16 @@ class NetworkVirtualization(Test):
                 except CmdError as details:
                     self.log.debug(str(details))
                     self.fail("dlpar operation did not complete")
-                if not self.ping_check(device_ip, netmask, mac, peer_ip):
+                device = self.find_device(mac)
+                networkinterface = NetworkInterface(device, self.local)
+                try:
+                    networkinterface.add_ipaddr(device_ip, netmask)
+                except Exception:
+                    networkinterface.save(device_ip, netmask)
+                if not wait.wait_for(networkinterface.is_link_up, timeout=120):
+                    self.fail("Unable to bring up the link on the Network \
+                              virtualized device")
+                if networkinterface.ping_check(peer_ip, count=5) is not None:
                     self.fail("dlpar has affected Network connectivity")
             else:
                 self.fail("slot not found")
@@ -678,21 +715,6 @@ class NetworkVirtualization(Test):
                 return device
         return ''
 
-    def interfacewait(self, mac):
-        """
-        Waits for the interface link to be UP
-        """
-        device = self.find_device(mac)
-        for _ in range(0, 600, 5):
-            if 'UP' or 'yes' in \
-                    process.system_output("ip link show %s | head -1"
-                                          % device, shell=True,
-                                          ignore_status=True):
-                self.log.info("Network virtualized device %s is up", device)
-                return True
-            time.sleep(5)
-        return False
-
     def drmgr_vnic_dlpar(self, operation, slot):
         """
         Perform add / remove operation
@@ -770,25 +792,6 @@ class NetworkVirtualization(Test):
             return False
         return True
 
-    def configure_device(self, device_ip, netmask, mac_adrs):
-        """
-        Configures the Network virtualized device
-        """
-        device = self.find_device(mac_adrs)
-        cmd = "ip addr add %s/%s dev %s;ip link set %s up" % (device_ip,
-                                                              netmask,
-                                                              device,
-                                                              device)
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
-            self.fail("Failed to configure Network \
-                              Virtualized device")
-        if not self.interfacewait(mac_adrs):
-            self.fail("Unable to bring up the link on the Network \
-                       virtualized device")
-        self.log.info("Successfully configured the Network \
-                              Virtualized device")
-        return device
-
     def find_device_id(self, mac):
         """
         Finds the device id needed to trigger failover
@@ -810,17 +813,6 @@ class NetworkVirtualization(Test):
             if dev_id in slot:
                 return slot.split(' ')[0]
         return False
-
-    def ping_check(self, device_ip, netmask, mac_adrs, peer_ip):
-        """
-        ping check
-        """
-        device = self.configure_device(device_ip, netmask, mac_adrs)
-        cmd = "ping -I %s %s -c 5"\
-              % (device, peer_ip)
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
-            return False
-        return True
 
     def trigger_failover(self, logport):
         '''
