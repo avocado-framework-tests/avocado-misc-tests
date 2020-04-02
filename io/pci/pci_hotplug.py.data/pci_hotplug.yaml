@@ -1,2 +1,2 @@
-pci_device: "001b:62:00.0,001b:62:00.1"
+pci_devices: ""
 count: 10

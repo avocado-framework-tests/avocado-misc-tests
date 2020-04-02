@@ -41,7 +41,7 @@ class DriverBindTest(Test):
         Setup the device.
         """
         self.return_code = 0
-        self.pci_devices = self.params.get('pci_device', default=None)
+        self.pci_devices = self.params.get('pci_devices', default=None)
         self.count = int(self.params.get('count', default=1))
         if not self.pci_devices:
             self.cancel("No pci_adresses Given")
