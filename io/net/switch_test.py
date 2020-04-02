@@ -24,7 +24,8 @@ import paramiko
 import netifaces
 from avocado import main
 from avocado import Test
-from avocado.utils import configure_network
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.network.hosts import LocalHost
 
 
 class SwitchTest(Test):
@@ -43,11 +44,18 @@ class SwitchTest(Test):
         self.iface = interface
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        configure_network.set_ip(self.ipaddr, self.netmask, self.iface)
+        local = LocalHost()
+        self.networkinterface = NetworkInterface(self.iface, local)
+        try:
+            self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        except Exception:
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        self.networkinterface.bring_up()
         self.peer = self.params.get("peer_ip")
         if not self.peer:
             self.cancel("No peer provided")
-        if not configure_network.ping_check(self.iface, self.peer, "2"):
+        if self.networkinterface.ping_check(self.peer, count=2) is not None:
             self.cancel("No connection to peer")
         self.switch_name = self.params.get("switch_name", '*', default="")
         self.userid = self.params.get("userid", '*', default="")
@@ -106,11 +114,11 @@ class SwitchTest(Test):
         self.run_switch_command(cmd)
         self.run_switch_command("shutdown")
         time.sleep(5)
-        if configure_network.ping_check(self.iface, self.peer, "5"):
+        if self.networkinterface.ping_check(self.peer, count=5) is None:
             self.fail("pinging after disable port")
         self.run_switch_command("no shutdown")
         time.sleep(5)
-        if not configure_network.ping_check(self.iface, self.peer, "5"):
+        if self.networkinterface.ping_check(self.peer, count=5) is not None:
             self.fail("ping test failed")
         self.run_switch_command("end")
 
@@ -118,7 +126,7 @@ class SwitchTest(Test):
         '''
         unset ip address
         '''
-        configure_network.unset_ip(self.iface)
+        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
 
 
 if __name__ == "__main__":

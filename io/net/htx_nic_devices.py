@@ -30,7 +30,8 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import build
 from avocado.utils import archive
 from avocado.utils.process import CmdError
-from avocado.utils import configure_network
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.network.hosts import LocalHost
 
 
 class CommandFailed(Exception):
@@ -74,8 +75,15 @@ class HtxNicTest(Test):
 
         self.parameters()
         if 'start' in str(self.name.name):
+            self.localhost = LocalHost()
             for ipaddr, interface in zip(self.ipaddr, self.host_intfs):
-                configure_network.set_ip(ipaddr, self.netmask, interface)
+                networkinterface = NetworkInterface(interface, self.localhost)
+                try:
+                    networkinterface.add_ipaddr(ipaddr, self.netmask)
+                    networkinterface.save(ipaddr, self.netmask)
+                except Exception:
+                    networkinterface.save(ipaddr, self.netmask)
+                networkinterface.bring_up()
         self.host_distro = distro.detect()
         self.login(self.peer_ip, self.peer_user, self.peer_password)
         self.get_ips()
@@ -417,7 +425,13 @@ class HtxNicTest(Test):
         """
         for (host_intf, net_id) in zip(self.host_intfs, self.net_ids):
             ip_addr = "%s.1.1.%s" % (net_id, self.host_ip.split('.')[-1])
-            configure_network.set_ip(ip_addr, self.netmask, host_intf)
+            networkinterface = NetworkInterface(host_intf, self.localhost)
+            try:
+                networkinterface.add_ipaddr(ip_addr, self.netmask)
+                networkinterface.save(ip_addr, self.netmask)
+            except Exception:
+                networkinterface.save(ip_addr, self.netmask)
+            networkinterface.bring_up()
         for (peer_intf, net_id) in zip(self.peer_intfs, self.net_ids):
             ip_addr = "%s.1.1.%s" % (net_id, self.peer_ip.split('.')[-1])
             cmd = "ip addr add dev %s %s/%s" % (peer_intf, ip_addr, self.netmask)
@@ -721,8 +735,8 @@ class HtxNicTest(Test):
             self.suspend_all_net_devices_in_host()
             self.log.info("Shutting down the %s in host", self.mdt_file)
             cmd = 'htxcmdline -shutdown -mdt %s' % self.mdt_file
-            process.system(cmd, timeout=120, ignore_status=True, shell=True, sudo=True)
-
+            process.system(cmd, timeout=120, ignore_status=True,
+                           shell=True, sudo=True)
         if self.is_net_device_active_in_peer():
             self.suspend_all_net_devices_in_peer()
             self.log.info("Shutting down the %s in peer", self.mdt_file)

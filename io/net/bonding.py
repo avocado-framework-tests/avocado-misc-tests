@@ -36,7 +36,8 @@ from avocado.utils import process
 from avocado.utils import linux_modules
 from avocado.utils import genio
 from avocado.utils.ssh import Session
-from avocado.utils import configure_network
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.network.hosts import LocalHost
 
 
 class Bonding(Test):
@@ -87,8 +88,15 @@ class Bonding(Test):
         self.ipaddr = self.params.get("host_ips", default="").split(",")
         self.netmask = self.params.get("netmask", default="")
         if 'setup' in str(self.name.name):
+            localhost = LocalHost()
             for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
-                configure_network.set_ip(ipaddr, self.netmask, interface)
+                networkinterface = NetworkInterface(interface, localhost)
+                try:
+                    networkinterface.add_ipaddr(ipaddr, self.netmask)
+                    networkinterface.save(ipaddr, self.netmask)
+                except Exception:
+                    networkinterface.save(ipaddr, self.netmask)
+                networkinterface.bring_up()
         self.miimon = self.params.get("miimon", default="100")
         self.fail_over_mac = self.params.get("fail_over_mac",
                                              default="2")
@@ -297,7 +305,8 @@ class Bonding(Test):
                 for param in dict[self.mode]:
                     param_value = self.params.get(param, default='')
                     if param_value:
-                        genio.write_file("%s/bonding/%s" % (self.bond_dir, param), param_value)
+                        genio.write_file("%s/bonding/%s"
+                                         % (self.bond_dir, param), param_value)
             for val in self.host_interfaces:
                 if self.ib:
                     self.bond_ib_conf(self.bond_name, val, "ATTACH")
@@ -419,8 +428,6 @@ class Bonding(Test):
                     self.log.warn("unable to bring to original state in peer")
                 time.sleep(self.sleep_time)
         self.error_check()
-        for interface in self.host_interfaces:
-            configure_network.unset_ip(interface)
 
     def error_check(self):
         if self.err:

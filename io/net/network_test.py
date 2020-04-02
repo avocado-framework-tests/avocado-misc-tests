@@ -29,8 +29,8 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils import genio
-from avocado.utils.configure_network import PeerInfo
-from avocado.utils import configure_network
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.network.hosts import LocalHost, RemoteHost
 from avocado.utils import wait
 
 
@@ -62,9 +62,15 @@ class NetworkTest(Test):
         self.iface = interface
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        configure_network.set_ip(self.ipaddr, self.netmask, self.iface)
-        if not wait.wait_for(configure_network.is_interface_link_up,
-                             timeout=120, args=[self.iface]):
+        local = LocalHost()
+        self.networkinterface = NetworkInterface(self.iface, local)
+        try:
+            self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        except Exception:
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        self.networkinterface.bring_up()
+        if not wait.wait_for(self.networkinterface.is_link_up, timeout=120):
             self.fail("Link up of interface is taking longer than 120 seconds")
         self.peer = self.params.get("peer_ip")
         if not self.peer:
@@ -73,24 +79,23 @@ class NetworkTest(Test):
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default=None)
-        self.peerinfo = PeerInfo(self.peer, peer_user=self.peer_user,
-                                 peer_password=self.peer_password)
-        self.peer_interface = self.peerinfo.get_peer_interface(self.peer)
+        remotehost = RemoteHost(self.peer, self.peer_user,
+                                password=self.peer_password)
+        self.peer_interface = remotehost.get_interface_by_ipaddr(self.peer).name
+        self.peer_networkinterface = NetworkInterface(self.peer_interface,
+                                                      remotehost)
         self.mtu = self.params.get("mtu", default=1500)
         self.mtu_set()
-        if not wait.wait_for(configure_network.is_interface_link_up,
-                             timeout=120, args=[self.iface]):
-            self.fail("Link up of interface is taking longer than 120 seconds")
-        if not configure_network.ping_check(self.iface, self.peer, "5"):
+        if self.networkinterface.ping_check(self.peer, count=5) is not None:
             self.cancel("No connection to peer")
 
     def mtu_set(self):
         '''
         set mtu size
         '''
-        if not self.peerinfo.set_mtu_peer(self.peer_interface, self.mtu):
+        if self.peer_networkinterface.set_mtu(self.mtu) is not None:
             self.cancel("Failed to set mtu in peer")
-        if not configure_network.set_mtu_host(self.iface, self.mtu):
+        if self.networkinterface.set_mtu(self.mtu) is not None:
             self.cancel("Failed to set mtu in host")
 
     def test_gro(self):
@@ -148,15 +153,15 @@ class NetworkTest(Test):
         '''
         ping to peer machine
         '''
-        if not configure_network.ping_check(self.iface, self.peer, '10'):
+        if self.networkinterface.ping_check(self.peer, count=10) is not None:
             self.fail("ping test failed")
 
     def test_floodping(self):
         '''
         Flood ping to peer machine
         '''
-        if not configure_network.ping_check(self.iface, self.peer,
-                                            '500000', flood=True):
+        if self.networkinterface.ping_check(self.peer, count=500000,
+                                            options='-f') is not None:
             self.fail("flood ping test failed")
 
     def test_ssh(self):
@@ -193,9 +198,9 @@ class NetworkTest(Test):
         '''
         Test jumbo frames
         '''
-        if not configure_network.ping_check(self.iface, self.peer, "30",
-                                            option='-i 0.1 -s %d'
-                                            % (int(self.mtu) - 28)):
+        if self.networkinterface.ping_check(self.peer, count=30,
+                                            options='-i 0.1 -s %d'
+                                            % (int(self.mtu) - 28)) is not None:
             self.fail("jumbo frame test failed")
 
     def test_statistics(self):
@@ -206,8 +211,7 @@ class NetworkTest(Test):
         tx_file = "/sys/class/net/%s/statistics/tx_packets" % self.iface
         rx_before = genio.read_file(rx_file)
         tx_before = genio.read_file(tx_file)
-        configure_network.ping_check(self.iface, self.peer, "500000",
-                                     flood=True)
+        self.networkinterface.ping_check(self.peer, count=500000, options='-f')
         rx_after = genio.read_file(rx_file)
         tx_after = genio.read_file(tx_file)
         if (rx_after <= rx_before) or (tx_after <= tx_before):
@@ -219,9 +223,9 @@ class NetworkTest(Test):
         '''
         Test set mtu back to 1500
         '''
-        if not configure_network.set_mtu_host(self.iface, '1500'):
-            self.cancel("Failed to set mtu in host")
-        if not self.peerinfo.set_mtu_peer(self.peer_interface, '1500'):
+        if self.peer_networkinterface.set_mtu('1500') is not None:
+            self.cancel("Failed to set mtu in peer")
+        if self.networkinterface.set_mtu('1500') is not None:
             self.cancel("Failed to set mtu in peer")
 
     def offload_toggle_test(self, ro_type, ro_type_full):
@@ -232,8 +236,8 @@ class NetworkTest(Test):
             if not self.offload_state_change(ro_type,
                                              ro_type_full, state):
                 self.fail("%s %s failed" % (ro_type, state))
-            if not configure_network.ping_check(self.iface, self.peer,
-                                                "500000", flood=True):
+            if self.networkinterface.ping_check(self.peer, count=500000,
+                                                options='-f') is not None:
                 self.fail("ping failed in %s %s" % (ro_type, state))
 
     def offload_state_change(self, ro_type, ro_type_full, state):
@@ -270,12 +274,11 @@ class NetworkTest(Test):
         cmd = "ip link set %s promisc on" % self.iface
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("failed to enable promisc mode")
-        configure_network.ping_check(self.iface, self.peer,
-                                     "100000", flood=True)
+        self.networkinterface.ping_check(self.peer, count=100000, options='-f')
         cmd = "ip link set %s promisc off" % self.iface
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("failed to disable promisc mode")
-        configure_network.ping_check(self.iface, self.peer, "5")
+        self.networkinterface.ping_check(self.peer, count=5)
 
     def tearDown(self):
         '''
@@ -286,7 +289,7 @@ class NetworkTest(Test):
             process.run("rm -rf /tmp/tempfile")
             cmd = "timeout 600 ssh %s \" rm -rf /tmp/tempfile\"" % self.peer
             process.system(cmd, shell=True, verbose=True, ignore_status=True)
-        configure_network.unset_ip(self.iface)
+        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
 
 
 if __name__ == "__main__":

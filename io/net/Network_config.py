@@ -23,7 +23,8 @@ from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
-from avocado.utils import configure_network
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.network.hosts import LocalHost
 
 
 class NetworkconfigTest(Test):
@@ -47,7 +48,14 @@ class NetworkconfigTest(Test):
             self.cancel("%s interface is not available" % self.iface)
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        configure_network.set_ip(self.ipaddr, self.netmask, self.iface)
+        local = LocalHost()
+        self.networkinterface = NetworkInterface(self.iface, local)
+        try:
+            self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        except Exception:
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        self.networkinterface.bring_up()
         cmd = "basename /sys/class/net/%s/device/driver/module/drivers/*" % self.iface
         self.iface_type, self.driver = process.system_output(
             cmd, shell=True).decode("utf-8").split(':')
@@ -149,7 +157,7 @@ class NetworkconfigTest(Test):
         '''
         unset ip for host interface
         '''
-        configure_network.unset_ip(self.iface)
+        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
 
 
 if __name__ == "__main__":
