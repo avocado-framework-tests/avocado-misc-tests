@@ -42,15 +42,15 @@ class BootlisTest(Test):
         if self.host_interfaces is not None:
             if not self.host_interfaces:
                 self.cancel("user should specify host interfaces")
-            self.names = self.host_interfaces.replace(',', ' ')
+            self.names = self.host_interfaces
             interfaces = netifaces.interfaces()
-            for host_interface in self.host_interfaces.split(","):
+            for host_interface in self.host_interfaces.split(" "):
                 if host_interface not in interfaces:
                     self.cancel("interface is not available")
         elif self.disk_names is not None:
             if not self.disk_names:
                 self.cancel("user should specify disk name")
-            self.names = self.disk_names.replace(',', ' ')
+            self.names = self.disk_names
 
     def bootlist_mode(self, param):
         '''
