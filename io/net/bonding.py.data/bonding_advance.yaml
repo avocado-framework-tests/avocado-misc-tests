@@ -12,6 +12,7 @@ sleep_time: "5"
 fail_over_mac: "2"
 downdelay: "200"
 miimon: "50"
+mtu: "1500"
 bonding_mode: !mux
     roundrobin:
         bonding_mode: "0"
