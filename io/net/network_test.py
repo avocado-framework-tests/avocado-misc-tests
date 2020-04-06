@@ -76,6 +76,7 @@ class NetworkTest(Test):
         if not self.peer:
             self.cancel("No peer provided")
         self.mtu = self.params.get("mtu", default=1500)
+        self.peer_public_ip = self.params.get("peer_public_ip", default="")
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default=None)
@@ -84,8 +85,16 @@ class NetworkTest(Test):
         self.peer_interface = remotehost.get_interface_by_ipaddr(self.peer).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
                                                       remotehost)
+        remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
+                                       password=self.peer_password)
+        self.peer_public_networkinterface = NetworkInterface(self.peer_interface,
+                                                             remotehost_public)
         self.mtu = self.params.get("mtu", default=1500)
         self.mtu_set()
+        self.peer_networkinterface = NetworkInterface(self.peer_interface,
+                                                      remotehost)
+        remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
+                                       password=self.peer_password)
         if self.networkinterface.ping_check(self.peer, count=5) is not None:
             self.cancel("No connection to peer")
 
@@ -223,10 +232,12 @@ class NetworkTest(Test):
         '''
         Test set mtu back to 1500
         '''
-        if self.peer_networkinterface.set_mtu('1500') is not None:
-            self.cancel("Failed to set mtu in peer")
+        try:
+            self.peer_networkinterface.set_mtu('1500')
+        except Exception:
+            self.peer_public_networkinterface.set_mtu('1500')
         if self.networkinterface.set_mtu('1500') is not None:
-            self.cancel("Failed to set mtu in peer")
+            self.cancel("Failed to set mtu in host")
 
     def offload_toggle_test(self, ro_type, ro_type_full):
         '''

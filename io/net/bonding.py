@@ -70,6 +70,7 @@ class Bonding(Test):
             if not self.mode:
                 self.cancel("test skipped because mode not specified")
         interfaces = netifaces.interfaces()
+        self.peer_public_ip = self.params.get("peer_public_ip", default="")
         self.user = self.params.get("user_name", default="root")
         self.password = self.params.get("peer_password", '*',
                                         default="None")
@@ -122,15 +123,15 @@ class Bonding(Test):
         self.err = []
         self.remotehost = RemoteHost(self.peer_first_ipinterface, self.user,
                                      password=self.password)
+        self.remotehost_public = RemoteHost(self.peer_public_ip, self.user,
+                                            password=self.password)
         if 'setup' in str(self.name.name):
             for interface in self.peer_interfaces:
-                peer_networkinterface = NetworkInterface(interface,
-                                                         self.remotehost)
+                peer_networkinterface = NetworkInterface(interface, self.remotehost)
                 if peer_networkinterface.set_mtu(self.mtu) is not None:
                     self.cancel("Failed to set mtu in peer")
             for host_interface in self.host_interfaces:
-                self.networkinterface = NetworkInterface(host_interface,
-                                                         self.localhost)
+                self.networkinterface = NetworkInterface(host_interface, self.localhost)
                 if self.networkinterface.set_mtu(self.mtu) is not None:
                     self.cancel("Failed to set mtu in host")
 
@@ -446,11 +447,15 @@ class Bonding(Test):
             networkinterface = NetworkInterface(host_interface, self.localhost)
             if networkinterface.set_mtu("1500") is not None:
                 self.cancel("Failed to set mtu in host")
-        for interface in self.peer_interfaces:
-            peer_networkinterface = NetworkInterface(interface,
-                                                     self.remotehost)
-            if peer_networkinterface.set_mtu("1500") is not None:
-                self.cancel("Failed to set mtu in peer")
+        try:
+            for interface in self.peer_interfaces:
+                peer_networkinterface = NetworkInterface(interface, self.remotehost)
+                peer_networkinterface.set_mtu("1500")
+        except Exception:
+            for interface in self.peer_interfaces:
+                peer_public_networkinterface = NetworkInterface(interface,
+                                                                self.remotehost_public)
+                peer_public_networkinterface.set_mtu("1500")
 
     def error_check(self):
         if self.err:
