@@ -165,15 +165,15 @@ class HtxNicTest(Test):
         self.peer_password = self.params.get("peer_password",
                                              '*', default=None)
         self.host_intfs = self.params.get("host_interfaces",
-                                          '*', default=None).split(",")
+                                          '*', default=None).split(" ")
         self.peer_intfs = self.params.get("peer_interfaces",
-                                          '*', default=None).split(",")
-        self.net_ids = self.params.get("net_ids", '*', default=None).split(",")
+                                          '*', default=None).split(" ")
+        self.net_ids = self.params.get("net_ids", '*', default=None).split(" ")
         self.mdt_file = self.params.get("mdt_file", '*', default="net.mdt")
         self.time_limit = int(self.params.get("time_limit",
                                               '*', default=2)) * 60
         self.query_cmd = "htxcmdline -query -mdt %s" % self.mdt_file
-        self.ipaddr = self.params.get("host_ips", default="").split(",")
+        self.ipaddr = self.params.get("host_ips", default="").split(" ")
         self.netmask = self.params.get("netmask", default="")
         self.htx_url = self.params.get("htx_rpm", default="")
 

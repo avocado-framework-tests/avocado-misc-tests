@@ -24,3 +24,9 @@ based on the net_id value. If this happens, none of the Peer commands
 will be executed as ssh will not happen and the test will fail.
 Make sure that there is a separate interface configured with Public IP
 and is left untouched.
+
+Please pass these parameters as space spearated values if there are more than one inputts
+host_interfaces: "env2 env5"
+peer_interfaces: "eht1 eth2"
+net_ids: "150 151"
+host_ips: "102.10.10.188 202.20.20.188"

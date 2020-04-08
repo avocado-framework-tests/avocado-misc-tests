@@ -17,11 +17,12 @@ Note:
 Inputs Needed To Run Tests:
 ------------------------------
 bond_interfaces --> Interfaces in the Host machine requird for Bonding
-Note: example bond_interfaces = "ib0,ib1", No Space between the interface names
+Note: example bond_interfaces = "ib0 ib1", Space between the interface names
 peerip --> peer ip address
-peer_interfaces --> This is needed only if a Bond interface is to be created in the Peer machine.
+peer_interfaces --> This is needed only if a Bond interface is to be created in the Peer machine, space separated names if specifying multiple
 bond_name --> to create bond
 username --> user name
+host_ips --> space separated ip addresses
 peer_bond_needed --> If bond interface is needed to be created in Peer machine
 peer_wait_time --> Time required for the interfaces in Peer machine to come up
 sleep_time --> Generic Sleep time used in the test
