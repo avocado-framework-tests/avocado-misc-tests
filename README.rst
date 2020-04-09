@@ -41,4 +41,4 @@ References:
 -----------
 
 1. https://github.com/avocado-framework/avocado
-2. http://avocado-framework.readthedocs.io/en/latest/WritingTests.html#categorizing-tests
+2. https://avocado-framework.readthedocs.io/en/77.0/guides/writer/chapters/writing.html#categorizing-tests
