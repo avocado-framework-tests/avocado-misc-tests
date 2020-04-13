@@ -50,7 +50,7 @@ class Openblas(Test):
         openblas_dir = os.path.join(self.workdir, "OpenBLAS-develop")
         openblas_bin_dir = os.path.join(openblas_dir, 'bin')
         os.mkdir(openblas_bin_dir)
-        build.make(openblas_dir, extra_args='FC=gfortran'
+        build.make(openblas_dir, extra_args='FC=gfortran '
                    'ISMAXKERNEL=imax.S ISMINKERNEL=imin.S')
         build.make(openblas_dir, extra_args='PREFIX=%s install' %
                    openblas_bin_dir)
