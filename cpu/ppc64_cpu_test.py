@@ -121,7 +121,7 @@ class PPC64Test(Test):
         op1 = process.system_output(
             "ppc64_cpu --cores-present",
             shell=True).decode("utf-8").strip().split()[-1]
-        op2 = cpu.online_cpus_count() / int(self.key)
+        op2 = cpu.online_count() / int(self.key)
         self.equality_check("Core", op1, ceil(op2))
 
     def subcore(self):

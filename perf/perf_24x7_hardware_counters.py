@@ -66,11 +66,11 @@ class EliminateDomainSuffix(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
-        self.cpu_arch = cpu.get_cpu_arch().lower()
+        self.cpu_family = cpu.get_family()
         self.perf_args = "perf stat -v -C 0 -e"
-        if self.cpu_arch == 'power8':
+        if self.cpu_family == 'power8':
             self.perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % self.perf_args
-        if self.cpu_arch == 'power9':
+        if self.cpu_family == 'power9':
             self.perf_stat = "%s hv_24x7/CPM_TLBIE" % self.perf_args
         self.event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
 

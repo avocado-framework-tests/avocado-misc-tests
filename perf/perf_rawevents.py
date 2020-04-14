@@ -23,9 +23,9 @@ from avocado import skipUnless
 from avocado.utils import cpu, distro, process, genio
 from avocado.utils.software_manager import SoftwareManager
 
-CPU_ARCH = cpu.get_cpu_arch().lower()
-IS_POWER9 = 'power9' in CPU_ARCH
-IS_POWER8 = 'power8' in CPU_ARCH
+CPU_FAMILY = cpu.get_family()
+IS_POWER9 = 'power9' in CPU_FAMILY
+IS_POWER8 = 'power8' in CPU_FAMILY
 
 
 class PerfRawevents(Test):

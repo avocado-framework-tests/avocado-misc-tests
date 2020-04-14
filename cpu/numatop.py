@@ -73,7 +73,7 @@ class Numatop(Test):
 
         # Run mgen for 5 seconds to generate a single snapshot of numatop
         process.run('%s -a 0 -c %s -t 5' %
-                    (mgen, cpu.cpu_online_list()[0]), shell=True, sudo=True)
+                    (mgen, cpu.online_list()[0]), shell=True, sudo=True)
 
         # Kill numatop recording after running mgen
         self.numa_pid.terminate()

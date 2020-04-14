@@ -76,7 +76,7 @@ class freq_transitions(Test):
                 break
         threshold = (fre_max - fre_min) * (10 ** 6)
         self.threshold = int(self.params.get("threshold", default=threshold))
-        self.cpus = cpu.total_cpus_count()
+        self.cpus = cpu.online_count()
         self.cpu_num = 0
         self.max_freq = 0
         self.quad_dict = {}

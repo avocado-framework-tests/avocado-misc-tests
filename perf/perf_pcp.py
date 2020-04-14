@@ -34,7 +34,7 @@ class PCP(Test):
 
     def setUp(self):
         smg = SoftwareManager()
-        self.cpu_arch = cpu.get_cpu_arch().lower()
+        self.cpu_family = cpu.get_family()
         self.dist = distro.detect()
         if self.dist.name in ['centos', 'fedora', 'rhel', 'SuSE']:
             pkgs = ['pcp', 'pcp-pmda-perfevent']
@@ -87,7 +87,7 @@ class PCP(Test):
 
     def test_perfevent_24x7_events(self):
         self.lpar_24x7_ppc64le_check()
-        if self.cpu_arch == 'power8':
+        if self.cpu_family == 'power8':
             self.cancel("Not supported on Power8")
         # -s 2 collects two samples
         cmd = "pmval -s 2 perfevent.hwcounters.hv_24x7.PM_MBA0_CLK_CYC.value"
