@@ -20,6 +20,7 @@ HTX Test
 
 import os
 import time
+import shutil
 from avocado import Test
 from avocado import main
 from avocado.utils.software_manager import SoftwareManager
@@ -50,12 +51,14 @@ class HtxTest(Test):
         self.mdt_file = self.params.get('mdt_file', default='mdt.mem')
         self.time_limit = int(self.params.get('time_limit', default=2))
         self.time_unit = self.params.get('time_unit', default='m')
+        self.run_type = self.params.get('run_type', default='git')
         if self.time_unit == 'm':
             self.time_limit = self.time_limit * 60
         elif self.time_unit == 'h':
             self.time_limit = self.time_limit * 3600
         else:
-            self.cancel("running time unit is not proper, please pass as 'm' or 'h' ")
+            self.cancel(
+                "running time unit is not proper, please pass as 'm' or 'h' ")
         if str(self.name.name).endswith('test_start'):
             # Build HTX only at the start phase of test
             self.setup_htx()
@@ -83,23 +86,50 @@ class HtxTest(Test):
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("Can not install %s" % pkg)
 
-        url = "https://github.com/open-power/HTX/archive/master.zip"
-        tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')
-        archive.extract(tarball, self.teststmpdir)
-        htx_path = os.path.join(self.teststmpdir, "HTX-master")
-        os.chdir(htx_path)
+        if self.run_type == 'git':
+            url = "https://github.com/open-power/HTX/archive/master.zip"
+            tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')
+            archive.extract(tarball, self.teststmpdir)
+            htx_path = os.path.join(self.teststmpdir, "HTX-master")
+            os.chdir(htx_path)
 
-        exercisers = ["hxecapi_afu_dir", "hxedapl", "hxecapi", "hxeocapi"]
-        for exerciser in exercisers:
-            process.run("sed -i 's/%s//g' %s/bin/Makefile" % (exerciser,
-                                                              htx_path))
+            exercisers = ["hxecapi_afu_dir", "hxedapl", "hxecapi", "hxeocapi"]
+            for exerciser in exercisers:
+                process.run("sed -i 's/%s//g' %s/bin/Makefile" % (exerciser,
+                                                                  htx_path))
 
-        build.make(htx_path, extra_args='all')
-        build.make(htx_path, extra_args='tar')
-        process.run('tar --touch -xvzf htx_package.tar.gz')
-        os.chdir('htx_package')
-        if process.system('./installer.sh -f'):
-            self.fail("Installation of htx fails:please refer job.log")
+            build.make(htx_path, extra_args='all')
+            build.make(htx_path, extra_args='tar')
+            process.run('tar --touch -xvzf htx_package.tar.gz')
+            os.chdir('htx_package')
+            if process.system('./installer.sh -f'):
+                self.fail("Installation of htx fails:please refer job.log")
+        else:
+            dist_name = detected_distro.name.lower()
+            if dist_name == 'suse':
+                dist_name = 'sles'
+            rpm_check = "htx%s%s" % (dist_name, detected_distro.version)
+            skip_install = False
+            ins_htx = process.system_output(
+                'rpm -qa | grep htx', shell=True, ignore_status=True).decode()
+            if ins_htx:
+                if not smm.check_installed(rpm_check):
+                    self.log.info("Clearing existing HTX rpm")
+                    process.system('rpm -e %s' %
+                                   ins_htx, shell=True, ignore_status=True)
+                    if os.path.exists('/usr/lpp/htx'):
+                        shutil.rmtree('/usr/lpp/htx')
+                else:
+                    self.log.info("Using existing HTX")
+                    skip_install = True
+            if not skip_install:
+                rpm_loc = self.params.get('rpm_link', default=None)
+                if rpm_loc:
+                    if process.system('rpm -ivh --nodeps %s '
+                                      '--force' % rpm_loc, shell=True, ignore_status=True):
+                        self.cancel("Installing rpm failed")
+                else:
+                    self.cancel("RPM link is required for RPM run type")
         self.log.info("Starting the HTX Deamon")
         process.run('/usr/lpp/htx/etc/scripts/htxd_run')
 
@@ -151,9 +181,14 @@ class HtxTest(Test):
         cmd = 'htxcmdline -shutdown -mdt %s' % self.mdt_file
         process.system(cmd, timeout=120, ignore_status=True)
 
-        daemon_state = process.system_output('/etc/init.d/htx.d status')
-        if daemon_state.decode().split(" ")[-1] == 'running':
-            process.system('/usr/lpp/htx/etc/scripts/htxd_shutdown')
+        if self.run_type == 'rpm':
+            process.system(
+                '/usr/lpp/htx/etc/scripts/htxd_shutdown', ignore_status=True)
+            process.system('umount /htx_pmem*', ignore_status=True)
+        else:
+            daemon_state = process.system_output('/etc/init.d/htx.d status')
+            if daemon_state.decode().split(" ")[-1] == 'running':
+                process.system('/usr/lpp/htx/etc/scripts/htxd_shutdown')
 
 
 if __name__ == "__main__":
