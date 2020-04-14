@@ -126,7 +126,8 @@ class HtxTest(Test):
                 rpm_loc = self.params.get('rpm_link', default=None)
                 if rpm_loc:
                     if process.system('rpm -ivh --nodeps %s '
-                                      '--force' % rpm_loc, shell=True, ignore_status=True):
+                                      '--force' % rpm_loc,
+                                      shell=True, ignore_status=True):
                         self.cancel("Installing rpm failed")
                 else:
                     self.cancel("RPM link is required for RPM run type")
