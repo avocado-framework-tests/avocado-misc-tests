@@ -21,7 +21,7 @@ import json
 
 from avocado import Test
 from avocado import main
-from avocado.utils import process, build, distro, git
+from avocado.utils import process, build, distro, git, genio
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -50,6 +50,11 @@ class NdctlTest(Test):
         """
         Prequisite for ndctl selftest on non-NFIT devices
         """
+        nstype = genio.read_file("/sys/bus/nd/devices/region0"
+                                 "/nstype").rstrip("\n")
+        if nstype == "4":
+            self.cancel("Test not supported on legacy hardware")
+
         smg = SoftwareManager()
         self.url = self.params.get(
             'url', default="https://github.com/pmem/ndctl.git")
