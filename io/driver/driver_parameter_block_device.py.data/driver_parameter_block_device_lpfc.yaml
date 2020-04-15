@@ -1,0 +1,174 @@
+module: 'lpfc'
+multipath_enabled: True
+disk: '/dev/mapper/mpathe'
+Test: !mux
+    lpfc_debugfs_enable:
+        module_param_name: "lpfc_debugfs_enable"
+        value: !mux
+            lpfc_debugfs_enable_0:
+                module_param_value: "0"
+            lpfc_debugfs_enable_1:
+                module_param_value: "1"
+    lpfc_log_verbose:
+        module_param_name: "lpfc_log_verbose"
+        value: !mux
+            lpfc_log_verbose_1:
+                module_param_value: "1"
+            lpfc_log_verbose_0:
+                module_param_value: "0"
+    lpfc_enable_mds_diags:
+        module_param_name: "lpfc_enable_mds_diags"
+        value: !mux
+            lpfc_enable_mds_diags_1:
+                module_param_value: "1"
+            lpfc_enable_mds_diags_0:
+                module_param_value: "0"
+    lpfc_ras_fwlog_level:
+        module_param_name: "lpfc_ras_fwlog_level"
+        value: !mux
+            lpfc_ras_fwlog_level_1:
+                module_param_value: "1"
+            lpfc_ras_fwlog_level_0:
+                module_param_value: "0"
+    lpfc_tgt_queue_depth:
+        module_param_name: "lpfc_tgt_queue_depth"
+        value: !mux
+            lpfc_tgt_queue_depth_10:
+                module_param_value: "10"
+            lpfc_tgt_queue_depth_1000:
+                module_param_value: "1000"
+            lpfc_tgt_queue_depth_10240:
+                module_param_value: "10240"
+            lpfc_tgt_queue_depth_655350:
+                module_param_value: "655350"
+    lpfc_link_speed:
+        module_param_name: "lpfc_link_speed"
+        value: !mux
+            lpfc_link_speed_1:
+                module_param_value: "1"
+            lpfc_link_speed_8:
+                module_param_value: "8"
+            lpfc_link_speed_16:
+                module_param_value: "16"
+    lpfc_hdw_queue:
+        module_param_name: "lpfc_hdw_queue"
+        value: !mux
+            lpfc_hdw_queue_1:
+                module_param_value: "1"
+            lpfc_hdw_queue_10:
+                module_param_value: "10"
+            lpfc_hdw_queue_100:
+                module_param_value: "100"
+    lpfc_irq_chann:
+        module_param_name: "lpfc_irq_chann"
+        value: !mux
+            lpfc_irq_chann_1:
+                module_param_value: "1"
+            lpfc_irq_chann_10:
+                module_param_value: "10"
+            lpfc_irq_chann_100:
+                module_param_value: "100"
+    lpfc_max_luns:
+        module_param_name: "lpfc_max_luns"
+        value: !mux
+            lpfc_max_luns_0:
+                module_param_value: "0"
+            lpfc_max_luns_1:
+                module_param_value: "1"
+            lpfc_max_luns_4:
+                module_param_value: "4"
+            lpfc_max_luns_120:
+                module_param_value: "100"
+            lpfc_max_luns_256:
+                module_param_value: "256"
+    lpfc_fcp_mq_threshold:
+        module_param_name: "lpfc_fcp_mq_threshold"
+        value: !mux
+            lpfc_fcp_mq_threshold_1:
+                module_param_value: "1"
+            lpfc_fcp_mq_threshold_20:
+                module_param_value: "20"
+            lpfc_fcp_mq_threshold_80:
+                module_param_value: "80"
+    lpfc_delay_discovery:
+        module_param_name: "lpfc_delay_discovery"
+        value: !mux
+            lpfc_delay_discovery_1:
+                module_param_value: "1"
+            lpfc_delay_discovery_0:
+                module_param_value: "0"
+    lpfc_fcp_imax:
+        module_param_name: "lpfc_fcp_imax"
+        value: !mux
+            lpfc_fcp_imax_1:
+                module_param_value: "1"
+            lpfc_fcp_imax_30:
+                module_param_value: "30"
+    lpfc_hba_queue_depth:
+        module_param_name: "lpfc_hba_queue_depth"
+        value: !mux
+            lpfc_hba_queue_depth_10:
+                module_param_value: "10"
+            lpfc_hba_queue_depth_1000:
+                module_param_value: "1000"
+            lpfc_hba_queue_depth_5120:
+                module_param_value: "5120"
+            lpfc_hba_queue_depth_10240:
+                module_param_value: "10240"
+    lpfc_task_mgmt_tmo:
+        module_param_name: "lpfc_task_mgmt_tmo"
+        value: !mux
+            lpfc_task_mgmt_tmo_10:
+                module_param_value: "10"
+            lpfc_task_mgmt_tmo_100:
+                module_param_value: "100"
+            lpfc_task_mgmt_tmo_600:
+                module_param_value: "600"
+    lpfc_poll_tmo:
+        module_param_name: "lpfc_poll_tmo"
+        value: !mux
+            lpfc_poll_tmo_5:
+                module_param_value: "5"
+            lpfc_poll_tmo_50:
+                module_param_value: "50"
+            lpfc_poll_tmo_100:
+                module_param_value: "100"
+    lpfc_cr_count:
+        module_param_name: "lpfc_cr_count"
+        value: !mux
+            lpfc_cr_count_5:
+                module_param_value: "5"
+            lpfc_cr_count_10:
+                module_param_value: "10"
+    lpfc_cr_delay:
+        module_param_name: "lpfc_cr_delay"
+        value: !mux
+            lpfc_cr_delay_1:
+                module_param_value: "1"
+            lpfc_cr_delay_4:
+                module_param_value: "4"
+            lpfc_cr_delay_8:
+                module_param_value: "8"
+    lpfc_force_rscn:
+        module_param_name: "lpfc_force_rscn"
+        value: !mux
+            lpfc_force_rscn_1:
+                module_param_value: "1"
+            lpfc_force_rscn_0:
+                module_param_value: "0"
+    lpfc_scan_down:
+        module_param_name: "lpfc_scan_down"
+        value: !mux
+            lpfc_scan_down_0:
+                module_param_value: "0"
+            lpfc_scan_down_1:
+                module_param_value: "1"
+    lpfc_fcp_cpu_map:
+        module_param_name: "lpfc_fcp_cpu_map"
+        value: !mux
+            lpfc_fcp_cpu_map_0:
+                module_param_value: "0"
+            lpfc_fcp_cpu_map_10:
+                module_param_value: "10"
+            lpfc_fcp_cpu_map_100:
+                module_param_value: "100"
