@@ -512,6 +512,46 @@ class NdctlTest(Test):
         self.log.info('Created dax device %s', vals)
 
     @avocado.fail_on(pmem.PMemException)
+    def test_region_capabilities(self):
+        """
+        Test region capabilities
+        """
+        self.plib.enable_region()
+        self.plib.disable_namespace()
+        self.plib.destroy_namespace()
+        regions = self.plib.run_ndctl_list('-R -C')
+        for region in regions:
+            cap = self.plib.run_ndctl_list_val(region, 'capabilities')
+            sec_sizes = []
+            fsdax_align = []
+            devdax_align = []
+            for typ in cap:
+                mode = self.plib.run_ndctl_list_val(typ, 'mode')
+                if mode == 'fsdax':
+                    fsdax_align = self.plib.run_ndctl_list_val(
+                        typ, 'alignments')
+                elif mode == 'devdax':
+                    devdax_align = self.plib.run_ndctl_list_val(
+                        typ, 'alignments')
+                elif mode == 'sector':
+                    sec_sizes = self.plib.run_ndctl_list_val(
+                        typ, 'sector_sizes')
+            reg_name = self.plib.run_ndctl_list_val(region, 'dev')
+            self.log.info("Creating namespaces with possible sizes")
+            for size in sec_sizes:
+                self.plib.create_namespace(
+                    region=reg_name, mode='sector', sector_size=size)
+                self.plib.destroy_namespace(region=reg_name, force=True)
+            for size in fsdax_align:
+                self.plib.create_namespace(
+                    region=reg_name, mode='fsdax', align=size)
+                self.plib.destroy_namespace(region=reg_name, force=True)
+            for size in devdax_align:
+                self.plib.create_namespace(
+                    region=reg_name, mode='devdax', align=size)
+                self.plib.destroy_namespace(region=reg_name, force=True)
+
+    @avocado.fail_on(pmem.PMemException)
     def test_sector_write(self):
         """
         Test write on a sector mode device
