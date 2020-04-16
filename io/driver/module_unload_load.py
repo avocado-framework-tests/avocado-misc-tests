@@ -20,6 +20,7 @@ import os
 from avocado import main
 from avocado.utils import process
 from avocado.utils import linux_modules, genio
+from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import pci
 from avocado import Test
 
@@ -43,6 +44,9 @@ class ModuleLoadUnload(Test):
         self.error_modules = []
         self.mod_list = []
         self.uname = linux_modules.platform.uname()[2]
+        smm = SoftwareManager()
+        if not smm.check_installed("pciutils") and not smm.install("pciutils"):
+            self.cancel("pciutils package is need to test")
 
     def built_in_module(self, module):
         """

@@ -36,7 +36,7 @@ class PciLsvpdInfo(Test):
         To check and install dependencies for the test
         '''
         smm = SoftwareManager()
-        for pkg in ["lsvpd"]:
+        for pkg in ["lsvpd", "pciutils"]:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
         if process.system("vpdupdate", ignore_status=True, shell=True):

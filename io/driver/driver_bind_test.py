@@ -25,6 +25,7 @@ from avocado import Test
 from avocado import main
 from avocado.utils import process
 from avocado.utils import pci
+from avocado.utils.software_manager import SoftwareManager
 
 
 class DriverBindTest(Test):
@@ -45,6 +46,9 @@ class DriverBindTest(Test):
         self.count = int(self.params.get('count', default=1))
         if not self.pci_devices:
             self.cancel("No pci_adresses Given")
+        smm = SoftwareManager()
+        if not smm.check_installed("pciutils") and not smm.install("pciutils"):
+            self.cancel("pciutils package is need to test")
 
     def test(self):
         """

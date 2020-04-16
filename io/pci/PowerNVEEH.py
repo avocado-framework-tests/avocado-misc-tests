@@ -26,6 +26,7 @@ from avocado.utils import process
 from avocado.utils import pci
 from avocado.utils import genio
 from avocado.utils import distro
+from avocado.utils.software_manager import SoftwareManager
 
 EEH_HIT = 0
 EEH_MISS = 1
@@ -74,6 +75,9 @@ class PowerNVEEH(Test):
                                     "eeh_pe_config_addr" % self.pci_device)
         self.addr = str(self.addr).rstrip()
         self.err = 0
+        smm = SoftwareManager()
+        if not smm.check_installed("pciutils") and not smm.install("pciutils"):
+            self.cancel("pciutils package is need to test")
         for line in process.system_output('lspci -vs %s' % self.pci_device,
                                           ignore_status=True,
                                           shell=True).decode("utf-8\
