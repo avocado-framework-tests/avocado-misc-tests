@@ -351,7 +351,7 @@ class DlparPci(Test):
                    -o %s --id %s -l %s ' % (server, operation, lpar_id,
                                             drc_index)
         try:
-            cmd = self.run_command(cmd)
+            cmd = self.run_command(cmd, 3000)
         except CommandFailed as cmd_fail:
             self.log.debug(str(cmd_fail))
             self.fail("dlpar %s operation failed" % msg)
