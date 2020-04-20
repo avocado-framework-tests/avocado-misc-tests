@@ -41,6 +41,7 @@ class Mprotect(Test):
         smm = SoftwareManager()
         self.nr_pages = self.params.get('nr_pages', default=None)
         self.in_err = self.params.get('induce_err', default=0)
+        self.back_file = self.params.get('back_file', default="/dev/zero")
         self.failure = self.params.get('failure', default=False)
 
         if not self.nr_pages:
@@ -60,7 +61,7 @@ class Mprotect(Test):
         os.chdir(self.teststmpdir)
         self.log.info("Starting test...")
 
-        ret = process.system('./mprotect %s %s' % (self.nr_pages, self.in_err),
+        ret = process.system('./mprotect %s %s %s' % (self.nr_pages, self.in_err, self.back_file),
                              shell=True, ignore_status=True, sudo=True)
         if self.failure:
             if ret != 255:

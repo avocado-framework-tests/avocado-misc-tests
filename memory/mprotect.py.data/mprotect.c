@@ -33,8 +33,8 @@ handler(int sig, siginfo_t *si, void *unused)
 
 int main(int argc, char **argv)
 {
-	if ((argc < 2) || (argc > 3)) {
-		printf("bad args, usage: ./mprotect <nr-pages> <induce-err>\n");
+	if ((argc < 2) || (argc > 4)) {
+		printf("bad args, usage: ./mprotect <nr-pages> <induce-err> <file-to-back>\n");
 		handle_error("Input");
 	}
 
@@ -43,12 +43,29 @@ int main(int argc, char **argv)
 	char *seg;
 	int fd, proto, ret, induce = 0, k = 0 ;
 	struct sigaction sa;
+	char *filepath;
 
-	if (argc == 3)
+	if (argc > 2)
 		induce = atoi(argv[2]);
+	if (argc > 3)
+		filepath = argv[3];
 
-	fd = open("/dev/zero", O_RDWR);
+	fd = open(filepath, O_CREAT | O_RDWR);
 	size = ps * length;
+
+	if (lseek(fd, size-1, SEEK_SET) == -1)
+	{
+		close(fd);
+		perror("Error calling lseek() to 'stretch' the file");
+		exit(EXIT_FAILURE);
+	}
+
+	if (write(fd, "", 1) == -1)
+	{
+		close(fd);
+		perror("Error writing last byte of the file");
+		exit(EXIT_FAILURE);
+	}
 
 	sa.sa_flags = SA_SIGINFO;
 	sigemptyset(&sa.sa_mask);
