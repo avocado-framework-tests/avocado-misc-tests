@@ -79,12 +79,6 @@ class DlparPci(Test):
             if line in self.lpar_1:
                 self.server = line
                 break
-        cmd = 'lssyscfg -r lpar -F name -m %s' % self.server
-        output = self.run_command(cmd)
-        for line in output:
-            if "%s-" % self.lpar_1 in line:
-                self.lpar_1 = line
-                break
         if not self.server:
             self.cancel("Managed System not got")
         self.lpar_2 = self.params.get("lpar_2", '*', default=None)

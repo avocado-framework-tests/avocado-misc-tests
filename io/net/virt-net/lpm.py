@@ -98,13 +98,6 @@ class LPM(Test):
         else:
             current_server = self.server
 
-        cmd = 'lssyscfg -r lpar -F name -m %s' % current_server
-        output = self.run_command(cmd)
-        for line in output:
-            if "%s-" % self.lpar in line:
-                self.lpar = line
-                break
-
         if not self.is_lpar_in_server(current_server, self.lpar):
             self.cancel("%s not in %s" % (self.lpar, current_server))
 

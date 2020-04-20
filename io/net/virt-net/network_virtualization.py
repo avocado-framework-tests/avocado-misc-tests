@@ -94,12 +94,6 @@ class NetworkVirtualization(Test):
                 break
         if not self.server:
             self.cancel("Managed System not got")
-        cmd = 'lssyscfg -r lpar -F name -m %s' % self.server
-        output = self.run_command(self.con_hmc, cmd)
-        for line in output:
-            if "%s-" % self.lpar in line:
-                self.lpar = line
-                break
         self.slot_num = self.params.get("slot_num", '*', default=None)
         self.slot_num = self.slot_num.split(',')
         for slot in self.slot_num:
