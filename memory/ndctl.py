@@ -237,7 +237,7 @@ class NdctlTest(Test):
         self.plib.destroy_namespace(region=region)
         for mode in self.modes:
             self.plib.create_namespace(region=region, mode=mode)
-            ns_json = self.plib.run_ndctl_list()[0]
+            ns_json = self.plib.run_ndctl_list('-r %s -N' % region)[0]
             created_mode = self.plib.run_ndctl_list_val(ns_json, 'mode')
             if mode != created_mode:
                 failed_modes.append(mode)
