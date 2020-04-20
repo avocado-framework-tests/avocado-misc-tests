@@ -243,6 +243,7 @@ class PortBounceTest(Test):
         checking mpath disk status after disabling the switch port
         '''
         curr_path = ''
+        err_paths = []
 
         def is_path_online():
             path_stat = multipath.get_path_status(curr_path)
@@ -252,7 +253,6 @@ class PortBounceTest(Test):
 
         for port in ports:
             paths = self.get_paths(self.dic[port])
-            err_paths = []
             self.log.info("verify %s path status for port %s in %s",
                           state1, port, ports)
             for path in paths:
