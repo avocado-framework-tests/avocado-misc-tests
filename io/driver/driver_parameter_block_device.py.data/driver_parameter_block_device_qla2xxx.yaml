@@ -1,0 +1,121 @@
+module: 'qla2xxx'
+multipath_enabled: True
+disk: '/dev/mapper/mpathb'
+Test: !mux
+    logging:
+        module_param_name: "logging"
+        value: !mux
+            logging_2:
+                module_param_value: "2"
+            logging_0:
+                module_param_value: "0"
+    ql2xextended_error_logging:
+        module_param_name: "ql2xextended_error_logging"
+        value: !mux
+            ql2xextended_error_logging_2:
+                module_param_value: "2"
+            ql2xextended_error_logging_0:
+                module_param_value: "0"
+    ql2xdontresethba:
+        module_param_name: "ql2xdontresethba"
+        value: !mux
+            ql2xdontresethba_1:
+                module_param_value: "1"
+            ql2xdontresethba_0:
+                module_param_value: "0"
+    ql2xmaxqdepth:
+        module_param_name: "ql2xmaxqdepth"
+        value: !mux
+            ql2xmaxqdepth_10:
+                module_param_value: "10"
+            ql2xmaxqdepth_40:
+                module_param_value: "40"
+            ql2xmaxqdepth_300:
+                module_param_value: "300"
+            ql2xmaxqdepth_640:
+                module_param_value: "640"
+    ql2xenablemsix:
+        module_param_name: "ql2xenablemsix"
+        value: !mux
+            ql2xenablemsix_0:
+                module_param_value: "0"
+            ql2xenablemsix_1:
+                module_param_value: "1"
+            ql2xenablemsix_2:
+                module_param_value: "2"
+    ql2xexlogins:
+        module_param_name: "ql2xexlogins"
+        value: !mux
+            ql2xexlogins_1:
+                module_param_value: "1"
+            ql2xexlogins_2:
+                module_param_value: "2"
+            ql2xexlogins_4:
+                module_param_value: "4"
+    ql2xexchoffld:
+        module_param_name: "ql2xexchoffld"
+        value: !mux
+            ql2xexchoffld_1:
+                module_param_value: "1"
+            ql2xexchoffld_512:
+                module_param_value: "512"
+            ql2xexchoffld_4096:
+                module_param_value: "4096"
+            ql2xexchoffld_10240:
+                module_param_value: "10240"
+    ql2xiniexchg:
+        module_param_name: "ql2xiniexchg"
+        value: !mux
+            ql2xiniexchg_1:
+                module_param_value: "1"
+            ql2xiniexchg_512:
+                module_param_value: "512"
+            ql2xiniexchg_4096:
+                module_param_value: "4096"
+            ql2xiniexchg_10240:
+                module_param_value: "10240"
+    ql2xfwloadbin:
+        module_param_name: "ql2xfwloadbin"
+        value: !mux
+            ql2xfwloadbin_1:
+                module_param_value: "1"
+            ql2xfwloadbin_2:
+                module_param_value: "2"
+            ql2xfwloadbin_0:
+                module_param_value: "0"
+    ql2xmqsupport:
+        module_param_name: "ql2xmqsupport"
+        value: !mux
+            ql2xmqsupport_0:
+                module_param_value: "1"
+            ql2xmqsupport_0:
+                module_param_value: "0"
+    ql2xenablehba_err_chk:
+        module_param_name: "ql2xenablehba_err_chk"
+        value: !mux
+            ql2xenablehba_err_chk_0:
+                module_param_value: "0"
+            ql2xenablehba_err_chk_1:
+                module_param_value: "1"
+            ql2xenablehba_err_chk_2:
+                module_param_value: "2"
+    ql2xloginretrycount:
+        module_param_name: "ql2xloginretrycount"
+        value: !mux
+            ql2xloginretrycount_1:
+                module_param_value: "1"
+            ql2xloginretrycount_12:
+                module_param_value: "12"
+            ql2xloginretrycount_40:
+                module_param_value: "40"
+    ql2xlogintimeout:
+        module_param_name: "ql2xlogintimeout"
+        value: !mux
+            ql2xlogintimeout_1:
+                module_param_value: "1"
+            ql2xlogintimeout_12:
+                module_param_value: "12"
+            ql2xlogintimeout_100:
+                module_param_value: "100"
+            ql2xlogintimeout_200:
+                module_param_value: "200"                
