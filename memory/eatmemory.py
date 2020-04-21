@@ -71,7 +71,7 @@ class EatMemory(Test):
                 return None
             mem_in_bytes = value * multiplier[unit]
 
-        return mem_in_bytes / multiplier['m']
+        return mem_in_bytes // multiplier['m']
 
     def test(self):
         os.chdir(self.sourcedir)

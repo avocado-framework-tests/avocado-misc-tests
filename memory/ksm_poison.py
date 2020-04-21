@@ -58,7 +58,7 @@ class KsmPoison(Test):
 
     def test(self):
         os.chdir(self.teststmpdir)
-        cmd = './ksm_poison -n %s' % str(self.nr_pages / 2)
+        cmd = './ksm_poison -n %s' % str(self.nr_pages // 2)
         if self.touch:
             cmd = '%s -t' % cmd
         if self.offline:

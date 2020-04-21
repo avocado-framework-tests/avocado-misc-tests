@@ -85,8 +85,8 @@ class VATest(Test):
                 self.hsizes[0] * 1024)).rstrip("\n")
             n_pages2 = genio.read_file(self.hp_file % str(
                 self.hsizes[1] * 1024)).rstrip("\n")
-            self.n_chunks = (int(n_pages) * self.hsizes[0]) / 16384
-            self.n_chunks2 = (int(n_pages2) * self.hsizes[1]) / 16384
+            self.n_chunks = (int(n_pages) * self.hsizes[0]) // 16384
+            self.n_chunks2 = (int(n_pages2) * self.hsizes[1]) // 16384
         if self.scenario_arg not in [1, 2, 10, 11, 12]:
             max_hpages = int((0.9 * memory.meminfo.MemFree.m) / page_chunker)
             if self.scenario_arg in [3, 4, 5, 6]:
@@ -97,7 +97,7 @@ class VATest(Test):
                     page_chunker * 1024), str(max_hpages))
                 nr_pages = genio.read_file(self.hp_file % str(
                     page_chunker * 1024)).rstrip("\n")
-            self.n_chunks = (int(nr_pages) * page_chunker) / 16384
+            self.n_chunks = (int(nr_pages) * page_chunker) // 16384
 
         for packages in ['gcc', 'make']:
             if not smm.check_installed(packages) and not smm.install(packages):

@@ -157,8 +157,8 @@ class MemStress(Test):
             self.fail('ERROR: Test failed, please check the dmesg logs')
 
     def run_stress(self):
-        mem_free = memory.meminfo.MemFree.m / 4
-        cpu_count = int(multiprocessing.cpu_count()) / 2
+        mem_free = memory.meminfo.MemFree.m // 4
+        cpu_count = int(multiprocessing.cpu_count()) // 2
         process.run("stress --cpu %s --io %s --vm %s --vm-bytes %sM --timeout %ss" %
                     (cpu_count, self.iocount, self.vmcount, mem_free, self.stresstime), ignore_status=True, sudo=True, shell=True)
 
