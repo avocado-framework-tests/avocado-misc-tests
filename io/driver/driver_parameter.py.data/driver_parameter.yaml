@@ -1,0 +1,12 @@
+module:
+interface:
+host_ip:
+netmask:
+peer_ip:
+sysfs_check_required:
+module_param_name:
+value: !mux
+    value1:
+        module_param_value:
+    value2:
+        module_param_value:
