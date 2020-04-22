@@ -26,6 +26,7 @@ from avocado.utils import process
 from avocado.utils import pci
 from avocado.utils import genio
 from avocado.utils import distro
+from avocado.utils.software_manager import SoftwareManager
 
 EEH_HIT = 0
 EEH_MISS = 1
@@ -73,6 +74,9 @@ class PowerVMEEH(Test):
             % self.max_freeze
         process.system(cmd, ignore_status=True, shell=True)
         self.function = str(self.params.get('function')).split(" ")
+        smm = SoftwareManager()
+        if not smm.check_installed("pciutils") and not smm.install("pciutils"):
+            self.cancel("pciutils package is need to test")
         self.log.info("===============Testing EEH Frozen PE==================")
 
     def test_eeh_basic_pe(self):

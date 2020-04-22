@@ -34,7 +34,7 @@ class MultiportStress(Test):
         To check and install dependencies for the test
         '''
         self.host_interfaces = self.params.get("host_interfaces",
-                                               default="").split(",")
+                                               default="").split(" ")
         if not self.host_interfaces:
             self.cancel("user should specify host interfaces")
         smm = SoftwareManager()
@@ -45,14 +45,14 @@ class MultiportStress(Test):
         if not smm.check_installed(pkg) and not smm.install(pkg):
             self.cancel("Package %s is needed to test" % pkg)
         self.peer_ips = self.params.get("peer_ips",
-                                        default="").split(",")
+                                        default="").split(" ")
         self.peer_public_ip = self.params.get("peer_public_ip", default="")
         interfaces = netifaces.interfaces()
         for self.host_interface in self.host_interfaces:
             if self.host_interface not in interfaces:
                 self.cancel("interface is not available")
         self.count = self.params.get("count", default="1000")
-        self.ipaddr = self.params.get("host_ips", default="").split(",")
+        self.ipaddr = self.params.get("host_ips", default="").split(" ")
         self.netmask = self.params.get("netmask", default="")
         self.local = LocalHost()
         for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):

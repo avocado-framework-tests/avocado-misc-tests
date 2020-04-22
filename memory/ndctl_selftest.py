@@ -21,7 +21,7 @@ import json
 
 from avocado import Test
 from avocado import main
-from avocado.utils import process, build, distro, git
+from avocado.utils import process, build, distro, git, genio
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -50,6 +50,11 @@ class NdctlTest(Test):
         """
         Prequisite for ndctl selftest on non-NFIT devices
         """
+        nstype = genio.read_file("/sys/bus/nd/devices/region0"
+                                 "/nstype").rstrip("\n")
+        if nstype == "4":
+            self.cancel("Test not supported on legacy hardware")
+
         smg = SoftwareManager()
         self.url = self.params.get(
             'url', default="https://github.com/pmem/ndctl.git")
@@ -58,14 +63,12 @@ class NdctlTest(Test):
         detected_distro = distro.detect()
         if detected_distro.name in ['SuSE', 'rhel']:
             if detected_distro.name == 'SuSE':
-                deps.extend(['ruby2.5-rubygem-asciidoctor', 'libtool',
-                             'libkmod-devel', 'libudev-devel',
+                deps.extend(['libkmod-devel', 'libudev-devel',
                              'keyutils-devel', 'libuuid-devel-static',
                              'libjson-c-devel', 'systemd-devel',
                              'kmod-bash-completion'])
             else:
-                deps.extend(['rubygem-asciidoctor', 'automake', 'libtool',
-                             'kmod-devel', 'libuuid-devel', 'json-c-devel',
+                deps.extend(['kmod-devel', 'libuuid-devel', 'json-c-devel',
                              'systemd-devel', 'keyutils-libs-devel', 'jq',
                              'parted', 'libtool'])
         else:
@@ -95,6 +98,7 @@ class NdctlTest(Test):
         process.run('./autogen.sh', sudo=True, shell=True)
         process.run(
             "./configure CFLAGS='-g -O2' --prefix=/usr "
+            "--disable-docs "
             "--sysconfdir=/etc --libdir=/usr/lib64 "
             "--enable-destructive", shell=True, sudo=True)
 

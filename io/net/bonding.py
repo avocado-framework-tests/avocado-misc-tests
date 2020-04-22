@@ -75,18 +75,18 @@ class Bonding(Test):
         self.password = self.params.get("peer_password", '*',
                                         default="None")
         self.host_interfaces = self.params.get("bond_interfaces",
-                                               default="").split(",")
+                                               default="").split(" ")
         if not self.host_interfaces:
             self.cancel("user should specify host interfaces")
         self.peer_interfaces = self.params.get("peer_interfaces",
-                                               default="").split(",")
+                                               default="").split(" ")
         for self.host_interface in self.host_interfaces:
             if self.host_interface not in interfaces:
                 self.cancel("interface is not available")
         self.peer_first_ipinterface = self.params.get("peer_ip", default="")
         if not self.peer_interfaces or self.peer_first_ipinterface == "":
             self.cancel("peer machine should available")
-        self.ipaddr = self.params.get("host_ips", default="").split(",")
+        self.ipaddr = self.params.get("host_ips", default="").split(" ")
         self.netmask = self.params.get("netmask", default="")
         self.localhost = LocalHost()
         if 'setup' in str(self.name.name):

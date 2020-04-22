@@ -40,8 +40,9 @@ class ScsiAddRemove(Test):
         self.err_paths = []
         self.device_list = []
         smm = SoftwareManager()
-        if not smm.check_installed("lsscsi") and not smm.install("lsscsi"):
-            self.cancel("lsscsi is not installed")
+        for pkg in ["lsscsi", "pciutils"]:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
+                self.cancel("%s is not installed" % pkg)
         self.wwids = self.params.get('wwids', default='')
         self.pci_device = self.params.get("pci_devices", default='')
         self.count = int(self.params.get("count", default=1))

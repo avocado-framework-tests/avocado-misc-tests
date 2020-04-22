@@ -22,11 +22,13 @@ name, Size, UUID, mount points and IO Sector sizes
 """
 
 import platform
+import os
 from avocado import Test
 from avocado import main
 from avocado.utils import process
 from avocado.utils import genio
 from avocado.utils import distro
+from avocado.utils import multipath
 from avocado.utils.partition import Partition
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.process import CmdError
@@ -85,6 +87,17 @@ class DiskInfo(Test):
             if pkg and not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("Package %s is missing and could not be installed"
                             % pkg)
+        self.disk_nodes = []
+        self.disk_base = os.path.basename(self.disk)
+        if multipath.is_mpath(self.disk_base):
+            self.mpath = True
+            self.disk_abs = os.path.basename(os.readlink(self.disk))
+            mwwid = multipath.get_multipath_wwid(self.disk_base)
+            self.disk_nodes = multipath.get_paths(mwwid)
+        else:
+            self.mpath = False
+            self.disk_abs = self.disk_base
+            self.disk_nodes.append(self.disk_base)
 
     def run_command(self, cmd):
         """
@@ -113,24 +126,32 @@ class DiskInfo(Test):
         size, UUID and IO sizes etc
         """
         msg = []
-        disk = (self.disk.split("/dev/"))[1]
-        if process.system("ls /dev/disk/by-id -l| grep -i %s" % disk,
+        if process.system("ls /dev/disk/by-id -l| grep -i %s" % self.disk_abs,
                           ignore_status=True, shell=True, sudo=True) != 0:
-            msg.append("Given disk %s is not in /dev/disk/by-id" % disk)
-        if process.system("ls /dev/disk/by-path -l| grep -i %s" % disk,
-                          ignore_status=True, shell=True, sudo=True) != 0:
-            msg.append("Given disk %s is not in /dev/disk/by-path" % disk)
+            msg.append("Given disk %s is not in /dev/disk/by-id" % self.disk_abs)
+        for disk_node in self.disk_nodes:
+            if process.system("ls /dev/disk/by-path -l| grep -i %s" % disk_node,
+                              ignore_status=True, shell=True, sudo=True) != 0:
+                msg.append("Given disk %s is not in /dev/disk/by-path" % disk_node)
 
         # Verify disk listed in all tools
-        cmd_list = ["fdisk -l ", "parted -l", "lsblk ",
-                    "lshw -c disk "]
+        if self.mpath:
+            cmd_list = ["fdisk -l ", "lsblk "]
+        else:
+            cmd_list = ["fdisk -l ", "parted -l", "lsblk ",
+                        "lshw -c disk "]
         if self.distro == 'Ubuntu':
             cmd_list.append("hwinfo --short --block")
         for cmd in cmd_list:
-            cmd = cmd + " | grep -i %s" % disk
+            cmd = cmd + " | grep -i %s" % self.disk_base
             if process.system(cmd, ignore_status=True,
                               shell=True, sudo=True) != 0:
-                msg.append("Given disk %s is not present in %s" % (disk, cmd))
+                msg.append("Given disk %s is not present in %s" % (self.disk_base, cmd))
+        if self.mpath:
+            for disk_node in self.disk_nodes:
+                if process.system("lshw -c disk | grep -i %s" % disk_node,
+                                  ignore_status=True, shell=True, sudo=True) != 0:
+                    msg.append("Given disk %s is not in lshw -c disk" % disk_node)
 
         # Get the size and UUID of the disk
         cmd = "lsblk -l %s --output SIZE -b |sed -n 2p" % self.disk
@@ -142,13 +163,13 @@ class DiskInfo(Test):
         self.log.info("Disk: %s Size: %s", self.disk, self.size_b)
 
         # Get the physical/logical and minimal/optimal sector sizes
-        pbs_sysfs = "/sys/block/%s/queue/physical_block_size" % disk
+        pbs_sysfs = "/sys/block/%s/queue/physical_block_size" % self.disk_abs
         pbs = genio.read_file(pbs_sysfs).rstrip("\n")
-        lbs_sysfs = "/sys/block/%s/queue/logical_block_size" % disk
+        lbs_sysfs = "/sys/block/%s/queue/logical_block_size" % self.disk_abs
         lbs = genio.read_file(lbs_sysfs).rstrip("\n")
-        mis_sysfs = "/sys/block/%s/queue/minimum_io_size" % disk
+        mis_sysfs = "/sys/block/%s/queue/minimum_io_size" % self.disk_abs
         mis = genio.read_file(mis_sysfs).rstrip("\n")
-        ois_sysfs = "/sys/block/%s/queue/optimal_io_size" % disk
+        ois_sysfs = "/sys/block/%s/queue/optimal_io_size" % self.disk_abs
         ois = genio.read_file(ois_sysfs).rstrip("\n")
         self.log.info("pbs: %s, lbs: %s, mis: %s, ois: %s", pbs, lbs, mis, ois)
 
@@ -217,9 +238,9 @@ class DiskInfo(Test):
             self.log.info("Mount point %s for disk %s updated in df o/p",
                           self.dirs, self.disk)
 
-        if process.system("ls /dev/disk/by-uuid -l| grep -i %s" % disk,
+        if process.system("ls /dev/disk/by-uuid -l| grep -i %s" % self.disk_abs,
                           ignore_status=True, shell=True, sudo=True) != 0:
-            msg.append("Given disk %s not having uuid" % disk)
+            msg.append("Given disk %s not having uuid" % self.disk_abs)
 
         output = process.system_output("blkid %s" % self.disk,
                                        ignore_status=True, shell=True,
@@ -231,7 +252,7 @@ class DiskInfo(Test):
                           self.disk, self.fstype, self.uuid)
 
         if process.system("grub2-probe %s" % self.dirs, ignore_status=True):
-            msg.append("Given disk %s's fs not detected by grub2" % disk)
+            msg.append("Given disk %s's fs not detected by grub2" % self.disk_base)
 
         # Un-mount the directory
         self.log.info("Unmounting directory %s", self.dirs)

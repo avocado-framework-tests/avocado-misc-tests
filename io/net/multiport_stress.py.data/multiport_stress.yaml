@@ -1,4 +1,4 @@
-host_interfaces: "enP4p1s0f1,enP4p1s0f2"
+host_interfaces: ""
 peer_ips: ""
 peer_public_ip: ""
 peer_user: ""

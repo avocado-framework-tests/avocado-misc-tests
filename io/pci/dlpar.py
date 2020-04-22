@@ -79,12 +79,6 @@ class DlparPci(Test):
             if line in self.lpar_1:
                 self.server = line
                 break
-        cmd = 'lssyscfg -r lpar -F name -m %s' % self.server
-        output = self.run_command(cmd)
-        for line in output:
-            if "%s-" % self.lpar_1 in line:
-                self.lpar_1 = line
-                break
         if not self.server:
             self.cancel("Managed System not got")
         self.lpar_2 = self.params.get("lpar_2", '*', default=None)
@@ -180,7 +174,7 @@ class DlparPci(Test):
         '''
         smm = SoftwareManager()
         packages = ['ksh', 'src', 'rsct.basic', 'rsct.core.utils',
-                    'rsct.core', 'DynamicRM']
+                    'rsct.core', 'DynamicRM', 'pciutils']
         detected_distro = distro.detect()
         if detected_distro.name == "Ubuntu":
             packages.extend(['python-paramiko'])
@@ -351,7 +345,7 @@ class DlparPci(Test):
                    -o %s --id %s -l %s ' % (server, operation, lpar_id,
                                             drc_index)
         try:
-            cmd = self.run_command(cmd)
+            cmd = self.run_command(cmd, 3000)
         except CommandFailed as cmd_fail:
             self.log.debug(str(cmd_fail))
             self.fail("dlpar %s operation failed" % msg)
