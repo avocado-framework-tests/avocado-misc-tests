@@ -1,5 +1,6 @@
 host_interfaces: ""
 peer_ips: ""
+peer_public_ip: ""
 peer_user: ""
 peer_password: ""
 count: "1100"

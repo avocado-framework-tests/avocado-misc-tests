@@ -1,5 +1,6 @@
 interface: net0
 peer_ip:
+peer_public_ip: ""
 peer_user:
 peer_password:
 host_ip:

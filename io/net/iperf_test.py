@@ -45,6 +45,7 @@ class Iperf(Test):
         """
         self.peer_user = self.params.get("peer_user_name", default="root")
         self.peer_ip = self.params.get("peer_ip", default="")
+        self.peer_public_ip = self.params.get("peer_public_ip", default="")
         self.peer_password = self.params.get("peer_password", '*',
                                              default=None)
         interfaces = netifaces.interfaces()
@@ -80,6 +81,10 @@ class Iperf(Test):
         self.peer_interface = remotehost.get_interface_by_ipaddr(self.peer_ip).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
                                                       remotehost)
+        remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
+                                       password=self.peer_password)
+        self.peer_public_networkinterface = NetworkInterface(self.peer_interface,
+                                                             remotehost_public)
         if self.peer_networkinterface.set_mtu(self.mtu) is not None:
             self.cancel("Failed to set mtu in peer")
         if self.networkinterface.set_mtu(self.mtu) is not None:
@@ -145,8 +150,10 @@ class Iperf(Test):
         self.obj.stop()
         if self.networkinterface.set_mtu('1500') is not None:
             self.cancel("Failed to set mtu in host")
-        if self.peer_networkinterface.set_mtu('1500') is not None:
-            self.cancel("Failed to set mtu in peer")
+        try:
+            self.peer_networkinterface.set_mtu('1500')
+        except Exception:
+            self.peer_public_networkinterface.set_mtu('1500')
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
 
 
