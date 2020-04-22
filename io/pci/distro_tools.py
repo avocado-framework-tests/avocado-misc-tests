@@ -40,6 +40,7 @@ class DisrtoTool(Test):
         self.option = self.params.get("test_opt", default='')
         self.tool = self.params.get("tool", default='')
         self.pci_device = self.params.get("pci_device", default='')
+        self.adapter_type = self.params.get("adapter_type", default='')
         smm = SoftwareManager()
         if not smm.check_installed("pciutils") and not smm.install("pciutils"):
             self.cancel("pciutils package is need to test")
@@ -103,7 +104,8 @@ class DisrtoTool(Test):
         run usysident and usysattn
         '''
         location_code = pci.get_slot_from_sysfs(pci_device)
-        interface = pci.get_interfaces_in_pci_address(pci_device, "net")[0]
+        interface = pci.get_interfaces_in_pci_address(pci_device,
+                                                      self.adapter_type)[0]
         cmd = "%s %s" % (tool, option)
         if '-P' in cmd:
             cmd += " -l %s" % location_code
@@ -132,7 +134,8 @@ class DisrtoTool(Test):
         '''
         run ofpathname
         '''
-        interface = pci.get_interfaces_in_pci_address(self.pci_device, "net")[0]
+        interface = pci.get_interfaces_in_pci_address(self.pci_device,
+                                                      self.adapter_type)[0]
         cmd = "ofpathname -%s %s" % (self.option, interface)
         result = process.run(cmd, shell=True, ignore_status=True)
         if result.exit_status != 0:
