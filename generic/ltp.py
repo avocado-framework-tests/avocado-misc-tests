@@ -79,7 +79,8 @@ class LTP(Test):
             else:
                 self.device = Partition(
                     device="none", mountpoint=self.mount_dir)
-            self.device.mount(mountpoint=self.mount_dir, fstype="tmpfs")
+            self.device.mount(mountpoint=self.mount_dir,
+                              fstype="tmpfs", mnt_check=False)
 
     def setUp(self):
         smg = SoftwareManager()
