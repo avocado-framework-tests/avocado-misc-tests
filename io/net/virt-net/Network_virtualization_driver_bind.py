@@ -23,7 +23,8 @@ from avocado import main
 from avocado.utils import process
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.process import CmdError
-from avocado.utils import configure_network
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.network.hosts import LocalHost
 
 
 class NetworkVirtualizationDriverBindTest(Test):
@@ -54,23 +55,20 @@ class NetworkVirtualizationDriverBindTest(Test):
         self.peer_ip = self.params.get('peer_ip', default=None)
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        configure_network.set_ip(self.ipaddr, self.netmask, self.interface)
-
-    def ping_check(self):
-        """
-        ping check
-        """
-        cmd = "ping -I %s %s -c 5"\
-              % (self.interface, self.peer_ip)
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
-            return False
-        return True
+        local = LocalHost()
+        self.networkinterface = NetworkInterface(self.interface, local)
+        try:
+            self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        except Exception:
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        self.networkinterface.bring_up()
 
     def test(self):
         """
         Performs driver unbind and bind for the Network virtualized device
         """
-        if not self.ping_check():
+        if self.networkinterface.ping_check(self.peer_ip, count=5) is not None:
             self.cancel("Please make sure the network peer is configured ?")
 
         try:
@@ -84,7 +82,8 @@ class NetworkVirtualizationDriverBindTest(Test):
                     time.sleep(5)
                 self.log.info("Running a ping test to check if unbind/bind \
                                     affected newtwork connectivity")
-                if not self.ping_check():
+                if self.networkinterface.ping_check(self.peer_ip,
+                                                    count=5) is not None:
                     self.fail("Ping test failed. Network virtualized \
                            unbind/bind has affected Network connectivity")
         except CmdError as details:
