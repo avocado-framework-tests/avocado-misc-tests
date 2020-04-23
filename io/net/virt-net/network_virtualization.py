@@ -137,7 +137,7 @@ class NetworkVirtualization(Test):
         self.mac_id = self.params.get('mac_id',
                                       default="02:03:03:03:03:01").split(',')
         self.mac_id = [mac.replace(':', '') for mac in self.mac_id]
-        self.netmask = self.params.get('netmask', '*', default=None).split(',')
+        self.netmask = self.params.get('netmasks', '*', default=None).split(',')
         self.peer_ip = self.params.get('peer_ip', default=None).split(',')
         self.run_command(self.con_hmc, "uname -a")
         cmd = 'lssyscfg -m ' + self.server + \
