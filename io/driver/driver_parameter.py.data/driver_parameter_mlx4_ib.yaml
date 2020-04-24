@@ -1,0 +1,26 @@
+module: "mlx4_ib"
+interface: ib0 
+host_ip:
+netmask:
+peer_ip:
+sysfs_check_required: 1
+value: !mux
+    sm_guid_assign:
+       module_param_name: "sm_guid_assign"
+       value: !mux
+           sm_guid_assign_0:
+               module_param_value: "0"
+           sm_guid_assign_2:
+               module_param_value: "2"
+    en_ecn:
+       module_param_name: "en_ecn"
+       value: !mux
+           en_ecn_0:
+               module_param_value: "0"
+           en_ecn_1:
+               module_param_value: "1"
+    dev_assign_str:
+       module_param_name: "dev_assign_str"
+       value: !mux
+           dev_assign_str_range:
+               module_param_value: "0000:04:00.0-0,002b:1c:0b.a-1"
