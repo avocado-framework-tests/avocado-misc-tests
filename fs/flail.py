@@ -42,7 +42,13 @@ class Flail(Test):
         archive.extract(self.get_data("flail-0.2.0.tar.gz"), self.workdir)
         self.build_dir = os.path.join(self.workdir, 'flail-0.2.0')
         os.chdir(self.build_dir)
-        process.system("sed -i 's/.*-lm.*/& -lm' Makefile")
+        fin = open("Makefile", "rt")
+        data = fin.read()
+        data = data.replace('-lm -o $@ flail.c', '-o $@ flail.c -lm')
+        fin.close()
+        fin = open("Makefile", "wt")
+        fin.write(data)
+        fin.close()
         build.make(self.build_dir)
 
     def test(self):
