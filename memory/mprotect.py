@@ -45,7 +45,7 @@ class Mprotect(Test):
 
         if not self.nr_pages:
             memsize = int(memory.meminfo.MemFree.b * 0.9)
-            self.nr_pages = memsize / memory.get_page_size()
+            self.nr_pages = memsize // memory.get_page_size()
 
         for package in ['gcc', 'make']:
             if not smm.check_installed(package) and not smm.install(package):
