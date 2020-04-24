@@ -1,0 +1,42 @@
+module: "mlx4_en"
+interface: eth3 
+host_ip:
+netmask:
+peer_ip:
+sysfs_check_required: 1
+value: !mux
+    udev_dev_port_dev_id:
+       module_param_name: "udev_dev_port_dev_id"
+       value: !mux
+           udev_dev_port_dev_id_0:
+               module_param_value: "0"
+           udev_dev_port_dev_id_1:
+               module_param_value: "1"
+           udev_dev_port_dev_id_2:
+               module_param_value: "2"
+    udp_rss:
+       module_param_name: "udp_rss"
+       value: !mux
+           udp_rss_0:
+               module_param_value: "0"
+           udp_rss_1:
+               module_param_value: "1"
+    pfctx:
+       module_param_name: "pfctx"
+       value: !mux
+           pfctx_2:
+               module_param_value: "2"
+           pfctx_7:
+               module_param_value: "7"
+    pfcrx:
+       module_param_name: "pfcrx"
+       value: !mux
+           pfcrx_2:
+               module_param_value: "2"
+           pfcrx_7:
+               module_param_value: "7"
+    inline_thold:
+       module_param_name: "inline_thold"
+       value: !mux
+           inline_thold:
+               module_param_value: "71"

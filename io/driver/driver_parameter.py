@@ -56,7 +56,7 @@ class Moduleparameter(Test):
         else:
             configure_network.set_ip(self.ipaddr, self.netmask, self.ifaces,
                                      interface_type='Ethernet')
-        self.load_unload_sleep_time = 30
+        self.load_unload_sleep_time = 10
         self.error_modules = []
         self.mod_list = []
         self.uname = linux_modules.platform.uname()[2]
@@ -111,7 +111,7 @@ class Moduleparameter(Test):
             time.sleep(self.load_unload_sleep_time)
         sub_mod = linux_modules.get_submodules(mod1)
         if sub_mod:
-            for mod in sub_mod.split(' '):
+            for mod in sub_mod:
                 linux_modules.unload_module(mod)
                 if linux_modules.module_is_loaded(mod) is True:
                     self.error_modules.append(mod)
@@ -123,6 +123,7 @@ class Moduleparameter(Test):
         if linux_modules.load_module(cmd) is False:
             self.fail("Param %s = Value %s Failed for Module %s" %
                       (self.param_name, self.param_value, mod1))
+        time.sleep(self.load_unload_sleep_time)
         if self.sysfs_chk:
             if self.sysfs_value_check() is False:
                 self.fail("Sysfs check failed ")
