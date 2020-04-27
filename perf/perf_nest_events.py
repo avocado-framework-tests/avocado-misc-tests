@@ -67,13 +67,14 @@ class nestEvents(Test):
 
         # Collect nest events
         self.list_of_nest_events = []
-        for line in process.get_perf_events('nest_'):
+        for line in process.get_command_output_matching('perf list', 'nest_'):
             line = line.split(' ')[2]
             if 'pm_nest' in line:
                 continue
             self.list_of_nest_events.append(line)
 
-        # Clear the dmesg, by that we can capture the delta at the end of the test.
+        # Clear the dmesg, by that we can capture the delta at the end of the
+        # test.
         process.run("dmesg -c", sudo=True)
 
     def error_check(self):
