@@ -548,7 +548,8 @@ class IOZone(Test):
             args = '-a'
 
         cmd = os.path.join(self.sourcedir, 'src', 'current', 'iozone')
-        self.results = process.system_output('%s %s' % (cmd, args))
+        self.results = process.system_output(
+            '%s %s' % (cmd, args)).decode('utf-8')
         self.auto_mode = ("-a" in args)
         results_path = os.path.join(self.outputdir,
                                     'raw_output')
