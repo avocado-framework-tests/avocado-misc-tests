@@ -39,7 +39,8 @@ class Perfmon(Test):
         deps = ["gcc", "make"]
         if dist.name in ['Ubuntu', 'debian']:
             deps.extend(['libncurses-dev'])
-
+        elif dist.name in ['rhel', 'SuSE']:
+            deps.extend(['ncurses-devel'])
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel(
