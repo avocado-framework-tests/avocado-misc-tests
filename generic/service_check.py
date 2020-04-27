@@ -18,7 +18,7 @@
 # https://github.com/autotest/virt-test/blob/master/samples/service.py
 
 import os
-import ConfigParser
+import configparser
 from avocado import Test
 from avocado import main
 from avocado.utils import process
@@ -32,7 +32,7 @@ class service_check(Test):
 
     def test(self):
         detected_distro = distro.detect()
-        parser = ConfigParser.ConfigParser()
+        parser = configparser.ConfigParser()
         parser.read(self.get_data('services.cfg'))
         services_list = parser.get(detected_distro.name, 'services').split(',')
 
