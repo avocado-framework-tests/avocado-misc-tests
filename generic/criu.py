@@ -30,8 +30,8 @@ class CRIU(Test):
         sm = SoftwareManager()
         dist = distro.detect()
         packages = ['gcc', 'make', 'protobuf', 'protobuf-c', 'protobuf-c-devel',
-                    'protobuf-compiler', 'protobuf-devel', 'protobuf-python',
-                    'libnl3-devel', 'libcap-devel', 'libaio-devel']
+                    'protobuf-compiler', 'protobuf-devel', 'python3-protobuf',
+                    'libnl3-devel', 'libcap-devel', 'libaio-devel', 'libnet-devel']
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
@@ -41,7 +41,7 @@ class CRIU(Test):
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel("Fail to install %s required for this test." %
                             package)
-        criu_version = self.params.get('criu_version', default='2.6')
+        criu_version = self.params.get('criu_version', default='3.13')
         tarball = self.fetch_asset(
                   "http://download.openvz.org/criu/criu-%s.tar.bz2" % criu_version,
                   expire='10d')
