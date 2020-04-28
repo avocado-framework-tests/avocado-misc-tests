@@ -48,7 +48,7 @@ class Perftool(Test):
         # enabler for older runners, but should be removed soon
         elif detected_distro.name in ['rhel', 'SuSE', 'fedora',
                                       'centos', 'redhat']:
-            deps.extend(['perf', 'gcc-g++'])
+            deps.extend(['perf', 'gcc-c++'])
         else:
             self.cancel("Install the package for perf supported\
                       by %s" % detected_distro.name)
