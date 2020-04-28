@@ -1,0 +1,6 @@
+virtual_device: ""
+virtual_slot: ""
+host_ip: ""
+netmask: ""
+count: 1
+peer_ip: ""

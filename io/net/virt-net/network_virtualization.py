@@ -356,42 +356,6 @@ class NetworkVirtualization(Test):
         if original != self.get_active_device_logport(self.slot_num[0]):
             self.log.warn("Fail: Activating Initial backing dev %s" % original)
 
-    def test_unbindbind(self):
-        """
-        Performs driver unbind and bind for the Network virtualized device
-        """
-        for device_ip, netmask, mac, peer_ip in zip(self.device_ip,
-                                                    self.netmask,
-                                                    self.mac_id, self.peer_ip):
-            device_id = self.find_device_id(mac)
-            try:
-                for _ in range(self.count):
-                    for operation in ["unbind", "bind"]:
-                        self.log.info("Running %s operation for Network \
-                                       virtualized device", operation)
-                        genio.write_file(os.path.join
-                                         ("/sys/bus/vio/drivers/ibmvnic",
-                                          operation), "%s" % device_id)
-                        time.sleep(10)
-                    self.log.info("Running a ping test to check if unbind/bind \
-                                        affected newtwork connectivity")
-                    device = self.find_device(mac)
-                    networkinterface = NetworkInterface(device, self.local)
-                    try:
-                        networkinterface.add_ipaddr(device_ip, netmask)
-                    except Exception:
-                        networkinterface.save(device_ip, netmask)
-                    if not wait.wait_for(networkinterface.is_link_up, timeout=120):
-                        self.fail("Unable to bring up the link on the Network \
-                                  virtualized device")
-                    if networkinterface.ping_check(peer_ip, count=5) is not None:
-                        self.fail("Ping test failed. Network virtualized"
-                                  "unbind/bind has affected"
-                                  "Network connectivity")
-            except CmdError as details:
-                self.log.debug(str(details))
-                self.fail("Driver %s operation failed" % operation)
-
     def test_clientfailover(self):
         '''
         Performs Client initiated failover for Network virtualized
