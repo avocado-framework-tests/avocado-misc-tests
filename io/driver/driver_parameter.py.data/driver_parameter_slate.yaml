@@ -14,4 +14,3 @@ value: !mux
        module_param_value: "4096"
     rx_frag_size_8192:
        module_param_value: "8192"
-
