@@ -175,8 +175,8 @@ class Sosreport(Test):
             self.is_fail += 1
             self.log.info("--build option failed")
 
-        if self.run_cmd_out("sosreport --batch --tmp-dir=%s --quiet "
-                            "--no-report -e ntp,numa1" % directory_name):
+        if "version" not in self.run_cmd_out("sosreport --batch --tmp-dir=%s --quiet "
+                                             "--no-report -e ntp,numa1" % directory_name):
             self.is_fail += 1
             self.log.info("--quiet --no-report option failed")
         self.run_cmd("sosreport --batch --tmp-dir=%s --debug" % directory_name, None)
