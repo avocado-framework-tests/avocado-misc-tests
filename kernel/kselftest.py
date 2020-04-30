@@ -126,7 +126,7 @@ class kselftest(Test):
         Execute the kernel selftest
         """
         self.error = False
-        build.make(self.sourcedir, extra_args='%s run_tests' % self.comp)
+        build.make(self.sourcedir, extra_args='summary=1 %s run_tests' % self.comp)
         for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
             self.find_match(r'not ok (.*) selftests:(.*)', line)
 
