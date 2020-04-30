@@ -128,10 +128,7 @@ class kselftest(Test):
         self.error = False
         build.make(self.sourcedir, extra_args='%s run_tests' % self.comp)
         for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
-            if self.run_type == 'upstream':
-                self.find_match(r'not ok (.*) selftests:(.*)', line)
-            elif self.run_type == 'distro':
-                self.find_match(r'selftests:(.*)\[FAIL\]', line)
+            self.find_match(r'not ok (.*) selftests:(.*)', line)
 
         if self.error:
             self.fail("Testcase failed during selftests")
