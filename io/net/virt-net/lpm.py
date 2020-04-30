@@ -108,12 +108,12 @@ class LPM(Test):
         self.bandwidth = str(self.params.get("bandwidth", default=2))
 
         self.vios_name = self.params.get("vios_names", '*',
-                                         default=None).split(',')
+                                         default=None).split(' ')
         self.vios_id = []
         for vios_name in self.vios_name:
             self.vios_id.append(self.get_lpar_id(self.server, vios_name))
         self.remote_vios_name = self.params.get("remote_vios_names", '*',
-                                                default=None).split(',')
+                                                default=None).split(' ')
         self.remote_vios_id = []
         for vios_name in self.remote_vios_name:
             self.remote_vios_id.append(self.get_lpar_id(self.remote_server,
@@ -125,13 +125,13 @@ class LPM(Test):
             self.set_msp(self.remote_server, vios)
 
         self.adapters = self.params.get("sriov_adapters",
-                                        default='').split(',')
+                                        default='').split(' ')
         self.remote_adapters = self.params.get("remote_sriov_adapters",
-                                               default='').split(',')
+                                               default='').split(' ')
         self.ports = self.params.get("sriov_ports",
-                                     default='').split(',')
+                                     default='').split(' ')
         self.remote_ports = self.params.get("remote_sriov_ports",
-                                            default='').split(',')
+                                            default='').split(' ')
 
         self.adapter_id = []
         for adapter in self.adapters:

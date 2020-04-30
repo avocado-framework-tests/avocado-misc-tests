@@ -52,7 +52,7 @@ class MvcliTest(Test):
         self.fw_url = self.params.get('fw_url', '*', default=None)
         self.fw_upgrade = self.params.get("fw_upgrade", '*', default="no")
         self.adapter_id = self.params.get('adapter_id', '*', default=None)
-        self.pd_ids = self.params.get('pd_ids', '*', default=None).split(",")
+        self.pd_ids = self.params.get('pd_ids', '*', default=None).split(" ")
         path = self.fetch_asset("mvcli", locations=[self.tool_url],
                                 expire="7d")
         shutil.copy(path, self.teststmpdir)
