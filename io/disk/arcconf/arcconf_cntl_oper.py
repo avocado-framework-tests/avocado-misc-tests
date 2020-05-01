@@ -42,7 +42,7 @@ class Arcconftest(Test):
         if not smm.check_installed("lsscsi") and not smm.install("lsscsi"):
             self.cancel("Unable to install lsscsi")
         self.crtl_no = self.params.get('crtl_no')
-        self.pci_id = self.params.get('pci_id', default="").split(",")
+        self.pci_id = self.params.get('pci_id', default="").split(" ")
         self.http_path = self.params.get('http_path')
         self.tool_name = self.params.get('tool_name')
         self.firmware_path = self.params.get('firmware_path')

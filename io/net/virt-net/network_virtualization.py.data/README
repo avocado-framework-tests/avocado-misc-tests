@@ -19,21 +19,21 @@ Links :
 Explanation of the input parameters:
 lpar ---> lpar on which the Network virtualized interface needs to be added/deleted
 server ---> name of the server which hosts the lpar
-slot_num ---> slot number on which the Network virtualized interface will be added. Should be 3 - 2999 and unused currently.
-vios_names ---> Comma separated name of the vios used to add/remove Network virtualized interface
-sriov_adapters ---> Comma separated location code (DRC) of the the adapters that is assigned to the hypervisor
-sriov_ports ---> Comma separated ports using which the Network virtualized interface will be added/removed
+slot_num ---> slot number on which the Network virtualized interface will be added. Should be 3 - 2999 and unused currently. space separated for more
+vios_names ---> space separated name of the vios used to add/remove Network virtualized interface
+sriov_adapters ---> space separated location code (DRC) of the the adapters that is assigned to the hypervisor
+sriov_ports ---> space separated ports using which the Network virtualized interface will be added/removed
 Ex: if the adapter has 2 ports and the Network virtualized interface should be added using Port 1, mention value as 0
 else mention 2 if Network virtualized interface should be added using Port 1
-bandwidth ---> The percentage of the ports bandwidth this Network virtualized interface is entitled to
-priority ---> Comma seperated prirotiy value for backing devices should be range of 1-100 (1,100,50,.. 1 for active and 100, 50 for consecutive backing device). 1 represents highest priority, 100 represents lowest, 50 is default if param not specified
+bandwidth ---> The percentage of the ports bandwidth this Network virtualized interface is entitled to, space seprated for more
+priority ---> space seperated prirotiy value for backing devices should be range of 1-100 (1,100,50,.. 1 for active and 100, 50 for consecutive backing device). 1 represents highest priority, 100 represents lowest, 50 is default if param not specified
 auto_failover --> enable auto_failover flag, 1 to enable or 0 to disable, defaults to 1
-device_ip ---> Ip to be configured for the added Network virtualized interface
-netmask ---> netmask value for the added Network virtualized interface
+device_ip ---> Ip to be configured for the added Network virtualized interface, space separated if multiple
+netmask ---> netmask value for the added Network virtualized interface, space separated if multiple
 peer_ip ---> Peer ip to which the added Network virtualized interface will ping to check for ping test
 count ---> The number of times the unbind and bind test has to be executed
 num_of_dlpar --> number of times ddlpar remove and add operation to be executed
-mac_id ---> MAC ID to be set for the vnic interface. This is needed for us to have control over interface name via interface file or udev rules
+mac_id ---> MAC ID to be set for the vnic interface. This is needed for us to have control over interface name via interface file or udev rules, space separated if multiple
 
 NOTE: The last device listed by "ip link show" will be used to configure and test the
 driver unbind/bind and failover functionalities 

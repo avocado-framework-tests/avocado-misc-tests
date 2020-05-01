@@ -32,7 +32,7 @@ Test: !mux
 parameters:
     crtl_no: "1"
     channel_no: "0"
-    disk_no: "0, 1, 2, 3"
+    disk_no: "0 1 2 3"
     pci_id: "9005:028d:9005:0557"
     logicaldrive: "0"
     diskoverwrite: "Y"

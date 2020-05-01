@@ -44,8 +44,8 @@ class NVMfTest(Test):
         self.peer_ips = self.params.get('peer_ips', default='')
         if not self.nss or not self.peer_ips:
             self.cancel("No inputs provided")
-        self.nss = self.nss.split(',')
-        self.peer_ips = self.peer_ips.split(',')
+        self.nss = self.nss.split(' ')
+        self.peer_ips = self.peer_ips.split(' ')
         self.ids = range(1, len(self.peer_ips) + 1)
         if len(self.nss) != len(self.peer_ips):
             self.cancel("Count of namespace and peer ips mismatch")

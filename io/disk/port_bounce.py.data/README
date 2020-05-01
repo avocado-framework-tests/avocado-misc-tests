@@ -11,4 +11,4 @@ password : FC switch password to login
 sbt: short bounce time in seconds
 lbt: long bounce time in seconds
 count : Number of times test to run
-pci_device: pci_bus_adress of adapter
+pci_device: pci_bus_adress of adapter, space separated
