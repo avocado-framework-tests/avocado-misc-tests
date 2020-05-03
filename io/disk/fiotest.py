@@ -106,7 +106,8 @@ class FioTest(Test):
         cmd = '%s/fio %s %s --filename=%s' % (self.sourcedir,
                                               self.get_data(fio_job),
                                               self.dirs, self.fio_file)
-        process.system(cmd)
+        if process.system(cmd, ignore_status=True, shell=True) != 0:
+            self.fail("fio run failed")
 
     def tearDown(self):
         '''
@@ -118,7 +119,7 @@ class FioTest(Test):
         self.log.info("Removing the filesystem created on %s", self.disk)
         delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk
         if process.system(delete_fs, shell=True, ignore_status=True):
-            self.fail("Failed to delete filesystem on %s", self.disk)
+            self.fail("Failed to delete filesystem on %s" % self.disk)
         if os.path.exists(self.fio_file):
             os.remove(self.fio_file)
 
