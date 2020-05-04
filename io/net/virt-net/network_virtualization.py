@@ -98,16 +98,16 @@ class NetworkVirtualization(Test):
         if not self.server:
             self.cancel("Managed System not got")
         self.slot_num = self.params.get("slot_num", '*', default=None)
-        self.slot_num = self.slot_num.split(',')
+        self.slot_num = self.slot_num.split(' ')
         for slot in self.slot_num:
             if int(slot) < 3 or int(slot) > 2999:
                 self.cancel("Slot invalid. Valid range: 3 - 2999")
         self.vios_name = self.params.get("vios_names", '*',
-                                         default=None).split(',')
+                                         default=None).split(' ')
         self.sriov_port = self.params.get("sriov_ports", '*',
-                                          default=None).split(',')
+                                          default=None).split(' ')
         self.backing_adapter = self.params.get("sriov_adapters", '*',
-                                               default=None).split(',')
+                                               default=None).split(' ')
         if len(self.sriov_port) != len(self.backing_adapter):
             self.cancel('Backing Device counts and port counts differ')
         if len(self.vios_name) != len(self.backing_adapter):
@@ -119,7 +119,7 @@ class NetworkVirtualization(Test):
         if not self.vnic_priority:
             self.vnic_priority = [50] * len(self.backing_adapter)
         else:
-            self.vnic_priority = self.vnic_priority.split(',')
+            self.vnic_priority = self.vnic_priority.split(' ')
         if len(self.vnic_priority) != len(self.backing_adapter):
             self.cancel('Backing Device counts and priority counts differ')
         self.auto_failover = self.params.get(
@@ -133,12 +133,12 @@ class NetworkVirtualization(Test):
         self.count = int(self.params.get('vnic_test_count', default="1"))
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         self.device_ip = self.params.get('device_ip', '*',
-                                         default=None).split(',')
+                                         default=None).split(' ')
         self.mac_id = self.params.get('mac_id',
-                                      default="02:03:03:03:03:01").split(',')
+                                      default="02:03:03:03:03:01").split(' ')
         self.mac_id = [mac.replace(':', '') for mac in self.mac_id]
-        self.netmask = self.params.get('netmask', '*', default=None).split(',')
-        self.peer_ip = self.params.get('peer_ip', default=None).split(',')
+        self.netmask = self.params.get('netmask', '*', default=None).split(' ')
+        self.peer_ip = self.params.get('peer_ip', default=None).split(' ')
         self.run_command(self.con_hmc, "uname -a")
         cmd = 'lssyscfg -m ' + self.server + \
               ' -r lpar --filter lpar_names=' + self.lpar + \

@@ -54,7 +54,7 @@ class DriverBindTest(Test):
         """
         Creates namespace on the device.
         """
-        for pci_addr in self.pci_devices.split(","):
+        for pci_addr in self.pci_devices.split(" "):
             driver = pci.get_driver(pci_addr)
             for _ in range(self.count):
                 self.log.info("iteration:%s for PCI_ID = %s" % (_, pci_addr))

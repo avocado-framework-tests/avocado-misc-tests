@@ -125,7 +125,7 @@ class ModuleLoadUnload(Test):
         """
         pci_addrs = []
         if self.module:
-            for modl in self.module.split(','):
+            for modl in self.module.split(' '):
                 self.mod_list.append(modl)
         elif self.only_io is True:
             for pci_addrs in pci.get_pci_addresses():

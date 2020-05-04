@@ -58,7 +58,7 @@ class PCIHotPlugTest(Test):
             if not linux_modules.module_is_loaded("pnv_php"):
                 linux_modules.load_module("pnv_php")
         self.dic = {}
-        self.device = self.params.get('pci_devices', default=' ').split(",")
+        self.device = self.params.get('pci_devices', default=' ').split(" ")
         self.count = int(self.params.get('count', default='1'))
         if not self.device:
             self.cancel("PCI_address not given")

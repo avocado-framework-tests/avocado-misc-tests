@@ -3,7 +3,7 @@ unmap/map operations are done on corresponding vios from HMC CLI. test will
 run for all the vfc interfaces mapped to the lpar. it works fine for dual vios setup also.
 
 parameter:
-vioses :      vios lpar name(s) on which the unmap/map operations are done
+vioses :      vios lpar name(s) on which the unmap/map operations are done, space separated for multiple vioses
 hmc_ip :      HMC IP or host name (9.XX.XXX.XXX)
 hmc_username: username of the HMC
 hmc_pwd:      password of the HMC

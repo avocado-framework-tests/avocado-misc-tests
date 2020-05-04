@@ -70,7 +70,7 @@ class MultipathTest(Test):
             self.cancel("Can not install %s" % pkg_name)
 
         # Check if given multipath devices are present in system
-        self.wwids = self.params.get('wwids', default='').split(',')
+        self.wwids = self.params.get('wwids', default='').split(' ')
         system_wwids = multipath.get_multipath_wwids()
         wwids_to_remove = []
         for wwid in self.wwids:

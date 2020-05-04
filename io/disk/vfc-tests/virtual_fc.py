@@ -97,7 +97,7 @@ class VirtualFC(Test):
             self.cancel("Managed System not got")
         self.dic_list = []
         self.err_mesg = []
-        for vios in self.vioses.split(","):
+        for vios in self.vioses.split(" "):
             for vfchost in self.get_vfchost(vios):
                 vfc_dic = {}
                 vfc_dic["vios"] = vios

@@ -225,21 +225,18 @@ class servicelog(Test):
         self.log.info("===========4 - Checking servicelog after the "
                       "repair action =========")
         self.run_cmd("servicelog --type=ppc64_rtas -v")
-        # Checking if we have a repair action on servicelog
-        repair_event = self.run_cmd_out("servicelog "
-                                        "--type=ppc64_rtas | grep \"Repair Action\" | "
-                                        "cut -d\":\" -f1")
-        if repair_event != "Repair Action":
-            self.is_fail += 1
-            self.log.debug("Warning: Repair Action not found!")
         # Checking if the event was repaired indeed
         repaired = self.run_cmd_out("servicelog "
                                     "--type=ppc64_rtas | grep \"Event Repaired\" | cat -b "
                                     "| grep 2 | cut -d\":\" -f2 | sed 's/^ *//'")
-        if repaired != "Yes":
-            self.is_fail += 1
-            self.log.debug("Warning: Event not repaired!")
-
+        if repaired == "Yes":
+            # Checking if we have a repair action on servicelog
+            repair_event = self.run_cmd_out("servicelog "
+                                            "--type=ppc64_rtas | grep \"Repair Action\" | "
+                                            "cut -d\":\" -f1")
+            if repair_event != "Repair Action":
+                self.is_fail += 1
+                self.log.debug("Warning: Repair Action not found!")
         # Start of the service stopped earlier
         Manageservice.start("rtas_errd")
 

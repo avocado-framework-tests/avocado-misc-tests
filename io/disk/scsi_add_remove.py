@@ -49,14 +49,14 @@ class ScsiAddRemove(Test):
         system_pci_adress = pci.get_pci_addresses()
         system_wwids = multipath.get_multipath_wwids()
         if self.wwids:
-            self.wwids = self.wwids.split(',')
+            self.wwids = self.wwids.split(' ')
             for wwid in self.wwids:
                 if wwid not in system_wwids:
                     self.cancel("%s not present in the system", wwid)
                 for path in multipath.get_paths(wwid):
                     self.device_list.append(path)
         elif self.pci_device:
-            self.pci_device = self.pci_device.split(',')
+            self.pci_device = self.pci_device.split(' ')
             for pci_id in self.pci_device:
                 if pci_id not in system_pci_adress:
                     self.cancel("%s not present in the system", pci_id)

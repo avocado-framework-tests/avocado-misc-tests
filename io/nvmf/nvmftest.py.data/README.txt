@@ -15,5 +15,5 @@ Prerequisites:
 
 Inputs Needed (in multiplexer file):
 ------------------------------------
-* namespaces    -   comma separated namespaces on the peer to configure for NVMf
-* peer_ips      -   comma separated peer IP address
+* namespaces    -   space separated namespaces on the peer to configure for NVMf
+* peer_ips      -   space separated peer IP address

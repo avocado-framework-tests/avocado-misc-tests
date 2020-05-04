@@ -8,4 +8,4 @@ controller status using getconfig.
 Note:
     1. Tool handles only one channel type currently. 
     2. supported controllers pci_ids can be entered 
-       seperated by ",".
+       seperated by space " ".
