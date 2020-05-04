@@ -1,0 +1,8 @@
+hmc_username: ""
+hmc_pwd: ""
+sriov_adapter: ""
+sriov_port: ""
+ipaddr: ""
+netmask: ""
+peer_ip: ""
+mac_id: ""
