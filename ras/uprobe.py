@@ -62,6 +62,8 @@ class Uprobe(Test):
         smg = SoftwareManager()
         if dist.name in ["Ubuntu", "unknown", 'debian']:
             deps = ['libc-bin']
+        elif 'SuSE' in dist.name:
+            deps = ['glibc-devel']
         else:
             deps = ['glibc-common']
         for package in deps:
