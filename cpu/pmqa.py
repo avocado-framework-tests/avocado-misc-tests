@@ -20,8 +20,11 @@ import os
 
 from avocado import Test
 from avocado import main
+from avocado import skipIf
 from avocado.utils import process, git
 from avocado.utils.software_manager import SoftwareManager
+
+IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 
 
 class Pmqa(Test):
@@ -33,15 +36,13 @@ class Pmqa(Test):
 
     :avocado: tags=cpu,privileged
     """
-
+    @skipIf(not IS_POWER_NV, "This test is not supported on PowerVM platform")
     def setUp(self):
         '''
         Build Pmqa Test
         Source:
         git://git.linaro.org/power/pm-qa.git
         '''
-        if not os.path.exists('/sys/devices/system/cpu/cpu0/cpufreq'):
-            self.cancel('sysfs directory for cpufreq is unavailable.')
         # Check for basic utilities
         smm = SoftwareManager()
         for package in ['gcc', 'make']:
