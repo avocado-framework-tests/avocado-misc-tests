@@ -91,10 +91,6 @@ class NetworkTest(Test):
                                                              remotehost_public)
         self.mtu = self.params.get("mtu", default=1500)
         self.mtu_set()
-        self.peer_networkinterface = NetworkInterface(self.peer_interface,
-                                                      remotehost)
-        remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
-                                       password=self.peer_password)
         if self.networkinterface.ping_check(self.peer, count=5) is not None:
             self.cancel("No connection to peer")
 
