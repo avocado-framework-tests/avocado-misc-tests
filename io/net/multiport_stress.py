@@ -46,6 +46,7 @@ class MultiportStress(Test):
             self.cancel("Package %s is needed to test" % pkg)
         self.peer_ips = self.params.get("peer_ips",
                                         default="").split(" ")
+        self.peer_public_ip = self.params.get("peer_public_ip", default="")
         interfaces = netifaces.interfaces()
         for self.host_interface in self.host_interfaces:
             if self.host_interface not in interfaces:
@@ -66,8 +67,11 @@ class MultiportStress(Test):
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
         self.mtu = self.params.get("mtu", default=1500)
-        self.remotehost = RemoteHost(self.peer_ips[0], username=self.peer_user,
+        self.remotehost = RemoteHost(self.peer_ips[0], self.peer_user,
                                      password=self.peer_password)
+        self.remotehost_public = RemoteHost(self.peer_public_ip,
+                                            self.peer_user,
+                                            password=self.peer_password)
         for peer_ip in self.peer_ips:
             peer_interface = self.remotehost.get_interface_by_ipaddr(peer_ip).name
             peer_networkinterface = NetworkInterface(peer_interface,
@@ -122,10 +126,14 @@ class MultiportStress(Test):
                 self.cancel("Failed to set mtu in host")
         for peer_ip in self.peer_ips:
             peer_interface = self.remotehost.get_interface_by_ipaddr(peer_ip).name
-            peer_networkinterface = NetworkInterface(peer_interface,
-                                                     self.remotehost)
-            if peer_networkinterface.set_mtu("1500") is not None:
-                self.cancel("Failed to set mtu in peer")
+            try:
+                peer_networkinterface = NetworkInterface(peer_interface,
+                                                         self.remotehost)
+                peer_networkinterface.set_mtu("1500")
+            except Exception:
+                peer_public_networkinterface = NetworkInterface(peer_interface,
+                                                                self.remotehost_public)
+                peer_public_networkinterface.set_mtu("1500")
         for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
             networkinterface = NetworkInterface(interface, self.local)
             networkinterface.remove_ipaddr(ipaddr, self.netmask)

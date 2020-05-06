@@ -8,5 +8,5 @@ This script should be run as root.
 Inputs
 ------
 ITERATIONS -    No of counts to unload and load the module. Defaults to 1.
-MODULES -       List of modules to unload/load. Multiple modules can be seperated by comma. Example: 'mod1,mod2'.
+MODULES -       List of modules to unload/load. Multiple modules can be seperated by spaces. Example: 'mod1 mod2'.
 ONLY_IO -       If set to True, will unload/load all PCI drivers. Else, will unload/load all loaded modules in the sytem.

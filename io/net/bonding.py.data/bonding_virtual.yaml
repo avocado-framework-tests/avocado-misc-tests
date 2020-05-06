@@ -8,6 +8,7 @@ host_ips: ""
 netmask: ""
 peer_ip: ""
 peer_interfaces: ""
+peer_public_ip: ""
 bond_name: "bondtest"
 user_name: "root"
 peer_bond_needed: False 

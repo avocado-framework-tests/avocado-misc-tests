@@ -1,6 +1,8 @@
 setup:
     # make sure enough memory is available
     nr_pages: null
+    file_type:
+    back_file:
     scen: !mux
         positive:
             induce_err: 0

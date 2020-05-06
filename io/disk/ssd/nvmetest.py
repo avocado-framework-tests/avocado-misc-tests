@@ -267,7 +267,7 @@ class NVMeTest(Test):
         Creates one namespace, with the specified id, block size, controller
         """
         cmd = "%s create-ns %s --nsze=%s --ncap=%s --flbas=0 -dps=0" % (
-            self.binary, self.device, blocksize, blocksize)
+            self.binary, self.device, int(blocksize), int(blocksize))
         process.system(cmd, shell=True, ignore_status=True)
         cmd = "%s attach-ns %s --namespace-id=%s -controllers=%s" % (
             self.binary, self.device, ns_id, controller)

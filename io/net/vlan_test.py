@@ -72,6 +72,8 @@ class VlanTest(Test):
         self.host_port = self.params.get("host_port", '*', default=None)
         self.peer_port = self.params.get("peer_port", '*', default=None)
         self.host_intf = self.params.get("interface", '*', default=None)
+        if self.host_intf[0:2] == 'ib':
+            self.cancel("vlan is not supported for IB")
         self.peer_intf = self.params.get("peer_interface", '*', default=None)
         self.peer_ip = self.params.get("peer_public_ip", '*', default=None)
         self.peer_user = self.params.get("peer_user", '*', default=None)

@@ -66,7 +66,7 @@ class PortBounceTest(Test):
         self.switch_name = self.params.get("switch_name", '*', default=None)
         self.userid = self.params.get("userid", '*', default=None)
         self.password = self.params.get("password", '*', default=None)
-        self.wwids = self.params.get("wwids", default=None).split(",")
+        self.wwids = self.params.get("wwids", default=None).split(" ")
         self.sbt = int(self.params.get("sbt", '*', default=10))
         self.lbt = int(self.params.get("lbt", '*', default=250))
         self.count = int(self.params.get("count", '*', default="2"))

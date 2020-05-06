@@ -1,0 +1,16 @@
+# $ modinfo -p be2net
+#   num_vfs:Number of PCI VFs to initialize (uint)
+#   rx_frag_size:Size of a fragment that holds rcvd data. (ushort)
+
+module: be2net
+interface: eth1
+host_ip:
+netmask:
+peer_ip:
+sysfs_check_required: 0
+module_param_name: "rx_frag_size"
+value: !mux
+    rx_frag_size_4096:
+       module_param_value: "4096"
+    rx_frag_size_8192:
+       module_param_value: "8192"

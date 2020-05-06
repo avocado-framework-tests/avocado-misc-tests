@@ -39,6 +39,9 @@ class Bridging(Test):
         if not self.host_interface:
             self.cancel("User should specify host interface")
 
+        if self.host_interface[0:2] == 'ib':
+            self.cancel("Network Bridge is not supported for IB")
+
         interfaces = netifaces.interfaces()
         if self.host_interface not in interfaces:
             self.cancel("Interface is not available")

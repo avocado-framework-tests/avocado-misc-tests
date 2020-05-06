@@ -66,7 +66,7 @@ class DmaMemtest(Test):
         self.log.info('Downloading linux kernel tarball')
         self.tarball = self.fetch_asset(tarball_url, asset_hash=tarball_md5,
                                         algorithm='md5')
-        size_tarball = os.path.getsize(self.tarball) / 1024 / 1024
+        size_tarball = os.path.getsize(self.tarball) // 1024 // 1024
 
         # Estimation of the tarball size after uncompression
         compress_ratio = 5
@@ -80,7 +80,7 @@ class DmaMemtest(Test):
         self.log.info('Parallel: %s', parallel)
 
         # Verify if space is available in disk
-        disk_free_mb = (disk.freespace(self.tmpdir) / 1024) / 1024
+        disk_free_mb = (disk.freespace(self.tmpdir) // 1024) // 1024
         if disk_free_mb < (est_size * self.sim_cps):
             self.cancel("Space not available to extract the %s linux tars\n"
                         "Mount and Use other partitions in dir_to_extract arg "
@@ -97,12 +97,12 @@ class DmaMemtest(Test):
         mem_str = process.system_output('grep MemTotal /proc/meminfo')
         mem = int(re.search(r'\d+', mem_str.decode()).group(0))
         mem = int(mem / 1024)
-        sim_cps = (1.5 * mem) / est_size
+        sim_cps = (1.5 * mem) // est_size
 
-        if (mem % est_size) >= (est_size / 2):
+        if (mem % est_size) >= (est_size // 2):
             sim_cps += 1
 
-        if (mem / 32) < 1:
+        if (mem // 32) < 1:
             sim_cps += 1
 
         return int(sim_cps)
