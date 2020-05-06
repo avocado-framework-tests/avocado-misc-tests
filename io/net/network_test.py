@@ -301,6 +301,7 @@ class NetworkTest(Test):
             cmd = "timeout 600 ssh %s \" rm -rf /tmp/tempfile\"" % self.peer
             process.system(cmd, shell=True, verbose=True, ignore_status=True)
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+        self.networkinterface.restore_from_backup()
 
 
 if __name__ == "__main__":
