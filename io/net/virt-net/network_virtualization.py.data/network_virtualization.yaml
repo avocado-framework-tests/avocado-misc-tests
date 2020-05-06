@@ -13,7 +13,7 @@ priority:
 auto_failover:
 bandwidth:
 device_ip:
-netmask:
+netmasks:
 peer_ip:
 vnic_test_count:
 num_of_dlpar:
