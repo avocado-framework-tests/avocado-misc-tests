@@ -6,3 +6,4 @@ hmc_username:
 lpar_2: 
 pci_device:
 num_of_dlpar: 
+sriov: 'no'

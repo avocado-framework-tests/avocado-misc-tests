@@ -68,6 +68,7 @@ class DlparPci(Test):
             self.cancel("HMC IP not got")
         self.hmc_user = self.params.get("hmc_username", default='hscroot')
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default='********')
+        self.sriov = self.params.get("sriov", default="no")
         self.lpar_1 = self.get_partition_name("Partition Name")
         if not self.lpar_1:
             self.cancel("LPAR Name not got from lparstat command")
@@ -83,8 +84,8 @@ class DlparPci(Test):
             self.cancel("Managed System not got")
         self.lpar_2 = self.params.get("lpar_2", '*', default=None)
         if self.lpar_2 is not None:
-            cmd = 'lshwres -r io -m %s --rsubtype slot --filter lpar_names=%s ' \
-                   '-F lpar_id' % (self.server, self.lpar_2)
+            cmd = 'lshwres -r io -m %s --rsubtype slot --filter \
+                   lpar_names=%s -F lpar_id' % (self.server, self.lpar_2)
             output = self.run_command(cmd)
             self.lpar2_id = output[0]
         self.pci_device = self.params.get("pci_device", '*', default=None)
@@ -93,19 +94,38 @@ class DlparPci(Test):
         if self.loc_code is None:
             self.cancel("Failed to get the location code for the pci device")
         self.run_command("uname -a")
-        cmd = 'lshwres -r io -m %s --rsubtype slot --filter lpar_names=%s ' \
-              '-F drc_index,lpar_id,drc_name,bus_id' % (self.server,
-                                                        self.lpar_1)
-        output = self.run_command(cmd)
-        for line in output:
-            if self.loc_code in line:
-                self.drc_index = line.split(',')[0]
-                self.lpar_id = line.split(',')[1]
-                self.phb = line.split(',')[3]
-                break
+        if self.sriov == "yes":
+            cmd = "lshwres -r sriov --rsubtype logport -m %s \
+            --level eth --filter lpar_names=%s -F \
+            'adapter_id,logical_port_id,phys_port_id,lpar_id,location_code,drc_name'" \
+                   % (self.server, self.lpar_1)
+            output = self.run_command(cmd)
+            for line in output:
+                if self.loc_code in line:
+                    self.adapter_id = line.split(',')[0]
+                    self.logical_port_id = line.split(',')[1]
+                    self.phys_port_id = line.split(',')[2]
+                    self.lpar_id = line.split(',')[3]
+                    self.location_code = line.split(',')[4]
+                    self.phb = line.split(',')[5].split(' ')[1]
+                    break
+            self.log.info("lpar_id : %s, loc_code: %s",
+                          self.lpar_id, self.loc_code)
+        else:
+            cmd = 'lshwres -r io -m %s --rsubtype slot \
+                   --filter lpar_names=%s -F drc_index,lpar_id,drc_name,bus_id' \
+                   % (self.server, self.lpar_1)
+            output = self.run_command(cmd)
+            for line in output:
+                if self.loc_code in line:
+                    self.drc_index = line.split(',')[0]
+                    self.lpar_id = line.split(',')[1]
+                    self.phb = line.split(',')[3]
+                    break
 
-        self.log.info("lpar_id : %s, loc_code: %s, drc_index: %s, phb: %s",
-                      self.lpar_id, self.loc_code, self.drc_index, self.phb)
+            self.log.info("lpar_id : %s, loc_code: %s, drc_index: %s, phb: %s",
+                          self.lpar_id, self.loc_code, self.drc_index,
+                          self.phb)
 
     @staticmethod
     def get_mcp_component(component):
@@ -262,23 +282,43 @@ class DlparPci(Test):
         '''
         dlpar remove operation
         '''
-        self.changehwres(self.server, 'r', self.lpar_id, self.lpar_1,
-                         self.drc_index, 'remove')
-        output = self.listhwres(self.server, self.lpar_1, self.drc_index)
-        if output:
-            self.log.debug(output)
-            self.fail("lshwres still lists the drc after dlpar remove")
+        if self.sriov == "yes":
+            self.changehwres_sriov(self.server, 'r', self.lpar_id,
+                                   self.adapter_id, self.logical_port_id,
+                                   self.phys_port_id, 'remove')
+            output = self.listhwres_sriov(self.server, self.lpar_1,
+                                          self.logical_port_id)
+            if output:
+                self.log.debug(output)
+                self.fail("lshwres still lists the drc after dlpar remove")
+        else:
+            self.changehwres(self.server, 'r', self.lpar_id, self.lpar_1,
+                             self.drc_index, 'remove')
+            output = self.listhwres(self.server, self.lpar_1, self.drc_index)
+            if output:
+                self.log.debug(output)
+                self.fail("lshwres still lists the drc after dlpar remove")
 
     def dlpar_add(self):
         '''
         dlpar add operation
         '''
-        self.changehwres(self.server, 'a', self.lpar_id, self.lpar_1,
-                         self.drc_index, 'add')
-        output = self.listhwres(self.server, self.lpar_1, self.drc_index)
-        if self.drc_index not in output[0]:
-            self.log.debug(output)
-            self.fail("lshwres fails to list the drc after dlpar add")
+        if self.sriov == "yes":
+            self.changehwres_sriov(self.server, 'a', self.lpar_id,
+                                   self.adapter_id, self.logical_port_id,
+                                   self.phys_port_id, 'add')
+            output = self.listhwres_sriov(self.server, self.lpar_1,
+                                          self.logical_port_id)
+            if self.logical_port_id not in output[0]:
+                self.log.debug(output)
+                self.fail("lshwres fails to list the drc after dlpar add")
+        else:
+            self.changehwres(self.server, 'a', self.lpar_id, self.lpar_1,
+                             self.drc_index, 'add')
+            output = self.listhwres(self.server, self.lpar_1, self.drc_index)
+            if self.drc_index not in output[0]:
+                self.log.debug(output)
+                self.fail("lshwres fails to list the drc after dlpar add")
 
     def dlpar_move(self):
         '''
@@ -332,6 +372,17 @@ class DlparPci(Test):
             self.fail("lshwres operation failed ")
         return cmd
 
+    def listhwres_sriov(self, server, lpar, logical_port_id):
+        cmd = 'lshwres -r sriov -m %s \
+              --rsubtype logport --filter lpar_names= %s --level eth \
+              | grep -i %s' % (server, lpar, logical_port_id)
+        try:
+            cmd = self.run_command(cmd)
+        except CommandFailed as cmd_fail:
+            self.log.debug(str(cmd_fail))
+            self.fail("lshwres operation failed ")
+        return cmd
+
     def changehwres(self, server, operation, lpar_id, lpar, drc_index, msg):
         '''
         changes the drc index resource: add / remove / move
@@ -344,6 +395,26 @@ class DlparPci(Test):
             cmd = 'chhwres -r io --rsubtype slot -m %s \
                    -o %s --id %s -l %s ' % (server, operation, lpar_id,
                                             drc_index)
+        try:
+            cmd = self.run_command(cmd, 3000)
+        except CommandFailed as cmd_fail:
+            self.log.debug(str(cmd_fail))
+            self.fail("dlpar %s operation failed" % msg)
+
+    def changehwres_sriov(self, server, operation, lpar_id, adapter_id,
+                          logical_port_id, phys_port_id, msg):
+        '''
+        operation add / remove for sriov ports
+        '''
+        if operation == 'r':
+            cmd = 'chhwres -r sriov -m %s --rsubtype logport -o r --id %s -a \
+                  adapter_id=%s,logical_port_id=%s' \
+                  % (server, lpar_id, adapter_id, logical_port_id)
+        elif operation == 'a':
+            cmd = 'chhwres -r sriov -m %s --rsubtype logport -o a --id %s -a \
+                  phys_port_id=%s,adapter_id=%s,logical_port_id=%s, \
+                  logical_port_type=eth' % (server, lpar_id, phys_port_id,
+                                            adapter_id, logical_port_id)
         try:
             cmd = self.run_command(cmd, 3000)
         except CommandFailed as cmd_fail:
