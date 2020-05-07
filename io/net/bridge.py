@@ -16,6 +16,7 @@
 # Bridge interface test
 
 
+import os
 import netifaces
 from avocado import main
 from avocado import Test
@@ -80,9 +81,12 @@ class Bridging(Test):
         local = LocalHost()
         networkinterface = NetworkInterface(self.bridge_interface, local,
                                             if_type="Bridge")
-        networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+        try:
+            networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+            networkinterface.save(self.ipaddr, self.netmask)
+        except Exception:
+            networkinterface.save(self.ipaddr, self.netmask)
         networkinterface.bring_up()
-        networkinterface.save(self.ipaddr, self.netmask)
         if networkinterface.ping_check(self.peer_ip, count=5) is not None:
             self.fail('Ping using bridge failed')
         networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
@@ -92,6 +96,10 @@ class Bridging(Test):
         Set to original state
         '''
         self.check_failure('ip link del dev %s' % self.bridge_interface)
+        # TODO:need to get this functionality into avocado utils interfcae.py
+        path = "/etc/sysconfig/network-scripts/ifcfg-%s" \
+               % self.bridge_interface
+        os.remove(path)
 
 
 if __name__ == "__main__":
