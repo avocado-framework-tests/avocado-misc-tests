@@ -40,6 +40,8 @@ class DisrtoTool(Test):
         self.option = self.params.get("test_opt", default='')
         self.tool = self.params.get("tool", default='')
         self.pci_device = self.params.get("pci_device", default='')
+        if not self.pci_device:
+            self.cancel("pci bus not give test may fail")
         self.adapter_type = pci.get_pci_class_name(self.pci_device)
         smm = SoftwareManager()
         if not smm.check_installed("pciutils") and not smm.install("pciutils"):
