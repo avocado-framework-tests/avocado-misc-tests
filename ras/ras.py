@@ -146,7 +146,8 @@ class RASTools(Test):
                       "==")
         self.run_cmd("lsslot")
         self.run_cmd("lsslot -c mem")
-        self.run_cmd("lsslot -ac pci")
+        if self.run_cmd_out("lspci"):
+            self.run_cmd_out("lsslot -ac pci")
         if not IS_KVM_GUEST:
             self.run_cmd("lsslot -c cpu -b")
         self.run_cmd("lsslot -c pci -o")
