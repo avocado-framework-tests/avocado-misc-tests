@@ -155,6 +155,7 @@ class Iperf(Test):
         except Exception:
             self.peer_public_networkinterface.set_mtu('1500')
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+        self.networkinterface.restore_from_backup()
 
 
 if __name__ == "__main__":

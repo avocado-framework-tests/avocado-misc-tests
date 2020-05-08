@@ -137,6 +137,7 @@ class MultiportStress(Test):
         for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
             networkinterface = NetworkInterface(interface, self.local)
             networkinterface.remove_ipaddr(ipaddr, self.netmask)
+            networkinterface.restore_from_backup()
 
 
 if __name__ == "__main__":
