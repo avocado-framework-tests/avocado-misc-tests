@@ -118,7 +118,7 @@ class Kretprobe(Test):
         """
         self.run_cmd("date")
 
-        if "returned" not in self.run_cmd_out("dmesg |grep -i _do_fork"):
+        if "return" not in self.run_cmd_out("dmesg |grep -i _do_fork"):
             self.fail("kretprobe probing issues, check dmesg for more information")
 
         self.run_cmd("rmmod kretprobe_example")
