@@ -1,5 +1,5 @@
+# disk - Disk or Directory to which fio needs to run
 disk:  
-dir:
 fio_job: 'fio-simple.job'
 fio_tool_url: 'https://brick.kernel.dk/snaps/fio-git-latest.tar.gz'
 filesystem: !mux
@@ -9,3 +9,8 @@ filesystem: !mux
         fs: 'xfs'
     btrfs:
         fs: 'btrfs'
+    no_fs:
+lv: !mux
+    lv:
+        lv: True
+    no_lv:
