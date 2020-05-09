@@ -51,13 +51,12 @@ class Ioping(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel(
                     "Fail to install %s required for this test." % package)
-        tarball = self.fetch_asset('https://storage.googleapis.com/'
-                                   'google-code-archive-downloads/v2/'
-                                   'code.google.com/ioping/'
-                                   'ioping-0.8.tar.gz', expire='0d')
-        archive.extract(tarball, self.teststmpdir)
-        version = os.path.basename(tarball.split('.tar.')[0])
-        self.sourcedir = os.path.join(self.teststmpdir, version)
+
+        tarball = self.fetch_asset("ioping.zip", locations="https://github.com/"
+                                   "koct9i/ioping/archive/master.zip",
+                                   expire='1d')
+        archive.extract(tarball, self.workdir)
+        self.sourcedir = os.path.join(self.workdir, 'ioping-master')
 
         build.make(self.sourcedir)
 
