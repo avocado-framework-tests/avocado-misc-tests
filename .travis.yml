@@ -2,11 +2,9 @@ language: python
 
 matrix:
   allow_failures:
-        - python: "2.7"
         - python: "3.4" ## failing as recent changes in colorama failed to install 
 
 python:
-    - "2.7" #will remove when whole repo moved to python3
     - "3.4"
     - "3.5"
     - "3.6"
