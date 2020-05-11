@@ -93,6 +93,8 @@ class Kernbench(Test):
                        shell=True, sudo=True)
         process.system("sed -i 's/^.*CONFIG_MODULE_SIG_KEY/#&/g' .config",
                        shell=True, sudo=True)
+        process.system("sed -i 's/^.*CONFIG_DEBUG_INFO_BTF/#&/g' .config",
+                       shell=True, sudo=True)
 
     def setUp(self):
         """
