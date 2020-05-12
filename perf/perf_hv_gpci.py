@@ -17,7 +17,7 @@
 import platform
 from avocado import Test
 from avocado import main
-from avocado.utils import cpu, distro, process
+from avocado.utils import distro, process, genio
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -43,7 +43,7 @@ class perf_hv_gpci(Test):
         if 'ppc64' not in detected_distro.arch:
             self.cancel('This test is not supported on %s architecture'
                         % detected_distro.arch)
-        if 'PowerNV' in cpu._get_info():
+        if 'PowerNV' in genio.read_file('/proc/cpuinfo'):
             self.cancel('This test is only supported on LPAR')
 
         deps = ['gcc', 'make']
