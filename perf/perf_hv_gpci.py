@@ -65,14 +65,16 @@ class perf_hv_gpci(Test):
             line = line.split(',')[0].split('/')[1]
             self.list_of_hv_gpci_events.append(line)
 
-        # Clear the dmesg, by that we can capture the delta at the end of the test.
+        # Clear the dmesg, by that we can capture the delta at the end of
+        # the test.
         output = process.run("dmesg -c")
 
     def error_check(self):
         if len(self.fail_cmd) > 0:
             for cmd in range(len(self.fail_cmd)):
                 self.log.info("Failed command: %s" % self.fail_cmd[cmd])
-            self.fail("perf_raw_events: some of the events failed, refer to log")
+            self.fail("perf_raw_events: some of the events failed,"
+                      "refer to log")
 
     def run_cmd(self, cmd):
         output = process.run(cmd, shell=True, ignore_status=True)
