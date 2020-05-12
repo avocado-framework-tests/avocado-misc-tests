@@ -1,0 +1,18 @@
+setup:
+    pmdk_url: 'https://github.com/pmem/pmdk/releases/download/1.8/pmdk-1.8.tar.gz'
+    disk:
+    disk_type: 'nvdimm'
+    run_type: !mux
+        libpmem:
+            fio_job: 'fio-libpmem.job'
+            filesystem: !mux
+                xfs:
+                    fs: 'xfs'
+                    fs_args: '-f -b size=64k -s size=512 -m reflink=0'
+                    mnt_args: '-o dax'
+                ext4:
+                    fs: 'ext4'
+                    fs_args: '-b 64k -F'
+                    mnt_args: '-o dax'
+        devdax:
+            fio_job: 'fio-devdax.job'

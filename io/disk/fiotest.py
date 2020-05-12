@@ -23,11 +23,13 @@ FIO Test
 """
 
 import os
+import avocado
 
 from avocado import Test
 from avocado import main
 from avocado.utils import archive
 from avocado.utils import build
+from avocado.utils import pmem
 from avocado.utils import disk
 from avocado.utils import lv_utils
 from avocado.utils import process, distro
@@ -55,6 +57,11 @@ class FioTest(Test):
         default_url = "https://brick.kernel.dk/snaps/fio-git-latest.tar.gz"
         url = self.params.get('fio_tool_url', default=default_url)
         self.disk = self.params.get('disk', default=None)
+        self.disk_type = self.params.get('disk_type', default='')
+        fs_args = self.params.get('fs_args', default='')
+        mnt_args = self.params.get('mnt_args', default='')
+        self.fio_file = 'fiotest-image'
+
         fstype = self.params.get('fs', default=None)
         if fstype == 'btrfs':
             ver = int(distro.detect().version)
@@ -73,12 +80,42 @@ class FioTest(Test):
                 pkg_list.append('btrfs-progs')
         else:
             pkg_list = ['libaio', 'libaio-devel']
+            if self.disk_type == 'nvdimm':
+                pkg_list.extend(['autoconf', 'pkg-config'])
+                if distro.detect().name == 'SuSE':
+                    pkg_list.extend(['ndctl', 'libnuma-devel',
+                                     'libndctl-devel'])
+                else:
+                    pkg_list.extend(['ndctl', 'daxctl', 'numactl-devel',
+                                     'ndctl-devel', 'daxctl-devel'])
 
         smm = SoftwareManager()
         for pkg in pkg_list:
             if pkg and not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("Package %s is missing and could not be installed"
                             % pkg)
+
+        tarball = self.fetch_asset(url)
+        archive.extract(tarball, self.teststmpdir)
+        self.sourcedir = os.path.join(self.teststmpdir, "fio")
+
+        if self.disk_type == 'nvdimm':
+            self.setup_pmem_disk(mnt_args)
+            self.log.info("Building PMDK for NVDIMM fio engines")
+            pmdk_url = self.params.get('pmdk_url', default='')
+            tar = self.fetch_asset(pmdk_url, expire='7d')
+            archive.extract(tar, self.teststmpdir)
+            version = os.path.basename(tar.split('.tar.')[0])
+            pmdk_src = os.path.join(self.teststmpdir, version)
+            build.make(pmdk_src)
+            build.make(pmdk_src, extra_args='install prefix=/usr')
+            os.chdir(self.sourcedir)
+            out = process.system_output(
+                "./configure --prefix=/usr", shell=True)
+            for eng in ['PMDK libpmem', 'PMDK dev-dax', 'libnuma']:
+                for line in out.decode().splitlines():
+                    if line.startswith(eng) and 'no' in line:
+                        self.cancel("PMEM engines not built with fio")
 
         if not self.disk:
             self.disk = self.workdir
@@ -93,19 +130,37 @@ class FioTest(Test):
 
             if fstype:
                 self.dirs = self.workdir
-                self.create_fs(self.disk, self.dirs, fstype)
+                self.create_fs(self.disk, self.dirs, fstype, fs_args, mnt_args)
                 self.fs_create = True
             else:
                 self.dirs = self.disk
-
         else:
             self.dirs = self.disk
 
-        tarball = self.fetch_asset(url)
-        archive.extract(tarball, self.teststmpdir)
-        self.sourcedir = os.path.join(self.teststmpdir, "fio")
         build.make(self.sourcedir)
-        self.fio_file = 'fiotest-image'
+
+    @avocado.fail_on(pmem.PMemException)
+    def setup_pmem_disk(self, mnt_args):
+        if not self.disk:
+            self.plib = pmem.PMem()
+            regions = sorted(self.plib.run_ndctl_list(
+                '-R'), key=lambda i: i['size'], reverse=True)
+            if not regions:
+                self.plib.enable_region()
+                regions = sorted(self.plib.run_ndctl_list(
+                    '-R'), key=lambda i: i['size'], reverse=True)
+            region = self.plib.run_ndctl_list_val(regions[0], 'dev')
+            if self.plib.run_ndctl_list("-N -r %s" % region):
+                self.plib.destroy_namespace(region=region, force=True)
+            if 'dax' in mnt_args:
+                self.plib.create_namespace(region=region)
+                self.disk = "/dev/%s" % self.plib.run_ndctl_list_val(
+                    self.plib.run_ndctl_list('-N -r %s' % region)[0], 'blockdev')
+            else:
+                self.plib.create_namespace(
+                    region=region, mode='devdax')
+                self.fio_file = "/dev/%s" % self.plib.run_ndctl_list_val(
+                    self.plib.run_ndctl_list('-N -r %s' % region)[0], 'chardev')
 
     def create_lv(self, l_disk):
         vgname = 'avocado_vg'
@@ -121,12 +176,12 @@ class FioTest(Test):
         lv_utils.lv_remove(vgname, lvname)
         lv_utils.vg_remove(vgname)
 
-    def create_fs(self, l_disk, mountpoint, fstype):
+    def create_fs(self, l_disk, mountpoint, fstype, fs_args='', mnt_args=''):
         self.part_obj = Partition(l_disk, mountpoint=mountpoint)
         self.part_obj.unmount()
-        self.part_obj.mkfs(fstype)
+        self.part_obj.mkfs(fstype, args=fs_args)
         try:
-            self.part_obj.mount()
+            self.part_obj.mount(args=mnt_args)
         except PartitionError:
             self.fail("Mounting disk %s on directory %s failed"
                       % (l_disk, mountpoint))
