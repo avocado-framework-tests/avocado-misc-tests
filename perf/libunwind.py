@@ -29,7 +29,7 @@ class Libunwind(Test):
         '''
         Build Libunwind library
         Source:
-        https://github.com/pathscale/libunwind/archive/vanilla_pathscale.zip
+        https://github.com/libunwind/libunwind/archive/master.zip
         '''
         dist = distro.detect()
         smm = SoftwareManager()
@@ -48,15 +48,15 @@ class Libunwind(Test):
                             "the test to be run" % package)
 
         tarball = self.fetch_asset('vanilla_pathscale.zip', locations=[
-            'https://github.com/pathscale/libunwind/archive/'
-            'vanilla_pathscale.zip'], expire='7d')
+            'https://github.com/libunwind/libunwind/archive/'
+            'master.zip'], expire='7d')
         archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'libunwind-vanilla_pathscale')
+        self.sourcedir = os.path.join(self.workdir, 'libunwind-master')
         os.chdir(self.sourcedir)
         process.run('./autogen.sh', shell=True)
         '''
         For configure options on different architecture please refer
-        https://github.com/pathscale/libunwind
+        https://github.com/libunwind/libunwind
         '''
         configure_option = self.params.get('configure_option',
                                            default='configure_option')
