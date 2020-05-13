@@ -133,9 +133,12 @@ class NetworkTest(Test):
         '''
         ro_type = "lro"
         ro_type_full = "large-receive-offload"
-        path = '/sys/class/net/%s/device/name' % self.iface
-        if 'vnic' in open(path, 'r').read():
-            self.cancel("Unsupported on vNIC")
+        path = '/sys/class/net/%s/device/uevent' % self.iface
+        output = open(path, 'r').read()
+        for line in output.splitlines():
+            if "OF_NAME" in line:
+                if 'vnic' in line.split('=')[-1]:
+                    self.cancel("Unsupported on vNIC")
         if not self.offload_state(ro_type_full):
             self.fail("Could not get state of %s" % ro_type)
         if self.offload_state(ro_type_full) == 'fixed':
