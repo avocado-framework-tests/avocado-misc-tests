@@ -91,8 +91,8 @@ class Iperf(Test):
             self.cancel("Failed to set mtu in host")
         self.iperf = os.path.join(self.teststmpdir, 'iperf')
         iperf_download = self.params.get("iperf_download", default="https:"
-                                         "//excellmedia.dl.sourceforge.net/"
-                                         "project/iperf2/iperf-2.0.13.tar.gz")
+                                         "//sourceforge.net/projects/iperf2/"
+                                         "files/iperf-2.0.13.tar.gz")
         tarball = self.fetch_asset(iperf_download, expire='7d')
         archive.extract(tarball, self.iperf)
         self.version = os.path.basename(tarball.split('.tar')[0])
