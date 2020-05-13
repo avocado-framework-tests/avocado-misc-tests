@@ -19,7 +19,7 @@ import re
 
 from avocado import Test
 from avocado import main
-from avocado.utils import archive, build, distro, process
+from avocado.utils import archive, build, distro, process, cpu
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -29,7 +29,7 @@ class Libunwind(Test):
         '''
         Build Libunwind library
         Source:
-        https://github.com/pathscale/libunwind/archive/vanilla_pathscale.zip
+        https://github.com/libunwind/libunwind/archive/master.zip
         '''
         dist = distro.detect()
         smm = SoftwareManager()
@@ -48,18 +48,32 @@ class Libunwind(Test):
                             "the test to be run" % package)
 
         tarball = self.fetch_asset('vanilla_pathscale.zip', locations=[
-            'https://github.com/pathscale/libunwind/archive/'
-            'vanilla_pathscale.zip'], expire='7d')
+            'https://github.com/libunwind/libunwind/archive/'
+            'master.zip'], expire='7d')
         archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'libunwind-vanilla_pathscale')
+        self.sourcedir = os.path.join(self.workdir, 'libunwind-master')
         os.chdir(self.sourcedir)
         process.run('./autogen.sh', shell=True)
         '''
         For configure options on different architecture please refer
-        https://github.com/pathscale/libunwind
+        https://github.com/libunwind/libunwind
         '''
         configure_option = self.params.get('configure_option',
-                                           default='configure_option')
+                                           default=None)
+
+        if not configure_option:
+            if cpu.get_vendor() == 'intel':
+                configure_option = 'CC=icc CFLAGS="-g -O3 -ip" CXX=icc ' \
+                                   'CCAS=gcc CCASFLAGS=-g LDFLAGS=' \
+                                   '"-L$PWD/src/.libs"'
+            elif cpu.get_vendor() == 'ibm':
+                configure_option = 'CFLAGS="-g -O2 -m64" CXXFLAGS="' \
+                                   '-g -O2 -m64"'
+            else:
+                self.cancel(
+                    "Please provide configure option in YAML refer "
+                    "configure section for %s" % cpu.get_vendor())
+
         process.run('./configure %s' % configure_option, shell=True)
         build.make(self.sourcedir)
         build.make(self.sourcedir, extra_args='install')
@@ -69,7 +83,7 @@ class Libunwind(Test):
         Execute regression tests for libunwind library
         '''
         results = build.run_make(self.sourcedir, extra_args='check',
-                                 process_kwargs={'ignore_status': True}).stdout
+                                 process_kwargs={'ignore_status': True}).stdout.decode("utf-8")
 
         fail_list = ['FAIL', 'XFAIL', 'ERROR']
         failures = []
