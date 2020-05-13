@@ -7,6 +7,7 @@ peer_user_name: "root"
 peer_password: "********"
 EXPECTED_THROUGHPUT : 90
 IPERF_SERVER_RUN : 1
+iperf_download: "https://sourceforge.net/projects/iperf2/files/iperf-2.0.13.tar.gz"
 mtu: !mux
     1500:
         mtu: "1500"
