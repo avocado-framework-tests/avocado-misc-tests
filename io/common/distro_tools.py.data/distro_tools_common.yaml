@@ -1,0 +1,63 @@
+Test: !mux
+    lsslot:
+        tool: lsslot
+        test_opt: !mux
+            lsslot_pci:
+                test_opt: -d pci
+            lsslot_pci_-a:
+                test_opt: -c pci -a
+            lsslot_phb:
+                test_opt: -c phb
+            lsslot_pci_-o:
+                test_opt: -c pci -o
+            lsslot_slot:
+                test_opt: -c slot
+    netstat:
+        tool: netstat
+        test_opt: !mux
+            netstat_a:
+                test_opt: -a
+            netstat_l:
+                test_opt: -l
+            netstat_s:
+                test_opt: -s
+            netstat_r:
+                test_opt: -r
+            netstat_i:
+                test_opt: -i
+    lsprop:
+        tool: lsprop
+        test_opt: !mux
+            lsprop_R:
+                test_opt: -R
+            lsprop_r:
+                test_opt: -r
+    lsdevinfo:
+        tool: lsdevinfo
+        test_opt: !mux
+            lsdevinfo_:
+                test_opt: 
+            lsdevinfo_R:
+                test_opt: -R
+            lsdevinfo_c:
+                test_opt: -c
+    lparstat:
+        tool: lparstat
+        test_opt: !mux
+            lparstat_l:
+                test_opt: -l
+            lparstat_i:
+                test_opt: -i
+    lshw:
+        tool: lshw
+        test_opt: !mux
+            lshw_:
+                test_opt:
+            lshw_short:
+                test_opt: -short
+            lshw_businfo:
+                test_opt: -businfo
+            lshw_network:
+                test_opt: -class network
+            lshw_disk:
+                test_opt: -short -class disk

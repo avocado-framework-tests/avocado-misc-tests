@@ -1,0 +1,25 @@
+pci_device: ""
+Test: !mux
+    usysident: 
+        tool: usysident
+        test_opt: !mux
+            usysident_identify_l:
+                test_opt: -P -s identify
+            usysident_identify_d:
+                test_opt: -t -s identify
+            usysident_normal_l:
+                test_opt: -P -s normal
+            usysident_normal_d:
+                test_opt: -t -s normal
+    usysattn:
+        tool: usysattn
+        test_opt: !mux
+            usysattn_normal_l:
+                test_opt: -P -s normal
+    ofpathname:
+        tool: ofpathname
+        test_opt: !mux
+            ofpathname_l:
+                test_opt: -l
+            ofpathname_a:
+                test_opt: -a
