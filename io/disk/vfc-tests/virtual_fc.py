@@ -30,6 +30,8 @@ from avocado.utils import multipath
 from avocado.utils import distro
 from avocado.utils import wait
 from avocado.utils import genio
+from avocado.utils.process import CmdError
+from avocado.utils.software_manager import SoftwareManager
 from avocado import skipIf, skipUnless
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
@@ -65,6 +67,8 @@ class VirtualFC(Test):
         '''
         set up required packages and gather necessary test inputs
         '''
+        self.install_packages()
+        self.rsct_service_start()
         self.hmc_ip = self.get_mcp_component("HMCIPAddr")
         if not self.hmc_ip:
             self.cancel("HMC IP not got")
@@ -169,6 +173,35 @@ class VirtualFC(Test):
             if component in line:
                 return line.split(':')[-1].strip()
         return ''
+
+    def rsct_service_start(self):
+        '''
+        Running rsct services which is necessary for Network
+        virtualization tests
+        '''
+        try:
+            for svc in ["rsct", "rsct_rm"]:
+                process.run('startsrc -g %s' % svc, shell=True, sudo=True)
+        except CmdError as details:
+            self.log.debug(str(details))
+            self.fail("Starting service %s failed", svc)
+
+        output = process.system_output("lssrc -a", ignore_status=True,
+                                       shell=True, sudo=True).decode("utf-8")
+        if "inoperative" in output:
+            self.fail("Failed to start the rsct and rsct_rm services")
+
+    def install_packages(self):
+        '''
+        Install required packages
+        '''
+        smm = SoftwareManager()
+        detected_distro = distro.detect()
+        self.log.info("Test is running on: %s", detected_distro.name)
+        for pkg in ['ksh', 'src', 'rsct.basic', 'rsct.core.utils',
+                    'rsct.core', 'DynamicRM']:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
+                self.cancel('%s is needed for the test to be run' % pkg)
 
     def test_unmap_map(self):
         '''
