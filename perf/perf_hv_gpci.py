@@ -17,7 +17,7 @@
 import platform
 from avocado import Test
 from avocado import main
-from avocado.utils import cpu, distro, process
+from avocado.utils import distro, process, genio
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -43,7 +43,7 @@ class perf_hv_gpci(Test):
         if 'ppc64' not in detected_distro.arch:
             self.cancel('This test is not supported on %s architecture'
                         % detected_distro.arch)
-        if 'PowerNV' in cpu._get_info():
+        if 'PowerNV' in genio.read_file('/proc/cpuinfo'):
             self.cancel('This test is only supported on LPAR')
 
         deps = ['gcc', 'make']
@@ -65,14 +65,16 @@ class perf_hv_gpci(Test):
             line = line.split(',')[0].split('/')[1]
             self.list_of_hv_gpci_events.append(line)
 
-        # Clear the dmesg, by that we can capture the delta at the end of the test.
+        # Clear the dmesg, by that we can capture the delta at the end of
+        # the test.
         output = process.run("dmesg -c")
 
     def error_check(self):
         if len(self.fail_cmd) > 0:
             for cmd in range(len(self.fail_cmd)):
                 self.log.info("Failed command: %s" % self.fail_cmd[cmd])
-            self.fail("perf_raw_events: some of the events failed, refer to log")
+            self.fail("perf_raw_events: some of the events failed,"
+                      "refer to log")
 
     def run_cmd(self, cmd):
         output = process.run(cmd, shell=True, ignore_status=True)
