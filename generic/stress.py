@@ -29,6 +29,7 @@ from avocado.utils import disk
 from avocado.utils import build
 from avocado.utils import memory
 from avocado.utils import process
+from avocado.utils.software_manager import SoftwareManager
 
 
 class Stress(Test):
@@ -45,6 +46,12 @@ class Stress(Test):
         Source:
          https://fossies.org/linux/privat/stress-1.0.4.tar.gz
         """
+        smm = SoftwareManager()
+        for package in ['gcc', 'make']:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel("Fail to install %s required for this test." %
+                            package)
+
         tarball = self.fetch_asset(
             'https://fossies.org/linux/privat/stress-1.0.4.tar.gz',
             expire='7d')
