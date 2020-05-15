@@ -17,6 +17,7 @@
 import os
 import platform
 import re
+import tempfile
 
 from avocado import Test
 from avocado import main
@@ -50,14 +51,17 @@ class PerfSDT(Test):
             /lib/powerpc64le-linux-gnu/libpthread.so.0
         """
         self.libpthread = self.run_cmd_out("ldconfig -p")
-
         for line in str(self.libpthread).splitlines():
             if re.search('libpthread', line, re.IGNORECASE):
                 if '64' in line:
                     self.libpthread = line.split(" ")[7]
-
+            if re.search('libc.so', line, re.IGNORECASE):
+                if '64' in line:
+                    self.libc = line.split(" ")[7]
         if not self.libpthread:
             self.fail("Library %s not found" % self.libpthread)
+        if not self.libc:
+            self.fail("Library %s not found" % self.libc)
         val = 0
         result = self.run_cmd_out("perf list")
         for line in str(result).splitlines():
@@ -69,23 +73,27 @@ class PerfSDT(Test):
         self.run_cmd(perf_add)
         if self.is_fail:
             self.fail("Unable to add %s to builid-cache" % self.libpthread)
-
+        # Add the libc.so.6 to perf
+        perf_libc_add = "perf buildid-cache -v --add %s" % self.libc
+        self.is_fail = 0
+        self.run_cmd(perf_libc_add)
+        if self.is_fail:
+            self.fail("Unable to add %s to builid-cache" % self.libc)
         # Check if libpthread has valid SDT markers
         new_val = 0
         result = self.run_cmd_out("perf list")
         for line in str(result).splitlines():
             if 'SDT' in line:
                 new_val = new_val + 1
-
         if val == new_val:
             self.fail("No SDT markers available in the %s" % self.libpthread)
 
-    def remove_library(self):
-        perf_remove = "perf buildid-cache -v --remove %s" % self.libpthread
+    def remove_library(self, param):
+        perf_remove = "perf buildid-cache -v --remove %s" % param
         self.is_fail = 0
         self.run_cmd(perf_remove)
         if self.is_fail:
-            self.fail("Unable to remove %s from builid-cache" % self.libpthread)
+            self.fail("Unable to remove %s from builid-cache" % param)
 
     def enable_sdt_marker_probe(self):
         self.sdt_marker = "sdt_libc:memory_mallopt_mmap_max"
@@ -99,7 +107,7 @@ class PerfSDT(Test):
             self.fail("Unable to probe SDT marker event %s" % self.sdt_marker)
 
     def disable_sdt_marker_probe(self):
-        disable_sdt_probe = "perf probe --del %s" % self.sdt_marker
+        disable_sdt_probe = "perf probe -d \\*"
         self.is_fail = 0
         self.run_cmd(disable_sdt_probe)
         if self.is_fail:
@@ -107,10 +115,10 @@ class PerfSDT(Test):
                       % self.sdt_marker)
 
     def record_sdt_marker_probe(self):
-        record_sdt_probe = "perf record -e %s -aR sleep 1" % self.sdt_marker
+        record_sdt_probe = "perf record -o %s -e %s -aR sleep 1" % (self.temp_file, self.sdt_marker)
         self.is_fail = 0
         self.run_cmd(record_sdt_probe)
-        if self.is_fail or not os.path.exists("perf.data"):
+        if self.is_fail or not os.path.exists(self.temp_file):
             self.disable_sdt_marker_probe()
             self.fail("Perf record of SDT marker event %s failed"
                       % self.sdt_marker)
@@ -135,6 +143,9 @@ class PerfSDT(Test):
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
+        self.libpthread = []
+        self.libc = []
+        self.temp_file = tempfile.NamedTemporaryFile().name
 
     def test(self):
         self.add_library()
@@ -144,7 +155,10 @@ class PerfSDT(Test):
 
     def tearDown(self):
         'cleanup'
-        self.remove_library()
+        self.remove_library(self.libpthread)
+        self.remove_library(self.libc)
+        if os.path.exists(self.temp_file):
+            os.remove(self.temp_file)
 
 
 if __name__ == "__main__":
