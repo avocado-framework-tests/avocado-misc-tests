@@ -137,7 +137,10 @@ class Ethtool(Test):
             ret = process.run(cmd, shell=True, verbose=True,
                               ignore_status=True)
             if ret.exit_status != 0:
-                self.fail("failed")
+                if "Operation not supported" in ret.stderr_text:
+                    self.log.warn("%s failed" % self.args)
+                else:
+                    self.fail("failed")
         if self.networkinterface.ping_check(self.peer, count=10000,
                                             options='-f') is not None:
             self.fail("flood ping test failed")
