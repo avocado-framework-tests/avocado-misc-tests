@@ -36,17 +36,31 @@ class DisrtoTool(Test):
         '''
         self.option = self.params.get("test_opt", default='')
         self.tool = self.params.get("tool", default='')
+        self.warn_msg = self.params.get("warn_msg", default='')
         self.pci_device = self.params.get("pci_device", default=None)
+
         if self.pci_device:
+            if 'LOC_CODE' in self.option:
+                location_code = pci.get_slot_from_sysfs(self.pci_device)
+                self.option = self.option.replace('LOC_CODE', location_code)
+            if 'INTERFACE' in self.option:
+                adapter_type = pci.get_pci_class_name(self.pci_device)
+                interface = pci.get_interfaces_in_pci_address(self.pci_device,
+                                                              adapter_type)[0]
+                self.option = self.option.replace('INTERFACE', interface)
+
+        if 'DEVICE_PATH_NAME' in self.option:
             adapter_type = pci.get_pci_class_name(self.pci_device)
-            self.location_code = pci.get_slot_from_sysfs(self.pci_device)
-            self.interface = pci.get_interfaces_in_pci_address(self.pci_device,
-                                                               adapter_type)[0]
-            path = '/sys/class/net/%s/device/uevent' % self.interface
+            interface = pci.get_interfaces_in_pci_address(self.pci_device,
+                                                          adapter_type)[0]
+            path = '/sys/class/net/%s/device/uevent' % interface
             output = open(path, 'r').read()
             for line in output.splitlines():
                 if "OF_FULLNAME" in line:
-                    self.device_path_name = line.split('=')[-1]
+                    device_path_name = line.split('=')[-1]
+            self.option = self.option.replace('DEVICE_PATH_NAME',
+                                              device_path_name)
+
         smm = SoftwareManager()
         if not smm.check_installed("pciutils") and not smm.install("pciutils"):
             self.cancel("pciutils package is need to test")
@@ -56,21 +70,10 @@ class DisrtoTool(Test):
         test all distro tools
         '''
         cmd = "%s %s" % (self.tool, self.option)
-        if self.tool in ['usysident', 'usysattn'] and '-P' in cmd:
-            cmd += " -l %s" % self.location_code
-        elif self.tool == 'usysident' and '-t' in cmd:
-            cmd += " -d %s" % self.interface
-        elif self.tool == 'ofpathname' and '-l' in cmd:
-            cmd += " %s" % self.device_path_name
-        elif self.tool == 'ofpathname' and '-a' in cmd:
-            cmd += " %s" % self.interface
-
         result = process.run(cmd, shell=True, ignore_status=True)
-        if self.tool == "usysident":
-            if "There is no identify indicator" in result.stdout_text:
-                self.log.warn("%s option %s failed" % (self.tool, self.option))
-        elif self.tool == "usysattn":
-            if "There is no fault indicator" in result.stdout_text:
+
+        if self.warn_msg:
+            if self.warn_msg in result.stdout_text:
                 self.log.warn("%s option %s failed" % (self.tool, self.option))
         else:
             if result.exit_status != 0:
