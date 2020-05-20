@@ -68,7 +68,10 @@ class NetworkconfigTest(Test):
             for line in process.system_output(cmd, shell=True).decode("utf-8") \
                                                               .splitlines():
                 if iface in line:
-                    loc_id = line.split()[-1]
+                    if "T" in line:
+                        loc_id = line.split()[-1].split("-T")[0]
+                    else:
+                        loc_id = line.split()[-1]
             for line in process.system_output("lsslot", shell=True).decode("utf-8") \
                                                                    .splitlines():
                 if loc_id in line:
