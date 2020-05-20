@@ -89,7 +89,7 @@ class DiskInfo(Test):
                             % pkg)
         self.disk_nodes = []
         self.disk_base = os.path.basename(self.disk)
-        if multipath.is_mpath(self.disk_base):
+        if multipath.is_mpath_dev(self.disk_base):
             self.mpath = True
             self.disk_abs = os.path.basename(os.readlink(self.disk))
             mwwid = multipath.get_multipath_wwid(self.disk_base)
