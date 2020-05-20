@@ -1,0 +1,27 @@
+pci_device: ""
+Test: !mux
+    usysident: 
+        tool: usysident
+        warn_msg: "There is no identify indicator"
+        test_opt: !mux
+            usysident_identify_l:
+                test_opt: -P -s identify -l LOC_CODE
+            usysident_identify_d:
+                test_opt: -t -s identify -d INTERFACE
+            usysident_normal_l:
+                test_opt: -P -s normal -l LOC_CODE
+            usysident_normal_d:
+                test_opt: -t -s normal -d INTERFACE
+    usysattn:
+        tool: usysattn
+        warn_msg: "There is no fault indicator"
+        test_opt: !mux
+            usysattn_normal_l:
+                test_opt: -P -s normal -l LOC_CODE
+    ofpathname:
+        tool: ofpathname
+        test_opt: !mux
+            ofpathname_l:
+                test_opt: -l DEVICE_PATH_NAME
+            ofpathname_a:
+                test_opt: -a INTERFACE
