@@ -48,6 +48,9 @@ class NVMeTest(Test):
         cmd = 'ls %s' % self.device
         if process.system(cmd, ignore_status=True):
             self.cancel("%s does not exist" % self.device)
+        self.firmware_url = self.params.get('firmware_url', default='')
+        if 'firmware_upgrade' in str(self.name) and not self.firmware_url:
+            self.cancel("firmware url not given")
 
         self.package = self.params.get('package', default='distro')
         if self.package == 'upstream':
@@ -69,9 +72,6 @@ class NVMeTest(Test):
         self.format_size = self.get_block_size()
         self.namespace = self.params.get('namespace', default='1')
         self.id_ns = "%sn%s" % (self.device, self.namespace)
-        self.firmware_url = self.params.get('firmware_url', default='')
-        if 'firmware_upgrade' in str(self.name) and not self.firmware_url:
-            self.cancel("firmware url not given")
 
         cmd = "%s id-ctrl %s -H" % (self.binary, self.device)
         self.id_ctrl = process.system_output(cmd, shell=True).decode("utf-8")
