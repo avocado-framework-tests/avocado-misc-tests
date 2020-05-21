@@ -76,8 +76,8 @@ class NVMeTest(Test):
                 self.cancel('nvme-cli is needed for the test to be run')
             self.binary = 'nvme'
         self.format_size = self.get_block_size()
-        self.namespace = self.params.get('namespace', default='1')
-        self.id_ns = "%sn%s" % (self.device, self.namespace)
+        namespace = self.params.get('namespace', default='1')
+        self.id_ns = "%sn%s" % (self.device, namespace)
 
         cmd = "%s id-ctrl %s -H" % (self.binary, self.device)
         self.id_ctrl = process.system_output(cmd, shell=True).decode("utf-8")
