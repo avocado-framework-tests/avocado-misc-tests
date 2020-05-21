@@ -90,11 +90,6 @@ class ParallelDd(Test):
         if not self.fstype and self.root_fstype:
             self.fstype = self.root_fstype
 
-        self.old_fstype = self._device_to_fstype('/etc/mtab')
-        if not self.old_fstype:
-            self.old_fstpye = self._device_to_fstype('/etc/fstab')
-        if not self.old_fstype:
-            self.old_fstype = self.fstype
         self.log.info('Dumping %d megabytes across %d streams', self.megabytes,
                       self.streams)
 
@@ -215,7 +210,7 @@ class ParallelDd(Test):
                                       'fs_write': self.fs_write_rate,
                                       'fs_read': self.fs_read_rate})
 
-    def cleanup(self):
+    def tearDown(self):
         """
         Formatting the disk.
         """
@@ -223,10 +218,6 @@ class ParallelDd(Test):
             self.fsys.unmount()
         except process.CmdError:
             pass
-        self.log.debug('\nFormatting %s back to type %s\n', self.fsys,
-                       self.old_fstype)
-        self.fsys.mkfs(self.old_fstype)
-        self.fsys.mount(None)
 
 
 if __name__ == "__main__":
