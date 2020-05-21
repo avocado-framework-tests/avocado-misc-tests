@@ -61,6 +61,12 @@ class NVMeTest(Test):
             archive.extract(tarball, self.teststmpdir)
             os.chdir("%s/nvme-cli-master" % self.teststmpdir)
             process.system("./NVME-VERSION-GEN", ignore_status=True)
+            with open('Makefile', 'r') as makefp:
+                makefile = makefp.read()
+            makefile = makefile.replace('plugins/wdc/wdc-nvme.o',
+                                        '# plugins/wdc/wdc-nvme.o')
+            with open('Makefile', 'w') as makefp:
+                makefp.write(makefile)
             build.make(".")
             self.binary = './nvme'
         else:
