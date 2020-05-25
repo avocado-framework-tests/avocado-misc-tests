@@ -90,11 +90,6 @@ class ParallelDd(Test):
         if not self.fstype and self.root_fstype:
             self.fstype = self.root_fstype
 
-        self.old_fstype = self._device_to_fstype('/etc/mtab')
-        if not self.old_fstype:
-            self.old_fstpye = self._device_to_fstype('/etc/fstab')
-        if not self.old_fstype:
-            self.old_fstype = self.fstype
         self.log.info('Dumping %d megabytes across %d streams', self.megabytes,
                       self.streams)
 
@@ -180,8 +175,6 @@ class ParallelDd(Test):
         """
         Test Execution.
         """
-        operation = "self.megabytes / (time.time() - start)"
-
         try:
             self.fsys.unmount()
         except process.CmdError:
@@ -190,11 +183,11 @@ class ParallelDd(Test):
         self.log.info('------------- Timing raw operations ------------------')
         start = time.time()
         self.raw_io("write")
-        self.raw_write_rate = operation
+        raw_write_rate = self.megabytes / (time.time() - start)
 
         start = time.time()
         self.raw_io("read")
-        self.raw_read_rate = operation
+        raw_read_rate = self.megabytes / (time.time() - start)
 
         self.fsys.mkfs(self.fstype)
         self.fsys.mount(None)
@@ -202,20 +195,20 @@ class ParallelDd(Test):
         self.log.info('------------- Timing fs operations ------------------')
         start = time.time()
         self.fs_write()
-        self.fs_write_rate = operation
+        fs_write_rate = self.megabytes / (time.time() - start)
         self.fsys.unmount()
 
         self.fsys.mount(None)
         start = time.time()
         self.fs_read()
-        self.fs_read_rate = operation
+        fs_read_rate = self.megabytes / (time.time() - start)
 
-        self.whiteboard = json.dumps({'raw_write': self.raw_write_rate,
-                                      'raw_read': self.raw_read_rate,
-                                      'fs_write': self.fs_write_rate,
-                                      'fs_read': self.fs_read_rate})
+        self.whiteboard = json.dumps({'raw_write': raw_write_rate,
+                                      'raw_read': raw_read_rate,
+                                      'fs_write': fs_write_rate,
+                                      'fs_read': fs_read_rate})
 
-    def cleanup(self):
+    def tearDown(self):
         """
         Formatting the disk.
         """
@@ -223,10 +216,6 @@ class ParallelDd(Test):
             self.fsys.unmount()
         except process.CmdError:
             pass
-        self.log.debug('\nFormatting %s back to type %s\n', self.fsys,
-                       self.old_fstype)
-        self.fsys.mkfs(self.old_fstype)
-        self.fsys.mount(None)
 
 
 if __name__ == "__main__":
