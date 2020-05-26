@@ -31,7 +31,7 @@ from avocado.utils import build
 from avocado.utils import archive
 from avocado.utils.process import CmdError
 from avocado.utils.network.interfaces import NetworkInterface
-from avocado.utils.network.hosts import LocalHost
+from avocado.utils.network.hosts import LocalHost, RemoteHost
 
 
 class CommandFailed(Exception):
@@ -74,8 +74,8 @@ class HtxNicTest(Test):
             self.cancel("Platform does not support HTX tests")
 
         self.parameters()
+        self.localhost = LocalHost()
         if 'start' in str(self.name.name):
-            self.localhost = LocalHost()
             for ipaddr, interface in zip(self.ipaddr, self.host_intfs):
                 networkinterface = NetworkInterface(interface, self.localhost)
                 try:
@@ -86,7 +86,8 @@ class HtxNicTest(Test):
                 networkinterface.bring_up()
         self.host_distro = distro.detect()
         self.login(self.peer_ip, self.peer_user, self.peer_password)
-        self.get_ips()
+        self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
+                                     password=self.peer_password)
         self.get_peer_distro()
 
     def build_htx(self):
@@ -164,7 +165,7 @@ class HtxNicTest(Test):
         self.peer_user = self.params.get("peer_user", '*', default=None)
         self.peer_password = self.params.get("peer_password",
                                              '*', default=None)
-        self.host_intfs = self.params.get("host_interfaces",
+        self.host_intfs = self.params.get("htx_host_interfaces",
                                           '*', default=None).split(" ")
         self.peer_intfs = self.params.get("peer_interfaces",
                                           '*', default=None).split(" ")
@@ -175,6 +176,7 @@ class HtxNicTest(Test):
         self.query_cmd = "htxcmdline -query -mdt %s" % self.mdt_file
         self.ipaddr = self.params.get("host_ips", default="").split(" ")
         self.netmask = self.params.get("netmask", default="")
+        self.peer_ips = self.params.get("peer_ips", default="").split(" ")
         self.htx_url = self.params.get("htx_rpm", default="")
 
     def login(self, ip, username, password):
@@ -217,21 +219,6 @@ class HtxNicTest(Test):
         if exitcode != 0:
             raise CommandFailed(command, output, exitcode)
         return output
-
-    def get_ips(self):
-        self.host_ips = {}
-        for intf in self.host_intfs:
-            cmd = "ip addr list %s |grep 'inet ' |cut -d' ' -f6| \
-                  cut -d/ -f1" % intf
-            ip = process.system_output(cmd, ignore_status=True,
-                                       shell=True, sudo=True).decode("utf-8")
-            self.host_ips[intf] = ip
-        self.peer_ips = {}
-        for intf in self.peer_intfs:
-            cmd = "ip addr list %s |grep 'inet ' |cut -d' ' -f6| \
-                  cut -d/ -f1" % intf
-            ip = self.run_command(cmd)[-1]
-            self.peer_ips[intf] = ip
 
     def get_peer_distro(self):
         res = self.run_command("cat /etc/os-release")
@@ -434,10 +421,9 @@ class HtxNicTest(Test):
             networkinterface.bring_up()
         for (peer_intf, net_id) in zip(self.peer_intfs, self.net_ids):
             ip_addr = "%s.1.1.%s" % (net_id, self.peer_ip.split('.')[-1])
-            cmd = "ip addr add dev %s %s/%s" % (peer_intf, ip_addr, self.netmask)
-            self.run_command(cmd)
-            cmd = "ip link set dev %s up" % peer_intf
-            self.run_command(cmd)
+            peer_networkinterface = NetworkInterface(peer_intf, self.remotehost)
+            peer_networkinterface.add_ipaddr(ip_addr, self.netmask)
+            peer_networkinterface.bring_up()
 
     def htx_configure_net(self):
         self.log.info("Starting the N/W ping test for HTX in Host")
@@ -747,67 +733,52 @@ class HtxNicTest(Test):
 
         self.run_command("rm -rf /tmp/HTX-master")
 
-    def bring_up_host_interfaces(self):
-        if self.host_distro.name == "Ubuntu":
-            file_name = "/etc/network/interfaces"
-            return  # TODO: For Ubuntu need to implement
-        elif self.host_distro.name == "SuSE":
-            base_name = "/etc/sysconfig/network/ifcfg-"
-        elif self.host_distro.name in ["rhel", "fedora", "centos", "redhat"]:
-            base_name = "/etc/sysconfig/network-scripts/ifcfg-"
-
-        list = ["rhel", "fedora", "centos", "redhat", "SuSE"]
-        if self.host_distro.name in list:
-            for intf, ip in self.host_ips.items():
-                file_name = "%s%s" % (base_name, intf)
-                with open(file_name, 'r') as file:
-                    filedata = file.read()
-                search_str = "IPADDR=.*"
-                replace_str = "IPADDR=%s" % ip
-                filedata = re.sub(search_str, replace_str, filedata)
-                with open(file_name, 'w') as file:
-                    for line in filedata:
-                        file.write(line)
-            if self.host_distro == "rhel":
-                cmd = "systemctl start NetworkManager"
-            else:
-                cmd = "systemctl restart network"
+    def ip_restore_host(self):
+        '''
+        restoring ip for host
+        '''
+        for ipaddr, interface in zip(self.ipaddr, self.host_intfs):
+            cmd = "ip addr flush %s" % interface
             process.run(cmd, ignore_status=True, shell=True, sudo=True)
+            networkinterface = NetworkInterface(interface, self.localhost)
+            networkinterface.add_ipaddr(ipaddr, self.netmask)
+            networkinterface.save(ipaddr, self.netmask)
+            networkinterface.bring_up()
 
-    def bring_up_peer_interfaces(self):
-        if self.peer_distro == "Ubuntu":
-            file_name = "/etc/network/interfaces"
-            return  # TODO: For Ubuntu need to implement
-        elif self.peer_distro == "SuSE":
-            base_name = "/etc/sysconfig/network/ifcfg-"
-        elif self.peer_distro in ["rhel", "fedora", "centos", "redhat"]:
-            base_name = "/etc/sysconfig/network-scripts/ifcfg-"
-
-        list = ["rhel", "fedora", "centos", "redhat", "SuSE"]
-        if self.peer_distro in list:
-            for intf, ip in self.peer_ips.items():
-                file_name = "%s%s" % (base_name, intf)
-                filedata = self.run_command("cat %s" % file_name)
-                search_str = "IPADDR=.*"
-                replace_str = "IPADDR=%s" % ip
-                for line in filedata:
-                    obj = re.search(search_str, line)
-                    if obj:
-                        idx = filedata.index(line)
-                        filedata[idx] = replace_str
-                filedata = "\n".join(filedata)
-                self.run_command("echo \'%s\' > %s" % (filedata, file_name))
-            if self.peer_distro == "rhel":
-                cmd = "systemctl start NetworkManager"
-            else:
-                cmd = "systemctl restart network"
+    def ip_restore_peer(self):
+        '''
+        config ip for peer
+        '''
+        for ip, interface in zip(self.peer_ips, self.peer_intfs):
+            if self.peer_distro in ['rhel', 'fedora']:
+                path = "/etc/sysconfig/network-scripts"
+                file_name = "{}/ifcfg-{}".format(path, interface)
+                self.run_command("echo \'%s\' > %s" % ('TYPE=Ethernet', file_name))
+                self.run_command("echo \'%s\' >> %s" % ('BOOTPROTO=none', file_name))
+                self.run_command("echo \'%s\' >> %s" % ('NAME=%s' % interface, file_name))
+                self.run_command("echo \'%s\' >> %s" % (('DEVICE=%s' % interface), file_name))
+                self.run_command("echo \'%s\' >> %s" % ('ONBOOT=yes', file_name))
+                self.run_command("echo \'%s\' >> %s" % ('IPADDR=%s' % ip, file_name))
+                self.run_command("echo \'%s\' >> %s" % ('NETMASK=%s' % self.netmask, file_name))
+                self.run_command("echo \'%s\' >> %s" % ('IPV6INIT=yes', file_name))
+                self.run_command("echo \'%s\' >> %s" % ('IPV6_AUTOCONF=yes', file_name))
+                self.run_command("echo \'%s\' >> %s" % ('IPV6_DEFROUTE=yes', file_name))
+            if self.peer_distro == 'SuSE':
+                path = "/etc/sysconfig/network"
+                file_name = "{}/ifcfg-{}".format(path, interface)
+                self.run_command("echo \'%s\' > %s" % ('IPADDR=%s' % ip, file_name))
+                self.run_command("echo \'%s\' >> %s" % ('NETMASK=%s' % self.netmask, file_name))
+                self.run_command("echo \'%s\' >> %s" % ('IPV6INIT=yes', file_name))
+                self.run_command("echo \'%s\' >> %s" % ('IPV6_AUTOCONF=yes', file_name))
+                self.run_command("echo \'%s\' >> %s" % ('IPV6_DEFROUTE=yes', file_name))
+            cmd = "ifup %s " % interface
             self.run_command(cmd)
 
     def htx_cleanup(self):
         self.clean_state()
         self.shutdown_htx_daemon()
-        self.bring_up_host_interfaces()
-        self.bring_up_peer_interfaces()
+        self.ip_restore_host()
+        self.ip_restore_peer()
 
 
 if __name__ == "__main__":
