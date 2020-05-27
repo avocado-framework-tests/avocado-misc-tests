@@ -157,8 +157,8 @@ class DmaMemtest(Test):
                     self.log.info('Error comparing trees: %s', error)
 
         for proc in parallel_procs:
-            out_buf = proc.get_stdout()
-            out_buf += proc.get_stderr()
+            out_buf = proc.get_stdout().decode()
+            out_buf += proc.get_stderr().decode()
             proc.wait()
             if out_buf != "":
                 self.nfail += 1
