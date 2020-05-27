@@ -37,6 +37,7 @@ from avocado import skipIf, skipUnless
 from avocado.utils import genio
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
+from avocado.utils.ssh import Session
 from avocado.utils import wait
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
@@ -129,7 +130,8 @@ class NetworkVirtualization(Test):
         self.vios_ip = self.params.get('vios_ip', '*', default=None)
         self.vios_user = self.params.get('vios_username', '*', default=None)
         self.vios_pwd = self.params.get('vios_pwd', '*', default=None)
-        self.con_vios = self.login(self.vios_ip, self.vios_user, self.vios_pwd)
+        self.session = Session(self.vios_ip, user=self.vios_user,
+                               password=self.vios_pwd)
         self.count = int(self.params.get('vnic_test_count', default="1"))
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         self.device_ip = self.params.get('device_ip', '*',
@@ -412,14 +414,14 @@ class NetworkVirtualization(Test):
         '''
         using mrdev and mkdev command to check vios failover works
         '''
-        cmd = "lsmap -all -vnic -cpid %s" % self.lpar_id
-        vnic_server = self.run_command(self.con_vios, cmd)[2].split()[0]
+        cmd = "ioscli lsmap -all -vnic -cpid %s" % self.lpar_id
+        vnic_server = self.session.cmd(cmd).stdout_text.splitlines()[2].split()[0]
 
-        cmd = "lsmap -vnic -vadapter %s" % vnic_server
-        output = self.run_command(self.con_vios, cmd)
+        cmd = "ioscli lsmap -vnic -vadapter %s" % vnic_server
+        output = self.session.cmd(cmd)
 
         vnic_backing_device = None
-        for line in output:
+        for line in output.stdout_text.splitlines():
             if 'Backing device' in line:
                 vnic_backing_device = line.split(':')[-1]
 
@@ -522,9 +524,9 @@ class NetworkVirtualization(Test):
         '''
         checking for vnicserver and backing device
         '''
-        l_cmd = "echo \"%s\" | oem_setup_env" % cmd
-        output = self.run_command(self.con_vios, l_cmd)
-        if validate_string not in str(output):
+        l_cmd = "echo \"%s\" | ioscli oem_setup_env" % cmd
+        output = self.session.cmd(l_cmd)
+        if validate_string not in output.stdout_text:
             self.fail("command fail in vios")
 
     def device_add_remove(self, slot, mac, operation):
