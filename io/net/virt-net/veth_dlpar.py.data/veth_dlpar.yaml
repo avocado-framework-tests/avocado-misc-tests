@@ -1,6 +1,4 @@
 interface: ""
-host_ip: ""
-netmask: ""
 peer_ip: ""
 vios_ip: ""
 vios_username: ""

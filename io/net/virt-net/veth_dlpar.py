@@ -37,8 +37,6 @@ class VethdlparTest(Test):
         Gather necessary test inputs.
         '''
         self.interface = self.params.get('interface', default=None)
-        self.ipaddr = self.params.get("host_ip", default="")
-        self.netmask = self.params.get("netmask", default="")
         self.peer_ip = self.params.get('peer_ip', default=None)
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         self.vios_ip = self.params.get('vios_ip', '*', default=None)
