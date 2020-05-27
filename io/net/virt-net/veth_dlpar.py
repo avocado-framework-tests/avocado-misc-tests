@@ -37,6 +37,8 @@ class VethdlparTest(Test):
         Gather necessary test inputs.
         '''
         self.interface = self.params.get('interface', default=None)
+        self.ipaddr = self.params.get("host_ip", default="")
+        self.netmask = self.params.get("netmask", default="")
         self.peer_ip = self.params.get('peer_ip', default=None)
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         self.vios_ip = self.params.get('vios_ip', '*', default=None)
@@ -44,6 +46,14 @@ class VethdlparTest(Test):
         self.vios_pwd = self.params.get('vios_pwd', '*', default=None)
         self.session = Session(self.vios_ip, user=self.vios_user,
                                password=self.vios_pwd)
+        local = LocalHost()
+        self.networkinterface = NetworkInterface(self.interface, local)
+        try:
+            self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        except Exception:
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        self.networkinterface.bring_up()
         cmd = "lscfg -l %s" % self.interface
         for line in process.system_output(cmd, shell=True).decode("utf-8") \
                                                           .splitlines():
@@ -62,8 +72,6 @@ class VethdlparTest(Test):
         if not self.sea:
             self.cancel("failed to get SEA")
         self.log.info(self.sea)
-        local = LocalHost()
-        self.networkinterface = NetworkInterface(self.interface, local)
         if self.networkinterface.ping_check(self.peer_ip, count=5) is not None:
             self.cancel("peer connection is failed")
 
@@ -100,6 +108,10 @@ class VethdlparTest(Test):
             if self.networkinterface.ping_check(self.peer_ip,
                                                 count=5) is not None:
                 self.fail("ping failed after add operation")
+
+    def tearDown(self):
+        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+        self.networkinterface.restore_from_backup()
 
 
 if __name__ == "__main__":
