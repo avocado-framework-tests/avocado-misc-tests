@@ -21,11 +21,11 @@
 
 import os
 import shutil
-import re
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import disk
 from avocado.utils import archive
+from avocado.utils import memory
 from avocado.core import data_dir
 
 
@@ -69,12 +69,17 @@ class DmaMemtest(Test):
         size_tarball = os.path.getsize(self.tarball) // 1024 // 1024
 
         # Estimation of the tarball size after uncompression
-        compress_ratio = 5
-        est_size = size_tarball * compress_ratio
+        os.chdir(self.tmpdir)
+        # This is the reference copy of the linux tarball
+        # that will be used for subsequent comparisons
+        self.log.info('Unpacking base copy')
+        archive.extract(self.tarball, self.base_dir)
+        est_size = int(process.system_output('du -sb %s' %
+                       self.base_dir).split()[0].decode()) // 1048576
+
         self.sim_cps = self.get_sim_cps(est_size)
         self.log.info('Source file: %s', tarball_base)
         self.log.info('Megabytes per copy: %s', size_tarball)
-        self.log.info('Compress ratio: %s', compress_ratio)
         self.log.info('Estimated size after uncompression: %s', est_size)
         self.log.info('Number of copies: %s', self.sim_cps)
         self.log.info('Parallel: %s', parallel)
@@ -94,9 +99,7 @@ class DmaMemtest(Test):
 
            :param est_size: Estimated size of uncompressed linux tarball
         '''
-        mem_str = process.system_output('grep MemTotal /proc/meminfo')
-        mem = int(re.search(r'\d+', mem_str.decode()).group(0))
-        mem = int(mem / 1024)
+        mem = memory.meminfo.MemFree.m
         sim_cps = (1.5 * mem) // est_size
 
         if (mem % est_size) >= (est_size // 2):
@@ -109,11 +112,6 @@ class DmaMemtest(Test):
 
     def test(self):
         parallel_procs = []
-        os.chdir(self.tmpdir)
-        # This is the reference copy of the linux tarball
-        # that will be used for subsequent comparisons
-        self.log.info('Unpacking base copy')
-        archive.extract(self.tarball, self.base_dir)
         self.log.info('Unpacking test copies')
         for j in range(self.sim_cps):
             tmp_dir = 'linux.%s' % j
@@ -157,8 +155,8 @@ class DmaMemtest(Test):
                     self.log.info('Error comparing trees: %s', error)
 
         for proc in parallel_procs:
-            out_buf = proc.get_stdout()
-            out_buf += proc.get_stderr()
+            out_buf = proc.get_stdout().decode()
+            out_buf += proc.get_stderr().decode()
             proc.wait()
             if out_buf != "":
                 self.nfail += 1
