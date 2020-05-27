@@ -21,11 +21,11 @@
 
 import os
 import shutil
-import re
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import disk
 from avocado.utils import archive
+from avocado.utils import memory
 from avocado.core import data_dir
 
 
@@ -99,9 +99,7 @@ class DmaMemtest(Test):
 
            :param est_size: Estimated size of uncompressed linux tarball
         '''
-        mem_str = process.system_output('grep MemTotal /proc/meminfo')
-        mem = int(re.search(r'\d+', mem_str.decode()).group(0))
-        mem = int(mem / 1024)
+        mem = memory.meminfo.MemFree.m
         sim_cps = (1.5 * mem) // est_size
 
         if (mem % est_size) >= (est_size // 2):
