@@ -89,12 +89,15 @@ class PCP(Test):
         self.lpar_24x7_ppc64le_check()
         if self.cpu_family == 'power8':
             self.cancel("Not supported on Power8")
-        # -s 2 collects two samples
-        cmd = "pmval -s 2 perfevent.hwcounters.hv_24x7.PM_MBA0_CLK_CYC.value"
-        process.run(cmd, shell=True)
-        # -s 2 collects two samples
-        cmd = "pmval -s 2 perfevent.hwcounters.hv_24x7.PM_PB_CYC.value"
-        process.run(cmd, shell=True)
+        output = process.system_output("pminfo").decode()
+        for line in output.splitlines():
+            # -s 2 collects two samples
+            if 'PM_MBA0_CLK_CYC' in line and 'value' in line:
+                process.run('pmval -s 2 %s' % line, shell=True)
+            # -s 2 collects two sample
+            if 'PM_PB_CYC' in line and 'value' in line:
+                process.run('pmval -s 2 %s' % line, shell=True)
+                break
 
     def test_pmda_perfevent_remove(self):
         os.chdir("/var/lib/pcp/pmdas/perfevent/")
