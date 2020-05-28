@@ -34,7 +34,7 @@ class Libpfm(Test):
         softm = SoftwareManager()
 
         pkgs = ['gcc', 'make']
-        if distro.detect().name in ['SuSE', 'Ubuntu']:
+        if distro.detect().name in ['SuSE', 'Ubuntu', 'debian']:
             pkgs.extend(['libpfm4'])
         else:
             pkgs.extend(['libpfm'])
@@ -61,7 +61,7 @@ class Libpfm(Test):
                 self.path = softm.get_source('libpfm', sourcedir)
 
         os.chdir(self.path)
-        build.make(self.path)
+        build.make(self.path, env={"-Wno-format-truncation"})
 
     def test(self):
         # Runs the tests

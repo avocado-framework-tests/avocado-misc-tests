@@ -45,6 +45,10 @@ class GCC(Test):
             packages.extend(['libmpfr-dev', 'libgmp-dev', 'libmpc-dev',
                              'texinfo', 'zip', 'libc6-dev', 'libelf1',
                              'elfutils', 'gnat', 'autogen'])
+        elif dist.name == 'debian':
+            packages.extend(['libmpfr-dev', 'libgmp-dev', 'libmpc-dev',
+                             'zip', 'libc6-dev', 'libelf1',
+                             'elfutils', 'autogen'])
         elif dist.name == 'SuSE':
             packages.extend(['glibc-devel-static', 'zlib-devel', 'elfutils',
                              'libelf-devel', 'gcc-c++', 'isl-devel',
@@ -75,7 +79,7 @@ class GCC(Test):
 
     def get_summary(self, index):
         with open(os.path.join(self.outputdir, 'gcc_summary'), 'a') as f_obj:
-            while self.summary[index].startswith('#'):
+            while self.summary[index].decode().startswith('#'):
                 f_obj.write('%s\n' % self.summary[index])
                 index += 1
             f_obj.write('\n')
@@ -89,7 +93,7 @@ class GCC(Test):
             process_kwargs={'ignore_status': True})
         self.summary = ret.stdout.splitlines()
         for index, line in enumerate(self.summary):
-            if "=== gcc Summary ===" in line:
+            if "=== gcc Summary ===" in line.decode():
                 self.get_summary(index + 2)
 
         if ret.exit_status:

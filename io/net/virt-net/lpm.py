@@ -58,6 +58,8 @@ class LPM(Test):
     '''
     @skipUnless("ppc" in distro.detect().arch,
                 "supported only on Power platform")
+    @skipIF(distro.detect().name in ['fedora', 'centos'],
+            "Not supported on distro.detect().name")
     @skipIf(IS_POWER_NV or IS_KVM_GUEST,
             "This test is not supported on KVM guest or PowerNV platform")
     def setUp(self):
@@ -227,7 +229,7 @@ class LPM(Test):
         detected_distro = distro.detect()
         self.log.info("Test is running on: %s", detected_distro.name)
         for pkg in ['ksh', 'src', 'rsct.basic', 'rsct.core.utils',
-                    'rsct.core', 'DynamicRM']:
+                    'rsct.core', 'DynamicRM', 'python3-pexpect']:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel('%s is needed for the test to be run' % pkg)
 

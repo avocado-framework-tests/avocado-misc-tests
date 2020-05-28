@@ -51,7 +51,8 @@ class papitest(Test):
             self.path = os.path.join(self.path, 'src')
 
         os.chdir(self.path)
-        process.run('./configure', shell=True)
+        process.run('./configure', shell=True,
+                    env={"CC": "gcc -Wno-override-init -Wno-format-truncation"})
         build.make(self.path)
 
     def test(self):
@@ -65,6 +66,7 @@ class papitest(Test):
         errors = 0
         warns = 0
         for line in result.stdout.splitlines():
+            line = line.decode()
             if 'FAILED' in line:
                 self.log.info(line)
                 errors += 1

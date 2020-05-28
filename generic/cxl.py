@@ -34,7 +34,7 @@ class Cxl(Test):
         self.script = self.params.get('script', default='memcpy_afu_ctx')
         self.args = self.params.get('args', default='')
         lspci_out = process.system_output("lspci")
-        if "accelerators" not in lspci_out:
+        if "accelerators" not in lspci_out.decode():
             self.cancel("No capi card preset. Unable to initialte the test")
         smngr = SoftwareManager()
         for pkgs in ['gcc', 'make', 'automake', 'autoconf']:
