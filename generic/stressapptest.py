@@ -27,7 +27,7 @@ class StressAppTest(Test):
         self.test_file = self.params.get('tmp_file', default='/tmp/dummy')
         self.duration = self.params.get('duration', default='30')
         self.threads = self.params.get(
-            'threads', default=cpu.online_count())
+            'threads', default=cpu.online_cpus_count())
         self.size = self.params.get(
             'memory_to_test', default=int(0.9 * memory.meminfo.MemFree.m))
 

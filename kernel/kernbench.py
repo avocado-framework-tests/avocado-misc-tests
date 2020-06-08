@@ -122,7 +122,7 @@ class Kernbench(Test):
         self.kernel_version = platform.uname()[2]
         self.iterations = self.params.get('runs', default=1)
         self.threads = self.params.get(
-            'cpus', default=2 * cpu.online_count())
+            'cpus', default=2 * cpu.online_cpus_count())
         self.location = self.params.get(
             'url', default='https://github.com/torvalds/linux/archive'
             '/master.zip')
