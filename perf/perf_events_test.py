@@ -18,7 +18,6 @@
 import platform
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import archive, build, process, distro, genio
 from avocado.utils.software_manager import SoftwareManager
 
@@ -101,7 +100,3 @@ class Perf_subsystem(Test):
         self.build_perf_test()
         self.execute_perf_test()
         self.analyse_perf_output(self.output)
-
-
-if __name__ == "__main__":
-    main()

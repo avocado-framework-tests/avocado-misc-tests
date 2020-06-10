@@ -19,7 +19,6 @@ This Script verfies driver module parameter.
 """
 import time
 import netifaces
-from avocado import main
 from avocado.utils import process
 from avocado.utils import linux_modules, genio
 from avocado.utils import configure_network
@@ -153,7 +152,3 @@ class Moduleparameter(Test):
         if linux_modules.module_is_loaded(self.module) is False:
             self.fail("Cannot restore default values for Module : %s"
                       % self.module)
-
-
-if __name__ == "__main__":
-    main()

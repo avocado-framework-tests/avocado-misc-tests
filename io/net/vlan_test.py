@@ -22,7 +22,6 @@ except ImportError:
     from pexpect import pxssh
 
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils.process import CmdError
 
@@ -369,7 +368,3 @@ class VlanTest(Test):
             self.restore_host_intf()
             self.restore_peer_intf()
         self.peer_logout()
-
-
-if __name__ == "__main__":
-    main()

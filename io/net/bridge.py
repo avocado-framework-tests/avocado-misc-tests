@@ -18,7 +18,6 @@
 
 import os
 import netifaces
-from avocado import main
 from avocado import Test
 from avocado.utils import process
 from avocado.utils.network.interfaces import NetworkInterface
@@ -100,7 +99,3 @@ class Bridging(Test):
         path = "/etc/sysconfig/network-scripts/ifcfg-%s" \
                % self.bridge_interface
         os.remove(path)
-
-
-if __name__ == "__main__":
-    main()

@@ -24,7 +24,6 @@ import multiprocessing
 import json
 
 from avocado import Test
-from avocado import main
 from avocado.utils import archive
 from avocado.utils import process
 from avocado.utils import build
@@ -84,7 +83,3 @@ class Dbench(Test):
         (throughput, procs) = pattern.findall(self.results)[0]
         self.whiteboard = json.dumps({'throughput': throughput,
                                       'procs': procs})
-
-
-if __name__ == "__main__":
-    main()

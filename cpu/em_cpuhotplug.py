@@ -18,7 +18,6 @@
 import random
 
 from avocado import Test
-from avocado import main
 from avocado.utils import process, cpu, genio, distro
 
 
@@ -134,7 +133,3 @@ class Cpuhotplug_Test(Test):
             self.log.info("Failed to online the cpu %s" % cpu_num)
         else:
             self.log.info("Online the cpu : %s" % cpu_num)
-
-
-if __name__ == "__main__":
-    main()

@@ -18,7 +18,6 @@ import os
 import tempfile
 import shutil
 from avocado import Test
-from avocado import main
 from avocado.utils import build, distro, process
 from avocado.utils.software_manager import SoftwareManager
 
@@ -62,7 +61,3 @@ class PerfProbe(Test):
         process.run(probe_del)
         if output.exit_status == -11:
             self.fail("perf script command segfaulted")
-
-
-if __name__ == "__main__":
-    main()

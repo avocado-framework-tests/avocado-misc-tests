@@ -28,7 +28,6 @@ import socket
 import fcntl
 import struct
 import netifaces
-from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import distro
@@ -460,7 +459,3 @@ class Bonding(Test):
     def error_check(self):
         if self.err:
             self.fail("Tests failed. Details:\n%s" % "\n".join(self.err))
-
-
-if __name__ == "__main__":
-    main()

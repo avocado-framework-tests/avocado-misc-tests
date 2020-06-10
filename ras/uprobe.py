@@ -15,7 +15,6 @@
 
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import genio
 from avocado.utils import distro
 from avocado.utils import process
@@ -92,7 +91,3 @@ class Uprobe(Test):
 
     def test(self):
         self.execute_test()
-
-
-if __name__ == "__main__":
-    main()

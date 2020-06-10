@@ -15,7 +15,7 @@
 # Author: sudeesh john <sudeesh@linux.vnet.ibm.com>
 
 import os
-from avocado import Test, main
+from avocado import Test
 from avocado.utils import build, git, process
 from avocado.utils.software_manager import SoftwareManager
 
@@ -56,7 +56,3 @@ class Cxl(Test):
             self.fail("%s is failed" % cmd)
         elif "failed" in result.stdout:
             self.fail("%s is failed" % cmd)
-
-
-if __name__ == "__main__":
-    main()

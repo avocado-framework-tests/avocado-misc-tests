@@ -19,7 +19,6 @@
 import os
 
 from avocado import Test
-from avocado import main
 from avocado.utils import process, archive, build
 from avocado.utils.software_manager import SoftwareManager
 
@@ -68,7 +67,3 @@ class Pjdfstest(Test):
                                   % str(string.splitlines()))
         except process.CmdError as details:
             self.fail("failed: %s" % details)
-
-
-if __name__ == "__main__":
-    main()

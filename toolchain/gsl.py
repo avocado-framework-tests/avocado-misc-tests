@@ -17,7 +17,6 @@
 import re
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import archive, process, build
 from avocado.utils.software_manager import SoftwareManager
 
@@ -50,7 +49,3 @@ class GSL(Test):
         match = re.search(r'FAIL:\s+[1-9]', logfile, re.M | re.I)
         if match:
             self.fail("test failed, Please check debug log for failed test cases")
-
-
-if __name__ == "__main__":
-    main()

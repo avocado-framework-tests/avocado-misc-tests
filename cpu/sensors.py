@@ -19,7 +19,6 @@
 Test for sensors command
 """
 from avocado import Test
-from avocado import main
 from avocado.utils import process, linux_modules
 from avocado.utils import distro
 from avocado.utils.software_manager import SoftwareManager
@@ -116,7 +115,3 @@ class Sensors(Test):
         error_list = self.check_errors('sensors -u')
         if len(error_list) > 0:
             self.fail('sensors -u command failed with %s' % error_list)
-
-
-if __name__ == "__main__":
-    main()

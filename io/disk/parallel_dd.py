@@ -29,7 +29,6 @@ import time
 import sys
 import json
 from avocado import Test
-from avocado import main
 from avocado.utils import process, distro
 from avocado.utils import partition as partition_lib
 
@@ -216,7 +215,3 @@ class ParallelDd(Test):
             self.fsys.unmount()
         except process.CmdError:
             pass
-
-
-if __name__ == "__main__":
-    main()

@@ -18,7 +18,6 @@ import os
 import tempfile
 import shutil
 from avocado import Test
-from avocado import main
 from avocado import skipIf
 from avocado.utils import process
 from avocado.utils import distro
@@ -259,7 +258,3 @@ class Sosreport(Test):
         shutil.rmtree(directory_name)
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in sosreport tool verification" % self.is_fail)
-
-
-if __name__ == "__main__":
-    main()

@@ -21,7 +21,6 @@ Tcpdump Test.
 import os
 import netifaces
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils import archive
@@ -160,7 +159,3 @@ class TcpdumpTest(Test):
             self.peer_public_networkinterface.set_mtu('1500')
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
         self.networkinterface.restore_from_backup()
-
-
-if __name__ == "__main__":
-    main()

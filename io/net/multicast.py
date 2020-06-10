@@ -20,7 +20,6 @@
 
 
 import netifaces
-from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.ssh import Session
@@ -129,7 +128,3 @@ class ReceiveMulticastTest(Test):
             self.log.info("unable to unset all mulicast option")
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
         self.networkinterface.restore_from_backup()
-
-
-if __name__ == "__main__":
-    main()

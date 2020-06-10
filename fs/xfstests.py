@@ -28,7 +28,6 @@ import shutil
 
 import avocado
 from avocado import Test
-from avocado import main
 from avocado.utils import process, build, git, distro, partition
 from avocado.utils import disk, data_structures, pmem
 from avocado.utils import genio
@@ -517,7 +516,3 @@ class Xfstests(Test):
             error_msg = 'Could not verify test result. Please check the logs.'
 
         return error_msg
-
-
-if __name__ == "__main__":
-    main()

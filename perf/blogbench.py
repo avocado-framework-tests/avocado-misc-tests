@@ -14,7 +14,6 @@
 
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils import build
 from avocado.utils import archive
@@ -69,7 +68,3 @@ class Blogbench(Test):
                       "%s  and %s\n " % (write_score, read_score))
         self.log.info("Please Check Logfile %s for more info of benchmark"
                       % report_path)
-
-
-if __name__ == "__main__":
-    main()

@@ -20,7 +20,6 @@ import platform
 from threading import Thread
 
 from avocado import Test
-from avocado import main
 from avocado.utils import archive, build
 from avocado.utils import process, cpu, distro, genio
 from avocado.utils.software_manager import SoftwareManager
@@ -136,7 +135,3 @@ class SmtFolding(Test):
                           " multi-thread performance ")
         else:
             self.fail("FAIL : Performance is degraded when SMT off")
-
-
-if __name__ == "__main__":
-    main()

@@ -15,7 +15,6 @@
 # Author: Harsha Thyagaraja <harshkid@linux.vnet.ibm.com>
 
 import netifaces
-from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
@@ -138,7 +137,3 @@ class MultiportStress(Test):
             networkinterface = NetworkInterface(interface, self.local)
             networkinterface.remove_ipaddr(ipaddr, self.netmask)
             networkinterface.restore_from_backup()
-
-
-if __name__ == "__main__":
-    main()

@@ -18,7 +18,6 @@ import shutil
 import tempfile
 import time
 from avocado import Test
-from avocado import main
 from avocado.utils import build
 from avocado.utils import distro
 from avocado.utils import process
@@ -166,7 +165,3 @@ class Livepatch(Test):
     def test(self):
         self.build_module()
         self.execute_test()
-
-
-if __name__ == "__main__":
-    main()

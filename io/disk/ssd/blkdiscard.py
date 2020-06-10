@@ -24,7 +24,6 @@ import avocado
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process, lv_utils
-from avocado import main
 
 # this block need to removed when test moved to python3
 try:
@@ -82,7 +81,3 @@ class Blkdiscard(Test):
                                       shell=True) == 0:
                         self.fail("Blkdiscard passed for the values which is, \
                             not aligned to 4096 but actually it should fail")
-
-
-if __name__ == "__main__":
-    main()

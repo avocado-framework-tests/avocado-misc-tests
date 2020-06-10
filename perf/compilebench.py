@@ -22,7 +22,6 @@
 import os
 
 from avocado import Test
-from avocado import main
 from avocado.utils import archive
 from avocado.utils import process
 
@@ -63,7 +62,3 @@ class Compilebench(Test):
         # shebang set to python2.4
         cmd = ('python %s/compilebench %s' % (self.sourcedir, " ".join(args)))
         process.run(cmd)
-
-
-if __name__ == "__main__":
-    main()

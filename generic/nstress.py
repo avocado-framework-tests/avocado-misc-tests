@@ -16,7 +16,6 @@
 
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import distro, archive, process
 
 
@@ -61,7 +60,3 @@ class NStress(Test):
                           (self.procs, self.duration),
                           ignore_status=True, sudo=True) != 1:
             self.fail("ncpu test failed")
-
-
-if __name__ == "__main__":
-    main()

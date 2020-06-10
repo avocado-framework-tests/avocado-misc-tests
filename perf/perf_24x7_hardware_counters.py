@@ -19,7 +19,6 @@ import os
 import re
 import platform
 from avocado import Test
-from avocado import main
 from avocado.utils import process, distro, cpu, genio
 from avocado.utils.software_manager import SoftwareManager
 from avocado import skipIf
@@ -194,7 +193,3 @@ class EliminateDomainSuffix(Test):
 
     def event_stat1(self, cmd):
         return process.run('%s %s' % (self.perf_args, cmd), ignore_status=True)
-
-
-if __name__ == "__main__":
-    main()

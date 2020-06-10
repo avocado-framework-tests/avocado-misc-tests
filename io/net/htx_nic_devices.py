@@ -24,7 +24,6 @@ except ImportError:
 
 from avocado import Test
 from avocado.utils import distro
-from avocado import main
 from avocado.utils import process
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import build
@@ -779,7 +778,3 @@ class HtxNicTest(Test):
         self.shutdown_htx_daemon()
         self.ip_restore_host()
         self.ip_restore_peer()
-
-
-if __name__ == "__main__":
-    main()

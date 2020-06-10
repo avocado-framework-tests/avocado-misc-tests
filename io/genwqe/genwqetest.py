@@ -22,7 +22,6 @@ import os
 import shutil
 import time
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils import download
 from avocado.utils.software_manager import SoftwareManager
@@ -198,7 +197,3 @@ class GenWQETest(Test):
         for fol in self.dirs_used:
             if os.path.isdir(fol):
                 shutil.rmtree(fol)
-
-
-if __name__ == "__main__":
-    main()

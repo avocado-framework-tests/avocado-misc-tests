@@ -21,7 +21,6 @@ import time
 import netifaces
 from avocado.utils import genio
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.process import CmdError
@@ -134,7 +133,3 @@ class VirtualizationDriverBindTest(Test):
         if self.device_type in ["l-lan", "vnic"]:
             self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
             self.networkinterface.restore_from_backup()
-
-
-if __name__ == "__main__":
-    main()

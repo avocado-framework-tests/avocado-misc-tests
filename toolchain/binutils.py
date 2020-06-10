@@ -22,7 +22,6 @@ import fnmatch
 import shutil
 
 from avocado import Test
-from avocado import main
 
 from avocado.utils import archive
 from avocado.utils import build
@@ -104,7 +103,3 @@ class Binutils(Test):
         elif ret:
             self.fail("'make check' finished with %s, but no FAIL lines were "
                       "found." % ret)
-
-
-if __name__ == "__main__":
-    main()

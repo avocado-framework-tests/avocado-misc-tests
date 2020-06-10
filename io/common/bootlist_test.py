@@ -17,7 +17,6 @@ Bootlist Test
 """
 
 import netifaces
-from avocado import main
 from avocado import Test
 from avocado.utils import process
 from avocado import skipUnless
@@ -164,7 +163,3 @@ class BootlisTest(Test):
         self.display_service_firmware_device()
         self.set_original_normal_bootlist()
         self.set_original_service_bootlist()
-
-
-if __name__ == "__main__":
-    main()

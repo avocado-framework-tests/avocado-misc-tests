@@ -20,7 +20,6 @@ import os
 import shutil
 
 from avocado import Test
-from avocado import main
 from avocado.utils import process, build, memory, genio, distro
 from avocado.utils.software_manager import SoftwareManager
 
@@ -131,7 +130,3 @@ class VATest(Test):
                 genio.write_file(self.hp_file % str(hp_size * 1024), str(0))
         if self.scenario_arg not in [1, 2]:
             memory.set_num_huge_pages(self.exist_pages)
-
-
-if __name__ == "__main__":
-    main()

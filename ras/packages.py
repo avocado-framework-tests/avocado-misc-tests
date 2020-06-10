@@ -15,7 +15,6 @@
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils.software_manager import SoftwareManager
@@ -72,7 +71,3 @@ class Package_check(Test):
                     self.log.info("%s package is not installed" % package)
         if is_fail >= 1:
             self.fail("%s package(s) not installed by default" % is_fail)
-
-
-if __name__ == "__main__":
-    main()

@@ -23,7 +23,6 @@ import re
 import platform
 
 from avocado import Test
-from avocado import main
 from avocado.utils import build
 from avocado.utils import process
 from avocado.utils import cpu
@@ -161,7 +160,3 @@ class Kernbench(Test):
         self.log.info("User      : %s", user_time)
         self.log.info("System    : %s", system_time)
         self.log.info("Elapsed   : %s", elapsed_time)
-
-
-if __name__ == "__main__":
-    main()

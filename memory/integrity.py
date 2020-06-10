@@ -20,7 +20,6 @@ import os
 import shutil
 
 from avocado import Test
-from avocado import main
 from avocado.utils import process, build
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import distro
@@ -75,7 +74,3 @@ class Integrity(Test):
             if status == 255:
                 self.cancel("System does not have numa/memory to run the test")
             self.fail("Test failed")
-
-
-if __name__ == "__main__":
-    main()

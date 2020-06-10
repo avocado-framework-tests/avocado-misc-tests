@@ -21,7 +21,6 @@ NVM-Express user space tooling for Linux, which handles NVMe devices.
 import os
 import pkgutil
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils import archive
 from avocado.utils.software_manager import SoftwareManager
@@ -83,7 +82,3 @@ class NVMeCliSelfTest(Test):
         res = [res.stdout.decode("utf-8"), res.stderr.decode("utf-8")]
         if any('FAILED' in line for line in res):
             self.fail("Test Failed")
-
-
-if __name__ == "__main__":
-    main()

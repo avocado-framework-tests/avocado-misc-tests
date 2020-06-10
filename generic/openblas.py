@@ -17,7 +17,6 @@
 import os
 
 from avocado import Test
-from avocado import main
 from avocado.utils import build
 from avocado.utils import archive
 from avocado.utils.software_manager import SoftwareManager
@@ -62,7 +61,3 @@ class Openblas(Test):
             if '[FAIL]' in line:
                 self.fail("test failed, Please check debug log for failed"
                           "test cases")
-
-
-if __name__ == "__main__":
-    main()

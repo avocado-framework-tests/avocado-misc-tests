@@ -18,7 +18,6 @@
 Test the different tools
 """
 
-from avocado import main
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import pci
@@ -78,7 +77,3 @@ class DisrtoTool(Test):
         else:
             if result.exit_status != 0:
                 self.fail("%s tool failed" % self.tool)
-
-
-if __name__ == "__main__":
-    main()

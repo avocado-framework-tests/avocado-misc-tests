@@ -24,7 +24,6 @@ import shutil
 import time
 from pprint import pprint
 from avocado import Test
-from avocado import main
 from avocado.utils import distro, process
 from avocado.utils import multipath
 from avocado.utils import service
@@ -308,7 +307,3 @@ class MultipathTest(Test):
 
         # Need to wait for some time to make sure multipaths are loaded.
         wait.wait_for(self.mpath_svc.status, timeout=10)
-
-
-if __name__ == "__main__":
-    main()
