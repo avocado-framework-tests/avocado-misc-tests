@@ -21,30 +21,13 @@ DLPAR operations
 
 import os
 import shutil
-try:
-    import pxssh
-except ImportError:
-    from pexpect import pxssh
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import distro
+from avocado.utils.ssh import Session
 from avocado.utils import pci
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.process import CmdError
-
-
-class CommandFailed(Exception):
-    '''
-    Class for Command Failures.
-    '''
-    def __init__(self, command, output, exitcode):
-        self.command = command
-        self.output = output
-        self.exitcode = exitcode
-
-    def __str__(self):
-        return "Command '%s' exited with %d.\nOutput:\n%s" \
-               % (self.command, self.exitcode, self.output)
 
 
 class DlparPci(Test):
@@ -71,11 +54,12 @@ class DlparPci(Test):
         self.lpar_1 = self.get_partition_name("Partition Name")
         if not self.lpar_1:
             self.cancel("LPAR Name not got from lparstat command")
-        self.login(self.hmc_ip, self.hmc_user, self.hmc_pwd)
+        self.session = Session(self.hmc_ip, user=self.hmc_user,
+                               password=self.hmc_pwd)
         cmd = 'lssyscfg -r sys  -F name'
-        output = self.run_command(cmd)
+        output = self.session.cmd(cmd)
         self.server = ''
-        for line in output:
+        for line in output.stdout_text.splitlines():
             if line in self.lpar_1:
                 self.server = line
                 break
@@ -85,21 +69,21 @@ class DlparPci(Test):
         if self.lpar_2 is not None:
             cmd = 'lshwres -r io -m %s --rsubtype slot --filter \
                    lpar_names=%s -F lpar_id' % (self.server, self.lpar_2)
-            output = self.run_command(cmd)
-            self.lpar2_id = output[0]
+            output = self.session.cmd(cmd)
+            self.lpar2_id = output.stdout_text[0]
         self.pci_device = self.params.get("pci_device", '*', default=None)
         self.loc_code = pci.get_slot_from_sysfs(self.pci_device)
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         if self.loc_code is None:
             self.cancel("Failed to get the location code for the pci device")
-        self.run_command("uname -a")
+        self.session.cmd("uname -a")
         if self.sriov == "yes":
             cmd = "lshwres -r sriov --rsubtype logport -m %s \
             --level eth --filter lpar_names=%s -F \
             'adapter_id,logical_port_id,phys_port_id,lpar_id,location_code,drc_name'" \
                    % (self.server, self.lpar_1)
-            output = self.run_command(cmd)
-            for line in output:
+            output = self.session.cmd(cmd)
+            for line in output.stdout_text.splitlines():
                 if self.loc_code in line:
                     self.adapter_id = line.split(',')[0]
                     self.logical_port_id = line.split(',')[1]
@@ -114,8 +98,8 @@ class DlparPci(Test):
             cmd = 'lshwres -r io -m %s --rsubtype slot \
                    --filter lpar_names=%s -F drc_index,lpar_id,drc_name,bus_id' \
                    % (self.server, self.lpar_1)
-            output = self.run_command(cmd)
-            for line in output:
+            output = self.session.cmd(cmd)
+            for line in output.stdout_text.splitlines():
                 if self.loc_code in line:
                     self.drc_index = line.split(',')[0]
                     self.lpar_id = line.split(',')[1]
@@ -152,40 +136,6 @@ class DlparPci(Test):
             if component in line:
                 return line.split(':')[-1].strip()
         return ''
-
-    def login(self, ip_addr, username, password):
-        '''
-        SSH Login method for remote server
-        '''
-        ssh = pxssh.pxssh(encoding='utf-8')
-        # Work-around for old pxssh not having options= parameter
-        ssh.SSH_OPTS = ssh.SSH_OPTS + " -o 'StrictHostKeyChecking=no' "
-        ssh.SSH_OPTS = ssh.SSH_OPTS + " -o 'UserKnownHostsFile /dev/null' "
-        ssh.force_password = True
-
-        ssh.login(ip_addr, username, password)
-        ssh.sendline()
-        ssh.prompt(timeout=60)
-        # Ubuntu likes to be "helpful" and alias grep to
-        # include color, which isn't helpful at all. So let's
-        # go back to absolutely no messing around with the shell
-        ssh.set_unique_prompt()
-        ssh.prompt(timeout=60)
-        self.pxssh = ssh
-
-    def run_command(self, command, timeout=300):
-        '''
-        SSH Run command method for running commands on remote server
-        '''
-        self.log.info("Running the command on hmc %s", command)
-        hmc = self.pxssh
-        hmc.sendline(command)
-        hmc.expect("\n")  # from us
-        hmc.expect(hmc.PROMPT, timeout=timeout)
-        output = hmc.before.splitlines()
-        hmc.sendline("echo $?")
-        hmc.prompt(timeout)
-        return output
 
     def install_packages(self):
         '''
@@ -308,14 +258,14 @@ class DlparPci(Test):
                                    self.phys_port_id, 'add')
             output = self.listhwres_sriov(self.server, self.lpar_1,
                                           self.logical_port_id)
-            if self.logical_port_id not in output[0]:
+            if self.logical_port_id not in output:
                 self.log.debug(output)
                 self.fail("lshwres fails to list the drc after dlpar add")
         else:
             self.changehwres(self.server, 'a', self.lpar_id, self.lpar_1,
                              self.drc_index, 'add')
             output = self.listhwres(self.server, self.lpar_1, self.drc_index)
-            if self.drc_index not in output[0]:
+            if self.drc_index not in output:
                 self.log.debug(output)
                 self.fail("lshwres fails to list the drc after dlpar add")
 
@@ -336,7 +286,7 @@ class DlparPci(Test):
                       dlpar move to lpar_2")
 
         output = self.listhwres(self.server, self.lpar_2, self.drc_index)
-        if self.drc_index not in output[0]:
+        if self.drc_index not in output:
             self.log.debug(output)
             self.fail("lshwres fails to list the drc in lpar_2 after \
                        dlpar move")
@@ -346,7 +296,7 @@ class DlparPci(Test):
                          self.drc_index, 'move')
 
         output = self.listhwres(self.server, self.lpar_1, self.drc_index)
-        if self.drc_index not in output[0]:
+        if self.drc_index not in output:
             self.log.debug(output)
             self.fail("lshwres fails to list the drc in lpar_1 after \
                        dlpar move")
@@ -365,9 +315,9 @@ class DlparPci(Test):
                --rsubtype slot --filter lpar_names= %s \
                | grep -i %s' % (server, lpar, drc_index)
         try:
-            cmd = self.run_command(cmd)
-        except CommandFailed as cmd_fail:
-            self.log.debug(str(cmd_fail))
+            cmd = self.session.cmd(cmd).stdout_text
+        except CmdError as details:
+            self.log.debug(str(details))
             self.fail("lshwres operation failed ")
         return cmd
 
@@ -376,9 +326,9 @@ class DlparPci(Test):
               --rsubtype logport --filter lpar_names= %s --level eth \
               | grep -i %s' % (server, lpar, logical_port_id)
         try:
-            cmd = self.run_command(cmd)
-        except CommandFailed as cmd_fail:
-            self.log.debug(str(cmd_fail))
+            cmd = self.session.cmd(cmd).stdout_text
+        except CmdError as details:
+            self.log.debug(str(details))
             self.fail("lshwres operation failed ")
         return cmd
 
@@ -394,10 +344,9 @@ class DlparPci(Test):
             cmd = 'chhwres -r io --rsubtype slot -m %s \
                    -o %s --id %s -l %s ' % (server, operation, lpar_id,
                                             drc_index)
-        try:
-            cmd = self.run_command(cmd, 3000)
-        except CommandFailed as cmd_fail:
-            self.log.debug(str(cmd_fail))
+        cmd = self.session.cmd(cmd)
+        if cmd.exit_status != 0:
+            self.log.debug(cmd.stderr)
             self.fail("dlpar %s operation failed" % msg)
 
     def changehwres_sriov(self, server, operation, lpar_id, adapter_id,
@@ -414,10 +363,9 @@ class DlparPci(Test):
                   phys_port_id=%s,adapter_id=%s,logical_port_id=%s, \
                   logical_port_type=eth' % (server, lpar_id, phys_port_id,
                                             adapter_id, logical_port_id)
-        try:
-            cmd = self.run_command(cmd, 3000)
-        except CommandFailed as cmd_fail:
-            self.log.debug(str(cmd_fail))
+        cmd = self.session.cmd(cmd)
+        if cmd.exit_status != 0:
+            self.log.debug(cmd.stderr)
             self.fail("dlpar %s operation failed" % msg)
 
     def tearDown(self):

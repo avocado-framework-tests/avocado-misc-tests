@@ -23,10 +23,6 @@ import os
 import time
 import shutil
 import netifaces
-try:
-    import pxssh
-except ImportError:
-    from pexpect import pxssh
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import distro
@@ -41,24 +37,6 @@ from avocado.utils import wait
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
-
-
-class CommandFailed(Exception):
-
-    '''
-    Defines the exception called when a
-    command fails
-    '''
-
-    def __init__(self, command, output, exitcode):
-        Exception.__init__(self, command, output, exitcode)
-        self.command = command
-        self.output = output
-        self.exitcode = exitcode
-
-    def __str__(self):
-        return "Command '%s' exited with %d.\nOutput:\n%s" \
-               % (self.command, self.exitcode, self.output)
 
 
 class NetworkVirtualization(Test):
@@ -87,11 +65,12 @@ class NetworkVirtualization(Test):
         self.lpar = self.get_partition_name("Partition Name")
         if not self.lpar:
             self.cancel("LPAR Name not got from lparstat command")
-        self.con_hmc = self.login(self.hmc_ip, self.hmc_username, self.hmc_pwd)
+        self.session_hmc = Session(self.hmc_ip, user=self.hmc_username,
+                                   password=self.hmc_pwd)
         cmd = 'lssyscfg -r sys  -F name'
-        output = self.run_command(self.con_hmc, cmd)
+        output = self.session_hmc.cmd(cmd)
         self.server = ''
-        for line in output:
+        for line in output.stdout_text.splitlines():
             if line in self.lpar:
                 self.server = line
                 break
@@ -140,23 +119,23 @@ class NetworkVirtualization(Test):
         self.mac_id = [mac.replace(':', '') for mac in self.mac_id]
         self.netmask = self.params.get('netmasks', '*', default=None).split(' ')
         self.peer_ip = self.params.get('peer_ip', default=None).split(' ')
-        self.run_command(self.con_hmc, "uname -a")
+        self.session_hmc.cmd("uname -a")
         cmd = 'lssyscfg -m ' + self.server + \
               ' -r lpar --filter lpar_names=' + self.lpar + \
               ' -F lpar_id'
-        self.lpar_id = self.run_command(self.con_hmc, cmd)[-1]
+        self.lpar_id = self.session_hmc.cmd(cmd).stdout_text.split()[0]
         self.vios_id = []
         for vios_name in self.vios_name:
             cmd = 'lssyscfg -m ' + self.server + \
                   ' -r lpar --filter lpar_names=' + vios_name + \
                   ' -F lpar_id'
-            self.vios_id.append(self.run_command(self.con_hmc, cmd)[-1])
+            self.vios_id.append(self.session_hmc.cmd(cmd).stdout_text.split()[0])
         cmd = 'lshwres -m %s -r sriov --rsubtype adapter -F \
               phys_loc:adapter_id' % self.server
-        adapter_id_output = self.run_command(self.con_hmc, cmd)
+        adapter_id_output = self.session_hmc.cmd(cmd).stdout_text
         self.backing_adapter_id = []
         for backing_adapter in self.backing_adapter:
-            for line in adapter_id_output:
+            for line in adapter_id_output.splitlines():
                 if str(backing_adapter) in line:
                     self.backing_adapter_id.append(line.split(':')[1])
         self.rsct_service_start()
@@ -193,40 +172,6 @@ class NetworkVirtualization(Test):
                 return line.split(':')[-1].strip()
         return ''
 
-    def login(self, ipaddr, username, password):
-        '''
-        SSH Login method for remote server
-        '''
-        pxh = pxssh.pxssh(encoding='utf-8')
-        # Work-around for old pxssh not having options= parameter
-        pxh.SSH_OPTS = pxh.SSH_OPTS + " -o 'StrictHostKeyChecking=no'"
-        pxh.SSH_OPTS = pxh.SSH_OPTS + " -o 'UserKnownHostsFile /dev/null' "
-        pxh.force_password = True
-
-        pxh.login(ipaddr, username, password)
-        pxh.sendline()
-        pxh.prompt(timeout=60)
-        # Ubuntu likes to be "helpful" and alias grep to
-        # include color, which isn't helpful at all. So let's
-        # go back to absolutely no messing around with the shell
-        pxh.set_unique_prompt()
-        pxh.prompt(timeout=60)
-        self.pxssh = pxh
-        return pxh
-
-    def run_command(self, console, command, timeout=300):
-        '''
-        SSH Run command method for running commands on remote server
-        '''
-        self.log.info("Running the command on hmc %s", command)
-        console.sendline(command)
-        console.expect("\n")  # from us
-        console.expect(console.PROMPT, timeout=timeout)
-        output = console.before.splitlines()
-        console.sendline("echo $?")
-        console.prompt(timeout)
-        return output
-
     def check_slot_availability(self, slot_num):
         '''
         Checks if given slot is available(free) to be used.
@@ -234,10 +179,10 @@ class NetworkVirtualization(Test):
         '''
         cmd = 'lshwres -r virtualio -m %s --rsubtype vnic --filter \
            "lpar_names=%s" -F slot_num' % (self.server, self.lpar)
-        for slot in self.run_command(self.con_hmc, cmd):
+        for slot in self.session_hmc.cmd(cmd).stdout_text:
             if 'No results were found' in slot:
                 return True
-            if int(slot_num) == int(slot):
+            if slot_num == slot:
                 self.log.debug("Slot %s already exists" % slot_num)
                 return False
         return True
@@ -546,10 +491,9 @@ class NetworkVirtualization(Test):
             cmd = 'chhwres -m %s --id %s -r virtualio --rsubtype vnic \
                    -o r -s %s'\
                    % (self.server, self.lpar_id, slot)
-        try:
-            self.run_command(self.con_hmc, cmd)
-        except CommandFailed as cmdfail:
-            self.log.debug(str(cmdfail))
+        output = self.session_hmc.cmd(cmd)
+        if output.exit_status != 0:
+            self.log.debug(output.stderr)
             self.fail("Network virtualization %s device operation \
                        failed" % operation)
 
@@ -561,11 +505,11 @@ class NetworkVirtualization(Test):
               \"lpar_names=%s,slots=%s\"' % (self.server, self.lpar,
                                              slot)
         try:
-            output = self.run_command(self.con_hmc, cmd)
-        except CommandFailed as cmdfail:
-            self.log.debug(str(cmdfail))
+            output = self.session_hmc.cmd(cmd)
+        except CmdError as details:
+            self.log.debug(str(details))
             self.fail("lshwres operation failed ")
-        return output
+        return output.stdout_text
 
     def backing_dev_add_remove(self, operation, i):
         '''
@@ -590,10 +534,9 @@ class NetworkVirtualization(Test):
                                                       self.slot_num[0],
                                                       self.lpar_id,
                                                       add_backing_device)
-        try:
-            self.run_command(self.con_hmc, cmd)
-        except CommandFailed as cmdfail:
-            self.log.debug(str(cmdfail))
+        output = self.session_hmc.cmd(cmd)
+        if output.exit_status != 0:
+            self.log.debug(output.stderr)
             self.fail("Network virtualization Backing device %s \
                        operation failed" % operation)
 
@@ -606,11 +549,11 @@ class NetworkVirtualization(Test):
                --filter lpar_names=%s -F slot_num,backing_device_states' \
                % (self.server, self.lpar)
         try:
-            output = self.run_command(self.con_hmc, cmd)
-        except CommandFailed as cmdfail:
-            self.log.debug(str(cmdfail))
+            output = self.session_hmc.cmd(cmd)
+        except CmdError as details:
+            self.log.debug(str(details))
             self.fail("lshwres operation failed ")
-        return output
+        return output.stdout_text
 
     def get_backing_devices(self):
         '''
@@ -621,11 +564,11 @@ class NetworkVirtualization(Test):
                --filter lpar_names=%s -F backing_devices' \
                % (self.server, self.lpar)
         try:
-            output = self.run_command(self.con_hmc, cmd)
-        except CommandFailed as cmdfail:
-            self.log.debug(str(cmdfail))
+            output = self.session_hmc.cmd(cmd)
+        except CmdError as details:
+            self.log.debug(str(details))
             self.fail("lshwres operation failed ")
-        return output
+        return output.stdout_text
 
     def update_backing_devices(self, slot):
         '''
@@ -657,7 +600,7 @@ class NetworkVirtualization(Test):
         '''
         for slot in self.slot_num:
             output = self.backing_dev_list()
-            for i in output:
+            for i in output.splitlines():
                 if i.startswith('%s,' % slot):
                     count = len(i.split(',')[1:])
             return count
@@ -690,11 +633,10 @@ class NetworkVirtualization(Test):
         cmd = 'lshwres -r virtualio -m %s --rsubtype vnic \
                --filter lpar_names=%s,slots=%s' \
                % (self.server, self.lpar, self.slot_num[0])
-        try:
-            output = self.run_command(self.con_hmc, cmd)
-        except CommandFailed as cmdfail:
-            self.log.debug(str(cmdfail))
-        for entry in output:
+        output = self.session_hmc.cmd(cmd)
+        if output.exit_status != 0:
+            self.log.debug(output.stderr)
+        for entry in output.stdout_text:
             if 'auto_priority_failover=1' in entry:
                 return True
         return False
@@ -706,10 +648,9 @@ class NetworkVirtualization(Test):
         cmd = 'chhwres -r virtualio -m %s --rsubtype vnic \
                -o s --id %s -s %s -a auto_priority_failover=1' \
                % (self.server, self.lpar_id, self.slot_num[0])
-        try:
-            self.run_command(self.con_hmc, cmd)
-        except CommandFailed as cmdfail:
-            self.log.debug(str(cmdfail))
+        output = self.session_hmc.cmd(cmd)
+        if output.exit_status != 0:
+            self.log.debug(output.stderr)
         if not self.is_auto_failover_enabled():
             return False
         return True
@@ -722,11 +663,10 @@ class NetworkVirtualization(Test):
         cmd = 'lshwres -r virtualio -m %s --rsubtype vnic --level lpar \
                --filter lpar_names=%s -F slot_num,backing_devices' \
                % (self.server, self.lpar)
-        try:
-            output = self.run_command(self.con_hmc, cmd)
-        except CommandFailed as cmdfail:
-            self.log.debug(str(cmdfail))
-        for backing_dev in output:
+        output = self.session_hmc.cmd(cmd)
+        if output.exit_status != 0:
+            self.log.debug(output.stderr)
+        for backing_dev in output.stdout_text:
             if backing_dev.startswith('%s,' % self.slot_num[0]):
                 backing_dev = backing_dev.strip('%s,"' % self.slot_num[0])
                 for entry in backing_dev.split(','):
@@ -743,10 +683,9 @@ class NetworkVirtualization(Test):
         cmd = 'chhwres -r virtualio --rsubtype vnicbkdev -o s -m %s \
                -s %s --id %s --logport %s -a failover_priority=%s' \
                % (self.server, self.slot_num[0], self.lpar_id, logport, priority)
-        try:
-            self.run_command(self.con_hmc, cmd)
-        except CommandFailed as cmdfail:
-            self.log.debug(str(cmdfail))
+        output = self.session_hmc.cmd(cmd)
+        if output.exit_status != 0:
+            self.log.debug(output.stderr)
         if priority != self.get_failover_priority(logport):
             return False
         return True
@@ -781,10 +720,9 @@ class NetworkVirtualization(Test):
                -s %s --id %s \
                --logport %s' % (self.server, self.slot_num[0],
                                 self.lpar_id, logport)
-        try:
-            self.run_command(self.con_hmc, cmd)
-        except CommandFailed as cmdfail:
-            self.log.debug(str(cmdfail))
+        output = self.session_hmc.cmd(cmd)
+        if output.exit_status != 0:
+            self.log.debug(output.stderr)
             self.fail("Command to set %s as Active has failed" % logport)
 
     def get_backing_device_logport(self, slot):
@@ -792,7 +730,7 @@ class NetworkVirtualization(Test):
         Get the logical port id of the
         backing device
         '''
-        for backing_dev in self.backing_dev_list():
+        for backing_dev in self.backing_dev_list().splitlines():
             if backing_dev.startswith('%s,' % slot):
                 backing_dev = backing_dev.strip('%s,"' % slot)
                 for entry in backing_dev.split(','):
@@ -807,7 +745,7 @@ class NetworkVirtualization(Test):
         Get the logical port id of the Network
         virtualized device
         '''
-        for backing_dev in self.backing_dev_list():
+        for backing_dev in self.backing_dev_list().splitlines():
             if backing_dev.startswith('%s,' % slot):
                 backing_dev = backing_dev.strip('%s,"' % slot)
                 for entry in backing_dev.split(','):
@@ -822,7 +760,7 @@ class NetworkVirtualization(Test):
         TO check the status of the backing device
         after failover
         '''
-        for backing_dev in self.backing_dev_list():
+        for backing_dev in self.backing_dev_list().splitlines():
             if backing_dev.startswith('%s,' % slot):
                 val = int(backing_dev.split(',')[1:][1].split('/')[2])
         if val:
