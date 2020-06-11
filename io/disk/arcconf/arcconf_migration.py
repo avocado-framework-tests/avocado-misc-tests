@@ -25,7 +25,6 @@ import time
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
-from avocado import main
 from avocado.utils import distro
 
 
@@ -238,7 +237,3 @@ class Arcconftest(Test):
         else:
             if cond == 0:
                 self.cancel("Test Skipped!! OS disk requested for removal")
-
-
-if __name__ == "__main__":
-    main()

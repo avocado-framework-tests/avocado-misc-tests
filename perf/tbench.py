@@ -23,7 +23,6 @@ import signal
 import subprocess
 import re
 from avocado import Test
-from avocado import main
 from avocado.utils import archive
 from avocado.utils import process
 from avocado.utils import build
@@ -78,7 +77,3 @@ class tbench(Test):
         pattern = re.compile(r"Throughput (.*?) MB/sec (.*?) procs")
         (throughput, procs) = pattern.findall(self.results)[0]
         self.log.info({'throughput': throughput, 'procs': procs})
-
-
-if __name__ == "__main__":
-    main()

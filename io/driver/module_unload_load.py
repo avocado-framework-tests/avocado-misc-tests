@@ -17,7 +17,6 @@
 
 import time
 import os
-from avocado import main
 from avocado.utils import process
 from avocado.utils import linux_modules, genio
 from avocado.utils.software_manager import SoftwareManager
@@ -143,7 +142,3 @@ class ModuleLoadUnload(Test):
 
         if self.error_modules:
             self.fail("Failed Modules: %s" % self.error_modules)
-
-
-if __name__ == "__main__":
-    main()

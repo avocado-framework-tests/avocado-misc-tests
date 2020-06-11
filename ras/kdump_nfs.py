@@ -18,7 +18,6 @@ import time
 import os
 import socket
 from avocado import Test
-from avocado import main
 try:
     from virttest import remote
 except ImportError:
@@ -161,7 +160,3 @@ class KDUMP(Test):
         for files in self.file_list:
             if files not in open(log_file_server).read():
                 self.fail("%s is not saved" % files)
-
-
-if __name__ == "__main__":
-    main()

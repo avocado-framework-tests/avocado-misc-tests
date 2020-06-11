@@ -17,7 +17,6 @@
 import os
 import re
 from avocado import Test
-from avocado import main
 from avocado.utils import archive
 from avocado.utils import build
 from avocado.utils import distro
@@ -72,7 +71,3 @@ class GDB(Test):
                 for match in re.finditer("of unexpected failures[1-9]", line):
                     self.log.info(line)
                     self.fail("Few gdb tests have failed")
-
-
-if __name__ == "__main__":
-    main()

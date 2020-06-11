@@ -22,7 +22,6 @@ import os
 import tempfile
 
 from avocado import Test
-from avocado import main
 from avocado.utils import archive
 from avocado.utils import process
 from avocado.utils import build
@@ -118,7 +117,3 @@ class Lmbench(Test):
         build.make(self.sourcedir, extra_args='rerun')
         build.make(self.sourcedir, extra_args='rerun')
         build.make(self.sourcedir, extra_args='see')
-
-
-if __name__ == "__main__":
-    main()

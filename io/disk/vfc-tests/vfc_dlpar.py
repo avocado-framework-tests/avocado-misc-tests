@@ -24,7 +24,6 @@ try:
 except ImportError:
     from pexpect import pxssh
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils import multipath
 from avocado.utils import distro
@@ -350,7 +349,3 @@ class VirtualFC(Test):
         '''
         if self.pxssh.isalive():
             self.pxssh.terminate()
-
-
-if __name__ == "__main__":
-    main()

@@ -14,7 +14,6 @@
 # Author: Ramya BS <ramya@linux.vnet.ibm.com>
 
 from avocado import Test
-from avocado import main
 from avocado import skipIf
 from avocado.utils import process
 from avocado.utils import genio
@@ -230,7 +229,3 @@ class Lshwrun(Test):
         if "modified" in self.run_cmd_out("lshw -notime | grep modified"):
             self.fail("modified time stamp is present evev with -notime")
         self.error_check()
-
-
-if __name__ == "__main__":
-    main()

@@ -19,7 +19,6 @@
 import os
 import shutil
 from avocado import Test
-from avocado import main
 from avocado.utils import process, build, memory
 from avocado.utils.software_manager import SoftwareManager
 
@@ -81,7 +80,3 @@ class Forkoff(Test):
 
         if self.fails:
             self.fail("The following test(s) failed: %s" % self.fails)
-
-
-if __name__ == "__main__":
-    main()

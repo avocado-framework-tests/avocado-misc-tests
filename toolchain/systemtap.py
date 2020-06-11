@@ -20,7 +20,6 @@
 import os
 
 from avocado import Test
-from avocado import main
 from avocado.utils import build
 from avocado.utils import process
 from avocado.utils import git
@@ -84,7 +83,3 @@ class Systemtap(Test):
         if failed_tests:
             self.log.info(failed_tests)
             self.fail("Few tests failed,check log")
-
-
-if __name__ == "__main__":
-    main()

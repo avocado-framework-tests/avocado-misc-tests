@@ -17,7 +17,6 @@
 import time
 import os
 from avocado import Test
-from avocado import main
 from virttest import remote
 from avocado.utils import process
 from avocado.utils.software_manager import SoftwareManager
@@ -97,7 +96,3 @@ class PSTORE(Test):
             time_created = self.run_cmd_out("cat %s | tail -3 | head -1 | cut -d' ' -f3" % log_file).strip()
             if time_created < time_init:
                 self.fail("sosreport contains wrong %s file" % files)
-
-
-if __name__ == "__main__":
-    main()

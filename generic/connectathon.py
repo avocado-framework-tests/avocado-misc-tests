@@ -22,7 +22,6 @@ import os
 import tempfile
 
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils import build
 from avocado.utils import git
@@ -95,7 +94,3 @@ class Connectathon(Test):
             self.log.info("Test failed: ")
         if self.nfail != 0:
             raise self.fail('Connectathon test suite failed.')
-
-
-if __name__ == "__main__":
-    main()

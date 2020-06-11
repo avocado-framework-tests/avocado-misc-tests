@@ -14,7 +14,6 @@
 
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils import build
 from avocado.utils import archive
@@ -93,7 +92,3 @@ class Valgrind(Test):
         if self.failures:
             self.fail('Following tests failed: %s, Check %s for results' % (
                 self.failures, self.outputdir))
-
-
-if __name__ == "__main__":
-    main()

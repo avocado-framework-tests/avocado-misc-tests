@@ -20,7 +20,6 @@ Rawread test
 
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import archive
 from avocado.utils import build
 from avocado.utils import process, distro
@@ -72,7 +71,3 @@ class Rawread(Test):
 
         if err_val:
             self.fail("test failed for values : %s" % " ".join(err_val))
-
-
-if __name__ == "__main__":
-    main()

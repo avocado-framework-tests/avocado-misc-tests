@@ -24,7 +24,6 @@
 
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import archive
 from avocado.utils import build
 from avocado.utils import process
@@ -64,7 +63,3 @@ class rt_tests(Test):
         args = self.params.get('args', default=' -t 10 -l 100000')
         process.system("%s %s" % (os.path.join(self.sourcedir, test_to_run), args),
                        sudo=True)
-
-
-if __name__ == "__main__":
-    main()

@@ -29,7 +29,6 @@ import time
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
-from avocado import main
 
 
 class SoftwareRaid(Test):
@@ -154,7 +153,3 @@ class SoftwareRaid(Test):
             self.check_pass(cmd, "Failed to stop the MD device")
             cmd = "mdadm --zero-superblock %s %s" % (self.disk, self.sparedisk)
             self.check_pass(cmd, "Failed to remove the MD device")
-
-
-if __name__ == "__main__":
-    main()

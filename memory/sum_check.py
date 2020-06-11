@@ -17,7 +17,6 @@
 
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import process, memory, disk, genio
 
 
@@ -56,7 +55,3 @@ class SumCheck(Test):
 
     def tearDown(self):
         genio.write_file("/proc/sys/vm/drop_caches", "3")
-
-
-if __name__ == "__main__":
-    main()

@@ -22,7 +22,7 @@ import glob
 import tempfile
 
 from avocado import Test
-from avocado import main, skipUnless
+from avocado import skipUnless
 from avocado.utils import process
 from avocado.utils import build
 from avocado.utils import kernel
@@ -218,7 +218,3 @@ class LibHugetlbfs(Test):
             if process.system('umount %s' %
                               self.hugetlbfs_dir[hp_size], ignore_status=True):
                 self.log.warn("umount of hugetlbfs dir failed")
-
-
-if __name__ == "__main__":
-    main()

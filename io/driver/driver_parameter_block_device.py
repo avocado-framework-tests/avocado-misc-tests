@@ -19,7 +19,6 @@
 This Script verfies driver module parameter.
 """
 import time
-from avocado import main
 from avocado.utils import process
 from avocado.utils import linux_modules, genio
 from avocado.utils import wait
@@ -169,7 +168,3 @@ class Moduleparameter(Test):
             self.fail("Cannot restore default values for Module : %s"
                       % self.module)
         self.log.info("Restore of default param is success")
-
-
-if __name__ == "__main__":
-    main()

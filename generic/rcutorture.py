@@ -22,7 +22,6 @@ import time
 import multiprocessing
 
 from avocado import Test
-from avocado import main
 from avocado.utils import process, cpu
 from avocado.utils import linux_modules
 
@@ -130,7 +129,3 @@ class Rcutorture(Test):
     def tearDown(self):
         if linux_modules.module_is_loaded('rcutorture'):
             linux_modules.unload_module('rcutorture')
-
-
-if __name__ == "__main__":
-    main()

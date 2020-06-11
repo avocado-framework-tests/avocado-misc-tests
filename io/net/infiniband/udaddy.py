@@ -23,7 +23,6 @@ import time
 import netifaces
 from netifaces import AF_INET
 from avocado import Test
-from avocado import main
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process, distro
 from avocado.utils.network.interfaces import NetworkInterface
@@ -164,7 +163,3 @@ class Udady(Test):
             self.fail("Failed to set mtu in host")
         if self.peer_networkinterface.set_mtu('1500') is not None:
             self.fail("Failed to set mtu in peer")
-
-
-if __name__ == "__main__":
-    main()

@@ -15,7 +15,6 @@
 import os
 import shutil
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils import build
 from avocado.utils import distro
@@ -73,7 +72,3 @@ class PowerTimeBaseBug(Test):
                     len_str = len(line.split('=')[1].lstrip())
                     if len_str <= 8:
                         self.fail('Test failed.')
-
-
-if __name__ == "__main__":
-    main()

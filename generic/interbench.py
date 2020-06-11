@@ -21,7 +21,6 @@
 import os
 
 from avocado import Test
-from avocado import main
 from avocado.utils import archive
 from avocado.utils import process
 from avocado.utils import build, disk, memory
@@ -72,7 +71,3 @@ class Interbench(Test):
         args += ' c'
         process.system("%s ' run ' %s" % (os.path.join(
             self.sourcedir, 'interbench'), args), sudo=True)
-
-
-if __name__ == "__main__":
-    main()

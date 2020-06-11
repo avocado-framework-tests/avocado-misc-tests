@@ -14,7 +14,6 @@
 
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils import build
 from avocado.utils import archive
@@ -77,7 +76,3 @@ class Atlas(Test):
         if ret.exit_status:
             self.fail("Make check Has been Failed !!"
                       "Please, refer the log file")
-
-
-if __name__ == "__main__":
-    main()

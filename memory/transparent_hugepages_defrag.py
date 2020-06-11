@@ -20,7 +20,6 @@ import time
 import mmap
 import avocado
 from avocado import Test
-from avocado import main
 from avocado import skipIf, skipUnless
 from avocado.utils import process
 from avocado.utils import memory
@@ -128,7 +127,3 @@ class ThpDefrag(Test):
             memory.set_num_huge_pages(0)
             self.device.unmount()
             process.system('rm -rf %s' % self.mem_path, ignore_status=True)
-
-
-if __name__ == "__main__":
-    main()

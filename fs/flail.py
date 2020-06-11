@@ -17,7 +17,6 @@ import os
 import re
 
 from avocado import Test
-from avocado import main
 from avocado.utils import process, build, archive
 from avocado.utils.software_manager import SoftwareManager
 
@@ -61,7 +60,3 @@ class Flail(Test):
 
     def clear_dmesg(self):
         process.run("dmesg -C ", sudo=True)
-
-
-if __name__ == "__main__":
-    main()

@@ -15,7 +15,6 @@
 
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import process, genio
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.partition import Partition
@@ -107,7 +106,3 @@ class Fsx(Test):
     def tearDown(self):
         if self.mount_dir:
             self.device.unmount()
-
-
-if __name__ == "__main__":
-    main()

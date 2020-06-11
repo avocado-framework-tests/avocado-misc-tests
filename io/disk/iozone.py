@@ -26,7 +26,6 @@ import json
 import logging
 
 from avocado import Test
-from avocado import main
 from avocado.utils import archive
 from avocado.utils import process
 from avocado.utils import build
@@ -573,7 +572,3 @@ class IOZone(Test):
             plotter = IOzonePlotter(self.log, results_file=results_path,
                                     output_dir=analysisdir)
             plotter.plot_2d_graphs()
-
-
-if __name__ == "__main__":
-    main()

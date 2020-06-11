@@ -22,7 +22,6 @@ SSD performance.
 
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import build
 from avocado.utils import process
 from avocado.utils import genio
@@ -87,7 +86,3 @@ class EzfioTest(Test):
         Clean up
         """
         os.chdir(self.cwd)
-
-
-if __name__ == "__main__":
-    main()

@@ -21,7 +21,6 @@ import shutil
 
 import avocado
 from avocado import Test
-from avocado import main
 from avocado.utils import process, build, memory, distro, pmem, partition
 from avocado.utils.software_manager import SoftwareManager
 
@@ -116,7 +115,3 @@ class Mprotect(Test):
             self.part_obj.unmount(force=True)
             self.plib.destroy_namespace(region=self.region, force=True)
             shutil.rmtree(self.mnt_dir)
-
-
-if __name__ == "__main__":
-    main()

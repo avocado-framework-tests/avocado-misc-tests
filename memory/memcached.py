@@ -16,7 +16,6 @@
 import time
 import getpass
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils import memory
 from avocado.utils import distro
@@ -114,7 +113,3 @@ class Memcached(Test):
         """
 
         process.system('pkill memcached', ignore_status=True)
-
-
-if __name__ == "__main__":
-    main()

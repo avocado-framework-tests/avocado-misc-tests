@@ -22,7 +22,6 @@ using nvme cli.
 
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils import archive
 from avocado.utils import build
@@ -431,7 +430,3 @@ class NVMeTest(Test):
         cmd = '%s subsystem-reset %s' % (self.binary, self.device)
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Subsystem reset failed")
-
-
-if __name__ == "__main__":
-    main()

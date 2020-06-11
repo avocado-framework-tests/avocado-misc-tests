@@ -22,7 +22,6 @@
 import os
 import re
 from avocado import Test
-from avocado import main
 from avocado.utils import build, distro, genio
 from avocado.utils import process, archive
 from avocado.utils.partition import Partition
@@ -151,7 +150,3 @@ class LTP(Test):
     def tearDown(self):
         if self.mount_dir:
             self.device.unmount()
-
-
-if __name__ == "__main__":
-    main()

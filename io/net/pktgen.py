@@ -21,7 +21,6 @@
 import os
 import shutil
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 
 
@@ -106,7 +105,3 @@ class Pktgen(Test):
         self.log.info("Ping response value is %d" % ping_response)
         if ping_response != 0:
             self.cancel("Host not reachable")
-
-
-if __name__ == "__main__":
-    main()

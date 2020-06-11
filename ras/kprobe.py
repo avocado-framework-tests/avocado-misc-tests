@@ -17,7 +17,6 @@ import os
 import shutil
 import tempfile
 from avocado import Test
-from avocado import main
 from avocado.utils import genio
 from avocado.utils import build
 from avocado.utils import distro
@@ -162,7 +161,3 @@ class Kprobe(Test):
         self.build_module()
         self.execute_test()
         self.optprobes_disable_test()
-
-
-if __name__ == "__main__":
-    main()

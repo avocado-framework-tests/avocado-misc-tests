@@ -19,7 +19,6 @@ import platform
 import shutil
 import tempfile
 from avocado import Test
-from avocado import main
 from avocado.utils import build, distro, process, genio
 from avocado.utils.software_manager import SoftwareManager
 
@@ -119,7 +118,3 @@ class PerfUprobe(Test):
         output = self.cmd_verify('perf probe -d \\*')
         if os.path.isfile(self.temp_file):
             process.run('rm -f %s' % self.temp_file)
-
-
-if __name__ == "__main__":
-    main()

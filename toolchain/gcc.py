@@ -18,7 +18,6 @@
 import os
 
 from avocado import Test
-from avocado import main
 from avocado.utils import archive
 from avocado.utils import build
 from avocado.utils import distro
@@ -94,7 +93,3 @@ class GCC(Test):
 
         if ret.exit_status:
             self.fail("Few gcc tests failed,refer the log file")
-
-
-if __name__ == "__main__":
-    main()

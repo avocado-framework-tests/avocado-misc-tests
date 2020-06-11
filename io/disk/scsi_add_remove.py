@@ -19,7 +19,6 @@
 This script will perform scsi add and remove test case
 """
 import time
-from avocado import main
 from avocado import Test
 from avocado.utils import process, genio
 from avocado.utils.software_manager import SoftwareManager
@@ -127,7 +126,3 @@ class ScsiAddRemove(Test):
         '''
         if self.err_paths:
             self.fail("\nPaths failed to add or remove %s\n" % self.err_paths)
-
-
-if __name__ == "__main__":
-    main()

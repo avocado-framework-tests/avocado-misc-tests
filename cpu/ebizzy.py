@@ -23,7 +23,6 @@ import json
 import re
 
 from avocado import Test
-from avocado import main
 from avocado.utils import archive
 from avocado.utils import process
 from avocado.utils import build
@@ -92,7 +91,3 @@ class Ebizzy(Test):
                                       'real_time': real,
                                       'user': usr_time,
                                       'sys': sys_time})
-
-
-if __name__ == "__main__":
-    main()

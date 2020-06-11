@@ -19,7 +19,6 @@ import re
 import time
 # import telnetlib
 from avocado import Test
-from avocado import main
 import paramiko
 from avocado.utils import process
 from avocado.utils import genio
@@ -318,7 +317,3 @@ class PortBounceTest(Test):
                                        shell=True, sudo=True)
 
         self.log.debug("Kernel Errors: %s", output)
-
-
-if __name__ == "__main__":
-    main()

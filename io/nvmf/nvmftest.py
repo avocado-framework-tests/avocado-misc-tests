@@ -24,7 +24,6 @@ import os
 import json
 import copy
 from avocado import Test
-from avocado import main
 from avocado.utils import process, linux_modules, genio
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.process import CmdError
@@ -200,7 +199,3 @@ class NVMfTest(Test):
         cmd = "ssh %s \"%s\"" % (self.peer_ips[0], msg)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.log.warn("removing config file on peer failed")
-
-
-if __name__ == "__main__":
-    main()

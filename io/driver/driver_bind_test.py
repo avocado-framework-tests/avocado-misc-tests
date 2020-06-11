@@ -22,7 +22,6 @@ This test verifies that for given adapters.
 import os
 import time
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils import pci
 from avocado.utils.software_manager import SoftwareManager
@@ -84,7 +83,3 @@ class DriverBindTest(Test):
                     self.fail('%s not unbound in itertion=%s' % (pci_addr, _))
                 if self.return_code == 2:
                     self.fail('%s not bound back itertion=%s' % (pci_addr, _))
-
-
-if __name__ == "__main__":
-    main()

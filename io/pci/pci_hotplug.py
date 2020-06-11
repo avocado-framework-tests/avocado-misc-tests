@@ -24,7 +24,6 @@ import os
 import re
 import platform
 from avocado import Test
-from avocado import main
 from avocado.utils import wait
 from avocado.utils import linux_modules, genio, pci, cpu
 from avocado.utils.software_manager import SoftwareManager
@@ -137,7 +136,3 @@ class PCIHotPlugTest(Test):
             return True
 
         return wait.wait_for(is_added, timeout=10) or False
-
-
-if __name__ == "__main__":
-    main()

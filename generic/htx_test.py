@@ -22,7 +22,6 @@ import os
 import time
 import shutil
 from avocado import Test
-from avocado import main
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import build
 from avocado.utils import process, archive
@@ -190,7 +189,3 @@ class HtxTest(Test):
             daemon_state = process.system_output('/etc/init.d/htx.d status')
             if daemon_state.decode().split(" ")[-1] == 'running':
                 process.system('/usr/lpp/htx/etc/scripts/htxd_shutdown')
-
-
-if __name__ == "__main__":
-    main()

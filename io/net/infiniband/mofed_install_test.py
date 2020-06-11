@@ -20,7 +20,6 @@ MOFED Install Test
 
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 
 
@@ -86,7 +85,3 @@ class MOFEDInstallTest(Test):
         os.chdir(self.pwd)
         cmd = "umount %s" % self.workdir
         process.run(cmd, shell=True)
-
-
-if __name__ == "__main__":
-    main()

@@ -31,7 +31,6 @@ import os
 
 import avocado
 from avocado import Test
-from avocado import main
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import lv_utils
 from avocado.utils import distro
@@ -197,7 +196,3 @@ class Lvsetup(Test):
         A volume group with given name is deleted in the ramdisk
         """
         self.delete_lv()
-
-
-if __name__ == "__main__":
-    main()

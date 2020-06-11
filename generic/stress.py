@@ -23,7 +23,6 @@ import os
 import multiprocessing
 
 from avocado import Test
-from avocado import main
 from avocado.utils import archive
 from avocado.utils import disk
 from avocado.utils import build
@@ -112,7 +111,3 @@ class Stress(Test):
         os.chdir(self.sourcedir)
         cmd = ('./src/stress %s' % args)
         process.run(cmd)
-
-
-if __name__ == "__main__":
-    main()

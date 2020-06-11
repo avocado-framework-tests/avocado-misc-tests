@@ -21,7 +21,6 @@
 import os
 
 from avocado import Test
-from avocado import main
 from avocado.utils import archive
 from avocado.utils import process
 from avocado.utils import build
@@ -70,7 +69,3 @@ class Posixtest(Test):
 
         if error:
             self.fail("Testcase failed during test check the log")
-
-
-if __name__ == "__main__":
-    main()
