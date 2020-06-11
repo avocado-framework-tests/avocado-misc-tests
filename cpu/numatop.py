@@ -47,7 +47,7 @@ class Numatop(Test):
             self.cancel("Upsupported OS %s" % detected_distro)
         smm = SoftwareManager()
         for package in ['gcc', 'numatop', 'make', 'libnuma-dev',
-                        'libncurses-dev', 'check']:
+                        'libncurses-dev', 'check', 'pkg-config']:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("Failed to install %s, which is needed for"
                             "the test to be run" % package)
@@ -72,7 +72,7 @@ class Numatop(Test):
 
         # Run mgen for 5 seconds to generate a single snapshot of numatop
         process.run('%s -a 0 -c %s -t 5' %
-                    (mgen, cpu.online_list()[0]), shell=True, sudo=True)
+                    (mgen, cpu.cpu_online_list()[0]), shell=True, sudo=True)
 
         # Kill numatop recording after running mgen
         self.numa_pid.terminate()

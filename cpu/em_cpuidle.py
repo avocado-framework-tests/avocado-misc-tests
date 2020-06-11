@@ -56,7 +56,7 @@ class cpuidle(Test):
         Validate the number of cpu idle states against device tree
         """
         for var in range(1, 10):
-            cpu_num = random.choice(cpu.online_list())
+            cpu_num = random.choice(cpu.cpu_online_list())
             self.log.info("--------CPU: %s--------" % cpu_num)
             states = process.system_output("cpupower -c %s idle-info --silent"
                                            " | grep 'Number of idle states:' |"

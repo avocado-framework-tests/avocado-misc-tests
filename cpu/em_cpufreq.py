@@ -87,7 +87,7 @@ class Cpufreq(Test):
         """
         Get random online cpu
         """
-        return random.choice(cpu.online_list())
+        return random.choice(cpu.cpu_online_list())
 
     def cpu_freq_path(self, file):
         """
