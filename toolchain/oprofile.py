@@ -36,8 +36,9 @@ class Oprofile(Test):
         else:
             deps.append("git")
         if detected_distro.name in ["Ubuntu", 'debian']:
-            deps.append("libxml2-utils")
-            deps.append("tclsh")
+            deps.extend(["libxml2-utils", "tclsh"])
+            if detected_distro.name == "Ubuntu":
+                deps.extend(["oprofile"])
         else:
             deps.append("oprofile")
         for package in deps:

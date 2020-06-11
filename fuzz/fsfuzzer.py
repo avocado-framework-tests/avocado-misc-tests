@@ -50,7 +50,7 @@ class Fsfuzzer(Test):
 
         smm = SoftwareManager()
         deps = ['gcc', 'patch', 'libtool', 'autoconf', 'automake', 'make']
-        if d_name == 'ubuntu':
+        if d_name in ['ubuntu', 'debian']:
             deps.extend(['libattr1-dev'])
         else:
             deps.extend(['libattr-devel'])

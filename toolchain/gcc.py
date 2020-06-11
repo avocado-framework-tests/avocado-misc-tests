@@ -41,10 +41,12 @@ class GCC(Test):
         dist = distro.detect()
         packages = ['gcc', 'dejagnu', 'flex', 'bison', 'sharutils']
 
-        if dist.name == 'Ubuntu':
+        if dist.name in ['Ubuntu', 'debian']:
             packages.extend(['libmpfr-dev', 'libgmp-dev', 'libmpc-dev',
-                             'texinfo', 'zip', 'libc6-dev', 'libelf1',
-                             'elfutils', 'gnat', 'autogen'])
+                             'zip', 'libc6-dev', 'libelf1',
+                             'elfutils', 'autogen'])
+            if dist.name == 'Ubuntu':
+                packages.extend(['texinfo', 'gnat'])
         elif dist.name == 'SuSE':
             packages.extend(['glibc-devel-static', 'zlib-devel', 'elfutils',
                              'libelf-devel', 'gcc-c++', 'isl-devel',

@@ -34,7 +34,7 @@ class Libpfm(Test):
         softm = SoftwareManager()
 
         pkgs = ['gcc', 'make']
-        if distro.detect().name in ['SuSE', 'Ubuntu']:
+        if distro.detect().name in ['SuSE', 'Ubuntu', 'debian']:
             pkgs.extend(['libpfm4'])
         else:
             pkgs.extend(['libpfm'])

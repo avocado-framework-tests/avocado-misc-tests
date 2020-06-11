@@ -48,7 +48,7 @@ class Numatop(Test):
             self.cancel("Upsupported OS %s" % detected_distro)
         smm = SoftwareManager()
         for package in ['gcc', 'numatop', 'make', 'libnuma-dev',
-                        'libncurses-dev', 'check']:
+                        'libncurses-dev', 'check', 'pkg-config']:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("Failed to install %s, which is needed for"
                             "the test to be run" % package)
