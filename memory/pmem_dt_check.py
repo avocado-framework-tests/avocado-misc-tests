@@ -45,9 +45,12 @@ class NdctlDeviceTreeCheck(Test):
                          [1:]).strip().split()
         return values
 
-    def get_ref_point_index(self):
-        val = self.get_hex_list(
-            "/proc/device-tree/rtas/ibm,associativity-reference-points")
+    def get_ref_point_index(self, legacy=False):
+        path = "/proc/device-tree/rtas/ibm,associativity-reference-points"
+        if legacy:
+            path = "/proc/device-tree/ibm,opal/"\
+                   "ibm,associativity-reference-points"
+        val = self.get_hex_list(path)
         return int(val[0], 16)
 
     def get_node_id_from_associativity(self, assoc_ref_index, filename):
@@ -57,6 +60,14 @@ class NdctlDeviceTreeCheck(Test):
     def parse_pmem_dt(self, ref_index, bus_id):
         dt_path = "/proc/device-tree/ibm,persistent-memory"
         path = os.path.join(dt_path, bus_id.split(':')[-1])
+        node_id = self.get_node_id_from_associativity(ref_index,
+                                                      '%s/ibm,associativi'
+                                                      'ty' % path)
+        return node_id
+
+    def parse_legacy_dt(self, ref_index, provider):
+        dt_path = "/proc/device-tree"
+        path = os.path.join(dt_path, "nvdimm@%s" % provider.split(".")[0])
         node_id = self.get_node_id_from_associativity(ref_index,
                                                       '%s/ibm,associativi'
                                                       'ty' % path)
@@ -127,25 +138,31 @@ class NdctlDeviceTreeCheck(Test):
         self.plib.enable_region()
         regions = self.plib.run_ndctl_list('-R')
         region = self.plib.run_ndctl_list_val(regions[0], 'dev')
-        if self.plib.is_region_legacy(region):
-            self.cancel("Test not-applicable for legacy regions")
-        buses = self.plib.run_ndctl_list('-RB')
+        legacy = self.plib.is_region_legacy(region)
+        buses = self.plib.run_ndctl_list('-RBN')
         failures = []
-        assoc_ref_index = self.get_ref_point_index()
+        assoc_ref_index = self.get_ref_point_index(legacy=legacy)
         for val in buses:
             region = self.plib.run_ndctl_list_val(val, 'regions')
-            reg_no = self.plib.run_ndctl_list_val(region[0], 'dev')
-            node_path = '/sys/bus/nd/devices/%s/target_node' % reg_no
+            sys_id = self.plib.run_ndctl_list_val(region[0], 'dev')
+            if legacy:
+                # Use namespace level node for legacy h/w
+                nss = self.plib.run_ndctl_list_val(region[0], 'namespaces')
+                sys_id = self.plib.run_ndctl_list_val(nss[0], 'dev')
+            node_path = '/sys/bus/nd/devices/%s/target_node' % sys_id
             if not os.path.exists(node_path):
                 # Fallback to numa_node if target_node support does not exist
-                node_path = '/sys/bus/nd/devices/%s/numa_node' % reg_no
+                node_path = '/sys/bus/nd/devices/%s/numa_node' % sys_id
             node = genio.read_one_line(node_path)
 
             provider = self.plib.run_ndctl_list_val(val, 'provider')
-            dt_node = str(self.parse_pmem_dt(assoc_ref_index, provider))
+            if legacy:
+                dt_node = str(self.parse_legacy_dt(assoc_ref_index, provider))
+            else:
+                dt_node = str(self.parse_pmem_dt(assoc_ref_index, provider))
             if node != dt_node:
                 failures.append("%s associativity is wrong! "
-                                "Exp:%s, Got:%s" % (reg_no, dt_node, node))
+                                "Exp:%s, Got:%s" % (sys_id, dt_node, node))
             else:
                 self.log.info("Working as expected. "
                               "ndctl node: %s, DT node: %s", node, dt_node)
