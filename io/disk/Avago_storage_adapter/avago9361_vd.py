@@ -23,7 +23,6 @@ This scripts performs Virtual Drive(VD) operations on drives
 import time
 from avocado import Test
 from avocado.utils import process
-from avocado import main
 
 
 class Avago9361(Test):
@@ -418,7 +417,3 @@ class Avago9361(Test):
         if 'ghs_dhs' in str(self.name):
             cmd = "%s /c%d set autorebuild=off" % (self.tool, self.controller)
             self.check_pass(cmd, False, "Failed to set auto rebuild off")
-
-
-if __name__ == "__main__":
-    main()

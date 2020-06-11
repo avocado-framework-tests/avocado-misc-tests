@@ -19,7 +19,6 @@
 import os
 
 from avocado import Test
-from avocado import main
 from avocado.utils import archive, build, process, distro, memory
 from avocado.utils.software_manager import SoftwareManager
 
@@ -76,7 +75,3 @@ class Numactl(Test):
                 self.log.warn('Few tests failed due to less NUMA mem-nodes')
             else:
                 self.fail('test failed, Please check debug log')
-
-
-if __name__ == "__main__":
-    main()

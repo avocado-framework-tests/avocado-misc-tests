@@ -19,7 +19,6 @@ Veth DLPAR operations
 
 import time
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils.ssh import Session
 from avocado.utils.network.hosts import LocalHost
@@ -112,7 +111,3 @@ class VethdlparTest(Test):
     def tearDown(self):
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
         self.networkinterface.restore_from_backup()
-
-
-if __name__ == "__main__":
-    main()

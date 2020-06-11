@@ -22,7 +22,6 @@ RDMA test for infiniband adaptors
 
 import time
 import netifaces
-from avocado import main
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process, distro
@@ -169,7 +168,3 @@ class RDMA(Test):
             self.fail("Failed to set mtu in host")
         if self.peer_networkinterface.set_mtu('1500') is not None:
             self.fail("Failed to set mtu in peer")
-
-
-if __name__ == "__main__":
-    main()

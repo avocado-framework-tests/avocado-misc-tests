@@ -19,7 +19,6 @@
 import os
 
 from avocado import Test
-from avocado import main
 from avocado import skipIf
 from avocado.utils import process, git
 from avocado.utils.software_manager import SoftwareManager
@@ -75,7 +74,3 @@ class Pmqa(Test):
         if not result.stdout == '':
             self.log.info(result.stdout)
             self.fail("few tests cases failed please check log")
-
-
-if __name__ == "__main__":
-    main()

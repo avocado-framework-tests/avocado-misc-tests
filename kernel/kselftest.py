@@ -20,7 +20,6 @@ import glob
 import shutil
 
 from avocado import Test
-from avocado import main
 from avocado.utils import build
 from avocado.utils import distro
 from avocado.utils import archive, process
@@ -132,7 +131,3 @@ class kselftest(Test):
 
         if self.error:
             self.fail("Testcase failed during selftests")
-
-
-if __name__ == "__main__":
-    main()

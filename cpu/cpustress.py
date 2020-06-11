@@ -21,7 +21,6 @@ Stress test for CPU
 import multiprocessing
 from random import randint
 from avocado import Test
-from avocado import main
 from avocado.utils import process, cpu, distro
 from avocado.utils.software_manager import SoftwareManager
 
@@ -303,7 +302,3 @@ class cpustresstest(Test):
             "ppc64_cpu --smt=off && ppc64_cpu --smt=on && ppc64_cpu --smt=%s"
             % self.curr_smt, shell=True)
         self.__online_cpus(totalcpus)
-
-
-if __name__ == "__main__":
-    main()

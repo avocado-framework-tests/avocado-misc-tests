@@ -20,7 +20,6 @@ import os
 import shutil
 
 from avocado import Test
-from avocado import main
 from avocado.utils import process, build, memory, distro, cpu
 from avocado.utils.software_manager import SoftwareManager
 
@@ -94,7 +93,3 @@ class Dwh(Test):
         if process.system('./dwh %s dwh.test' % args,
                           shell=True, ignore_status=True, sudo=True):
             self.fail("Please check the logs for debug")
-
-
-if __name__ == "__main__":
-    main()

@@ -19,7 +19,6 @@
 import os
 
 from avocado import Test
-from avocado import main
 from avocado.utils import process, archive, build
 from avocado.utils.software_manager import SoftwareManager
 
@@ -69,7 +68,3 @@ class Filebench(Test):
         cmd = '%s -f %s' % (binary_path, testfile_path)
         out = process.system_output(cmd)
         self.log.info(b"result:" + out)
-
-
-if __name__ == "__main__":
-    main()

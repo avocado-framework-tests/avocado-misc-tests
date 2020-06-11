@@ -22,7 +22,6 @@ import re
 import platform
 import shutil
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils.process import CmdError
 
@@ -266,7 +265,3 @@ class MvcliTest(Test):
         self.test_delete()
         self.log.info("Gathering any kernel errors")
         self.run_command("dmesg -T --level=alert,crit,err,warn")
-
-
-if __name__ == "__main__":
-    main()

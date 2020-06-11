@@ -26,7 +26,6 @@ import os
 import avocado
 
 from avocado import Test
-from avocado import main
 from avocado.utils import archive
 from avocado.utils import build
 from avocado.utils import pmem
@@ -214,7 +213,3 @@ class FioTest(Test):
             self.delete_lv()
         if os.path.exists(self.fio_file):
             os.remove(self.fio_file)
-
-
-if __name__ == "__main__":
-    main()

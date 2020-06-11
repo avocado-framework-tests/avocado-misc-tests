@@ -17,7 +17,6 @@
 
 import os
 from avocado import Test
-from avocado import main
 from avocado import skipIf, skipUnless
 from avocado.utils import process
 from avocado.utils import memory
@@ -129,7 +128,3 @@ class Thp(Test):
             self.log.info('Cleaning Up!!!')
             self.device.unmount()
             process.system('rm -rf %s' % self.mem_path, ignore_status=True)
-
-
-if __name__ == "__main__":
-    main()

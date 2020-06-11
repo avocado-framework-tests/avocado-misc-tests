@@ -19,7 +19,6 @@ import re
 import platform
 import multiprocessing
 from avocado import Test
-from avocado import main
 from avocado.utils import process, memory, build, archive
 from avocado.utils.software_manager import SoftwareManager
 
@@ -225,7 +224,3 @@ class MemStress(Test):
 
     def tearDown(self):
         self.hotplug_all(self.blocks_hotpluggable)
-
-
-if __name__ == "__main__":
-    main()

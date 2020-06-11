@@ -25,7 +25,6 @@ import os
 import time
 from avocado import Test
 from avocado.utils import process
-from avocado import main
 
 
 class Avago3008(Test):
@@ -253,7 +252,3 @@ class Avago3008(Test):
         """
         while self.adapter_status("Current operation") != 'None':
             time.sleep(10)
-
-
-if __name__ == "__main__":
-    main()

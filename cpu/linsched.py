@@ -19,7 +19,6 @@
 import os
 
 from avocado import Test
-from avocado import main
 from avocado.utils import process, git, build, distro
 from avocado.utils.software_manager import SoftwareManager
 
@@ -65,7 +64,3 @@ class Linsched(Test):
 
         if process.system('./%s' % self.args, ignore_status=True, shell=True):
             self.fail('Test [%s] failed.' % self.args)
-
-
-if __name__ == "__main__":
-    main()

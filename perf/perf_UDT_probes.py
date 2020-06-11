@@ -18,7 +18,6 @@ import os
 import platform
 import shutil
 from avocado import Test
-from avocado import main
 from avocado.utils import distro, process
 from avocado.utils.software_manager import SoftwareManager
 
@@ -59,7 +58,3 @@ class PerfProbe(Test):
         res = process.run("readelf -n tick")
         if 'NT_STAPSDT' not in res.stdout_text:
             self.fail("NT_STAPSDT not found in binary")
-
-
-if __name__ == "__main__":
-    main()

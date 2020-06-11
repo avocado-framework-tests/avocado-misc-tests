@@ -21,7 +21,6 @@ import os
 import re
 import avocado
 from avocado import Test
-from avocado import main
 from avocado import skipUnless
 from avocado.utils import process, distro
 from avocado.utils.software_manager import SoftwareManager
@@ -351,7 +350,3 @@ class Iptunnel(Test):
     def tearDown(self):
         if self.tunnel:
             self._remove_tunnel(self.tunnel)
-
-
-if __name__ == "__main__":
-    main()

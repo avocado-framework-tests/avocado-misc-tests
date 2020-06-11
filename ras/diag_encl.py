@@ -18,7 +18,6 @@ import os
 import glob
 import xml.etree.ElementTree
 from avocado import Test, skipIf
-from avocado import main
 from avocado.utils import process, distro
 from avocado.utils import genio
 from avocado.utils.software_manager import SoftwareManager
@@ -90,7 +89,3 @@ class DiagEncl(Test):
             self.fail("type and model are incorrect")
         if machine_serial_xml not in serial_num:
             self.fail("serial is incorrect")
-
-
-if __name__ == "__main__":
-    main()

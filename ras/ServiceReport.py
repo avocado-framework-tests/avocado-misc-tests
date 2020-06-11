@@ -16,7 +16,6 @@
 import os
 
 from avocado import Test
-from avocado import main
 from avocado.utils import process, build
 from avocado.utils import archive
 from avocado.utils.software_manager import SoftwareManager
@@ -55,7 +54,3 @@ class ServiceReport(Test):
         cmd = "./servicereport %s" % self.options
         if process.system(cmd, ignore_status=True, sudo=True, shell=True):
             self.fail("ServiceReport: Failed command is: %s" % cmd)
-
-
-if __name__ == "__main__":
-    main()

@@ -20,7 +20,6 @@ import os
 import json
 
 from avocado import Test
-from avocado import main
 from avocado.utils import process, build, distro, git, genio
 from avocado.utils.software_manager import SoftwareManager
 
@@ -127,7 +126,3 @@ class NdctlTest(Test):
                 failed_tests.append(line)
         if failed_tests:
             self.fail("%s" % failed_tests)
-
-
-if __name__ == "__main__":
-    main()

@@ -22,7 +22,6 @@ This scripts runs test on LSI9361
 
 from avocado import Test
 from avocado.utils import process
-from avocado import main
 
 
 class Avago9361(Test):
@@ -98,7 +97,3 @@ class Avago9361(Test):
         """
         if process.system(cmd, ignore_status=True, shell=True) != 0:
             self.fail(errmsg)
-
-
-if __name__ == "__main__":
-    main()

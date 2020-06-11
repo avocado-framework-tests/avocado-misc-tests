@@ -20,7 +20,6 @@ import os
 import shutil
 import avocado
 from avocado import Test
-from avocado import main
 from avocado.utils import process, memory, distro, pmem, disk, partition
 from avocado.utils.software_manager import SoftwareManager
 
@@ -139,7 +138,3 @@ class MemoHog(Test):
                 shutil.rmtree(self.mnt_dir)
             else:
                 os.remove(self.back_file)
-
-
-if __name__ == "__main__":
-    main()

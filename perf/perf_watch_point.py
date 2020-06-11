@@ -17,7 +17,6 @@
 import os
 import platform
 from avocado import Test
-from avocado import main
 from avocado import skipUnless
 from avocado.utils import archive
 from avocado.utils import cpu, build, distro, process, genio
@@ -87,7 +86,3 @@ class PerfWatchPoint(Test):
     def tearDown(self):
         process.system('pkill perf', ignore_status=True)
         process.run("rmmod wptest")
-
-
-if __name__ == "__main__":
-    main()

@@ -20,7 +20,6 @@ This scripts basic EEH tests on all PCI device
 """
 
 import time
-from avocado import main
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import pci
@@ -244,7 +243,3 @@ class PowerVMEEH(Test):
                 return True
             time.sleep(1)
         return False
-
-
-if __name__ == '__main__':
-    main()

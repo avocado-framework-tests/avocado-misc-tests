@@ -16,7 +16,6 @@
 import random
 import platform
 from avocado import Test
-from avocado import main
 from avocado import skipIf
 from avocado.utils import process, distro, cpu
 from avocado.utils.software_manager import SoftwareManager
@@ -98,7 +97,3 @@ class Cpufreq(Test):
         """
         f_name = "/sys/devices/system/cpu/cpu%s/cpufreq/%s" % (self.cpu, file)
         return open(f_name, 'r').readline().strip('\n').strip(' ')
-
-
-if __name__ == "__main__":
-    main()

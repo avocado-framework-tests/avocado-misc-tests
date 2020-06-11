@@ -24,7 +24,6 @@ import time
 import shutil
 import netifaces
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils.software_manager import SoftwareManager
@@ -796,6 +795,6 @@ class NetworkVirtualization(Test):
                 time.sleep(2)
         return False
 
-
-if __name__ == "__main__":
-    main()
+    def tearDown(self):
+        if self.pxssh.isalive():
+            self.pxssh.terminate()

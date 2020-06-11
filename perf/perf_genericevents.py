@@ -18,7 +18,6 @@
 import os
 import configparser
 from avocado import Test
-from avocado import main
 
 
 class test_generic_events(Test):
@@ -59,7 +58,3 @@ class test_generic_events(Test):
                           '%s' % (val, raw_code))
         if nfail != 0:
             self.fail('Failed to verify generic PMU event codes')
-
-
-if __name__ == "__main__":
-    main()

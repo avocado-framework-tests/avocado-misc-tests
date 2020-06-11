@@ -14,7 +14,6 @@
 
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils import build
 from avocado.utils import archive
@@ -68,7 +67,3 @@ class Glibc(Test):
         else:
             self.log.info("Tests Have been Passed\n"
                           "Please Check Logfile %s run info" % logfile)
-
-
-if __name__ == "__main__":
-    main()

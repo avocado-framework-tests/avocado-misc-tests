@@ -19,7 +19,6 @@ import os
 import re
 
 from avocado import Test
-from avocado import main
 from avocado.utils import archive, build, process
 from avocado.utils.software_manager import SoftwareManager
 
@@ -101,7 +100,3 @@ class Trinity(Test):
         """
 
         process.system('userdel -r  trinity', sudo=True, ignore_status=True)
-
-
-if __name__ == "__main__":
-    main()

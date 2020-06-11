@@ -25,7 +25,6 @@ LTP Filesystem tests
 
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import build, distro
 from avocado.utils import process, archive
 from avocado.utils.software_manager import SoftwareManager
@@ -133,7 +132,3 @@ class LtpFs(Test):
         delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk
         if process.system(delete_fs, shell=True, ignore_status=True):
             self.fail("Failed to delete filesystem on %s", self.disk)
-
-
-if __name__ == "__main__":
-    main()

@@ -17,7 +17,6 @@
 
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import process, build, memory, archive
 from avocado.utils.software_manager import SoftwareManager
 
@@ -75,7 +74,3 @@ class Memtester(Test):
                               (phyaddr, device, mem, runs), verbose=True,
                               sudo=True, ignore_status=True):
                 self.fail("memtester failed for address %s" % phyaddr)
-
-
-if __name__ == "__main__":
-    main()

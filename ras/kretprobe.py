@@ -17,7 +17,6 @@ import os
 import shutil
 import tempfile
 from avocado import Test
-from avocado import main
 from avocado.utils import build
 from avocado.utils import distro
 from avocado.utils import process
@@ -131,7 +130,3 @@ class Kretprobe(Test):
     def test(self):
         self.build_module()
         self.execute_test()
-
-
-if __name__ == "__main__":
-    main()

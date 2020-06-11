@@ -25,7 +25,6 @@ import time
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
-from avocado import main
 from avocado.utils import distro
 
 
@@ -262,7 +261,3 @@ class Arcconftest(Test):
                 cmd = "echo y | arcconf delete %s logicaldrive %s" % \
                       (self.crtl_no, self.logicaldrive)
                 self.check_pass(cmd, "Failed to cleanup Logical drive")
-
-
-if __name__ == "__main__":
-    main()

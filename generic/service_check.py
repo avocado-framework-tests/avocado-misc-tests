@@ -20,7 +20,6 @@
 import os
 import configparser
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils.service import SpecificServiceManager
 from avocado.utils import distro
@@ -96,7 +95,3 @@ class service_check(Test):
             self.fail("List of services failed: %s" % services_failed)
         else:
             self.log.info("All Services Passed the ON/OFF test")
-
-
-if __name__ == "__main__":
-    main()

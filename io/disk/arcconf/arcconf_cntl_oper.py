@@ -23,7 +23,6 @@ arcconf - Array configuration utility for PMC-Sierra
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
-from avocado import main
 from avocado.utils import distro
 
 
@@ -150,7 +149,3 @@ class Arcconftest(Test):
         if "SAVECONFIG" not in self.option:
             cmd = "rm -rf /tmp/arcconf_cntl*"
             self.check_pass(cmd, "Failed to remove temporary files")
-
-
-if __name__ == "__main__":
-    main()

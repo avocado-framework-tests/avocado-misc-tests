@@ -21,7 +21,6 @@ Needs to be run as root.
 
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
-from avocado import main
 from avocado.utils import pci
 from avocado.utils import process
 
@@ -111,7 +110,3 @@ class PciLsvpdInfo(Test):
 
         if error:
             self.fail("Errors for above pci addresses: %s" % error)
-
-
-if __name__ == "__main__":
-    main()

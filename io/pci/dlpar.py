@@ -22,7 +22,6 @@ DLPAR operations
 import os
 import shutil
 from avocado import Test
-from avocado import main
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils.ssh import Session
@@ -368,7 +367,6 @@ class DlparPci(Test):
         if cmd.exit_status != 0:
             self.log.debug(cmd.stderr)
             self.fail("dlpar %s operation failed" % msg)
-
-
-if __name__ == "__main__":
-    main()
+    def tearDown(self):
+        if self.pxssh.isalive():
+            self.pxssh.terminate()

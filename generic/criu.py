@@ -16,7 +16,6 @@
 
 import os
 from avocado import Test
-from avocado import main
 from avocado.utils import archive
 from avocado.utils import build
 from avocado.utils import distro
@@ -60,7 +59,3 @@ class CRIU(Test):
             "grep -w FAIL %s" % logfile, shell=True, ignore_status=True).decode("utf-8")
         if failed_tests:
             self.fail("test failed, Please check debug log for failed test cases")
-
-
-if __name__ == "__main__":
-    main()

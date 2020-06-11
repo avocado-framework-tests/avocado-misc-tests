@@ -16,7 +16,6 @@
 
 import platform
 from avocado import Test
-from avocado import main
 from avocado.utils import distro, process
 from avocado.utils.software_manager import SoftwareManager
 
@@ -77,7 +76,3 @@ class perf_bench(Test):
         bench_cmd = "perf bench %s %s" % (self.optname, self.option)
         self.run_cmd(bench_cmd)
         self.verify_dmesg()
-
-
-if __name__ == "__main__":
-    main()
