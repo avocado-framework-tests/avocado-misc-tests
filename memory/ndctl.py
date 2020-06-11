@@ -22,6 +22,7 @@ This Suite works with various options of ndctl on a NVDIMM device.
 import os
 import re
 import shutil
+import json
 
 import avocado
 from avocado import Test
@@ -54,15 +55,25 @@ class NdctlTest(Test):
         regions = sorted(regions, key=lambda i: i['size'], reverse=True)
         return self.plib.run_ndctl_list_val(regions[0], 'dev')
 
-    @staticmethod
-    def get_size_alignval():
+    def get_unsupported_alignval(self):
+        """
+        Return unsupported size align based on platform
+        """
+        align = self.get_size_alignval()
+        if align == self.align_val['hash']:
+            return self.align_val['radix']
+        else:
+            return self.align_val['hash']
+
+    def get_size_alignval(self):
         """
         Return the size align restriction based on platform
         """
+        self.align_val = {'hash': 16777216, 'radix': 2097152}
         if 'Hash' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
-            def_align = 16 * 1024 * 1024
+            def_align = self.align_val['hash']
         else:
-            def_align = 2 * 1024 * 1024
+            def_align = self.align_val['radix']
         return def_align
 
     def build_fio(self):
@@ -549,6 +560,75 @@ class NdctlTest(Test):
                 self.plib.create_namespace(
                     region=reg_name, mode='devdax', align=size)
                 self.plib.destroy_namespace(region=reg_name, force=True)
+
+    @avocado.fail_on(pmem.PMemException)
+    def write_infoblock(self, ns_name, align):
+        """
+        Write_infoblock on given namespace
+        """
+        if not self.plib.check_ndctl_subcmd("write-infoblock"):
+            self.cancel("Binary does not support write-infoblock")
+        write_cmd = "%s write-infoblock --align %s -m devdax "\
+                    "%s" % (self.ndctl, align, ns_name)
+        if process.system(write_cmd, ignore_status=True):
+            self.fail("write-infoblock command failed")
+        read_cmd = "%s read-infoblock -j %s" % (self.ndctl, ns_name)
+        read_out = process.system_output(read_cmd, ignore_status=True).decode()
+        read_out = json.loads(read_out)
+        if align != int(self.plib.run_ndctl_list_val(read_out[0], 'align')):
+            self.fail("Alignment has not changed")
+
+    @avocado.fail_on(pmem.PMemException)
+    def test_write_infoblock(self):
+        """
+        Test write_infoblock with align size
+        """
+        region = self.get_default_region()
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
+        self.plib.create_namespace(region=region, mode='devdax')
+        ns_name = self.plib.run_ndctl_list_val(
+            self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
+        self.plib.disable_namespace(namespace=ns_name)
+        self.write_infoblock(ns_name, self.get_size_alignval())
+        self.plib.enable_namespace(namespace=ns_name)
+
+    @avocado.fail_on(pmem.PMemException)
+    def test_write_infoblock_negate(self):
+        """
+        Test write_infoblock with unsupported align size
+        """
+        region = self.get_default_region()
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
+        self.plib.create_namespace(region=region, mode='devdax')
+        ns_name = self.plib.run_ndctl_list_val(
+            self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
+        self.plib.disable_namespace(namespace=ns_name)
+        self.write_infoblock(ns_name, self.get_unsupported_alignval())
+        failed = False
+        found = False
+        try:
+            self.plib.enable_namespace(namespace=ns_name)
+        except pmem.PMemException:
+            self.log.info("Failed as expected")
+            failed = True
+        if not failed:
+            self.log.info(self.plib.run_ndctl_list())
+            self.fail("Enabling namespace must have failed")
+
+        idle_ns = self.plib.run_ndctl_list('-Ni -r %s' % region)
+        if len(idle_ns) > 1:
+            for namespace in idle_ns:
+                if int(self.plib.run_ndctl_list_val(namespace, 'size')) != 0:
+                    found = True
+                    break
+        else:
+            self.fail("Created namespace is not found")
+        if not found:
+            self.fail("Namespace with infoblock written not found")
+
+        self.plib.destroy_namespace(namespace=ns_name, force=True)
 
     @avocado.fail_on(pmem.PMemException)
     def test_sector_write(self):
