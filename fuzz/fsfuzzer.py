@@ -81,7 +81,7 @@ class Fsfuzzer(Test):
         self._args = self.params.get('fstype', default='')
         self._fsfuzz = os.path.abspath(os.path.join('.', "fsfuzz"))
         fs_sup = process.system_output('%s %s' % (self._fsfuzz, ' --help'))
-        match = re.search(br'%s' % self._args, fs_sup, re.M | re.I)
+        match = re.search(r'%s' % self._args, fs_sup.decode(), re.M | re.I)
         if not match:
             self.cancel('File system ' + self._args +
                         ' is unsupported in ' + detected_distro.name)

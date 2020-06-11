@@ -64,7 +64,7 @@ class papitest(Test):
 
         errors = 0
         warns = 0
-        for line in result.stdout.splitlines():
+        for line in result.stdout.decode().splitlines():
             if 'FAILED' in line:
                 self.log.info(line)
                 errors += 1

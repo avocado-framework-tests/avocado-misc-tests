@@ -98,7 +98,7 @@ class Pktgen(Test):
     def validate_net_interface(self):
         interfaces = process.system_output(
             "ip -o link show | awk -F': ' '{print $2}'", shell=True)
-        if self.eth not in interfaces:
+        if self.eth not in interfaces.decode():
             self.cancel("%s is not available" % self.eth)
 
     def ping_test(self):
