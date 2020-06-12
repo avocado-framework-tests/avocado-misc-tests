@@ -196,8 +196,9 @@ class NVMeTest(Test):
         cmd = "%s list-ctrl %s" % (self.binary, self.device)
         output = process.system_output(cmd, shell=True,
                                        ignore_status=True).decode("utf-8")
-        if output:
-            return output.split(':')[-1]
+        for line in output.splitlines():
+            if '0]' in line:
+                return line.split(':')[-1]
         return ""
 
     def get_lba(self):
