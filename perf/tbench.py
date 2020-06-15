@@ -20,10 +20,9 @@
 
 import os
 import signal
-import subprocess
 import re
 from avocado import Test
-from avocado.utils import archive
+from avocado.utils import archive, cpu
 from avocado.utils import process
 from avocado.utils import build
 from avocado.utils.software_manager import SoftwareManager
@@ -59,7 +58,7 @@ class tbench(Test):
     def test(self):
         # only supports combined server+client model at the moment
         # should support separate I suppose, but nobody uses it
-        nprocs = self.params.get('nprocs', default=subprocess.getoutput("nproc"))
+        nprocs = self.params.get('nprocs', default=cpu.total_count())
         args = self.params.get('args',  default=None)
         args = '%s %s' % (args, nprocs)
         pid = os.fork()
