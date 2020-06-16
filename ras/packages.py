@@ -15,7 +15,6 @@
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 
 from avocado import Test
-from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils.software_manager import SoftwareManager
 
@@ -34,40 +33,19 @@ class Package_check(Test):
 
     def test(self):
         dist = distro.detect()
-        is_fail = 0
         if dist.name == 'rhel':
             packages_rhel = self.params.get(
                 'packages_rhel', default=['lshw', 'librtas'])
             self.packages.extend(packages_rhel)
-            for package in self.packages:
-                if "anaconda" in process.system_output("yum list installed "
-                                                       "| grep %s | tail -1"
-                                                       % package,
-                                                       shell=True).decode("utf-8"):
-                    self.log.info(
-                        "%s package is installed by default" % package)
-                else:
-                    self.log.info(
-                        "%s package is not installed by default" % package)
-                    is_fail += 1
         elif dist.name == 'Ubuntu':
             packages_ubuntu = self.params.get(
                 'packages_ubuntu', default=['librtas2'])
             self.packages.extend(packages_ubuntu)
-            for package in self.packages:
-                if process.system_output("apt-mark showauto %s" % package,
-                                         shell=True):
-                    self.log.info(
-                        "%s package is installed by default" % package)
-                else:
-                    self.log.info(
-                        "%s package is not installed by default" % package)
-                    is_fail += 1
-        else:
-            for package in self.packages:
-                if self.sm.check_installed(package):
-                    self.log.info("%s package is installed" % package)
-                else:
-                    self.log.info("%s package is not installed" % package)
-        if is_fail >= 1:
-            self.fail("%s package(s) not installed by default" % is_fail)
+        not_installed_list = []
+        for package in self.packages:
+            if self.sm.check_installed(package):
+                self.log.info("%s package is installed" % package)
+            else:
+                not_installed_list.append(package)
+        if not_installed_list:
+            self.fail("%s packages not installed by default" % not_installed_list)
