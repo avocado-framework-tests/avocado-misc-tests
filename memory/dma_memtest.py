@@ -21,12 +21,12 @@
 
 import os
 import shutil
+import tempfile
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import disk
 from avocado.utils import archive
 from avocado.utils import memory
-from avocado.core import data_dir
 
 
 class DmaMemtest(Test):
@@ -49,7 +49,11 @@ class DmaMemtest(Test):
         copies of the linux kernel that will be uncompressed.
         """
         self.nfail = 0
-        self.tmpdir = data_dir.get_tmp_dir()
+        base_dir = self.teststmpdir
+        if disk.freespace("/home") > disk.freespace(self.teststmpdir):
+            base_dir = "/home"
+            self.log.info("Using %s as base dir for the test" % base_dir)
+        self.tmpdir = tempfile.mkdtemp(dir=base_dir)
         self.tmpdir = self.params.get('dir_to_extract', default=self.tmpdir)
         self.base_dir = os.path.join(self.tmpdir, 'linux.orig')
         tarball_base = self.params.get('tarball_base',
