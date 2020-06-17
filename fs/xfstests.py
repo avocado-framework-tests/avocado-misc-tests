@@ -119,8 +119,10 @@ class Xfstests(Test):
                     self.plib.destroy_namespace(region=self.region, force=True)
                 self.plib.destroy_namespace(
                     region=self.region_ldev, force=True)
-                # XFS restrict max log size to 2136997888
-                logdev_size = min(logdev_size, 2136997888)
+                # XFS restrict max log size to 2136997888, which is 10M less
+                # than 2GB, not 16M page-aligned, hence rounding-off to nearest
+                # 16M align value 2130706432, which is 16M less than 2GiB
+                logdev_size = min(logdev_size, 2130706432)
                 # log device to be created in sector mode
                 self.plib.create_namespace(region=self.region_ldev, mode='sector',
                                            sector_size='512', size=logdev_size)
