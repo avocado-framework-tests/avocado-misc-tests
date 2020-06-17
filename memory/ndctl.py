@@ -223,8 +223,12 @@ class NdctlTest(Test):
         """
         region = self.get_default_region()
         if (not self.plib.is_region_legacy(region)):
+            size = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
+                '-r %s' % region)[0], 'size')
+            if size < (3 * 64 * 1024 * 1024):
+                self.cancel('Not enough memory to create namespaces')
             for _ in range(0, 3):
-                self.plib.create_namespace(region=region, size='128M')
+                self.plib.create_namespace(region=region, size='64M')
         namespaces = self.plib.run_ndctl_list('-N')
         ns_names = []
         for ns in namespaces:
@@ -303,6 +307,10 @@ class NdctlTest(Test):
             namespace_size = (namespace_size // size_align) * size_align
         else:
             slot_count = region_size // namespace_size
+
+        if namespace_size <= size_align:
+            self.log.warn("Ns size equal to pagesize, hence skipping region")
+            return
 
         self.log.info("Creating %s namespaces", slot_count)
         for count in range(0, slot_count):
@@ -448,9 +456,13 @@ class NdctlTest(Test):
             if not self.plib.is_region_legacy(region):
                 self.plib.disable_namespace(region=region)
                 self.plib.destroy_namespace(region=region)
+                size = self.plib.run_ndctl_list_val(dev, 'size')
+                if size < (3 * 64 * 1024 * 1024):
+                    self.log.warn('Skipping region due to insufficient memory')
+                    continue
                 for _ in range(3):
                     self.plib.create_namespace(
-                        region=region, mode='fsdax', size='128M')
+                        region=region, mode='fsdax', size='64M')
 
             namespaces = self.plib.run_ndctl_list('-N -r %s' % region)
             if not os.path.exists('/sys/bus/nd/devices/namespace0.0/numa_node'):
