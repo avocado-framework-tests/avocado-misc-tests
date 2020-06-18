@@ -1,3 +1,97 @@
-cenario:
-    controller: 0
-    tool_location: /root/storcli64
+controller: 0
+tool_location: /root/storcli64
+params: !mux
+    value_params: !mux
+        !filter-out : /run/value/off
+        !filter-out : /run/value/on
+        rebuildrate:
+            option: rebuildrate
+        reconrate:
+            option: reconrate
+        eccbucketleakrate:
+            option: eccbucketleakrate
+        ccrate:
+            option: ccrate
+        bgirate:
+            option: bgirate
+        prrate:
+            option: prrate
+    state_params: !mux
+        !filter-only : /run/value/off
+        !filter-only : /run/value/on
+        restorehotspare:
+            option: restorehotspare
+        autorebuild:
+            option: autorebuild
+        copyback:
+            option: copyback
+            extra: type
+        eghs:
+            option: eghs
+            extra: state
+        alarm:
+            option: alarm
+        foreignautoimport:
+            option: foreignautoimport
+        maintainpdfailhistory:
+            option: maintainpdfailhistory
+        ocr:
+            option: ocr
+        immediateio:
+            option: immediateio
+        largeQD:
+            option: largeQD
+        driveactivityled:
+            option: driveactivityled
+        flushwriteverify:
+            option: flushwriteverify
+        limitMaxRateSATA:
+            option: limitMaxRateSATA
+        supportssdpatrolread:
+            option: supportssdpatrolread
+            show: False
+        sgpioforce:
+            option: sgpioforce
+        dpm:
+            option: dpm
+        loadbalancemode:
+            option: loadbalancemode
+        directpdmapping:
+            option: directpdmapping
+        configautobalance:
+            option: configautobalance
+        ncq:
+            option: ncq
+        abortcconerror:
+            option: abortcconerror
+        batterywarning:
+            option: batterywarning
+        prcorrectunconfiguredareas:
+            option: prcorrectunconfiguredareas
+        usefdeonlyencrypt:
+            option: usefdeonlyencrypt
+        cachebypass:
+            option: cachebypass
+        activityforlocate:
+            option: activityforlocate
+        bootwithpinnedcache:
+            option: bootwithpinnedcache
+        sesmonitoring:
+            option: sesmonitoring
+        failpdonsmarterror:
+            option: failpdonsmarterror
+value: !mux
+    0:
+        value: 0
+    10:
+        value: 10
+    30:
+        value: 30
+    60:
+        value: 60
+    100:
+        value: 100
+    off:
+        value: "off"
+    on:
+        value: "on"

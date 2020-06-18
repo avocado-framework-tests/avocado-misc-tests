@@ -14,7 +14,7 @@
 #
 # Copyright: 2016 IBM
 # Author: Venkat Rao B <vrbagal1@linux.vnet.ibm.com>
-
+# Author: Narasimhan V <sim@linux.vnet.ibm.com>
 
 """
 This scripts runs test on LSI9361
@@ -37,63 +37,48 @@ class Avago9361(Test):
 
         self.controller = int(self.params.get('controller', default='0'))
         self.tool_location = str(self.params.get('tool_location'))
+        self.option = str(self.params.get('option'))
+        self.value = str(self.params.get('value'))
+        self.extra = str(self.params.get('extra'))
+        self.show = self.params.get('show', default=True)
 
-    def test_display(self):
-        """
-        Displays entire adapter configuration
-        """
         cmd = "%s -v" % self.tool_location
-        self.check_pass(cmd, "Failed to display the version of the tool")
+        self.check_pass(cmd, "version of the tool")
         cmd = "%s show ctrlcount" % self.tool_location
-        self.check_pass(cmd, "Failed to show the controleer count")
+        self.check_pass(cmd, "controleer count")
         cmd = "%s /c%d show" % (self.tool_location, self.controller)
-        self.check_pass(cmd, "Fail to display the adapter details")
+        self.check_pass(cmd, "adapter details")
         cmd = "%s /c%d show all" % (self.tool_location, self.controller)
-        self.check_pass(cmd, "Fail to display 'show all' o/p of the adapter")
+        self.check_pass(cmd, "'show all' o/p of the adapter")
 
-    def test_adjustablerates(self):
+    def test(self):
         """
         Function to set all adjustable values of the adapter
         """
-        adjustable_rate = ['rebuildrate', 'migraterate', 'ccrate',
-                           'bgirate', 'prrate']
-        for i in adjustable_rate:
-            for j in [0, 10, 30, 60, 100]:
-                cmd = "%s /c%d show %s" % (self.tool_location,
-                                           self.controller, i)
-                self.check_pass(cmd, "Failed to show the rate")
-                cmd = "%s /c%d set %s=%d" % (self.tool_location,
-                                             self.controller, i, j)
-                self.check_pass(cmd, "Failed to set the rate")
+        if self.show:
+            cmd = "%s /c%d show %s" % (self.tool_location,
+                                       self.controller, self.option)
+            self.check_pass(cmd, "%s" % self.option)
 
-    def test_set_on_off(self):
-        """
-        Function to set ON/OFF values for the different values
-        """
-        adjust_on_off = ['restorehotspare', 'autorebuild', 'copyback', 'eghs',
-                         'alarm', 'foreignautoimport', 'maintainpdfailhistory',
-                         'ocr', 'immediateio', 'largeQD',
-                         'driveactivityled', 'flushwriteverify',
-                         'limitMaxRateSATA', 'supportssdpatrolread',
-                         'sgpioforce', 'dpm', 'loadbalancemode',
-                         'directpdmapping', 'restorehotspare',
-                         'configautobalance', 'ncq', 'abortcconerror',
-                         'batterywarning', 'prcorrectunconfiguredareas',
-                         'usefdeonlyencrypt', 'cachebypass',
-                         'activityforlocate', 'bootwithpinnedcache',
-                         'sesmonitoring', 'failpdonsmarterror']
-        for i in adjust_on_off:
-            for j in ['off', 'on']:
-                cmd = "%s /c%d show %s" % (self.tool_location,
-                                           self.controller, i)
-                self.check_pass(cmd, "Failed to show the deatils of {0}" + i)
-                cmd = "%s /c%d set %s=%s" % (self.tool_location,
-                                             self.controller, i, j)
-                self.check_pass(cmd, "Failed to set to %s for %s" % (j, i))
+        if self.extra == 'state':
+            cmd = "%s /c%d set %s state=%s" % (self.tool_location,
+                                               self.controller, self.option,
+                                               self.value)
+        else:
+            cmd = "%s /c%d set %s=%s" % (self.tool_location,
+                                         self.controller, self.option,
+                                         self.value)
+        if self.extra == 'type':
+            cmd += " type=all"
+        self.check_pass(cmd, "setting %s as %s" % (self.option,
+                                                   self.value))
 
     def check_pass(self, cmd, errmsg):
         """
         Helper function to check, if the cmd is passed or failed
         """
-        if process.system(cmd, ignore_status=True, shell=True) != 0:
-            self.fail(errmsg)
+        res = process.run(cmd, ignore_status=True, shell=True)
+        if 'not support' in res.stdout_text:
+            self.cancel('%s not supported' % errmsg)
+        if res.exit_status != 0:
+            self.fail('%s failed' % errmsg)
