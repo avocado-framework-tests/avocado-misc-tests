@@ -339,7 +339,7 @@ class Avago9361(Test):
         output = process.run(cmd, ignore_status=True, shell=True)
         if output.exit_status != 0:
             self.fail("Failed to display the progress")
-        for lines in output.stdout.splitlines():
+        for lines in output.stdout_text.splitlines():
             for times in ['Hour', 'Minute', 'Second']:
                 if times in lines:
                     return True
