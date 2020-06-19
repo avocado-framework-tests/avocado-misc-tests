@@ -92,8 +92,11 @@ class PerfUprobe(Test):
                                  % self.cmdProbe)
         if 'Added new event' not in output.stderr.decode("utf-8"):
             self.fail("perf: probe of uprobe return failed")
-        # RHEL
-        if self.distro_name == "rhel" and self.detected_distro.version > "7":
+        # RHEL and SLES15-SP2
+        if (self.distro_name == "rhel" and self.detected_distro.version > "7")\
+           or (self.distro_name == "SuSE" and
+               self.detected_distro.version >= 15 and
+               self.detected_distro.release >= 2):
             output = self.cmd_verify('%s__return -- ./uprobe_test'
                                      % self.recProbe)
         else:
