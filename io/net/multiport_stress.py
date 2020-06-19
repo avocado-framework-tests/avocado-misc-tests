@@ -137,3 +137,5 @@ class MultiportStress(Test):
             networkinterface = NetworkInterface(interface, self.local)
             networkinterface.remove_ipaddr(ipaddr, self.netmask)
             networkinterface.restore_from_backup()
+            self.remotehost.remote_session.quit()
+            self.remotehost_public.remote_session.quit()

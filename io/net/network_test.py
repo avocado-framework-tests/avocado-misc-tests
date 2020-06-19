@@ -79,15 +79,15 @@ class NetworkTest(Test):
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default=None)
-        remotehost = RemoteHost(self.peer, self.peer_user,
-                                password=self.peer_password)
-        self.peer_interface = remotehost.get_interface_by_ipaddr(self.peer).name
+        self.remotehost = RemoteHost(self.peer, self.peer_user,
+                                     password=self.peer_password)
+        self.peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
-                                                      remotehost)
-        remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
-                                       password=self.peer_password)
+                                                      self.remotehost)
+        self.remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
+                                            password=self.peer_password)
         self.peer_public_networkinterface = NetworkInterface(self.peer_interface,
-                                                             remotehost_public)
+                                                             self.remotehost_public)
         self.mtu = self.params.get("mtu", default=1500)
         self.mtu_set()
         if self.networkinterface.ping_check(self.peer, count=5) is not None:
@@ -300,3 +300,5 @@ class NetworkTest(Test):
             process.system(cmd, shell=True, verbose=True, ignore_status=True)
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
         self.networkinterface.restore_from_backup()
+        self.remotehost.remote_session.quit()
+        self.remotehost_public.remote_session.quit()

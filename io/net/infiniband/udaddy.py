@@ -97,11 +97,11 @@ class Udady(Test):
         self.timeout = "2m"
         self.local_ip = netifaces.ifaddresses(self.iface)[AF_INET][0]['addr']
         self.mtu = self.params.get("mtu", default=1500)
-        remotehost = RemoteHost(self.peer_ip, self.peer_user,
-                                password=self.peer_password)
-        self.peer_interface = remotehost.get_interface_by_ipaddr(self.peer_ip).name
+        self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
+                                     password=self.peer_password)
+        self.peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
-                                                      remotehost)
+                                                      self.remotehost)
 
         if detected_distro.name == "Ubuntu":
             cmd = "service ufw stop"
