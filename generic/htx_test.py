@@ -184,7 +184,7 @@ class HtxTest(Test):
         if self.run_type == 'rpm':
             process.system(
                 '/usr/lpp/htx/etc/scripts/htxd_shutdown', ignore_status=True)
-            process.system('umount /htx_pmem*', ignore_status=True)
+            process.system('umount /htx_pmem*', shell=True, ignore_status=True)
         else:
             daemon_state = process.system_output('/etc/init.d/htx.d status')
             if daemon_state.decode().split(" ")[-1] == 'running':
