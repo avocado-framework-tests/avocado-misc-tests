@@ -13,6 +13,7 @@
 #
 # Copyright: 2016 IBM
 # Author: Harish <harisrir@linux.vnet.ibm.com>
+# Author: Narasimhan V <sim@linux.vnet.ibm.com>
 # Copyright: 2016 Red Hat, Inc.
 # Author: Lukas Doktor <ldoktor@redhat.com>
 #
@@ -34,6 +35,7 @@ from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import lv_utils
 from avocado.utils import distro
+from avocado.utils import process
 
 
 class Lvsetup(Test):
@@ -41,8 +43,6 @@ class Lvsetup(Test):
     """
     Test class for creating logical volumes.
     """
-    ramdisks = []
-
     def setUp(self):
         """
         Check existence of input PV,VG, LV and snapshots prior to Test.
@@ -53,6 +53,7 @@ class Lvsetup(Test):
         self.vg_name = self.params.get('vg_name', default='avocado_vg')
         self.lv_name = self.params.get('lv_name', default='avocado_lv')
         self.fs_name = self.params.get('fs', default='ext4').lower()
+        self.lv_size = self.params.get('lv_size', default='0')
         if self.fs_name == 'xfs':
             pkgs = ['xfsprogs']
         if self.fs_name == 'btrfs':
@@ -74,37 +75,73 @@ class Lvsetup(Test):
 
         self.lv_snap_name = self.params.get(
             'lv_snapshot_name', default='avocado_sn')
-        self.ramdisk_basedir = self.params.get(
-            'ramdisk_basedir', default=os.path.join(self.workdir, 'ramdisk'))
-        self.ramdisk_sparse_filename = self.params.get(
-            'ramdisk_sparse_filename', default='virtual_hdd')
 
-        if 'delete' not in str(self.name.name):
-            if lv_utils.vg_check(self.vg_name):
-                self.cancel('Volume group %s already exists' % self.vg_name)
-            if lv_utils.lv_check(self.vg_name, self.lv_name):
-                self.cancel('Logical Volume %s already exists' % self.lv_name)
-            if lv_utils.lv_check(self.vg_name, self.lv_snap_name):
-                self.cancel('Snapshot %s already exists' % self.lv_snap_name)
+        if lv_utils.vg_check(self.vg_name):
+            self.cancel('Volume group %s already exists' % self.vg_name)
+        if lv_utils.lv_check(self.vg_name, self.lv_name):
+            self.cancel('Logical Volume %s already exists' % self.lv_name)
+        if lv_utils.lv_check(self.vg_name, self.lv_snap_name):
+            self.cancel('Snapshot %s already exists' % self.lv_snap_name)
 
         self.mount_loc = os.path.join(self.workdir, 'mountpoint')
         if not os.path.isdir(self.mount_loc):
             os.makedirs(self.mount_loc)
 
+        if self.lv_size:
+            # converting to megabytes
+            if self.lv_size.endswith('G'):
+                self.lv_size = int(self.lv_size.strip('G')) * 1024
+            elif self.lv_size.endswith('M'):
+                self.lv_size = int(self.lv_size.strip('M'))
+            else:
+                self.lv_size = int(self.lv_size) / 1024 / 1024
+
         if self.disk:
-            # converting bytes to megabytes, and using only 45% of the size
-            self.lv_size = int(lv_utils.get_diskspace(self.disk)) / 2330168
+            disk_size = lv_utils.get_devices_total_space(self.disk.split())
+            # converting bytes to megabytes
+            disk_size = disk_size / (1024 * 1024)
+
+            if self.lv_size:
+                if self.lv_size > disk_size:
+                    self.cancel("lv size provided more than size of disks")
+            else:
+                self.lv_size = disk_size
+
+            self.device = self.disk
         else:
-            self.lv_size = '1G'
-        self.lv_size = self.params.get('lv_size', default=self.lv_size)
+            if not self.lv_size:
+                self.lv_size = 1024
+
+            self.create_loop_dev()
+            self.device = self.loop
+
+        # Using only 45% of lv size, to accomodate lv snapshot also.
+        self.lv_size = (self.lv_size * 45) / 100
+
         self.lv_snapshot_size = self.params.get('lv_snapshot_size',
                                                 default=self.lv_size)
-        self.ramdisk_vg_size = self.params.get('ramdisk_vg_size',
-                                               default=self.lv_size)
-        self.ramdisks.append(lv_utils.vg_ramdisk(self.disk, self.vg_name,
-                                                 self.ramdisk_vg_size,
-                                                 self.ramdisk_basedir,
-                                                 self.ramdisk_sparse_filename))
+
+    def create_loop_dev(self):
+        """
+        Creates loop device.
+        """
+        cmd = "losetup --find"
+        self.loop = process.system_output(cmd, ignore_status=True,
+                                          sudo=True).decode("utf-8")
+        self.loop_file = "loopbackfile.img"
+        cmd = "dd if=/dev/zero of=%s bs=1M" % self.loop_file
+        cmd += " count=%d" % self.lv_size
+        process.run(cmd, sudo=True)
+        cmd = "losetup %s %s -P" % (self.loop, self.loop_file)
+        process.run(cmd, sudo=True)
+
+    def delete_loop_dev(self):
+        """
+        Deletes the created loop device.
+        """
+        cmd = "losetup -d %s" % self.loop
+        process.run(cmd, sudo=True)
+        os.remove(self.loop_file)
 
     @avocado.fail_on(lv_utils.LVException)
     def create_lv(self):
@@ -114,22 +151,22 @@ class Lvsetup(Test):
         A volume group with given name is created in the ramdisk. It then
         creates a logical volume.
         """
+        lv_utils.vg_create(self.vg_name, self.device)
+        if not lv_utils.vg_check(self.vg_name):
+            self.fail('Volume group %s not created' % self.vg_name)
         lv_utils.lv_create(self.vg_name, self.lv_name, self.lv_size)
+        if not lv_utils.lv_check(self.vg_name, self.lv_name):
+            self.fail('Logical Volume %s not created' % self.lv_name)
 
     @avocado.fail_on(lv_utils.LVException)
     def delete_lv(self):
         """
         Clear all PV,VG, LV and snapshots created by the test.
         """
-        # Remove created VG and unmount from base directory
-        errs = []
-        for ramdisk in self.ramdisks:
-            try:
-                lv_utils.vg_ramdisk_cleanup(*ramdisk)
-            except Exception as exc:
-                errs.append("Fail to cleanup ramdisk %s: %s" % (ramdisk, exc))
-        if errs:
-            self.fail("\n".join(errs))
+        if lv_utils.lv_check(self.vg_name, self.lv_name):
+            lv_utils.lv_remove(self.vg_name, self.lv_name)
+        if lv_utils.vg_check(self.vg_name):
+            lv_utils.vg_remove(self.vg_name)
 
     @avocado.fail_on(lv_utils.LVException)
     def mount_unmount_lv(self):
@@ -150,10 +187,9 @@ class Lvsetup(Test):
                           create_filesystem=self.fs_name)
         lv_utils.lv_umount(self.vg_name, self.lv_name)
         self.mount_unmount_lv()
-        self.delete_lv()
 
     @avocado.fail_on(lv_utils.LVException)
-    def test_vg_recreate(self):
+    def test_vg_reactivate(self):
         """
         Deactivate, export, import and activate a volume group.
         """
@@ -163,7 +199,6 @@ class Lvsetup(Test):
         lv_utils.lv_umount(self.vg_name, self.lv_name)
         lv_utils.vg_reactivate(self.vg_name, export=True)
         self.mount_unmount_lv()
-        self.delete_lv()
 
     @avocado.fail_on(lv_utils.LVException)
     def test_lv_snapshot(self):
@@ -180,19 +215,11 @@ class Lvsetup(Test):
                                   self.lv_snapshot_size)
         lv_utils.lv_revert(self.vg_name, self.lv_name, self.lv_snap_name)
         self.mount_unmount_lv()
-        self.delete_lv()
 
-    @avocado.fail_on(lv_utils.LVException)
-    def test_create_lv(self):
+    def tearDown(self):
         """
-        A volume group with given name is created in the ramdisk. It then
-        creates a logical volume on it.
-        """
-        self.create_lv()
-
-    @avocado.fail_on(lv_utils.LVException)
-    def test_delete_lv(self):
-        """
-        A volume group with given name is deleted in the ramdisk
+        Cleans up loop device.
         """
         self.delete_lv()
+        if not self.disk:
+            self.delete_loop_dev()
