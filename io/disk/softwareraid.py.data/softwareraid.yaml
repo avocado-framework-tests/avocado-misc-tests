@@ -1,6 +1,6 @@
 disks:
-run_test: True
-force: True
+raidname:
+spare_disks:
 raidlevel: !mux
     raidlinear:
         raid: linear
@@ -15,7 +15,7 @@ raidlevel: !mux
     raid6:
         raid: 6
 metadata: !mux
-    superblock-0.90:
+    superblock-0.9:
         metadata: 0.90
         !filter-out : /run/raidlevel/raid0
     superblock-1.0:

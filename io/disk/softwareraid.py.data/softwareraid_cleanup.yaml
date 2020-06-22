@@ -1,7 +1,0 @@
-disks:
-raidname: /dev/md/avocado
-setup: False
-run_test: False
-cleanup: True
-force: True
-raid: 1

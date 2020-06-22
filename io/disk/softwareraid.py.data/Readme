@@ -2,7 +2,7 @@ mdadm - manage MD devices aka Linux Software RAID
 
 Values to be passed in yaml file:
 
-* Devices on which this scripts should be run. disks: "/dev/sdx /dev/sdy ..." (comman separated disks)
+* Devices on which this scripts should be run. disks: "/dev/sdx /dev/sdy ..." (space separated disks)
 
 * Raid Name to be created, optional parameter.
 
@@ -10,14 +10,7 @@ Values to be passed in yaml file:
 
 * metadata levels for raid
 
-* Setup - True if only raid needs to be created and exit
-
-* Cleanup - True if only raid needs to be deleted and exit
-
-* Run_tests - True if only mdadm tests (like add, fail, remove device, etc)
-needs to be run on created raid
-
-* force - True if force option needs to be passed while creating raid.
+* spare disks (space separated disks) [optional parameter]
 
 Note: Please specify minimum of 5 disks, for creating all levels of software
 raid. If 5 disks are not available, create 5 partitions, and specify those
