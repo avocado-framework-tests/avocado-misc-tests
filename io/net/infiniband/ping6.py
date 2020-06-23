@@ -111,11 +111,11 @@ class Ping6(Test):
         self.option = self.option.replace("peer_ip", self.peer_ip)
         self.option_list = self.option.split(",")
         self.mtu = self.params.get("mtu", default=1500)
-        remotehost = RemoteHost(self.peer_ip, self.peer_user,
-                                password=self.peer_password)
-        self.peer_interface = remotehost.get_interface_by_ipaddr(self.peer_ip).name
+        self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
+                                     password=self.peer_password)
+        self.peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
-                                                      remotehost)
+                                                      self.remotehost)
 
         if detected_distro.name == "Ubuntu":
             cmd = "service ufw stop"
@@ -178,3 +178,4 @@ class Ping6(Test):
             self.fail("Failed to set mtu in host")
         if self.peer_networkinterface.set_mtu('1500') is not None:
             self.fail("Failed to set mtu in peer")
+        self.remotehost.remote_session.quit()

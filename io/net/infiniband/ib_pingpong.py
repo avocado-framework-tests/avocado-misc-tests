@@ -84,11 +84,11 @@ class PingPong(Test):
         self.peer_port = int(self.params.get("PEERPORT", default="1"))
         self.tmo = self.params.get("TIMEOUT", default="120")
         self.mtu = self.params.get("mtu", default=1500)
-        remotehost = RemoteHost(self.peer_ip, self.peer_user,
-                                password=self.peer_password)
-        self.peer_interface = remotehost.get_interface_by_ipaddr(self.peer_ip).name
+        self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
+                                     password=self.peer_password)
+        self.peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
-                                                      remotehost)
+                                                      self.remotehost)
         smm = SoftwareManager()
         detected_distro = distro.detect()
         pkgs = []
@@ -198,3 +198,4 @@ class PingPong(Test):
             self.fail("Failed to set mtu in host")
         if self.peer_networkinterface.set_mtu('1500') is not None:
             self.fail("Failed to set mtu in peer")
+        self.remotehost.remote_session.quit()

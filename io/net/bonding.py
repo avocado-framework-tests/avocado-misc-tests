@@ -456,6 +456,8 @@ class Bonding(Test):
                 peer_public_networkinterface = NetworkInterface(interface,
                                                                 self.remotehost_public)
                 peer_public_networkinterface.set_mtu("1500")
+        self.remotehost.remote_session.quit()
+        self.remotehost_public.remote_session.quit()
 
     def error_check(self):
         if self.err:

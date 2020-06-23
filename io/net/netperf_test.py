@@ -87,15 +87,15 @@ class Netperf(Test):
             self.cancel("%s peer machine is not available" % self.peer_ip)
         self.timeout = self.params.get("TIMEOUT", default="600")
         self.mtu = self.params.get("mtu", default=1500)
-        remotehost = RemoteHost(self.peer_ip, self.peer_user,
-                                password=self.peer_password)
-        self.peer_interface = remotehost.get_interface_by_ipaddr(self.peer_ip).name
+        self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
+                                     password=self.peer_password)
+        self.peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
-                                                      remotehost)
-        remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
-                                       password=self.peer_password)
+                                                      self.remotehost)
+        self.remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
+                                            password=self.peer_password)
         self.peer_public_networkinterface = NetworkInterface(self.peer_interface,
-                                                             remotehost_public)
+                                                             self.remotehost_public)
         if self.peer_networkinterface.set_mtu(self.mtu) is not None:
             self.cancel("Failed to set mtu in peer")
         if self.networkinterface.set_mtu(self.mtu) is not None:
@@ -180,3 +180,5 @@ class Netperf(Test):
             self.peer_public_networkinterface.set_mtu('1500')
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
         self.networkinterface.restore_from_backup()
+        self.remotehost.remote_session.quit()
+        self.remotehost_public.remote_session.quit()

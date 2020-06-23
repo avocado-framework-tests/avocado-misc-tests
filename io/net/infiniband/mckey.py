@@ -98,11 +98,11 @@ class Mckey(Test):
         self.local_ip = netifaces.ifaddresses(self.iface)[AF_INET][0]['addr']
         self.ip_val = self.local_ip.split(".")[-1]
         self.mtu = self.params.get("mtu", default=1500)
-        remotehost = RemoteHost(self.peer_ip, self.peer_user,
-                                password=self.peer_password)
-        self.peer_interface = remotehost.get_interface_by_ipaddr(self.peer_ip).name
+        self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
+                                     password=self.peer_password)
+        self.peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
-                                                      remotehost)
+                                                      self.remotehost)
         self.option = self.option.replace("PEERIP", self.peer_ip)
         self.option = self.option.replace("LOCALIP", self.local_ip)
         self.option = self.option.replace("IPVAL", self.ip_val)
@@ -173,3 +173,4 @@ class Mckey(Test):
             self.fail("Failed to set mtu in host")
         if self.peer_networkinterface.set_mtu('1500') is not None:
             self.fail("Failed to set mtu in peer")
+        self.remotehost.remote_session.quit()

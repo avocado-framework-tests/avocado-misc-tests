@@ -778,3 +778,4 @@ class HtxNicTest(Test):
         self.shutdown_htx_daemon()
         self.ip_restore_host()
         self.ip_restore_peer()
+        self.remotehost.remote_session.quit()
