@@ -578,8 +578,6 @@ class NdctlTest(Test):
         """
         Write_infoblock on given namespace
         """
-        if not self.plib.check_ndctl_subcmd("write-infoblock"):
-            self.cancel("Binary does not support write-infoblock")
         write_cmd = "%s write-infoblock --align %s -m devdax "\
                     "%s" % (self.ndctl, align, ns_name)
         if process.system(write_cmd, ignore_status=True):
@@ -595,6 +593,8 @@ class NdctlTest(Test):
         """
         Test write_infoblock with align size
         """
+        if not self.plib.check_ndctl_subcmd("write-infoblock"):
+            self.cancel("Binary does not support write-infoblock")
         region = self.get_default_region()
         self.plib.disable_namespace(region=region)
         self.plib.destroy_namespace(region=region)
@@ -610,6 +610,8 @@ class NdctlTest(Test):
         """
         Test write_infoblock with unsupported align size
         """
+        if not self.plib.check_ndctl_subcmd("write-infoblock"):
+            self.cancel("Binary does not support write-infoblock")
         region = self.get_default_region()
         self.plib.disable_namespace(region=region)
         self.plib.destroy_namespace(region=region)
