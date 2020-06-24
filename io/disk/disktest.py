@@ -79,7 +79,7 @@ class Disktest(Test):
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
-        gigabytes = int(lv_utils.get_diskspace(self.disk)) // 1073741824
+        gigabytes = lv_utils.get_device_total_space(self.disk) // 1073741824
         memory_mb = memory.meminfo.MemTotal.m
         self.chunk_mb = gigabytes * 950
 

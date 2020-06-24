@@ -60,7 +60,7 @@ class Blkdiscard(Test):
         """
         Sectors are dicarded for the different values of OFFSET and LENGTH.
         """
-        size = int(lv_utils.get_diskspace(self.disk))
+        size = lv_utils.get_device_total_space(self.disk)
         cmd = "blkdiscard %s -o 0 -v -l %d" % (self.disk, size)
         process.run(cmd, shell=True)
         cmd = "blkdiscard %s -o %d \

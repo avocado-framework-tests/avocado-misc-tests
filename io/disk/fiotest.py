@@ -164,7 +164,7 @@ class FioTest(Test):
     def create_lv(self, l_disk):
         vgname = 'avocado_vg'
         lvname = 'avocado_lv'
-        lv_size = int(lv_utils.get_diskspace(l_disk)) / 2330168
+        lv_size = lv_utils.get_device_total_space(l_disk) / 2330168
         lv_utils.vg_create(vgname, l_disk)
         lv_utils.lv_create(vgname, lvname, lv_size)
         return '/dev/%s/%s' % (vgname, lvname)
