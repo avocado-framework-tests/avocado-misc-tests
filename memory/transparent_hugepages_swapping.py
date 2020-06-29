@@ -69,7 +69,7 @@ class ThpSwapping(Test):
                 os.makedirs(self.mem_path)
             self.device = Partition(device="none", mountpoint=self.mem_path)
             self.device.mount(mountpoint=self.mem_path, fstype="tmpfs",
-                              args="-o size=%sM" % tmpfs_size)
+                              args="-o size=%sM" % tmpfs_size, mnt_check=False)
 
     def test(self):
         '''
