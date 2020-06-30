@@ -35,7 +35,8 @@ from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import lv_utils
 from avocado.utils import distro
-from avocado.utils import process
+from avocado.utils import disk
+from avocado.utils.disk import DiskError
 
 
 class Lvsetup(Test):
@@ -110,38 +111,21 @@ class Lvsetup(Test):
             self.device = self.disk
         else:
             if not self.lv_size:
-                self.lv_size = 1024
+                self.lv_size = 1024 * 1024 * 1024
 
-            self.create_loop_dev()
-            self.device = self.loop
+            try:
+                self.device = disk.create_loop_device(self.lv_size)
+            except DiskError:
+                self.cancel("Could not create loop device")
+
+            # converting bytes to megabytes
+            self.lv_size = self.lv_size / (1024 * 1024)
 
         # Using only 45% of lv size, to accomodate lv snapshot also.
         self.lv_size = (self.lv_size * 45) / 100
 
         self.lv_snapshot_size = self.params.get('lv_snapshot_size',
                                                 default=self.lv_size)
-
-    def create_loop_dev(self):
-        """
-        Creates loop device.
-        """
-        cmd = "losetup --find"
-        self.loop = process.system_output(cmd, ignore_status=True,
-                                          sudo=True).decode("utf-8")
-        self.loop_file = "loopbackfile.img"
-        cmd = "dd if=/dev/zero of=%s bs=1M" % self.loop_file
-        cmd += " count=%d" % self.lv_size
-        process.run(cmd, sudo=True)
-        cmd = "losetup %s %s -P" % (self.loop, self.loop_file)
-        process.run(cmd, sudo=True)
-
-    def delete_loop_dev(self):
-        """
-        Deletes the created loop device.
-        """
-        cmd = "losetup -d %s" % self.loop
-        process.run(cmd, sudo=True)
-        os.remove(self.loop_file)
 
     @avocado.fail_on(lv_utils.LVException)
     def create_lv(self):
@@ -222,4 +206,4 @@ class Lvsetup(Test):
         """
         self.delete_lv()
         if not self.disk:
-            self.delete_loop_dev()
+            disk.delete_loop_device(self.device)
