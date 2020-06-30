@@ -796,5 +796,5 @@ class NetworkVirtualization(Test):
         return False
 
     def tearDown(self):
-        if self.pxssh.isalive():
-            self.pxssh.terminate()
+        self.session_hmc.quit()
+        self.session.quit()
