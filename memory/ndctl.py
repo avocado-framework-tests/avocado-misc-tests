@@ -217,6 +217,29 @@ class NdctlTest(Test):
         self.log.info('Created namespace %s', namespaces)
 
     @avocado.fail_on(pmem.PMemException)
+    def test_namespace_unaligned(self):
+        """
+        Test namespace
+        """
+        self.plib.enable_region()
+        # Use an default unaligned pagesize and make sure it fails
+        align_size = memory.get_page_size()
+        size = (64 * 1024 * 1024) + align_size
+        regions = self.plib.run_ndctl_list('-R')
+        for val in regions:
+            region = self.plib.run_ndctl_list_val(val, 'dev')
+            self.plib.disable_namespace(region=region)
+            self.plib.destroy_namespace(region=region)
+            try:
+                self.plib.create_namespace(
+                    region=region, size=size, align=align_size)
+            except pmem.PMemException:
+                self.log.info("Unaligned namespace creation failed"
+                              "as expected")
+            else:
+                self.fail("Unaligned namespace creation must have failed! ")
+
+    @avocado.fail_on(pmem.PMemException)
     def test_disable_enable_ns(self):
         """
         Test enable disable namespace
