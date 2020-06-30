@@ -65,6 +65,8 @@ class Uperf(Test):
         self.networkinterface.bring_up()
         self.session = Session(self.peer_ip, user=self.peer_user,
                                password=self.peer_password)
+        if not self.session.connect():
+            self.cancel("failed connecting to peer")
         smm = SoftwareManager()
         detected_distro = distro.detect()
         pkgs = ["gcc", "autoconf", "perl", "m4", "git-core", "automake"]
@@ -170,3 +172,4 @@ class Uperf(Test):
         self.networkinterface.restore_from_backup()
         self.remotehost.remote_session.quit()
         self.remotehost_public.remote_session.quit()
+        self.session.quit()
