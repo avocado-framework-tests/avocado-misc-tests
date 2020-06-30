@@ -60,6 +60,8 @@ class ReceiveMulticastTest(Test):
 
         self.session = Session(self.peer, user=self.user,
                                password=self.peer_password)
+        if not self.session.connect():
+            self.fail("failed connecting to peer")
         self.count = self.params.get("count", default="500000")
         smm = SoftwareManager()
         pkgs = ["net-tools"]
@@ -128,3 +130,4 @@ class ReceiveMulticastTest(Test):
             self.log.info("unable to unset all mulicast option")
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
         self.networkinterface.restore_from_backup()
+        self.session.quit()

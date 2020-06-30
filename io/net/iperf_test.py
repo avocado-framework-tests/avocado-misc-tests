@@ -63,6 +63,8 @@ class Iperf(Test):
         self.networkinterface.bring_up()
         self.session = Session(self.peer_ip, user=self.peer_user,
                                password=self.peer_password)
+        if not self.session.connect():
+            self.fail("failed connecting to peer")
         smm = SoftwareManager()
         for pkg in ["gcc", "autoconf", "perl", "m4", "libtool"]:
             if not smm.check_installed(pkg) and not smm.install(pkg):
@@ -155,3 +157,4 @@ class Iperf(Test):
             self.peer_public_networkinterface.set_mtu('1500')
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
         self.networkinterface.restore_from_backup()
+        self.session.quit()
