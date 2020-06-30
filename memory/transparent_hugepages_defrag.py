@@ -55,7 +55,7 @@ class ThpDefrag(Test):
         if os.path.exists(self.mem_path):
             os.makedirs(self.mem_path)
         self.device = Partition(device="none", mountpoint=self.mem_path)
-        self.device.mount(mountpoint=self.mem_path, fstype="tmpfs")
+        self.device.mount(mountpoint=self.mem_path, fstype="tmpfs", mnt_check=False)
         free_space = (disk.freespace(self.mem_path)) // 1024
         # Leaving out some free space in tmpfs
         self.count = (free_space // self.block_size) - 3
