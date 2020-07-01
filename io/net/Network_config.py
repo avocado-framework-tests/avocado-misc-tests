@@ -55,9 +55,12 @@ class NetworkconfigTest(Test):
         except Exception:
             self.networkinterface.save(self.ipaddr, self.netmask)
         self.networkinterface.bring_up()
-        cmd = "basename /sys/class/net/%s/device/driver/module/drivers/*" % self.iface
-        self.iface_type, self.driver = process.system_output(
-            cmd, shell=True).decode("utf-8").split(':')
+        cmd = "basename -a /sys/class/net/%s/device/driver/module/drivers/*" % self.iface
+        output = process.system_output(cmd, shell=True).decode("utf-8")
+        for line in output.splitlines():
+            if line.split(':')[0] in ['pci', 'vio']:
+                self.iface_type, self.driver = line.split(':')
+                break
         self.businfo = self.get_bus_info(self.iface, self.iface_type)
 
     @staticmethod
