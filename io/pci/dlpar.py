@@ -369,5 +369,4 @@ class DlparPci(Test):
             self.fail("dlpar %s operation failed" % msg)
 
     def tearDown(self):
-        if self.pxssh.isalive():
-            self.pxssh.terminate()
+        self.session.quit()
