@@ -118,6 +118,8 @@ class Bonding(Test):
         self.log.info("Bond Test on IB Interface? = %s", self.ib)
         self.session = Session(self.peer_first_ipinterface, user=self.user,
                                password=self.password)
+        if not self.session.connect():
+            self.cancel("failed connecting to peer")
         self.setup_ip()
         self.err = []
         self.remotehost = RemoteHost(self.peer_first_ipinterface, self.user,
@@ -462,3 +464,6 @@ class Bonding(Test):
     def error_check(self):
         if self.err:
             self.fail("Tests failed. Details:\n%s" % "\n".join(self.err))
+
+    def tearDown(self):
+        self.session.quit()
