@@ -301,7 +301,7 @@ class MultipathTest(Test):
         """
         Restore config file, if existed, and restart services
         """
-        if os.path.isfile(self.mpath_file):
+        if os.path.isfile("%s.bkp" % self.mpath_file):
             shutil.copyfile("%s.bkp" % self.mpath_file, self.mpath_file)
         self.mpath_svc.restart()
 
