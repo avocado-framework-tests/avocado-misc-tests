@@ -105,8 +105,11 @@ class Uperf(Test):
                                    expire='7d')
         archive.extract(tarball, self.teststmpdir)
         self.uperf_dir = os.path.join(self.teststmpdir, "uperf-master")
-        cmd = "scp -r %s %s@%s:/tmp" % (self.uperf_dir, self.peer_user,
-                                        self.peer_ip)
+        out = self.session.get_raw_ssh_command('ls')
+        cmd_l = " ".join((out.split()[1:7]))
+        cmd = "/usr/bin/scp %s -r %s %s@%s:/tmp" % (cmd_l, self.uperf_dir,
+                                                    self.peer_user,
+                                                    self.peer_ip)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.cancel("unable to copy the uperf into peer machine")
         cmd = "cd /tmp/uperf-master;autoreconf -fi;./configure ppc64le;make"

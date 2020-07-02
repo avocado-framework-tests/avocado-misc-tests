@@ -28,6 +28,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils import genio
+from avocado.utils.ssh import Session
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost, RemoteHost
 from avocado.utils import wait
@@ -79,6 +80,11 @@ class NetworkTest(Test):
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default=None)
+        if 'scp' or 'ssh' in str(self.name.name):
+            self.session = Session(self.peer, user=self.peer_user,
+                                   password=self.peer_password)
+            if not self.session.connect():
+                self.cancel("failed connecting to peer")
         self.remotehost = RemoteHost(self.peer, self.peer_user,
                                      password=self.peer_password)
         self.peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer).name
@@ -175,8 +181,9 @@ class NetworkTest(Test):
         '''
         Test ssh
         '''
-        cmd = "ssh %s \"echo hi\"" % self.peer
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
+        cmd = "echo hi"
+        output = self.session.cmd(cmd)
+        if not output.exit_status == 0:
             self.fail("unable to ssh into peer machine")
 
     def test_scp(self):
@@ -186,13 +193,14 @@ class NetworkTest(Test):
         process.run("dd if=/dev/zero of=/tmp/tempfile bs=1024000000 count=1",
                     shell=True)
         md_val1 = hashlib.md5(open('/tmp/tempfile', 'rb').read()).hexdigest()
-
-        cmd = "timeout 600 scp /tmp/tempfile %s:/tmp" % self.peer
+        out = self.session.get_raw_ssh_command('ls')
+        cmd_l = " ".join((out.split()[1:7]))
+        cmd = "/usr/bin/scp %s /tmp/tempfile %s:/tmp" % (cmd_l, self.peer)
         ret = process.system(cmd, shell=True, verbose=True, ignore_status=True)
         if ret != 0:
             self.fail("unable to copy into peer machine")
 
-        cmd = "timeout 600 scp %s:/tmp/tempfile /tmp" % self.peer
+        cmd = "/usr/bin/scp %s %s:/tmp/tempfile /tmp" % (cmd_l, self.peer)
         ret = process.system(cmd, shell=True, verbose=True, ignore_status=True)
         if ret != 0:
             self.fail("unable to copy from peer machine")
@@ -296,9 +304,11 @@ class NetworkTest(Test):
         self.mtu_set_back()
         if 'scp' in str(self.name.name):
             process.run("rm -rf /tmp/tempfile")
-            cmd = "timeout 600 ssh %s \" rm -rf /tmp/tempfile\"" % self.peer
-            process.system(cmd, shell=True, verbose=True, ignore_status=True)
+            cmd = "rm -rf /tmp/tempfile"
+            self.session.cmd(cmd)
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
         self.networkinterface.restore_from_backup()
         self.remotehost.remote_session.quit()
         self.remotehost_public.remote_session.quit()
+        if 'scp' or 'ssh' in str(self.name.name):
+            self.session.quit()
