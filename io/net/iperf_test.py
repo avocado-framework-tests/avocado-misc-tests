@@ -98,8 +98,11 @@ class Iperf(Test):
         archive.extract(tarball, self.iperf)
         self.version = os.path.basename(tarball.split('.tar')[0])
         self.iperf_dir = os.path.join(self.iperf, self.version)
-        cmd = "scp -r %s %s@%s:/tmp" % (self.iperf_dir, self.peer_user,
-                                        self.peer_ip)
+        out = self.session.get_raw_ssh_command('ls')
+        cmd_l = " ".join((out.split()[1:7]))
+        cmd = "/usr/bin/scp %s -r %s %s@%s:/tmp" % (cmd_l, self.iperf_dir,
+                                                    self.peer_user,
+                                                    self.peer_ip)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.cancel("unable to copy the iperf into peer machine")
         cmd = "cd /tmp/%s;./configure ppc64le;make" % self.version
