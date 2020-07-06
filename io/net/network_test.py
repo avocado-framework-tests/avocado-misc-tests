@@ -193,16 +193,14 @@ class NetworkTest(Test):
         process.run("dd if=/dev/zero of=/tmp/tempfile bs=1024000000 count=1",
                     shell=True)
         md_val1 = hashlib.md5(open('/tmp/tempfile', 'rb').read()).hexdigest()
-        out = self.session.get_raw_ssh_command('ls')
-        cmd_l = " ".join((out.split()[1:7]))
-        cmd = "/usr/bin/scp %s /tmp/tempfile %s:/tmp" % (cmd_l, self.peer)
-        ret = process.system(cmd, shell=True, verbose=True, ignore_status=True)
-        if ret != 0:
+        destination = "%s:/tmp" % self.peer
+        output = self.session.copy_files('/tmp/tempfile', destination)
+        if not output:
             self.fail("unable to copy into peer machine")
 
-        cmd = "/usr/bin/scp %s %s:/tmp/tempfile /tmp" % (cmd_l, self.peer)
-        ret = process.system(cmd, shell=True, verbose=True, ignore_status=True)
-        if ret != 0:
+        source = "%s:/tmp/tempfile" % self.peer
+        output = self.session.copy_files(source, '/tmp')
+        if not output:
             self.fail("unable to copy from peer machine")
 
         md_val2 = hashlib.md5(open('/tmp/tempfile', 'rb').read()).hexdigest()
