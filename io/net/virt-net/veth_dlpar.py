@@ -45,6 +45,7 @@ class VethdlparTest(Test):
         self.vios_pwd = self.params.get('vios_pwd', '*', default=None)
         self.session = Session(self.vios_ip, user=self.vios_user,
                                password=self.vios_pwd)
+        self.session.connect()
         local = LocalHost()
         self.networkinterface = NetworkInterface(self.interface, local)
         try:
@@ -111,3 +112,4 @@ class VethdlparTest(Test):
     def tearDown(self):
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
         self.networkinterface.restore_from_backup()
+        self.session.quit()

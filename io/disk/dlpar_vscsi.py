@@ -39,6 +39,7 @@ class DlparTest(Test):
         self.vios_pwd = self.params.get('vios_pwd', '*', default=None)
         self.session = Session(self.vios_ip, user=self.vios_user,
                                password=self.vios_pwd)
+        self.session.connect()
         cmd = "lscfg -l %s" % self.disk
         for line in process.system_output(cmd, shell=True).decode("utf-8") \
                                                           .splitlines():
@@ -102,3 +103,6 @@ class DlparTest(Test):
         for _ in range(self.num_of_dlpar):
             self.dlpar_remove()
             self.dlpar_add()
+
+    def tearDown(self):
+        self.session.quit()

@@ -56,6 +56,8 @@ class DlparPci(Test):
             self.cancel("LPAR Name not got from lparstat command")
         self.session = Session(self.hmc_ip, user=self.hmc_user,
                                password=self.hmc_pwd)
+        if not self.session.connect():
+            self.cancel("failed connecting to HMC")
         cmd = 'lssyscfg -r sys  -F name'
         output = self.session.cmd(cmd)
         self.server = ''

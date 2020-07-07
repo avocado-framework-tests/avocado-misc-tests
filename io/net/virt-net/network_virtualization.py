@@ -67,6 +67,8 @@ class NetworkVirtualization(Test):
             self.cancel("LPAR Name not got from lparstat command")
         self.session_hmc = Session(self.hmc_ip, user=self.hmc_username,
                                    password=self.hmc_pwd)
+        if not self.session_hmc.connect():
+            self.cancel("failed connecting to HMC")
         cmd = 'lssyscfg -r sys  -F name'
         output = self.session_hmc.cmd(cmd)
         self.server = ''
@@ -108,8 +110,10 @@ class NetworkVirtualization(Test):
         self.vios_ip = self.params.get('vios_ip', '*', default=None)
         self.vios_user = self.params.get('vios_username', '*', default=None)
         self.vios_pwd = self.params.get('vios_pwd', '*', default=None)
-        self.session = Session(self.vios_ip, user=self.vios_user,
-                               password=self.vios_pwd)
+        if 'vios' in str(self.name.name):
+            self.session = Session(self.vios_ip, user=self.vios_user,
+                                   password=self.vios_pwd)
+            self.session.connect()
         self.count = int(self.params.get('vnic_test_count', default="1"))
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         self.device_ip = self.params.get('device_ip', '*',
@@ -797,4 +801,5 @@ class NetworkVirtualization(Test):
 
     def tearDown(self):
         self.session_hmc.quit()
-        self.session.quit()
+        if 'vios' in str(self.name.name):
+            self.session.quit()
