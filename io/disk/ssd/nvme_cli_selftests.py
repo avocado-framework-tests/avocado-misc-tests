@@ -53,7 +53,7 @@ class NVMeCliSelfTest(Test):
         if not smm.check_installed("nvme-cli") and not \
                 smm.install("nvme-cli"):
             self.cancel('nvme-cli is needed for the test to be run')
-        py_pkgs = ['nose', 'nose2', 'pep8', 'flake8', 'pylint', 'epydoc']
+        py_pkgs = ['nose', 'nose2']
         installed_py_pkgs = [pkg[1] for pkg in list(pkgutil.iter_modules())]
         py_pkgs_not_installed = list(set(py_pkgs) - set(installed_py_pkgs))
         if py_pkgs_not_installed:
