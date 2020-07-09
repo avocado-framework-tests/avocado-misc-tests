@@ -90,7 +90,8 @@ class Cpuhotplug_Test(Test):
                 self.log.info("Onlining the threads : %s for "
                               "the core : %s" % (cpu_list, core))
                 for cpu_num in cpu_list:
-                    self.online_cpu(cpu_num)
+                    if cpu_num != 0:
+                        self.online_cpu(cpu_num)
         if self.nfail > 0:
             self.fail(" Unable to online/offline few cpus")
 
