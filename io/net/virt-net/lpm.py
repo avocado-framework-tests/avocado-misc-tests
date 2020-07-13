@@ -19,36 +19,16 @@ Tests for Live Partition Mobility
 '''
 
 import time
-try:
-    import pxssh
-except ImportError:
-    from pexpect import pxssh
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.ssh import Session
 from avocado.utils.process import CmdError
 from avocado import skipIf, skipUnless
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
-
-
-class CommandFailed(Exception):
-    '''
-    Defines the exception called when a
-    command fails
-    '''
-
-    def __init__(self, command, output, exitcode):
-        Exception.__init__(self, command, output, exitcode)
-        self.command = command
-        self.output = output
-        self.exitcode = exitcode
-
-    def __str__(self):
-        return "Command '%s' exited with %d.\nOutput:\n%s" \
-               % (self.command, self.exitcode, self.output)
 
 
 class LPM(Test):
@@ -77,11 +57,14 @@ class LPM(Test):
         if not self.lpar:
             self.cancel("LPAR Name not got from lparstat command")
 
-        self.login(self.hmc_ip, self.hmc_user, self.hmc_pwd)
+        self.session = Session(self.hmc_ip, user=self.hmc_user,
+                               password=self.hmc_pwd)
+        if not self.session.connect():
+            self.cancel("failed connecting to HMC")
         cmd = 'lssyscfg -r sys -F name'
-        output = self.run_command(cmd)
+        output = self.session.cmd(cmd)
         self.server = ''
-        for line in output:
+        for line in output.stdout_text.splitlines():
             if line in self.lpar:
                 self.server = line
                 break
@@ -167,40 +150,6 @@ class LPM(Test):
                 return line.split(':')[-1].strip()
         return ''
 
-    def login(self, ipaddr, username, password):
-        '''
-        SSH Login method for remote server
-        '''
-        pxh = pxssh.pxssh(encoding='utf-8')
-        # Work-around for old pxssh not having options= parameter
-        pxh.SSH_OPTS = pxh.SSH_OPTS + " -o 'StrictHostKeyChecking=no'"
-        pxh.SSH_OPTS = pxh.SSH_OPTS + " -o 'UserKnownHostsFile /dev/null' "
-        pxh.force_password = True
-
-        pxh.login(ipaddr, username, password)
-        pxh.sendline()
-        pxh.prompt(timeout=60)
-        # Ubuntu likes to be "helpful" and alias grep to
-        # include color, which isn't helpful at all. So let's
-        # go back to absolutely no messing around with the shell
-        pxh.set_unique_prompt()
-        pxh.prompt(timeout=60)
-        self.pxssh = pxh
-
-    def run_command(self, command, timeout=3000):
-        '''
-        SSH Run command method for running commands on remote server
-        '''
-        self.log.info("Running the command on hmc: %s", command)
-        con = self.pxssh
-        con.sendline(command)
-        con.expect("\n")  # from us
-        con.expect(con.PROMPT, timeout=timeout)
-        output = con.before.splitlines()
-        con.sendline("echo $?")
-        con.prompt(timeout)
-        return output
-
     def rsct_service_start(self):
         '''
         Running rsct services which is necessary for Network
@@ -236,7 +185,7 @@ class LPM(Test):
         '''
         cmd = "chsyscfg -m %s -r lpar -i lpar_id=%s,msp=1" % (server,
                                                               vios_id)
-        self.run_command(cmd)
+        self.session.cmd(cmd)
 
     def do_migrate(self, server, remote_server, lpar, params):
         '''
@@ -248,7 +197,7 @@ class LPM(Test):
                                                       lpar, params)
         if self.options:
             cmd = "%s %s" % (cmd, self.options)
-        self.log.debug("\n".join(self.run_command(cmd)))
+        self.log.debug(self.session.cmd(cmd).stdout_text)
         time.sleep(10)
         if not self.is_lpar_in_server(remote_server, lpar):
             self.fail("%s not in %s" % (lpar, remote_server))
@@ -262,7 +211,7 @@ class LPM(Test):
         Returns False, otherwise.
         '''
         cmd = "lssyscfg -r lpar -m %s -F name,state" % server
-        output = "\n".join(self.run_command(cmd))
+        output = self.session.cmd(cmd).stdout_text
         if "%s," % lpar in output:
             return True
         return False
@@ -273,8 +222,8 @@ class LPM(Test):
         '''
         cmd = 'lshwres -m %s -r sriov --rsubtype adapter -F \
               phys_loc:adapter_id' % server
-        adapter_id_output = self.run_command(cmd)
-        for line in adapter_id_output:
+        adapter_id_output = self.session.cmd(cmd)
+        for line in adapter_id_output.stdout_text.splitlines():
             if str(loc_code) in line:
                 return line.split(':')[1]
         return ''
@@ -285,7 +234,7 @@ class LPM(Test):
         '''
         cmd = "lssyscfg -m %s -r lpar --filter lpar_names=%s \
               -F lpar_id" % (server, lpar_name)
-        return self.run_command(cmd)[-1]
+        return self.session.cmd(cmd).stdout_text
 
     def form_virt_net_options(self, remote=''):
         '''
@@ -333,5 +282,4 @@ class LPM(Test):
         self.do_migrate(self.remote_server, self.server, self.lpar, cmd)
 
     def tearDown(self):
-        if self.pxssh.isalive():
-            self.pxssh.terminate()
+        self.session.quit()

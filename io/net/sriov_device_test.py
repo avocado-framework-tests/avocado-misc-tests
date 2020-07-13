@@ -20,33 +20,12 @@ Tests for Sriov logical device
 '''
 
 import netifaces
-try:
-    import pxssh
-except ImportError:
-    from pexpect import pxssh
 from avocado import Test
 from avocado.utils import process
+from avocado.utils.ssh import Session
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
-
-
-class CommandFailed(Exception):
-
-    '''
-    Defines the exception called when a
-    command fails
-    '''
-
-    def __init__(self, command, output, exitcode):
-        Exception.__init__(self, command, output, exitcode)
-        self.command = command
-        self.output = output
-        self.exitcode = exitcode
-
-    def __str__(self):
-        return "Command '%s' exited with %d.\nOutput:\n%s" \
-               % (self.command, self.exitcode, self.output)
 
 
 class NetworkSriovDevice(Test):
@@ -72,11 +51,14 @@ class NetworkSriovDevice(Test):
         self.lpar = self.get_partition_name("Partition Name")
         if not self.lpar:
             self.cancel("LPAR Name not got from lparstat command")
-        self.login(self.hmc_ip, self.hmc_username, self.hmc_pwd)
+        self.session = Session(self.hmc_ip, user=self.hmc_username,
+                               password=self.hmc_pwd)
+        if not self.session.connect():
+            self.cancel("failed connetion to HMC")
         cmd = 'lssyscfg -r sys  -F name'
-        output = self.run_command(cmd)
+        output = self.session.cmd(cmd)
         self.server = ''
-        for line in output.splitlines():
+        for line in output.stdout_text.splitlines():
             if line in self.lpar:
                 self.server = line
                 break
@@ -121,47 +103,6 @@ class NetworkSriovDevice(Test):
                 return line.split(':')[-1].strip()
         return ''
 
-    def login(self, ipaddr, username, password):
-        '''
-        SSH Login method for remote server
-        '''
-        pxh = pxssh.pxssh(encoding='utf-8')
-        # Work-around for old pxssh not having options= parameter
-        pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
-        pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
-        pxh.force_password = True
-
-        pxh.login(ipaddr, username, password)
-        pxh.sendline()
-        pxh.prompt(timeout=60)
-        pxh.sendline('exec bash --norc --noprofile')
-        pxh.prompt(timeout=60)
-        # Ubuntu likes to be "helpful" and alias grep to
-        # include color, which isn't helpful at all. So let's
-        # go back to absolutely no messing around with the shell
-        pxh.set_unique_prompt()
-        pxh.prompt(timeout=60)
-        self.pxssh = pxh
-
-    def run_command(self, command, timeout=300):
-        '''
-        SSH Run command method for running commands on remote server
-        '''
-        self.log.info("Running the command on peer lpar: %s", command)
-        if not hasattr(self, 'pxssh'):
-            self.fail("SSH Console setup is not yet done")
-        con = self.pxssh
-        con.sendline(command)
-        con.expect("\n")  # from us
-        con.expect(con.PROMPT, timeout=timeout)
-        output = "".join(con.before)
-        con.sendline("echo $?")
-        con.prompt(timeout)
-        exitcode = int(''.join(con.before.splitlines()[1:]))
-        if exitcode != 0:
-            raise CommandFailed(command, output, exitcode)
-        return output
-
     def test_add_logical_device(self):
         '''
         test to create logical sriov device
@@ -196,8 +137,8 @@ class NetworkSriovDevice(Test):
         """
         cmd = "lshwres -m %s -r sriov --rsubtype adapter -F phys_loc:adapter_id" \
               % (self.server)
-        output = self.run_command(cmd)
-        for line in output.splitlines():
+        output = self.session.cmd(cmd)
+        for line in output.stdout_text.splitlines():
             if slot in line:
                 adapter_id = line.split(':')[-1]
 
@@ -211,11 +152,11 @@ class NetworkSriovDevice(Test):
             cmd = 'chhwres -r sriov -m %s --rsubtype logport \
                   -o r -p %s -a \"adapter_id=%s,logical_port_id=%s\" ' \
                   % (self.server, self.lpar, adapter_id, logical_id)
-        try:
-            self.run_command(cmd)
-        except CommandFailed as cf:
+        cmd = self.session.cmd(cmd)
+        if cmd.exit_status != 0:
+            self.log.debug(cmd.stderr)
             self.fail("sriov logical device %s operation \
-                       failed as %s" % (operation, cf))
+                       failed" % operation)
 
     def get_logical_port_id(self, mac):
         """
@@ -224,8 +165,8 @@ class NetworkSriovDevice(Test):
         cmd = "lshwres -r sriov --rsubtype logport -m  %s \
                --level eth | grep %s | grep %s" \
                % (self.server, self.lpar, mac)
-        output = self.run_command(cmd)
-        logical_port_id = output.split(',')[6].split('=')[-1]
+        output = self.session.cmd(cmd)
+        logical_port_id = output.stdout_text.split(',')[6].split('=')[-1]
         return logical_port_id
 
     @staticmethod
@@ -246,11 +187,10 @@ class NetworkSriovDevice(Test):
         """
         cmd = 'lshwres -r sriov --rsubtype logport -m  ltcfleet2 \
               --level eth --filter \"lpar_names=%s\" ' % self.lpar
-        output = self.run_command(cmd)
-        if mac in output:
+        output = self.session.cmd(cmd)
+        if mac in output.stdout_text:
             return True
         return False
 
     def tearDown(self):
-        if self.pxssh.isalive():
-            self.pxssh.terminate()
+        self.session.quit()

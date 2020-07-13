@@ -19,37 +19,17 @@ Tests for Virtual FC
 '''
 
 import time
-try:
-    import pxssh
-except ImportError:
-    from pexpect import pxssh
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import multipath
 from avocado.utils import distro
+from avocado.utils.ssh import Session
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.process import CmdError
 from avocado import skipIf, skipUnless
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
-
-
-class CommandFailed(Exception):
-    '''
-    Defines the exception called when a
-    command fails
-    '''
-
-    def __init__(self, command, output, exitcode):
-        Exception.__init__(self, command, output, exitcode)
-        self.command = command
-        self.output = output
-        self.exitcode = exitcode
-
-    def __str__(self):
-        return "Command '%s' exited with %d.\nOutput:\n%s" \
-               % (self.command, self.exitcode, self.output)
 
 
 class VirtualFC(Test):
@@ -76,11 +56,14 @@ class VirtualFC(Test):
         self.lpar = self.get_partition_name("Partition Name")
         if not self.lpar:
             self.cancel("LPAR Name not got from lparstat command")
-        self.login(self.hmc_ip, self.hmc_username, self.hmc_pwd)
+        self.session = Session(self.hmc_ip, user=self.hmc_username,
+                               password=self.hmc_pwd)
+        if not self.session.connect():
+            self.cancel("failed connecting to HMC")
         cmd = 'lssyscfg -r sys  -F name'
-        output = self.run_command(cmd)
+        output = self.session.cmd(cmd)
         self.server = ''
-        for line in output:
+        for line in output.stdout_text.splitlines():
             if line in self.lpar:
                 self.server = line
         if not self.server:
@@ -88,7 +71,7 @@ class VirtualFC(Test):
         self.dic_list = []
         cmd = 'lshwres -r virtualio --rsubtype fc --level lpar -m %s \
                --filter "lpar_names=%s"' % (self.server, self.lpar)
-        for line in self.run_command(cmd):
+        for line in self.session.cmd(cmd).stdout_text.splitlines():
             self.vfc_dic = {}
             for i in line.split(","):
                 if i.split("=")[0] == "slot_num":
@@ -101,42 +84,7 @@ class VirtualFC(Test):
             self.vfc_dic["drc"] = self.get_drc_name(self.vfc_dic["c_slot"])
             self.vfc_dic["paths"] = self.get_paths(self.vfc_dic["drc"])
             self.dic_list.append(self.vfc_dic)
-
         self.log.info("complete list : %s" % self.dic_list)
-
-    def login(self, ipaddr, username, password):
-        '''
-        SSH Login method for remote server
-        '''
-        pxh = pxssh.pxssh()
-        # Work-around for old pxssh not having options= parameter
-        pxh.SSH_OPTS = pxh.SSH_OPTS + " -o 'StrictHostKeyChecking=no'"
-        pxh.SSH_OPTS = pxh.SSH_OPTS + " -o 'UserKnownHostsFile /dev/null' "
-        pxh.force_password = True
-
-        pxh.login(ipaddr, username, password)
-        pxh.sendline()
-        pxh.prompt(timeout=60)
-        # Ubuntu likes to be "helpful" and alias grep to
-        # include color, which isn't helpful at all. So let's
-        # go back to absolutely no messing around with the shell
-        pxh.set_unique_prompt()
-        pxh.prompt(timeout=60)
-        self.pxssh = pxh
-
-    def run_command(self, command, timeout=300):
-        '''
-        SSH Run command method for running commands on remote server
-        '''
-        self.log.info("Running the command on hmc %s", command)
-        con = self.pxssh
-        con.sendline(command)
-        con.expect("\n")  # from us
-        con.expect(con.PROMPT, timeout=timeout)
-        output = con.before.decode('utf-8').splitlines()
-        con.sendline("echo $?")
-        con.prompt(timeout)
-        return output
 
     @staticmethod
     def get_mcp_component(component):
@@ -211,7 +159,7 @@ class VirtualFC(Test):
         cmd = 'lshwres -r virtualio --rsubtype slot --level slot -m %s -F \
                slot_num,lpar_name,drc_name | grep -i %s' \
                % (self.server, self.lpar)
-        for line in self.run_command(cmd):
+        for line in self.session.cmd(cmd).stdout_text.splitlines():
             if c_slot in line:
                 return line.split(",")[-1]
         return None
@@ -249,14 +197,14 @@ class VirtualFC(Test):
         cmd = 'lshwres -r virtualio --rsubtype fc --level lpar -m %s -F \
                lpar_name,slot_num,wwpns | grep -i %s' \
                % (self.server, self.lpar)
-        try:
-            for line in self.run_command(cmd):
-                if self.lpar and client_slot in line:
-                    wwpn = line.split('"')[1]
-            self.log.info("wwpns of slot %s is : %s" % (client_slot, wwpn))
-            return wwpn
-        except CommandFailed as cmdfail:
-            self.log.debug(str(cmdfail))
+        output = self.session.cmd(cmd)
+        for line in output.stdout_text.splitlines():
+            if self.lpar and client_slot in line:
+                wwpn = line.split('"')[1]
+        self.log.info("wwpns of slot %s is : %s" % (client_slot, wwpn))
+        return wwpn
+        if output.exit_status != 0:
+            self.log.debug(output.stderr)
             self.fail("Failed to get the wwpn, from give slot")
 
     def device_add_remove(self, operation, vfc_dic):
@@ -273,10 +221,10 @@ class VirtualFC(Test):
         else:
             cmd = 'chhwres -r virtualio -m %s -o r -p %s  -s %s' \
                    % (self.server, self.lpar, vfc_dic["c_slot"])
-        try:
-            self.run_command(cmd)
-        except CommandFailed as cmdfail:
-            self.log.debug(str(cmdfail))
+
+        output = self.session.cmd(cmd)
+        if output.exit_status != 0:
+            self.log.debug(output.stderr)
             self.fail("Network virtualization %s device operation \
                        failed" % operation)
         time.sleep(self.opp_sleep_time)
@@ -347,5 +295,4 @@ class VirtualFC(Test):
         '''
         close ssh session gracefully
         '''
-        if self.pxssh.isalive():
-            self.pxssh.terminate()
+        self.session.quit()
