@@ -637,19 +637,17 @@ class NdctlTest(Test):
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
         self.plib.disable_namespace(namespace=ns_name)
         self.write_read_infoblock(ns_name, self.get_unsupported_alignval())
-        failed = False
-        found = False
         try:
             self.plib.enable_namespace(namespace=ns_name)
         except pmem.PMemException:
             self.log.info("Failed as expected")
-            failed = True
-        if not failed:
+        else:
             self.log.info(self.plib.run_ndctl_list())
             self.fail("Enabling namespace must have failed")
 
         idle_ns = self.plib.run_ndctl_list('-Ni -r %s' % region)
         if len(idle_ns) > 1:
+            found = False
             for namespace in idle_ns:
                 if int(self.plib.run_ndctl_list_val(namespace, 'size')) != 0:
                     found = True
