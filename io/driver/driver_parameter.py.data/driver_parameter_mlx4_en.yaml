@@ -1,8 +1,8 @@
 module: "mlx4_en"
-interface: eth3 
-host_ip:
-netmask:
-peer_ip:
+interface: "" 
+host_ip: ""
+netmask: ""
+peer_ip: ""
 sysfs_check_required: 1
 value: !mux
     udev_dev_port_dev_id:

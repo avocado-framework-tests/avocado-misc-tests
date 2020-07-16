@@ -3,10 +3,10 @@
 #   rx_frag_size:Size of a fragment that holds rcvd data. (ushort)
 
 module: be2net
-interface: eth1
-host_ip:
-netmask:
-peer_ip:
+interface: ""
+host_ip: ""
+netmask: ""
+peer_ip: ""
 sysfs_check_required: 0
 module_param_name: "rx_frag_size"
 value: !mux

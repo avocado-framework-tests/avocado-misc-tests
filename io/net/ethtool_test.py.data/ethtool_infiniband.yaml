@@ -1,7 +1,7 @@
-interface: ib0
-peer_ip:
-host_ip:
-netmask:
+interface: ""
+peer_ip: ""
+host_ip: ""
+netmask: ""
 args: !mux
     PrivateFlag:
         privflag_test: True

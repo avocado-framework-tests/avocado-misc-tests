@@ -1,4 +1,3 @@
-ib_send_lat_extended:
 tool: ib_send_lat
 interface: ""
 peer_ip: ""

@@ -1,3 +1,13 @@
+crtl_no: ""
+channel_no: ""
+disk_no: "0 1 2 3"
+pci_id: "9005:028d:9005:0557"
+logicaldrive: "0"
+diskoverwrite: "Y"
+disk_size: "100"
+migration_sleep: "60"
+http_path: ""
+tool_name: "Arcconf-2.02-22404.ppc64el"
 Test: !mux
    Migrating5:
         initial_raid: "5"
@@ -29,14 +39,3 @@ Test: !mux
         disk_initial: "2"
         disk_migrated: "3"
         spare_drive: "3"
-parameters:
-    crtl_no: "1"
-    channel_no: "0"
-    disk_no: "0 1 2 3"
-    pci_id: "9005:028d:9005:0557"
-    logicaldrive: "0"
-    diskoverwrite: "Y"
-    disk_size: "100"
-    migration_sleep: "60"
-    http_path: ""
-    tool_name: "Arcconf-2.02-22404.ppc64el"

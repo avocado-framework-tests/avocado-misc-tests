@@ -1,6 +1,6 @@
-disk:
-dir: '/mnt'
-filesystem: !mux
+disk: ""
+dir: ''
+fs: !mux
     ext4:
         fs: 'ext4'
     xfs:

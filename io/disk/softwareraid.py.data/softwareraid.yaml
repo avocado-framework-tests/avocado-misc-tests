@@ -1,4 +1,4 @@
-disks:
+disks: ""
 run_test: True
 force: True
 raidlevel: !mux

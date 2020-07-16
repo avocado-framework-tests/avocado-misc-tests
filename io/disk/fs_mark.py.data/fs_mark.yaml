@@ -1,8 +1,8 @@
-disk:
-dir:
+disk: ""
+dir: ""
 num_files: 1000
 size: 10240
-filesystem: !mux
+fs: !mux
     ext4:
         fs: 'ext4'
     xfs:

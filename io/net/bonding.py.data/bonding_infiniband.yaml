@@ -1,6 +1,4 @@
-Test: !mux
-    active-backup:
-        bonding_mode: "1"
+bonding_mode: "1"
 bond_interfaces: ""
 host_ips: ""
 netmask: ""

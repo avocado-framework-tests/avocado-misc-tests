@@ -1,10 +1,10 @@
-interface:
-peer_ip:
+interface: ""
+peer_ip: ""
 peer_public_ip: ""
 peer_user: "root"
 peer_password: "********"
-host_ip:
-netmask:
+host_ip: ""
+netmask: ""
 mtu: !mux
     1500:
         mtu: "1500"

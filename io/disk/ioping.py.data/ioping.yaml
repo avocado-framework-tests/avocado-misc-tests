@@ -32,4 +32,4 @@ period: '10'
 interval: '1s'
 size: '4k'
 wsize: '10m'
-disk:
+disk: ""

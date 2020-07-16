@@ -1,4 +1,4 @@
 htx_disks: ''
 all: False
-time_limit: 1
+time_limit: 120
 mdt_file: 'mdt.hd'

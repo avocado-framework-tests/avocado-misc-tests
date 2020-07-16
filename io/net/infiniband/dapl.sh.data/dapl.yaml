@@ -1,4 +1,4 @@
-peer_ip: "16.16.16.17"
+peer_ip: ""
 dapl_interface: ofa-v2-ib1
 dapl_peer_interface: ofa-v2-ib1
 Parameters: !mux

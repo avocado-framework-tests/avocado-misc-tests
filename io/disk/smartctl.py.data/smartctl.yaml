@@ -1,8 +1,4 @@
-scenario: !mux
-    test1:
-        disk: /dev/sda
-    test2:
-        disk: /dev/sdb
+disk: ""
 Options: !mux
     self_test:
         option: --test=long

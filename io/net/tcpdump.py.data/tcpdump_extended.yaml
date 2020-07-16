@@ -1,10 +1,10 @@
-interface:
-peer_ip:
+interface: ""
+peer_ip: ""
 peer_public_ip: ""
-peer_user:
-peer_password:
-host_ip:
-netmask:
+peer_user: ""
+peer_password: ""
+host_ip: ""
+netmask: ""
 count: 100
 # interface packet drop accepted in percentage (eg 10 for 10%)
 drop_accepted: 10

@@ -1,3 +1,16 @@
+bond_interfaces: ""
+host_ips: ""
+netmask: ""
+peer_ip: ""
+peer_interfaces: ""
+peer_public_ip: ""
+peer_password: "********"
+bond_name: "bondtest"
+user_name: "root"
+peer_bond_needed: False 
+peer_wait_time: "10"
+sleep_time: "5"
+mtu: "1500"
 Test: !mux
     round-robin:
         bonding_mode: "0"
@@ -13,16 +26,3 @@ Test: !mux
         bonding_mode: "5"
     balance-alb:
         bonding_mode: "6"
-bond_interfaces: ""
-host_ips: ""
-netmask: ""
-peer_ip: ""
-peer_interfaces: ""
-peer_public_ip: ""
-peer_password: "********"
-bond_name: "bondtest"
-user_name: "root"
-peer_bond_needed: False 
-peer_wait_time: "10"
-sleep_time: "5"
-mtu: "1500"

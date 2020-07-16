@@ -1,6 +1,6 @@
-disk:
+disk: ""
 script: 'runltp'
-dir:
+dir: ""
 args: !mux
     fs_di:
         args: '-s fs_di'

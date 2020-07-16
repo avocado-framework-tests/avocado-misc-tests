@@ -1,7 +1,7 @@
 # btrfs needs minimum LV size of 641M
-lv_disks:
-lv_size:
-filesystem: !mux
+lv_disks: ""
+lv_size: ""
+fs: !mux
     ext2:
         fs: ext2
     ext3:

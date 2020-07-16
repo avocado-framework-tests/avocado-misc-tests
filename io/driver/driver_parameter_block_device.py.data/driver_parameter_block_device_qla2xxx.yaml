@@ -1,6 +1,6 @@
 module: 'qla2xxx'
 multipath_enabled: True
-disk: '/dev/mapper/mpathb'
+disk: ''
 Test: !mux
     logging:
         module_param_name: "logging"

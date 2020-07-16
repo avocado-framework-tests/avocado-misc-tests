@@ -1,4 +1,4 @@
-adapter_id: 1
+adapter_id: ""
 tool_url: "ftp://ftp.supermicro.com/driver/****/Onboard%20Marvell%209230/Tools/mvcli"
 fw_url: "ftp://ftp.supermicro.com/driver/****/Onboard%20Marvell%209230/FW/ImageA1-2.3.12.1074_led.bin"
 fw_upgrade: "no"

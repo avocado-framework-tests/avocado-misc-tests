@@ -1,3 +1,9 @@
+crtl_no: ""
+pci_id: "9005:028d:9005:0557"
+http_path: ""
+tool_name: "Arcconf-2.02-22404.ppc64el"
+firmware_path: ""
+firmware_name: "AS816Z01.ufi"
 Test: !mux
    Firmwareflash:
         option: "echo y | arcconf ROMUPDATE"
@@ -179,10 +185,3 @@ Test: !mux
    setpower:
         option: "arcconf setpower"
         option_args: "spinup 5 11"
-parameters:
-    crtl_no: "1"
-    pci_id: "9005:028d:9005:0557"
-    http_path: ""
-    tool_name: "Arcconf-2.02-22404.ppc64el"
-    firmware_path: ""
-    firmware_name: "AS816Z01.ufi"

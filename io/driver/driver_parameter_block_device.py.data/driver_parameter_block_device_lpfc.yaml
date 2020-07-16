@@ -1,6 +1,6 @@
 module: 'lpfc'
 multipath_enabled: True
-disk: '/dev/mapper/mpathe'
+disk: ''
 Test: !mux
     lpfc_debugfs_enable:
         module_param_name: "lpfc_debugfs_enable"

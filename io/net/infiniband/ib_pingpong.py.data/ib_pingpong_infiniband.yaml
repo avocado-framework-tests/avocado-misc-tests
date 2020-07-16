@@ -1,3 +1,17 @@
+ext_flag: "1"
+interface: ""
+peer_ip: ""
+peer_user: "root"
+peer_password: "********"
+host_ip: ""
+netmask: ""
+CA_NAME: "mlx4_0"
+GID_NUM: "0"
+PORT_NUM: "1"
+PEERCA: "mlx4_0"
+PEERGID: "0"
+PEERPORT: "1"
+TIMEOUT: "120"
 Test: !mux
     ud_pingpong:
         tool: ibv_ud_pingpong
@@ -15,21 +29,6 @@ Test: !mux
         tool: ibv_srq_pingpong
         test_opt: -s 1024,basic,-n 100000,-e,-r 2000,-l 2,-m 1024,-q 10
         ext_test_opt: -s 524288,-s 524288 -n 10000,-s 524288 -n 100000,-q 32,-e -s 524288 -n 10000 -q 32
-parameters:
-    ext_flag: "1"
-    interface: "ib0"
-    peer_ip:
-    peer_user: "root"
-    peer_password: "********"
-    host_ip: ""
-    netmask: ""
-    CA_NAME: "mlx4_0"
-    GID_NUM: "0"
-    PORT_NUM: "1"
-    PEERCA: "mlx4_0"
-    PEERGID: "0"
-    PEERPORT: "1"
-    TIMEOUT: "120"
 mtu: !mux
     1500:
         mtu: "1500"

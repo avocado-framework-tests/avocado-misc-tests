@@ -1,4 +1,2 @@
-Disks: !mux
-    disk1:
-        disk: /dev/nvme0n1
-        utilization: 10
+disk: ""
+utilization: 100

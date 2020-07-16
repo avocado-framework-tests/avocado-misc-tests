@@ -1,5 +1,4 @@
-scenario:
-            max_freeze: 
-            function: 
-            err: 
-            pci_device: ""
+max_freeze: ""
+function: "" 
+err: "" 
+pci_device: ""

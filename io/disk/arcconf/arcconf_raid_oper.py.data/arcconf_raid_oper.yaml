@@ -1,3 +1,13 @@
+crtl_no: ""
+channel_no: ""
+disk_no: "0 1 2 3"
+pci_id: "9005:028d:9005:0557"
+logicaldrive: "0"
+diskoverwrite: "Y"
+fs_type: "ext4"
+mount_point: "/mnt"
+http_path: ""
+tool_name: "Arcconf-2.02-22404.ppc64el"
 Test: !mux
    Stripe_16:
         option: "Stripesize 16"
@@ -45,14 +55,3 @@ Test: !mux
         option: "MaxCacheWriteCache ION"
    MaxCacheWriteCache_IOFF:
         option: "MaxCacheWriteCache IOFF"
-parameters:
-    crtl_no: "1"
-    channel_no: "0"
-    disk_no: "0 1 2 3"
-    pci_id: "9005:028d:9005:0557"
-    logicaldrive: "0"
-    diskoverwrite: "Y"
-    fs_type: "ext4"
-    mount_point: "/mnt"
-    http_path: ""
-    tool_name: "Arcconf-2.02-22404.ppc64el"

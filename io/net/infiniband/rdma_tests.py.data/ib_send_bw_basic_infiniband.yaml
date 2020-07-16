@@ -1,4 +1,3 @@
-ib_send_bw_basic:
 tool: ib_send_bw
 interface: ""
 peer_ip: ""

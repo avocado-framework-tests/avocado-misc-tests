@@ -1,4 +1,4 @@
-Test: !mux
+Bonding_mode: !mux
     active-backup:
         bonding_mode: "1"
     802.3ad:

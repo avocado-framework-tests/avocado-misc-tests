@@ -1,6 +1,5 @@
-parameters:
-    dir: '/mnt'
-    fio_tool_url: 'http://brick.kernel.dk/snaps/fio-2.99.tar.gz'
+dir: '/mnt'
+fio_tool_url: 'http://brick.kernel.dk/snaps/fio-2.99.tar.gz'
 job: !mux
     rand-RW:
         fio_job: 'fio-rand-RW.job'
@@ -14,6 +13,6 @@ job: !mux
         fio_job: 'fio-seq-read.job'
     fio-seq-write:
         fio_job: 'fio-seq-write.job'
-filesystem: !mux
+fs: !mux
     ext4:
         fs: 'ext4'

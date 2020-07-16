@@ -1,4 +1,4 @@
-disk:
+disk: ""
 script: 'fsstress'
 dir: '/mnt/nfs'
 fsstress_loop: 1

@@ -36,7 +36,7 @@ Test: !mux
         tool: lsdevinfo
         test_opt: !mux
             lsdevinfo_:
-                test_opt: 
+                test_opt: ""
             lsdevinfo_R:
                 test_opt: -R
             lsdevinfo_c:
@@ -52,7 +52,7 @@ Test: !mux
         tool: lshw
         test_opt: !mux
             lshw_:
-                test_opt:
+                test_opt: ""
             lshw_short:
                 test_opt: -short
             lshw_businfo:

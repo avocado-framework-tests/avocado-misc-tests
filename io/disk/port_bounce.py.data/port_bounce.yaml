@@ -1,6 +1,6 @@
 switch_name: ""
-userid: "admin"
-password: "passw0rd"
+userid: ""
+password: ""
 wwids: ''
 sbt: 60
 lbt: 120

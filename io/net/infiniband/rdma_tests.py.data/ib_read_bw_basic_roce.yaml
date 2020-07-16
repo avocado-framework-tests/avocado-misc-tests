@@ -1,4 +1,3 @@
-ib_read_bw_basic:
 tool: ib_read_bw
 interface: ""
 peer_ip: ""

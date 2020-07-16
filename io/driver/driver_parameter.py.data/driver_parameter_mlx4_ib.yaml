@@ -1,8 +1,8 @@
 module: "mlx4_ib"
-interface: ib0 
-host_ip:
-netmask:
-peer_ip:
+interface: "" 
+host_ip: ""
+netmask: ""
+peer_ip: ""
 sysfs_check_required: 1
 value: !mux
     sm_guid_assign:

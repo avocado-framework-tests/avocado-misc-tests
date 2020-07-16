@@ -14,14 +14,14 @@ Test: !mux
         tool: ls-veth
         test_opt: !mux
             ls-veth:
-                test_opt:
+                test_opt: ""
     lsvscsi:
         tool: ls-vscsi
         test_opt: !mux
             ls-vscsi:
-                test_opt:
+                test_opt: ""
     lsvdev:
         tool: ls-vdev
         test_opt: !mux
             ls-vdev:
-                test_opt:
+                test_opt: ""

@@ -1,5 +1,3 @@
-ib_atomic_bw_extended:
-tool: ib_atomic_bw
 interface: ""
 peer_ip: ""
 peer_user: "root"

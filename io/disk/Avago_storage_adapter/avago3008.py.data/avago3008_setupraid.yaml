@@ -1,11 +1,8 @@
-cenario:
-    controller:
-    disk_bay:
-    spare:
-    size: 10000
-    tool_location: /root/sas3ircu
-    clear_config: False
-    setup_raid: True
-raidlevel: !mux
-    raid1:
-        raidlevel: raid1
+controller: ""
+disk_bay: ""
+spare: ""
+size: 10000
+tool_location: /root/sas3ircu
+clear_config: False
+setup_raid: True
+raidlevel: raid1

@@ -1,8 +1,8 @@
 module: "mlx4_core"
-interface: eth3
-host_ip:
-netmask:
-peer_ip:
+interface: "" 
+host_ip: ""
+netmask: ""
+peer_ip: ""
 sysfs_check_required: 1
 value: !mux
     mlx4_en_only_mode:

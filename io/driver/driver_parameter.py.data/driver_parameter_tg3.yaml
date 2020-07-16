@@ -1,8 +1,8 @@
 module: tg3
-interface: eth1
-host_ip:
-netmask:
-peer_ip:
+interface: ""
+host_ip: ""
+netmask: ""
+peer_ip: ""
 sysfs_check_required: 0
 module_param_name: "tg3_debug"
 value: !mux

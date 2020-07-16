@@ -1,18 +1,16 @@
-Test: !mux
-    options: !mux
-        first:
-            basic_option: -m 224.0.0.IPVAL -b PEERIP -c 100 -C 300 -S 1024 , -m 224.0.0.IPVAL -b LOCALIP -c 100 -C 300 -S 1024 -s
+ext_flag: "1"
+interface: ""
+peer_ip: ""
+peer_user: "root"
+peer_password: "********"
+host_ip: ""
+netmask: ""
+options: !mux
+    first:
+        basic_option: -m 224.0.0.IPVAL -b PEERIP -c 100 -C 300 -S 1024 , -m 224.0.0.IPVAL -b LOCALIP -c 100 -C 300 -S 1024 -s
 # Placeholder for exended option
-#        fourth:
-#            ext_option:
-Parameters:
-    ext_flag: "1"
-    interface:
-    peer_ip:
-    peer_user: "root"
-    peer_password: "********"
-    host_ip:
-    netmask:
+#    fourth:
+#        ext_option:
 mtu: !mux
     1500:
         mtu: "1500"

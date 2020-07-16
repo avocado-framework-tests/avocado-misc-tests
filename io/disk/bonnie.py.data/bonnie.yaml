@@ -7,12 +7,12 @@
 #       [-D]
 
 # Valid options in avocado test are below:
-disk:
-dir:
+disk: ""
+dir: ""
 uid-to-use: root
 number-to-stat: 10:100:10:1000
 data_size_to_pass: 0
-filesystem: !mux
+fs: !mux
     ext4:
         fs: 'ext4'
     xfs:

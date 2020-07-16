@@ -1,4 +1,3 @@
-ib_write_bw_extended:
 tool: ib_write_bw
 interface: ""
 peer_ip: ""

@@ -1,6 +1,4 @@
-ISO_Location:
-    location:
-        iso_location: http://www.mellanox.com/downloads/ofed/MLNX_OFED-3.3-1.0.4.0/MLNX_OFED_LINUX-3.3-1.0.4.0-rhel7.2-ppc64le.iso
+iso_location: ""
 Options: !mux
     all:
         option: --all --post-start-delay 15 --pre-install-opensm "echo pre" --post-install-mstflint "echo post"

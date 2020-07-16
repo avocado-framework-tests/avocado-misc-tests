@@ -1,3 +1,2 @@
-cenario:
-    controller: 0
-    tool_location: /root/storcli64
+controller: ""
+tool_location: /root/storcli64

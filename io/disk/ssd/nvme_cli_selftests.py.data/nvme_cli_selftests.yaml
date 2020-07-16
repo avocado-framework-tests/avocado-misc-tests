@@ -1,5 +1,5 @@
-device: nvme0
-disk: /dev/nvme0n1
+device: ""
+disk: ""
 test: !mux
     nvme_id_ctrl_test:
         test: nvme_id_ctrl_test

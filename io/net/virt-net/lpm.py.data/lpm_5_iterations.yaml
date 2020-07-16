@@ -1,14 +1,14 @@
-hmc_pwd:
-hmc_username:
-slot_num:
-vios_names:
-remote_server:
-remote_vios_names:
-sriov_adapters:
-sriov_ports:
-remote_sriov_adapters:
-remote_sriov_ports:
-bandwidth:
+hmc_pwd: ""
+hmc_username: ""
+slot_num: ""
+vios_names: ""
+remote_server: ""
+remote_vios_names: ""
+sriov_adapters: ""
+sriov_ports: ""
+remote_sriov_adapters: ""
+remote_sriov_ports: ""
+bandwidth: ""
 options: "--vniccfg 2"
 iteration: !mux
     default: !mux
