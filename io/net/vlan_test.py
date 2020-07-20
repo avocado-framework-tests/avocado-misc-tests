@@ -16,25 +16,11 @@
 
 import time
 import paramiko
-try:
-    import pxssh
-except ImportError:
-    from pexpect import pxssh
 
 from avocado import Test
 from avocado.utils import process
+from avocado.utils.ssh import Session
 from avocado.utils.process import CmdError
-
-
-class CommandFailed(Exception):
-    def __init__(self, command, output, exitcode):
-        self.command = command
-        self.output = output
-        self.exitcode = exitcode
-
-    def __str__(self):
-        return "Command '%s' exited with %d.\nOutput:\n%s" \
-               % (self.command, self.exitcode, self.output)
 
 
 class VlanTest(Test):
@@ -60,7 +46,10 @@ class VlanTest(Test):
         """
         self.parameters()
         self.switch_login(self.switch_name, self.userid, self.password)
-        self.peer_login(self.peer_ip, self.peer_user, self.peer_password)
+        self.session = Session(self.peer_ip, user=self.peer_user,
+                               password=self.peer_password)
+        if not self.session.connect():
+            self.cancel("failed connecting to peer")
         self.get_ips()
 
     def parameters(self):
@@ -118,52 +107,12 @@ class VlanTest(Test):
         response = self.remote_conn.recv(1000)
         return self._send_only_result(command, response)
 
-    def peer_login(self, ip, username, password):
-        '''
-        SSH Login method for remote peer server
-        '''
-        pxh = pxssh.pxssh(encoding='utf-8')
-        # Work-around for old pxssh not having options= parameter
-        pxh.SSH_OPTS = "%s  -o 'StrictHostKeyChecking=no'" % pxh.SSH_OPTS
-        pxh.SSH_OPTS = "%s  -o 'UserKnownHostsFile /dev/null' " % pxh.SSH_OPTS
-        pxh.force_password = True
-
-        pxh.login(ip, username, password)
-        pxh.sendline()
-        pxh.prompt(timeout=60)
-        pxh.sendline('exec bash --norc --noprofile')
-        # Ubuntu likes to be "helpful" and alias grep to
-        # include color, which isn't helpful at all. So let's
-        # go back to absolutely no messing around with the shell
-        pxh.set_unique_prompt()
-        self.pxssh = pxh
-
     def peer_logout(self):
         '''
         SSH Logout method for remote peer server
         '''
-        if hasattr(self, 'pxssh'):
-            self.pxssh.terminate()
+        self.session.quit()
         return
-
-    def run_peer_command(self, command, timeout=300):
-        '''
-        SSH Run command method for running commands on remote server
-        '''
-        self.log.info("Running the command on peer lpar %s", command)
-        if not hasattr(self, 'pxssh'):
-            self.fail("SSH Console setup is not yet done")
-        con = self.pxssh
-        con.sendline(command)
-        con.expect("\n")  # from us
-        con.expect(con.PROMPT, timeout=timeout)
-        output = con.before.splitlines()
-        con.sendline("echo $?")
-        con.prompt(timeout)
-        exitcode = int(''.join(con.before.splitlines()[1:]))
-        if exitcode != 0:
-            raise CommandFailed(command, output, exitcode)
-        return output
 
     def run_host_command(self, cmd):
         """
@@ -197,11 +146,10 @@ class VlanTest(Test):
         ping check for host in peer
         '''
         cmd = "ping -I %s %s -c 5" % (intf, ip)
-        try:
-            self.run_peer_command(cmd)
+        output = self.session.cmd(cmd)
+        if output.exit_status == 0:
             return True
-        except CommandFailed:
-            return False
+        return False
 
     def test_default_vlan1(self):
         """
@@ -230,7 +178,7 @@ class VlanTest(Test):
         if self.ping_check_host(self.host_intf, self.ip_dic[self.peer_intf]):
             self.fail("Ping test failed for vlan 1 & 2230 in host")
         self.log.info("Ping test passed for vlan 1 % 2230 in host")
-        if self.ping_check_host(self.peer_intf, self.ip_dic[self.host_intf]):
+        if self.ping_check_peer(self.peer_intf, self.ip_dic[self.host_intf]):
             self.fail("Ping test failed for vlan 1 & 2230 in peer")
         self.log.info("Ping test passed for vlan 1 % 2230 in peer")
 
@@ -297,10 +245,10 @@ class VlanTest(Test):
         cmd = "ip addr list %s |grep 'inet ' |cut -d' ' -f6| \
               cut -d/ -f1" % self.host_intf
         self.ip_dic[self.host_intf] = self.run_cmd_output(cmd)
-
-        cmd = "ip addr list %s |grep 'inet ' |cut -d' ' -f6| \
-              cut -d/ -f1" % self.peer_intf
-        self.ip_dic[self.peer_intf] = self.run_peer_command(cmd)[0]
+        cmd = "ip addr list %s |grep \'inet \'" % self.peer_intf
+        output = self.session.cmd(cmd)
+        self.ip_dic[self.peer_intf] = output.stdout_text.splitlines()[0] \
+                                                        .split()[1].split('/')[0]
         self.log.info("test interface & ips: %s", self.ip_dic)
 
     def conf_host_vlan_intf(self, vlan_num):
@@ -325,18 +273,18 @@ class VlanTest(Test):
         Vlan configuration on Peer
         """
         ip = self.ip_dic[self.peer_intf]
-        self.run_peer_command("ip addr flush dev %s" % self.peer_intf)
+        cmd = "ip addr flush dev %s" % self.peer_intf
+        self.session.cmd(cmd)
         cmd = "ip link add link %s name %s.%s type vlan id %s" \
               % (self.peer_intf, self.peer_intf, vlan_num, vlan_num)
-        self.run_peer_command(cmd)
+        self.session.cmd(cmd)
         cmd = "ip addr add %s/%s dev %s.%s" \
               % (ip, self.cidr_value, self.peer_intf, vlan_num)
-        self.run_peer_command(cmd)
-        self.run_peer_command("ip link set %s.%s up" % (self.peer_intf,
-                                                        vlan_num))
+        self.session.cmd(cmd)
         cmd = "ip link set %s.%s up" % (self.peer_intf, vlan_num)
+        self.session.cmd(cmd)
         cmd = "ip addr show %s.%s" % (self.peer_intf, vlan_num)
-        self.run_peer_command(cmd)
+        self.session.cmd(cmd)
 
     def restore_host_intf(self):
         """
@@ -352,9 +300,11 @@ class VlanTest(Test):
         Restore peer interfaces
         """
         cmd = "ip link delete %s.%s" % (self.peer_intf, self.vlan_num)
-        self.run_peer_command(cmd)
-        self.run_peer_command("ifdown %s" % self.peer_intf)
-        self.run_peer_command("ifup %s" % self.peer_intf)
+        self.session.cmd(cmd)
+        cmd = "ifdown %s" % self.peer_intf
+        self.session.cmd(cmd)
+        cmd = "ifup %s" % self.peer_intf
+        self.session.cmd(cmd)
 
     def tearDown(self):
         """

@@ -19,10 +19,6 @@ Tests for Virtual FC
 '''
 
 import time
-try:
-    import pxssh
-except ImportError:
-    from pexpect import pxssh
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import multipath
@@ -30,28 +26,12 @@ from avocado.utils import distro
 from avocado.utils import wait
 from avocado.utils import genio
 from avocado.utils.process import CmdError
+from avocado.utils.ssh import Session
 from avocado.utils.software_manager import SoftwareManager
 from avocado import skipIf, skipUnless
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
-
-
-class CommandFailed(Exception):
-    '''
-    Defines the exception called when a
-    command fails
-    '''
-
-    def __init__(self, command, output, exitcode):
-        Exception.__init__(self, command, output, exitcode)
-        self.command = command
-        self.output = output
-        self.exitcode = exitcode
-
-    def __str__(self):
-        return "Command '%s' exited with %d.\nOutput:\n%s" \
-               % (self.command, self.exitcode, self.output)
 
 
 class VirtualFC(Test):
@@ -89,11 +69,14 @@ class VirtualFC(Test):
         self.lpar = self.get_partition_name("Partition Name")
         if not self.lpar:
             self.cancel("LPAR Name not got from lparstat command")
-        self.login(self.hmc_ip, self.hmc_username, self.hmc_pwd)
+        self.session = Session(self.hmc_ip, user=self.hmc_username,
+                               password=self.hmc_pwd)
+        if not self.session.connect():
+            self.cancel("failed connecting to HMC")
         cmd = 'lssyscfg -r sys  -F name'
-        output = self.run_command(cmd)
+        output = self.session.cmd(cmd).stdout_text
         self.server = ''
-        for line in output:
+        for line in output.splitlines():
             if line in self.lpar:
                 self.server = line
         if not self.server:
@@ -111,40 +94,6 @@ class VirtualFC(Test):
                 self.dic_list.append(vfc_dic)
 
         self.log.info("complete list : %s" % self.dic_list)
-
-    def login(self, ipaddr, username, password):
-        '''
-        SSH Login method for remote server
-        '''
-        pxh = pxssh.pxssh()
-        # Work-around for old pxssh not having options= parameter
-        pxh.SSH_OPTS = pxh.SSH_OPTS + " -o 'StrictHostKeyChecking=no'"
-        pxh.SSH_OPTS = pxh.SSH_OPTS + " -o 'UserKnownHostsFile /dev/null' "
-        pxh.force_password = True
-
-        pxh.login(ipaddr, username, password)
-        pxh.sendline()
-        pxh.prompt(timeout=60)
-        # Ubuntu likes to be "helpful" and alias grep to
-        # include color, which isn't helpful at all. So let's
-        # go back to absolutely no messing around with the shell
-        pxh.set_unique_prompt()
-        pxh.prompt(timeout=60)
-        self.pxssh = pxh
-
-    def run_command(self, command, timeout=300):
-        '''
-        SSH Run command method for running commands on remote server
-        '''
-        self.log.info("Running the command on hmc %s", command)
-        con = self.pxssh
-        con.sendline(command)
-        con.expect("\n")  # from us
-        con.expect(con.PROMPT, timeout=timeout)
-        output = con.before.decode('utf-8').splitlines()
-        con.sendline("echo $?")
-        con.prompt(timeout)
-        return output
 
     @staticmethod
     def get_mcp_component(component):
@@ -223,8 +172,8 @@ class VirtualFC(Test):
         vfchost = []
         cmd = 'viosvrcmd -m %s -p %s -c "lsmap -all -npiv -field  Name \
                ClntName -fmt :"' % (self.server, vios_name)
-        for line in self.run_command(cmd):
-            if self.lpar in line:
+        for line in self.session.cmd(cmd).stdout_text:
+            if self.lpar in line.splitlines():
                 vfchost.append(line.split(":")[0])
         return vfchost
 
@@ -234,9 +183,9 @@ class VirtualFC(Test):
         '''
         cmd = 'viosvrcmd -m %s -p %s -c "lsmap -all -npiv -field Name \
                fc -fmt :"' % (self.server, vios_name)
-        output = self.run_command(cmd)
+        output = self.session.cmd(cmd).stdout_text
         self.log.info("output value : %s" % output)
-        for line in output:
+        for line in output.splitlines():
             if vfchost in line:
                 return line.split(":")[-1]
         return ''
@@ -247,9 +196,9 @@ class VirtualFC(Test):
         '''
         cmd = 'viosvrcmd -m %s -p %s -c "lsmap -all -npiv -field  name\
                vfcclient -fmt :"' % (self.server, vios_name)
-        output = self.run_command(cmd)
+        output = self.session.cmd(cmd).stdout_text
         self.log.info("output value : %s" % output)
-        for line in output:
+        for line in output.splitlines():
             if vfchost in line:
                 return line.split(":")[-1]
         return ''
@@ -260,9 +209,9 @@ class VirtualFC(Test):
         '''
         cmd = 'viosvrcmd -m %s -p %s -c "lsmap -all -npiv -field  name\
                Status -fmt :"' % (self.server, vios_name)
-        output = self.run_command(cmd)
+        output = self.session.cmd(cmd).stdout_text
         self.log.info("output value : %s" % output)
-        for line in output:
+        for line in output.splitlines():
             if vfchost in line:
                 return line.split(":")[-1]
         return ''
@@ -292,10 +241,10 @@ class VirtualFC(Test):
         else:
             cmd = 'viosvrcmd -m %s -p %s -c "vfcmap -vadapter %s -fcp"' \
                    % (self.server, vfc_dic["vios"], vfc_dic["vfchost"])
-        try:
-            self.run_command(cmd)
-        except CommandFailed as cmdfail:
-            self.log.debug(str(cmdfail))
+
+        output = self.session.cmd(cmd)
+        if output.exit_status != 0:
+            self.log.debug(output.stderr)
             self.fail("vfchost %s operation failed" % operation)
         self.vfchost_status_verify(operation, vfc_dic["vfchost"],
                                    vfc_dic["vios"])
@@ -404,10 +353,9 @@ class VirtualFC(Test):
         else:
             cmd = 'viosvrcmd -m %s -p %s -c "cfgdev -dev %s"' \
                    % (self.server, vfc_dic["vios"], vfc_dic["vfchost"])
-        try:
-            self.run_command(cmd)
-        except CommandFailed as cmdfail:
-            self.log.debug(str(cmdfail))
+        output = self.session.cmd(cmd)
+        if output.exit_status != 0:
+            self.log.debug(output.stderr)
             self.fail("vfchost %s operation failed" % operation)
         self.vfchost_config_status_verify(operation, vfc_dic["vfchost"],
                                           vfc_dic["vios"])
@@ -419,9 +367,9 @@ class VirtualFC(Test):
         '''
         cmd = 'viosvrcmd -m %s -p %s -c "lsdev -dev %s -field  name status \
                -fmt :"' % (self.server, vios, vfchost)
-        output = self.run_command(cmd)
+        output = self.session.cmd(cmd).stdout_text
         self.log.info("output value : %s" % output)
-        for line in output:
+        for line in output.splitlines():
             if vfchost in line:
                 return line.split(":")[-1]
         return ''
@@ -500,17 +448,16 @@ class VirtualFC(Test):
                    -p %s -s %s -a "adapter_type=%s,remote_lpar_name=%s, \
                    remote_slot_num=%s"' % (self.server, vios, vfchost_id,
                                            vfc_type, self.lpar, vfchost_id)
-        try:
-            self.log.info("create-command=%s" % cmd)
-            self.run_command(cmd)
-            if self.vfchost_exists("create", vfchost_id, vfc_type) is True:
-                return True
-            else:
-                self.err_mesg.append("%s=%scommand success but not \
-                                     deleted" % (vfc_type, vfchost_id))
-                return False
-        except CommandFailed as cmdfail:
-            self.log.debug(str(cmdfail))
+        self.log.info("create-command=%s" % cmd)
+        output = self.session.cmd(cmd)
+        if self.vfchost_exists("create", vfchost_id, vfc_type) is True:
+            return True
+        else:
+            self.err_mesg.append("%s=%scommand success but not \
+                                  deleted" % (vfc_type, vfchost_id))
+            return False
+        if output.exit_status != 0:
+            self.log.debug(output.stderr)
             self.err_mesg.append("failed to create %s vfchost%s on \
                                   %s" % (vfc_type, vfchost_id, vios))
 
@@ -521,19 +468,18 @@ class VirtualFC(Test):
         cmd = 'chhwres -r virtualio -m %s -o r -p %s -s %s' % (self.server,
                                                                lpar,
                                                                vfchost_id)
-        try:
-            self.log.info("delete-command=%s" % cmd)
-            self.run_command(cmd)
-            if self.vfchost_exists("delete", vfchost_id, lpar) is True:
-                self.log.info("%s vfchost with ID: %s deleted \
-                               successfully" % (lpar, vfchost_id))
-                return True
-            else:
-                self.err_mesg.append("%s=%scommand success but not \
-                                      deleted" % (lpar, vfchost_id))
-                return False
-        except CommandFailed as cmdfail:
-            self.log.debug(str(cmdfail))
+        self.log.info("delete-command=%s" % cmd)
+        output = self.session.cmd(cmd)
+        if self.vfchost_exists("delete", vfchost_id, lpar) is True:
+            self.log.info("%s vfchost with ID: %s deleted \
+                           successfully" % (lpar, vfchost_id))
+            return True
+        else:
+            self.err_mesg.append("%s=%scommand success but not \
+                                  deleted" % (lpar, vfchost_id))
+            return False
+        if output.exit_status != 0:
+            self.log.debug(output.stderr)
             self.err_mesg.append("failed to delete %s vfchost%s \
                                   on" % (lpar, vfchost_id))
 
@@ -545,14 +491,14 @@ class VirtualFC(Test):
                slot_num,adapter_type | grep -i %s' % (self.server, lpar)
 
         def is_vfc_exist():
-            output = self.run_command(cmd)
+            output = self.session.cmd(cmd).stdout_text
             if operation == "create":
-                for line in output:
+                for line in output.splitlines():
                     if str(vfc_slot) == line.split(",")[0]:
                         return True
                 return False
             else:
-                for line in output:
+                for line in output.splitlines():
                     if str(vfc_slot) == line.split(",")[0]:
                         return False
                 return True
@@ -563,5 +509,4 @@ class VirtualFC(Test):
         '''
         close ssh session gracefully
         '''
-        if self.pxssh.isalive():
-            self.pxssh.terminate()
+        self.session.quit()
