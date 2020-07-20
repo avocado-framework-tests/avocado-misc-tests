@@ -32,6 +32,7 @@ from avocado.utils import pmem
 from avocado.utils import disk
 from avocado.utils import lv_utils
 from avocado.utils import process, distro
+from avocado.utils import softwareraid
 from avocado.utils.partition import Partition
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.partition import PartitionError
@@ -61,7 +62,7 @@ class FioTest(Test):
         mnt_args = self.params.get('mnt_args', default='')
         self.fio_file = 'fiotest-image'
 
-        fstype = self.params.get('fs', default=None)
+        fstype = self.params.get('fs', default='')
         if fstype == 'btrfs':
             ver = int(distro.detect().version)
             rel = int(distro.detect().release)
@@ -72,6 +73,8 @@ class FioTest(Test):
         self.fs_create = False
         lv_needed = self.params.get('lv', default=False)
         self.lv_create = False
+        raid_needed = self.params.get('raid', default=False)
+        self.raid_create = False
 
         if distro.detect().name in ['Ubuntu', 'debian']:
             pkg_list = ['libaio-dev']
@@ -87,6 +90,8 @@ class FioTest(Test):
                 else:
                     pkg_list.extend(['ndctl', 'daxctl', 'numactl-devel',
                                      'ndctl-devel', 'daxctl-devel'])
+        if raid_needed:
+            pkg_list.append('mdadm')
 
         smm = SoftwareManager()
         for pkg in pkg_list:
@@ -119,22 +124,23 @@ class FioTest(Test):
         if not self.disk:
             self.disk = self.workdir
 
+        self.dirs = self.disk
         if self.disk in disk.get_disks():
+            if raid_needed:
+                raid_name = '/dev/md/mdsraid'
+                self.create_raid(self.disk, raid_name)
+                self.raid_create = True
+                self.disk = raid_name
+
             if lv_needed:
                 self.disk = self.create_lv(self.disk)
                 self.lv_create = True
-                self.dirs = self.disk
-            else:
                 self.dirs = self.disk
 
             if fstype:
                 self.dirs = self.workdir
                 self.create_fs(self.disk, self.dirs, fstype, fs_args, mnt_args)
                 self.fs_create = True
-            else:
-                self.dirs = self.disk
-        else:
-            self.dirs = self.disk
 
         build.make(self.sourcedir)
 
@@ -160,6 +166,15 @@ class FioTest(Test):
                     region=region, mode='devdax')
                 self.fio_file = "/dev/%s" % self.plib.run_ndctl_list_val(
                     self.plib.run_ndctl_list('-N -r %s' % region)[0], 'chardev')
+
+    def create_raid(self, l_disk, l_raid_name):
+        self.sraid = softwareraid.SoftwareRaid(l_raid_name, '0',
+                                               l_disk.split(), '1.2')
+        self.sraid.create()
+
+    def delete_raid(self):
+        self.sraid.stop()
+        self.sraid.clear_superblock()
 
     def create_lv(self, l_disk):
         vgname = 'avocado_vg'
@@ -207,9 +222,11 @@ class FioTest(Test):
         '''
         Cleanup of disk used to perform this test
         '''
+        if os.path.exists(self.fio_file):
+            os.remove(self.fio_file)
         if self.fs_create:
             self.delete_fs(self.disk)
         if self.lv_create:
             self.delete_lv()
-        if os.path.exists(self.fio_file):
-            os.remove(self.fio_file)
+        if self.raid_create:
+            self.delete_raid()

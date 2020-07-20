@@ -2,7 +2,7 @@
 disk:  
 fio_job: 'fio-simple.job'
 fio_tool_url: 'https://brick.kernel.dk/snaps/fio-git-latest.tar.gz'
-filesystem: !mux
+fs: !mux
     ext4:
         fs: 'ext4'
     xfs:
@@ -10,7 +10,14 @@ filesystem: !mux
     btrfs:
         fs: 'btrfs'
     no_fs:
+        fs: ''
 lv: !mux
     lv:
         lv: True
     no_lv:
+        lv: False
+raid: !mux
+    raid:
+        raid: True
+    no_raid:
+        raid: False
