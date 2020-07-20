@@ -71,6 +71,6 @@ class Integrity(Test):
         status = process.system('./mem_integrity_test -s %s' %
                                 self.scenario_arg, shell=True, ignore_status=True)
         if status != 0:
-            if status == 255:
+            if status == 201:
                 self.cancel("System does not have numa/memory to run the test")
             self.fail("Test failed")

@@ -177,7 +177,7 @@ void get_numa_nodes_to_use(unsigned long memory_to_use)
 		printf("Nodes used in test %d %d \n", nodes_to_use[0], nodes_to_use[1]);
 	}else {
 		printf("10 percent of total memory is not found in 2 nodes\n");
-		exit(255);
+		exit(201);
 	}
 }
 
@@ -291,7 +291,7 @@ void write_read_pattern_numa_migration()
         printf("\nScenario : Numa Migration \n\n");
 	if(numa_available == -1){
 		printf("Numa library is not present");
-		exit(255);
+		exit(201);
 	}
 	max_node = numa_max_node();
 
@@ -374,7 +374,7 @@ int main(int argc, char *argv[])
 	printf("Total memory size %lu bytes \n", total_mem);
 	if (argc < 2){
 		printf("Usage <execname> -s <scenario_no> \n");
-		exit(255);
+		exit(201);
 	}
 	option = getopt(argc, argv,"s:");
 	if (option != -1){
