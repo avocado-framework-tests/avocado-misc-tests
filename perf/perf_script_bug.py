@@ -17,6 +17,7 @@
 import os
 import tempfile
 import shutil
+import configparser
 from avocado import Test
 from avocado.utils import build, distro, process
 from avocado.utils.software_manager import SoftwareManager
@@ -31,9 +32,11 @@ class PerfProbe(Test):
         # Check for basic utilities
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        self.distro_name = detected_distro.name
+        parser = configparser.ConfigParser()
+        parser.read(self.get_data('probe.cfg'))
+        self.perf_probe = parser.get(detected_distro.name, 'probepoint')
         deps = ['gcc', 'make']
-        if self.distro_name in ['rhel', 'SuSE']:
+        if detected_distro.name in ['rhel', 'SuSE']:
             deps.extend(['perf'])
         else:
             self.cancel("Install the package perf\
@@ -52,10 +55,10 @@ class PerfProbe(Test):
     def test_probe(self):
         # Creating temporary file to collect the perf.data
         self.temp_file = tempfile.NamedTemporaryFile().name
-        probe = "perf probe -x perf_test 'perf_test.c:4'"
-        output = process.run(probe, sudo=True, shell=True)
+        probe = "perf probe -x perf_test 'perf_test.c:%s'" % self.perf_probe
+        process.run(probe, sudo=True, shell=True)
         record = "perf record -e \'{cpu/cpu-cycles,period=10000/,probe_perf_test:main}:S\' -o %s ./perf_test" % self.temp_file
-        output = process.run(record, sudo=True, shell=True)
+        process.run(record, sudo=True, shell=True)
         output = process.run("perf script -i %s" % self.temp_file, ignore_status=True, sudo=True, shell=True)
         probe_del = "perf probe -d probe_perf_test:main"
         process.run(probe_del)
