@@ -43,15 +43,15 @@ class Ebizzy(Test):
         '''
         Build ebizzy
         Source:
-        http://liquidtelecom.dl.sourceforge.net/project/ebizzy/ebizzy/0.3
+        https://sourceforge.net/projects/ebizzy/files/ebizzy/0.3
         /ebizzy-0.3.tar.gz
         '''
         sm = SoftwareManager()
         for package in ['gcc', 'make', 'patch']:
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel("%s is needed for the test to be run" % package)
-        tarball = self.fetch_asset('http://liquidtelecom.dl.sourceforge.net'
-                                   '/project/ebizzy/ebizzy/0.3'
+        tarball = self.fetch_asset('http://sourceforge.net/projects'
+                                   '/ebizzy/files/ebizzy/0.3'
                                    '/ebizzy-0.3.tar.gz')
         archive.extract(tarball, self.workdir)
         version = os.path.basename(tarball.split('.tar.')[0])
@@ -60,8 +60,8 @@ class Ebizzy(Test):
         patch = self.params.get(
             'patch', default='Fix-build-issues-with-ebizzy.patch')
         os.chdir(self.sourcedir)
-        p1 = 'patch -p0 < %s' % (self.get_data(patch))
-        process.run(p1, shell=True)
+        patch_cmd = 'patch -p0 < %s' % (self.get_data(patch))
+        process.run(patch_cmd, shell=True)
         process.run('[ -x configure ] && ./configure', shell=True)
         build.make(self.sourcedir)
 
