@@ -126,8 +126,9 @@ class LTP(Test):
         logfile = os.path.join(self.logdir, 'ltp.log')
         failcmdfile = os.path.join(self.logdir, 'failcmdfile')
 
+        os.chmod(self.teststmpdir, 0o755)
         self.args += (" -q -p -l %s -C %s -d %s -S %s"
-                      % (logfile, failcmdfile, self.workdir,
+                      % (logfile, failcmdfile, self.teststmpdir,
                          self.get_data('skipfile')))
         if self.mem_leak:
             self.args += " -M %s" % self.mem_leak
