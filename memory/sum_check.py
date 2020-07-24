@@ -16,6 +16,7 @@
 #
 
 import os
+import tempfile
 from avocado import Test
 from avocado.utils import process, memory, disk, genio
 
@@ -30,10 +31,20 @@ class SumCheck(Test):
 
     def setUp(self):
         self.iter = int(self.params.get('iterations', default='5'))
+        dir_to_use = self.params.get('dir_to_use', default=None)
         self.memsize = int(self.params.get(
             'mem_size', default=memory.meminfo.MemFree.k * 0.9))
-        self.ddfile = os.path.join(self.workdir, 'ddfile')
-        if (disk.freespace(self.workdir) // 1024) < self.memsize:
+        if not dir_to_use:
+            base_dir = self.teststmpdir
+            if disk.freespace("/home") > disk.freespace(self.teststmpdir):
+                base_dir = "/home"
+        else:
+            base_dir = dir_to_use
+
+        self.log.info("Using %s as base dir for the test" % base_dir)
+        self.tmpdir = tempfile.mkdtemp(dir=base_dir)
+        self.ddfile = os.path.join(self.tmpdir, 'ddfile')
+        if (disk.freespace(self.tmpdir) // 1024) < self.memsize:
             self.cancel('%sM is needed for the test to be run' %
                         (self.memsize // 1024))
 
