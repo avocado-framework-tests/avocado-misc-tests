@@ -1,5 +1,4 @@
 disk:
-dir:
 num_files: 1000
 size: 10240
 filesystem: !mux
@@ -9,3 +8,13 @@ filesystem: !mux
         fs: 'xfs'
     btrfs:
         fs: 'btrfs'
+lv: !mux
+    lv:
+        lv: True
+    no_lv:
+        lv: False
+raid: !mux
+    raid:
+        raid: True
+    no_raid:
+        raid: False

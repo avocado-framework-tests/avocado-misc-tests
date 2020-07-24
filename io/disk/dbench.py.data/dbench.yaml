@@ -1,3 +1,4 @@
+disk:
 setup:
     duration: !mux
         default:
@@ -9,7 +10,22 @@ setup:
             nprocs: null
         minimal:
             nprocs: 1
-    location:
-        default:
-            dir: '.'
-
+fs: !mux
+    ext4:
+        fs: 'ext4'
+    xfs:
+        fs: 'xfs'
+    btrfs:
+        fs: 'btrfs'
+    no_fs:
+        fs: ''
+lv: !mux
+    lv:
+        lv: True
+    no_lv:
+        lv: False
+raid: !mux
+    raid:
+        raid: True
+    no_raid:
+        raid: False

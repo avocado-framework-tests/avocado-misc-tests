@@ -1,7 +1,5 @@
+disk:
 setup:
-    location: !mux
-        default:
-            dir: null
     argument: !mux
         default:
             args: null
@@ -11,3 +9,22 @@ setup:
 iterations: !mux
     1:
     2:
+fs: !mux
+    ext4:
+        fs: 'ext4'
+    xfs:
+        fs: 'xfs'
+    btrfs:
+        fs: 'btrfs'
+    no_fs:
+        fs: ''
+lv: !mux
+    lv:
+        lv: True
+    no_lv:
+        lv: False
+raid: !mux
+    raid:
+        raid: True
+    no_raid:
+        raid: False

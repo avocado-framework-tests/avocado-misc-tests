@@ -20,6 +20,5 @@ Multiplexer Input Parameters
 ----------------------------
 
 disk		- disk on which the test is to be run
-dir         - dir on which the disk needs to be mounted and run
 num_files	- number of files allocated per directory
 size		- size of each file
