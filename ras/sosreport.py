@@ -188,13 +188,11 @@ class Sosreport(Test):
             self.log.info("--tmp-dir option failed")
 
         dir_name = self.run_cmd_out("sosreport --no-report --batch --build | "
-                                    "grep located | "
-                                    "cut -d':' -f2").strip()
-        sosreport_dir = os.path.join(dir_name, 'sos_reports')
-        if os.listdir(sosreport_dir) != []:
+                                    "grep '/tmp/sosreport'").strip()
+        if os.listdir(dir_name) == []:
             self.is_fail += 1
             self.log.info("--no-report option failed")
-        file_list = self.params.get('file_list', default=['proc/device-tree/'])
+        file_list = self.params.get('file_list', default=['proc/'])
         for files in file_list:
             file_path = os.path.join(dir_name, files)
             if not os.path.exists(file_path):
@@ -254,7 +252,7 @@ class Sosreport(Test):
         directory_name = tempfile.mkdtemp()
         self.is_fail = 0
         self.run_cmd("sosreport --batch --tmp-dir=%s -o "
-                     "pci,powerpc,procenv,process,processor,kdump" % directory_name)
+                     "pci,powerpc,process,processor,kdump" % directory_name)
         shutil.rmtree(directory_name)
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in sosreport tool verification" % self.is_fail)
