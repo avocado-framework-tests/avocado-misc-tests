@@ -22,7 +22,6 @@ This Suite works with various options of ndctl on a NVDIMM device.
 import os
 import re
 import shutil
-import json
 
 import avocado
 from avocado import Test
@@ -597,17 +596,12 @@ class NdctlTest(Test):
                 self.plib.destroy_namespace(region=reg_name, force=True)
 
     @avocado.fail_on(pmem.PMemException)
-    def write_infoblock(self, ns_name, align):
+    def write_read_infoblock(self, ns_name, align):
         """
         Write_infoblock on given namespace
         """
-        write_cmd = "%s write-infoblock --align %s -m devdax "\
-                    "%s" % (self.ndctl, align, ns_name)
-        if process.system(write_cmd, ignore_status=True):
-            self.fail("write-infoblock command failed")
-        read_cmd = "%s read-infoblock -j %s" % (self.ndctl, ns_name)
-        read_out = process.system_output(read_cmd, ignore_status=True).decode()
-        read_out = json.loads(read_out)
+        self.plib.write_infoblock(namespace=ns_name, align=align, mode='devdax')
+        read_out = self.plib.read_infoblock(namespace=ns_name)
         if align != int(self.plib.run_ndctl_list_val(read_out[0], 'align')):
             self.fail("Alignment has not changed")
 
@@ -625,7 +619,7 @@ class NdctlTest(Test):
         ns_name = self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
         self.plib.disable_namespace(namespace=ns_name)
-        self.write_infoblock(ns_name, self.get_size_alignval())
+        self.write_read_infoblock(ns_name, self.get_size_alignval())
         self.plib.enable_namespace(namespace=ns_name)
 
     @avocado.fail_on(pmem.PMemException)
@@ -642,20 +636,18 @@ class NdctlTest(Test):
         ns_name = self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
         self.plib.disable_namespace(namespace=ns_name)
-        self.write_infoblock(ns_name, self.get_unsupported_alignval())
-        failed = False
-        found = False
+        self.write_read_infoblock(ns_name, self.get_unsupported_alignval())
         try:
             self.plib.enable_namespace(namespace=ns_name)
         except pmem.PMemException:
             self.log.info("Failed as expected")
-            failed = True
-        if not failed:
+        else:
             self.log.info(self.plib.run_ndctl_list())
             self.fail("Enabling namespace must have failed")
 
         idle_ns = self.plib.run_ndctl_list('-Ni -r %s' % region)
         if len(idle_ns) > 1:
+            found = False
             for namespace in idle_ns:
                 if int(self.plib.run_ndctl_list_val(namespace, 'size')) != 0:
                     found = True
