@@ -114,8 +114,7 @@ class EliminateDomainSuffix(Test):
 
     def test_event_wo_domain_param(self):
         result1 = self.event_stat('/ sleep 1')
-        if "invalid or unsupported event" not in result1.stderr.decode("utf-8") or "Required "\
-                "parameter 'domain' not specified" not in result1.stdout.decode("utf-8"):
+        if "Required parameter 'domain' not specified" not in result1.stdout.decode("utf-8"):
             self.fail('Domain is not specified, perf unable'
                       ' to recognize it has invalid event')
         else:
