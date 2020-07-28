@@ -68,7 +68,9 @@ class PowerNVEEH(Test):
         process.system(cmd, ignore_status=True, shell=True)
         self.function = str(self.params.get('function', default='4'))
         self.err = str(self.params.get('err'))
-        self.pci_device = str(self.params.get('pci_device', default=' '))
+        self.pci_device = str(self.params.get('pci_device', default=""))
+        if not self.pci_device:
+            self.cancel("PCI bus id not given")
         self.phb = self.pci_device.split(":", 1)[0]
         self.addr = genio.read_file("/sys/bus/pci/devices/%s/"
                                     "eeh_pe_config_addr" % self.pci_device)
