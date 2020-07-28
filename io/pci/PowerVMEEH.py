@@ -65,7 +65,7 @@ class PowerVMEEH(Test):
         if '0x1' not in genio.read_file(eeh_enable_file).strip():
             self.cancel("EEH is not enabled, please enable via FSP")
         self.max_freeze = self.params.get('max_freeze', default=1)
-        self.pci_addr = [self.params.get('pci_device', default='')]
+        self.pci_addr = [self.params.get('pci_device', default="")]
         self.add_cmd = self.params.get('additional_command', default='')
         if not self.pci_addr:
             self.cancel("No PCI Device specified")
