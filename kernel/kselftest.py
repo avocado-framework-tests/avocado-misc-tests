@@ -81,8 +81,16 @@ class kselftest(Test):
             location = self.params.get('location', default='https://github.c'
                                        'om/torvalds/linux/archive/master.zip')
             path = ''
-            if 'zip' in location:
-                tarball = self.fetch_asset("kselftest.zip", locations=[location],
+            git_location = True
+            kselfdir = ''
+            if ".zip" in location:
+                kselfdir = "kselftest.zip"
+                git_location = False
+            elif ".tar" in location:
+                kselfdir = "kselftest.tar"
+                git_location = False
+            if not git_location:
+                tarball = self.fetch_asset(kselfdir, locations=[location],
                                            expire='1d')
                 archive.extract(tarball, self.workdir)
                 path = glob.glob(os.path.join(self.workdir, "linux*"))
