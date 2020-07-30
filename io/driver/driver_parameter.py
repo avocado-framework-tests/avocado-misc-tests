@@ -21,9 +21,10 @@ import time
 import netifaces
 from avocado.utils import process
 from avocado.utils import linux_modules, genio
-from avocado.utils import configure_network
 from avocado import Test
 from avocado.utils import wait
+from avocado.utils.network.hosts import LocalHost
+from avocado.utils.network.interfaces import NetworkInterface
 
 
 class Moduleparameter(Test):
@@ -49,12 +50,23 @@ class Moduleparameter(Test):
         self.param_name = self.params.get('module_param_name', default=None)
         self.param_value = self.params.get('module_param_value', default=None)
         self.sysfs_chk = self.params.get('sysfs_check_required', default=None)
+        local = LocalHost()
         if self.ifaces[0:2] == 'ib':
-            configure_network.set_ip(self.ipaddr, self.netmask, self.ifaces,
-                                     interface_type='Infiniband')
+            self.networkinterface = NetworkInterface(self.ifaces, local,
+                                                     if_type='Infiniband')
+            try:
+                self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+                self.networkinterface.save(self.ipaddr, self.netmask)
+            except Exception:
+                self.networkinterface.save(self.ipaddr, self.netmask)
         else:
-            configure_network.set_ip(self.ipaddr, self.netmask, self.ifaces,
-                                     interface_type='Ethernet')
+            self.networkinterface = NetworkInterface(self.ifaces, local)
+            try:
+                self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+                self.networkinterface.save(self.ipaddr, self.netmask)
+            except Exception:
+                self.networkinterface.save(self.ipaddr, self.netmask)
+        self.networkinterface.bring_up()
         self.load_unload_sleep_time = 10
         self.error_modules = []
         self.mod_list = []
@@ -126,11 +138,10 @@ class Moduleparameter(Test):
         if self.sysfs_chk:
             if self.sysfs_value_check() is False:
                 self.fail("Sysfs check failed ")
-        if not wait.wait_for(configure_network.is_interface_link_up,
-                             timeout=120, args=[self.ifaces]):
+        if not wait.wait_for(self.networkinterface.is_link_up, timeout=120):
             self.fail("Link up of interface is taking longer than 120s")
-        if not configure_network.ping_check(self.ifaces, self.peer, '1000',
-                                            flood=True):
+        if self.networkinterface.ping_check(self.peer, count=1000,
+                                            options='-f') is not None:
             self.fail("ping test failed")
 
     def test(self):
