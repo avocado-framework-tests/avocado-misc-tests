@@ -22,7 +22,7 @@ import shutil
 from avocado import Test
 from avocado.utils import build
 from avocado.utils import distro
-from avocado.utils import archive, process
+from avocado.utils import archive, process, git
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -80,10 +80,27 @@ class kselftest(Test):
         if self.run_type == 'upstream':
             location = self.params.get('location', default='https://github.c'
                                        'om/torvalds/linux/archive/master.zip')
-            tarball = self.fetch_asset("kselftest.zip", locations=[location],
-                                       expire='1d')
-            archive.extract(tarball, self.workdir)
-            self.buldir = os.path.join(self.workdir, 'linux-master')
+            path = ''
+            git_location = True
+            kselfdir = ''
+            if ".zip" in location:
+                kselfdir = "kselftest.zip"
+                git_location = False
+            elif ".tar" in location:
+                kselfdir = "kselftest.tar"
+                git_location = False
+            if not git_location:
+                tarball = self.fetch_asset(kselfdir, locations=[location],
+                                           expire='1d')
+                archive.extract(tarball, self.workdir)
+                path = glob.glob(os.path.join(self.workdir, "linux*"))
+            else:
+                git.get_repo(location, destination_dir=self.workdir)
+                path = glob.glob(self.workdir)
+            for l_dir in path:
+                if os.path.isdir(l_dir) and 'Makefile' in os.listdir(l_dir):
+                    self.buldir = os.path.join(self.workdir, l_dir)
+                    break
         else:
             # Make sure kernel source repo is configured
             if detected_distro.name in ['centos', 'fedora', 'rhel']:
@@ -125,7 +142,8 @@ class kselftest(Test):
         Execute the kernel selftest
         """
         self.error = False
-        build.make(self.sourcedir, extra_args='summary=1 %s run_tests' % self.comp)
+        build.make(self.sourcedir,
+                   extra_args='summary=1 %s run_tests' % self.comp)
         for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
             self.find_match(r'not ok (.*) selftests:(.*)', line)
 
