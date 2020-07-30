@@ -2,3 +2,13 @@ htx_disks: ''
 all: False
 time_limit: 1
 mdt_file: 'mdt.hd'
+lv: !mux
+    lv:
+        lv: True
+    no_lv:
+        lv: False
+raid: !mux
+    raid:
+        raid: True
+    no_raid:
+        raid: False

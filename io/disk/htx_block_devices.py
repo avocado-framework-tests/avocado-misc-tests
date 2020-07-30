@@ -22,6 +22,9 @@ import os
 import time
 from avocado import Test
 from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.disk import get_disks
+from avocado.utils import lv_utils
+from avocado.utils import softwareraid
 from avocado.utils import build
 from avocado.utils import process, archive
 from avocado.utils import distro
@@ -45,6 +48,8 @@ class HtxTest(Test):
         """
         Setup
         """
+        self.lv_needed = self.params.get('lv', default=False)
+        self.raid_needed = self.params.get('raid', default=False)
         if 'ppc64' not in distro.detect().arch:
             self.cancel("Platform does not supports")
 
@@ -62,6 +67,51 @@ class HtxTest(Test):
             for disk in self.block_devices.split():
                 self.block_device.append(disk.rsplit("/")[-1])
             self.block_device = " ".join(self.block_device)
+
+        smm = SoftwareManager()
+        if self.raid_needed:
+            if not smm.check_installed('mdadm') and not smm.install('mdadm'):
+                self.cancel("mdadm is needed for the test to be run")
+
+        if 'start' in str(self.name.name):
+            if self.block_devices is not None:
+                if set(self.block_devices.split()).issubset(get_disks()):
+                    if self.raid_needed:
+                        raid_name = '/dev/md/mdsraid'
+                        self.create_raid(self.block_devices, raid_name)
+                        self.block_device = raid_name
+
+                    if self.lv_needed:
+                        if self.raid_needed:
+                            self.block_device = self.create_lv(self.block_device.split())
+                        else:
+                            self.block_device = self.create_lv(self.block_devices.split())
+                        self.dirs = self.block_device
+
+    def create_raid(self, l_disk, l_raid_name):
+        self.sraid = softwareraid.SoftwareRaid(l_raid_name, '0',
+                                               l_disk.split(), '1.2')
+        self.sraid.create()
+
+    def delete_raid(self, l_disk, l_raid_name):
+        self.sraid = softwareraid.SoftwareRaid(l_raid_name, '0',
+                                               l_disk.split(), '1.2')
+        self.sraid.stop()
+        self.sraid.clear_superblock()
+
+    def create_lv(self, l_disk):
+        vgname = 'avocado_vg'
+        lvname = 'avocado_lv'
+        lv_size = lv_utils.get_devices_total_space(l_disk) / 2330168
+        lv_utils.vg_create(vgname, l_disk)
+        lv_utils.lv_create(vgname, lvname, lv_size)
+        return '/dev/%s/%s' % (vgname, lvname)
+
+    def delete_lv(self):
+        vgname = 'avocado_vg'
+        lvname = 'avocado_lv'
+        lv_utils.lv_remove(vgname, lvname)
+        lv_utils.vg_remove(vgname)
 
     def setup_htx(self):
         """
@@ -220,3 +270,15 @@ class HtxTest(Test):
         daemon_state = process.system_output('/etc/init.d/htx.d status')
         if daemon_state.decode("utf-8").split(" ")[-1] == 'running':
             process.system('/usr/lpp/htx/etc/scripts/htxd_shutdown')
+
+    def tearDown(self):
+        """
+        remove raid and LV
+        """
+        if 'stop' in str(self.name.name):
+            if self.block_devices is not None:
+                if self.lv_needed:
+                    self.delete_lv()
+                if self.raid_needed:
+                    raid_name = '/dev/md/mdsraid'
+                    self.delete_raid(self.block_devices, raid_name)
