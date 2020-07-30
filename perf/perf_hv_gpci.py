@@ -66,7 +66,7 @@ class perf_hv_gpci(Test):
 
         # Clear the dmesg, by that we can capture the delta at the end of
         # the test.
-        output = process.run("dmesg -c")
+        process.run("dmesg -c")
 
     def error_check(self):
         if len(self.fail_cmd) > 0:
@@ -97,4 +97,4 @@ class perf_hv_gpci(Test):
 
     def tearDown(self):
         # Collect the dmesg
-        output = process.run("dmesg -T")
+        process.run("dmesg -T")

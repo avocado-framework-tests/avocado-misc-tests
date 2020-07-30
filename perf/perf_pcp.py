@@ -61,7 +61,7 @@ class PCP(Test):
                         " only on LPAR")
 
     def test_pmcd_daemon(self):
-        output = process.run("systemctl start pmcd", shell=True)
+        process.run("systemctl start pmcd", shell=True)
         output = process.run("systemctl status pmcd", shell=True)
         if "active (running)" not in output.stdout.decode("utf-8"):
             self.fail("PCP: Can not start pmcd daemon")

@@ -77,15 +77,13 @@ class PerfUprobe(Test):
         if 'probe_perf:main' not in output.stdout.decode("utf-8"):
             self.fail("perf: probe of 'perf main' not found in list")
         sysfsfile = '/sys/kernel/debug/tracing/uprobe_events'
-        if 'probe_perf' not in genio.read_file(
-                               '/sys/kernel/debug/tracing/uprobe_events'
-                               ).rstrip('\t\r\n\0'):
+        if 'probe_perf' not in genio.read_file(sysfsfile).rstrip('\t\r\n\0'):
             self.fail("perf: sysfs file didn't reflect uprobe events")
         output = self.cmd_verify('perf record -o %s -e probe_perf:main -- '
                                  'perf list' % self.temp_file)
         if 'samples' not in output.stderr.decode("utf-8"):
             self.fail("perf: perf.data file not created")
-        output = self.cmd_verify(self.report)
+        self.cmd_verify(self.report)
 
     def test_uprobe_return(self):
         output = self.cmd_verify('%s ./uprobe_test doit%%return'
@@ -103,7 +101,7 @@ class PerfUprobe(Test):
             output = self.cmd_verify('%s -aR ./uprobe_test' % self.recProbe)
         if 'samples' not in output.stderr.decode("utf-8"):
             self.fail("perf: perf.data file not created")
-        output = self.cmd_verify(self.report)
+        self.cmd_verify(self.report)
 
     def test_uprobe_variable(self):
         output = self.cmd_verify('%s ./uprobe_test "doit i"' % self.cmdProbe)
@@ -115,9 +113,9 @@ class PerfUprobe(Test):
             output = self.cmd_verify('%s -aR ./uprobe_test' % self.recProbe)
         if 'samples' not in output.stderr.decode("utf-8"):
             self.fail("perf: perf.data file not created")
-        output = self.cmd_verify(self.report)
+        self.cmd_verify(self.report)
 
     def tearDown(self):
-        output = self.cmd_verify('perf probe -d \\*')
+        self.cmd_verify('perf probe -d \\*')
         if os.path.isfile(self.temp_file):
             process.run('rm -f %s' % self.temp_file)
