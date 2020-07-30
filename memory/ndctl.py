@@ -596,17 +596,20 @@ class NdctlTest(Test):
                 self.plib.destroy_namespace(region=reg_name, force=True)
 
     @avocado.fail_on(pmem.PMemException)
-    def write_read_infoblock(self, ns_name, align):
+    def write_read_infoblock(self, ns_name, align='', size=''):
         """
         Write_infoblock on given namespace
         """
-        self.plib.write_infoblock(namespace=ns_name, align=align, mode='devdax')
+        self.plib.write_infoblock(namespace=ns_name, align=align,
+                                  size=size, mode='devdax')
         read_out = self.plib.read_infoblock(namespace=ns_name)
-        if align != int(self.plib.run_ndctl_list_val(read_out[0], 'align')):
-            self.fail("Alignment has not changed")
+        if align:
+            if align != int(self.plib.run_ndctl_list_val(read_out[0], 'align')):
+                self.fail("Alignment has not changed")
+        return read_out[0]
 
     @avocado.fail_on(pmem.PMemException)
-    def test_write_infoblock(self):
+    def test_write_infoblock_supported_align(self):
         """
         Test write_infoblock with align size
         """
@@ -619,11 +622,11 @@ class NdctlTest(Test):
         ns_name = self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
         self.plib.disable_namespace(namespace=ns_name)
-        self.write_read_infoblock(ns_name, self.get_size_alignval())
+        self.write_read_infoblock(ns_name, align=self.get_size_alignval())
         self.plib.enable_namespace(namespace=ns_name)
 
     @avocado.fail_on(pmem.PMemException)
-    def test_write_infoblock_negate(self):
+    def test_write_infoblock_unalign(self):
         """
         Test write_infoblock with unsupported align size
         """
@@ -636,7 +639,7 @@ class NdctlTest(Test):
         ns_name = self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
         self.plib.disable_namespace(namespace=ns_name)
-        self.write_read_infoblock(ns_name, self.get_unsupported_alignval())
+        self.write_read_infoblock(ns_name, align=self.get_unsupported_alignval())
         try:
             self.plib.enable_namespace(namespace=ns_name)
         except pmem.PMemException:
@@ -658,6 +661,74 @@ class NdctlTest(Test):
             self.fail("Namespace with infoblock written not found")
 
         self.plib.destroy_namespace(namespace=ns_name, force=True)
+
+    @avocado.fail_on(pmem.PMemException)
+    def test_write_infoblock_align_default(self):
+        """
+        Test write_infoblock with align size
+        """
+        if not self.plib.check_ndctl_subcmd("write-infoblock"):
+            self.cancel("Binary does not support write-infoblock")
+        region = self.get_default_region()
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
+        self.plib.create_namespace(region=region, mode='devdax')
+        ns_name = self.plib.run_ndctl_list_val(
+            self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
+        align = self.plib.run_ndctl_list_val(
+            self.plib.run_ndctl_list("-N -r %s" % region)[0], 'align')
+        self.plib.disable_namespace(namespace=ns_name)
+        write_block = self.write_read_infoblock(ns_name)
+        if align != self.plib.run_ndctl_list_val(write_block, 'align'):
+            self.fail("Alignment is not same as default alignment")
+
+    @avocado.fail_on(pmem.PMemException)
+    def test_write_infoblock_size(self):
+        """
+        Test write_infoblock with align size
+        """
+        if not self.plib.check_ndctl_subcmd("write-infoblock"):
+            self.cancel("Binary does not support write-infoblock")
+        region = self.get_default_region()
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
+        self.plib.create_namespace(region=region, mode='devdax')
+        ns_name = self.plib.run_ndctl_list_val(
+            self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
+        size = self.plib.run_ndctl_list_val(
+            self.plib.run_ndctl_list("-N -r %s" % region)[0], 'size')
+        self.plib.disable_namespace(namespace=ns_name)
+        align = self.get_size_alignval()
+        size = size - align
+        self.write_read_infoblock(ns_name, size=size, align=align)
+        self.plib.enable_namespace(namespace=ns_name)
+
+    @avocado.fail_on(pmem.PMemException)
+    def test_write_infoblock_size_unaligned(self):
+        """
+        Test write_infoblock with align size
+        """
+        if not self.plib.check_ndctl_subcmd("write-infoblock"):
+            self.cancel("Binary does not support write-infoblock")
+        region = self.get_default_region()
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
+        self.plib.create_namespace(region=region, mode='devdax')
+        ns_name = self.plib.run_ndctl_list_val(
+            self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
+        size = self.plib.run_ndctl_list_val(
+            self.plib.run_ndctl_list("-N -r %s" % region)[0], 'size')
+        self.plib.disable_namespace(namespace=ns_name)
+        align = memory.get_page_size()
+        size = size - align
+        self.write_read_infoblock(ns_name, size=size, align=align)
+        try:
+            self.plib.enable_namespace(namespace=ns_name)
+        except pmem.PMemException:
+            self.log.info("Failed as expected")
+        else:
+            self.log.info(self.plib.run_ndctl_list())
+            self.fail("Enabling namespace must have failed")
 
     @avocado.fail_on(pmem.PMemException)
     def test_sector_write(self):
