@@ -46,7 +46,7 @@ class perf_c2c(Test):
             deps.extend(['linux-tools-common', 'linux-tools-%s' %
                          platform.uname()[2]])
         elif 'debian' in detected_distro.name:
-            deps.extend(['linux-tools-%s' % platform.uname()[2][3]])
+            deps.extend(['linux-perf'])
         elif self.distro_name in ['rhel', 'SuSE', 'fedora', 'centos']:
             deps.extend(['perf'])
         else:

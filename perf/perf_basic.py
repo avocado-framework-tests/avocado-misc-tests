@@ -53,11 +53,13 @@ class PerfBasic(Test):
     def setUp(self):
         smg = SoftwareManager()
         dist = distro.detect()
-        if dist.name in ['Ubuntu', 'debian']:
+        if dist.name in ['Ubuntu']:
             linux_tools = "linux-tools-" + os.uname()[2][3]
             pkgs = [linux_tools]
             if dist.name in ['Ubuntu']:
                 pkgs.extend(['linux-tools-common'])
+        elif dist.name in ['debian']:
+            pkgs = ['linux-perf']
         elif dist.name in ['centos', 'fedora', 'rhel', 'SuSE']:
             pkgs = ['perf']
         else:
