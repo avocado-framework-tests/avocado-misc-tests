@@ -62,6 +62,10 @@ class FioTest(Test):
         mnt_args = self.params.get('mnt_args', default='')
         self.fio_file = 'fiotest-image'
 
+        self.fs_create = False
+        self.lv_create = False
+        self.raid_create = False
+
         fstype = self.params.get('fs', default='')
         if fstype == 'btrfs':
             ver = int(distro.detect().version)
@@ -70,11 +74,9 @@ class FioTest(Test):
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
-        self.fs_create = False
+
         lv_needed = self.params.get('lv', default=False)
-        self.lv_create = False
         raid_needed = self.params.get('raid', default=False)
-        self.raid_create = False
 
         if distro.detect().name in ['Ubuntu', 'debian']:
             pkg_list = ['libaio-dev']
@@ -212,11 +214,26 @@ class FioTest(Test):
         """
         self.log.info("Test will run on %s", self.dirs)
         fio_job = self.params.get('fio_job', default='fio-simple.job')
-        cmd = '%s/fio %s %s --filename=%s' % (self.sourcedir,
-                                              self.get_data(fio_job),
-                                              self.dirs, self.fio_file)
-        if process.system(cmd, ignore_status=True, shell=True):
-            self.fail("fio run failed")
+
+        # if fs is present create a file on that fs, if no fs
+        # self.dirs = path to disk, thus a filename is not needed
+        if self.fs_create:
+            cmd = '%s/fio %s --filename=%s/%s' % (self.sourcedir,
+                                                  self.get_data(fio_job),
+                                                  self.dirs, self.fio_file)
+        else:
+            cmd = '%s/fio %s --filename=%s' % (self.sourcedir,
+                                               self.get_data(fio_job),
+                                               self.dirs)
+        status = process.system(cmd, ignore_status=True, shell=True)
+        if status:
+            # status of 3 is a common warning with iscsi disks but fio
+            # process completes successfully so throw a warning not
+            # a fail. For other nonzero statuses we should fail.
+            if status == 3:
+                self.log.warning("Warnings during fio run")
+            else:
+                self.fail("fio run failed")
 
     def tearDown(self):
         '''
