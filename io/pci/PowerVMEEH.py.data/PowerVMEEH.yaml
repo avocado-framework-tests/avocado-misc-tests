@@ -1,4 +1,4 @@
 scenario:
     max_freeze: 1
     function: 4
-    pci_device:
+    pci_device: ""
