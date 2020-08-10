@@ -1,0 +1,36 @@
+interface:
+peer_ip:
+host_ip:
+netmask:
+args: !mux
+    PrivateFlag:
+        privflag_test: True
+    Driver:
+        arg: -i
+    Autonegotiation:
+        arg: -r
+    PauseParameter:
+        arg: -a
+    Coalescing:
+        arg: -c
+    RegisterDump:
+        arg: -d
+    EEPROMDump:
+       arg: -e
+    RingParameter:
+        arg: -g
+    ShowOffloadProtocolFeature:
+        arg: -k
+    AdapterInitiate:
+        arg: -p
+        action_elapse: 3
+    Statistics:
+        arg: -S
+    SelfTest:
+        arg: -t
+    Show-permaddr:
+        arg: -P
+    Get-dump:
+        arg: -w
+    Show-time-stamping:
+        arg: -T
