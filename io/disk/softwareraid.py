@@ -41,41 +41,43 @@ class SoftwareRaid(Test):
         Checking if the required packages are installed,
         if not found packages will be installed.
         """
-
         smm = SoftwareManager()
         if not smm.check_installed("mdadm"):
             self.log.info("Mdadm must be installed before continuing the test")
             if SoftwareManager().install("mdadm") is False:
                 self.cancel("Unable to install mdadm")
-        disk = self.params.get('disks', default='').strip(" ")
-        if not disk:
+        disks = self.params.get('disks', default='').strip(" ")
+        if not disks:
             self.cancel('No disks given')
-        disk = disk.split()
-        spare = self.params.get('spare_disks', default='').strip(" ")
-        if spare:
-            spare = spare.split()
-        raid = self.params.get('raidname', default='/dev/md/mdsraid')
+        required_disks = self.params.get('required_disks', default=1)
+        disks = disks.split()
         raidlevel = str(self.params.get('raid', default='0'))
+        if len(disks) < required_disks:
+            self.cancel("Minimum %d disks required for %s" % (required_disks,
+                                                              raidlevel))
+        spare_disks = self.params.get('spare_disks', default='').strip(" ")
+        if spare_disks:
+            spare_disks = spare_disks.split()
+        raid = self.params.get('raidname', default='/dev/md/mdsraid')
         metadata = str(self.params.get('metadata', default='1.2'))
-        self.remadd = ''
+        self.remove_add_disk = ''
         if raidlevel not in ['0', 'linear']:
-            self.remadd = disk[-1]
-        self.sraid = softwareraid.SoftwareRaid(raid, raidlevel, disk,
-                                               metadata, spare)
+            self.remove_add_disk = disks[-1]
+        self.sraid = softwareraid.SoftwareRaid(raid, raidlevel, disks,
+                                               metadata, spare_disks)
 
     def test(self):
         """
         Decides which functions to be run for a perticular raid level, and runs
         those tests.
         """
-
         if not self.sraid.create():
             self.fail("Failed to create")
-        if not self.remadd:
+        if not self.remove_add_disk:
             return
-        if not self.sraid.remove_disk(self.remadd):
+        if not self.sraid.remove_disk(self.remove_add_disk):
             self.fail("Failed to remove disk")
-        if not self.sraid.add_disk(self.remadd):
+        if not self.sraid.add_disk(self.remove_add_disk):
             self.fail("Failed to add disk")
         if not self.sraid.stop():
             self.fail("Failed to stop raid")
@@ -86,7 +88,6 @@ class SoftwareRaid(Test):
         """
         Stop/Remove the raid device.
         """
-
         if self.sraid:
             self.sraid.stop()
             self.sraid.clear_superblock()

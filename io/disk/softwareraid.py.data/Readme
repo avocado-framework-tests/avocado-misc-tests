@@ -12,6 +12,9 @@ Values to be passed in yaml file:
 
 * spare disks (space separated disks) [optional parameter]
 
+* required disks - This is a configurable value of minimum required disks for each raid level.
+  Usually, it is 2 for RAID1, 3 for RAID5 and RAID10 and 4 for RAID6.
+
 Note: Please specify minimum of 5 disks, for creating all levels of software
 raid. If 5 disks are not available, create 5 partitions, and specify those
 partitions in the yaml file.
