@@ -117,7 +117,8 @@ class LTP(Test):
         build.make(ltp_dir, extra_args='autotools')
         if not self.ltpbin_dir:
             self.ltpbin_dir = os.path.join(ltp_dir, 'bin')
-        os.mkdir(self.ltpbin_dir)
+        if not os.path.exists(self.ltpbin_dir):
+            os.mkdir(self.ltpbin_dir)
         process.system('./configure --prefix=%s' % self.ltpbin_dir)
         build.make(ltp_dir)
         build.make(ltp_dir, extra_args='install')
