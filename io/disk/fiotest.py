@@ -65,6 +65,7 @@ class FioTest(Test):
         self.fs_create = False
         self.lv_create = False
         self.raid_create = False
+        self.devdax_file = None
 
         fstype = self.params.get('fs', default='')
         if fstype == 'btrfs':
@@ -166,7 +167,7 @@ class FioTest(Test):
             else:
                 self.plib.create_namespace(
                     region=region, mode='devdax')
-                self.fio_file = "/dev/%s" % self.plib.run_ndctl_list_val(
+                self.devdax_file = "/dev/%s" % self.plib.run_ndctl_list_val(
                     self.plib.run_ndctl_list('-N -r %s' % region)[0], 'chardev')
 
     def create_raid(self, l_disk, l_raid_name):
@@ -218,13 +219,14 @@ class FioTest(Test):
         # if fs is present create a file on that fs, if no fs
         # self.dirs = path to disk, thus a filename is not needed
         if self.fs_create:
-            cmd = '%s/fio %s --filename=%s/%s' % (self.sourcedir,
-                                                  self.get_data(fio_job),
-                                                  self.dirs, self.fio_file)
+            filename = "%s/%s" % (self.dirs, self.fio_file)
+        elif self.devdax_file:
+            filename = self.devdax_file
         else:
-            cmd = '%s/fio %s --filename=%s' % (self.sourcedir,
-                                               self.get_data(fio_job),
-                                               self.dirs)
+            filename = self.dirs
+        cmd = '%s/fio %s --filename=%s' % (self.sourcedir,
+                                           self.get_data(fio_job),
+                                           filename)
         status = process.system(cmd, ignore_status=True, shell=True)
         if status:
             # status of 3 is a common warning with iscsi disks but fio
