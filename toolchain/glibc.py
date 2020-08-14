@@ -46,7 +46,8 @@ class Glibc(Test):
                 os.makedirs(glibc_dir)
             glibc_dir = sm.get_source("glibc", glibc_dir)
         os.chdir(self.build_dir)
-        process.run('%s/configure --prefix=%s' % (glibc_dir, self.build_dir),
+        process.run('%s/configure --prefix=%s'
+                    % (glibc_dir, self.params.get("prefix", default="/usr")),
                     ignore_status=True, sudo=True)
         build.make(self.build_dir)
 
