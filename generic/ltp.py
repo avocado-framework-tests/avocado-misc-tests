@@ -116,7 +116,7 @@ class LTP(Test):
         os.chdir(ltp_dir)
         build.make(ltp_dir, extra_args='autotools')
         if not self.ltpbin_dir:
-            self.ltpbin_dir = os.path.join(ltp_dir, 'bin')
+            self.ltpbin_dir = os.path.join(self.teststmpdir, 'bin')
         if not os.path.exists(self.ltpbin_dir):
             os.mkdir(self.ltpbin_dir)
         process.system('./configure --prefix=%s' % self.ltpbin_dir)
@@ -133,7 +133,6 @@ class LTP(Test):
                          self.get_data('skipfile')))
         if self.mem_leak:
             self.args += " -M %s" % self.mem_leak
-        self.ltpbin_dir = os.path.join(self.workdir, "ltp-master", 'bin')
         cmd = "%s %s" % (os.path.join(self.ltpbin_dir, 'runltp'), self.args)
         process.run(cmd, ignore_status=True)
         # Walk the ltp.log and try detect failed tests from lines like these:
