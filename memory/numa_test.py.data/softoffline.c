@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 	/* fault in */
 	memset(p, 'a', nr_pages * page_size);
 	for (i = 0; i < nr_pages; i++){
-		get_pfn(p + (i * page_size), &old_pfn[i]);
+		get_pfn(p + (i * page_size), (void*)&old_pfn[i]);
 		printf("pfn before soft offline 0x%lx\n", old_pfn[i]);
 	}
 
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
 
 	memset(p, 'a', nr_pages * page_size);
 	for (i = 0; i < nr_pages; i++){
-		get_pfn(p + (i * page_size), &new_pfn[i]);
+		get_pfn(p + (i * page_size), (void*)&new_pfn[i]);
 		printf("pfn after soft offline 0x%lx\n", new_pfn[i]);
 	}
 
