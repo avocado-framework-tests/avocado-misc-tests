@@ -448,7 +448,10 @@ class Bonding(Test):
             networkinterface = NetworkInterface(host_interface, self.localhost)
             if networkinterface.set_mtu("1500") is not None:
                 self.cancel("Failed to set mtu in host")
-            networkinterface.restore_from_backup()
+            try:
+                networkinterface.restore_from_backup()
+            except Exception:
+                self.log.info("backup file not availbale, could not restore file.")
         try:
             for interface in self.peer_interfaces:
                 peer_networkinterface = NetworkInterface(interface, self.remotehost)
