@@ -36,7 +36,7 @@ extern unsigned long get_next_mem_node(unsigned long node);
 
 int verbose;
 void **addrs;
-int nr_pages;    /* number of pages in page size */
+long nr_pages;    /* number of pages in page size */
 int page_size;
 int hpage_size;
 unsigned long dest_node;
