@@ -21,6 +21,7 @@ check the statistics of interface, test big ping
 test lro and gro and interface
 """
 
+import os
 import hashlib
 import netifaces
 from avocado import Test
@@ -62,14 +63,16 @@ class NetworkTest(Test):
         self.iface = interface
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
+        self.ip_config = self.params.get("ip_config", default=True)
         local = LocalHost()
         self.networkinterface = NetworkInterface(self.iface, local)
-        try:
-            self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
-            self.networkinterface.save(self.ipaddr, self.netmask)
-        except Exception:
-            self.networkinterface.save(self.ipaddr, self.netmask)
-        self.networkinterface.bring_up()
+        if self.ip_config:
+            try:
+                self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+                self.networkinterface.save(self.ipaddr, self.netmask)
+            except Exception:
+                self.networkinterface.save(self.ipaddr, self.netmask)
+            self.networkinterface.bring_up()
         if not wait.wait_for(self.networkinterface.is_link_up, timeout=120):
             self.fail("Link up of interface is taking longer than 120 seconds")
         self.peer = self.params.get("peer_ip")
@@ -139,11 +142,12 @@ class NetworkTest(Test):
         ro_type = "lro"
         ro_type_full = "large-receive-offload"
         path = '/sys/class/net/%s/device/uevent' % self.iface
-        output = open(path, 'r').read()
-        for line in output.splitlines():
-            if "OF_NAME" in line:
-                if 'vnic' in line.split('=')[-1]:
-                    self.cancel("Unsupported on vNIC")
+        if os.path.exists(path):
+            output = open(path, 'r').read()
+            for line in output.splitlines():
+                if "OF_NAME" in line:
+                    if 'vnic' in line.split('=')[-1]:
+                        self.cancel("Unsupported on vNIC")
         if not self.offload_state(ro_type_full):
             self.fail("Could not get state of %s" % ro_type)
         if self.offload_state(ro_type_full) == 'fixed':
@@ -304,8 +308,9 @@ class NetworkTest(Test):
             process.run("rm -rf /tmp/tempfile")
             cmd = "rm -rf /tmp/tempfile"
             self.session.cmd(cmd)
-        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-        self.networkinterface.restore_from_backup()
+        if self.ip_config:
+            self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+            self.networkinterface.restore_from_backup()
         self.remotehost.remote_session.quit()
         self.remotehost_public.remote_session.quit()
         if 'scp' or 'ssh' in str(self.name.name):
