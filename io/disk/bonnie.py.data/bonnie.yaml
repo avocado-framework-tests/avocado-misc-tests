@@ -8,14 +8,23 @@
 
 # Valid options in avocado test are below:
 disk:
-dir:
 uid-to-use: root
 number-to-stat: 10:100:10:1000
 data_size_to_pass: 0
-filesystem: !mux
+fs: !mux
     ext4:
         fs: 'ext4'
     xfs:
         fs: 'xfs'
     btrfs:
         fs: 'btrfs'
+lv: !mux
+    lv:
+        lv: True
+    no_lv:
+        lv: False
+raid: !mux
+    raid:
+        raid: True
+    no_raid:
+        raid: False

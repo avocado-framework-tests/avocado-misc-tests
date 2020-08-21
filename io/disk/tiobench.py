@@ -27,6 +27,9 @@ import os
 from avocado import Test
 from avocado.utils import archive
 from avocado.utils import build
+from avocado.utils import disk
+from avocado.utils import lv_utils
+from avocado.utils import softwareraid
 from avocado.utils import process, distro
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.partition import Partition
@@ -44,7 +47,12 @@ class Tiobench(Test):
         Source:
         https://github.com/mkuoppal/tiobench.git
         """
-        self.fstype = self.params.get('fs', default='ext4')
+        self.fstype = self.params.get('fs', default='')
+        self.fs_create = False
+        lv_needed = self.params.get('lv', default=False)
+        self.lv_create = False
+        raid_needed = self.params.get('raid', default=False)
+        self.raid_create = False
         smm = SoftwareManager()
         packages = ['gcc']
         if self.fstype == 'btrfs':
@@ -55,6 +63,8 @@ class Tiobench(Test):
                     self.cancel("btrfs is not supported with RHEL 7.4 onwards")
             if distro.detect().name == 'Ubuntu':
                 packages.extend(['btrfs-tools'])
+        if raid_needed:
+            packages.append('mdadm')
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("%s package required for this test." % package)
@@ -63,22 +73,66 @@ class Tiobench(Test):
         archive.extract(tarball, self.teststmpdir)
         os.chdir(os.path.join(self.teststmpdir, "tiobench-master"))
         build.make(".")
-        self.target = self.params.get('dir', default=self.workdir)
         self.disk = self.params.get('disk', default=None)
-
+        self.target = self.disk
         if self.disk is not None:
-            self.part_obj = Partition(self.disk, mountpoint=self.target)
-            self.log.info("Unmounting disk/dir before creating file system")
-            self.part_obj.unmount()
-            self.log.info("creating %s file system", self.fstype)
-            self.part_obj.mkfs(self.fstype)
-            self.log.info("Mounting disk %s on directory %s", self.disk,
-                          self.target)
-            try:
-                self.part_obj.mount()
-            except PartitionError:
-                self.fail("Mounting disk %s on directory %s failed"
-                          % (self.disk, self.target))
+            if self.disk in disk.get_disks():
+                if raid_needed:
+                    raid_name = '/dev/md/mdsraid'
+                    self.create_raid(self.disk, raid_name)
+                    self.raid_create = True
+                    self.disk = raid_name
+                    self.target = self.disk
+
+                if lv_needed:
+                    self.disk = self.create_lv(self.disk)
+                    self.lv_create = True
+                    self.target = self.disk
+
+                if self.fstype:
+                    self.target = self.workdir
+                    self.create_fs(self.disk, self.target, self.fstype)
+                    self.fs_create = True
+
+    def create_raid(self, l_disk, l_raid_name):
+        self.sraid = softwareraid.SoftwareRaid(l_raid_name, '0',
+                                               l_disk.split(), '1.2')
+        self.sraid.create()
+
+    def delete_raid(self):
+        self.sraid.stop()
+        self.sraid.clear_superblock()
+
+    def create_lv(self, l_disk):
+        vgname = 'avocado_vg'
+        lvname = 'avocado_lv'
+        lv_size = lv_utils.get_device_total_space(l_disk) / 2330168
+        lv_utils.vg_create(vgname, l_disk)
+        lv_utils.lv_create(vgname, lvname, lv_size)
+        return '/dev/%s/%s' % (vgname, lvname)
+
+    def delete_lv(self):
+        vgname = 'avocado_vg'
+        lvname = 'avocado_lv'
+        lv_utils.lv_remove(vgname, lvname)
+        lv_utils.vg_remove(vgname)
+
+    def create_fs(self, l_disk, mountpoint, fstype):
+        self.part_obj = Partition(l_disk,
+                                  mountpoint=mountpoint)
+        self.part_obj.unmount()
+        self.part_obj.mkfs(fstype)
+        try:
+            self.part_obj.mount()
+        except PartitionError:
+            self.fail("Mounting disk %s on directory %s failed"
+                      % (l_disk, mountpoint))
+
+    def delete_fs(self, l_disk):
+        self.part_obj.unmount()
+        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % l_disk
+        if process.system(delete_fs, shell=True, ignore_status=True):
+            self.fail("Failed to delete filesystem on %s" % l_disk)
 
     def test(self):
         """
@@ -108,10 +162,9 @@ class Tiobench(Test):
         Cleanup of disk used to perform this test
         '''
         if self.disk is not None:
-            self.log.info("Unmounting disk %s on directory %s", self.disk,
-                          self.target)
-            self.part_obj.unmount()
-        self.log.info("Removing the filesystem created on %s", self.disk)
-        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk
-        if process.system(delete_fs, shell=True, ignore_status=True):
-            self.fail("Failed to delete filesystem on %s", self.disk)
+            if self.fs_create:
+                self.delete_fs(self.disk)
+            if self.lv_create:
+                self.delete_lv()
+            if self.raid_create:
+                self.delete_raid()

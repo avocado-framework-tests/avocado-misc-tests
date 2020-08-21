@@ -1,6 +1,5 @@
 disk:
 script: 'runltp'
-dir:
 args: !mux
     fs_di:
         args: '-s fs_di'
@@ -21,3 +20,13 @@ fs: !mux
         fs: 'xfs'
     btrfs:
         fs: 'btrfs'
+lv: !mux
+    lv:
+        lv: True
+    no_lv:
+        lv: False
+raid: !mux
+    raid:
+        raid: True
+    no_raid:
+        raid: False
