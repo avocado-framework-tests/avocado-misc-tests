@@ -24,6 +24,10 @@ LTP fsstress test
 import os
 from avocado import Test
 from avocado.utils import build
+from avocado.utils import disk
+from avocado.utils import lv_utils
+from avocado.utils import softwareraid
+from avocado.utils import distro
 from avocado.utils import process, archive
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.partition import Partition
@@ -40,28 +44,52 @@ class LtpFs(Test):
         '''
         To check and install dependencies for the test
         '''
+        self.fs_create = False
+        lv_needed = self.params.get('lv', default=False)
+        self.lv_create = False
+        raid_needed = self.params.get('raid', default=False)
+        self.raid_create = False
         smm = SoftwareManager()
-        for package in ['gcc', 'make', 'automake', 'autoconf']:
+        packages = ['gcc', 'make', 'automake', 'autoconf']
+        if raid_needed:
+            packages.append('mdadm')
+        for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("%s is needed for the test to be run" % package)
         self.disk = self.params.get('disk', default=None)
         self.mount_point = self.params.get('dir', default=self.workdir)
         self.script = self.params.get('script')
-        fstype = self.params.get('fs', default='ext4')
+        fstype = self.params.get('fs', default='')
         self.fsstress_run = self.params.get('fsstress_loop', default='1')
 
+        if fstype == 'btrfs':
+            ver = int(distro.detect().version)
+            rel = int(distro.detect().release)
+            if distro.detect().name == 'rhel':
+                if (ver == 7 and rel >= 4) or ver > 7:
+                    self.cancel("btrfs is not supported with \
+                                RHEL 7.4 onwards")
+            if distro.detect().name == 'Ubuntu':
+                if not smm.check_installed("btrfs-tools") and not \
+                        smm.install("btrfs-tools"):
+                    self.cancel('btrfs-tools is needed for the test to be run')
+
         if self.disk is not None:
-            self.part_obj = Partition(self.disk, mountpoint=self.mount_point)
-            self.log.info("Unmounting the disk/dir if it is already mounted")
-            self.part_obj.unmount()
-            self.log.info("creating %s file system on %s", fstype, self.disk)
-            self.part_obj.mkfs(fstype)
-            self.log.info("mounting %s on %s", self.disk, self.mount_point)
-            try:
-                self.part_obj.mount()
-            except PartitionError:
-                self.fail("Mounting disk %s on directory %s failed"
-                          % (self.disk, self.mount_point))
+            if self.disk in disk.get_disks():
+                if raid_needed:
+                    raid_name = '/dev/md/mdsraid'
+                    self.create_raid(self.disk, raid_name)
+                    self.raid_create = True
+                    self.disk = raid_name
+                    self.mount_point = self.disk
+                if lv_needed:
+                    self.disk = self.create_lv(self.disk)
+                    self.lv_create = True
+                    self.mount_point = self.disk
+                if fstype:
+                    self.mount_point = self.workdir
+                    self.create_fs(self.disk, self.mount_point, fstype)
+                    self.fs_create = True
 
         url = "https://github.com/linux-test-project/ltp/"
         url += "archive/master.zip"
@@ -77,6 +105,45 @@ class LtpFs(Test):
         fsstress_dir = os.path.join(ltp_dir,
                                     'testcases/kernel/fs/fsstress')
         os.chdir(fsstress_dir)
+
+    def create_raid(self, l_disk, l_raid_name):
+        self.sraid = softwareraid.SoftwareRaid(l_raid_name, '0',
+                                               l_disk.split(), '1.2')
+        self.sraid.create()
+
+    def delete_raid(self):
+        self.sraid.stop()
+        self.sraid.clear_superblock()
+
+    def create_lv(self, l_disk):
+        vgname = 'avocado_vg'
+        lvname = 'avocado_lv'
+        lv_size = lv_utils.get_device_total_space(l_disk) / 2330168
+        lv_utils.vg_create(vgname, l_disk)
+        lv_utils.lv_create(vgname, lvname, lv_size)
+        return '/dev/%s/%s' % (vgname, lvname)
+
+    def delete_lv(self):
+        vgname = 'avocado_vg'
+        lvname = 'avocado_lv'
+        lv_utils.lv_remove(vgname, lvname)
+        lv_utils.vg_remove(vgname)
+
+    def create_fs(self, l_disk, mountpoint, fstype):
+        self.part_obj = Partition(l_disk, mountpoint=mountpoint)
+        self.part_obj.unmount()
+        self.part_obj.mkfs(fstype)
+        try:
+            self.part_obj.mount()
+        except PartitionError:
+            self.fail("Mounting disk %s on directory %s failed"
+                      % (l_disk, mountpoint))
+
+    def delete_fs(self, l_disk):
+        self.part_obj.unmount()
+        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % l_disk
+        if process.system(delete_fs, shell=True, ignore_status=True):
+            self.fail("Failed to delete filesystem on %s" % l_disk)
 
     def test_fsstress_run(self):
         '''
@@ -101,10 +168,9 @@ class LtpFs(Test):
         Cleanup of disk used to perform this test
         '''
         if self.disk is not None:
-            self.log.info("Unmounting disk %s on directory %s",
-                          self.disk, self.mount_point)
-            self.part_obj.unmount()
-            self.log.info("Removing the filesystem created on %s", self.disk)
-            delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk
-            if process.system(delete_fs, shell=True, ignore_status=True):
-                self.fail("Failed to delete filesystem on %s", self.disk)
+            if self.fs_create:
+                self.delete_fs(self.disk)
+            if self.lv_create:
+                self.delete_lv()
+            if self.raid_create:
+                self.delete_raid()
