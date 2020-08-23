@@ -60,6 +60,7 @@ class PCIHotPlugTest(Test):
         smm = SoftwareManager()
         if not smm.check_installed("pciutils") and not smm.install("pciutils"):
             self.cancel("pciutils package is need to test")
+        self.end_devices = {}
         for pci_addr in self.device:
             if not os.path.isdir('/sys/bus/pci/devices/%s' % pci_addr):
                 self.cancel("%s not present in device path" % pci_addr)
@@ -67,6 +68,10 @@ class PCIHotPlugTest(Test):
             if not slot:
                 self.cancel("slot number not available for: %s" % pci_addr)
             self.dic[pci_addr] = slot
+            self.end_devices[pci_addr] = len(
+                pci.get_disks_in_pci_address(pci_addr))
+            self.end_devices[pci_addr] += len(
+                pci.get_nics_in_pci_address(pci_addr))
 
     def test(self):
         """
@@ -103,8 +108,7 @@ class PCIHotPlugTest(Test):
 
         return wait.wait_for(is_removed, timeout=10) or False
 
-    @staticmethod
-    def hotplug_add(slot, pci_addr):
+    def hotplug_add(self, slot, pci_addr):
         """
         Hot plug add operation
         """
@@ -118,4 +122,22 @@ class PCIHotPlugTest(Test):
                 return False
             return True
 
-        return wait.wait_for(is_added, timeout=10) or False
+        def is_recovered():
+            """
+            Compares current endpoint devices in pci address with
+            `pre` value, and returns True if equals pre.
+            False otherwise.
+            """
+            post = len(pci.get_disks_in_pci_address(pci_addr))
+            post += len(pci.get_nics_in_pci_address(pci_addr))
+            self.log.debug("Pre: %d,  Post: %d",
+                           self.end_devices[pci_addr], post)
+            if post == self.end_devices[pci_addr]:
+                return True
+            return False
+
+        if not wait.wait_for(is_added, timeout=10):
+            return False
+        # Waiting for 10s per end device, for recovery.
+        return wait.wait_for(is_recovered,
+                             self.end_devices[pci_addr] * 10)
