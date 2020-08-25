@@ -255,7 +255,6 @@ class NdctlTest(Test):
         ns_names = []
         for ns in namespaces:
             ns_names.append(self.plib.run_ndctl_list_val(ns, 'dev'))
-        ns_names.append('all')
 
         for namespace in ns_names:
             self.plib.disable_namespace(namespace=namespace)
