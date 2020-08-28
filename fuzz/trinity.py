@@ -94,7 +94,7 @@ class Trinity(Test):
         match = re.search(br'Call Trace:', dmesg, re.M | re.I)
         if match:
             self.log.info("some call traces seen please check")
-        match = re.search(br'tainting:', dmesg, re.M | re.I)
+        match = re.search(br'tainting', dmesg, re.M | re.I)
         if match:
             self.log.info("kernel become tainting please check")
 
