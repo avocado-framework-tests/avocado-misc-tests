@@ -55,6 +55,7 @@ class MmSubsystemTest(Test):
         smm = SoftwareManager()
         deps = ['gcc', 'make', 'patch']
         detected_distro = distro.detect()
+        skip_offline = self.params.get("skip_softoffline", default=True)
         if detected_distro.name in ["Ubuntu", 'debian']:
             deps.extend(['libpthread-stubs0-dev', 'git'])
         elif detected_distro.name == "SuSE":
@@ -76,16 +77,22 @@ class MmSubsystemTest(Test):
         skip_numa = False
         if len(memory.numa_nodes_with_memory()) < 2:
             skip_numa = True
-        rm_dic = []
+        rm_list = []
         for key, val in self.test_dic.items():
             if skip_numa:
                 if 'NUMA' in val or 'migrate' in val:
-                    rm_dic.append(key)
+                    if key not in rm_list:
+                        rm_list.append(key)
+            if skip_offline:
+                if 'soft offlin' in val:
+                    if key not in rm_list:
+                        rm_list.append(key)
             if detected_distro.name == "SuSE":
                 if 'runc' in val:
-                    rm_dic.append(key)
+                    if key not in rm_list:
+                        rm_list.append(key)
 
-        for item in rm_dic:
+        for item in rm_list:
             self.test_dic.pop(item)
 
     def test(self):
