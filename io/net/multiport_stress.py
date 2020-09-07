@@ -136,6 +136,9 @@ class MultiportStress(Test):
         for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
             networkinterface = NetworkInterface(interface, self.local)
             networkinterface.remove_ipaddr(ipaddr, self.netmask)
-            networkinterface.restore_from_backup()
+            try:
+                networkinterface.restore_from_backup()
+            except Exception:
+                self.log.info("backup file not availbale, could not restore file.")
             self.remotehost.remote_session.quit()
             self.remotehost_public.remote_session.quit()

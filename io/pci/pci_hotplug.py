@@ -21,11 +21,10 @@ This test verifies that for supported slots.
 """
 
 import os
-import re
 import platform
 from avocado import Test
 from avocado.utils import wait
-from avocado.utils import linux_modules, genio, pci, cpu
+from avocado.utils import linux_modules, genio, pci
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -45,15 +44,11 @@ class PCIHotPlugTest(Test):
             self.cancel("Processor is not ppc64")
         if os.path.exists('/proc/device-tree/bmc'):
             self.cancel("Test Unsupported! on this platform")
-        if cpu._list_matches(open('/proc/cpuinfo').readlines(),
-                             'platform\t: pSeries\n'):
-            self.power_vm = True
+        if 'pSeries' in open('/proc/cpuinfo', 'r').read():
             for mdl in ['rpaphp', 'rpadlpar_io']:
                 if not linux_modules.module_is_loaded(mdl):
                     linux_modules.load_module(mdl)
-        elif cpu._list_matches(open('/proc/cpuinfo').readlines(),
-                               'platform\t: PowerNV\n'):
-            self.power_vm = False
+        elif 'PowerNV' in open('/proc/cpuinfo', 'r').read():
             if not linux_modules.module_is_loaded("pnv_php"):
                 linux_modules.load_module("pnv_php")
         self.dic = {}
@@ -65,34 +60,18 @@ class PCIHotPlugTest(Test):
         smm = SoftwareManager()
         if not smm.check_installed("pciutils") and not smm.install("pciutils"):
             self.cancel("pciutils package is need to test")
+        self.end_devices = {}
         for pci_addr in self.device:
             if not os.path.isdir('/sys/bus/pci/devices/%s' % pci_addr):
                 self.cancel("%s not present in device path" % pci_addr)
-            slot = self.get_slot(pci_addr)
+            slot = pci.get_slot_from_sysfs(pci_addr)
             if not slot:
                 self.cancel("slot number not available for: %s" % pci_addr)
             self.dic[pci_addr] = slot
-
-    def get_slot(self, pci_addr):
-        '''
-        Returns the slot number with pci_address
-        '''
-        if self.power_vm:
-            devspec = genio.read_file("/sys/bus/pci/devices/%s/devspec"
-                                      % pci_addr)
-            slot = genio.read_file("/proc/device-tree/%s/ibm,loc-code"
-                                   % devspec)
-            slot = re.match(r'((\w+)[\.])+(\w+)-P(\d+)-C(\d+)|Slot(\d+)',
-                            slot).group()
-        else:
-            slot = pci.get_pci_prop(pci_addr, "PhySlot")
-        if not os.path.isdir('/sys/bus/pci/slots/%s' % slot):
-            self.log.info("%s Slot not available" % slot)
-            return ""
-        if not os.path.exists('/sys/bus/pci/slots/%s/power' % slot):
-            self.log.info("%s Slot does not support hotplug" % slot)
-            return ""
-        return slot
+            self.end_devices[pci_addr] = len(
+                pci.get_disks_in_pci_address(pci_addr))
+            self.end_devices[pci_addr] += len(
+                pci.get_nics_in_pci_address(pci_addr))
 
     def test(self):
         """
@@ -104,21 +83,25 @@ class PCIHotPlugTest(Test):
                 if not self.hotplug_remove(self.dic[pci_addr], pci_addr):
                     err_pci.append(pci_addr)
                 else:
-                    self.log.info("%s removed successfully" % pci_addr)
+                    self.log.info("%s removed successfully", pci_addr)
                 if not self.hotplug_add(self.dic[pci_addr], pci_addr):
                     err_pci.append(pci_addr)
                 else:
-                    self.log.info("%s added back successfully" % pci_addr)
+                    self.log.info("%s added back successfully", pci_addr)
         if err_pci:
             self.fail("following devices failed: %s" % ", ".join(err_pci))
 
-    def hotplug_remove(self, slot, pci_addr):
+    @staticmethod
+    def hotplug_remove(slot, pci_addr):
         """
         Hot Plug remove operation
         """
         genio.write_file("/sys/bus/pci/slots/%s/power" % slot, "0")
 
         def is_removed():
+            """
+            Returns True if pci device is removed, False otherwise.
+            """
             if pci_addr in pci.get_pci_addresses():
                 return False
             return True
@@ -132,8 +115,29 @@ class PCIHotPlugTest(Test):
         genio.write_file("/sys/bus/pci/slots/%s/power" % slot, "1")
 
         def is_added():
+            """
+            Returns True if pci device is added, False otherwise.
+            """
             if pci_addr not in pci.get_pci_addresses():
                 return False
             return True
 
-        return wait.wait_for(is_added, timeout=10) or False
+        def is_recovered():
+            """
+            Compares current endpoint devices in pci address with
+            `pre` value, and returns True if equals pre.
+            False otherwise.
+            """
+            post = len(pci.get_disks_in_pci_address(pci_addr))
+            post += len(pci.get_nics_in_pci_address(pci_addr))
+            self.log.debug("Pre: %d,  Post: %d",
+                           self.end_devices[pci_addr], post)
+            if post == self.end_devices[pci_addr]:
+                return True
+            return False
+
+        if not wait.wait_for(is_added, timeout=10):
+            return False
+        # Waiting for 10s per end device, for recovery.
+        return wait.wait_for(is_recovered,
+                             self.end_devices[pci_addr] * 10)

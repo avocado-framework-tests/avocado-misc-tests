@@ -126,4 +126,7 @@ class SwitchTest(Test):
         unset ip address
         '''
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-        self.networkinterface.restore_from_backup()
+        try:
+            self.networkinterface.restore_from_backup()
+        except Exception:
+            self.log.info("backup file not availbale, could not restore file.")

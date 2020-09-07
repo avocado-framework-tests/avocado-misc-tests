@@ -5,3 +5,4 @@ run_type: !mux
         type: 'upstream'
     distro:
         type: 'distro'
+prefix: '/usr'

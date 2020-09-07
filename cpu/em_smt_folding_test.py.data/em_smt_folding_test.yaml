@@ -1,3 +1,4 @@
 setup:
+    ebizy_url: 'http://sourceforge.net/projects/ebizzy/files/ebizzy/0.3/ebizzy-0.3.tar.gz'
     cpu_unit: .1
     range: 10

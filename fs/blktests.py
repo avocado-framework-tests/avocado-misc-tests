@@ -33,6 +33,8 @@ class Blktests(Test):
         '''
         Setup Blktests
         '''
+        self.disk = self.params.get('disk', default='')
+        self.dev_type = self.params.get('type', default='')
         smm = SoftwareManager()
         dist = distro.detect()
         if dist.name in ['Ubuntu', 'debian']:
@@ -59,7 +61,12 @@ class Blktests(Test):
         os.chdir(self.sourcedir)
 
         genio.write_one_line("/proc/sys/kernel/hung_task_timeout_secs", "0")
-        process.system('./check', ignore_status=True)
+        if self.disk:
+            os.environ['TEST_DEVS'] = self.disk
+        cmd = './check %s' % self.dev_type
+        result = process.run(cmd, ignore_status=True, verbose=True)
+        if result.exit_status != 0:
+            self.fail("test failed")
         dmesg = process.system_output('dmesg')
         match = re.search(br'Call Trace:', dmesg, re.M | re.I)
         if match:

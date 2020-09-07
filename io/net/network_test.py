@@ -310,7 +310,10 @@ class NetworkTest(Test):
             self.session.cmd(cmd)
         if self.ip_config:
             self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-            self.networkinterface.restore_from_backup()
+            try:
+                self.networkinterface.restore_from_backup()
+            except Exception:
+                self.log.info("backup file not availbale, could not restore file.")
         self.remotehost.remote_session.quit()
         self.remotehost_public.remote_session.quit()
         if 'scp' or 'ssh' in str(self.name.name):

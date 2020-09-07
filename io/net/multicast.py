@@ -129,5 +129,8 @@ class ReceiveMulticastTest(Test):
                           ignore_status=True) != 0:
             self.log.info("unable to unset all mulicast option")
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-        self.networkinterface.restore_from_backup()
+        try:
+            self.networkinterface.restore_from_backup()
+        except Exception:
+            self.log.info("backup file not availbale, could not restore file.")
         self.session.quit()
