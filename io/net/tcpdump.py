@@ -42,7 +42,6 @@ class TcpdumpTest(Test):
         """
         self.iface = self.params.get("interface", default="")
         self.count = self.params.get("count", default="500")
-        self.nping_count = self.params.get("nping_count", default="")
         self.peer_ip = self.params.get("peer_ip", default="")
         self.peer_public_ip = self.params.get("peer_public_ip", default="")
         self.drop = self.params.get("drop_accepted", default="10")
@@ -138,13 +137,14 @@ class TcpdumpTest(Test):
         """
         perform nping
         """
+        nping_count = round((120 * self.count) / 100)
         detected_distro = distro.detect()
         if detected_distro.name == "SuSE":
             cmd = "./nping/nping --%s %s -c %s" % (param,
-                                                   self.peer_ip, self.nping_count)
+                                                   self.peer_ip, nping_count)
             return process.SubProcess(cmd, verbose=False, shell=True)
         else:
-            cmd = "nping --%s %s -c %s" % (param, self.peer_ip, self.nping_count)
+            cmd = "nping --%s %s -c %s" % (param, self.peer_ip, nping_count)
             return process.SubProcess(cmd, verbose=False, shell=True)
 
     def tearDown(self):
