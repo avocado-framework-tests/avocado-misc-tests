@@ -22,7 +22,6 @@ from avocado.utils.software_manager import SoftwareManager
 
 
 class Perftool(Test):
-
     """
     perftool-testsuite
     :avocado: tags=perf,testsuite
@@ -41,7 +40,9 @@ class Perftool(Test):
             deps.extend(['linux-tools-common', 'linux-tools-%s' %
                          platform.uname()[2]])
         elif 'debian' in detected_distro.name:
-            deps.extend(['linux-tools-%s' % platform.uname()[2][3]])
+            package = 'linux-tools-%s' % platform.uname()[2][3]
+            if not smm.check_installed(package) and not smm.install(package):
+                deps.extend(['linux-perf'])
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon

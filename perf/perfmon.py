@@ -37,6 +37,7 @@ class Perfmon(Test):
 
         deps = ["gcc", "make"]
         if dist.name in ['Ubuntu', 'debian']:
+            process.system('apt-cache search ncurses')
             deps.extend(['libncurses-dev'])
         elif dist.name in ['rhel', 'SuSE']:
             deps.extend(['ncurses-devel'])
