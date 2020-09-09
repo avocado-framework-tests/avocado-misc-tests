@@ -154,22 +154,22 @@ class cpustresstest(Test):
         """
         for _ in range(self.iteration):
             self.log.info("OFF-ON Serial Test %s", totalcpus)
-            if (totalcpus != 0):
+            if totalcpus != 0:
                 for cpus in range(1, totalcpus):
-                    self.log.info("cpu%s going offline" % cpus)
+                    self.log.info("Offlining cpu%s", cpus)
                     cpu.offline(cpus)
             self.log.info("Online CPU's in reverse order %s", totalcpus)
             for cpus in range(totalcpus, -1, -1):
-                self.log.info("cpu%s going online" % cpus)
+                self.log.info("Onlining cpu%s", cpus)
                 cpu.online(cpus)
             self.log.info("Offline CPU's in reverse order %s", totalcpus)
-            if (totalcpus != 0):
+            if totalcpus != 0:
                 for cpus in range(totalcpus, -1, -2):
-                    self.log.info("cpu%s going offline" % cpus)
+                    self.log.info("Offlining cpu%s", cpus)
                     cpu.offline(cpus)
             self.log.info("Online CPU's in serial")
             for cpus in range(0, totalcpus):
-                self.log.info("cpu%s going online" % cpus)
+                self.log.info("Onlining cpu%s", cpus)
                 cpu.online(cpus)
 
     def single_cpu_toggle(self):
@@ -180,10 +180,10 @@ class cpustresstest(Test):
         """
         for cpus in range(1, totalcpus):
             for _ in range(self.iteration):
-                if (totalcpus != 0):
-                    self.log.info("cpu%s going offline" % cpus)
+                if totalcpus != 0:
+                    self.log.info("Offlining cpu%s", cpus)
                     cpu.offline(cpus)
-                self.log.info("cpu%s going online" % cpus)
+                self.log.info("Onlining cpu%s", cpus)
                 cpu.online(cpus)
 
     def cpu_toggle_one_by_one(self):
@@ -193,10 +193,10 @@ class cpustresstest(Test):
         """
         for _ in range(self.iteration):
             for cpus in range(totalcpus):
-                if (totalcpus != 0):
-                    self.log.info("cpu%s going offline" % cpus)
+                if totalcpus != 0:
+                    self.log.info("Offlining cpu%s", cpus)
                     cpu.offline(cpus)
-                self.log.info("cpu%s going online" % cpus)
+                self.log.info("Onlining cpu%s", cpus)
                 cpu.online(cpus)
 
     def multiple_cpus_toggle(self):
@@ -246,7 +246,7 @@ class cpustresstest(Test):
 
         self.log.info("\nSet all process affine to single NUMA node")
         nodes = process.system_output(
-            "numactl --hardware | grep cpus:",  shell=True)
+            "numactl --hardware | grep cpus:", shell=True)
         nodes = nodes.decode().split('\n')
         for node in nodes:
             cores = node.split(': ')[-1].replace(" ", ",")
@@ -257,7 +257,7 @@ class cpustresstest(Test):
 
         self.log.info(
             "\ntoggle random cpu, while shifting affinity of same pid")
-        for i in range(self.iteration):
+        for _ in range(self.iteration):
             core = randint(0, totalcpus)
             process.run("taskset -pc $((%s<<1)) $$" %
                         core, ignore_status=True, shell=True)
