@@ -31,6 +31,7 @@ from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost, RemoteHost
 from avocado.utils.ssh import Session
 from avocado.utils.process import SubProcess
+from avocado.utils import distro
 
 
 class Iperf(Test):
@@ -98,10 +99,12 @@ class Iperf(Test):
         archive.extract(tarball, self.iperf)
         self.version = os.path.basename(tarball.split('.tar')[0])
         self.iperf_dir = os.path.join(self.iperf, self.version)
-        destination = "%s:/tmp" % self.peer_ip
-        output = self.session.copy_files(self.iperf_dir, destination,
-                                         recursive=True)
-        if not output:
+        out = self.session.get_raw_ssh_command('ls')
+        cmd_l = " ".join((out.split()[1:7]))
+        cmd = "/usr/bin/scp %s -r %s %s@%s:/tmp" % (cmd_l, self.iperf_dir,
+                                                    self.peer_user,
+                                                    self.peer_ip)
+        if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.cancel("unable to copy the iperf into peer machine")
         cmd = "cd /tmp/%s;./configure ppc64le;make" % self.version
         output = self.session.cmd(cmd)
@@ -129,6 +132,7 @@ class Iperf(Test):
         os.chdir(self.iperf)
         cmd = "./iperf -c %s" % self.peer_ip
         result = process.run(cmd, shell=True, ignore_status=True)
+        self.nping()
         if result.exit_status:
             self.fail("FAIL: Iperf Run failed")
         for line in result.stdout.decode("utf-8").splitlines():
@@ -139,6 +143,22 @@ class Iperf(Test):
                               ", Throughput Actual value - %s "
                               % ((tput*100)/speed, self.expected_tp,
                                  str(tput)+'Mb/sec'))
+
+    def nping(self):
+        """
+        perform nping
+        """
+        detected_distro = distro.detect()
+        if detected_distro.name == "SuSE":
+            cmd = "./nping/nping --tcp %s -c 10" % self.peer_ip
+            if process.SubProcess(cmd, verbose=False, shell=True) != 0:
+                return False
+            return True
+        else:
+            cmd = "nping --tcp %s -c 10" % self.peer_ip
+            if process.SubProcess(cmd, verbose=False, shell=True) != 0:
+                return False
+            return True
 
     def tearDown(self):
         """
@@ -157,10 +177,7 @@ class Iperf(Test):
         except Exception:
             self.peer_public_networkinterface.set_mtu('1500')
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-        try:
-            self.networkinterface.restore_from_backup()
-        except Exception:
-            self.log.info("backup file not availbale, could not restore file.")
+        self.networkinterface.restore_from_backup()
         self.remotehost.remote_session.quit()
         self.remotehost_public.remote_session.quit()
         self.session.quit()
