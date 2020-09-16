@@ -263,6 +263,14 @@ class Bonding(Test):
                     self.fail("Not able to bring up the slave\
                                     interface %s" % interface)
                 time.sleep(self.sleep_time)
+                if self.ping_check():
+                    self.log.info("Ping passed for Mode %s after reinstating \
+                                  the slave interface", arg1)
+                else:
+                    error_str = "Ping fail in Mode %s when"\
+                                "interface %s reinstated" % (arg1, interface)
+                    self.log.debug(error_str)
+                    self.err.append(error_str)
         else:
             self.log.debug("Need a min of 2 host interfaces to test\
                          slave failover in Bonding")
