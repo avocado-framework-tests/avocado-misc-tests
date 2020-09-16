@@ -286,6 +286,32 @@ class Bonding(Test):
                                 interface %s" % interface)
             time.sleep(self.sleep_time)
 
+        bond_mtu = ['2000', '3000', '4000', '5000', '6000', '7000',
+                    '8000', '9000']
+        for mtu in bond_mtu:
+            self.bond_networkinterface = NetworkInterface(self.bond_name,
+                                                          self.localhost)
+            if self.bond_networkinterface.set_mtu(mtu) is not None:
+                self.cancel("Failed to set mtu in host")
+            for interface in self.peer_interfaces:
+                peer_networkinterface = NetworkInterface(interface,
+                                                         self.remotehost)
+                if peer_networkinterface.set_mtu(mtu) is not None:
+                    self.cancel("Failed to set mtu in peer")
+            if self.ping_check():
+                self.log.info("Ping passed for Mode %s", self.mode,
+                              mtu)
+            else:
+                error_str = "Ping fail in Mode %s after MTU change to %s"\
+                    % (arg1, mtu)
+            if self.bond_networkinterface.set_mtu('1500'):
+                self.cancel("Failed to set mtu back to 1500 in host")
+            for interface in self.peer_interfaces:
+                peer_networkinterface = NetworkInterface(interface,
+                                                         self.remotehost)
+                if peer_networkinterface.set_mtu('1500') is not None:
+                    self.cancel("Failed to set mtu back to 1500 in peer")
+
     def bond_setup(self, arg1, arg2):
         '''
         bond setup
