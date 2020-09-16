@@ -1,13 +1,13 @@
-ISO_Location:
-    location:
-        iso_location: http://www.mellanox.com/downloads/ofed/MLNX_OFED-3.3-1.0.4.0/MLNX_OFED_LINUX-3.3-1.0.4.0-rhel7.2-ppc64le.iso
+Parameters:
+    iso_location: http://www.mellanox.com/downloads/ofed/MLNX_OFED-3.3-1.0.4.0/MLNX_OFED_LINUX-3.3-1.0.4.0-rhel7.2-ppc64le.iso
+    kernel_compile: "Y"
 Options: !mux
     all:
-        option: --all --post-start-delay 15 --pre-install-opensm "echo pre" --post-install-mstflint "echo post"
+        option: --all --post-start-delay 15 --pre-install-opensm "echo testpre" --post-install-mstflint "echo testpost"
     32-bit:
         option: --with-32bit
     without_32-bit:
-        option: --without-32bit  --with-fabric-collector -vv --vma-eth
+        option: --without-32bit  --with-fabric-collector -vv --vma
     skip-distro-check:
         option: --skip-distro-check -q
     skip-kmp-verify:
@@ -15,13 +15,17 @@ Options: !mux
     force-fw-update:
         option: --vma --force-fw-update --tmpdir /tmp 
     disable-kmp_skip-distro-check:
-        option: --disable-kmp --skip-distro-check -vvv --disable-affinity --add-kernel-support --skip-repo
+        option: --disable-kmp --skip-distro-check -vvv --disable-affinity
     dpdk:
         option: --dpdk
+    opensm:
+        option: --enable-opensm
     hpc:
         option: --hpc
     basic:
         option: --basic
+    mlnxlibs:
+        option: --mlnx-libs
     msm:
         option: --msm
     p:
@@ -30,24 +34,34 @@ Options: !mux
         option: -s /lib/modules/`uname -r`/build -k `uname -r`  --umad-dev-na  --enable-affinity
     umad-dev-rw:
         option: --umad-dev-rw
+    umad-dev-na:
+        option: --umad-dev-na
     distro:
         option: -U --distro `cat distro` --with-vma
     fw-update-only:
         option: --fw-update-only
     check-deps-only:
         option: --check-deps-only
+    bluefield:
+        option: --bluefield
+    libdisni:
+        option: --with-libdisni
     guest:
         option: --guest
     hypervisor:
         option: --hypervisor
     kernel-only_without-fw-update:
-        option: --kernel-only   --without-fw-update  -v  --enable-mlnx_tune
+        option: --kernel-only --without-fw-update -v --enable-mlnx_tune --skip-kmp-verify
     ofed-conf:
         option: -c docs/conf/ofed-basic.conf -n docs/conf/ofed_net.conf-example
-    add-kernel-support_with-kmp:
-        option: --add-kernel-support --skip-repo --force --kmp
-    add-kernel-support_with-nvmf:
-        option: --skip-distro-check --add-kernel-support --skip-repo --with-nvmf
+    with-kmp:
+        option: --kmp
+    with-nvmf:
+        option: --skip-distro-check --with-nvmf --disable-kmp
+    with-nfsrdma:
+        option: --with-nfsrdma
+    without-nfsrdma:
+        option: --without-nfsrdma
     add-kernel-support:
-        option: --add-kernel-support --skip-repo --force
+        option: " "
         uninstall: False
