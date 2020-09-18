@@ -22,6 +22,7 @@ import netifaces
 from avocado.utils import genio
 from avocado import Test
 from avocado.utils import process
+from avocado.utils import disk
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.process import CmdError
 from avocado.utils.network.interfaces import NetworkInterface
@@ -65,12 +66,17 @@ class VirtualizationDriverBindTest(Test):
                             % self.virtual_device)
             self.networkinterface = NetworkInterface(self.virtual_device,
                                                      local)
+            if self.virtual_device in local.get_default_route_interface():
+                self.cancel("Test could not run on default interface")
             try:
                 self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
                 self.networkinterface.save(self.ipaddr, self.netmask)
             except Exception:
                 self.networkinterface.save(self.ipaddr, self.netmask)
             self.networkinterface.bring_up()
+        else:
+            if disk.is_root_device(self.virtual_device):
+                self.cancel("Test could not run on root disk")
 
     def is_exists_device(self, device):
         '''
