@@ -26,6 +26,7 @@ import copy
 from avocado import Test
 from avocado.utils import process, linux_modules, genio
 from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.ssh import Session
 from avocado.utils.process import CmdError
 import yaml
 
@@ -43,6 +44,8 @@ class NVMfTest(Test):
         self.peer_ips = self.params.get('peer_ips', default='')
         if not self.nss or not self.peer_ips:
             self.cancel("No inputs provided")
+        self.peer_user = self.params.get("peer_user", default="root")
+        self.peer_password = self.params.get("peer_password", default=None)
         self.nss = self.nss.split(' ')
         self.peer_ips = self.peer_ips.split(' ')
         self.ids = range(1, len(self.peer_ips) + 1)
@@ -58,7 +61,8 @@ class NVMfTest(Test):
         except CmdError:
             self.cancel("nvme-rdma module not loadable")
         self.cfg_tmpl = self.get_data("nvmf_template.cfg")
-        self.cfg_file = self.get_data("nvmf.cfg")
+        dirname = os.path.dirname(os.path.abspath(self.cfg_tmpl))
+        self.cfg_file = os.path.join(dirname, "nvmf.cfg")
         self.nvmf_discovery_file = "/etc/nvme/discovery.conf"
 
     def create_cfg_file(self):
@@ -103,21 +107,27 @@ class NVMfTest(Test):
         """
         Configures the peer NVMf.
         """
+        self.session = Session(self.peer_ips[0], user=self.peer_user,
+                               password=self.peer_password)
+        if not self.session.connect():
+            self.fail("failed connecting to peer")
         self.create_cfg_file()
-        cmd = "scp -r %s %s:/tmp/" % (self.cfg_file, self.peer_ips[0])
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
+        destination = "%s:/tmp/" % self.peer_ips[0]
+        output = self.session.copy_files(self.cfg_file, destination)
+        if not output:
             self.cancel("unable to copy the NVMf cfg file into peer machine")
         for mdl in ["nvmet", "nvmet-rdma"]:
-            cmd = "ssh %s \"%s\"" % (self.peer_ips[0], "modprobe %s" % mdl)
-            if process.system(cmd, shell=True, ignore_status=True) != 0:
+            cmd = "modprobe %s" % mdl
+            output = self.session.cmd(cmd)
+            if not output.exit_status == 0:
                 self.cancel("%s is not loadable on the peer" % mdl)
         msg = "which nvmetcli"
-        cmd = "ssh %s \"%s\"" % (self.peer_ips[0], msg)
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
+        output = self.session.cmd(msg)
+        if not output.exit_status == 0:
             self.cancel("nvmetcli is not installed on the peer")
         msg = "nvmetcli restore /tmp/nvmf.cfg"
-        cmd = "ssh %s \"%s\"" % (self.peer_ips[0], msg)
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
+        output = self.session.cmd(msg)
+        if not output.exit_status == 0:
             self.fail("nvmetcli setup config fails on peer")
 
     def test_nvmfdiscover(self):
@@ -191,11 +201,15 @@ class NVMfTest(Test):
         """
         Clears the peer NVMf
         """
+        self.session = Session(self.peer_ips[0], user=self.peer_user,
+                               password=self.peer_password)
+        if not self.session.connect():
+            self.fail("failed connecting to peer")
         msg = "nvmetcli clear"
-        cmd = "ssh %s \"%s\"" % (self.peer_ips[0], msg)
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
+        output = self.session.cmd(msg)
+        if not output.exit_status == 0:
             self.fail("nvmetcli clear config remove on peer")
         msg = "rm -rf /tmp/nvmf.cfg"
-        cmd = "ssh %s \"%s\"" % (self.peer_ips[0], msg)
-        if process.system(cmd, shell=True, ignore_status=True) != 0:
+        output = self.session.cmd(msg)
+        if not output.exit_status == 0:
             self.log.warn("removing config file on peer failed")
