@@ -23,6 +23,7 @@ a storage networking fabric.
 import os
 import json
 import copy
+import time
 from avocado import Test
 from avocado.utils import process, linux_modules, genio
 from avocado.utils.software_manager import SoftwareManager
@@ -100,7 +101,7 @@ class NVMfTest(Test):
         """
         cmd = "nvme list"
         output = process.system_output(cmd, shell=True, ignore_status=True)
-        count = len(output.splitlines()) - 2
+        count = max(len(output.splitlines()) - 2, 0)
         return count
 
     def test_targetconfig(self):
@@ -119,15 +120,15 @@ class NVMfTest(Test):
         for mdl in ["nvmet", "nvmet-rdma"]:
             cmd = "modprobe %s" % mdl
             output = self.session.cmd(cmd)
-            if not output.exit_status == 0:
+            if output.exit_status:
                 self.cancel("%s is not loadable on the peer" % mdl)
         msg = "which nvmetcli"
         output = self.session.cmd(msg)
-        if not output.exit_status == 0:
+        if output.exit_status:
             self.cancel("nvmetcli is not installed on the peer")
         msg = "nvmetcli restore /tmp/nvmf.cfg"
         output = self.session.cmd(msg)
-        if not output.exit_status == 0:
+        if output.exit_status:
             self.fail("nvmetcli setup config fails on peer")
 
     def test_nvmfdiscover(self):
@@ -150,8 +151,10 @@ class NVMfTest(Test):
                 str(i + 1), self.peer_ips[i])
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.fail("Connect to mysubsys%s fails" % str(i + 1))
+            # Time needed to populate the device in nvme list command
+            time.sleep(1)
         if (self.nvme_devs_count() - pre_count) != len(self.ids):
-            self.fail("%d new nvme not devices added" % len(self.ids))
+            self.fail("%d new nvme devices not added" % len(self.ids))
 
     def test_nvmfdisconnect(self):
         """
@@ -163,7 +166,7 @@ class NVMfTest(Test):
             if process.system(cmd, shell=True, ignore_status=True) != 0:
                 self.fail("Disconnect to mysubsys%s fails" % str(i + 1))
         if (pre_count - self.nvme_devs_count()) != len(self.ids):
-            self.fail("%d new nvme not devices removed" % len(self.ids))
+            self.fail("%d new nvme devices not removed" % len(self.ids))
 
     def test_nvmfconnectcfg(self):
         """
@@ -182,7 +185,7 @@ class NVMfTest(Test):
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("connect-all fails")
         if (self.nvme_devs_count() - pre_count) != len(self.ids):
-            self.fail("%d new nvme not devices added" % len(self.ids))
+            self.fail("%d new nvme devices not added" % len(self.ids))
 
     def test_nvmfdisconnectcfg(self):
         """
@@ -195,7 +198,7 @@ class NVMfTest(Test):
                 self.fail("Disconnect to mysubsys%s fails" % str(i + 1))
         genio.write_file(self.nvmf_discovery_file, "")
         if (pre_count - self.nvme_devs_count()) != len(self.ids):
-            self.fail("%d new nvme not devices removed" % len(self.ids))
+            self.fail("%d new nvme devices not removed" % len(self.ids))
 
     def test_cleartargetconfig(self):
         """
@@ -207,9 +210,9 @@ class NVMfTest(Test):
             self.fail("failed connecting to peer")
         msg = "nvmetcli clear"
         output = self.session.cmd(msg)
-        if not output.exit_status == 0:
+        if output.exit_status:
             self.fail("nvmetcli clear config remove on peer")
         msg = "rm -rf /tmp/nvmf.cfg"
         output = self.session.cmd(msg)
-        if not output.exit_status == 0:
+        if output.exit_status:
             self.log.warn("removing config file on peer failed")
