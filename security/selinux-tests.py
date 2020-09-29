@@ -31,7 +31,6 @@ class SELinux(Test):
         '''
         Install the basic packages to support selinux
         '''
-
         # Check for basic utilities
         smm = SoftwareManager()
         detected_distro = distro.detect()
@@ -55,9 +54,7 @@ class SELinux(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-
         url = "https://github.com/SELinuxProject/selinux-testsuite/archive/master.zip"
-
         tarball = self.fetch_asset(url, expire='7d')
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(self.workdir, 'selinux-testsuite-master')
@@ -78,11 +75,11 @@ class SELinux(Test):
         count = 0
         output = build.run_make(self.sourcedir, extra_args="-C tests test",
                                 process_kwargs={"ignore_status": True})
-        for line in output.stderr_text:
+        for line in output.stderr_text.splitlines():
             if 'Failed test at' in line:
                 count += 1
                 self.log.info(line)
-        if count > 0:
+        if count:
             self.fail("%s test(s) failed, please refer to the log" % count)
 
     def tearDown(self):
