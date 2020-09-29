@@ -1,0 +1,45 @@
+Test: !mux
+    options: !mux
+        first:
+            HOST_PARAM: -T Q -s $peer_ip -D $dapl_interface -d
+            PEER_PARAM: -T S -D $dapl_peer_interface
+        second:
+            HOST_PARAM: -T T -d -s $peer_ip -D $dapl_interface -n 53000 client SR 4096 2 server SR 4096 2
+            PEER_PARAM: -T S -d -n 53000 -D $dapl_peer_interface
+        third:
+            HOST_PARAM: -T T -V -d -t 2 -w 4 -i 5555 -s $peer_ip -D $dapl_interface client RW 4096 1 server RW 2048 4 client SR 1024 4 server SR 4096 2 client SR 1024 3 -f server SR 2048 1 -f
+            PEER_PARAM: -T S -D $dapl_peer_interface
+        fourth:
+            HOST_PARAM: -T P -d -s $peer_ip -D $dapl_interface -i 100 RW 4096 2
+            PEER_PARAM: -T S -D $dapl_peer_interface
+        fifth:
+            PEER_PARAM: -T L -D $dapl_peer_interface -d -w 16 -m 1000
+parameters:
+    dapl_interface: ofa-v2-eth1
+    dapl_peer_interface: ofa-v2-eth1
+    interface: eth1
+    peer_ip:
+    peer_user: "root"
+    peer_password: "********"
+    host_ip:
+    netmask:
+    peer_public_ip:
+mtu: !mux
+    1500:
+        mtu: "1500"
+    2000:
+        mtu: "2000"
+    3000:
+        mtu: "3000"
+    4000:
+        mtu: "4000"
+    5000:
+        mtu: "5000"
+    6000:
+        mtu: "6000"
+    7000:
+        mtu: "7000"
+    8000:
+        mtu: "8000"
+    9000:
+        mtu: "9000"
