@@ -1,0 +1,44 @@
+module: 'i40e'
+interface:
+host_ip:
+netmask:
+peer_ip:
+sysfs_check_required: 0
+Test: !mux
+    debug:
+        module_param_name: "debug"
+        value: !mux
+            debug_0:
+                module_param_value: "0"
+            debug_1:
+                module_param_value: "1"
+            debug_2:
+                module_param_value: "2"
+            debug_3:
+                module_param_value: "3"
+            debug_4:
+                module_param_value: "4"
+            debug_5:
+                module_param_value: "5"
+            debug_6:
+                module_param_value: "6"
+            debug_7:
+                module_param_value: "7"
+            debug_8:
+                module_param_value: "8"
+            debug_9:
+                module_param_value: "9"
+            debug_10:
+                module_param_value: "10"
+            debug_11:
+                module_param_value: "11"
+            debug_12:
+                module_param_value: "12"
+            debug_13:
+                module_param_value: "13"
+            debug_14:
+                module_param_value: "14"
+            debug_15:
+                module_param_value: "15"
+            debug_16:
+                module_param_value: "16"
