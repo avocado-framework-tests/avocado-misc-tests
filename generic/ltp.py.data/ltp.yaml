@@ -1,5 +1,6 @@
 setup:
     mem_leak: 0
+    url: 'https://github.com/linux-test-project/ltp/archive/master.zip' 
     general: !mux
         runltp: !mux
             syscalls:

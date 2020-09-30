@@ -109,8 +109,15 @@ class LTP(Test):
             if not smg.check_installed(package) and not smg.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
         clear_dmesg()
-        url = "https://github.com/linux-test-project/ltp/archive/master.zip"
-        tarball = self.fetch_asset("ltp-master.zip", locations=[url])
+        url = self.params.get(
+            'url', default='https://github.com/linux-test-project/ltp/archive/master.zip')
+        match = next((ext for ext in [".zip", ".tar"] if ext in url), None)
+        tarball = ''
+        if match:
+            tarball = self.fetch_asset(
+                "ltp-master%s" % match, locations=[url], expire='7d')
+        else:
+            self.cancel("Provided LTP Url is not valid")
         archive.extract(tarball, self.workdir)
         ltp_dir = os.path.join(self.workdir, "ltp-master")
         os.chdir(ltp_dir)
