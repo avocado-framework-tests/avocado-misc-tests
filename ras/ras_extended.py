@@ -150,7 +150,7 @@ class RASTools(Test):
             cmd = "bootlist %s" % list_item
             self.run_cmd(cmd)
         interface = self.run_cmd_out(
-            "ifconfig | head -1 | cut -d':' -f1")
+            "lsvio -e | cut -d' ' -f2")
         disk_name = self.run_cmd_out("df -h | egrep '(s|v)d[a-z][1-8]' | "
                                      "tail -1 | cut -d' ' -f1").strip("12345")
         file_path = os.path.join(self.workdir, 'file')
