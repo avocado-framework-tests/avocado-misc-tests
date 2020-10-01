@@ -1,0 +1,9 @@
+interface:
+peer_ip: 
+host_ip: 
+netmask: 
+args: !mux
+    PrivateFlag:
+        privflag_test: True
+    Get-dump:
+        arg: -w
