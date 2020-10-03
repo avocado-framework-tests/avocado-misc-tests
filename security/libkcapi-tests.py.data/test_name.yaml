@@ -1,0 +1,16 @@
+libkcapi:
+    test: !mux
+        test.sh:
+            test_name: 'test.sh'
+        kcapi-convenience.sh:
+            test_name: 'kcapi-convenience.sh'
+        kcapi-dgst-test.sh:
+            test_name: 'kcapi-dgst-test.sh'
+        kcapi-enc-test.sh:
+            test_name: 'kcapi-enc-test.sh'
+        kcapi-enc-test-large.sh:
+            test_name: 'kcapi-enc-test-large.sh'
+        hasher-test.sh:
+            test_name: 'hasher-test.sh'
+        kcapi-fuzz-test.sh:
+            test_name: 'kcapi-fuzz-test.sh'
