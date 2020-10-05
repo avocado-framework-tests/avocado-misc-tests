@@ -95,7 +95,7 @@ class Rping(Test):
         self.local_ip = netifaces.ifaddresses(self.iface)[AF_INET][0]['addr']
         self.option = self.option.replace("peer_ipv6", self.ipv6_peer)
         self.option = self.option.replace("peer_ip", self.peer_ip)
-        self.peer_user = self.params.get("peer_user_name", default="root")
+        self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
         self.session = Session(self.peer_ip, user=self.peer_user,

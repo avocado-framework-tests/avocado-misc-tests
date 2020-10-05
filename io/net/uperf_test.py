@@ -46,7 +46,7 @@ class Uperf(Test):
         """
         self.peer_ip = self.params.get("peer_ip", default="")
         self.peer_public_ip = self.params.get("peer_public_ip", default="")
-        self.peer_user = self.params.get("peer_user_name", default="root")
+        self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
         interfaces = netifaces.interfaces()

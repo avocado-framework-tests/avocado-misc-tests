@@ -45,7 +45,7 @@ class Netperf(Test):
         """
         To check and install dependencies for the test
         """
-        self.peer_user = self.params.get("peer_user_name", default="root")
+        self.peer_user = self.params.get("peer_user", default="root")
         self.peer_public_ip = self.params.get("peer_public_ip", default="")
         self.peer_ip = self.params.get("peer_ip", default="")
         self.peer_password = self.params.get("peer_password", '*',
