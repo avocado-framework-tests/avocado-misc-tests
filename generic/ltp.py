@@ -133,11 +133,17 @@ class LTP(Test):
     def test(self):
         logfile = os.path.join(self.logdir, 'ltp.log')
         failcmdfile = os.path.join(self.logdir, 'failcmdfile')
-
+        skipfileurl = self.params.get(
+            'skipfileurl', default=None)
+        if skipfileurl:
+            skipfilepath = self.fetch_asset(
+                "skipfile", locations=[skipfileurl], expire='7d')
+        else:
+            skipfilepath = self.get_data('skipfile')
         os.chmod(self.teststmpdir, 0o755)
         self.args += (" -q -p -l %s -C %s -d %s -S %s"
                       % (logfile, failcmdfile, self.teststmpdir,
-                         self.get_data('skipfile')))
+                         skipfilepath))
         if self.mem_leak:
             self.args += " -M %s" % self.mem_leak
         cmd = "%s %s" % (os.path.join(self.ltpbin_dir, 'runltp'), self.args)
