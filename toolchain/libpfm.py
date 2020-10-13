@@ -46,7 +46,7 @@ class Libpfm(Test):
         if test_type == 'upstream':
             tarball = self.fetch_asset(
                 'https://netix.dl.sourceforge.net/project/perfmon2/'
-                'libpfm4/libpfm-4.9.0.tar.gz', expire='1d')
+                'libpfm4/libpfm-4.10.1.tar.gz', expire='1d')
             archive.extract(tarball, self.teststmpdir)
             version = os.path.basename(tarball.split('.tar.')[0])
             self.path = os.path.join(self.teststmpdir, version)
