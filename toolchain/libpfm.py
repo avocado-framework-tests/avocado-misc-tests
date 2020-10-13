@@ -41,9 +41,9 @@ class Libpfm(Test):
         for pkg in pkgs:
             if not softm.check_installed(pkg) and not softm.install(pkg):
                 self.cancel("%s is needed for the test to be run" % pkg)
-        test_type = self.params.get('type', default='upstream')
+        test_type = self.params.get('type', default='distro')
 
-        if test_type == 'upstream':
+        if test_type == 'distro':
             tarball = self.fetch_asset(
                 'https://netix.dl.sourceforge.net/project/perfmon2/'
                 'libpfm4/libpfm-4.10.1.tar.gz', expire='1d')
