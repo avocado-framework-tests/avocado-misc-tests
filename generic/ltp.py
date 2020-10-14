@@ -109,8 +109,15 @@ class LTP(Test):
             if not smg.check_installed(package) and not smg.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
         clear_dmesg()
-        url = "https://github.com/linux-test-project/ltp/archive/master.zip"
-        tarball = self.fetch_asset("ltp-master.zip", locations=[url])
+        url = self.params.get(
+            'url', default='https://github.com/linux-test-project/ltp/archive/master.zip')
+        match = next((ext for ext in [".zip", ".tar"] if ext in url), None)
+        tarball = ''
+        if match:
+            tarball = self.fetch_asset(
+                "ltp-master%s" % match, locations=[url], expire='7d')
+        else:
+            self.cancel("Provided LTP Url is not valid")
         archive.extract(tarball, self.workdir)
         ltp_dir = os.path.join(self.workdir, "ltp-master")
         os.chdir(ltp_dir)
@@ -126,11 +133,17 @@ class LTP(Test):
     def test(self):
         logfile = os.path.join(self.logdir, 'ltp.log')
         failcmdfile = os.path.join(self.logdir, 'failcmdfile')
-
+        skipfileurl = self.params.get(
+            'skipfileurl', default=None)
+        if skipfileurl:
+            skipfilepath = self.fetch_asset(
+                "skipfile", locations=[skipfileurl], expire='7d')
+        else:
+            skipfilepath = self.get_data('skipfile')
         os.chmod(self.teststmpdir, 0o755)
         self.args += (" -q -p -l %s -C %s -d %s -S %s"
                       % (logfile, failcmdfile, self.teststmpdir,
-                         self.get_data('skipfile')))
+                         skipfilepath))
         if self.mem_leak:
             self.args += " -M %s" % self.mem_leak
         cmd = "%s %s" % (os.path.join(self.ltpbin_dir, 'runltp'), self.args)
