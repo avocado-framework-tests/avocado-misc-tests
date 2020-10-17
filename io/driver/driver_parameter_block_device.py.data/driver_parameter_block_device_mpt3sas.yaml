@@ -1,0 +1,37 @@
+module: 'mpt3sas'
+multipath_enabled: False
+disk: ''
+Test: !mux
+    logging_level:
+        module_param_name: "logging_level"
+        value: !mux
+            logging_level_0:
+                 module_param_value: "0"
+            logging_level_1:
+                 module_param_value: "1"
+            logging_level_8:
+                 module_param_value: "8"
+            logging_level_16:
+                 module_param_value: "16"
+            logging_level_32:
+                 module_param_value:  "32"
+            logging_level_128:
+                 module_param_value: "128"
+    smp_affinity_enable:
+        module_param_name: "smp_affinity_enable"
+        value: !mux
+            smp_affinity_enable_0:
+                module_param_value: "0"
+    mpt3sas_fwfault_debug:
+        module_param_name: "mpt3sas_fwfault_debug"
+        value: !mux
+            mpt3sas_fwfault_debug_0:
+                module_param_value: "0"
+            mpt3sas_fwfault_debug_1:
+                module_param_value: "1"
+            mpt3sas_fwfault_debug_2:
+                module_param_value: "2"
+            mpt3sas_fwfault_debug_4:
+                module_param_value: "4"
+            mpt3sas_fwfault_debug_6:
+                module_param_value: "6"
