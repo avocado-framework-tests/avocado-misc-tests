@@ -1,0 +1,44 @@
+module: ixgbe
+interface:
+host_ip:
+netmask:
+peer_ip:
+sysfs_check_required: 0
+Test: !mux
+    max_vfs:
+        module_param_name: "max_vfs"
+        value: !mux
+            max_vfs_0:
+                module_param_value: "0"
+            max_vfs_8:
+                module_param_value: "8"
+            max_vfs_12:
+                module_param_value: "12"
+            max_vfs_30:
+                module_param_value: "30"
+            max_vfs_63:
+                module_param_value: "63"
+    allow_unsupported_sfp:
+        module_param_name: "allow_unsupported_sfp"
+        value: !mux
+            allow_unsupported_sfp_8:
+                module_param_value: "8"
+            allow_unsupported_sfp_16:
+                module_param_value: "16"
+            allow_unsupported_sfp_32:
+                module_param_value: "16"
+            allow_unsupported_sfp_128:
+                module_param_value: "128"
+    debug:
+        module_param_name: "debug"
+        value: !mux
+            debug_0:
+                module_param_value: "0"
+            debug_2:
+                module_param_value: "2"
+            debug_4:
+                module_param_value: "4"
+            debug_8:
+                module_param_value: "8"
+            debug_16:
+                module_param_value: "16"
