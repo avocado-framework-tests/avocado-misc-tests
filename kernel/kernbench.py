@@ -19,15 +19,11 @@
 # https://github.com/autotest/autotest-client-tests/commits/master/kernbench
 
 import os
-import re
 import platform
+import re
 
 from avocado import Test
-from avocado.utils import build
-from avocado.utils import process
-from avocado.utils import cpu
-from avocado.utils import distro
-from avocado.utils import archive
+from avocado.utils import archive, build, cpu, distro, process
 from avocado.utils.software_manager import SoftwareManager
 
 

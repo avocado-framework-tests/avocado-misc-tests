@@ -17,6 +17,7 @@
 #          Pavithra <pavrampu@linux.vnet.ibm.com> (Added test_servicelog)
 
 import os
+
 from avocado import Test
 from avocado.utils import process
 from avocado.utils.service import ServiceManager

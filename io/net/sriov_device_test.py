@@ -22,10 +22,10 @@ Tests for Sriov logical device
 import netifaces
 from avocado import Test
 from avocado.utils import process
-from avocado.utils.ssh import Session
-from avocado.utils.software_manager import SoftwareManager
-from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.ssh import Session
 
 
 class NetworkSriovDevice(Test):

@@ -17,9 +17,8 @@ Bootlist Test
 """
 
 import netifaces
-from avocado import Test
+from avocado import Test, skipUnless
 from avocado.utils import process
-from avocado import skipUnless
 
 IS_POWER_VM = 'pSeries' in open('/proc/cpuinfo', 'r').read()
 

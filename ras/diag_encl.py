@@ -14,12 +14,12 @@
 # Copyright: 2018 IBM
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 
-import os
 import glob
+import os
 import xml.etree.ElementTree
+
 from avocado import Test, skipIf
-from avocado.utils import process, distro
-from avocado.utils import genio
+from avocado.utils import distro, genio, process
 from avocado.utils.software_manager import SoftwareManager
 
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()

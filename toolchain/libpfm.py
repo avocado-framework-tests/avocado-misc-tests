@@ -16,9 +16,9 @@
 
 
 import os
-from avocado.utils import process
+
 from avocado import Test
-from avocado.utils import build, distro, archive
+from avocado.utils import archive, build, distro, process
 from avocado.utils.software_manager import SoftwareManager
 
 

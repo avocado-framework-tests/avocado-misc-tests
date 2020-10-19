@@ -21,18 +21,16 @@ workload profiles
 """
 
 import os
+
 import netifaces
 from avocado import Test
-from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import distro
-from avocado.utils import build
-from avocado.utils import archive
-from avocado.utils import process
-from avocado.utils.ssh import Session
+from avocado.utils import archive, build, distro, process
 from avocado.utils.genio import read_file
-from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost, RemoteHost
+from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.process import SubProcess
+from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.ssh import Session
 
 
 class Uperf(Test):

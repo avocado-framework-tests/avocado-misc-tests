@@ -20,14 +20,15 @@ Ping6 - Send ICMP ECHO_REQUEST to network hosts.
 """
 
 import time
+
 import netifaces
-from netifaces import AF_INET, AF_INET6
 from avocado import Test
-from avocado.utils.software_manager import SoftwareManager
-from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils import distro, process
 from avocado.utils.network.hosts import LocalHost, RemoteHost
-from avocado.utils import process, distro
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.ssh import Session
+from netifaces import AF_INET, AF_INET6
 
 
 class Ping6(Test):

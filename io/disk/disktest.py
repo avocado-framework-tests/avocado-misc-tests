@@ -26,13 +26,9 @@ import os
 import shutil
 
 from avocado import Test
-from avocado.utils import build
-from avocado.utils import memory
-from avocado.utils import process, distro
-from avocado.utils import lv_utils
-from avocado.utils.partition import Partition
+from avocado.utils import build, distro, lv_utils, memory, process
+from avocado.utils.partition import Partition, PartitionError
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils.partition import PartitionError
 
 
 class Disktest(Test):

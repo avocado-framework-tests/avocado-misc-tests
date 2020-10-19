@@ -16,10 +16,9 @@
 
 import os
 import platform
-from avocado import Test
-from avocado import skipUnless
-from avocado.utils import archive
-from avocado.utils import cpu, build, distro, process, genio
+
+from avocado import Test, skipUnless
+from avocado.utils import archive, build, cpu, distro, genio, process
 from avocado.utils.software_manager import SoftwareManager
 
 IS_POWER8 = 'power8' in cpu.get_family()

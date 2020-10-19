@@ -20,14 +20,16 @@ range of storage networking fabrics for NVMe block storage protocol over
 a storage networking fabric.
 """
 
-import os
-import json
 import copy
-from avocado import Test
-from avocado.utils import process, linux_modules, genio
-from avocado.utils.software_manager import SoftwareManager
-from avocado.utils.process import CmdError
+import json
+import os
+
 import yaml
+
+from avocado import Test
+from avocado.utils import genio, linux_modules, process
+from avocado.utils.process import CmdError
+from avocado.utils.software_manager import SoftwareManager
 
 
 class NVMfTest(Test):

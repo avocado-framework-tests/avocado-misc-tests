@@ -19,10 +19,10 @@
 
 import os
 import re
+
 import avocado
-from avocado import Test
-from avocado import skipUnless
-from avocado.utils import process, distro
+from avocado import Test, skipUnless
+from avocado.utils import distro, process
 from avocado.utils.software_manager import SoftwareManager
 
 release = "%s%s" % (distro.detect().name, distro.detect().version)

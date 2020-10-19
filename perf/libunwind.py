@@ -18,7 +18,7 @@ import os
 import re
 
 from avocado import Test
-from avocado.utils import archive, build, distro, process, cpu
+from avocado.utils import archive, build, cpu, distro, process
 from avocado.utils.software_manager import SoftwareManager
 
 

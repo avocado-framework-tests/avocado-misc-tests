@@ -19,12 +19,11 @@
 # https://github.com/autotest/autotest-client-tests/tree/master/tbench
 
 import os
-import signal
 import re
+import signal
+
 from avocado import Test
-from avocado.utils import archive, cpu
-from avocado.utils import process
-from avocado.utils import build
+from avocado.utils import archive, build, cpu, process
 from avocado.utils.software_manager import SoftwareManager
 
 

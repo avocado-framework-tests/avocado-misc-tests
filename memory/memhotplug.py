@@ -13,15 +13,15 @@
 # Copyright: 2017 IBM
 # Author: Abdul Haleem <abdhalee@linux.vnet.ibm.com>
 
-import os
 import glob
-import re
-import platform
 import multiprocessing
-from avocado import Test
-from avocado.utils import process, memory, build, archive
-from avocado.utils.software_manager import SoftwareManager
+import os
+import platform
+import re
 
+from avocado import Test
+from avocado.utils import archive, build, memory, process
+from avocado.utils.software_manager import SoftwareManager
 
 MEM_PATH = '/sys/devices/system/memory'
 ERRORLOG = ['WARNING: CPU:', 'Oops',

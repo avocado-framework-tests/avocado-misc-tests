@@ -20,11 +20,8 @@
 import os
 
 from avocado import Test
-from avocado.utils import build
-from avocado.utils import process
-from avocado.utils import git
+from avocado.utils import build, distro, git, process
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import distro
 
 
 class Systemtap(Test):

@@ -19,10 +19,9 @@ Rawread test
 """
 
 import os
+
 from avocado import Test
-from avocado.utils import archive
-from avocado.utils import build
-from avocado.utils import process, distro
+from avocado.utils import archive, build, distro, process
 from avocado.utils.software_manager import SoftwareManager
 
 

@@ -21,9 +21,9 @@ This Suite tests the GenWQE Accelarator.
 import os
 import shutil
 import time
+
 from avocado import Test
-from avocado.utils import process
-from avocado.utils import download
+from avocado.utils import download, process
 from avocado.utils.software_manager import SoftwareManager
 
 

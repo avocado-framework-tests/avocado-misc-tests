@@ -22,9 +22,9 @@ This test verifies that for supported slots.
 
 import os
 import platform
+
 from avocado import Test
-from avocado.utils import wait
-from avocado.utils import linux_modules, genio, pci
+from avocado.utils import genio, linux_modules, pci, wait
 from avocado.utils.software_manager import SoftwareManager
 
 

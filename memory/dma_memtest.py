@@ -22,11 +22,9 @@
 import os
 import shutil
 import tempfile
+
 from avocado import Test
-from avocado.utils import process
-from avocado.utils import disk
-from avocado.utils import archive
-from avocado.utils import memory
+from avocado.utils import archive, disk, memory, process
 
 
 class DmaMemtest(Test):

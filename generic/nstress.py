@@ -15,8 +15,9 @@
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 
 import os
+
 from avocado import Test
-from avocado.utils import distro, archive, process
+from avocado.utils import archive, distro, process
 
 
 class NStress(Test):

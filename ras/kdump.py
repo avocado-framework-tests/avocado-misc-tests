@@ -14,16 +14,18 @@
 # Copyright: 2017 IBM
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 
-import time
 import os
 import socket
+import time
+
 from avocado import Test
+from avocado.utils import process
+from avocado.utils.software_manager import SoftwareManager
+
 try:
     from virttest import remote
 except ImportError:
     raise ImportError('Could not import virttest')
-from avocado.utils import process
-from avocado.utils.software_manager import SoftwareManager
 
 
 class KDUMP(Test):

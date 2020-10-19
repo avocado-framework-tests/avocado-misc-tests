@@ -14,10 +14,11 @@
 # Copyright: 2016 IBM
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 
-import re
 import os
+import re
+
 from avocado import Test
-from avocado.utils import archive, process, build
+from avocado.utils import archive, build, process
 from avocado.utils.software_manager import SoftwareManager
 
 

@@ -18,15 +18,14 @@
 
 import os
 import time
+
 import netifaces
-from avocado.utils import genio
 from avocado import Test
-from avocado.utils import process
-from avocado.utils import disk
-from avocado.utils.software_manager import SoftwareManager
-from avocado.utils.process import CmdError
-from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils import disk, genio, process
 from avocado.utils.network.hosts import LocalHost
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.process import CmdError
+from avocado.utils.software_manager import SoftwareManager
 
 
 class VirtualizationDriverBindTest(Test):

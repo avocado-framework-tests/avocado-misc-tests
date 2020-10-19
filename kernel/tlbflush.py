@@ -15,9 +15,9 @@
 # Author:Praveen K Pandey <praveen@linux.vnet.ibm.com>
 #
 
+import json
 import os
 import shutil
-import json
 
 from avocado import Test
 from avocado.utils import process

@@ -19,10 +19,10 @@ MOFED Install Test
 """
 
 import os
+
 from avocado import Test
-from avocado.utils import process, distro
+from avocado.utils import distro, linux_modules, process
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import linux_modules
 
 
 class MOFEDInstallTest(Test):

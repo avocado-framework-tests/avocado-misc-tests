@@ -19,10 +19,9 @@
 This Script verfies driver module parameter.
 """
 import time
-from avocado.utils import process
-from avocado.utils import linux_modules, genio
-from avocado.utils import wait
+
 from avocado import Test
+from avocado.utils import genio, linux_modules, process, wait
 
 
 class Moduleparameter(Test):

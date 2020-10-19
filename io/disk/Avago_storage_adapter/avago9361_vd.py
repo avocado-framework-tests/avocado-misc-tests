@@ -21,6 +21,7 @@ This scripts performs Virtual Drive(VD) operations on drives
 """
 
 import time
+
 from avocado import Test
 from avocado.utils import process
 

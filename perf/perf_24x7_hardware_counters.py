@@ -16,12 +16,12 @@
 # Author: Shriya Kulkarni <shriyak@linux.vnet.ibm.com>
 
 import os
-import re
 import platform
-from avocado import Test
-from avocado.utils import process, distro, cpu, genio
+import re
+
+from avocado import Test, skipIf
+from avocado.utils import cpu, distro, genio, process
 from avocado.utils.software_manager import SoftwareManager
-from avocado import skipIf
 
 IS_POWER_NV = 'PowerNV' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0')
 IS_KVM_GUEST = 'qemu' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0')

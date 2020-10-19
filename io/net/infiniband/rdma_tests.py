@@ -21,12 +21,13 @@ RDMA test for infiniband adaptors
 
 
 import time
+
 import netifaces
 from avocado import Test
-from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import process, distro
-from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils import distro, process
 from avocado.utils.network.hosts import LocalHost, RemoteHost
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.ssh import Session
 
 

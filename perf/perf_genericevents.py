@@ -15,8 +15,9 @@
 # Author: Athira Rajeev<atrajeev@linux.vnet.ibm.com>
 # Author: Shriya Kulkarni <shriyak@linux.vnet.ibm.com>
 
-import os
 import configparser
+import os
+
 from avocado import Test
 
 

@@ -15,18 +15,15 @@
 # Copyright: 2017 IBM
 # Author: Santhosh G <santhog4@linux.vnet.ibm.com>
 
+import mmap
 import os
 import time
-import mmap
-import avocado
-from avocado import Test
-from avocado import skipIf, skipUnless
-from avocado.utils import process
-from avocado.utils import memory
-from avocado.utils import disk
-from avocado.core import data_dir
-from avocado.utils.partition import Partition
 
+import avocado
+from avocado import Test, skipIf, skipUnless
+from avocado.core import data_dir
+from avocado.utils import disk, memory, process
+from avocado.utils.partition import Partition
 
 PAGESIZE = '4096' in str(memory.get_page_size())
 

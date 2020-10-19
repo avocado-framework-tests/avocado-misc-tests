@@ -20,11 +20,10 @@ HTX Test
 
 import os
 import time
+
 from avocado import Test
+from avocado.utils import archive, build, distro, process
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import build
-from avocado.utils import process, archive
-from avocado.utils import distro
 
 
 class HtxTest(Test):

@@ -19,10 +19,8 @@
 Test for sensors command
 """
 from avocado import Test
-from avocado.utils import process, linux_modules
-from avocado.utils import distro
+from avocado.utils import cpu, distro, linux_modules, process
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import cpu
 
 # TODO: Add possible errors of sensors command
 ERRORS = ['I/O error']

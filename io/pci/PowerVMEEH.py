@@ -20,11 +20,9 @@ This scripts basic EEH tests on all PCI device
 """
 
 import time
+
 from avocado import Test
-from avocado.utils import process
-from avocado.utils import pci
-from avocado.utils import genio
-from avocado.utils import distro
+from avocado.utils import distro, genio, pci, process
 from avocado.utils.software_manager import SoftwareManager
 
 EEH_HIT = 0

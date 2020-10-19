@@ -23,11 +23,9 @@ import os
 import shutil
 import time
 from pprint import pprint
+
 from avocado import Test
-from avocado.utils import distro, process
-from avocado.utils import multipath
-from avocado.utils import service
-from avocado.utils import wait
+from avocado.utils import distro, multipath, process, service, wait
 from avocado.utils.software_manager import SoftwareManager
 
 

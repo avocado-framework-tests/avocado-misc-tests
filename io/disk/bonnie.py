@@ -22,18 +22,14 @@
 Bonnie test
 """
 
-import os
 import getpass
+import os
+
 from avocado import Test
-from avocado.utils import archive
-from avocado.utils import build
-from avocado.utils import disk
-from avocado.utils import lv_utils
-from avocado.utils import softwareraid
-from avocado.utils import process, distro
-from avocado.utils.partition import Partition
+from avocado.utils import (archive, build, disk, distro, lv_utils, process,
+                           softwareraid)
+from avocado.utils.partition import Partition, PartitionError
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils.partition import PartitionError
 
 
 class Bonnie(Test):

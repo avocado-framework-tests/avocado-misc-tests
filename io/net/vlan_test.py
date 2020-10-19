@@ -15,12 +15,12 @@
 # VLAN Testcase
 
 import time
-import paramiko
 
+import paramiko
 from avocado import Test
 from avocado.utils import process
-from avocado.utils.ssh import Session
 from avocado.utils.process import CmdError
+from avocado.utils.ssh import Session
 
 
 class VlanTest(Test):

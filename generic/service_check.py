@@ -17,14 +17,14 @@
 # Besed on the Sample Idea from:
 # https://github.com/autotest/virt-test/blob/master/samples/service.py
 
-import os
 import configparser
+import os
+
 from avocado import Test
-from avocado.utils import process
+from avocado.utils import distro, process
 from avocado.utils.service import SpecificServiceManager
-from avocado.utils import distro
-from avocado.utils.wait import wait_for
 from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.wait import wait_for
 
 
 class service_check(Test):

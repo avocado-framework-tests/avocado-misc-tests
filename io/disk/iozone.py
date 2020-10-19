@@ -20,25 +20,16 @@
 #   copyright: 2006 IBM
 #   copyright: 2008 Red Hat, Inc.
 
-import os
-import re
 import json
 import logging
+import os
+import re
 
 from avocado import Test
-from avocado.utils import archive
-from avocado.utils import process
-from avocado.utils import build
-from avocado.utils import distro
-from avocado.utils import disk
-from avocado.utils import lv_utils
-from avocado.utils import softwareraid
-from avocado.utils.partition import Partition
-from avocado.utils import data_structures
-from avocado.utils import astring
-from avocado.utils.partition import PartitionError
+from avocado.utils import (archive, astring, build, data_structures, disk,
+                           distro, lv_utils, process, softwareraid)
+from avocado.utils.partition import Partition, PartitionError
 from avocado.utils.software_manager import SoftwareManager
-
 
 _LABELS = ['file_size', 'record_size', 'write', 'rewrite', 'read', 'reread',
            'randread', 'randwrite', 'bkwdread', 'recordrewrite', 'strideread',

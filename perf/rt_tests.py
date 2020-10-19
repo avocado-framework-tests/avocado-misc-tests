@@ -23,12 +23,10 @@
 
 
 import os
+
 from avocado import Test
-from avocado.utils import archive
-from avocado.utils import build
-from avocado.utils import process
+from avocado.utils import archive, build, distro, process
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import distro
 
 
 class rt_tests(Test):

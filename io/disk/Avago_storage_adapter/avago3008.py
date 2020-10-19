@@ -23,6 +23,7 @@ This script will list all the adapter connected to the system.
 
 import os
 import time
+
 from avocado import Test
 from avocado.utils import process
 

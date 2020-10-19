@@ -19,7 +19,7 @@
 import os
 
 from avocado import Test
-from avocado.utils import archive, build, process, distro, cpu
+from avocado.utils import archive, build, cpu, distro, process
 from avocado.utils.software_manager import SoftwareManager
 
 

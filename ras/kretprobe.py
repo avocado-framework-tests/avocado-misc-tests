@@ -16,10 +16,9 @@
 import os
 import shutil
 import tempfile
+
 from avocado import Test
-from avocado.utils import build
-from avocado.utils import distro
-from avocado.utils import process
+from avocado.utils import build, distro, process
 from avocado.utils.software_manager import SoftwareManager
 
 

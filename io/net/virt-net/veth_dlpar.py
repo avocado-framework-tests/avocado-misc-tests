@@ -18,11 +18,12 @@ Veth DLPAR operations
 """
 
 import time
+
 from avocado import Test
 from avocado.utils import process
-from avocado.utils.ssh import Session
 from avocado.utils.network.hosts import LocalHost
 from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.ssh import Session
 
 
 class VethdlparTest(Test):

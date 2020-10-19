@@ -14,12 +14,13 @@
 # Copyright: 2017 IBM
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 
-import time
 import os
+import time
+
 from avocado import Test
-from virttest import remote
 from avocado.utils import process
 from avocado.utils.software_manager import SoftwareManager
+from virttest import remote
 
 
 class PSTORE(Test):

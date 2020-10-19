@@ -2,3 +2,4 @@ pycodestyle==2.4.0
 inspektor==0.5.2
 pep8==1.7.1
 pylint==2.5.0
+isort==4.3.21

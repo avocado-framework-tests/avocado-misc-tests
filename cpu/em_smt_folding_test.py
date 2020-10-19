@@ -20,8 +20,7 @@ import platform
 from threading import Thread
 
 from avocado import Test
-from avocado.utils import archive, build
-from avocado.utils import process, cpu, distro, genio
+from avocado.utils import archive, build, cpu, distro, genio, process
 from avocado.utils.software_manager import SoftwareManager
 
 

@@ -16,14 +16,13 @@
 #        Praveen K Pandey <praveen@linux.vnet.ibm.com>
 #
 
+import multiprocessing
 import os
 import re
 import time
-import multiprocessing
 
 from avocado import Test
-from avocado.utils import process, cpu
-from avocado.utils import linux_modules
+from avocado.utils import cpu, linux_modules, process
 
 
 class Rcutorture(Test):

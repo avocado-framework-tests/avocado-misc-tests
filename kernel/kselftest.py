@@ -13,16 +13,14 @@
 # Copyright: 2016 IBM
 # Author: Abdul Haleem <abdhalee@linux.vnet.ibm.com>
 
+import glob
 import os
 import platform
 import re
-import glob
 import shutil
 
 from avocado import Test
-from avocado.utils import build
-from avocado.utils import distro
-from avocado.utils import archive, process, git
+from avocado.utils import archive, build, distro, git, process
 from avocado.utils.software_manager import SoftwareManager
 
 

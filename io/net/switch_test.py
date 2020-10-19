@@ -20,11 +20,12 @@ test lro and gro and interface
 """
 
 import time
-import paramiko
+
 import netifaces
+import paramiko
 from avocado import Test
-from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
+from avocado.utils.network.interfaces import NetworkInterface
 
 
 class SwitchTest(Test):

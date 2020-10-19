@@ -17,8 +17,9 @@
 
 import os
 import tempfile
+
 from avocado import Test
-from avocado.utils import process, memory, disk, genio
+from avocado.utils import disk, genio, memory, process
 
 
 class SumCheck(Test):

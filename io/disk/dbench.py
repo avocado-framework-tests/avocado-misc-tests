@@ -18,21 +18,15 @@
 #   copyright 2006 Google, Inc.
 #   https://github.com/autotest/autotest-client-tests/tree/master/dbench
 
+import json
+import multiprocessing
 import os
 import re
-import multiprocessing
-import json
 
 from avocado import Test
-from avocado.utils import archive
-from avocado.utils import process
-from avocado.utils import build
-from avocado.utils import disk
-from avocado.utils import distro
-from avocado.utils import lv_utils
-from avocado.utils import softwareraid
-from avocado.utils.partition import Partition
-from avocado.utils.partition import PartitionError
+from avocado.utils import (archive, build, disk, distro, lv_utils, process,
+                           softwareraid)
+from avocado.utils.partition import Partition, PartitionError
 from avocado.utils.software_manager import SoftwareManager
 
 

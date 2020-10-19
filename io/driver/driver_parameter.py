@@ -18,11 +18,10 @@
 This Script verfies driver module parameter.
 """
 import time
+
 import netifaces
-from avocado.utils import process
-from avocado.utils import linux_modules, genio
 from avocado import Test
-from avocado.utils import wait
+from avocado.utils import genio, linux_modules, process, wait
 from avocado.utils.network.hosts import LocalHost
 from avocado.utils.network.interfaces import NetworkInterface
 

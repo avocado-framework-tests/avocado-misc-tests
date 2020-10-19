@@ -15,6 +15,7 @@
 # Author: Harish <harish@linux.vnet.ibm.com>
 
 import os
+
 from avocado import Test
 from avocado.utils import archive, build, cpu, memory, process
 from avocado.utils.software_manager import SoftwareManager

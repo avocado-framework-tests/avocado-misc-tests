@@ -14,10 +14,11 @@
 # Copyright: 2019 IBM
 # Author: Shirisha <shiganta@in.ibm.com>
 
-import os
-import tempfile
-import shutil
 import configparser
+import os
+import shutil
+import tempfile
+
 from avocado import Test
 from avocado.utils import build, distro, process
 from avocado.utils.software_manager import SoftwareManager

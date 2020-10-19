@@ -21,17 +21,14 @@ available. Then it verifies all the tools with certain parameters like disk
 name, Size, UUID, mount points and IO Sector sizes
 """
 
-import platform
 import os
+import platform
+
 from avocado import Test
-from avocado.utils import process
-from avocado.utils import genio
-from avocado.utils import distro
-from avocado.utils import multipath
-from avocado.utils.partition import Partition
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils import distro, genio, multipath, process
+from avocado.utils.partition import Partition, PartitionError
 from avocado.utils.process import CmdError
-from avocado.utils.partition import PartitionError
+from avocado.utils.software_manager import SoftwareManager
 
 
 class DiskInfo(Test):

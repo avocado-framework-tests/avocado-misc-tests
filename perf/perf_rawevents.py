@@ -17,9 +17,9 @@
 import os
 import platform
 import shutil
-from avocado import Test
-from avocado import skipUnless
-from avocado.utils import cpu, distro, process, genio
+
+from avocado import Test, skipUnless
+from avocado.utils import cpu, distro, genio, process
 from avocado.utils.software_manager import SoftwareManager
 
 CPU_FAMILY = cpu.get_family()

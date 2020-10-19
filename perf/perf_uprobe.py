@@ -18,8 +18,9 @@ import os
 import platform
 import shutil
 import tempfile
+
 from avocado import Test
-from avocado.utils import build, distro, process, genio
+from avocado.utils import build, distro, genio, process
 from avocado.utils.software_manager import SoftwareManager
 
 

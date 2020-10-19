@@ -17,13 +17,12 @@
 
 import re
 import time
+
+import paramiko
 # import telnetlib
 from avocado import Test
-import paramiko
-from avocado.utils import process
-from avocado.utils import genio
-from avocado.utils import multipath
-from avocado.utils import wait
+from avocado.utils import genio, multipath, process, wait
+
 # import shutil
 # try:
 #    import pxssh

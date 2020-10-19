@@ -13,12 +13,9 @@
 # Copyright: 2016 IBM.
 # Author: Ramya BS <ramya@linux.vnet.ibm.com>
 
-from avocado import Test
-from avocado import skipIf
-from avocado.utils import process
-from avocado.utils import genio
+from avocado import Test, skipIf
+from avocado.utils import distro, genio, process
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import distro
 
 
 class Lshwrun(Test):

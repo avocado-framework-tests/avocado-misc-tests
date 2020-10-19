@@ -16,9 +16,9 @@
 
 import os
 from shutil import copyfile
-from avocado import Test
-from avocado.utils import process, distro
-from avocado import skipIf, skipUnless
+
+from avocado import Test, skipIf, skipUnless
+from avocado.utils import distro, process
 from avocado.utils.software_manager import SoftwareManager
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()

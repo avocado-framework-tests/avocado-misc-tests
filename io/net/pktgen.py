@@ -20,6 +20,7 @@
 
 import os
 import shutil
+
 from avocado import Test
 from avocado.utils import process
 

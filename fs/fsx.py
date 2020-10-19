@@ -14,10 +14,11 @@
 #
 
 import os
+
 from avocado import Test
-from avocado.utils import process, genio
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils import genio, process
 from avocado.utils.partition import Partition
+from avocado.utils.software_manager import SoftwareManager
 
 
 class Fsx(Test):

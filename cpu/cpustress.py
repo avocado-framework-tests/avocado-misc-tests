@@ -20,10 +20,10 @@ Stress test for CPU
 
 import multiprocessing
 from random import randint
-from avocado import Test
-from avocado.utils import process, cpu, distro
-from avocado.utils.software_manager import SoftwareManager
 
+from avocado import Test
+from avocado.utils import cpu, distro, process
+from avocado.utils.software_manager import SoftwareManager
 
 pids = []
 totalcpus = int(multiprocessing.cpu_count()) - 1

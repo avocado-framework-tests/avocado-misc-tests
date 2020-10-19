@@ -22,21 +22,19 @@ simultaneously increasing the bandwidth and providing redundancy.
 """
 
 
-import time
+import fcntl
 import os
 import socket
-import fcntl
 import struct
+import time
+
 import netifaces
 from avocado import Test
-from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import distro
-from avocado.utils import process
-from avocado.utils import linux_modules
-from avocado.utils import genio
-from avocado.utils.ssh import Session
-from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils import distro, genio, linux_modules, process
 from avocado.utils.network.hosts import LocalHost, RemoteHost
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.ssh import Session
 
 
 class Bonding(Test):

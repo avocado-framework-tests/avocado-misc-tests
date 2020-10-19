@@ -17,20 +17,18 @@
 import os
 import re
 import time
+
+from avocado import Test
+from avocado.utils import archive, build, distro, process
+from avocado.utils.network.hosts import LocalHost, RemoteHost
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.process import CmdError
+from avocado.utils.software_manager import SoftwareManager
+
 try:
     import pxssh
 except ImportError:
     from pexpect import pxssh
-
-from avocado import Test
-from avocado.utils import distro
-from avocado.utils import process
-from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import build
-from avocado.utils import archive
-from avocado.utils.process import CmdError
-from avocado.utils.network.interfaces import NetworkInterface
-from avocado.utils.network.hosts import LocalHost, RemoteHost
 
 
 class CommandFailed(Exception):
@@ -148,7 +146,8 @@ class HtxNicTest(Test):
                 self.run_command("unzip master.zip")
                 self.run_command("cd HTX-master")
                 for exerciser in exercisers:
-                    self.run_command("sed -i 's/%s//g' bin/Makefile" % exerciser)
+                    self.run_command(
+                        "sed -i 's/%s//g' bin/Makefile" % exerciser)
                 self.run_command("make all")
                 self.run_command("make tar")
                 self.run_command("tar --touch -xvzf htx_package.tar.gz")
@@ -419,7 +418,8 @@ class HtxNicTest(Test):
             networkinterface.bring_up()
         for (peer_intf, net_id) in zip(self.peer_intfs, self.net_ids):
             ip_addr = "%s.1.1.%s" % (net_id, self.peer_ip.split('.')[-1])
-            peer_networkinterface = NetworkInterface(peer_intf, self.remotehost)
+            peer_networkinterface = NetworkInterface(
+                peer_intf, self.remotehost)
             peer_networkinterface.add_ipaddr(ip_addr, self.netmask)
             peer_networkinterface.bring_up()
 
@@ -439,7 +439,8 @@ class HtxNicTest(Test):
                                    cf.output)
             if "All networks ping Ok" not in output.decode("utf-8"):
                 if self.peer_distro == "rhel":
-                    self.run_command("systemctl start NetworkManager", timeout=300)
+                    self.run_command(
+                        "systemctl start NetworkManager", timeout=300)
                 else:
                     self.run_command("systemctl restart network", timeout=300)
                 if self.host_distro == "rhel":
@@ -612,7 +613,8 @@ class HtxNicTest(Test):
     def shutdown_active_mdt(self):
         self.log.info("Shutdown active mdt in host")
         cmd = "htxcmdline -shutdown"
-        process.run(cmd, timeout=120, ignore_status=True, shell=True, sudo=True)
+        process.run(cmd, timeout=120, ignore_status=True,
+                    shell=True, sudo=True)
         self.log.info("Shutdown active mdt in peer")
         try:
             self.run_command(cmd)
@@ -751,24 +753,39 @@ class HtxNicTest(Test):
             if self.peer_distro in ['rhel', 'fedora']:
                 path = "/etc/sysconfig/network-scripts"
                 file_name = "{}/ifcfg-{}".format(path, interface)
-                self.run_command("echo \'%s\' > %s" % ('TYPE=Ethernet', file_name))
-                self.run_command("echo \'%s\' >> %s" % ('BOOTPROTO=none', file_name))
-                self.run_command("echo \'%s\' >> %s" % ('NAME=%s' % interface, file_name))
-                self.run_command("echo \'%s\' >> %s" % (('DEVICE=%s' % interface), file_name))
-                self.run_command("echo \'%s\' >> %s" % ('ONBOOT=yes', file_name))
-                self.run_command("echo \'%s\' >> %s" % ('IPADDR=%s' % ip, file_name))
-                self.run_command("echo \'%s\' >> %s" % ('NETMASK=%s' % self.netmask, file_name))
-                self.run_command("echo \'%s\' >> %s" % ('IPV6INIT=yes', file_name))
-                self.run_command("echo \'%s\' >> %s" % ('IPV6_AUTOCONF=yes', file_name))
-                self.run_command("echo \'%s\' >> %s" % ('IPV6_DEFROUTE=yes', file_name))
+                self.run_command("echo \'%s\' > %s" %
+                                 ('TYPE=Ethernet', file_name))
+                self.run_command("echo \'%s\' >> %s" %
+                                 ('BOOTPROTO=none', file_name))
+                self.run_command("echo \'%s\' >> %s" %
+                                 ('NAME=%s' % interface, file_name))
+                self.run_command("echo \'%s\' >> %s" %
+                                 (('DEVICE=%s' % interface), file_name))
+                self.run_command("echo \'%s\' >> %s" %
+                                 ('ONBOOT=yes', file_name))
+                self.run_command("echo \'%s\' >> %s" %
+                                 ('IPADDR=%s' % ip, file_name))
+                self.run_command("echo \'%s\' >> %s" %
+                                 ('NETMASK=%s' % self.netmask, file_name))
+                self.run_command("echo \'%s\' >> %s" %
+                                 ('IPV6INIT=yes', file_name))
+                self.run_command("echo \'%s\' >> %s" %
+                                 ('IPV6_AUTOCONF=yes', file_name))
+                self.run_command("echo \'%s\' >> %s" %
+                                 ('IPV6_DEFROUTE=yes', file_name))
             if self.peer_distro == 'SuSE':
                 path = "/etc/sysconfig/network"
                 file_name = "{}/ifcfg-{}".format(path, interface)
-                self.run_command("echo \'%s\' > %s" % ('IPADDR=%s' % ip, file_name))
-                self.run_command("echo \'%s\' >> %s" % ('NETMASK=%s' % self.netmask, file_name))
-                self.run_command("echo \'%s\' >> %s" % ('IPV6INIT=yes', file_name))
-                self.run_command("echo \'%s\' >> %s" % ('IPV6_AUTOCONF=yes', file_name))
-                self.run_command("echo \'%s\' >> %s" % ('IPV6_DEFROUTE=yes', file_name))
+                self.run_command("echo \'%s\' > %s" %
+                                 ('IPADDR=%s' % ip, file_name))
+                self.run_command("echo \'%s\' >> %s" %
+                                 ('NETMASK=%s' % self.netmask, file_name))
+                self.run_command("echo \'%s\' >> %s" %
+                                 ('IPV6INIT=yes', file_name))
+                self.run_command("echo \'%s\' >> %s" %
+                                 ('IPV6_AUTOCONF=yes', file_name))
+                self.run_command("echo \'%s\' >> %s" %
+                                 ('IPV6_DEFROUTE=yes', file_name))
             cmd = "ifup %s " % interface
             self.run_command(cmd)
 

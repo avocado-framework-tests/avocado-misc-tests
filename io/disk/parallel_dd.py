@@ -24,13 +24,15 @@ Measures the performance of writing and reading multiple streams of files onto
 the files system.
 """
 
-import os
-import time
-import sys
 import json
+import os
+import sys
+import time
+
 from avocado import Test
-from avocado.utils import process, distro
+from avocado.utils import distro
 from avocado.utils import partition as partition_lib
+from avocado.utils import process
 
 
 class ParallelDd(Test):

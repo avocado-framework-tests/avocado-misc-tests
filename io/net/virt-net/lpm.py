@@ -19,14 +19,12 @@ Tests for Live Partition Mobility
 '''
 
 import time
-from avocado import Test
-from avocado.utils import process
-from avocado.utils import distro
-from avocado.utils import wait
+
+from avocado import Test, skipIf, skipUnless
+from avocado.utils import distro, process, wait
+from avocado.utils.process import CmdError
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.ssh import Session
-from avocado.utils.process import CmdError
-from avocado import skipIf, skipUnless
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()

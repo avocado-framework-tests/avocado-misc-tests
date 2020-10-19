@@ -21,11 +21,10 @@
 
 import os
 import re
-from avocado import Test
-from avocado.utils import build, distro, genio
-from avocado.utils import process, archive
-from avocado.utils.partition import Partition
 
+from avocado import Test
+from avocado.utils import archive, build, distro, genio, process
+from avocado.utils.partition import Partition
 from avocado.utils.software_manager import SoftwareManager
 
 

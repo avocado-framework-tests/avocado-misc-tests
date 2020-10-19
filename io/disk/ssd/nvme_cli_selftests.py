@@ -20,9 +20,9 @@ NVM-Express user space tooling for Linux, which handles NVMe devices.
 
 import os
 import pkgutil
+
 from avocado import Test
-from avocado.utils import process
-from avocado.utils import archive
+from avocado.utils import archive, process
 from avocado.utils.software_manager import SoftwareManager
 
 

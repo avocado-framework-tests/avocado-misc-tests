@@ -18,7 +18,7 @@
 import random
 
 from avocado import Test
-from avocado.utils import process, cpu, genio, distro
+from avocado.utils import cpu, distro, genio, process
 
 
 class Cpuhotplug_Test(Test):

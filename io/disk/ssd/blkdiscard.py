@@ -22,8 +22,8 @@ solid-state drivers (SSDs) and thinly-provisioned storage.
 
 import avocado
 from avocado import Test
+from avocado.utils import lv_utils, process
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import process, lv_utils
 
 # this block need to removed when test moved to python3
 try:

@@ -18,9 +18,10 @@
 Mvcli Test for OpenPower based Marvell adapter 88SE9230.
 """
 
-import re
 import platform
+import re
 import shutil
+
 from avocado import Test
 from avocado.utils import process
 from avocado.utils.process import CmdError

@@ -18,9 +18,9 @@
 #   copyright: 2008 Google
 #   https://github.com/autotest/autotest-client-tests/tree/master/hackbench
 
+import json
 import os
 import shutil
-import json
 
 from avocado import Test
 from avocado.utils import process

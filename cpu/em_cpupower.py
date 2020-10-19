@@ -14,13 +14,12 @@
 # Copyright: 2016 IBM
 # Author: Pavithra D P <pavithra@linux.vnet.ibm.com>
 
-import random
 import platform
-from avocado import Test
-from avocado import skipIf
-from avocado.utils import process, distro
-from avocado.utils.software_manager import SoftwareManager
+import random
 
+from avocado import Test, skipIf
+from avocado.utils import distro, process
+from avocado.utils.software_manager import SoftwareManager
 
 # TODO : Logic need to change when we have lib fix
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()

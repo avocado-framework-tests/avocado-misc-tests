@@ -21,16 +21,15 @@
 #   https://github.com/autotest/autotest-client-tests/tree/master/xfstests
 
 
-import os
 import glob
+import os
 import re
 import shutil
 
 import avocado
 from avocado import Test
-from avocado.utils import process, build, git, distro, partition
-from avocado.utils import disk, data_structures, pmem
-from avocado.utils import genio
+from avocado.utils import (build, data_structures, disk, distro, genio, git,
+                           partition, pmem, process)
 from avocado.utils.software_manager import SoftwareManager
 
 

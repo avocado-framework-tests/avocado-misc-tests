@@ -17,13 +17,11 @@
 # Author: Santhosh G <santhog4@linux.vnet.ibm.com>
 
 import os
-from avocado import Test
-from avocado import skipIf, skipUnless
-from avocado.utils import process
-from avocado.utils import memory
-from avocado.core import data_dir
-from avocado.utils.partition import Partition
 
+from avocado import Test, skipIf, skipUnless
+from avocado.core import data_dir
+from avocado.utils import memory, process
+from avocado.utils.partition import Partition
 
 PAGESIZE = '4096' in str(memory.get_page_size())
 
