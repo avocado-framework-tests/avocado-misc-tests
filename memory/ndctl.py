@@ -120,7 +120,8 @@ class NdctlTest(Test):
                 deps.extend(['libtool',
                              'libkmod-devel', 'libudev-devel', 'systemd-devel',
                              'libuuid-devel-static', 'libjson-c-devel',
-                             'keyutils-devel', 'kmod-bash-completion'])
+                             'keyutils-devel', 'kmod-bash-completion',
+                             'bash-completion-devel'])
             elif self.dist.name == 'rhel':
                 deps.extend(['libtool',
                              'kmod-devel', 'libuuid-devel', 'json-c-devel',
