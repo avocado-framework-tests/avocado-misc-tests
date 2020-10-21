@@ -38,6 +38,12 @@ class Sosreport(Test):
         return process.system_output(cmd, shell=True, ignore_status=True,
                                      sudo=True).decode("utf-8")
 
+    def run_cmd_search(self, cmd, search_str):
+        self.output = self.run_cmd_out(cmd)
+        for line in reversed(self.output.splitlines()):
+            if search_str in line:
+                return line.strip()
+
     def setUp(self):
         dist = distro.detect()
         sm = SoftwareManager()
@@ -167,9 +173,7 @@ class Sosreport(Test):
             self.is_fail += 1
             self.log.info("--profile option failed")
 
-        dir_name = self.run_cmd_out("sosreport --batch --tmp-dir=%s --build | "
-                                    "grep located | "
-                                    "cut -d':' -f2" % directory_name).strip()
+        dir_name = self.run_cmd_search("sosreport --batch --tmp-dir=%s --build" % directory_name, directory_name)
         if not os.path.isdir(dir_name):
             self.is_fail += 1
             self.log.info("--build option failed")
@@ -180,18 +184,13 @@ class Sosreport(Test):
             self.log.info("--quiet --no-report option failed")
         self.run_cmd("sosreport --batch --tmp-dir=%s --debug" % directory_name, None)
 
-        self.run_cmd("sosreport --batch --tmp-dir=%s --config-file=/etc/sos.conf" % directory_name)
-        file_name = self.run_cmd_out("sosreport --batch --tmp-dir=%s --tmp-dir=/root | "
-                                     "grep root | tail -1" % directory_name).strip()
+        file_name = self.run_cmd_search("sosreport --batch --tmp-dir=%s" % directory_name, directory_name)
         if not os.path.exists(file_name):
             self.is_fail += 1
             self.log.info("--tmp-dir option failed")
 
-        dir_name = self.run_cmd_out("sosreport --no-report --batch --build | "
-                                    "grep located | "
-                                    "cut -d':' -f2").strip()
-        sosreport_dir = os.path.join(dir_name, 'sos_reports')
-        if os.listdir(sosreport_dir) != []:
+        dir_name = self.run_cmd_search("sosreport --no-report --batch --build", '/var/tmp/sosreport')
+        if os.listdir(dir_name) == []:
             self.is_fail += 1
             self.log.info("--no-report option failed")
         file_list = self.params.get('file_list', default=['proc/device-tree/'])
@@ -254,7 +253,7 @@ class Sosreport(Test):
         directory_name = tempfile.mkdtemp()
         self.is_fail = 0
         self.run_cmd("sosreport --batch --tmp-dir=%s -o "
-                     "pci,powerpc,procenv,process,processor,kdump" % directory_name)
+                     "pci,powerpc,process,processor,kdump" % directory_name)
         shutil.rmtree(directory_name)
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in sosreport tool verification" % self.is_fail)
