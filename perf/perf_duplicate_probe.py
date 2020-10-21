@@ -45,14 +45,16 @@ class PerfProbe(Test):
                 self.cancel('%s is needed for the test to be run' % package)
 
     def test_probe(self):
-        output = process.run("perf probe select_task_rq_fair:15", sudo=True)
-        if 'select_task_rq_fair' in output.stderr.decode("utf-8") and 'select_task_rq_fair_' in output.stderr.decode("utf-8"):
-            fail_flag = 1
+        output = process.run("perf probe select_task_rq_fair:0", sudo=True)
+        output = output.stderr.decode("utf-8")
+        fail_flag = False
+        if 'select_task_rq_fair' in output and 'select_task_rq_fair_' in output:
+            fail_flag = True
         output = genio.read_all_lines("/sys/kernel/debug/tracing/kprobe_events")
         for line in output:
             if 'select_task_rq_fair' in line or 'select_task_rq_fair_' in line:
-                fail_flag += 1
-        if(fail_flag >= 2):
+                fail_flag = True
+        if fail_flag:
             self.fail("perf probe is placing multiple probe at the same location ")
 
     def tearDown(self):
