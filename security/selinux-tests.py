@@ -16,7 +16,7 @@
 
 import os
 from avocado import Test
-from avocado.utils import archive, build, distro, process
+from avocado.utils import archive, build, distro, linux
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -59,12 +59,8 @@ class SELinux(Test):
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(self.workdir, 'selinux-testsuite-master')
         os.chdir(self.sourcedir)
-        output = process.system_output('getenforce', ignore_status=True)
-        if output.decode() == 'Permissive':
-            process.run('setenforce 1', ignore_status=True)
-            output = process.system_output('getenforce', ignore_status=True)
-            if output.decode() == 'Permissive':
-                self.fail("Unable to enter in to 'Enforcing' mode")
+        if not linux.enable_selinux_enforcing():
+            self.fail("Unable to enter in to 'Enforcing' mode")
         if build.make(self.sourcedir, extra_args="-C policy load") > 0:
             self.cancel("Failed to load the policies")
 
