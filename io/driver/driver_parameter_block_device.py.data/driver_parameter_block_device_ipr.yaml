@@ -1,0 +1,29 @@
+module: 'ipr'
+multipath_enabled: False
+disk: ''
+Test: !mux
+    fastfail:
+        module_param_name: "fastfail"
+        value: !mux
+            fastfail_180:
+                module_param_value: "180"
+            fastfail_120:
+                module_param_value: "120"
+            fastfail_60:
+                module_param_value: "60"
+            fastfail_0:
+                module_param_value: "0"
+    debug:
+        module_param_name: "debug"
+        value: !mux
+            debug_0:
+                module_param_value: "0"
+            debug_1:
+                module_param_value: "1"
+    fast_reboot:
+        module_param_name: "fast_reboot"
+        value: !mux
+            fast_reboot_0:
+                module_param_value: "0"
+            fast_reboot_1:
+                module_param_value: "1"
