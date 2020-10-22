@@ -317,14 +317,14 @@ class NetworkVirtualization(Test):
                 for val in range(int(self.backing_dev_count())):
                     self.log.info("Performing Client initiated\
                                   failover - Attempt %s", int(val + 1))
-                    genio.write_file("/sys/devices/vio/%s/failover"
-                                     % device_id, "1")
+                    genio.write_file_or_fail("/sys/devices/vio/%s/failover"
+                                             % device_id, "1")
                     time.sleep(10)
                     self.log.info("Running a ping test to check if failover \
                                     affected Network connectivity")
                     device = self.find_device(self.mac_id[0])
                     networkinterface = NetworkInterface(device, self.local)
-                    if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
+                    if networkinterface.ping_check(self.peer_ip[0], count=5, options="-w50") is not None:
                         self.fail("Ping test failed. Network virtualized \
                                    failover has affected Network connectivity")
         except CmdError as details:
