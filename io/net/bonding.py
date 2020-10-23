@@ -296,8 +296,17 @@ class Bonding(Test):
             for interface in self.peer_interfaces:
                 peer_networkinterface = NetworkInterface(interface,
                                                          self.remotehost)
-                if peer_networkinterface.set_mtu(mtu) is not None:
-                    self.cancel("Failed to set mtu in peer")
+                cmd = "cat /sys/class/net/%s/device/name" % peer_networkinterface.name
+                output = self.session.cmd(cmd).stdout.decode("utf-8")
+                if output != "vnic\n":
+                    if peer_networkinterface.set_mtu(mtu) is not None:
+                        self.cancel("Failed to set mtu in peer")
+                elif output == "vnic\n" and mtu == '9000':
+                    if peer_networkinterface.set_mtu(mtu) is not None:
+                        self.cancel("Failed to set mtu in peer")
+                else:
+                    self.log.info("Peer interface is vNIC and it does not\
+                                   support %s MTU" % mtu)
             if self.ping_check():
                 self.log.info("Ping passed for Mode %s", self.mode,
                               mtu)
