@@ -17,3 +17,5 @@ Inputs Needed (in multiplexer file):
 ------------------------------------
 * namespaces    -   space separated namespaces on the peer to configure for NVMf
 * peer_ips      -   space separated peer IP address
+* peer_user     -   user name of peer system to login
+* peer_password -   passowrd of peer_user on peer system to login
