@@ -16,9 +16,12 @@ RHEL :
 Links :
 -> https://pypi.python.org/packages/source/p/pycrypto/pycrypto-2.6.1.tar.gz#md5=55a61a054aa66812daf5161a0d5d7eda
 
-Explanation of the input parameters:
-lpar ---> lpar on which the Network virtualized interface needs to be added/deleted
-server ---> name of the server which hosts the lpar
+Explanation of the input parameters for single vnic:
+hmc_pwd ---> HMC password
+hmc_username ---> HMC user name
+vios_ip ---> ip of vios for vios failover
+vios_username ---> vios user name
+vios_pwd---> vios password
 slot_num ---> slot number on which the Network virtualized interface will be added. Should be 3 - 2999 and unused currently. space separated for more
 vios_names ---> space separated name of the vios used to add/remove Network virtualized interface
 sriov_adapters ---> space separated location code (DRC) of the the adapters that is assigned to the hypervisor
@@ -31,9 +34,26 @@ auto_failover --> enable auto_failover flag, 1 to enable or 0 to disable, defaul
 device_ip ---> Ip to be configured for the added Network virtualized interface, space separated if multiple
 netmask ---> netmask value for the added Network virtualized interface, space separated if multiple
 peer_ip ---> Peer ip to which the added Network virtualized interface will ping to check for ping test
-count ---> The number of times the unbind and bind test has to be executed
+vnic_test_count ---> The number of times the failover test has to be executed
 num_of_dlpar --> number of times ddlpar remove and add operation to be executed
 mac_id ---> MAC ID to be set for the vnic interface. This is needed for us to have control over interface name via interface file or udev rules, space separated if multiple
 
-NOTE: The last device listed by "ip link show" will be used to configure and test the
-driver unbind/bind and failover functionalities 
+Explanation of the input parameters for multiple vnic:
+hmc_pwd ---> HMC password
+hmc_username ---> HMC user name
+slot_num ---> multiple slot number separated with space, on which the Network virtualized interface will be added. Should be 3 - 2999 and unused currently. space separated for more
+vios_names ---> space separated name of the vios used to add/remove Network virtualized interface
+sriov_adapters ---> space separated location code (DRC) of the the adapters that is assigned to the hypervisor.
+if want mutiple Network virtualized interface from same adapter, ex : "U78D5.ND1.CSS130E-P1-C4-C1 U78D5.ND1.CSS130E-P1-C4-C1"
+if want mutiple Network virtualized interface from different adapter, ex : "U78D5.ND1.CSS130E-P1-C4-C1 U78D5.ND2.CSS140C-P1-C5-C1"
+sriov_ports ---> space separated ports using which the Network virtualized interface will be added/removed
+priority: space seperated prirotiy value for backing devices should be range of 1-100 (1,100,50,.. 1 for active and 100, 50 for consecutive backing device). 1 represents highest priority, 100 represents lowest, 50 is default if param not specified
+auto_failover ---> enable auto_failover flag, 1 to enable or 0 to disable, defaults to 1
+bandwidth ---> The percentage of the ports bandwidth this Network virtualized interface is entitled to, space seprated for more
+device_ip ---> space separated ip address
+netmasks ---> space separated netmask
+peer_ip ---> space separated peer ip
+mac_id ---> MAC ID to be set for the vnic interface. This is needed for us to have control over interface name via interface file or udev rules, space separated mac id
+
+NOTE: all failover test will not execute when it will create multiple Network virtualized interface.
+and for now multiple Network virtualized interface with multiple backing device will not work.

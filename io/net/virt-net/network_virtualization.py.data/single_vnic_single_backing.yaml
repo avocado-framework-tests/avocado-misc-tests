@@ -1,0 +1,20 @@
+ubuntu_url: 'http://ausgsa.ibm.com/projects/r/rsctdev/builds/muthu/rmuts006a/ppc64le'
+debs: ['src_3.2.0.6-15111_ppc64el.deb', 'rsct.core.utils_3.2.0.6-15111_ppc64el.deb', 'rsct.core.utils_3.2.0.6-15111_ppc64el.deb', 'rsct.core_3.2.0.6-15111_ppc64el.deb', 'rsct.basic_3.2.0.6-15111_ppc64el.deb', 'devices.chrp.base.servicerm_2.5.0.1-15111_ppc64el.deb', 'dynamicrm_2.0.1-3_ppc64el.deb']
+hmc_pwd: ""
+hmc_username: ""
+vios_ip: ""
+vios_username: ""
+vios_pwd: ""
+slot_num: "6"
+vios_names: ""
+sriov_adapters: "U78D5.ND2.CSS140C-P1-C5-C1 U78D5.ND2.CSS140C-P1-C5-C1"
+sriov_ports: "0 1"
+priority: "1 100"
+auto_failover: True
+bandwidth: 2
+device_ip: "147.1.1.247"
+netmasks: "255.255.255.0"
+peer_ip: "147.1.1.246"
+vnic_test_count: 1
+num_of_dlpar: 1
+mac_id: "02:03:05:02:05:06"
