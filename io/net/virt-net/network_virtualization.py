@@ -26,6 +26,7 @@ import netifaces
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import distro
+from avocado.utils import dmesg
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.process import CmdError
 from avocado import skipIf, skipUnless
@@ -123,6 +124,7 @@ class NetworkVirtualization(Test):
         self.mac_id = [mac.replace(':', '') for mac in self.mac_id]
         self.netmask = self.params.get('netmasks', '*', default=None).split(' ')
         self.peer_ip = self.params.get('peer_ip', default=None).split(' ')
+        dmesg.clear_dmesg()
         self.session_hmc.cmd("uname -a")
         cmd = 'lssyscfg -m ' + self.server + \
               ' -r lpar --filter lpar_names=' + self.lpar + \
@@ -263,6 +265,7 @@ class NetworkVirtualization(Test):
             if not wait.wait_for(networkinterface.is_link_up, timeout=120):
                 self.fail("Unable to bring up the link on the Network \
                        virtualized device")
+        self.check_dmesg_error()
 
     def test_backingdevadd(self):
         '''
@@ -281,6 +284,7 @@ class NetworkVirtualization(Test):
             self.log.debug("Expected backing dev count: %d",
                            self.backingdev_count)
             self.fail("Failed to add backing device")
+        self.check_dmesg_error()
 
     def test_hmcfailover(self):
         '''
@@ -305,6 +309,7 @@ class NetworkVirtualization(Test):
             self.trigger_failover(original)
         if original != self.get_active_device_logport(self.slot_num[0]):
             self.log.warn("Fail: Activating Initial backing dev %s" % original)
+        self.check_dmesg_error()
 
     def test_clientfailover(self):
         '''
@@ -331,6 +336,7 @@ class NetworkVirtualization(Test):
             self.log.debug(str(details))
             self.fail("Client initiated Failover for Network virtualized \
                       device has failed")
+        self.check_dmesg_error()
 
     def test_vnic_auto_failover(self):
         '''
@@ -357,6 +363,7 @@ class NetworkVirtualization(Test):
                     self.fail("Could not enable auto failover")
         else:
             self.cancel("Provide more backing device, only 1 given")
+        self.check_dmesg_error()
 
     def test_rmdev_viosfailover(self):
         '''
@@ -396,6 +403,7 @@ class NetworkVirtualization(Test):
         if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
             self.fail("Ping test failed. Network virtualized \
                       vios failover has affected Network connectivity")
+        self.check_dmesg_error()
 
     def test_vnic_dlpar(self):
         '''
@@ -432,6 +440,7 @@ class NetworkVirtualization(Test):
                     self.fail("dlpar has affected Network connectivity")
             else:
                 self.fail("slot not found")
+        self.check_dmesg_error()
 
     def test_backingdevremove(self):
         '''
@@ -452,6 +461,7 @@ class NetworkVirtualization(Test):
                 self.log.debug("Expected backing dev count: %d",
                                self.backingdev_count)
                 self.fail("Failed to remove backing device")
+        self.check_dmesg_error()
 
     def test_remove(self):
         '''
@@ -467,6 +477,7 @@ class NetworkVirtualization(Test):
                 self.log.debug(output)
                 self.fail("lshwres still lists the Network virtualized device \
                            after remove operation")
+        self.check_dmesg_error()
 
     def validate_vios_command(self, cmd, validate_string):
         '''
@@ -798,6 +809,17 @@ class NetworkVirtualization(Test):
                     return True
                 time.sleep(2)
         return False
+
+    def check_dmesg_error(self):
+        """
+        check for dmesg error
+        """
+        self.log.info("Gathering kernel errors if any")
+        try:
+            dmesg.collect_errors_by_level()
+        except Exception as exc:
+            self.log.info(exc)
+            self.fail("test failed,check dmesg log in debug log")
 
     def tearDown(self):
         self.session_hmc.quit()
