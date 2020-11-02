@@ -9,6 +9,7 @@ count: 100
 # interface packet drop accepted in percentage (eg 10 for 10%)
 drop_accepted: 10
 nmap_download: "https://nmap.org/dist/nmap-7.80.tar.bz2"
+mtu_timeout:
 options: !mux
     generic:
         option: ''
