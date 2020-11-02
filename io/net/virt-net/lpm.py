@@ -23,6 +23,7 @@ from avocado import Test
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils import wait
+from avocado.utils import dmesg
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.ssh import Session
 from avocado.utils.process import CmdError
@@ -126,6 +127,7 @@ class LPM(Test):
         for adapter in self.remote_adapters:
             self.remote_adapter_id.append(
                 self.get_adapter_id(self.remote_server, adapter))
+        dmesg.clear_dmesg()
 
     @staticmethod
     def get_mcp_component(component):
@@ -300,12 +302,24 @@ class LPM(Test):
 
         return " -i \"vnic_mappings=\\\"%s\\\"\" " % ",".join(cmd)
 
+    def check_dmesg_error(self):
+        """
+        check for dmesg error
+        """
+        self.log.info("Gathering kernel errors if any")
+        try:
+            dmesg.collect_errors_by_level()
+        except Exception as exc:
+            self.log.info(exc)
+            self.fail("test failed,check dmesg log in debug log")
+
     def test_migrate(self):
         '''
         Migrate the LPAR from given server to remote server.
         '''
         cmd = self.form_virt_net_options()
         self.do_migrate(self.server, self.remote_server, self.lpar, cmd)
+        self.check_dmesg_error()
 
     def test_migrate_back(self):
         '''
@@ -313,6 +327,7 @@ class LPM(Test):
         '''
         cmd = self.form_virt_net_options('remote')
         self.do_migrate(self.remote_server, self.server, self.lpar, cmd)
+        self.check_dmesg_error()
 
     def tearDown(self):
         self.session.quit()
