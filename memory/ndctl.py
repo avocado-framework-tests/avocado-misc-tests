@@ -620,6 +620,41 @@ class NdctlTest(Test):
                 self.plib.destroy_namespace(region=reg_name, force=True)
 
     @avocado.fail_on(pmem.PMemException)
+    def test_daxctl_memhotplug_unplug(self):
+        """
+        Test devdax memory hotplug/unplug
+        """
+        for cmd in ["reconfigure-device", "offline-memory", "online-memory"]:
+            if not self.plib.check_daxctl_subcmd(cmd):
+                self.cancel("Binary does not support %s" % cmd)
+        region = self.get_default_region()
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
+        self.plib.create_namespace(region=region, mode='devdax')
+        daxdev = self.plib.run_ndctl_list_val(
+            self.plib.run_ndctl_list("-N -r %s" % region)[0], 'chardev')
+        old_mem = memory.meminfo.MemTotal.b
+        dev_prop = self.plib.reconfigure_dax_device(daxdev, mode="system-ram")
+        self.log.info("Reconfigured device %s", dev_prop)
+        new_mem = memory.meminfo.MemTotal.b
+        self.log.info("Memory Before:%s, Memory After:%s", old_mem, new_mem)
+        if new_mem <= old_mem:
+            self.log.warn("Memorysize not increased %s<=%s", new_mem, old_mem)
+        self.plib.set_dax_memory_offline(daxdev)
+        unplug_mem = memory.meminfo.MemTotal.b
+        if unplug_mem != old_mem:
+            self.fail("Memory after unplug is not same as system memory")
+        self.log.info("Memory restored to base memory after unplug")
+        self.plib.set_dax_memory_online(daxdev)
+        hplug_mem = memory.meminfo.MemTotal.b
+        if hplug_mem != new_mem:
+            self.fail("Memory after hotplug is not same as device size memory")
+        self.log.info("Memory hotplug successful with pmem device")
+        self.log.info("Restoring pmem device in devdax mode")
+        self.plib.set_dax_memory_offline(daxdev)
+        self.plib.reconfigure_dax_device(daxdev, mode="devdax")
+
+    @avocado.fail_on(pmem.PMemException)
     def write_read_infoblock(self, ns_name, align='', size=''):
         """
         Write_infoblock on given namespace
