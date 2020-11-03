@@ -115,10 +115,10 @@ class FioTest(Test):
             version = os.path.basename(tar.split('.tar.')[0])
             pmdk_src = os.path.join(self.teststmpdir, version)
             build.make(pmdk_src)
-            build.make(pmdk_src, extra_args='install prefix=/usr')
+            build.make(pmdk_src, extra_args='install prefix=%s' % self.teststmpdir)
             os.chdir(self.sourcedir)
             out = process.system_output(
-                "./configure --prefix=/usr", shell=True)
+                "./configure --prefix=%s" % self.teststmpdir, shell=True)
             for eng in ['PMDK libpmem', 'PMDK dev-dax', 'libnuma']:
                 for line in out.decode().splitlines():
                     if line.startswith(eng) and 'no' in line:
