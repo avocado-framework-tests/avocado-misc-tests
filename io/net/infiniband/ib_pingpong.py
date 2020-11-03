@@ -48,7 +48,7 @@ class PingPong(Test):
         self.flag = self.params.get("ext_flag", default="0")
         self.iface = self.params.get("interface", default="")
         self.peer_ip = self.params.get("peer_ip", default="")
-        self.peer_user = self.params.get("peer_user_name", default="root")
+        self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
         self.ipaddr = self.params.get("host_ip", default="")

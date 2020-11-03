@@ -68,7 +68,7 @@ class Ping6(Test):
         self.peer_iface = self.params.get("peer_interface", default="")
         self.ipv6_peer = self.params.get("peer_ipv6", default="")
         self.peer_ip = self.params.get("peer_ip", default="")
-        self.peer_user = self.params.get("peer_user_name", default="root")
+        self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
         self.ipaddr = self.params.get("host_ip", default="")
