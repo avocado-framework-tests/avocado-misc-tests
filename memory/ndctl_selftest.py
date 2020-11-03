@@ -65,7 +65,7 @@ class NdctlTest(Test):
                 deps.extend(['libkmod-devel', 'libudev-devel',
                              'keyutils-devel', 'libuuid-devel-static',
                              'libjson-c-devel', 'systemd-devel',
-                             'kmod-bash-completion'])
+                             'kmod-bash-completion', 'bash-completion-devel'])
             else:
                 deps.extend(['kmod-devel', 'libuuid-devel', 'json-c-devel',
                              'systemd-devel', 'keyutils-libs-devel', 'jq',
