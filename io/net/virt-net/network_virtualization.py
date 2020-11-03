@@ -640,9 +640,8 @@ class NetworkVirtualization(Test):
         output = self.session_hmc.cmd(cmd)
         if output.exit_status != 0:
             self.log.debug(output.stderr)
-        for entry in output.stdout_text:
-            if 'auto_priority_failover=1' in entry:
-                return True
+        if 'auto_priority_failover=1' in output.stdout_text:
+            return True
         return False
 
     def enable_auto_failover(self):
@@ -670,14 +669,13 @@ class NetworkVirtualization(Test):
         output = self.session_hmc.cmd(cmd)
         if output.exit_status != 0:
             self.log.debug(output.stderr)
-        for backing_dev in output.stdout_text:
-            if backing_dev.startswith('%s,' % self.slot_num[0]):
-                backing_dev = backing_dev.strip('%s,"' % self.slot_num[0])
-                for entry in backing_dev.split(','):
-                    entry = entry.split('/')
-                    if logport in entry:
-                        priority = entry[8]
-                        break
+        if output.stdout_text.startswith('%s,' % self.slot_num[0]):
+            backing_dev = output.stdout_text.strip('%s,"' % self.slot_num[0])
+            for entry in backing_dev.split(','):
+                entry = entry.split('/')
+                if logport in entry:
+                    priority = entry[8]
+                    break
         return priority
 
     def change_failover_priority(self, logport, priority):
