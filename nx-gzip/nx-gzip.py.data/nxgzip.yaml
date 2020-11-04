@@ -1,0 +1,7 @@
+nx-gzip-config:
+    in_file: '/tmp/in_file'
+    out_file: '/tmp/out_file'
+    new_file: '/tmp/new_file'
+    file_size: '5'
+    comp_decomp_thr: '100'
+    comp_decomp_iter: '5'
