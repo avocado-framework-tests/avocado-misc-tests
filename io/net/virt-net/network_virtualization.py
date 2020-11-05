@@ -148,6 +148,10 @@ class NetworkVirtualization(Test):
                'failover' in str(self.name.name):
                 self.cancel("this test is not needed")
         self.local = LocalHost()
+        cmd = "echo 'module ibmvnic +p; func send_subcrq -p' > /sys/kernel/debug/dynamic_debug/control"
+        result = process.run(cmd, shell=True, ignore_status=True)
+        if result.exit_status:
+            self.fail("failed to enable debug mode")
 
     @staticmethod
     def get_mcp_component(component):
@@ -801,3 +805,7 @@ class NetworkVirtualization(Test):
         self.session_hmc.quit()
         if 'vios' in str(self.name.name):
             self.session.quit()
+        cmd = "echo 'module ibmvnic -p; func send_subcrq -p' > /sys/kernel/debug/dynamic_debug/control"
+        result = process.run(cmd, shell=True, ignore_status=True)
+        if result.exit_status:
+            self.log.debug("failed to disable debug mode")
