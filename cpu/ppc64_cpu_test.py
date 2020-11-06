@@ -96,7 +96,6 @@ class PPC64Test(Test):
             if self.smt_subcores == 1:
                 self.subcore()
             self.threads_per_core()
-            self.smt_snoozedelay()
             self.dscr()
 
         if self.failures > 0:
@@ -132,7 +131,7 @@ class PPC64Test(Test):
             shell=True).decode("utf-8").strip().split()[-1]
         op2 = genio.read_file(
             "/sys/devices/system/cpu/subcores_per_core").strip()
-        self.equality_check("Subcore", op1, ceil(op2))
+        self.equality_check("Subcore", op1, op2)
 
     def threads_per_core(self):
         """
@@ -145,24 +144,6 @@ class PPC64Test(Test):
                                     shell=True).decode("utf-8")
         op2 = len(op2.strip().splitlines()[0].split(":")[-1].split())
         self.equality_check("Threads per core", op1, ceil(op2))
-
-    def smt_snoozedelay(self):
-        """
-        Tests the smt snooze delay in ppc64_cpu command.
-        """
-        snz_content = set()
-        op1 = process.system_output(
-            "ppc64_cpu --smt-snooze-delay",
-            shell=True).decode("utf-8").strip().split()[-1]
-        snz_delay = "cpu*/smt_snooze_delay"
-        if os.path.isdir("/sys/bus/cpu/devices"):
-            snz_delay = "/sys/bus/cpu/devices/%s" % snz_delay
-        else:
-            snz_delay = "/sys/devices/system/cpu/%s" % snz_delay
-        for filename in glob.glob(snz_delay):
-            snz_content.add(genio.read_file(filename).strip())
-        op2 = list(snz_content)[0]
-        self.equality_check("SMT snooze delay", op1, op2)
 
     def dscr(self):
         """
