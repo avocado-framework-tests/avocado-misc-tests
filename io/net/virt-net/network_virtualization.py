@@ -65,6 +65,11 @@ class NetworkVirtualization(Test):
         self.lpar = self.get_partition_name("Partition Name")
         if not self.lpar:
             self.cancel("LPAR Name not got from lparstat command")
+        for root, dirct, files in os.walk("/root/.ssh"):
+            for file in files:
+                if file.startswith("avocado-master-root"):
+                    path = os.path.join(root, file)
+                    os.remove(path)
         self.session_hmc = Session(self.hmc_ip, user=self.hmc_username,
                                    password=self.hmc_pwd)
         if not self.session_hmc.connect():

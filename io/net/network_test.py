@@ -64,6 +64,11 @@ class NetworkTest(Test):
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         self.ip_config = self.params.get("ip_config", default=True)
+        for root, dirct, files in os.walk("/root/.ssh"):
+            for file in files:
+                if file.startswith("avocado-master-root"):
+                    path = os.path.join(root, file)
+                    os.remove(path)
         local = LocalHost()
         self.networkinterface = NetworkInterface(self.iface, local)
         if self.ip_config:
