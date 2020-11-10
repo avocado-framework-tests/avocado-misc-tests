@@ -130,7 +130,7 @@ class PPC64Test(Test):
             shell=True).decode("utf-8").strip().split()[-1]
         op2 = genio.read_file(
             "/sys/devices/system/cpu/subcores_per_core").strip()
-        self.equality_check("Subcore", op1, ceil(op2))
+        self.equality_check("Subcore", op1, op2)
 
     def threads_per_core(self):
         """
