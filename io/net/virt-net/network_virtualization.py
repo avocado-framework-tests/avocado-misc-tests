@@ -116,10 +116,6 @@ class NetworkVirtualization(Test):
         self.vios_ip = self.params.get('vios_ip', '*', default=None)
         self.vios_user = self.params.get('vios_username', '*', default=None)
         self.vios_pwd = self.params.get('vios_pwd', '*', default=None)
-        if 'vios' in str(self.name.name):
-            self.session = Session(self.vios_ip, user=self.vios_user,
-                                   password=self.vios_pwd)
-            self.session.connect()
         self.count = int(self.params.get('vnic_test_count', default="1"))
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         self.device_ip = self.params.get('device_ip', '*',
@@ -382,6 +378,12 @@ class NetworkVirtualization(Test):
         '''
         using mrdev and mkdev command to check vios failover works
         '''
+
+        self.session = Session(self.vios_ip, user=self.vios_user,
+                               password=self.vios_pwd)
+        if not self.session.connect():
+            self.fail("Failed connecting to VIOS")
+
         cmd = "ioscli lsmap -all -vnic -cpid %s" % self.lpar_id
         vnic_server = self.session.cmd(cmd).stdout_text.splitlines()[2].split()[0]
 
