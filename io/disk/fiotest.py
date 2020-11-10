@@ -105,6 +105,8 @@ class FioTest(Test):
         tarball = self.fetch_asset(url)
         archive.extract(tarball, self.teststmpdir)
         self.sourcedir = os.path.join(self.teststmpdir, "fio")
+        fio_flags = ""
+        self.ld_path = ""
 
         if self.disk_type == 'nvdimm':
             self.setup_pmem_disk(mnt_args)
@@ -115,10 +117,15 @@ class FioTest(Test):
             version = os.path.basename(tar.split('.tar.')[0])
             pmdk_src = os.path.join(self.teststmpdir, version)
             build.make(pmdk_src)
-            build.make(pmdk_src, extra_args='install prefix=%s' % self.teststmpdir)
+            build.make(pmdk_src, extra_args='install prefix=%s' %
+                       self.teststmpdir)
             os.chdir(self.sourcedir)
-            out = process.system_output(
-                "./configure --prefix=%s" % self.teststmpdir, shell=True)
+            ext_flags = '`PKG_CONFIG_PATH=%s/lib/pkgconfig pkg-config --cflags\
+                    --libs libpmem libpmemblk`' % self.teststmpdir
+            self.ld_path = "LD_LIBRARY_PATH=%s/lib" % self.teststmpdir
+            out = process.system_output('./configure --extra-cflags='
+                                        '"%s"' % ext_flags, shell=True)
+            fio_flags = "LDFLAGS='%s'" % ext_flags
             for eng in ['PMDK libpmem', 'PMDK dev-dax', 'libnuma']:
                 for line in out.decode().splitlines():
                     if line.startswith(eng) and 'no' in line:
@@ -145,7 +152,7 @@ class FioTest(Test):
                 self.create_fs(self.disk, self.dirs, fstype, fs_args, mnt_args)
                 self.fs_create = True
 
-        build.make(self.sourcedir)
+        build.make(self.sourcedir, extra_args=fio_flags)
 
     @avocado.fail_on(pmem.PMemException)
     def setup_pmem_disk(self, mnt_args):
@@ -224,9 +231,10 @@ class FioTest(Test):
             filename = self.devdax_file
         else:
             filename = self.dirs
-        cmd = '%s/fio %s --filename=%s' % (self.sourcedir,
-                                           self.get_data(fio_job),
-                                           filename)
+        cmd = '%s %s/fio %s --filename=%s' % (self.ld_path,
+                                              self.sourcedir,
+                                              self.get_data(fio_job),
+                                              filename)
         status = process.system(cmd, ignore_status=True, shell=True)
         if status:
             # status of 3 is a common warning with iscsi disks but fio
