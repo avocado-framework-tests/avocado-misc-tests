@@ -31,6 +31,7 @@ from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost, RemoteHost
 from avocado.utils.ssh import Session
 from avocado.utils.process import SubProcess
+from avocado.utils import distro
 
 
 class Iperf(Test):
@@ -74,6 +75,26 @@ class Iperf(Test):
             if not output.exit_status == 0:
                 self.cancel("unable to install the package %s on peer machine "
                             % pkg)
+
+        detected_distro = distro.detect()
+        pkg = "nmap"
+        if detected_distro.name == 'rhel':
+            if not smm.check_installed(pkg) and not smm.install(pkg):
+                self.cancel("%s package Can not install" % pkg)
+        if detected_distro.name == "SuSE":
+            self.nmap = os.path.join(self.teststmpdir, 'nmap')
+            nmap_download = self.params.get("nmap_download", default="https:"
+                                            "//nmap.org/dist/"
+                                            "nmap-7.80.tar.bz2")
+            tarball = self.fetch_asset(nmap_download)
+            self.version = os.path.basename(tarball.split('.tar')[0])
+            self.n_map = os.path.join(self.nmap, self.version)
+            archive.extract(tarball, self.nmap)
+            os.chdir(self.n_map)
+            process.system('./configure ppc64le', shell=True)
+            build.make(self.n_map)
+            process.system('./nping/nping -h', shell=True)
+
         if self.peer_ip == "":
             self.cancel("%s peer machine is not available" % self.peer_ip)
         self.mtu = self.params.get("mtu", default=1500)
@@ -119,6 +140,19 @@ class Iperf(Test):
         self.iperf = os.path.join(self.iperf_dir, 'src')
         self.expected_tp = self.params.get("EXPECTED_THROUGHPUT", default="85")
 
+    def nping(self):
+        """
+        Run nping test with tcp packets
+        """
+        detected_distro = distro.detect()
+        if detected_distro.name == "SuSE":
+            os.chdir(self.n_map)
+            cmd = "./nping/nping --tcp %s -c 10" % self.peer_ip
+            return process.run(cmd, verbose=False, shell=True)
+        else:
+            cmd = "nping --tcp %s -c 10" % self.peer_ip
+            return process.run(cmd, verbose=False, shell=True)
+
     def test(self):
         """
         Test run is a One way throughput test. In this test, we have one host
@@ -129,6 +163,7 @@ class Iperf(Test):
         os.chdir(self.iperf)
         cmd = "./iperf -c %s" % self.peer_ip
         result = process.run(cmd, shell=True, ignore_status=True)
+        nping_result = self.nping()
         if result.exit_status:
             self.fail("FAIL: Iperf Run failed")
         for line in result.stdout.decode("utf-8").splitlines():
@@ -139,6 +174,11 @@ class Iperf(Test):
                               ", Throughput Actual value - %s "
                               % ((tput*100)/speed, self.expected_tp,
                                  str(tput)+'Mb/sec'))
+        for line in nping_result.stdout.decode("utf-8").splitlines():
+            if 'Raw packets' in line:
+                lost = int(line.split("|")[2].split(" ")[2])*10
+                if lost > 60:
+                    self.fail("FAIL: Ping fails after iperf test")
 
     def tearDown(self):
         """
