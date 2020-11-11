@@ -443,18 +443,7 @@ class Bonding(Test):
         clean up the interface config
         '''
         self.bond_remove("local")
-        for val in self.host_interfaces:
-            cmd = "ifdown %s; ifup %s" % (val, val)
-            process.system(cmd, shell=True, ignore_status=True)
-            for _ in range(0, 600, 60):
-                if 'state UP' in process.system_output("ip link \
-                     show %s" % val, shell=True).decode("utf-8"):
-                    self.log.info("Interface %s is up", val)
-                    break
-                time.sleep(60)
-            else:
-                self.log.warn("Interface %s in not up\
-                                   in the host machine", val)
+
         if self.gateway:
             cmd = 'ip route add default via %s' % \
                 (self.gateway)
@@ -470,8 +459,14 @@ class Bonding(Test):
                     self.log.warn("unable to bring to original state in peer")
                 time.sleep(self.sleep_time)
         self.error_check()
-        for host_interface in self.host_interfaces:
+
+        for ipaddr, host_interface in zip(self.ipaddr, self.host_interfaces):
             networkinterface = NetworkInterface(host_interface, self.localhost)
+            try:
+                networkinterface.add_ipaddr(ipaddr, self.netmask)
+                networkinterface.bring_up()
+            except Exception:
+                self.fail("Interface is taking long time to link up")
             if networkinterface.set_mtu("1500") is not None:
                 self.cancel("Failed to set mtu in host")
             try:
