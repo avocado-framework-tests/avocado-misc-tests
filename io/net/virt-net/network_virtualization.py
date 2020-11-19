@@ -147,6 +147,8 @@ class NetworkVirtualization(Test):
             for line in adapter_id_output.splitlines():
                 if str(backing_adapter) in line:
                     self.backing_adapter_id.append(line.split(':')[1])
+        if not self.backing_adapter_id:
+            self.cancel("SRIOV adapter provided was not found.")
         self.rsct_service_start()
         if len(self.slot_num) > 1:
             if 'backing' in str(self.name.name) or \
