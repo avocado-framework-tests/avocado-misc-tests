@@ -247,11 +247,13 @@ class NetworkVirtualization(Test):
         '''
         Network virtualized device add operation
         '''
-        for slot, mac, device_ip, netmask in zip(self.slot_num, self.mac_id,
-                                                 self.device_ip, self.netmask):
+        for slot, mac, sriov_port, adapter_id, device_ip, netmask in zip(self.slot_num, self.mac_id,
+                                                                         self.sriov_port,
+                                                                         self.backing_adapter_id,
+                                                                         self.device_ip, self.netmask):
             if not self.check_slot_availability(slot):
                 self.fail("Slot does not exist")
-            self.device_add_remove(slot, mac, 'add')
+            self.device_add_remove(slot, mac, sriov_port, adapter_id, 'add')
             self.interface_naming(mac, slot)
             output = self.list_device(slot)
             if 'slot_num=%s' % slot not in str(output):
@@ -472,7 +474,7 @@ class NetworkVirtualization(Test):
             if self.check_slot_availability(slot):
                 self.fail("Slot does not exist")
             self.update_backing_devices(slot)
-            self.device_add_remove(slot, '', 'remove')
+            self.device_add_remove(slot, '', '', '', 'remove')
             output = self.list_device(slot)
             if 'slot_num=%s' % slot in str(output):
                 self.log.debug(output)
@@ -488,14 +490,14 @@ class NetworkVirtualization(Test):
         if validate_string not in output.stdout_text:
             self.fail("command fail in vios")
 
-    def device_add_remove(self, slot, mac, operation):
+    def device_add_remove(self, slot, mac, sriov_port, adapter_id, operation):
         '''
         Adds and removes a Network virtualized device based
         on the operation
         '''
         backing_device = "backing_devices=sriov/%s/%s/%s/%s/%s/%s"\
                          % (self.vios_name[0], self.vios_id[0],
-                            self.backing_adapter_id[0], self.sriov_port[0],
+                            adapter_id, sriov_port,
                             self.bandwidth, self.vnic_priority[0])
         if operation == 'add':
             cmd = 'chhwres -m %s --id %s -r virtualio --rsubtype vnic \
