@@ -55,7 +55,7 @@ class LPM(Test):
         self.hmc_user = self.params.get("hmc_username", default='hscroot')
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default='********')
         self.options = self.params.get("options", default='')
-
+        self.net_device_type = self.params.get("net_device_type", default='')
         self.lpar = self.get_partition_name("Partition Name")
         if not self.lpar:
             self.cancel("LPAR Name not got from lparstat command")
@@ -88,45 +88,47 @@ class LPM(Test):
         if not self.is_lpar_in_server(current_server, self.lpar):
             self.cancel("%s not in %s" % (self.lpar, current_server))
 
-        self.slot_num = str(self.params.get("slot_num", '*', default=1))
-        if int(self.slot_num) < 3 or int(self.slot_num) > 2999:
-            self.cancel("Slot invalid. Valid range: 3 - 2999")
+        if 'vnic' in self.net_device_type:
+            self.slot_num = str(self.params.get("slot_num", '*', default=3))
+            if int(self.slot_num) < 3 or int(self.slot_num) > 2999:
+                self.cancel("Slot invalid. Valid range: 3 - 2999")
 
-        self.bandwidth = str(self.params.get("bandwidth", default=2))
+            self.bandwidth = str(self.params.get("bandwidth", default=2))
 
-        self.vios_name = self.params.get("vios_names", '*',
-                                         default=None).split(' ')
-        self.vios_id = []
-        for vios_name in self.vios_name:
-            self.vios_id.append(self.get_lpar_id(self.server, vios_name))
-        self.remote_vios_name = self.params.get("remote_vios_names", '*',
-                                                default=None).split(' ')
-        self.remote_vios_id = []
-        for vios_name in self.remote_vios_name:
-            self.remote_vios_id.append(self.get_lpar_id(self.remote_server,
-                                                        vios_name))
+            self.vios_name = self.params.get("vios_names", '*',
+                                             default=None).split(' ')
+            self.vios_id = []
+            for vios_name in self.vios_name:
+                self.vios_id.append(self.get_lpar_id(self.server, vios_name))
+            self.remote_vios_name = self.params.get("remote_vios_names", '*',
+                                                    default=None).split(' ')
+            self.remote_vios_id = []
+            for vios_name in self.remote_vios_name:
+                self.remote_vios_id.append(self.get_lpar_id(self.remote_server,
+                                                            vios_name))
 
-        for vios in self.vios_id:
-            self.set_msp(self.server, vios)
-        for vios in self.remote_vios_id:
-            self.set_msp(self.remote_server, vios)
+            for vios in self.vios_id:
+                self.set_msp(self.server, vios)
+            for vios in self.remote_vios_id:
+                self.set_msp(self.remote_server, vios)
 
-        self.adapters = self.params.get("sriov_adapters",
-                                        default='').split(' ')
-        self.remote_adapters = self.params.get("remote_sriov_adapters",
-                                               default='').split(' ')
-        self.ports = self.params.get("sriov_ports",
-                                     default='').split(' ')
-        self.remote_ports = self.params.get("remote_sriov_ports",
+            self.adapters = self.params.get("sriov_adapters",
                                             default='').split(' ')
+            self.remote_adapters = self.params.get("remote_sriov_adapters",
+                                                   default='').split(' ')
+            self.ports = self.params.get("sriov_ports",
+                                         default='').split(' ')
+            self.remote_ports = self.params.get("remote_sriov_ports",
+                                                default='').split(' ')
 
-        self.adapter_id = []
-        for adapter in self.adapters:
-            self.adapter_id.append(self.get_adapter_id(self.server, adapter))
-        self.remote_adapter_id = []
-        for adapter in self.remote_adapters:
-            self.remote_adapter_id.append(
-                self.get_adapter_id(self.remote_server, adapter))
+            self.adapter_id = []
+            for adapter in self.adapters:
+                self.adapter_id.append(
+                    self.get_adapter_id(self.server, adapter))
+            self.remote_adapter_id = []
+            for adapter in self.remote_adapters:
+                self.remote_adapter_id.append(
+                    self.get_adapter_id(self.remote_server, adapter))
         dmesg.clear_dmesg()
 
     @staticmethod
@@ -317,7 +319,9 @@ class LPM(Test):
         '''
         Migrate the LPAR from given server to remote server.
         '''
-        cmd = self.form_virt_net_options()
+        cmd = ''
+        if 'vnic' in self.net_device_type:
+            cmd = self.form_virt_net_options()
         self.do_migrate(self.server, self.remote_server, self.lpar, cmd)
         self.check_dmesg_error()
 
@@ -325,7 +329,9 @@ class LPM(Test):
         '''
         Migrate the LPAR from given remote server back to server.
         '''
-        cmd = self.form_virt_net_options('remote')
+        cmd = ''
+        if 'vnic' in self.net_device_type:
+            cmd = self.form_virt_net_options('remote')
         self.do_migrate(self.remote_server, self.server, self.lpar, cmd)
         self.check_dmesg_error()
 
