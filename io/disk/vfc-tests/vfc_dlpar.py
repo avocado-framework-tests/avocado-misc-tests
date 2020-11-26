@@ -52,6 +52,7 @@ class VirtualFC(Test):
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default=None)
         self.hmc_username = self.params.get("hmc_username", '*', default=None)
         self.count = self.params.get("count", default=1)
+        self.skip_drc = self.params.get("skip_drc_name", default=None)
         self.opp_sleep_time = 150
         self.lpar = self.get_partition_name("Partition Name")
         if not self.lpar:
@@ -83,7 +84,8 @@ class VirtualFC(Test):
             self.vfc_dic["wwpn"] = self.get_wwpn(self.vfc_dic["c_slot"])
             self.vfc_dic["drc"] = self.get_drc_name(self.vfc_dic["c_slot"])
             self.vfc_dic["paths"] = self.get_paths(self.vfc_dic["drc"])
-            self.dic_list.append(self.vfc_dic)
+            if self.vfc_dic["drc"] != self.skip_drc:
+                self.dic_list.append(self.vfc_dic)
         self.log.info("complete list : %s" % self.dic_list)
 
     @staticmethod
