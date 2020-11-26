@@ -214,7 +214,7 @@ class HtxNicTest(Test):
         con.sendline("echo $?")
         con.prompt(timeout)
         exitcode = int(''.join(con.before.splitlines()[1:]))
-        if exitcode != 0:
+        if exitcode != 0 and exitcode != 43:
             raise CommandFailed(command, output, exitcode)
         return output
 
@@ -318,10 +318,11 @@ class HtxNicTest(Test):
         self.log.info("Generating bpt file in both Host & Peer")
         cmd = "/usr/bin/build_net help n"
         self.run_command(cmd)
-        try:
-            process.run(cmd, shell=True, sudo=True)
-        except CmdError as details:
-            self.fail("Command %s failed %s" % (cmd, details))
+        exit_code = process.run(cmd, shell=True, sudo=True, ignore_status=True).exit_status
+        if exit_code == 0 or exit_code == 43:
+            return True
+        else:
+            self.fail("Command %s failed with exit status %s " % (cmd, exit_code))
 
     def check_bpt_file_existence(self):
         """
@@ -710,10 +711,11 @@ class HtxNicTest(Test):
         self.log.info("Resetting bpt file in both Host & Peer")
         cmd = "/usr/bin/build_net help n"
         self.run_command(cmd)
-        try:
-            process.run(cmd, shell=True, sudo=True)
-        except CmdError as details:
-            self.fail("Command %s failed %s" % (cmd, details))
+        exit_code = process.run(cmd, shell=True, sudo=True, ignore_status=True).exit_status
+        if exit_code == 0 or exit_code == 43:
+            return True
+        else:
+            self.fail("Command %s failed with exit status %s " % (cmd, exit_code))
 
         if self.is_net_device_active_in_host():
             self.suspend_all_net_devices_in_host()
