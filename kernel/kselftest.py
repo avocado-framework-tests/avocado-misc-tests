@@ -62,15 +62,21 @@ class kselftest(Test):
         if detected_distro.name in ['Ubuntu', 'debian']:
             deps.extend(['libpopt0', 'libc6', 'libc6-dev', 'libcap-dev',
                          'libpopt-dev', 'libcap-ng0', 'libcap-ng-dev',
-                         'libnuma-dev', 'libfuse-dev', 'elfutils', 'libelf1'])
+                         'libnuma-dev', 'libfuse-dev', 'elfutils', 'libelf1',
+                         'libhugetlbfs-dev'])
         elif 'SuSE' in detected_distro.name:
             deps.extend(['glibc', 'glibc-devel', 'popt-devel', 'sudo',
                          'libcap2', 'libcap-devel', 'libcap-ng-devel',
                          'fuse', 'fuse-devel', 'glibc-devel-static'])
+            if detected_distro.version >= 15:
+                deps.extend(['libhugetlbfs-devel'])
+            else:
+                deps.extend(['libhugetlbfs-libhugetlb-devel'])
         elif detected_distro.name in ['centos', 'fedora', 'rhel']:
             deps.extend(['popt', 'glibc', 'glibc-devel', 'glibc-static',
                          'libcap-ng', 'libcap', 'libcap-devel', 'fuse-devel',
-                         'libcap-ng-devel', 'popt-devel'])
+                         'libcap-ng-devel', 'popt-devel',
+                         'libhugetlbfs-devel'])
 
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
