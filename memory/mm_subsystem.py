@@ -65,7 +65,7 @@ class MmSubsystemTest(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        git.get_repo("https://gitlab.com/cailca/linux-mm",
+        git.get_repo("https://gitlab.com/harish-24/linux-mm",
                      destination_dir=self.logdir)
         os.chdir(self.logdir)
         build.make(self.logdir)
