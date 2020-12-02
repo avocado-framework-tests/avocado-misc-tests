@@ -12,3 +12,4 @@ remote_server	        Remote server
 remote_vios_names       space separated name of the remote vios used to add/remove Network virtualized interface
 remote_sriov_adapters   space separated location code (DRC) of the the remote adapters that is assigned to the hypervisor
 remote_sriov_ports      space separated ports using which the remote Network virtualized interfaces
+net_device_type		Spcify the device type 'vnic' for vnic test interface and leave default '' for all other test like hnv, basic lpm
