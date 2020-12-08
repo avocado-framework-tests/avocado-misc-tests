@@ -54,26 +54,22 @@ class NdctlTest(Test):
         regions = sorted(regions, key=lambda i: i['size'], reverse=True)
         return self.plib.run_ndctl_list_val(regions[0], 'dev')
 
-    def get_unsupported_alignval(self):
+    @staticmethod
+    def get_unsupported_alignval(def_align):
         """
-        Return unsupported size align based on platform
+        Return alternate size align for negative case
         """
-        align = self.get_size_alignval()
-        if align == self.align_val['hash']:
-            return self.align_val['radix']
-        else:
-            return self.align_val['hash']
+        if def_align == 16777216:
+            return 2097152
+        return 16777216
 
     def get_size_alignval(self):
         """
         Return the size align restriction based on platform
         """
-        self.align_val = {'hash': 16777216, 'radix': 2097152}
-        if 'Hash' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
-            def_align = self.align_val['hash']
-        else:
-            def_align = self.align_val['radix']
-        return def_align
+        if not os.path.exists("/sys/bus/nd/devices/region0/align"):
+            self.cancel("Test cannot execute without the size alignment value")
+        return int(genio.read_one_line("/sys/bus/nd/devices/region0/align"), 16)
 
     def build_fio(self):
         """

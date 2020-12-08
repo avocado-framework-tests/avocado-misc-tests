@@ -33,16 +33,13 @@ class PmemDeviceMapper(Test):
     Ndctl user space tooling for Linux, which handles NVDIMM devices.
     """
 
-    @staticmethod
-    def get_size_alignval():
+    def get_size_alignval(self):
         """
         Return the size align restriction based on platform
         """
-        if 'Hash' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
-            def_align = 16 * 1024 * 1024
-        else:
-            def_align = 2 * 1024 * 1024
-        return def_align
+        if not os.path.exists("/sys/bus/nd/devices/region0/align"):
+            self.cancel("Test cannot execute without the size alignment value")
+        return int(genio.read_one_line("/sys/bus/nd/devices/region0/align"), 16)
 
     def build_fio(self):
         """
