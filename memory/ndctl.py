@@ -678,7 +678,8 @@ class NdctlTest(Test):
         ns_name = self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
         self.plib.disable_namespace(namespace=ns_name)
-        self.write_read_infoblock(ns_name, align=self.get_size_alignval())
+        map_align = memory.get_supported_huge_pages_size()[0] * 1024
+        self.write_read_infoblock(ns_name, align=map_align)
         self.plib.enable_namespace(namespace=ns_name)
 
     @avocado.fail_on(pmem.PMemException)
@@ -695,7 +696,9 @@ class NdctlTest(Test):
         ns_name = self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
         self.plib.disable_namespace(namespace=ns_name)
-        self.write_read_infoblock(ns_name, align=self.get_unsupported_alignval())
+        map_align = memory.get_supported_huge_pages_size()[0] * 1024
+        self.write_read_infoblock(
+            ns_name, align=self.get_unsupported_alignval(map_align))
         try:
             self.plib.enable_namespace(namespace=ns_name)
         except pmem.PMemException:
@@ -756,7 +759,7 @@ class NdctlTest(Test):
         self.plib.disable_namespace(namespace=ns_name)
         align = self.get_size_alignval()
         size = size - align
-        self.write_read_infoblock(ns_name, size=size, align=align)
+        self.write_read_infoblock(ns_name, size=size)
         self.plib.enable_namespace(namespace=ns_name)
 
     @avocado.fail_on(pmem.PMemException)
