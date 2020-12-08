@@ -71,6 +71,8 @@ class EliminateDomainSuffix(Test):
             self.perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % self.perf_args
         if self.cpu_family == 'power9':
             self.perf_stat = "%s hv_24x7/CPM_TLBIE" % self.perf_args
+        if self.cpu_family == 'power10':
+            self.perf_stat = "%s hv_24x7/CPM_TLBIE_FIN" % self.perf_args
         self.event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
 
         # Check if 24x7 is present
@@ -142,9 +144,11 @@ class EliminateDomainSuffix(Test):
                               ' format for all 6 domains')
 
     def test_event_w_chip_param(self):
-        event_out = process.run("cat %s/events/"
-                                "PM_PB_CYC" % self.event_sysfs)
-        if "chip=?" in event_out.stdout.decode("utf-8"):
+        if self.cpu_family in ['power8', 'power9']:
+            event_out = genio.read_file("%s/events/PM_PB_CYC" % self.event_sysfs).rstrip('\t\r\n\0')
+        if self.cpu_family == 'power10':
+            event_out = genio.read_file("%s/events/PM_PHB0_0_CYC" % self.event_sysfs).rstrip('\t\r\n\0')
+        if "chip=?" in event_out:
             self.log.info('sysfs entry has chip entry')
         else:
             self.fail('sysfs does not have chip entry')
@@ -155,14 +159,20 @@ class EliminateDomainSuffix(Test):
             self.fail('chip file does not exist')
 
     def test_event_wo_chip_param(self):
-        cmd = "hv_24x7/PM_PB_CYC,domain=1/ /bin/true"
+        if self.cpu_family in ['power8', 'power9']:
+            cmd = "hv_24x7/PM_PB_CYC,domain=1/ /bin/true"
+        if self.cpu_family == 'power10':
+            cmd = "hv_24x7/PM_PHB0_0_CYC,domain=1/ /bin/true"
         chip_miss = self.event_stat1(cmd)
         if "Required parameter 'chip' not specified" not in chip_miss.stdout.decode("utf-8"):
             self.fail('perf unable to detect chip'
                       ' parameter missing')
         else:
             self.log.info('perf detected chip parameter missing')
-        cmd = "hv_24x7/PM_PB_CYC,domain=1,chip=1/ /bin/true"
+        if self.cpu_family in ['power8', 'power9']:
+            cmd = "hv_24x7/PM_PB_CYC,domain=1,chip=1/ /bin/true"
+        if self.cpu_family == 'power10':
+            cmd = "hv_24x7/PM_PHB0_0_CYC,domain=1,chip=1/ /bin/true"
         output_chip = self.event_stat1(cmd)
         if "Performance counter stats for" not in output_chip.stderr.decode("utf-8"):
             self.fail('performance counter stats for missing')
