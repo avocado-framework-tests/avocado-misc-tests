@@ -305,7 +305,7 @@ class NetworkVirtualization(Test):
             before = self.get_active_device_logport(self.slot_num[0])
             self.trigger_failover(self.get_backing_device_logport
                                   (self.slot_num[0]))
-            time.sleep(10)
+            time.sleep(60)
             after = self.get_active_device_logport(self.slot_num[0])
             self.log.debug("Active backing device: %s", after)
             if before == after:
@@ -333,7 +333,7 @@ class NetworkVirtualization(Test):
                                   failover - Attempt %s", int(val + 1))
                     genio.write_file_or_fail("/sys/devices/vio/%s/failover"
                                              % device_id, "1")
-                    time.sleep(10)
+                    time.sleep(60)
                     self.log.info("Running a ping test to check if failover \
                                     affected Network connectivity")
                     device = self.find_device(self.mac_id[0])
@@ -361,7 +361,7 @@ class NetworkVirtualization(Test):
                         self.fail("Fail to change the priority for backing device %s", backing_logport)
                     if not self.change_failover_priority(active_logport, '100'):
                         self.fail("Fail to change the priority for active device %s", active_logport)
-                    time.sleep(10)
+                    time.sleep(60)
                     if backing_logport != self.get_active_device_logport(self.slot_num[0]):
                         self.fail("Auto failover of backing device failed")
                     device = self.find_device(self.mac_id[0])
@@ -407,7 +407,7 @@ class NetworkVirtualization(Test):
 
         if before == after:
             self.fail("failover not occour")
-        time.sleep(20)
+        time.sleep(60)
 
         if vnic_backing_device:
             self.validate_vios_command('mkdev -l %s' % vnic_backing_device, 'Available')
@@ -820,7 +820,7 @@ class NetworkVirtualization(Test):
                 if device_name == interface:
                     self.log.info("Network virtualized device %s is up", device_name)
                     return True
-                time.sleep(2)
+                time.sleep(5)
         return False
 
     def check_dmesg_error(self):
