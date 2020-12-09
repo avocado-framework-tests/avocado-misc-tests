@@ -19,6 +19,7 @@
 import os
 import netifaces
 from avocado import Test
+from avocado.utils import distro
 from avocado.utils import process
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
@@ -96,6 +97,10 @@ class Bridging(Test):
         '''
         self.check_failure('ip link del dev %s' % self.bridge_interface)
         # TODO:need to get this functionality into avocado utils interfcae.py
-        path = "/etc/sysconfig/network-scripts/ifcfg-%s" \
-               % self.bridge_interface
+        detected_distro = distro.detect()
+        if detected_distro.name == 'rhel':
+            path = "/etc/sysconfig/network-scripts/ifcfg-%s" \
+                   % self.bridge_interface
+        elif detected_distro.name == "SuSE":
+            path = "/etc/sysconfig/network/ifcfg-%s" % self.bridge_interface
         os.remove(path)
