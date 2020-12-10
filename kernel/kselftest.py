@@ -135,7 +135,14 @@ class kselftest(Test):
         build.make(self.sourcedir,
                    extra_args='summary=1 %s run_tests' % self.comp)
         for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
-            self.find_match(r'not ok (.*) selftests:(.*)', line)
+            if self.run_type == 'upstream':
+                self.find_match(r'not ok (.*) selftests:(.*)', line)
+            elif self.run_type == 'distro':
+                if distro.detect().name == 'SuSE' and\
+                        distro.detect().version == 12:
+                    self.find_match(r'selftests:(.*)\[FAIL\]', line)
+                else:
+                    self.find_match(r'not ok (.*) selftests:(.*)', line)
 
         if self.error:
             self.fail("Testcase failed during selftests")
