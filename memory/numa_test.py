@@ -20,8 +20,11 @@ import os
 import shutil
 
 from avocado import Test
+from avocado import skipIf
 from avocado.utils import process, build, memory, distro, genio
 from avocado.utils.software_manager import SoftwareManager
+
+SINGLE_NODE = len(memory.numa_nodes_with_memory()) < 2
 
 
 class NumaTest(Test):
@@ -46,10 +49,6 @@ class NumaTest(Test):
         self.hpage = self.params.get('h_page', default=False)
 
         nodes = memory.numa_nodes_with_memory()
-        if len(nodes) < 2:
-            self.cancel('Test requires two numa nodes to run.'
-                        'Node list with memory: %s' % nodes)
-
         pkgs = ['gcc', 'make']
         hp_check = 0
         if self.hpage:
@@ -86,6 +85,7 @@ class NumaTest(Test):
 
         build.make(self.teststmpdir)
 
+    @skipIf(SINGLE_NODE, "Test requires two numa nodes to run")
     def test_movepages(self):
         os.chdir(self.teststmpdir)
         self.log.info("Starting test...")
@@ -111,6 +111,7 @@ class NumaTest(Test):
         if ret != 0:
             self.fail('Please check the logs for failure')
 
+    @skipIf(SINGLE_NODE, "Test requires two numa nodes to run")
     def test_thp_compare(self):
         """
         Test PFN's before and after offlining
