@@ -132,8 +132,9 @@ class kselftest(Test):
         Execute the kernel selftest
         """
         self.error = False
+        kself_args = self.params.get("kself_args", default='')
         build.make(self.sourcedir,
-                   extra_args='summary=1 %s run_tests' % self.comp)
+                   extra_args='%s %s run_tests' % (kself_args, self.comp))
         for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
             if self.run_type == 'upstream':
                 self.find_match(r'not ok (.*) selftests:(.*)', line)

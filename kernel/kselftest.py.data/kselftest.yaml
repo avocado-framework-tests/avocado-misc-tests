@@ -4,6 +4,7 @@ setup:
             comp: "vm"
         power:
             comp: "powerpc"
+            kself_args: "summary=1"
         mem_plug:
             comp: "memory-hotplug"
     run_type: !mux
