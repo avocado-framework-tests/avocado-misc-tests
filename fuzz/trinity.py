@@ -93,6 +93,9 @@ class Trinity(Test):
         match = re.search(br'Call Trace:', dmesg, re.M | re.I)
         if match:
             self.log.info("some call traces seen please check")
+        match = re.search(br'tainting kernel:', dmesg, re.M | re.I)
+        if match:
+            self.log.info("tainting kernel seen please check")
 
     def tearDown(self):
         """
