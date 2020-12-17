@@ -123,10 +123,9 @@ class NdctlTest(Test):
                              'keyutils-devel', 'kmod-bash-completion',
                              'bash-completion-devel'])
             elif self.dist.name == 'rhel':
-                deps.extend(['libtool',
+                deps.extend(['libtool', 'bash-completion', 'parted',
                              'kmod-devel', 'libuuid-devel', 'json-c-devel',
-                             'systemd-devel', 'keyutils-libs-devel', 'jq',
-                             'parted', 'libtool'])
+                             'systemd-devel', 'keyutils-libs-devel', 'jq'])
             for pkg in deps:
                 if not self.smm.check_installed(pkg) and not \
                         self.smm.install(pkg):
