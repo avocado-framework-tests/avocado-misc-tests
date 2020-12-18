@@ -193,19 +193,22 @@ class NdctlTest(Test):
             self.fail('Failed to fetch DIMMs')
         for dimm in dimms:
             health = self.plib.run_ndctl_list_val(dimm, 'health')
+            nmem = self.plib.run_ndctl_list_val(dimm, 'dev')
+            region = "region%s" % re.findall(r'\d+', nmem)[0]
+            dev_type = genio.read_one_line("/sys/bus/nd/devices/%s/devtype" % region)
             if not health:
                 self.cancel("kernel/ndctl does not support health reporting")
-            if 'life_used_percentage' in health:
-                if health['life_used_percentage'] != 0:
-                    self.fail("DIMM has not been used, reporting says otherwise")
+            if dev_type == "nd_pmem":
+                if 'life_used_percentage' not in health:
+                    self.fail("life_used_percentage missing for HMS")
+                self.log.info("%s life is %s", nmem, health['life_used_percentage'])
             if 'health_state' in health:
                 if health['health_state'] != "ok":
-                    self.fail("DIMM health is bad")
+                    self.log.warn("%s health is bad", nmem)
             if 'shutdown_state' in health:
                 if health['shutdown_state'] != "clean":
-                    self.fail("DIMM shutdown state is dirty")
-            dim = self.plib.run_ndctl_list_val(dimm, 'dev')
-            self.log.info("Dimm %s Health info: %s", dim, health)
+                    self.log.warn("%s shutdown state is dirty", nmem)
+            self.log.info("DIMM %s Health info: %s", nmem, health)
 
     @avocado.fail_on(pmem.PMemException)
     def test_regions(self):
