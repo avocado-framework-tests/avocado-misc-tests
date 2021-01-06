@@ -695,13 +695,14 @@ class NetworkVirtualization(Test):
         output = self.session_hmc.cmd(cmd)
         if output.exit_status != 0:
             self.log.debug(output.stderr)
-        if output.stdout_text.startswith('%s,' % self.slot_num[0]):
-            backing_dev = output.stdout_text.strip('%s,"' % self.slot_num[0])
-            for entry in backing_dev.split(','):
-                entry = entry.split('/')
-                if logport in entry:
-                    priority = entry[8]
-                    break
+        for line in output.stdout_text.splitlines():
+            if line.startswith('%s,' % self.slot_num[0]):
+                backing_dev = line.strip('%s,"' % self.slot_num[0])
+                for entry in backing_dev.split(','):
+                    entry = entry.split('/')
+                    if logport in entry:
+                        priority = entry[8]
+                        break
         return priority
 
     def change_failover_priority(self, logport, priority):
