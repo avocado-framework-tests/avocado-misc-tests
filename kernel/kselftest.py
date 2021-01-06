@@ -17,12 +17,11 @@ import os
 import platform
 import re
 import glob
-import shutil
 
 from avocado import Test
 from avocado.utils import build
 from avocado.utils import distro
-from avocado.utils import archive, process, git
+from avocado.utils import archive, git
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -116,22 +115,13 @@ class kselftest(Test):
             elif detected_distro.name in ['Ubuntu', 'debian']:
                 self.buldir = smg.get_source('linux', self.workdir)
             elif 'SuSE' in detected_distro.name:
-                smg._source_install('kernel-default')
-                smg.get_source('kernel-source', self.workdir)
-                packages = '/usr/src/packages/'
-                os.chdir(os.path.join(packages, 'SOURCES'))
-                process.system('./mkspec', ignore_status=True)
-                shutil.copy(os.path.join(packages, 'SOURCES/kernel'
-                                                   '-default.spec'),
-                            os.path.join(packages, 'SPECS/kernel'
-                                                   '-default.spec'))
-                self.buldir = smg.prepare_source(os.path.join(
-                    packages, 'SPECS/kernel'
-                              '-default.spec'), dest_path=self.teststmpdir)
-                for l_dir in glob.glob(os.path.join(self.buldir, 'linux*')):
-                    if os.path.isdir(l_dir) and 'Makefile' in os.listdir(l_dir):
-                        self.buldir = os.path.join(
-                            self.buldir, os.listdir(self.buldir)[0])
+                if not smg.check_installed("kernel-source") and not\
+                        smg.install("kernel-source"):
+                    self.cancel(
+                        "Failed to install kernel-source for this test.")
+                if not os.path.exists("/usr/src/linux"):
+                    self.cancel("kernel source missing after install")
+                self.buldir = "/usr/src/linux"
 
         self.sourcedir = os.path.join(self.buldir, self.testdir)
         if build.make(self.sourcedir):
@@ -142,10 +132,18 @@ class kselftest(Test):
         Execute the kernel selftest
         """
         self.error = False
+        kself_args = self.params.get("kself_args", default='')
         build.make(self.sourcedir,
-                   extra_args='summary=1 %s run_tests' % self.comp)
+                   extra_args='%s %s run_tests' % (kself_args, self.comp))
         for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
-            self.find_match(r'not ok (.*) selftests:(.*)', line)
+            if self.run_type == 'upstream':
+                self.find_match(r'not ok (.*) selftests:(.*)', line)
+            elif self.run_type == 'distro':
+                if distro.detect().name == 'SuSE' and\
+                        distro.detect().version == 12:
+                    self.find_match(r'selftests:(.*)\[FAIL\]', line)
+                else:
+                    self.find_match(r'not ok (.*) selftests:(.*)', line)
 
         if self.error:
             self.fail("Testcase failed during selftests")
