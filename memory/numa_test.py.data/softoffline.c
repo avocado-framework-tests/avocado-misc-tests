@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 	int page_size = getpagesize();
 	int mapflag = MAP_ANONYMOUS;
 	int protflag = PROT_READ|PROT_WRITE;
-	char *old_pfn, *new_pfn;
+	unsigned long *old_pfn, *new_pfn;
 
 	while ((c = getopt(argc, argv, "m:n:hH")) != -1) {
 		switch(c) {
@@ -67,8 +67,8 @@ int main(int argc, char *argv[])
 			break;
 		}
 	}
-	old_pfn = (char*) malloc(nr_pages * sizeof(char));
-	new_pfn = (char*) malloc(nr_pages * sizeof(char));
+	old_pfn = (unsigned long*) malloc(nr_pages * sizeof(unsigned long));
+	new_pfn = (unsigned long*) malloc(nr_pages * sizeof(unsigned long));
 
 	if (!(mapflag & (MAP_SHARED | MAP_PRIVATE)))
 		errmsg("Specify shared or private using -m flag\n");
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 		if (!old_pfn[i] || !new_pfn[i])
 			continue;
 		if (old_pfn[i] == new_pfn[i]){
-			printf("pfn matches, softoffline failed\n");
+			printf("pfn matches, softoffline failed at %d\n", i);
 			return -1;
 		}
 	}
