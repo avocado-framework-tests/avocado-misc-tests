@@ -65,7 +65,6 @@ class Sosreport(Test):
         - help
         - list available plugins
         - capture enable plugins data
-        - ticket-number
         - case-id
         """
         self.log.info(
@@ -75,13 +74,6 @@ class Sosreport(Test):
         self.run_cmd("sosreport -h", False)
         self.run_cmd("sosreport -l", False)
         self.run_cmd("sosreport --batch --tmp-dir=%s --verify" % directory_name)
-
-        ticket_id = self.params.get('ticket_id', default='testid')
-        if ticket_id not in self.run_cmd_out("sosreport --batch --ticket-number=%s "
-                                             "| grep tar.xz" % ticket_id):
-            self.is_fail += 1
-            self.log.info("--ticket-number option failed")
-
         case_id = self.params.get('case_id', default='testid')
         if case_id not in self.run_cmd_out("sosreport --batch --case-id=%s | "
                                            "grep tar.xz" % case_id):
@@ -209,7 +201,6 @@ class Sosreport(Test):
     def test_archive(self):
         """
         execute archive options:
-        - bzip2
         - gzip
         - xz
         - auto
@@ -219,9 +210,9 @@ class Sosreport(Test):
             "===============Executing sosreport tool test (Archive)===============")
         directory_name = tempfile.mkdtemp()
         self.is_fail = 0
-        f_name = {'bzip2': 'file_name_bz2', 'gzip': 'file_name_gz',
+        f_name = {'gzip': 'file_name_gz',
                   'xz': 'file_name_xz', 'auto': 'file_name_xz2'}
-        archive = {'bzip2': 'tar.bz2', 'gzip': 'tar.gz',
+        archive = {'gzip': 'tar.gz',
                    'xz': 'tar.xz', 'auto': 'tar.xz'}
         for key, value in f_name.items():
             file_name = str(f_name[key])
