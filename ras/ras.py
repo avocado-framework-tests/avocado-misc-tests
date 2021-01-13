@@ -200,8 +200,7 @@ class RASTools(Test):
                                      "tail -1 | cut -d' ' -f1")
         if disk_name:
             self.run_cmd("ofpathname %s" % disk_name)
-            of_name = self.run_cmd_out("ofpathname %s"
-                                       % disk_name)
+            of_name = self.run_cmd_out("ofpathname %s" % disk_name).split(':')[0]
             self.run_cmd("ofpathname -l %s" % of_name)
         self.error_check()
 
