@@ -38,6 +38,8 @@ class service_check(Test):
         smm = SoftwareManager()
         deps = []
 
+        if detected_distro.name == 'rhel':
+            deps.extend(['libvirt-daemon'])
         if detected_distro.name == 'SuSE':
             deps.extend(['ppc64-diag', 'libvirt-daemon'])
             if detected_distro.version >= 15:
