@@ -280,9 +280,6 @@ class NetworkVirtualization(Test):
         '''
         Adding Backing device for Network virtualized device
         '''
-        for slot in self.slot_num:
-            if self.check_slot_availability(slot):
-                self.fail("Slot does not exist")
         pre_add = self.backing_dev_count()
         for count in range(1, self.backingdev_count):
             self.backing_dev_add_remove('add', count)
@@ -462,8 +459,6 @@ class NetworkVirtualization(Test):
         Removing Backing device for Network virtualized device
         '''
         for slot in self.slot_num:
-            if self.check_slot_availability(slot):
-                self.fail("Slot does not exist")
             self.update_backing_devices(slot)
             pre_remove = self.backing_dev_count()
             for count in range(1, self.backingdev_count):
