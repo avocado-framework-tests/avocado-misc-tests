@@ -98,4 +98,5 @@ class Bridging(Test):
         # TODO:need to get this functionality into avocado utils interfcae.py
         path = "/etc/sysconfig/network-scripts/ifcfg-%s" \
                % self.bridge_interface
-        os.remove(path)
+        if os.path.isfile(path):
+            os.remove(path)
