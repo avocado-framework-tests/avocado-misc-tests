@@ -296,6 +296,44 @@ class NetworkVirtualization(Test):
             self.fail("Failed to add backing device")
         self.check_dmesg_error()
 
+    def test_disable_enable_dev(self):
+        '''
+        Test if disabling and enabling of an adapter works
+        '''
+        self.disable_enable_dev('d')
+        self.is_disabled_enabled_dev('1')
+        self.disable_enable_dev('e')
+        self.is_disabled_enabled_dev('0')
+
+    def disable_enable_dev(self, option):
+        '''
+        Disable or enable interface command
+        '''
+        cmd = "chhwres -m %s -o %s -r virtualio --rsubtype vnic -p %s -s %s" % (self.server, option, self.lpar, self.slot_num[0])
+        self.session_hmc.cmd(cmd)
+
+    def is_disabled_enabled_dev(self, expect):
+        '''
+        Check if the interface was disabled or enabled correctly
+        '''
+        cmd = "lshwres -m %s -r virtualio --rsubtype vnic --filter \
+        \"lpar_names=%s\" -F slot_num:is_disabled" % (self.server, self.lpar)
+        output = self.session_hmc.cmd(cmd).stdout_text
+
+        for entry in output.splitlines():
+            self.log.info("entry: %s", entry)
+            if entry.startswith(self.slot_num[0]):
+                if entry.endswith(expect):
+                    if expect == '1':
+                        self.log.info("vNIC interface successfully disabled")
+                    else:
+                        self.log.info("vNIC interface successfully enabled")
+                else:
+                    if expect == '1':
+                        self.fail("Could not disable vNIC interface")
+                    else:
+                        self.fail("Could not enable vNIC interface")
+
     def test_hmcfailover(self):
         '''
         Triggers Failover for the Network virtualized
