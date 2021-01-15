@@ -1,5 +1,4 @@
-c2c:
-    record: !mux
+record: !mux
         event_load:
                 record_method: -e ldlat-loads
         event__load_full:
@@ -21,7 +20,7 @@ c2c:
         all_user_full:
                 record_method: --all-user
 
-    report: !mux
+report: !mux
         coalesce:
                 report_method: -c pid,tid,iaddr,dso
         coalesce_full:

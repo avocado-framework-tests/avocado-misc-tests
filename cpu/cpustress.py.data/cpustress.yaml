@@ -1,11 +1,10 @@
-setup:
-    cycles: !mux
-        default:
-            iteration: 10
-        long:
-            iteration: 100
-    type: !mux
-        default:
-            test: 'all'
-        cpu_serial_off_on:
-            test: 'cpu_serial_off_on'
+cycles: !mux
+    default:
+        iteration: 10
+    long:
+        iteration: 100
+type: !mux
+    default:
+        test: 'all'
+    cpu_serial_off_on:
+        test: 'cpu_serial_off_on'

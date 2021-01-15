@@ -1,13 +1,12 @@
-setup:
-    mem_leak: 0
-    general: !mux
-        runltp: !mux
-            mm:
-                args: '-f mm'
-                overcommit: True
-            hugetlb:
-                args: '-f hugetlb'
-                overcommit: False
-            thp-page-cache:
-                args: '-f mm'
-                tmpfs_mount_dir: '/mnt/thp/'
+mem_leak: 0
+general: !mux
+    runltp: !mux
+        mm:
+            args: '-f mm'
+            overcommit: True
+        hugetlb:
+            args: '-f hugetlb'
+            overcommit: False
+        thp-page-cache:
+            args: '-f mm'
+            tmpfs_mount_dir: '/mnt/thp/'

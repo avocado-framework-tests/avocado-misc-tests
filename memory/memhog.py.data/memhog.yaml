@@ -1,8 +1,8 @@
-setup:
-    memory_size:
-    mmap: !mux
-        nvdimm:
-            file_type: 'nvdimm'
-        block:
-            file_type: 'block'
-        no_backup:
+memory_size:
+mmap: !mux
+    nvdimm:
+        file_type: 'nvdimm'
+    block:
+        file_type: 'block'
+    no_backup:
+        file_type: "null"

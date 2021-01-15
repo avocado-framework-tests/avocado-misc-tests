@@ -1,18 +1,17 @@
-config:
-    region: 'region0'
-    size:
-    map:
-    git_branch: 'pending'
-    preserve_change: True
-    mnt_point: '/mnt/pmem'
-    fio_job:
-    version: !mux
-        upstream:
-            package : 'upstream'
-        distro:
-            package : 'distro'
-    mode_types: !mux
-        fsdax:
-            modes: 'fsdax'
-        sector:
-            modes: 'sector'
+region: 'region0'
+size: "null"
+map: "null"
+git_branch: 'pending'
+preserve_change: True
+mnt_point: '/mnt/pmem'
+fio_job: "null"
+version: !mux
+    upstream:
+        package : 'upstream'
+    distro:
+        package : 'distro'
+mode_types: !mux
+    fsdax:
+        modes: 'fsdax'
+    sector:
+        modes: 'sector'

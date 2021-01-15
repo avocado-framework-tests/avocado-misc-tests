@@ -1,25 +1,24 @@
-setup:
-    skip_dangerous: True
-    scratch_mnt: '/mnt/scratch_pmem'
-    test_mnt: '/mnt/test_pmem'
-    mount_opt: '-o dax'
-    logdev: true
-    fs_type: !mux
-        fs_ext4:
-            fs: 'ext4'
-            mkfs_opt: '-b 65536'
-            #test_range: '388'
-            #gen_exclude: '27'
-            #share_exclude: '1-300'
-        fs_xfs:
-            fs: 'xfs'
-            mkfs_opt: '-b size=65536 -s size=512 -m reflink=0'
-            logdev_opt: '-l logdev'
-            exclude:
-            gen_exclude:
-    disk_type:
-        type: 'nvdimm'
-        disk_test:
-        disk_scratch:
-        log_test:
-        log_scratch:
+skip_dangerous: True
+scratch_mnt: '/mnt/scratch_pmem'
+test_mnt: '/mnt/test_pmem'
+mount_opt: '-o dax'
+logdev: true
+fs_type: !mux
+    fs_ext4:
+        fs: 'ext4'
+        mkfs_opt: '-b 65536'
+        test_range: "null"
+        gen_exclude: "null"
+        share_exclude: "null"
+    fs_xfs:
+        fs: 'xfs'
+        mkfs_opt: '-b size=65536 -s size=512 -m reflink=0'
+        logdev_opt: '-l logdev'
+        exclude: "null"
+        gen_exclude: "null"
+disk_type:
+    type: 'nvdimm'
+    disk_test: "null"
+    disk_scratch: "null"
+    log_test: "null"
+    log_scratch: "null"

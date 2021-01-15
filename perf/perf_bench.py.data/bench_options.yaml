@@ -1,38 +1,37 @@
-bench:
-    subsystem: !mux
-        sched:
-                name: sched
-                variants: !mux
-                        sched_messaging:
-                                option: messaging
-                        sched_pipe:
-                                option: pipe
-        mem:
-                name: mem
-                variants: !mux
-                        mem_memcpy:
-                                option: memcpy
-                        mem_memset:
-                                option: memset
-        numa:
-                name: numa
-                variants: !mux
-                        numa_mem:
-                                option: mem
-                        numa_all:
-                                option: all
-        futex:
-                name: futex
-                variants: !mux
-                        futex_hash:
-                                option: hash
-                        futex_wake:
-                                option: wake
-                        futex_wake_parallel:
-                                option: wake-parallel
-                        futex_requeue:
-                                option: requeue
-                        futex_lock_pi:
-                                option: lock-pi
-        all:
-                name: all
+subsystem: !mux
+    sched:
+        name: sched
+        variants: !mux
+            sched_messaging:
+                option: messaging
+            sched_pipe:
+                option: pipe
+    mem:
+        name: mem
+        variants: !mux
+            mem_memcpy:
+                option: memcpy
+            mem_memset:
+                option: memset
+    numa:
+        name: numa
+        variants: !mux
+            numa_mem:
+                option: mem
+            numa_all:
+                option: all
+    futex:
+        name: futex
+        variants: !mux
+            futex_hash:
+                option: hash
+            futex_wake:
+                option: wake
+            futex_wake_parallel:
+                option: wake-parallel
+            futex_requeue:
+                option: requeue
+            futex_lock_pi:
+                option: lock-pi
+    all:
+        name: all

@@ -9,8 +9,7 @@
 #     -VN:         Number of VMAs to process
 #     -v:          Verbose
 
-setup:
- rmaptestrun : !mux
+rmaptestrun : !mux
   nu_itr : '100'
   nu_vma : '100'
   size_vma : '100'

@@ -21,10 +21,6 @@
 # A typical run of the program would look like this:
 # ./runtests -N 1 -b -t /mnt 
 
-setup:
-    arg:
-      arg: ''
-    cthon_iterations:
-      cthon_iterations: 1
-    testdir:
-       testdir: None 
+arg: "null"
+cthon_iterations: 1
+testdir: "null"

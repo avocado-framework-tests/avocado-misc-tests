@@ -1,3 +1,2 @@
-setup:
- filebenchrun:
-   testfile : 'mywebserver.f'
+filebenchrun:
+  testfile : 'mywebserver.f'

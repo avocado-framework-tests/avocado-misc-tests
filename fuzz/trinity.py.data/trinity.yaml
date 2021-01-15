@@ -26,11 +26,8 @@
 # -N#: do # syscalls then exit.
 # -s#: use # as random seed.
 
-setup:
- trinityrun : !mux
-  exclude:
-   runargs :  -x madvise
-  logging_off:
-   runargs :  -qq -l off -C16
- 
-  
+trinityrun : !mux
+ exclude:
+  runargs :  -x madvise
+ logging_off:
+  runargs :  -qq -l off -C16

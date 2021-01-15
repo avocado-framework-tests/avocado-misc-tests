@@ -1,5 +1,2 @@
-setup:
- runargs : !mux
-  default :
-    nprocs: 10
-    args: ''
+nprocs: 10
+args: "null"

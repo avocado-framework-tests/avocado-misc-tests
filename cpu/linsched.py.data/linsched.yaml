@@ -9,15 +9,14 @@
 #./pi-rw-sched - A simple program that combines the previous two programs
 #./driver - A program that forks processes to run multiple of the above programs
 #           at the same time with different scheduling processses
-setup:
- runargs: !mux
-  testscript:
+runargs: !mux
+ testscript:
    args: 'testscript'
-  pitest:
-    args: 'pi 100'
-  pi-sched:
-    args: 'pi-sched SCHED_FIFO'
-  rw-sched:
-    args: 'rw-sched 512'
-  driver:
-    args: 'driver pi-sched  2000 SCHED_OTHER'
+ pitest:
+   args: 'pi 100'
+ pi-sched:
+   args: 'pi-sched SCHED_FIFO'
+ rw-sched:
+   args: 'rw-sched 512'
+ driver:
+   args: 'driver pi-sched  2000 SCHED_OTHER'

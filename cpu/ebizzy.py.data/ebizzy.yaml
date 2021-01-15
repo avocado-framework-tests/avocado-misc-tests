@@ -1,17 +1,16 @@
-setup:
-    ebizy_url: 'http://sourceforge.net/projects/ebizzy/files/ebizzy/0.3/ebizzy-0.3.tar.gz'
-    duration: !mux
-        default:
-            seconds: 100
-        quick:
-            seconds: 60
-    workers: !mux
-        default:
-            num_chunks: 1000
-    threads:
-        default:
-            num_threads: 100
-    size: !mux
-        default:
-            chunk_size: 512000
+ebizy_url: 'http://sourceforge.net/projects/ebizzy/files/ebizzy/0.3/ebizzy-0.3.tar.gz'
+duration: !mux
+    default:
+        seconds: 100
+    quick:
+        seconds: 60
+workers: !mux
+    default:
+        num_chunks: 1000
+threads:
+    default:
+        num_threads: 100
+size: !mux
+    default:
+        chunk_size: 512000
 

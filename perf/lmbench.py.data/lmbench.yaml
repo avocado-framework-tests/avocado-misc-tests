@@ -1,7 +1,6 @@
-setup:
-   runarg: !mux
+runarg: !mux
     MB: 125
     fsdir:
-     fsdir: None
+        fsdir: "null"
     temp_file:
-     temp_file: None
+        temp_file: "null"
