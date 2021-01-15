@@ -94,7 +94,11 @@ class HtxNicTest(Test):
         Build 'HTX'
         """
         packages = ['git', 'gcc', 'make']
+        peer_packages = packages.copy()
+        peer_pkg_manager = None
         detected_distro = distro.detect()
+
+        #Host package detection
         if detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
             packages.extend(['gcc-c++', 'ncurses-devel', 'tar'])
         elif detected_distro.name == "Ubuntu":
@@ -105,16 +109,31 @@ class HtxNicTest(Test):
         else:
             self.cancel("Test not supported in  %s" % detected_distro.name)
 
-        smm = SoftwareManager()
-        for pkg in packages:
-            if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.cancel("Can not install %s" % pkg)
+        #Peer package detection
+        if self.peer_distro == 'rhel':
+            peer_packages.extend(['gcc-c++', 'ncurses-devel', 'tar'])
+            peer_pkg_manager = 'yum'
+        elif self.peer_distro == "Ubuntu":
+            peer_packages.extend(['libncurses5', 'g++', 'ncurses-dev',
+                             'libncurses-dev', 'tar'])
+            peer_pkg_manager = 'apt-get'
+        elif self.peer_distro == 'SuSE':
+            peer_packages.extend(['libncurses5', 'gcc-c++', 'ncurses-devel', 'tar'])
+            peer_pkg_manager = 'zypper'
+
+        for pkg in peer_packages:
             try:
-                cmd = "%s install %s" % (smm.backend.base_command, pkg)
+                cmd = "%s install %s" % (peer_pkg_manager, pkg)
                 self.run_command(cmd)
             except CommandFailed:
                 self.cancel("unable to install the package %s on peer machine"
                             % pkg)
+
+        smm = SoftwareManager()
+        for pkg in packages:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
+                self.cancel("Can not install %s" % pkg)
+
         if self.htx_url:
             htx = self.htx_url.split("/")[-1]
             htx_rpm = self.fetch_asset(self.htx_url)
