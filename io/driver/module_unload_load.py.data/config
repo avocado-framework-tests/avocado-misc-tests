@@ -4,3 +4,4 @@ xhci_hcd=xhci_pci
 qla2xxx=multipath
 lpfc=multipath
 ibmvfc=multipath
+nvme_fc=lpfc multipath
