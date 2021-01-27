@@ -385,7 +385,10 @@ class NetworkVirtualization(Test):
             self.fail("Failed connecting to VIOS")
 
         cmd = "ioscli lsmap -all -vnic -cpid %s" % self.lpar_id
-        vnic_server = self.session.cmd(cmd).stdout_text.splitlines()[2].split()[0]
+        vnic_servers = self.session.cmd(cmd).stdout_text.splitlines()
+        device = self.find_device(self.mac_id[0])
+        temp_idx = vnic_servers.index("Client device name:" + device)
+        vnic_server = vnic_servers[temp_idx - 5].split()[0]
 
         cmd = "ioscli lsmap -vnic -vadapter %s" % vnic_server
         output = self.session.cmd(cmd)
@@ -406,14 +409,13 @@ class NetworkVirtualization(Test):
         self.log.debug("Active backing device after: %s", after)
 
         if before == after:
-            self.fail("failover not occour")
+            self.fail("failover not occur")
         time.sleep(60)
 
         if vnic_backing_device:
             self.validate_vios_command('mkdev -l %s' % vnic_backing_device, 'Available')
         self.validate_vios_command('mkdev -l %s' % vnic_server, 'Available')
 
-        device = self.find_device(self.mac_id[0])
         networkinterface = NetworkInterface(device, self.local)
         if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
             self.fail("Ping test failed. Network virtualized \
