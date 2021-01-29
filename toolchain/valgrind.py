@@ -46,10 +46,10 @@ class Valgrind(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        run_type = self.params.get('type', default='upstream')
+        run_type = self.params.get('type', default='distro')
         if run_type == "upstream":
             url = self.params.get('url', default="ftp://sourceware.org/pub/"
-                                  "valgrind/valgrind-3.15.0.tar.bz2")
+                                  "valgrind/valgrind-3.16.1.tar.bz2")
             tarball = self.fetch_asset(url)
             archive.extract(tarball, self.workdir)
             version = os.path.basename(tarball.split('.tar.')[0])

@@ -58,11 +58,11 @@ class Binutils(Test):
             needed_deps.extend(['build-essential'])
         for pkg in needed_deps:
             self.check_install(pkg)
-        run_type = self.params.get("type", default="upstream")
+        run_type = self.params.get("type", default="distro")
         # Extract - binutils
-        # Source: https://ftp.gnu.org/gnu/binutils/binutils-2.26.tar.bz2
+        # Source: https://ftp.gnu.org/gnu/binutils/binutils-2.36.tar.bz2
         if run_type == "upstream":
-            version = self.params.get('binutils_version', default='2.27')
+            version = self.params.get('binutils_version', default='2.36')
             locations = [
                 "https://www.mirrorservice.org/sites/sourceware.org"
                 "/pub/binutils/releases/binutils-%s.tar.bz2" % version]

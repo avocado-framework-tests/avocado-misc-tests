@@ -46,9 +46,9 @@ class GDB(Test):
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel("Fail to install %s required for this test." %
                             package)
-        test_type = self.params.get('type', default='upstream')
+        test_type = self.params.get('type', default='distro')
         if test_type == 'upstream':
-            gdb_version = self.params.get('gdb_version', default='7.10')
+            gdb_version = self.params.get('gdb_version', default='10.1')
             tarball = self.fetch_asset(
                 "http://ftp.gnu.org/gnu/gdb/gdb-%s.tar.gz" % gdb_version)
             archive.extract(tarball, self.workdir)
