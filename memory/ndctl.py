@@ -54,26 +54,22 @@ class NdctlTest(Test):
         regions = sorted(regions, key=lambda i: i['size'], reverse=True)
         return self.plib.run_ndctl_list_val(regions[0], 'dev')
 
-    def get_unsupported_alignval(self):
+    @staticmethod
+    def get_unsupported_alignval(def_align):
         """
-        Return unsupported size align based on platform
+        Return alternate size align for negative case
         """
-        align = self.get_size_alignval()
-        if align == self.align_val['hash']:
-            return self.align_val['radix']
-        else:
-            return self.align_val['hash']
+        if def_align == 16777216:
+            return 2097152
+        return 16777216
 
     def get_size_alignval(self):
         """
         Return the size align restriction based on platform
         """
-        self.align_val = {'hash': 16777216, 'radix': 2097152}
-        if 'Hash' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
-            def_align = self.align_val['hash']
-        else:
-            def_align = self.align_val['radix']
-        return def_align
+        if not os.path.exists("/sys/bus/nd/devices/region0/align"):
+            self.cancel("Test cannot execute without the size alignment value")
+        return int(genio.read_one_line("/sys/bus/nd/devices/region0/align"), 16)
 
     def build_fio(self):
         """
@@ -196,19 +192,22 @@ class NdctlTest(Test):
             self.fail('Failed to fetch DIMMs')
         for dimm in dimms:
             health = self.plib.run_ndctl_list_val(dimm, 'health')
+            nmem = self.plib.run_ndctl_list_val(dimm, 'dev')
+            region = "region%s" % re.findall(r'\d+', nmem)[0]
+            dev_type = genio.read_one_line("/sys/bus/nd/devices/%s/devtype" % region)
             if not health:
                 self.cancel("kernel/ndctl does not support health reporting")
-            if 'life_used_percentage' in health:
-                if health['life_used_percentage'] != 0:
-                    self.fail("DIMM has not been used, reporting says otherwise")
+            if dev_type == "nd_pmem":
+                if 'life_used_percentage' not in health:
+                    self.fail("life_used_percentage missing for HMS")
+                self.log.info("%s life is %s", nmem, health['life_used_percentage'])
             if 'health_state' in health:
                 if health['health_state'] != "ok":
-                    self.fail("DIMM health is bad")
+                    self.log.warn("%s health is bad", nmem)
             if 'shutdown_state' in health:
                 if health['shutdown_state'] != "clean":
-                    self.fail("DIMM shutdown state is dirty")
-            dim = self.plib.run_ndctl_list_val(dimm, 'dev')
-            self.log.info("Dimm %s Health info: %s", dim, health)
+                    self.log.warn("%s shutdown state is dirty", nmem)
+            self.log.info("DIMM %s Health info: %s", nmem, health)
 
     @avocado.fail_on(pmem.PMemException)
     def test_regions(self):
@@ -681,7 +680,8 @@ class NdctlTest(Test):
         ns_name = self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
         self.plib.disable_namespace(namespace=ns_name)
-        self.write_read_infoblock(ns_name, align=self.get_size_alignval())
+        map_align = memory.get_supported_huge_pages_size()[0] * 1024
+        self.write_read_infoblock(ns_name, align=map_align)
         self.plib.enable_namespace(namespace=ns_name)
 
     @avocado.fail_on(pmem.PMemException)
@@ -698,7 +698,9 @@ class NdctlTest(Test):
         ns_name = self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
         self.plib.disable_namespace(namespace=ns_name)
-        self.write_read_infoblock(ns_name, align=self.get_unsupported_alignval())
+        map_align = memory.get_supported_huge_pages_size()[0] * 1024
+        self.write_read_infoblock(
+            ns_name, align=self.get_unsupported_alignval(map_align))
         try:
             self.plib.enable_namespace(namespace=ns_name)
         except pmem.PMemException:
@@ -759,7 +761,7 @@ class NdctlTest(Test):
         self.plib.disable_namespace(namespace=ns_name)
         align = self.get_size_alignval()
         size = size - align
-        self.write_read_infoblock(ns_name, size=size, align=align)
+        self.write_read_infoblock(ns_name, size=size)
         self.plib.enable_namespace(namespace=ns_name)
 
     @avocado.fail_on(pmem.PMemException)
