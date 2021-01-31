@@ -1,0 +1,28 @@
+pc_url: 'https://github.com/gautshen/misc.git'
+perf:
+    default:
+        perfstat: '-a'
+producer: !mux
+    default:
+        pcpu: '0'
+consumer: !mux
+    default:
+        ccpu: '1'
+random:
+    default:
+        random_seed: 6407741
+load: !mux
+    default:
+        iteration_length: 1024
+duration:
+    default:
+        runtime: 15
+statistics:
+    default:
+        verbose: False
+precompute:
+    default:
+        precompute_random: False
+consumer-stats:
+    default:
+        intermediate_stats: False
