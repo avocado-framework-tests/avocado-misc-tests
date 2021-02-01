@@ -1,0 +1,13 @@
+ipi_url: 'https://github.com/gautshen/misc.git'
+perf:
+    default:
+        perfstat: '-a'
+producer: !mux
+    default:
+        cpua: 0
+duration:
+    default:
+        runtime: 10
+limitcpu:
+    default:
+        lastcpu: 39
