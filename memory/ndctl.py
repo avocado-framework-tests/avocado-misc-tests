@@ -22,6 +22,7 @@ This Suite works with various options of ndctl on a NVDIMM device.
 import os
 import re
 import shutil
+import math
 
 import avocado
 from avocado import Test
@@ -63,13 +64,22 @@ class NdctlTest(Test):
             return 2097152
         return 16777216
 
+    @staticmethod
+    def lcm(one, two):
+        return abs(one * two) // math.gcd(one, two)
+
     def get_size_alignval(self):
         """
         Return the size align restriction based on platform
         """
         if not os.path.exists("/sys/bus/nd/devices/region0/align"):
-            self.cancel("Test cannot execute without the size alignment value")
-        return int(genio.read_one_line("/sys/bus/nd/devices/region0/align"), 16)
+            size_align = 1
+        else:
+            size_align = int(genio.read_one_line("/sys/bus/nd/devices/region0/align"), 16)
+        if not os.path.exists("/sys/bus/nd/devices/pfn0.0/align"):
+            self.cancel("Cannot determine the mapping alignment size")
+        map_align = int(genio.read_one_line("/sys/bus/nd/devices/pfn0.0/align"))
+        return self.lcm(size_align, map_align)
 
     def build_fio(self):
         """
