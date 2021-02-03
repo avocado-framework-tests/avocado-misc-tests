@@ -16,9 +16,9 @@ option: !mux
     generic:
         option: ''
     tcp_stream:
-        option: 'TCP_STREAM -- -m 63000'
+        option: 'TCP_STREAM --'
     udp_stream:
-        option: 'UDP_STREAM -- -m 63000'
+        option: 'UDP_STREAM --'
     tcp_rr:
         option: 'TCP_RR'
     udp_rr:

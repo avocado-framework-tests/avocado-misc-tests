@@ -148,7 +148,18 @@ class Netperf(Test):
         cmd = "timeout %s %s -H %s" % (self.timeout, self.perf,
                                        self.peer_ip)
         if self.option != "":
-            cmd = "%s -t %s" % (cmd, self.option)
+            if "TCP_STREAM" in self.option:
+                socket_size = process.run("cat /proc/sys/net/ipv4/tcp_rmem",
+                                          shell=True, ignore_status=True)
+                cmd = "%s %s -m %s" % (cmd, self.option,
+                                       socket_size.stdout.decode("utf-8").split('\t')[1])
+            elif "UDP_STREAM" in self.option:
+                socket_size = process.run("cat /proc/sys/net/ipv4/udp_mem",
+                                          shell=True, ignore_status=True)
+                cmd = "%s %s -m %s" % (cmd, self.option,
+                                       socket_size.stdout.decode("utf-8").split('\t')[1])
+            else:
+                cmd = "%s -t %s" % (cmd, self.option)
         cmd = "%s -l %s -i %s,%s" % (cmd, self.duration, self.max,
                                      self.min)
         result = process.run(cmd, shell=True, ignore_status=True)
