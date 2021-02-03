@@ -690,8 +690,8 @@ class NetworkVirtualization(Test):
         """
         priority = None
         cmd = 'lshwres -r virtualio -m %s --rsubtype vnic --level lpar \
-               --filter lpar_names=%s -F slot_num,backing_devices' \
-               % (self.server, self.lpar)
+               --filter slots=%s,lpar_names=%s -F slot_num,backing_devices' \
+               % (self.server, self.slot_num[0], self.lpar)
         output = self.session_hmc.cmd(cmd)
         if output.exit_status != 0:
             self.log.debug(output.stderr)
