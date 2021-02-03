@@ -476,6 +476,7 @@ class HtxNicTest(Test):
     def run_htx(self):
         self.start_htx_deamon()
         self.shutdown_active_mdt()
+        self.generate_mdt_files()
         self.select_net_mdt()
         self.query_net_devices_in_mdt()
         self.suspend_all_net_devices()
@@ -489,6 +490,14 @@ class HtxNicTest(Test):
         process.run(cmd, shell=True, sudo=True)
 
         self.log.info("Starting the HTX Deamon in Peer")
+        self.run_command(cmd)
+
+    def generate_mdt_files(self):
+        self.log.info("Generating mdt files in Host")
+        cmd = "htxcmdline -createmdt"
+        process.run(cmd, shell=True, sudo=True)
+
+        self.log.info("Generating mdt files in Peer")
         self.run_command(cmd)
 
     def select_net_mdt(self):
