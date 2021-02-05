@@ -1,5 +1,4 @@
-setup:
- memory: '1682560'
- iteration: '100'
- logdir: '/var/tmp/logdir'
- rundir: '/tmp'
+memory: '1682560'
+iteration: '100'
+logdir: '/var/tmp/logdir'
+rundir: '/tmp'

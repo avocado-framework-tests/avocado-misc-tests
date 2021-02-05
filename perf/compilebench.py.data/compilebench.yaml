@@ -20,14 +20,13 @@
 #   -n, --no-sync         don't sync and drop caches between each iteration
 
 # Valid options in avocado test are bellow:
-setup:
-    trees: !mux
-        default:
-            INITIAL_DIRS: null
-        quick:
-            INITIAL_DIRS: 5
-    runs: !mux
-        default:
-            RUNS: null
-        minimal:
-            RUNS: 1
+trees: !mux
+    default:
+        INITIAL_DIRS: "null"
+    quick:
+        INITIAL_DIRS: 5
+runs: !mux
+    default:
+        RUNS: null
+    minimal:
+        RUNS: 1

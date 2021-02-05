@@ -1,5 +1,4 @@
-setup:
-  run_type: !mux
+run_type: !mux
     upstream:
         type: "upstream"
     distro:

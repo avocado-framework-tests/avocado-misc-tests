@@ -1,12 +1,11 @@
-setup:
-    run_type: 'rpm'
-    rpm_link:
-    time_limit: 60 # in minutes
-    mdt: !mux
-        bu:
-            mdt_file: 'mdt.bu'
-        nvdimm_wrc:
-            mdt_file: 'mdt.nvdimm_wrc'
-        pmem_all:
-            time_limit: 120
-            mdt_file: 'mdt.pmem_all'
+run_type: 'rpm'
+rpm_link: "null"
+time_limit: 60 # in minutes
+mdt: !mux
+    bu:
+        mdt_file: 'mdt.bu'
+    nvdimm_wrc:
+        mdt_file: 'mdt.nvdimm_wrc'
+    pmem_all:
+        time_limit: 120
+        mdt_file: 'mdt.pmem_all'

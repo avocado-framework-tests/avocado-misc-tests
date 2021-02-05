@@ -1,3 +1,2 @@
-config:
-    url:
-    branch:
+url: "null"
+branch: "null"

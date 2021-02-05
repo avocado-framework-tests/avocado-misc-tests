@@ -1,5 +1,4 @@
-setup:
- filesystem: !mux
+filesystem: !mux
     cramfs:
         fstype: cramfs
     ext2:

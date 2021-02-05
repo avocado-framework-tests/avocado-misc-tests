@@ -1,14 +1,13 @@
-setup:
-    # make sure enough memory is available
-    # if hugepage, make sure two nodes have enough memory
-    nr_pages: 20
-    flag: !mux
-        s_type:
-            map_type: 'shared'
-        p_type:
-            map_type: 'private'
-    hugepage: !mux
-        wo_huge:
-            h_page: False
-        with_huge:
-            h_page: True
+# make sure enough memory is available
+# if hugepage, make sure two nodes have enough memory
+nr_pages: 20
+flag: !mux
+    s_type:
+        map_type: 'shared'
+    p_type:
+        map_type: 'private'
+hugepage: !mux
+    wo_huge:
+        h_page: False
+    with_huge:
+        h_page: True

@@ -1,24 +1,22 @@
-setup:
-    general: !mux
-        runltp: !mux
-            script: 'runltp'
-            net.features:
-                args: '-f net.features'
-            net.ipv6:
-                args: '-f net.ipv6'
-            net.ipv6_lib:
-                args: '-f net.ipv6_lib'
-            net.nfs:
-                args: '-f net.nfs'
-            net.tcp_cmds:
-                args: '-f net.tcp_cmds'
-            net.sctp:
-                args: '-f net.sctp'
-            net.multicast:
-                args: '-f net.multicast'
-            net.rpc:
-                args: '-f net.rpc'
-            net.rpc_tests:
-                args: '-f net.rpc_tests'
-            net.tirpc_tests:
-                args: '-f net.tirpc_tests'
+runltp: !mux
+    script: 'runltp'
+    net.features:
+        args: '-f net.features'
+    net.ipv6:
+        args: '-f net.ipv6'
+    net.ipv6_lib:
+        args: '-f net.ipv6_lib'
+    net.nfs:
+        args: '-f net.nfs'
+    net.tcp_cmds:
+        args: '-f net.tcp_cmds'
+    net.sctp:
+        args: '-f net.sctp'
+    net.multicast:
+        args: '-f net.multicast'
+    net.rpc:
+        args: '-f net.rpc'
+    net.rpc_tests:
+        args: '-f net.rpc_tests'
+    net.tirpc_tests:
+        args: '-f net.tirpc_tests'

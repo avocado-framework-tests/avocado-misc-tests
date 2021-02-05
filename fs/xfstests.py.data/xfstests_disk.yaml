@@ -9,9 +9,9 @@ fs_type: !mux
     fs_xfs:
         fs: 'xfs'
         # Exclude only if test_range not provided
-        #exclude: '2,4-7,203'
-        #gen_exclude: '1-10,30-45'
-        #share_exclude: '1-2'
+        exclude: "null"
+        gen_exclude: "null"
+        share_exclude: "null"
 disk_type: !mux
     type: 'disk'
     disk_test: /dev/loop0

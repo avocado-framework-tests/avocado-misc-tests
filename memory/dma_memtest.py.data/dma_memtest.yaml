@@ -1,10 +1,5 @@
-setup:
-    tarball_base:
-        default:
-            tarball_base: 'linux-2.6.18.tar.bz2'
-            kernel_repo: 'http://www.kernel.org/pub/linux/kernel/v2.6'
-            tarball_md5: '296a6d150d260144639c3664d127d174'
-    parallel:
-        default:
-            parallel: True
+tarball_base: 'linux-2.6.18.tar.bz2'
+kernel_repo: 'http://www.kernel.org/pub/linux/kernel/v2.6'
+tarball_md5: '296a6d150d260144639c3664d127d174'
+parallel: True
 dir_to_extract: '/tmp/'

@@ -1,4 +1,2 @@
-setup:
- args : !mux
-  mem_size: 100 #MB
-  iterations: 10
+mem_size: 100 #MB
+iterations: 10

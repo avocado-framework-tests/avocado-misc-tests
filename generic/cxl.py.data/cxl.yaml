@@ -14,9 +14,8 @@
 # SAMPLE RUN
 # A typical run of the program would look like this:
 # ./memcpy_afu_ctx -e 10 -p 508 -l 10
-setup:
-  script: 'memcpy_afu_ctx'
-  general: !mux
+script: 'memcpy_afu_ctx'
+general: !mux
     memcpy_afu_ctx_1:
         args: "-e 10 -p 508 -l 1"
     memcpy_afu_ctx_2:
@@ -30,5 +29,5 @@ setup:
     memcpy_afu_ctx_6:
         args: "-e 5 -p 508 -l 10"
     cxl_eeh_tests.sh:
-      script: 'cxl_eeh_tests.sh'
-      args: ''
+        script: 'cxl_eeh_tests.sh'
+        args: "null"

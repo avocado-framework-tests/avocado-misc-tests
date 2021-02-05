@@ -2,8 +2,7 @@
 #
 #Build and run the tests for POSIX area specified by
 #the 3 letter tag in the POSIX spec
-setup:
- run : !mux
+run : !mux
   aio:
    test_type: "AIO"
   mem:

@@ -1,8 +1,7 @@
-setup:
-    default: !mux
-        scenario1:
-            scenario_arg: '1'
-        scenario2:
-            scenario_arg: '2'
-        scenario3:
-            scenario_arg: '3'
+default: !mux
+    scenario1:
+        scenario_arg: '1'
+    scenario2:
+        scenario_arg: '2'
+    scenario3:
+        scenario_arg: '3'

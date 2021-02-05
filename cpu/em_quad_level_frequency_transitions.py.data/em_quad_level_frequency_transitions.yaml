@@ -1,2 +1,1 @@
-setup:
-   threshold: ''
+threshold: "null"

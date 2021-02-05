@@ -1,8 +1,7 @@
-setup:
-    functional_test: True
-    mount_dir: !mux
-        default:
-            hugetlbfs_dir: null
-    hugepages_requested: !mux
-        default:
-            pages_requested: 20
+functional_test: True
+mount_dir: !mux
+    default:
+        hugetlbfs_dir: "null"
+hugepages_requested: !mux
+    default:
+        pages_requested: 20
