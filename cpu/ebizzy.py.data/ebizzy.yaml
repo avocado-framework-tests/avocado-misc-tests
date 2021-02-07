@@ -1,4 +1,10 @@
 ebizy_url: 'http://sourceforge.net/projects/ebizzy/files/ebizzy/0.3/ebizzy-0.3.tar.gz'
+perf:
+    default:
+        perfstat: -a
+pin: !mux
+    default:
+        taskset: '0'
 duration: !mux
     default:
         seconds: 100
