@@ -68,6 +68,12 @@ class Ebizzy(Test):
     # Note: default we use always mmap()
     def test(self):
 
+        perfstat = self.params.get('perfstat', default='')
+        if perfstat:
+            perfstat = 'perf stat ' + perfstat
+        taskset = self.params.get('taskset', default='')
+        if taskset:
+            taskset = 'taskset -c ' + taskset
         args = self.params.get('args', default='')
         num_chunks = self.params.get('num_chunks', default=1000)
         chunk_size = self.params.get('chunk_size', default=512000)
@@ -77,8 +83,8 @@ class Ebizzy(Test):
                                                       seconds, num_threads)
         args = args + ' ' + args2
 
-        results = process.system_output('%s/ebizzy %s'
-                                        % (self.sourcedir, args)).decode("utf-8")
+        results = process.system_output('%s %s %s/ebizzy %s'
+                                        % (perfstat, taskset, self.sourcedir, args)).decode("utf-8")
         pattern = re.compile(r"(.*?) records/s")
         records = pattern.findall(results)[0]
         pattern = re.compile(r"real (.*?) s")
