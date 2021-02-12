@@ -1,0 +1,25 @@
+schbench_url: 'https://git.kernel.org/pub/scm/linux/kernel/git/mason/schbench.git'
+perf:
+    default:
+        perfstat: '-a'
+pin: !mux
+    default:
+        taskset: '0'
+threads: !mux
+    default:
+        num_threads: 10
+workers: !mux
+    default:
+        num_workers: 10
+bytes: !mux
+    default:
+        bytes: 1000
+duration: !mux
+    default:
+        runtime: 100
+cpu_duration: !mux
+    default:
+        cputime: 10000
+mode:
+    default:
+        autobench: False
