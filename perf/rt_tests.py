@@ -52,7 +52,7 @@ class rt_tests(Test):
                 self.cancel('%s is needed for the test to be run' % package)
         tarball = self.fetch_asset(
             "https://www.kernel.org/pub/linux/utils/rt-tests/"
-            "rt-tests-1.0.tar.gz")
+            "rt-tests-1.10.tar.gz")
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(
             self.workdir, os.path.basename(tarball.split('.tar.')[0]))
