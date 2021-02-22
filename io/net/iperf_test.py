@@ -167,13 +167,18 @@ class Iperf(Test):
         if result.exit_status:
             self.fail("FAIL: Iperf Run failed")
         for line in result.stdout.decode("utf-8").splitlines():
-            if 'sender' in line:
-                tput = int(line.split()[6].split('.')[0])
-                if tput < (int(self.expected_tp) * speed) / 100:
-                    self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%"
-                              ", Throughput Actual value - %s "
-                              % ((tput*100)/speed, self.expected_tp,
-                                 str(tput)+'Mb/sec'))
+            if 'local {}'.format(self.ipaddr) in line:
+                id = line[3]
+        for line in result.stdout.decode("utf-8").splitlines():
+            if id in line and 'Mbits/sec' in line:
+                tput = int(line.split()[6])
+            elif id in line and 'Gbits/sec' in line:
+                tput = int(float(line.split()[6])) * 1000
+        if tput < (int(self.expected_tp) * speed) / 100:
+            self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%"
+                      ", Throughput Actual value - %s "
+                      % ((tput*100)/speed, self.expected_tp,
+                         str(tput)+'Mb/sec'))
         for line in nping_result.stdout.decode("utf-8").splitlines():
             if 'Raw packets' in line:
                 lost = int(line.split("|")[2].split(" ")[2])*10
