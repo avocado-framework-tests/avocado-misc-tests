@@ -68,6 +68,28 @@ class NdctlTest(Test):
     def lcm(one, two):
         return abs(one * two) // math.gcd(one, two)
 
+    def check_namespace_align(self, region):
+        """
+        Utility to check if the namespaces of given region adapts following
+        1. Aligning of sys fs map_align attribute and ndctl list align value
+        2. The size after creation is a multiple of the map_align
+
+        Note: Function to be used after creation of namespace(s)
+        """
+        idx = re.findall(r'\d+', region)[0]
+        map_align = int(genio.read_one_line("/sys/bus/nd/devices/pfn%s.0/align" % idx))
+        namespaces = self.plib.run_ndctl_list('-N -r %s' % region)
+        for ns in namespaces:
+            ns_name = self.plib.run_ndctl_list_val(ns, 'dev')
+            namespace = self.plib.run_ndctl_list('-n %s' % ns_name)[0]
+            ndctl_align = self.plib.run_ndctl_list_val(namespace, 'align')
+            if map_align != ndctl_align:
+                self.fail("Mismatch in mapping alignment and ndctl list align")
+            ndctl_size = self.plib.run_ndctl_list_val(namespace, 'size')
+            print(ndctl_size, map_align)
+            if ndctl_size % map_align:
+                self.fail("Created Size is not a multiple of map alignment")
+
     def get_size_alignval(self):
         """
         Return the size align restriction based on platform
@@ -244,6 +266,7 @@ class NdctlTest(Test):
             self.plib.disable_namespace(region=region)
             self.plib.destroy_namespace(region=region)
             self.plib.create_namespace(region=region)
+            self.check_namespace_align(region)
 
         namespaces = self.plib.run_ndctl_list('-N')
         self.log.info('Created namespace %s', namespaces)
@@ -382,6 +405,7 @@ class NdctlTest(Test):
         if (self.plib.is_region_legacy(region)):
             self.cancel("Legacy config skipping the test")
         self.multiple_namespaces_region(region)
+        self.check_namespace_align(region)
 
     @avocado.fail_on(pmem.PMemException)
     def test_multiple_ns_multiple_region(self):
@@ -399,6 +423,7 @@ class NdctlTest(Test):
             if (self.plib.is_region_legacy(region)):
                 self.cancel("Legacy config skipping the test")
             self.multiple_namespaces_region(region)
+            self.check_namespace_align(region)
 
     @avocado.fail_on(pmem.PMemException)
     def test_multiple_ns_modes_region(self):
@@ -444,6 +469,7 @@ class NdctlTest(Test):
             self.plib.create_namespace(region=region, mode='fsdax',
                                        size=namespace_size)
             self.log.info("Namespace %s created", count)
+        self.check_namespace_align(region)
 
     @avocado.fail_on(pmem.PMemException)
     def test_namespace_reconfigure(self):
