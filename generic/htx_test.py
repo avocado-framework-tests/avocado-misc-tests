@@ -76,7 +76,7 @@ class HtxTest(Test):
             packages.extend(['libncurses5', 'g++',
                              'ncurses-dev', 'libncurses-dev'])
         elif detected_distro.name == 'SuSE':
-            packages.extend(['libncurses5', 'gcc-c++', 'ncurses-devel', 'tar'])
+            packages.extend(['libncurses6', 'gcc-c++', 'ncurses-devel', 'tar'])
         else:
             self.cancel("Test not supported in  %s" % detected_distro.name)
 
