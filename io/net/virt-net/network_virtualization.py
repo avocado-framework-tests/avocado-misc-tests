@@ -915,7 +915,8 @@ class NetworkVirtualization(Test):
         self.session_hmc.quit()
         if 'vios' in str(self.name.name):
             self.session.quit()
-        cmd = "echo 'module ibmvnic -pt; func send_subcrq -pt' > /sys/kernel/debug/dynamic_debug/control"
-        result = process.run(cmd, shell=True, ignore_status=True)
-        if result.exit_status:
-            self.log.debug("failed to disable debug mode")
+        if 'test_remove' in str(self.name.name):
+            cmd = "echo 'module ibmvnic -pt; func send_subcrq -pt' > /sys/kernel/debug/dynamic_debug/control"
+            result = process.run(cmd, shell=True, ignore_status=True)
+            if result.exit_status:
+                self.log.debug("failed to disable debug mode")
