@@ -65,6 +65,16 @@ class CpupowerMonitor(Test):
         return 0
 
     def test_workload(self):
+
+        """
+        This test covers:
+        1. Collect cpupower monitor output.
+        2. Run ebizzy workload.
+        3. Check if cpus have not entered idle states while running ebizzy.
+        4. Wait till ebizzy stops.
+        5. Check if cpus enters idle states.
+        """
+
         tarball = self.fetch_asset('http://sourceforge.net/projects/ebizzy/'
                                    'files/ebizzy/0.3/ebizzy-0.3.tar.gz')
         archive.extract(tarball, self.workdir)
@@ -92,6 +102,15 @@ class CpupowerMonitor(Test):
         self.log.info("cpus have entered idle states after killing work load")
 
     def test_disable_idlestate(self):
+
+        """
+        1. Collect list of supported idle states.
+        2. Disable first idle state and check if cpus have not entered first idle state.
+        3. Enable all idle states.
+        4. Disable second idle state and check if cpus have not entered first idle state.
+        5. Repeat test for all states.
+        """
+
         for i in range(len(self.states_list)):
             process.run('cpupower -c all idle-set -d %s' % i, shell=True)
             time.sleep(5)
@@ -103,6 +122,14 @@ class CpupowerMonitor(Test):
 
     @skipIf("powerpc" not in cpu.get_arch(), "Skip, SMT specific tests")
     def test_idlestate_smt(self):
+
+        """
+        1. Set smt mode to off.
+        2. Run test_workload.
+        3. Run test_disable_idlestate.
+        4. Repeat test for smt=2. 4.
+        """
+
         for i in ['off', '2', '4', 'on']:
             process.run('ppc64_cpu --smt=%s' % i, shell=True)
             self.test_workload()
@@ -110,6 +137,14 @@ class CpupowerMonitor(Test):
         process.run('ppc64_cpu --smt=on', shell=True)
 
     def test_idlestate_single_core(self):
+
+        """
+        1. Set single core online.
+        2. Run test_workload.
+        3. Run test_disable_idlestate.
+        4. Repeat test with smt=off, single core
+        """
+
         process.run('ppc64_cpu --cores-on=1', shell=True)
         self.test_workload()
         self.test_disable_idlestate()
