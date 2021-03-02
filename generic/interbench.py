@@ -52,9 +52,7 @@ class Interbench(Test):
         if memory.meminfo.MemTotal.b > disk_free_b:
             self.cancel('Disk space is less than total memory. Skipping test')
 
-        tarball = self.fetch_asset('http://slackware.cs.utah.edu/pub/kernel'
-                                   '.org/pub/linux/kernel/people/ck/apps/'
-                                   'interbench/interbench-0.31.tar.gz')
+        tarball = self.fetch_asset('http://ck.kolivas.org/apps/interbench/interbench-0.31.tar.bz2')
         archive.extract(tarball, self.workdir)
         version = os.path.basename(tarball.split('.tar.')[0])
         self.sourcedir = os.path.join(self.workdir, version)
