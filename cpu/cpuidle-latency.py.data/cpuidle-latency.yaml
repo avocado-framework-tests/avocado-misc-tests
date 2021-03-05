@@ -1,0 +1,7 @@
+ipi_url: 'https://github.com/pratiksampat/cpuidle-latency-measurements.git'
+perf:
+    default:
+        perfstat: '-a'
+all_cpu:
+    default:
+        verbose: False
