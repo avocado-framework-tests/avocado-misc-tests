@@ -1,4 +1,4 @@
-interface:
+interfaces: 'eth1 eth2'
 peer_ip:
 host_ip:
 netmask:
