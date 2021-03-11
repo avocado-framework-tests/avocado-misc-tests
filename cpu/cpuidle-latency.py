@@ -15,11 +15,12 @@
 # Based on code by Pratik Sampat<psampat@linux.ibm.com>
 
 import os
+import platform
 import shutil
 
 from avocado import Test
 from avocado.utils import process
-from avocado.utils import build, git
+from avocado.utils import build, distro, git
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -39,7 +40,18 @@ class Cpuidle_latency(Test):
         https://github.com/pratiksampat/cpuidle-latency-measurements.git
         '''
         sm = SoftwareManager()
-        for package in ['gcc', 'make']:
+        distro_name = distro.detect().name
+        deps = ['gcc', 'make']
+        if 'Ubuntu' in distro_name:
+            deps.extend(['linux-tools-common', 'linux-tools-%s' %
+                         platform.uname()[2]])
+        elif distro_name in ['rhel', 'SuSE', 'fedora', 'centos']:
+            deps.extend(['perf'])
+        else:
+            self.cancel("Install the package for perf supported \
+                         by %s" % distro_name)
+
+        for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel("%s is needed for the test to be run" % package)
         url = 'https://github.com/pratiksampat/cpuidle-latency-measurements.git'
