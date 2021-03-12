@@ -236,6 +236,16 @@ class Bonding(Test):
             return False
         return True
 
+    def is_vnic(self):
+        '''
+        check if slave interface is vnic
+        '''
+        for interface in self.host_interfaces:
+            cmd = "lsdevinfo -q name=%s" % interface
+            if 'type="IBM,vnic"' in process.system_output(cmd, shell=True).decode("utf-8"):
+                return True
+        return False
+
     def bond_fail(self, arg1):
         '''
         bond fail
@@ -285,9 +295,10 @@ class Bonding(Test):
                 self.fail("Not able to bring up the slave\
                                 interface %s" % interface)
             time.sleep(self.sleep_time)
-
         bond_mtu = ['2000', '3000', '4000', '5000', '6000', '7000',
                     '8000', '9000']
+        if self.is_vnic():
+            bond_mtu = ['9000']
         for mtu in bond_mtu:
             self.bond_networkinterface = NetworkInterface(self.bond_name,
                                                           self.localhost)
