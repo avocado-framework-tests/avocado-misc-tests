@@ -192,7 +192,7 @@ class NetworkVirtualization(Test):
         '''
         cmd = 'lshwres -r virtualio -m %s --rsubtype vnic --filter \
            "lpar_names=%s" -F slot_num' % (self.server, self.lpar)
-        for slot in self.session_hmc.cmd(cmd).stdout_text:
+        for slot in self.session_hmc.cmd(cmd).stdout_text.splitlines():
             if 'No results were found' in slot:
                 return True
             if slot_num == slot:
