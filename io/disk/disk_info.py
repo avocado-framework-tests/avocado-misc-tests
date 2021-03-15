@@ -266,7 +266,7 @@ class DiskInfo(Test):
                                           sudo=True).decode('utf-8')
             lst = total.splitlines() + middle.splitlines()
             lst.sort()
-            index = lst.index(middle.splitlines()[0])
+            index = round((len(lst)-1)/2)
             low = lst[index-1]
             high = lst[index+1]
             cmd = "lshw -c disk |sed -n '%s, %sp'" % (low, high)
