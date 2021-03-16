@@ -25,7 +25,7 @@ class NStress(Test):
         if "ppc" not in distro.detect().arch:
             self.cancel("supported only on Power platform")
         dist = distro.detect()
-        if dist.name == 'Ubuntu':
+        if dist.name in ['Ubuntu', 'debian']:
             tar_ball = self.params.get(
                 'tar_ball_ubuntu',
                 default='nstress_Ubuntu1410_ppc64_Nov_2015.tar')

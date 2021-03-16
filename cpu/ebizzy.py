@@ -54,6 +54,8 @@ class Ebizzy(Test):
         if 'Ubuntu' in distro_name:
             deps.extend(['linux-tools-common', 'linux-tools-%s' %
                          platform.uname()[2]])
+        elif distro_name in ['debian']:
+            deps.extend(['linux-perf'])
         elif distro_name in ['rhel', 'SuSE', 'fedora', 'centos']:
             deps.extend(['perf'])
         else:

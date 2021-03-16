@@ -42,14 +42,16 @@ class service_check(Test):
             deps.extend(['libvirt-daemon'])
         if detected_distro.name == 'SuSE':
             deps.extend(['ppc64-diag', 'libvirt-daemon'])
-            if detected_distro.version >= 15:
+            if int(detected_distro.version) >= 15:
                 services_list.append('firewalld')
             else:
                 services_list.append('SuSEfirewall2')
         elif detected_distro.name == 'Ubuntu':
             deps.extend(['opal-prd'])
-            if detected_distro.version >= 17:
+            if int(detected_distro.version) >= 17:
                 services_list.remove('networking')
+        elif detected_distro.name == 'debian':
+            deps.extend(['opal-prd', 'ufw'])
 
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
