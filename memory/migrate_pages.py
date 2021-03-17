@@ -92,5 +92,8 @@ class MigratePages(Test):
         elif self.thp:
             cmd += ' -t'
 
-        if process.system(cmd, shell=True, sudo=True, ignore_status=True):
+        ret = process.system(cmd, shell=True, sudo=True, ignore_status=True)
+        if ret == 255:
+            self.cancel("Environment prevents test! Check logs for node data")
+        elif ret != 0:
             self.fail('Please check the logs for failure')
