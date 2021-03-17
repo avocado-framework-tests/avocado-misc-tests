@@ -301,8 +301,8 @@ class NetworkSriovDevice(Test):
         """
         list the sriov logical device
         """
-        cmd = 'lshwres -r sriov --rsubtype logport -m  ltcfleet2 \
-              --level eth --filter \"lpar_names=%s\" ' % self.lpar
+        cmd = 'lshwres -r sriov --rsubtype logport -m %s \
+              --level eth --filter \"lpar_names=%s\" ' % (self.server, self.lpar)
         output = self.session.cmd(cmd)
         if mac in output.stdout_text:
             return True
