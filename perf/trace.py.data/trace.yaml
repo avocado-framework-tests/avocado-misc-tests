@@ -1,6 +1,20 @@
-run_type: !mux
-    distro:
-        type: 'distro'
-    upstream:
-        type: 'upstream'
-        location: "https://github.com/torvalds/linux/archive/master.zip"
+config:
+    version: !mux
+        distro:
+            type: 'distro'
+        upstream:
+            type: 'upstream'
+            location: "https://github.com/torvalds/linux/archive/master.zip"
+    ftest_types: !mux
+        basic:
+            args: '00basic'
+        event:
+            args: 'event'
+        ftrace:
+            args: 'ftrace'
+        instances:
+            args: 'instances'
+        trigger:
+            args: 'trigger'
+        kprobe:
+            args: 'kprobe'
