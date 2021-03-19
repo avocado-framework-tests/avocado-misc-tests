@@ -74,7 +74,7 @@ void get_numa_nodes_to_use(unsigned long memory_to_use)
 		printf("Nodes used in test %d %d \n", nodes_to_use[0], nodes_to_use[1]);
 	else{
 		printf("10 percent of total memory is not found in 2 nodes\n");
-		exit(0);
+		exit(255);
 	}
 }
 

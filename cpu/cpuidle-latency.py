@@ -11,9 +11,12 @@
 #
 # See LICENSE for more details.
 # Author: Abhishek Goel<huntbag@linux.vnet.ibm.com>
+#
+# Based on code by Pratik Sampat<psampat@linux.ibm.com>
 
 import os
 import platform
+import shutil
 
 from avocado import Test
 from avocado.utils import process
@@ -21,20 +24,20 @@ from avocado.utils import build, distro, git
 from avocado.utils.software_manager import SoftwareManager
 
 
-class Schbench(Test):
+class Cpuidle_latency(Test):
 
     '''
-    schbench is designed to provide detailed latency distributions for scheduler
-    wakeups.
+    Cpuidle latency is a kernel module based userspace driver to estimate the
+    wakeup latency for cpus that are in idle stop states.
 
     :avocado: tags=cpu
     '''
 
     def setUp(self):
         '''
-        Build schbench
+        Build cpuidle-latency
         Source:
-        https://git.kernel.org/pub/scm/linux/kernel/git/mason/schbench.git
+        https://github.com/pratiksampat/cpuidle-latency-measurements.git
         '''
         sm = SoftwareManager()
         distro_name = distro.detect().name
@@ -51,33 +54,27 @@ class Schbench(Test):
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel("%s is needed for the test to be run" % package)
-        url = 'https://git.kernel.org/pub/scm/linux/kernel/git/mason/schbench.git'
-        schbench_url = self.params.get("schbench_url", default=url)
-        git.get_repo(schbench_url, destination_dir=self.workdir)
-
+        url = 'https://github.com/pratiksampat/cpuidle-latency-measurements.git'
+        ipi_url = self.params.get("ipi_url", default=url)
+        git.get_repo(ipi_url, branch='main', destination_dir=self.workdir)
         os.chdir(self.workdir)
         build.make(self.workdir)
+        if not os.path.isfile("test-cpuidle_latency.ko"):
+            self.cancel("Module build failed. Please check the build log")
 
     def test(self):
 
         perfstat = self.params.get('perfstat', default='')
         if perfstat:
             perfstat = 'perf stat ' + perfstat
-        taskset = self.params.get('taskset', default='')
-        if taskset:
-            taskset = 'taskset -c ' + taskset
-        num_threads = self.params.get('num_threads', default=10)
-        num_workers = self.params.get('num_workers', default=10)
-        bytes = self.params.get('bytes', default=1000)
-        runtime = self.params.get('runtime', default=100)
-        cputime = self.params.get('cputime', default=10000)
-        autobench = self.params.get('autobench', default=False)
-        args = '-m %s -t %s -p %s -r %s -s %s ' % (num_threads, num_workers,
-                                                   bytes, runtime, cputime)
+        verbose = self.params.get('verbose', default=False)
+        cmd = '%s %s/cpuidle.sh' % (perfstat, self.workdir)
 
-        if autobench:
-            args += '-a'
+        if verbose:
+            cmd += ' -v'
 
-        cmd = "%s %s %s/schbench %s" % (perfstat, taskset, self.workdir, args)
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("The test failed. Failed command is %s" % cmd)
+
+        logfile = "%s/cpuidle.log" % self.workdir
+        shutil.copy(logfile, self.logdir)
