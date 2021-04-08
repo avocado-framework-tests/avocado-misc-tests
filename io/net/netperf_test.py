@@ -117,12 +117,12 @@ class Netperf(Test):
                                          recursive=True)
         if not output:
             self.cancel("unable to copy the netperf into peer machine")
-        cmd = "cd /tmp/%s;./configure ppc64le;make" % self.version
+        cmd = "cd /tmp/%s;./configure --build=powerpc64le;make" % self.version
         output = self.session.cmd(cmd)
         if not output.exit_status == 0:
             self.fail("test failed because command failed in peer machine")
         os.chdir(self.neperf)
-        process.system('./configure ppc64le', shell=True)
+        process.system('./configure --build=powerpc64le', shell=True)
         build.make(self.neperf)
         self.perf = os.path.join(self.neperf, 'src', 'netperf')
         self.expected_tp = self.params.get("EXPECTED_THROUGHPUT", default="90")
