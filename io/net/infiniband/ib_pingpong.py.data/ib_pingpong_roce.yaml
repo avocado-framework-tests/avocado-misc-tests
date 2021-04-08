@@ -15,6 +15,10 @@ Test: !mux
         tool: ibv_srq_pingpong
         test_opt: -s 1024,basic,-n 100000,-e,-r 2000,-l 2,-m 1024,-q 10
         ext_test_opt: -s 524288,-s 524288 -n 10000,-s 524288 -n 100000,-q 32,-e -s 524288 -n 10000 -q 32
+    xsrq_pingpong:
+        tool: ibv_xsrq_pingpong
+        test_opt: -s 1024,basic,-n 100000,-e,-l 2,-m 1024
+        ext_test_opt: -s 524288,-s 524288 -n 10000,-s 524288 -n 100000,-e -s 524288 -n 10000
 parameters:
     ext_flag: "1"
     interface: "ib0"
