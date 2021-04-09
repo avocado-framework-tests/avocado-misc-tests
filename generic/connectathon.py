@@ -54,11 +54,11 @@ class Connectathon(Test):
         packages = ['gcc', 'make']
 
         if detected_distro.name == "SuSE":
-            packages.extend(['git-core'])
-        elif detected_distro.name == "centos":
-            packages.extend(['libtirpc-devel'])
-        else:
-            packages.extend(['git'])
+            packages.extend(['git-core', 'libtirpc-devel'])
+        elif detected_distro.name in ["centos", "rhel", "fedora"]:
+            packages.extend(['git', 'libtirpc-devel'])
+        elif detected_distro.name == "Ubuntu":
+            packages.extend(['libtirpc-dev'])
 
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
