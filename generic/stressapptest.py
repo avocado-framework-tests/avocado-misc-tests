@@ -16,7 +16,7 @@
 
 import os
 from avocado import Test
-from avocado.utils import archive, build, cpu, memory, process
+from avocado.utils import archive, build, cpu, memory, process, distro
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -31,7 +31,15 @@ class StressAppTest(Test):
             'memory_to_test', default=int(0.9 * memory.meminfo.MemFree.m))
 
         smm = SoftwareManager()
-        for package in ['gcc', 'libtool', 'autoconf', 'automake', 'make']:
+        detected_distro = distro.detect()
+        packages = ['gcc', 'libtool', 'autoconf', 'automake', 'make']
+
+        if detected_distro.name in ["SuSE", "rhel", "centos", "fedora"]:
+            packages.extend(['gcc-c++'])
+        elif detected_distro.name == "Ubuntu":
+            packages.extend(['g++'])
+
+        for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("Failed to install %s, which is needed for"
                             "the test to be run" % package)
