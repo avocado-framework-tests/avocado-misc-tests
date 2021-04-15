@@ -29,6 +29,7 @@ from avocado import Test
 from avocado.utils import process
 from avocado.utils import archive
 from avocado.utils import distro
+from avocado.utils import dmesg
 from avocado.utils import build
 from avocado.utils import genio
 from avocado.utils import memory
@@ -37,6 +38,7 @@ from avocado.utils import pmem
 from avocado.utils.software_manager import SoftwareManager
 
 
+@dmesg.fail_on_dmesg(level=5)
 class NdctlTest(Test):
 
     """
@@ -193,6 +195,7 @@ class NdctlTest(Test):
         self.plib = pmem.PMem(self.ndctl, self.daxctl)
         if not self.plib.check_buses():
             self.cancel("Test needs atleast one region")
+        dmesg.clear_dmesg()
 
     @avocado.fail_on(pmem.PMemException)
     def test_bus_ids(self):
