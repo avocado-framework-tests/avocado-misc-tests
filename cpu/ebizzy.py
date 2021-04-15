@@ -81,6 +81,7 @@ class Ebizzy(Test):
     # Note: default we use always mmap()
     def test(self):
 
+        iterations = self.params.get('iterations', default=5)
         perfstat = self.params.get('perfstat', default='')
         if perfstat:
             perfstat = 'perf stat ' + perfstat
@@ -96,17 +97,24 @@ class Ebizzy(Test):
                                                       seconds, num_threads)
         args = args + ' ' + args2
 
-        results = process.system_output('%s %s %s/ebizzy %s'
-                                        % (perfstat, taskset, self.sourcedir, args)).decode("utf-8")
-        pattern = re.compile(r"(.*?) records/s")
-        records = pattern.findall(results)[0]
-        pattern = re.compile(r"real (.*?) s")
-        real = pattern.findall(results)[0]
-        pattern = re.compile(r"user (.*?) s")
-        usr_time = pattern.findall(results)[0]
-        pattern = re.compile(r"sys (.*?) s")
-        sys_time = pattern.findall(results)[0]
-        self.whiteboard = json.dumps({'records': records,
+        os.makedirs(os.path.join(self.logdir, "ebizzy_run"))
+        for ite in range(iterations):
+            results = process.system_output('%s %s %s/ebizzy %s'
+                                            % (perfstat, taskset, self.sourcedir, args)).decode("utf-8")
+            pattern = re.compile(r"(.*?) records/s")
+            records = pattern.findall(results)[0]
+            pattern = re.compile(r"real (.*?) s")
+            real = pattern.findall(results)[0].strip()
+            pattern = re.compile(r"user (.*?) s")
+            usr_time = pattern.findall(results)[0].strip()
+            pattern = re.compile(r"sys (.*?) s")
+            sys_time = pattern.findall(results)[0].strip()
+            json_object = json.dumps({'records': records,
                                       'real_time': real,
                                       'user': usr_time,
                                       'sys': sys_time})
+
+            logfile = os.path.join(
+                self.logdir, "ebizzy_run", "run_%s.json" % (ite + 1))
+            with open(logfile, "w") as outfile:
+                outfile.write(json_object)
