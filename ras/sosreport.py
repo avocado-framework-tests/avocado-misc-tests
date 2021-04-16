@@ -58,6 +58,10 @@ class Sosreport(Test):
             self.cancel("sosreport is not supported on %s" % dist.name)
         if not sm.check_installed(sos_pkg) and not sm.install(sos_pkg):
             self.cancel("Package %s is missing and could not be installed" % sos_pkg)
+        if dist.name == "rhel" and dist.version > "7" and dist.release >= "4":
+            self.sos_cmd = "sos report"
+        else:
+            self.sos_cmd = "sosreport"
 
     def test_short(self):
         """
@@ -71,18 +75,18 @@ class Sosreport(Test):
             "===============Executing sosreport tool test (short)===============")
         directory_name = tempfile.mkdtemp()
         self.is_fail = 0
-        self.run_cmd("sosreport -h", False)
-        self.run_cmd("sosreport -l", False)
-        self.run_cmd("sosreport --batch --tmp-dir=%s --verify" % directory_name)
+        self.run_cmd("%s -h" % self.sos_cmd, False)
+        self.run_cmd("%s -l" % self.sos_cmd, False)
+        self.run_cmd("%s --batch --tmp-dir=%s --verify" % (self.sos_cmd, directory_name))
         case_id = self.params.get('case_id', default='testid')
-        if case_id not in self.run_cmd_out("sosreport --batch --case-id=%s | "
-                                           "grep tar.xz" % case_id):
+        if case_id not in self.run_cmd_out("%s --batch --case-id=%s | "
+                                           "grep tar.xz" % (self.sos_cmd, case_id)):
             self.is_fail += 1
             self.log.info("--case-id option failed")
 
-        if 'testname' not in self.run_cmd_out("sosreport --batch --tmp-dir=%s "
+        if 'testname' not in self.run_cmd_out("%s --batch --tmp-dir=%s "
                                               "--label=testname | "
-                                              "grep tar.xz" % directory_name):
+                                              "grep tar.xz" % (self.sos_cmd, directory_name)):
             self.is_fail += 1
             self.log.info("--label option failed")
 
@@ -101,7 +105,7 @@ class Sosreport(Test):
         self.is_fail = 0
         list = self.params.get('list', default=['--all-logs'])
         for list_item in list:
-            cmd = "sosreport --batch --tmp-dir=%s %s" % (directory_name, list_item)
+            cmd = "%s --batch --tmp-dir=%s %s" % (self.sos_cmd, directory_name, list_item)
             self.run_cmd(cmd)
 
         shutil.rmtree(directory_name)
@@ -120,20 +124,20 @@ class Sosreport(Test):
         directory_name = tempfile.mkdtemp()
         self.is_fail = 0
 
-        if self.run_cmd_out("sosreport --batch --tmp-dir=%s -n libraries | "
-                            "grep libraries" % directory_name):
+        if self.run_cmd_out("%s --batch --tmp-dir=%s -n libraries | "
+                            "grep libraries" % (self.sos_cmd, directory_name)):
             self.is_fail += 1
             self.log.info("--skip-plugins option failed")
 
-        self.run_cmd("sosreport --batch --tmp-dir=%s -e ntp,numa,snmp" % directory_name)
-        if 'sendmail' not in self.run_cmd_out("sosreport --batch --tmp-dir=%s -e "
+        self.run_cmd("%s --batch --tmp-dir=%s -e ntp,numa,snmp" % (self.sos_cmd, directory_name))
+        if 'sendmail' not in self.run_cmd_out("%s --batch --tmp-dir=%s -e "
                                               "sendmail | "
-                                              "grep sendmail" % directory_name):
+                                              "grep sendmail" % (self.sos_cmd, directory_name)):
             self.is_fail += 1
             self.log.info("--enable-plugins option failed")
 
-        if self.run_cmd_out("sosreport --batch --tmp-dir=%s -o cups | "
-                            "grep kernel" % directory_name):
+        if self.run_cmd_out("%s --batch --tmp-dir=%s -o cups | "
+                            "grep kernel" % (self.sos_cmd, directory_name)):
             self.is_fail += 1
             self.log.info("--only-plugins option failed")
 
@@ -157,31 +161,31 @@ class Sosreport(Test):
             "===============Executing sosreport tool test (others)===============")
         directory_name = tempfile.mkdtemp()
         self.is_fail = 0
-        self.run_cmd("sosreport --list-profiles", None)
-        self.run_cmd("sosreport --batch --tmp-dir=%s -p boot,memory" % directory_name)
+        self.run_cmd("%s --list-profiles" % self.sos_cmd, None)
+        self.run_cmd("%s --batch --tmp-dir=%s -p boot,memory" % (self.sos_cmd, directory_name))
 
-        if "java" not in self.run_cmd_out("sosreport --batch --tmp-dir=%s -p webserver | "
-                                          "grep java" % directory_name):
+        if "java" not in self.run_cmd_out("%s --batch --tmp-dir=%s -p webserver | "
+                                          "grep java" % (self.sos_cmd, directory_name)):
             self.is_fail += 1
             self.log.info("--profile option failed")
 
-        dir_name = self.run_cmd_search("sosreport --batch --tmp-dir=%s --build" % directory_name, directory_name)
+        dir_name = self.run_cmd_search("%s --batch --tmp-dir=%s --build" % (self.sos_cmd, directory_name), directory_name)
         if not os.path.isdir(dir_name):
             self.is_fail += 1
             self.log.info("--build option failed")
 
-        if "version" not in self.run_cmd_out("sosreport --batch --tmp-dir=%s --quiet "
-                                             "--no-report -e ntp,numa1" % directory_name):
+        if "version" not in self.run_cmd_out("%s --batch --tmp-dir=%s --quiet "
+                                             "--no-report -e ntp,numa1" % (self.sos_cmd, directory_name)):
             self.is_fail += 1
             self.log.info("--quiet --no-report option failed")
-        self.run_cmd("sosreport --batch --tmp-dir=%s --debug" % directory_name, None)
+        self.run_cmd("%s --batch --tmp-dir=%s --debug" % (self.sos_cmd, directory_name), None)
 
-        file_name = self.run_cmd_search("sosreport --batch --tmp-dir=%s" % directory_name, directory_name)
+        file_name = self.run_cmd_search("%s --batch --tmp-dir=%s" % (self.sos_cmd, directory_name), directory_name)
         if not os.path.exists(file_name):
             self.is_fail += 1
             self.log.info("--tmp-dir option failed")
 
-        dir_name = self.run_cmd_search("sosreport --no-report --batch --build", '/var/tmp/sosreport')
+        dir_name = self.run_cmd_search("%s --no-report --batch --build" % self.sos_cmd, '/var/tmp/sosreport')
         if os.listdir(dir_name) == []:
             self.is_fail += 1
             self.log.info("--no-report option failed")
@@ -192,7 +196,7 @@ class Sosreport(Test):
                 self.is_fail += 1
                 self.log.info("%s file/directory not created" % file_path)
 
-        self.run_cmd("sosreport --batch --tmp-dir=%s -s /" % directory_name)
+        self.run_cmd("%s --batch --tmp-dir=%s -s /" % (self.sos_cmd, directory_name))
 
         shutil.rmtree(directory_name)
         if self.is_fail >= 1:
@@ -216,8 +220,8 @@ class Sosreport(Test):
                    'xz': 'tar.xz', 'auto': 'tar.xz'}
         for key, value in f_name.items():
             file_name = str(f_name[key])
-            file_name = self.run_cmd_out("sosreport --batch --tmp-dir=%s -z %s | grep %s" %
-                                         (directory_name, str(key),
+            file_name = self.run_cmd_out("%s --batch --tmp-dir=%s -z %s | grep %s" %
+                                         (self.sos_cmd, directory_name, str(key),
                                           str(archive[key]))).strip()
             if not os.path.exists(file_name):
                 self.is_fail += 1
@@ -243,8 +247,8 @@ class Sosreport(Test):
             "===============Executing sosreport tool test (PPC)===============")
         directory_name = tempfile.mkdtemp()
         self.is_fail = 0
-        self.run_cmd("sosreport --batch --tmp-dir=%s -o "
-                     "pci,powerpc,process,processor,kdump" % directory_name)
+        self.run_cmd("%s --batch --tmp-dir=%s -o "
+                     "pci,powerpc,process,processor,kdump" % (self.sos_cmd, directory_name))
         shutil.rmtree(directory_name)
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in sosreport tool verification" % self.is_fail)
