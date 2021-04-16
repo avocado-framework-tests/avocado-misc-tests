@@ -15,10 +15,11 @@
 # Author: Pooja B Surya <pooja@linux.vnet.ibm.com>
 
 import os
+import re
 
 from avocado import Test
 from avocado.utils import build
-from avocado.utils import archive
+from avocado.utils import archive, process, cpu
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils import distro
 
@@ -49,14 +50,24 @@ class Openblas(Test):
         openblas_dir = os.path.join(self.workdir, "OpenBLAS-develop")
         openblas_bin_dir = os.path.join(openblas_dir, 'bin')
         os.mkdir(openblas_bin_dir)
-        build.make(openblas_dir, extra_args='FC=gfortran '
-                   'ISMAXKERNEL=imax.S ISMINKERNEL=imin.S')
+        cmd = "gcc --version"
+        output = process.system_output(cmd, shell=True).decode("utf-8")
+        gcc_ver = re.search(r'\d+', output.splitlines()[0])
+        proc_type = cpu.get_family()
+        self.target = ""
+        if int(gcc_ver.group()) < 10 and 'power10' in proc_type:
+            self.target = "TARGET=POWER9"
+            build.make(openblas_dir, extra_args='FC=gfortran '
+                       'ISMAXKERNEL=imax.S ISMINKERNEL=imin.S TARGET=POWER9')
+        else:
+            build.make(openblas_dir, extra_args='FC=gfortran '
+                       'ISMAXKERNEL=imax.S ISMINKERNEL=imin.S')
         build.make(openblas_dir, extra_args='PREFIX=%s install' %
                    openblas_bin_dir)
         self.test_dir = os.path.join(openblas_dir, "test")
 
     def test(self):
-        result = build. run_make(self.test_dir)
+        result = build.run_make(self.test_dir, extra_args=self.target)
         for line in str(result).splitlines():
             if '[FAIL]' in line:
                 self.fail("test failed, Please check debug log for failed"
