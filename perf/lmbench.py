@@ -24,7 +24,7 @@ import tempfile
 from avocado import Test
 from avocado.utils import archive
 from avocado.utils import process
-from avocado.utils import build
+from avocado.utils import build, distro
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -47,7 +47,13 @@ class Lmbench(Test):
         memory_size_mb = self.params.get('MB', default=125)
         self.tmpdir = tempfile.mkdtemp(prefix='avocado_' + __name__)
         smm = SoftwareManager()
-        for package in ['gcc', 'make', 'patch']:
+        detected_distro = distro.detect()
+        packages = ['gcc', 'make', 'patch']
+        if detected_distro.name in ['SuSE', 'rhel', 'centos', 'fedora']:
+            packages.extend(['libtirpc-devel'])
+        elif detected_distro.name == "Ubuntu":
+            packages.extend(['libtirpc-dev'])
+        for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("%s is needed for the test to be run" % package)
         tarball = self.fetch_asset('http://www.bitmover.com'
@@ -67,13 +73,16 @@ class Lmbench(Test):
             '0002-Changing-shebangs-on-lmbench-scripts.patch')
         ostype_fix_patch = 'patch -p1 < %s' % self.get_data(
             'fix_add_os_type.patch')
+        lsleek_fix_patch = 'patch -p1 < %s' % self.get_data(
+            'fix_lseek.patch')
 
         process.run(makefile_patch, shell=True)
         process.run(build_patch, shell=True)
         process.run(lmbench_fix_patch, shell=True)
         process.run(ostype_fix_patch, shell=True)
+        process.run(lsleek_fix_patch, shell=True)
 
-        build.make(self.sourcedir)
+        build.make(self.sourcedir, extra_args='LDFLAGS=-ltirpc')
 
         # configure lmbench
         os.chdir(self.sourcedir)
