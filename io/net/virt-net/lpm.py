@@ -308,9 +308,10 @@ class LPM(Test):
         """
         check for dmesg error
         """
+        error = ['uevent: failed to send synthetic uevent', 'failed to send uevent', 'registration failed']
         self.log.info("Gathering kernel errors if any")
         try:
-            dmesg.collect_errors_by_level()
+            dmesg.collect_errors_by_level(skip_errors=error)
         except Exception as exc:
             self.log.info(exc)
             self.fail("test failed,check dmesg log in debug log")
