@@ -120,8 +120,9 @@ class Kernbench(Test):
                 self.cancel('%s is needed for the test to be run' % package)
         self.kernel_version = platform.uname()[2]
         self.iterations = self.params.get('runs', default=1)
-        self.threads = self.params.get(
-            'cpus', default=2 * cpu.online_cpus_count())
+        self.threads = self.params.get('cpus', default=None)
+        if self.threads is None:
+            self.threads = 2 * cpu.online_cpus_count()
         self.location = self.params.get(
             'url', default='https://github.com/torvalds/linux/archive'
             '/master.zip')
