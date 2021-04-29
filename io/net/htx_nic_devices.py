@@ -262,17 +262,17 @@ class HtxNicTest(Test):
         Host & Peer
         """
         host_name = process.system_output("hostname", ignore_status=True,
-                                          shell=True, sudo=True)
+                                          shell=True, sudo=True).decode("utf-8")
         peer_name = self.run_command("hostname")[-1]
         hosts_file = '/etc/hosts'
         self.log.info("Updating hostname of both Host & Peer in \
                       %s file", hosts_file)
         with open(hosts_file, 'r') as file:
             filedata = file.read().splitlines()
-        search_str1 = "%s.* %s" % (host_name, self.host_ip)
-        search_str2 = "%s.* %s" % (peer_name, self.peer_ip)
-        add_str1 = "%s %s" % (host_name, self.host_ip)
-        add_str2 = "%s %s" % (peer_name, self.peer_ip)
+        search_str1 = "%s %s.*" % (self.host_ip, host_name)
+        search_str2 = "%s %s.*" % (self.peer_ip, peer_name)
+        add_str1 = "%s %s" % (self.host_ip, host_name)
+        add_str2 = "%s %s" % (self.peer_ip, peer_name)
 
         for index, line in enumerate(filedata):
             filedata[index] = line.replace('\t', ' ')
