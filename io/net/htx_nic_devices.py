@@ -427,50 +427,66 @@ class HtxNicTest(Test):
     def htx_configure_net(self):
         self.log.info("Starting the N/W ping test for HTX in Host")
         cmd = "build_net %s" % self.bpt_file
+        host_success, peer_success = False, False
+        success_str = "All networks ping Ok"
+
+        # run build_net on host
         output = process.system_output(cmd, ignore_status=True, shell=True,
                                        sudo=True)
-        # Try up to 10 times until pingum test passes
-        for count in range(11):
-            if count == 0:
-                try:
-                    output_peer = self.run_command(cmd, timeout=300)
-                except CommandFailed as cf:
-                    output_peer = cf.output
-                    self.log.debug("Command %s failed %s", cf.command,
-                                   cf.output)
-            if "All networks ping Ok" not in output.decode("utf-8"):
-                if self.peer_distro == "rhel":
-                    self.run_command("systemctl start NetworkManager", timeout=300)
+
+        # run build_net on peer
+        try:
+            output_peer = self.run_command(cmd, timeout=300)
+        except CommandFailed as cf:
+            output_peer = cf.output
+            self.log.debug("Command %s failed %s", cf.command,
+                           cf.output)
+
+        # Try up to 10 times until pingum test passes on both host and peer
+        for _ in range(11):
+
+            if not host_success:
+                if success_str not in output.decode("utf-8"):
+                    # restart Network service on host
+                    if self.host_distro == "rhel":
+                        process.system("systemctl restart NetworkManager", shell=True,
+                                       ignore_status=True)
+                    else:
+                        process.system("systemctl restart network", shell=True,
+                                       ignore_status=True)
+                    output = process.system_output("pingum", ignore_status=True,
+                                                   shell=True, sudo=True)
                 else:
-                    self.run_command("systemctl restart network", timeout=300)
-                if self.host_distro == "rhel":
-                    process.system("systemctl start NetworkManager", shell=True,
-                                   ignore_status=True)
+                    host_success = True
+
+            if not peer_success:
+                if success_str not in "\n".join(output_peer):
+                    # restart Network service on peer
+                    if self.peer_distro == "rhel":
+                        self.run_command("systemctl restart NetworkManager", timeout=300)
+                    else:
+                        self.run_command("systemctl restart network", timeout=300)
+
+                    try:
+                        output_peer = self.run_command("pingum", timeout=300)
+                    except CommandFailed as cf:
+                        output_peer = cf.output
+                    self.log.info("\n".join(output_peer))
                 else:
-                    process.system("systemctl restart network", shell=True,
-                                   ignore_status=True)
-                output = process.system_output("pingum", ignore_status=True,
-                                               shell=True, sudo=True)
-            else:
+                    peer_success = True
+
+            if host_success and peer_success:
                 break
+
             time.sleep(30)
-        else:
-            self.log.info("manually configuring ip because of pingum failed.")
+
+        if not host_success:
+            self.log.debug("manually configuring ip because of pingum failed.")
             self.ip_config()
 
-        self.log.info("Starting the N/W ping test for HTX in Peer")
-        for count in range(11):
-            if "All networks ping Ok" not in "\n".join(output_peer):
-                try:
-                    output_peer = self.run_command("pingum", timeout=300)
-                except CommandFailed as cf:
-                    output_peer = cf.output
-                self.log.info("\n".join(output_peer))
-            else:
-                break
-            time.sleep(30)
-        else:
+        if not peer_success:
             self.fail("N/W ping test for HTX failed in Peer(pingum)")
+
         self.log.info("N/W ping test for HTX passed in both Host & Peer")
 
     def run_htx(self):
