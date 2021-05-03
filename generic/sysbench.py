@@ -72,7 +72,8 @@ class Sysbench(Test):
 
                 if self.fixlink and self.fix_dir:
                     fixpath = '%s%s' % (self.teststmpdir, self.fix_dir)
-                    shutil.rmtree(fixpath)
+                    if os.path.exists(fixpath):
+                        shutil.rmtree(fixpath)
                     git.get_repo(self.fixlink, branch="ppc64-port",
                                  destination_dir=fixpath)
                 os.chdir(self.teststmpdir)
