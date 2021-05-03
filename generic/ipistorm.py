@@ -23,6 +23,7 @@ import platform
 from avocado import Test
 from avocado import skipIf
 from avocado.utils import archive, build, cpu, genio, linux_modules, process
+from avocado.utils import distro
 from avocado.utils.software_manager import SoftwareManager
 
 IS_POWER_NV = 'PowerNV' in genio.read_file('/proc/cpuinfo')
@@ -40,7 +41,7 @@ class DBLIPIStrom(Test):
         """
         Install necessary packages to build the linux module
         """
-        if 'power' not in cpu.get_family():
+        if 'ppc' not in distro.detect().arch:
             self.cancel('Test Only supported on Power')
 
         pkgs = ['gcc', 'make', 'kernel-devel']
@@ -75,7 +76,7 @@ class DBLIPIStrom(Test):
         int_op = genio.read_file("/proc/interrupts")
         for line in int_op.splitlines():
             if string in line:
-                line = line.split()[1: cpu.online_count() + 1]
+                line = line.split()[1: cpu.online_cpus_count() + 1]
                 return line
         return []
 
@@ -87,7 +88,8 @@ class DBLIPIStrom(Test):
         pre_ipi_val = self.get_interrupts("IPI")
         if not linux_modules.module_is_loaded("ipistorm"):
             if process.system(
-                    "insmod ./ipistorm.ko", ignore_status=True, shell=True, sudo=True):
+                    "insmod ./ipistorm.ko", ignore_status=True, shell=True,
+                    sudo=True):
                 self.fail("Failed to insert ipistorm module")
         else:
             self.cancel(
