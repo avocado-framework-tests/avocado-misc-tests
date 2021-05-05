@@ -29,6 +29,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost, RemoteHost
 from avocado.utils import wait
+from avocado.utils import genio
 
 
 class TcpdumpTest(Test):
@@ -47,22 +48,32 @@ class TcpdumpTest(Test):
         self.drop = self.params.get("drop_accepted", default="10")
         self.host_ip = self.params.get("host_ip", default="")
         self.option = self.params.get("option", default='')
+        self.hbond = self.params.get("hbond", default=False)
         # Check if interface exists in the system
         interfaces = netifaces.interfaces()
-        if self.iface not in interfaces:
-            self.cancel("%s interface is not available" % self.iface)
+        self.hbond = self.params.get("hbond", default=False)
+        if not self.hbond:
+            self.iface = self.params.get("interface")
+            if self.iface not in interfaces:
+                self.cancel("%s interface is not available" % self.iface)
+        else:
+            self.mac_id = self.params.get("mac_id", default="02:03:03:03:03:01")
+            self.iface = self.get_hbond(self.mac_id)
+            if self.iface not in interfaces:
+                self.cancel("%s interface is not available" % self.iface)
         if not self.peer_ip:
             self.cancel("peer ip should specify in input")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         localhost = LocalHost()
         self.networkinterface = NetworkInterface(self.iface, localhost)
-        try:
-            self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
-            self.networkinterface.save(self.ipaddr, self.netmask)
-        except Exception:
-            self.networkinterface.save(self.ipaddr, self.netmask)
-        self.networkinterface.bring_up()
+        if not self.hbond:
+            try:
+                self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+                self.networkinterface.save(self.ipaddr, self.netmask)
+            except Exception:
+                self.networkinterface.save(self.ipaddr, self.netmask)
+            self.networkinterface.bring_up()
         if not wait.wait_for(self.networkinterface.is_link_up, timeout=120):
             self.cancel("Link up of interface is taking longer than 120 seconds")
         self.peer_user = self.params.get("peer_user", default="root")
@@ -105,6 +116,12 @@ class TcpdumpTest(Test):
             build.make(self.n_map)
             process.system('./nping/nping -h', shell=True)
 
+    def get_hbond(self, mac_id):
+        output = genio.read_one_line("/sys/class/net/bonding_masters").split()
+        for bond in output:
+            if mac_id in netifaces.ifaddresses(bond)[17][0]['addr']:
+                return bond
+
     def test(self):
         """
         Performs the tcpdump test.
@@ -138,7 +155,12 @@ class TcpdumpTest(Test):
         """
         perform nping
         """
-        nping_count = round((120 * int(self.count)) / 100)
+        if self.count <= 5:
+            nping_count = round((200 * int(self.count)) / 100)
+            print(nping_count)
+        else:
+            nping_count = round((120 * int(self.count)) / 100)
+            print("nping %s" % nping_count)
         detected_distro = distro.detect()
         if detected_distro.name == "SuSE":
             cmd = "./nping/nping --%s %s -c %s" % (param,
@@ -158,10 +180,11 @@ class TcpdumpTest(Test):
             self.peer_networkinterface.set_mtu('1500', timeout=self.mtu_timeout)
         except Exception:
             self.peer_public_networkinterface.set_mtu('1500', timeout=self.mtu_timeout)
-        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-        try:
-            self.networkinterface.restore_from_backup()
-        except Exception:
-            self.log.info("backup file not availbale, could not restore file.")
+        if not self.hbond:
+            self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+            try:
+                self.networkinterface.restore_from_backup()
+            except Exception:
+                self.log.info("backup file not availbale, could not restore file.")
         self.remotehost.remote_session.quit()
         self.remotehost_public.remote_session.quit()

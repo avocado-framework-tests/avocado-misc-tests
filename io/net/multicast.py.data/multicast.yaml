@@ -6,3 +6,5 @@ Parameters:
     netmask: ""
     peer_password: "********"
     count: "500000"
+    hbond: True
+    mac_id: "16:77:03:d5:cf:00"

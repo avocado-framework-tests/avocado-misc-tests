@@ -6,6 +6,8 @@ peer_password: "********"
 host_ip:
 netmask:
 ip_config: True
+hbond: False
+mac_id: ""
 mtu: !mux
     1500:
         mtu: "1500"

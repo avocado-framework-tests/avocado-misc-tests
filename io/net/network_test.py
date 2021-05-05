@@ -57,13 +57,21 @@ class NetworkTest(Test):
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
         interfaces = netifaces.interfaces()
-        interface = self.params.get("interface")
-        if interface not in interfaces:
-            self.cancel("%s interface is not available" % interface)
+        self.hbond = self.params.get("hbond", default=False)
+        if not self.hbond:
+            interface = self.params.get("interface")
+            if interface not in interfaces:
+                self.cancel("%s interface is not available" % interface)
+        else:
+            self.mac_id = self.params.get("mac_id", default="02:03:03:03:03:01")
+            interface = self.get_hbond(self.mac_id)
+            if interface not in interfaces:
+                self.cancel("%s interface is not available" % interface)
         self.iface = interface
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         self.ip_config = self.params.get("ip_config", default=True)
+        self.hbond = self.params.get("hbond", default=False)
         for root, dirct, files in os.walk("/root/.ssh"):
             for file in files:
                 if file.startswith("avocado-master-root"):
@@ -72,12 +80,13 @@ class NetworkTest(Test):
         local = LocalHost()
         self.networkinterface = NetworkInterface(self.iface, local)
         if self.ip_config:
-            try:
-                self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
-                self.networkinterface.save(self.ipaddr, self.netmask)
-            except Exception:
-                self.networkinterface.save(self.ipaddr, self.netmask)
-            self.networkinterface.bring_up()
+            if not self.hbond:
+                try:
+                    self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+                    self.networkinterface.save(self.ipaddr, self.netmask)
+                except Exception:
+                    self.networkinterface.save(self.ipaddr, self.netmask)
+                self.networkinterface.bring_up()
         if not wait.wait_for(self.networkinterface.is_link_up, timeout=120):
             self.fail("Link up of interface is taking longer than 120 seconds")
         self.peer = self.params.get("peer_ip")
@@ -106,6 +115,15 @@ class NetworkTest(Test):
         self.mtu_set()
         if self.networkinterface.ping_check(self.peer, count=5) is not None:
             self.cancel("No connection to peer")
+
+    def get_hbond(self, mac_id):
+        """
+        Get the newly created hnv bond interface name
+        """
+        output = genio.read_one_line("/sys/class/net/bonding_masters").split()
+        for bond in output:
+            if mac_id in netifaces.ifaddresses(bond)[17][0]['addr']:
+                return bond
 
     def mtu_set(self):
         '''
@@ -314,11 +332,12 @@ class NetworkTest(Test):
             cmd = "rm -rf /tmp/tempfile"
             self.session.cmd(cmd)
         if self.ip_config:
-            self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-            try:
-                self.networkinterface.restore_from_backup()
-            except Exception:
-                self.log.info("backup file not availbale, could not restore file.")
+            if not self.hbond:
+                self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+                try:
+                    self.networkinterface.restore_from_backup()
+                except Exception:
+                    self.log.info("backup file not availbale, could not restore file.")
         self.remotehost.remote_session.quit()
         self.remotehost_public.remote_session.quit()
         if 'scp' or 'ssh' in str(self.name.name):

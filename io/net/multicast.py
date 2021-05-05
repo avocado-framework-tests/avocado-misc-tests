@@ -27,6 +27,7 @@ from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
+from avocado.utils import genio
 
 
 class ReceiveMulticastTest(Test):
@@ -44,19 +45,25 @@ class ReceiveMulticastTest(Test):
         self.peer_password = self.params.get("peer_password",
                                              '*', default="None")
         interfaces = netifaces.interfaces()
-        self.iface = self.params.get("interface", default="")
+        self.hbond = self.params.get("hbond", default=False)
+        if not self.hbond:
+            self.iface = self.params.get("interface", default="")
+        else:
+            self.mac_id = self.params.get("mac_id", default="02:03:03:03:03:01")
+            self.iface = self.get_hbond(self.mac_id)
         if self.iface not in interfaces:
             self.cancel("%s interface is not available" % self.iface)
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         local = LocalHost()
         self.networkinterface = NetworkInterface(self.iface, local)
-        try:
-            self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
-            self.networkinterface.save(self.ipaddr, self.netmask)
-        except Exception:
-            self.networkinterface.save(self.ipaddr, self.netmask)
-        self.networkinterface.bring_up()
+        if not self.hbond:
+            try:
+                self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+                self.networkinterface.save(self.ipaddr, self.netmask)
+            except Exception:
+                self.networkinterface.save(self.ipaddr, self.netmask)
+            self.networkinterface.bring_up()
 
         self.session = Session(self.peer, user=self.user,
                                password=self.peer_password)
@@ -89,6 +96,15 @@ class ReceiveMulticastTest(Test):
         self.local_ip = process.system_output(cmd, shell=True).strip()
         if self.local_ip == "":
             self.cancel("unable to get local ip")
+
+    def get_hbond(self, mac_id):
+        """
+        Get the newly created hnv bond interface name
+        """
+        output = genio.read_one_line("/sys/class/net/bonding_masters").split()
+        for bond in output:
+            if mac_id in netifaces.ifaddresses(bond)[17][0]['addr']:
+                return bond
 
     def test_multicast(self):
         '''
@@ -128,9 +144,10 @@ class ReceiveMulticastTest(Test):
         if process.system(cmd, shell=True, verbose=True,
                           ignore_status=True) != 0:
             self.log.info("unable to unset all mulicast option")
-        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-        try:
-            self.networkinterface.restore_from_backup()
-        except Exception:
-            self.log.info("backup file not availbale, could not restore file.")
+        if not self.hbond:
+            self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+            try:
+                self.networkinterface.restore_from_backup()
+            except Exception:
+                self.log.info("backup file not availbale, could not restore file.")
         self.session.quit()
