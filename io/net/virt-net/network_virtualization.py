@@ -252,7 +252,8 @@ class NetworkVirtualization(Test):
             if not self.check_slot_availability(slot):
                 self.fail("Slot does not exist")
             self.device_add_remove(slot, mac, sriov_port, adapter_id, 'add')
-            self.interface_naming(mac, slot)
+            # Call interface_naming() if required
+            # self.interface_naming(mac, slot)
             output = self.list_device(slot)
             if 'slot_num=%s' % slot not in str(output):
                 self.log.debug(output)
@@ -802,16 +803,12 @@ class NetworkVirtualization(Test):
         naming to vnic interface
         '''
         mac_addrs = ':'.join(mac[i:i+2] for i in range(0, 12, 2))
-        file = "/etc/udev/rules.d/70-persistent-net.rules-%s" % slot
-        with open(file, "w") as interface_conf:
-            interface_conf.write("SUBSYSTEM==net \n")
-            interface_conf.write("ACTION==add \n")
-            interface_conf.write("DRIVERS==? \n")
-            interface_conf.write("ATTR{address}==%s \n" % mac_addrs)
-            interface_conf.write("ATTR{dev_id}==0x0 \n")
-            interface_conf.write("ATTR{type}==1 \n")
-            interface_conf.write("KERNEL==vnic \n")
-            interface_conf.write("NAME=vnic%s \n" % slot)
+        file = "/etc/udev/rules.d/70-persistent-net.rules"
+        with open(file, "a+") as interface_conf:
+            interface_conf.write("SUBSYSTEM==\"net\", ")
+            interface_conf.write("ACTION==\"add\", ")
+            interface_conf.write("DRIVERS==\"?*\", ")
+            interface_conf.write("ATTR{address}==\"%s\", " % mac_addrs)
 
     def wait_intrerface(self, device_name):
         """
