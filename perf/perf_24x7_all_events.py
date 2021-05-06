@@ -61,8 +61,10 @@ class hv_24x7_all_events(Test):
         if self.cpu_family == 'power8':
             self.perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % \
                               self.perf_args
-        if self.cpu_family == 'power9':
+        elif self.cpu_family == 'power9':
             self.perf_stat = "%s hv_24x7/CPM_TLBIE" % self.perf_args
+        elif self.cpu_family == 'power10':
+            self.perf_stat = "%s hv_24x7/CPM_TLBIE_FIN" % self.perf_args
         self.event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
 
         # Check if this is a guest
