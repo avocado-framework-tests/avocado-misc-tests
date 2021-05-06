@@ -40,14 +40,22 @@ class Numatop(Test):
         '''
 
         # Check for basic utilities
-        # TODO: Add support for other distributions
         self.numa_pid = None
-        detected_distro = distro.detect().name.lower()
-        if detected_distro not in ["ubuntu", 'debian']:
-            self.cancel("Upsupported OS %s" % detected_distro)
+        distro_name = distro.detect().name.lower()
         smm = SoftwareManager()
-        for package in ['gcc', 'numatop', 'make', 'libnuma-dev',
-                        'libncurses-dev', 'check', 'pkg-config']:
+        deps = ['gcc', 'numatop', 'make']
+        if distro_name == 'ubuntu':
+            deps.extend(['libnuma-dev', 'libncurses-dev', 'pkg-config',
+                         'check'])
+        elif distro_name in ['rhel', 'fedora']:
+            deps.extend(['ncurses-devel', 'numactl-libs', 'numactl-devel',
+                         'check-devel'])
+        elif distro_name == 'suse':
+            deps.extend(['ncurses-devel', 'libnuma-devel', 'check-devel'])
+        else:
+            self.cancel("Install corresponding libnuma packages")
+
+        for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("Failed to install %s, which is needed for"
                             "the test to be run" % package)
