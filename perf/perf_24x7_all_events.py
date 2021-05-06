@@ -59,7 +59,8 @@ class hv_24x7_all_events(Test):
         self.cpu_family = cpu.get_family()
         self.perf_args = "perf stat -v -C 0 -e"
         if self.cpu_family == 'power8':
-            self.perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % self.perf_args
+            self.perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % \
+                              self.perf_args
         if self.cpu_family == 'power9':
             self.perf_stat = "%s hv_24x7/CPM_TLBIE" % self.perf_args
         self.event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
@@ -95,11 +96,11 @@ class hv_24x7_all_events(Test):
 
         # Collect all hv_24x7 events
         self.list_of_hv_24x7_events = []
-        for line in process.get_command_output_matching('perf list', 'hv_24x7'):
-            line = line.split(',')[0].split('/')[1]
-            self.list_of_hv_24x7_events.append(line)
+        for lne in process.get_command_output_matching('perf list', 'hv_24x7'):
+            lne = lne.split(',')[0].split('/')[1]
+            self.list_of_hv_24x7_events.append(lne)
 
-        # Clear the dmesg, by that we can capture the delta at the end of the test.
+        # Clear the dmesg to capture the delta at the end of the test.
         process.run("dmesg -c", sudo=True)
 
     def test_all_events(self):
@@ -109,7 +110,8 @@ class hv_24x7_all_events(Test):
                 # Running for domain range from 1-6
                 for domain in range(1, 7):
                     for core in range(0, self.cores + 1):
-                        events = "hv_24x7/%s,domain=%s,core=%s/" % (line, domain, core)
+                        events = "hv_24x7/%s,domain=%s,core=%s/" % \
+                                 (line, domain, core)
                         cmd = 'perf stat %s %s sleep 1' % (perf_args, events)
                         if process.system(cmd, ignore_status=True):
                             self.fail_cmd.append(cmd)
