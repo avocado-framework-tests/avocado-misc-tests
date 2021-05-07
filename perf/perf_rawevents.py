@@ -22,10 +22,6 @@ from avocado import skipUnless
 from avocado.utils import cpu, distro, process, genio
 from avocado.utils.software_manager import SoftwareManager
 
-CPU_FAMILY = cpu.get_family()
-IS_POWER9 = 'power9' in CPU_FAMILY
-IS_POWER8 = 'power8' in CPU_FAMILY
-
 
 class PerfRawevents(Test):
 
@@ -93,20 +89,18 @@ class PerfRawevents(Test):
                 self.log.info("Failed command: %s", self.fail_cmd[cmd])
             self.fail("perf_raw_events: some of the events failed, refer to log")
 
-    @skipUnless(IS_POWER8, 'Supported only on Power8')
-    def test_raw_events_power8(self):
-        self.run_event('raw_codes_p8', 'raw')
-        self.error_check()
-
-    @skipUnless(IS_POWER8, 'Supported only on Power8')
-    def test_name_events_power8(self):
-        self.run_event('name_events_p8', 'name')
-        self.error_check()
-
-    @skipUnless(IS_POWER9, 'Supported only on Power9')
-    def test_raw_events_power9(self):
-        self.run_event('raw_codes_p9', 'raw')
-        self.error_check()
+    def test(self):
+        cpu_family = cpu.get_family()
+        if cpu_family == 'power8':
+            self.run_event('raw_codes_p8', 'raw')
+            self.error_check()
+            self.run_event('name_events_p8', 'name')
+            self.error_check()
+        elif cpu_family == 'power9':
+            self.run_event('raw_codes_p9', 'raw')
+            self.error_check()
+        else:
+            self.cancel('This test is not supported on %s' % cpu_family)
 
     def tearDown(self):
         # Collect the dmesg
