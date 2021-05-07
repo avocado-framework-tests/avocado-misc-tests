@@ -1,0 +1,24 @@
+--- lmbench3/src/disk_org.c	2021-04-16 17:57:30.570000000 +0530
++++ lmbench3/src/disk.c	2021-04-16 18:07:44.770000000 +0530
+@@ -6,7 +6,9 @@
+  * Copyright (c) 1994-1997 Larry McVoy.  All rights reserved.
+  * Bits of this are derived from work by Ethan Solomita.
+  */
+-
++#ifdef  __linux__
++#define __USE_FILE_OFFSET64
++#endif
+ #include	<stdio.h>
+ #include	<sys/types.h>
+ #include	<unistd.h>
+@@ -289,9 +291,8 @@
+ seekto(int fd, uint64 off)
+ {
+ #ifdef	__linux__
+-	extern	loff_t llseek(int, loff_t, int);
+ 
+-	if (llseek(fd, (loff_t)off, SEEK_SET) == (loff_t)-1) {
++	if (lseek(fd, (loff_t)off, SEEK_SET) == (loff_t)-1) {
+ 		return(-1);
+ 	}
+ 	return (0);
