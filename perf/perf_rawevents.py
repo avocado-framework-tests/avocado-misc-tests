@@ -68,7 +68,7 @@ class PerfRawevents(Test):
             self.copy_files(filename)
 
         os.chdir(self.teststmpdir)
-        # Clear the dmesg, by that we can capture the delta at the end of the test.
+        # Clear the dmesg to capture the delta changes at the end of the test.
         process.run("dmesg -c")
 
     def run_event(self, filename, eventname):
@@ -87,7 +87,7 @@ class PerfRawevents(Test):
         if self.fail_cmd:
             for cmd in range(len(self.fail_cmd)):
                 self.log.info("Failed command: %s", self.fail_cmd[cmd])
-            self.fail("perf_raw_events: some of the events failed, refer to log")
+            self.fail("perf_raw_events: refer log file for failed events")
 
     def test(self):
         cpu_family = cpu.get_family()
