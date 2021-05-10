@@ -54,7 +54,7 @@ class PerfBasic(Test):
         smg = SoftwareManager()
         dist = distro.detect()
         if dist.name in ['Ubuntu']:
-            linux_tools = "linux-tools-" + os.uname()[2][3]
+            linux_tools = "linux-tools-" + os.uname()[2]
             pkgs = [linux_tools]
             if dist.name in ['Ubuntu']:
                 pkgs.extend(['linux-tools-common'])
