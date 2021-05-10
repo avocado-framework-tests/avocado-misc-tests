@@ -26,7 +26,7 @@ from avocado.utils import process, distro, cpu, genio
 from avocado import skipIf
 from avocado.utils.software_manager import SoftwareManager
 
-IS_POWER_NV = 'POWER9' not in open('/proc/cpuinfo', 'r').read()
+IS_POWER_NV = 'PowerNV' not in open('/proc/cpuinfo', 'r').read()
 
 
 class freq_transitions(Test):
@@ -35,7 +35,7 @@ class freq_transitions(Test):
 
     :avocado: tags=cpu,power,privileged
     """
-    @skipIf(IS_POWER_NV, "This test only supported on Power9  platform")
+    @skipIf(IS_POWER_NV, "This test is not supported on PowerVM")
     def setUp(self):
         """
         Verify :
@@ -46,7 +46,7 @@ class freq_transitions(Test):
         if 'ppc' not in distro.detect().arch:
             self.cancel("Processor is not ppc64")
         if not os.path.exists('/sys/devices/system/cpu/cpu0/cpufreq'):
-            self.cancel('CPUFREQ is supported only on Power NV')
+            self.cancel('missing sysfs entry cpufreq, CPUFREQ not supported')
 
         smm = SoftwareManager()
         detected_distro = distro.detect()
