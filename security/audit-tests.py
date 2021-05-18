@@ -67,4 +67,4 @@ class Audit(Test):
         for line in output.stdout_text.splitlines():
             if 'Result: FAIL' in line:
                 self.log.info(line)
-                self.fail("Some of the test(s) failed, please refer to the log")
+                self.fail("Some of the test(s) failed, refer to the log file")
