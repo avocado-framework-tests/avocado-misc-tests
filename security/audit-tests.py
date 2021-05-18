@@ -48,11 +48,12 @@ class Audit(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
-        url = "https://github.com/linux-audit/audit-testsuite/archive/master.zip"
+        url = ("https://github.com/linux-audit/audit-testsuite/archive/"
+               "refs/heads/main.zip")
 
         tarball = self.fetch_asset(url, expire='7d')
         archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'audit-testsuite-master')
+        self.sourcedir = os.path.join(self.workdir, 'audit-testsuite-main')
         os.chdir(self.sourcedir)
         if build.make(self.sourcedir) > 0:
             self.cancel("Building audit test suite failed")
