@@ -173,7 +173,7 @@ class Xfstests(Test):
             packages.extend(
                 ['xfslibs-dev', 'uuid-dev', 'libuuid1',
                  'libattr1-dev', 'libacl1-dev', 'libgdbm-dev',
-                 'uuid-runtime', 'libaio-dev', 'fio', 'dbench', 'libbtrfs-dev'])
+                 'uuid-runtime', 'libaio-dev', 'fio', 'dbench'])
             if self.detected_distro.version in ['14']:
                 packages.extend(['libtool'])
             elif self.detected_distro.version in ['18', '20']:
