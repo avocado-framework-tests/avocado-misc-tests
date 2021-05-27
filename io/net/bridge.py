@@ -16,7 +16,6 @@
 # Bridge interface test
 
 
-import os
 import netifaces
 from avocado import Test
 from avocado.utils import process
@@ -34,17 +33,18 @@ class Bridging(Test):
             self.fail("Command %s failed" % cmd)
 
     def setUp(self):
-        self.host_interface = self.params.get("interface",
-                                              default=None)
-        if not self.host_interface:
-            self.cancel("User should specify host interface")
+        self.host_interfaces = self.params.get("interfaces",
+                                               default="").split(" ")
+        if not self.host_interfaces:
+            self.cancel("User should specify host interface/s")
 
-        if self.host_interface[0:2] == 'ib':
+        if self.host_interfaces[0:2] == 'ib':
             self.cancel("Network Bridge is not supported for IB")
 
         interfaces = netifaces.interfaces()
-        if self.host_interface not in interfaces:
-            self.cancel("Interface is not available")
+        for host_interface in self.host_interfaces:
+            if host_interface not in interfaces:
+                self.cancel("Interface is not available")
 
         self.peer_ip = self.params.get("peer_ip", default=None)
         if not self.peer_ip:
@@ -53,6 +53,9 @@ class Bridging(Test):
         self.netmask = self.params.get("netmask", default="")
         self.bridge_interface = self.params.get("bridge_interface",
                                                 default="br0")
+        local = LocalHost()
+        self.networkinterface = NetworkInterface(self.bridge_interface, local,
+                                                 if_type="Bridge")
 
     def test_bridge_create(self):
         '''
@@ -69,34 +72,31 @@ class Bridging(Test):
                 check_flag = True
         if not check_flag:
             self.fail('Bridge interface is not created')
-        self.check_failure('ip link set %s master %s'
-                           % (self.host_interface, self.bridge_interface))
-        self.check_failure('ip addr flush dev %s' % self.host_interface)
+        for host_interface in self.host_interfaces:
+            self.check_failure('ip link set %s master %s'
+                               % (host_interface, self.bridge_interface))
+            self.check_failure('ip addr flush dev %s' % host_interface)
 
     def test_bridge_run(self):
         '''
         run bridge test
         '''
-        local = LocalHost()
-        networkinterface = NetworkInterface(self.bridge_interface, local,
-                                            if_type="Bridge")
         try:
-            networkinterface.add_ipaddr(self.ipaddr, self.netmask)
-            networkinterface.save(self.ipaddr, self.netmask)
+            self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+            self.networkinterface.save(self.ipaddr, self.netmask)
         except Exception:
-            networkinterface.save(self.ipaddr, self.netmask)
-        networkinterface.bring_up()
-        if networkinterface.ping_check(self.peer_ip, count=5) is not None:
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        self.networkinterface.bring_up()
+        if self.networkinterface.ping_check(self.peer_ip, count=5) is not None:
             self.fail('Ping using bridge failed')
-        networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
 
     def test_bridge_delete(self):
         '''
         Set to original state
         '''
         self.check_failure('ip link del dev %s' % self.bridge_interface)
-        # TODO:need to get this functionality into avocado utils interfcae.py
-        path = "/etc/sysconfig/network-scripts/ifcfg-%s" \
-               % self.bridge_interface
-        if os.path.isfile(path):
-            os.remove(path)
+        try:
+            self.networkinterface.restore_from_backup()
+        except Exception:
+            self.networkinterface.remove_cfg_file()
