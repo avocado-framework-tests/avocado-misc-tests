@@ -14,8 +14,10 @@
 #
 # Based on code by Gautham Shenoy <ego@linux.vnet.ibm.com>
 
+import json
 import os
 import platform
+import re
 
 from avocado import Test
 from avocado.utils import process
@@ -89,5 +91,26 @@ class Producer_Consumer(Test):
             args += ' --intermediate-stats'
 
         cmd = '%s %s/producer_consumer %s' % (perfstat, self.sourcedir, args)
-        if process.system(cmd, ignore_status=True, shell=True):
+        res = process.run(cmd, ignore_status=True, shell=True)
+
+        if res.exit_status:
             self.fail("The test failed. Failed command is %s" % cmd)
+        lines = res.stdout.decode().splitlines()
+        for line in lines:
+            if line.startswith('Consumer(0) :'):
+                print(line)
+                pattern = re.compile(r":    (.*?) iterations")
+                iteration = pattern.findall(line)[0]
+                pattern = re.compile(r"time/iteration: (.*?) ns")
+                time_iter = pattern.findall(line)[0]
+                pattern = re.compile(r"time/access:  (.*?) ns")
+                time_acc = pattern.findall(line)[0]
+
+                json_object = json.dumps({'iterations': iteration,
+                                          'iter_time': time_iter,
+                                          'access_time': time_acc})
+                break
+
+        logfile = os.path.join(self.logdir, "time_log.json")
+        with open(logfile, "w") as outfile:
+            outfile.write(json_object)
