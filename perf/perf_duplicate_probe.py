@@ -43,18 +43,19 @@ class PerfProbe(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
+        self.fail_flag = False
+
+    def _check_duplicate_probe(self, output):
+        if 'select_task_rq_fair' in output and 'select_task_rq_fair_' in output:
+            self.fail_flag = True
 
     def test_probe(self):
         output = process.run("perf probe select_task_rq_fair:0", sudo=True)
         output = output.stderr.decode("utf-8")
-        fail_flag = False
-        if 'select_task_rq_fair' in output and 'select_task_rq_fair_' in output:
-            fail_flag = True
+        self._check_duplicate_probe(output)
         output = genio.read_all_lines("/sys/kernel/debug/tracing/kprobe_events")
-        for line in output:
-            if 'select_task_rq_fair' in line or 'select_task_rq_fair_' in line:
-                fail_flag = True
-        if fail_flag:
+        self._check_duplicate_probe(output)
+        if self.fail_flag:
             self.fail("perf probe is placing multiple probe at the same location ")
 
     def tearDown(self):
