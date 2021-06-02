@@ -138,7 +138,10 @@ class TcpdumpTest(Test):
         """
         perform nping
         """
-        nping_count = round((120 * int(self.count)) / 100)
+        if self.count <= 10:
+            nping_count = round((200 * int(self.count)) / 100)
+        else:
+            nping_count = round((120 * int(self.count)) / 100)
         detected_distro = distro.detect()
         if detected_distro.name == "SuSE":
             cmd = "./nping/nping --%s %s -c %s" % (param,
