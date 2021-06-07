@@ -73,9 +73,13 @@ class kselftest(Test):
                 deps.extend(['libhugetlbfs-libhugetlb-devel'])
         elif detected_distro.name in ['centos', 'fedora', 'rhel']:
             deps.extend(['popt', 'glibc', 'glibc-devel', 'glibc-static',
-                         'libcap-ng', 'libcap', 'libcap-devel', 'fuse-devel',
+                         'libcap-ng', 'libcap', 'libcap-devel',
                          'libcap-ng-devel', 'popt-devel',
                          'libhugetlbfs-devel'])
+            if detected_distro.name == 'rhel' and int(detected_distro.version) >= 9:
+                deps.extend(['fuse3-devel'])
+            else:
+                deps.extend(['fuse-devel'])
 
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
