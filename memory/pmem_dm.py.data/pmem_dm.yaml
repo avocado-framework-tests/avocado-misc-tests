@@ -1,8 +1,8 @@
-preserve_dm: "null"
+preserve_dm: False
 mnt_point: '/mnt/pmem'
-fio_job: "null"
-fio_url: "null"
-package: "null"
+fio_job:
+fio_url:
+package:
 split: !mux
     ns_split:
         split_ns : True
