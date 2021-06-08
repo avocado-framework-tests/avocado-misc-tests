@@ -424,7 +424,7 @@ class NetworkVirtualization(Test):
 
     def test_vnic_dlpar(self):
         '''
-        Perform vNIC device hot add and hot remove using drmgr command
+        Perform vNIC device hot add and hot remove
         '''
         for slot_no, device_ip, netmask, mac, peer_ip in zip(self.slot_num,
                                                              self.device_ip,
@@ -432,31 +432,41 @@ class NetworkVirtualization(Test):
                                                              self.mac_id,
                                                              self.peer_ip):
             self.update_backing_devices(slot_no)
-            dev_id = self.find_device_id(mac)
             device_name = self.find_device(mac)
-            slot = self.find_virtual_slot(dev_id)
-            if slot:
-                try:
-                    for _ in range(self.num_of_dlpar):
-                        self.drmgr_vnic_dlpar('-r', slot)
-                        self.drmgr_vnic_dlpar('-a', slot)
-                        self.wait_intrerface(device_name)
-                except CmdError as details:
-                    self.log.debug(str(details))
-                    self.fail("dlpar operation did not complete")
-                device = self.find_device(mac)
-                networkinterface = NetworkInterface(device, self.local)
+            self.log.info("Preforming DLPAR on %s" % device_name)
+            for _ in range(self.num_of_dlpar):
+                self.log.info("DLPAR iteration #%d" % count)
+
+                num_backingdevs = self.backing_dev_count_w_slot_num(slot_no)
+
+                # DLPAR remove vNIC
+                self.device_add_remove(slot_no, '', '', '', 'remove')
+                if networkinterface.is_available():
+                    self.fail("DLPAR remove did not remove interface")
+
+                # DLPAR add vNIC
+                self.device_add_remove(slot_no, mac, sriov_port, adapter_id, 'add')
+                for c in range(1, num_backingdevs):
+                    self.backing_dev_add_remove('add', c)
+                    self.wait_interface(device_name)
+
+                #check if vNIC interface is functional
                 try:
                     networkinterface.add_ipaddr(device_ip, netmask)
                 except Exception:
                     networkinterface.save(device_ip, netmask)
+                    networkinterface.add_ipaddr(device_ip, netmask)
+
+                networkinterface.bring_up()
+
                 if not wait.wait_for(networkinterface.is_link_up, timeout=120):
                     self.fail("Unable to bring up the link on the Network \
-                              virtualized device")
+                        virtualized device")
+
+                time.sleep(5)
+
                 if networkinterface.ping_check(peer_ip, count=5) is not None:
                     self.fail("dlpar has affected Network connectivity")
-            else:
-                self.fail("slot not found")
         self.check_dmesg_error()
 
     def test_backingdevremove(self):
@@ -637,6 +647,17 @@ class NetworkVirtualization(Test):
                     count = len(i.split(',')[1:])
             return count
 
+    def backing_dev_count_w_slot_num(self, slot):
+        '''
+        Lists the count of backing devices
+        '''
+        count = 0
+        output = self.backing_dev_list()
+        for i in output.splitlines():
+            if i.startswith('%s,' % slot):
+                count = len(i.split(',')[1:])
+        return count
+
     @staticmethod
     def find_device(mac_addrs):
         """
@@ -648,15 +669,6 @@ class NetworkVirtualization(Test):
             if mac in netifaces.ifaddresses(device)[17][0]['addr']:
                 return device
         return ''
-
-    def drmgr_vnic_dlpar(self, operation, slot):
-        """
-        Perform add / remove operation
-        """
-        cmd = 'drmgr %s -c slot -s %s -w 5 -d 1' % (operation, slot)
-        if process.system(cmd, shell=True, sudo=True, ignore_status=True):
-            self.fail("drmgr operation %s fails for vNIC device %s" %
-                      (operation, slot))
 
     def is_auto_failover_enabled(self):
         """
