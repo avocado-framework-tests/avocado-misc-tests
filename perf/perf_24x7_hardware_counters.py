@@ -106,6 +106,14 @@ class EliminateDomainSuffix(Test):
             self.fail('Unable to display domain indices in sysfs')
 
     def test_event_phys_core_param(self):
+        found_flag = False
+        for lne in process.get_command_output_matching('perf list', 'hv_24x7'):
+            lne = lne.split(',')[0].split('/')[1]
+            if 'HPM_0THRD_NON_IDLE_CCYC__PHYS_CORE' in lne:
+                found_flag = True
+                break
+        if not found_flag:
+            self.cancel("HPM_0THRD_NON_IDLE_CCYC__PHYS_CORE not found")
         result1 = self.event_stat('__PHYS_CORE,core=1/ sleep 1')
         if "Invalid event/parameter" not in result1.stdout.decode("utf-8"):
             self.fail('perf unable to recognize'
