@@ -116,16 +116,46 @@ class Bonding(Test):
         if self.host_interface[0:2] == 'ib':
             self.ib = True
         self.log.info("Bond Test on IB Interface? = %s", self.ib)
-        self.session = Session(self.peer_first_ipinterface, user=self.user,
-                               password=self.password)
+
+        '''
+        An individual interface, that has a LACP PF, cannot communicate without
+        being bonded. So the test uses the public ip address to create an SSH
+        session instead of the private one when setting up a bonding interface.
+        '''
+        if self.mode == "4" and "setup" in str(self.name.name):
+            self.session = Session(self.peer_public_ip, user=self.user,
+                                   password=self.password)
+        else:
+            self.session = Session(self.peer_first_ipinterface, user=self.user,
+                                   password=self.password)
+
         if not self.session.connect():
-            self.cancel("failed connecting to peer")
+            '''
+            LACP bond interface takes some time to get it to ping peer after it
+            is setup. This code block tries at most 5 times to get it to connect
+            to the peer.
+            '''
+            if self.mode == "4":
+                connect = False
+                for _ in range(5):
+                    if self.session.connect():
+                        connect = True
+                        self.log.info("Was able to connect to peer.")
+                        break
+                    time.sleep(5)
+                if not connect:
+                    self.cancel("failed connecting to peer")
+            else:
+                self.cancel("failed connecting to peer")
         self.setup_ip()
         self.err = []
-        self.remotehost = RemoteHost(self.peer_first_ipinterface, self.user,
-                                     password=self.password)
-        self.remotehost_public = RemoteHost(self.peer_public_ip, self.user,
-                                            password=self.password)
+        if self.mode == "4" and "setup" in str(self.name.name):
+            self.remotehost = RemoteHost(self.peer_public_ip, self.user,
+                                         password=self.password)
+        else:
+            self.remotehost = RemoteHost(self.peer_first_ipinterface, self.user,
+                                         password=self.password)
+
         if 'setup' in str(self.name.name):
             for interface in self.peer_interfaces:
                 peer_networkinterface = NetworkInterface(interface, self.remotehost)
@@ -484,17 +514,13 @@ class Bonding(Test):
                 networkinterface.restore_from_backup()
             except Exception:
                 self.log.info("backup file not availbale, could not restore file.")
-        try:
-            for interface in self.peer_interfaces:
-                peer_networkinterface = NetworkInterface(interface, self.remotehost)
-                peer_networkinterface.set_mtu("1500")
-        except Exception:
-            for interface in self.peer_interfaces:
-                peer_public_networkinterface = NetworkInterface(interface,
-                                                                self.remotehost_public)
-                peer_public_networkinterface.set_mtu("1500")
-        self.remotehost.remote_session.quit()
-        self.remotehost_public.remote_session.quit()
+            try:
+                for interface in self.peer_interfaces:
+                    peer_networkinterface = NetworkInterface(interface, self.remotehost)
+                    peer_networkinterface.set_mtu("1500")
+                self.remotehost.remote_session.quit()
+            except Exception:
+                self.log.debug("Could not revert peer interface MTU to 1500")
 
     def error_check(self):
         if self.err:
