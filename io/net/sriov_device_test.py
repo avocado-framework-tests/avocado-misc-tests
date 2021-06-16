@@ -78,15 +78,16 @@ class NetworkSriovDevice(Test):
                                       default="02:03:03:03:03:01").split(' ')
         self.mac_id = [mac.replace(':', '') for mac in self.mac_id]
         self.migratable = self.params.get('migratable', '*', default=0)
-        self.backup_device_type = self.params.get(
-            'backup_device_type', '*', default='')
-        self.backup_device_slot_num = self.params.get(
-            'backup_device_slot_num', '*', default=None)
         self.backup_veth_vnetwork = self.params.get(
-            'backup_veth_vnetwork', '*', default=None)
+            'backup_veth_vnetwork', '*', default="")
+        self.vnic_sriov_adapter = self.params.get(
+            'vnic_sriov_adapter', '*', default="")
+        self.backup_device_type = "veth"
+        if not self.backup_veth_vnetwork:
+            self.backup_device_type = "vnic"
+            if not self.vnic_sriov_adapter:
+                self.cancel("Please provide veth or vnic inputs")
         if 'vnic' in self.backup_device_type:
-            self.vnic_sriov_adapter = self.params.get(
-                'vnic_sriov_adapter', '*', default=None)
             self.vnic_port_id = self.params.get(
                 'vnic_port_id', '*', default=None)
             self.vnic_adapter_id = self.get_adapter_id(self.vnic_sriov_adapter)
