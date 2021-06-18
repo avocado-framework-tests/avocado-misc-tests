@@ -40,7 +40,7 @@ class CryptSetup(Test):
             deps.extend(["autoconf", "automake", "gettext", "gettext-devel",
                          "libtool", "device-mapper", "device-mapper-devel",
                          "device-mapper-libs", "popt-devel", "json-c",
-                         "json-c-devel", "libblkid-devel"])
+                         "json-c-devel", "libblkid-devel", "libssh-devel"])
         else:
             self.cancel("Unsupported distro %s for cryptsetup package"
                         % detected_distro.name)
