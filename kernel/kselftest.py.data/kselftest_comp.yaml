@@ -1,0 +1,47 @@
+run_type: !mux
+    distro:
+        type: 'distro'
+    upstream:
+        type: 'upstream'
+        location: "https://github.com/torvalds/linux/archive/master.zip"
+component: !mux
+    alignment:
+        comp: 'powerpc/alignment'
+    benchmarks:
+        comp: 'powerpc/benchmarks'
+    cache_shape:
+        comp: 'powerpc/cache_shape'
+    copyloops:
+        comp: 'powerpc/copyloops'
+    dscr:
+       comp: 'powerpc/dscr'
+    eeh:
+       comp: 'powerpc/eeh'
+    math:
+       comp: 'powerpc/math'
+    mm:
+       comp: 'powerpc/mm'
+    nx-gzip:
+       comp: 'powerpc/nx-gzip'
+    pmu:
+       comp: 'powerpc/pmu'
+    primitives:
+       comp: 'powerpc/primitives'
+    ptrace:
+       comp: 'powerpc/ptrace'
+    scripts:
+       comp: 'powerpc/scripts'
+    security:
+       comp: 'powerpc/security'
+    signal:
+       comp: 'powerpc/signal'
+    stringloops:
+       comp: 'powerpc/stringloops'
+    switch_endian:
+       comp: 'powerpc/switch_endian'
+    syscalls:
+       comp: 'powerpc/syscalls'
+    tm:
+       comp: 'powerpc/tm'
+    vphn:
+       comp: 'powerpc/vphn'

@@ -17,6 +17,7 @@ import os
 import platform
 import re
 import glob
+import shutil
 
 from avocado import Test
 from avocado.utils import build
@@ -151,3 +152,8 @@ class kselftest(Test):
 
         if self.error:
             self.fail("Testcase failed during selftests")
+
+    def tearDown(self):
+        self.log.info('Cleaning up')
+        if os.path.exists(self.workdir):
+            shutil.rmtree(self.workdir)
