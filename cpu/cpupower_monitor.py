@@ -41,7 +41,13 @@ class CpupowerMonitor(Test):
             if 'Available idle states: ' in line:
                 self.states_list = (line.split('Available idle states: ')[-1]).split()
                 break
-        self.log.info("Idle states on the system are: ", self.states_list)
+        self.log.info("Idle states on the system are: %s" % self.states_list)
+
+        for line in output.splitlines():
+            if 'Number of idle states: ' in line:
+                self.states_tot = int(line.split('Number of idle states: ')[1])
+                break
+        self.log.info("Total Idle states: %d" % self.states_tot)
         self.run_cmd_out("cpupower monitor")
 
     def run_cmd_out(self, cmd):
@@ -88,14 +94,14 @@ class CpupowerMonitor(Test):
                                  shell=True)
         obj.start()
         time.sleep(2)
-        for i in range(len(self.states_list)):
+        for i in range(self.states_tot - 1):
             zero_nonzero = self.check_zero_nonzero(i + 1)
             if zero_nonzero:
                 self.fail("cpus entered idle states during ebizzy workload")
             self.log.info("no cpus entered idle states while running ebizzy")
         time.sleep(100)
         zero_nonzero = 0
-        for i in range(len(self.states_list)):
+        for i in range(self.states_tot - 1):
             zero_nonzero = zero_nonzero + self.check_zero_nonzero(i + 1)
         if not zero_nonzero:
             self.fail("cpus have not entered idle states after killing ebizzy workload")
@@ -111,7 +117,7 @@ class CpupowerMonitor(Test):
         5. Repeat test for all states.
         """
 
-        for i in range(len(self.states_list)):
+        for i in range(self.states_tot - 1):
             process.run('cpupower -c all idle-set -d %s' % i, shell=True)
             time.sleep(5)
             zero_nonzero = self.check_zero_nonzero(i + 1)
