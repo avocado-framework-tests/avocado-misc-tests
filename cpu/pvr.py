@@ -49,8 +49,15 @@ class pvr(Test):
             self.cancel("%s package is needed for the test to be run" % pkg)
 
         val = genio.read_file("/proc/cpuinfo")
+        for line in val.splitlines():
+            if 'revision' in line:
+                rev = (line.split('revision')[1]).split()
+                self.log.info("Revision: %s %s" % (rev, rev[1]))
+                break
         if 'pSeries|PowerNV' and 'POWER8' in val:
             self.pvr_value = parser.get('PVR_Values', 'pvr_value_p8')
+        elif 'pSeries' and '1.2' and 'POWER9' in val:
+            self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9LPAR_1.2')
         elif 'pSeries' and '2.2' and 'POWER9' in val:
             self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9LPAR_2.2')
         elif 'pSeries' and '2.3' and 'POWER9' in val:
@@ -61,10 +68,11 @@ class pvr(Test):
             self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9NV_2.2')
         elif 'PowerNV' and '2.3' and 'POWER9' in val:
             self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9NV_2.3')
-        elif 'pSeries' and '1.0' and 'POWER10' in val:
-            self.pvr_value = parser.get('PVR_Values', 'pvr_value_p10_1')
-        elif 'pSeries' and '2.0' and 'POWER10' in val:
-            self.pvr_value = parser.get('PVR_Values', 'pvr_value_p10_2')
+        elif 'pSeries' and 'POWER10' in val:
+            if (rev[1] == '1.0'):
+                self.pvr_value = parser.get('PVR_Values', 'pvr_value_p10_1')
+            elif (rev[1] == '2.0'):
+                self.pvr_value = parser.get('PVR_Values', 'pvr_value_p10_2')
         else:
             self.fail("Unsupported processor family")
 
