@@ -32,13 +32,16 @@ class PerfBasic(Test):
     - version
     - 'list' -> List all symbolic event types
     - 'record' -> Run a command and record its profile into perf.data
-    - 'report' -> Read perf.data (created by perf record) and display the profile
+    - 'report' -> Read perf.data (created by perf record) and display
+                  the profile
 
     execute perf commands:
     - 'kallsyms' -> Searches running kernel for symbols
-    - 'annotate' -> Read perf.data (created by perf record) and display annotated code
+    - 'annotate' -> Read perf.data (created by perf record) and display
+                    annotated code
     - 'evlist' -> List the event names in a perf.data file
-    - 'script' -> Read perf.data (created by perf record) and display trace output
+    - 'script' -> Read perf.data (created by perf record) and display
+                  trace output
     - 'stat' -> Run a command and gather performance counter statistics
     - 'bench' -> General framework for benchmark suites
     """
@@ -47,7 +50,8 @@ class PerfBasic(Test):
 
     def run_cmd(self, cmd, verbose=True):
         self.log.info("executing ============== %s =================", cmd)
-        if process.system(cmd, verbose=verbose, ignore_status=True, sudo=True, shell=True):
+        if process.system(cmd, verbose=verbose, ignore_status=True,
+                          sudo=True, shell=True):
             self.fail("perf: failed to execute command %s" % cmd)
 
     def setUp(self):
