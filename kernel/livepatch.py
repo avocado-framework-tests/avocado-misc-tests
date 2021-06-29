@@ -48,9 +48,9 @@ class Livepatch(Test):
         return process.system_output(cmd, shell=True, ignore_status=True,
                                      sudo=True).decode("utf-8")
 
-
     def check_kernel_support(self):
-        if linux_modules.check_kernel_config("CONFIG_LIVEPATCH") == linux_modules.ModuleConfig.NOT_SET:
+        if linux_modules.check_kernel_config("CONFIG_LIVEPATCH") \
+                == linux_modules.ModuleConfig.NOT_SET:
             self.fail("Livepatch support not available")
 
     def setUp(self):
@@ -140,8 +140,8 @@ class Livepatch(Test):
             self.fail("Unable to disable livepatch "
                       "for livepatch_sample module")
 
-        if "unpatching transition" not in self.run_cmd_out("dmesg |grep "
-                                                           "-i livepatch_sample"):
+        if "unpatching transition" not in \
+                self.run_cmd_out("dmesg |grep -i livepatch_sample"):
             self.fail(
                 "livepatch couldn't be disabled, check dmesg "
                 "for more information")
