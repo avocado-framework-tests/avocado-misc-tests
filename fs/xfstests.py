@@ -181,9 +181,6 @@ class Xfstests(Test):
             else:
                 packages.extend(['libtool-bin'])
 
-        # FIXME: "redhat" as the distro name for RHEL is deprecated
-        # on Avocado versions >= 50.0.  This is a temporary compatibility
-        # enabler for older runners, but should be removed soon
         elif self.detected_distro.name in ['centos', 'fedora', 'rhel', 'SuSE']:
             if self.dev_type == 'nvdimm':
                 packages.extend(['ndctl', 'parted'])
