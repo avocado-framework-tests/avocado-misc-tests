@@ -19,7 +19,7 @@
 import os
 
 from avocado import Test
-from avocado.utils import process, git, build, distro
+from avocado.utils import process, archive, build, distro
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -40,27 +40,26 @@ class Linsched(Test):
 
         # Check for basic utilities
         smm = SoftwareManager()
-        deps = ['gcc', 'make', 'patch']
-        if distro.detect().name == "SuSE":
-            deps.append('git-core')
-        else:
-            deps.append('git')
-        for package in deps:
+        for package in ['gcc', 'make', 'patch']:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel(
                     "Fail to install %s required for this test." % package)
         self.args = self.params.get('args', default='pi 100')
-        git.get_repo('https://github.com/thejinxters/linux-scheduler-testing',
-                     destination_dir=self.workdir)
-        os.chdir(self.workdir)
+        url = "https://github.com/thejinxters/linux-scheduler-testing/" \
+              "archive/refs/heads/master.zip"
+        tarball = self.fetch_asset("linsched.zip", locations=url, expire='7d')
+        archive.extract(tarball, self.workdir)
+        self.sourcedir = os.path.join(self.workdir, 'linux-scheduler-testing-master')
+
+        os.chdir(self.sourcedir)
         fix_patch = 'patch -p1 < %s' % self.get_data('fix.patch')
         process.run(fix_patch, shell=True, ignore_status=True)
 
-        build.make(self.workdir)
+        build.make(self.sourcedir)
 
     def test(self):
 
-        os.chdir(self.workdir)
+        os.chdir(self.sourcedir)
 
         if process.system('./%s' % self.args, ignore_status=True, shell=True):
             self.fail('Test [%s] failed.' % self.args)
