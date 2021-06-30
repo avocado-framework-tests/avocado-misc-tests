@@ -45,7 +45,7 @@ class rt_tests(Test):
         if detected_distro.name == "Ubuntu":
             deps.append("build-essential")
             deps.append("libnuma-dev")
-        elif detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
+        elif detected_distro.name in ['centos', 'fedora', 'rhel']:
             deps.append("numactl-devel")
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):

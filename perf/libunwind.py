@@ -36,7 +36,7 @@ class Libunwind(Test):
         if dist.name == 'Ubuntu':
             deps.extend(['dh-autoreconf', 'dh-dist-zilla', 'g++',
                          'texlive-extra-utils'])
-        elif dist.name in ['SuSE', 'rhel', 'fedora', 'redhat']:
+        elif dist.name in ['SuSE', 'rhel', 'fedora']:
             deps.extend(['gcc-c++'])
         else:
             self.cancel('Test not supported in %s' % dist.name)
