@@ -49,8 +49,10 @@ class NdctlTest(Test):
         """
         Prequisite for ndctl selftest on non-NFIT devices
         """
-        nstype = genio.read_file("/sys/bus/nd/devices/region0"
-                                 "/nstype").rstrip("\n")
+        nstype_file = "/sys/bus/nd/devices/region0/nstype"
+        if not os.path.isfile(nstype_file):
+            self.cancel("Not found required sysfs file: %s." % nstype_file)
+        nstype = genio.read_file(nstype_file).rstrip("\n")
         if nstype == "4":
             self.cancel("Test not supported on legacy hardware")
 
