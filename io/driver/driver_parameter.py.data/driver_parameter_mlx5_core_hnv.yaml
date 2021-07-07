@@ -1,0 +1,28 @@
+module: "mlx5_core"
+interface:
+host_ip:
+netmask:
+peer_ip:
+sysfs_check_required: 1
+#hbond: True
+value: !mux
+    debug_mask:
+       module_param_name: "debug_mask"
+       value: !mux
+           debug_mask_0:
+               module_param_value: "0"
+           debug_mask_1:
+               module_param_value: "1"
+           debug_mask_2:
+               module_param_value: "2"
+           debug_mask_3:
+               module_param_value: "3"
+    prof_sel:
+       module_param_name: "prof_sel"
+       value: !mux
+           prof_sel_0:
+               module_param_value: "0"
+           prof_sel_1:
+               module_param_value: "1"
+           prof_sel_2:
+               module_param_value: "2"
