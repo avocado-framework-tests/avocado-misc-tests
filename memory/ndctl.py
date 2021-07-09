@@ -844,13 +844,13 @@ class NdctlTest(Test):
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'blockdev')
         size = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
             "-N -r %s" % region)[0], 'size')
-        self.part = partition.Partition(self.disk)
+        mnt_path = self.params.get('mnt_point', default='/pmemS')
+        self.part = partition.Partition(self.disk, mountpoint=mnt_path)
         self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512' %
                        memory.get_page_size())
-        mnt_path = self.params.get('mnt_point', default='/pmemS')
         if not os.path.exists(mnt_path):
             os.makedirs(mnt_path)
-        self.part.mount(mountpoint=mnt_path)
+        self.part.mount()
         self.log.info("Test will run on %s", mnt_path)
         fio_job = self.params.get('fio_job', default='sector-fio.job')
         cmd = '%s --directory %s --filename mmap-pmem --size %s %s' % (
@@ -869,13 +869,13 @@ class NdctlTest(Test):
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'blockdev')
         size = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
             "-N -r %s" % region)[0], 'size')
-        self.part = partition.Partition(self.disk)
+        mnt_path = self.params.get('mnt_point', default='/pmem')
+        self.part = partition.Partition(self.disk, mountpoint=mnt_path, mount_options='dax')
         self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512 %s' %
                        (memory.get_page_size(), self.reflink))
-        mnt_path = self.params.get('mnt_point', default='/pmem')
         if not os.path.exists(mnt_path):
             os.makedirs(mnt_path)
-        self.part.mount(mountpoint=mnt_path, args='-o dax')
+        self.part.mount()
         self.log.info("Test will run on %s", mnt_path)
         fio_job = self.params.get('fio_job', default='ndctl-fio.job')
         cmd = '%s --directory %s --filename mmap-pmem --size %s %s' % (
@@ -892,13 +892,13 @@ class NdctlTest(Test):
         self.plib.create_namespace(region=region, mode='fsdax')
         self.disk = '/dev/%s' % self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'blockdev')
-        self.part = partition.Partition(self.disk)
+        mnt_path = self.params.get('mnt_point', default='/pmem_map')
+        self.part = partition.Partition(self.disk, mountpoint=mnt_path, mount_options='dax')
         self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512 %s' %
                        (memory.get_page_size(), self.reflink))
-        mnt_path = self.params.get('mnt_point', default='/pmem_map')
         if not os.path.exists(mnt_path):
             os.makedirs(mnt_path)
-        self.part.mount(mountpoint=mnt_path, args='-o dax')
+        self.part.mount()
         self.log.info("Testing MAP_SYNC on %s", mnt_path)
         src_file = os.path.join(self.teststmpdir, 'map_sync.c')
         shutil.copyfile(self.get_data('map_sync.c'), src_file)
