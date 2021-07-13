@@ -19,6 +19,7 @@ Tcpdump Test.
 """
 
 import os
+from time import sleep
 import netifaces
 from avocado import Test
 from avocado.utils import process
@@ -28,8 +29,36 @@ from avocado.utils import build
 from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost, RemoteHost
+from avocado.utils.network.common import run_command
+from avocado.utils.network.exceptions import NWException
 from avocado.utils import wait
 
+class FVTNetworkInterface(NetworkInterface):
+    def set_mtu(self, mtu, timeout=30):
+        if int(self.get_mtu()) == int(mtu):
+            return
+        if self.is_vnic():
+            if int(mtu) not in [1500, 9000]:
+                raise NWException("MTU %s not supported by VNIC" % str(mtu))
+            for i in range(2):
+                try:
+                    # Apparently repeatedly setting the mtu can help solve issues sometimes
+                    super().set_mtu(mtu, timeout=timeout)
+                except :
+                    continue
+            # Vnic driver needs some time to reset itself after mtu changes
+            sleep(15)
+            return super().set_mtu(mtu, timeout=timeout)
+        else:
+            return super().set_mtu(mtu, timeout=timeout)
+
+    
+    def is_vnic(self):
+        '''
+        check if slave interface is vnic
+        '''
+        cmd = "lsdevinfo -q name=%s" % self.name
+        return 'type="IBM,vnic"' in run_command(cmd, self.host)
 
 class TcpdumpTest(Test):
     """
@@ -56,7 +85,7 @@ class TcpdumpTest(Test):
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         localhost = LocalHost()
-        self.networkinterface = NetworkInterface(self.iface, localhost)
+        self.networkinterface = FVTNetworkInterface(self.iface, localhost)
         try:
             self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
             self.networkinterface.save(self.ipaddr, self.netmask)
@@ -73,11 +102,11 @@ class TcpdumpTest(Test):
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
                                      password=self.peer_password)
         self.peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip).name
-        self.peer_networkinterface = NetworkInterface(self.peer_interface,
+        self.peer_networkinterface = FVTNetworkInterface(self.peer_interface,
                                                       self.remotehost)
         self.remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
                                             password=self.peer_password)
-        self.peer_public_networkinterface = NetworkInterface(self.peer_interface,
+        self.peer_public_networkinterface = FVTNetworkInterface(self.peer_interface,
                                                              self.remotehost_public)
         if self.peer_networkinterface.set_mtu(self.mtu, timeout=self.mtu_timeout) is not None:
             self.cancel("Failed to set mtu in peer")
