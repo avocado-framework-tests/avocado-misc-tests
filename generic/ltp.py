@@ -93,7 +93,7 @@ class LTP(Test):
         elif dist.name in ["centos", "rhel", "fedora"]:
             deps.extend(['numactl-devel'])
         elif dist.name == "SuSE":
-            deps.extend(['libnuma-devel'])
+            deps.extend(['libnuma-devel', 'iputils'])
         self.ltpbin_dir = self.mount_dir = None
         self.thp = False
         if self.args in self.mem_tests:
