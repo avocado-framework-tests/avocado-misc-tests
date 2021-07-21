@@ -200,6 +200,11 @@ class Bonding(Test):
             self.log.info("Removing bonding module")
             linux_modules.unload_module("bonding")
             time.sleep(self.sleep_time)
+            bond_networkinterface = NetworkInterface(self.bond_name, self.localhost)
+            try:
+                bond_networkinterface.restore_from_backup()
+            except Exception:
+                bond_networkinterface.remove_cfg_file()
         else:
             self.log.info("Removing Bonding configuration on Peer machine")
             self.log.info("------------------------------------------------")
@@ -223,6 +228,11 @@ class Bonding(Test):
             output = self.session.cmd(cmd)
             if not output.exit_status == 0:
                 self.log.info("bond removing command failed in peer machine")
+            peerbond_networkinterface = NetworkInterface(self.bond_name, self.remotehost)
+            try:
+                peerbond_networkinterface.restore_from_backup()
+            except Exception:
+                peerbond_networkinterface.remove_cfg_file()
 
     def ping_check(self):
         '''
@@ -372,22 +382,19 @@ class Bonding(Test):
                     bond_name_val = line.split(':')[1]
             self.log.info("Trying bond mode %s [ %s ]", arg2, bond_name_val)
             for ifs in self.host_interfaces:
-                cmd = "ip link set %s up" % ifs
-                if process.system(cmd, shell=True, ignore_status=True) != 0:
-                    self.fail("unable to interface up")
-            cmd = "ip addr add %s/%s dev %s;ip link set %s up"\
-                  % (self.local_ip, self.net_mask[0],
-                     self.bond_name, self.bond_name)
-            process.system(cmd, shell=True, ignore_status=True)
-            for _ in range(0, 600, 60):
-                if 'state UP' in process.system_output("ip link \
-                     show %s" % self.bond_name, shell=True).decode("utf-8"):
-                    self.log.info("Bonding setup is successful on\
-                                  local machine")
-                    break
-                time.sleep(60)
-            else:
-                self.fail("Bonding setup on local machine has failed")
+                networkinterface = NetworkInterface(ifs, self.localhost)
+                try:
+                    networkinterface.restore_from_backup()
+                except Exception:
+                    self.log.info("backup file not availbale, could not restore file.")
+                networkinterface.bring_up()
+            bond_networkinterface = NetworkInterface(self.bond_name, self.localhost, if_type='Bond')
+            try:
+                bond_networkinterface.add_ipaddr(self.local_ip, self.net_mask[0])
+                bond_networkinterface.save(self.local_ip, self.net_mask[0])
+            except Exception:
+                bond_networkinterface.save(self.local_ip, self.net_mask[0])
+            bond_networkinterface.bring_up()
             if self.gateway:
                 cmd = 'ip route add default via %s dev %s' % \
                     (self.gateway, self.bond_name)
@@ -416,13 +423,15 @@ class Bonding(Test):
                 else:
                     cmd += 'echo "+%s" > %s;' % (val, self.bonding_slave_file)
             for val in self.peer_interfaces:
-                cmd += 'ip link set %s up;' % val
-            cmd += 'ip addr add %s/%s dev %s;ip link set %s up;sleep 5;'\
-                   % (self.peer_first_ipinterface, self.net_mask[0],
-                      self.bond_name, self.bond_name)
-            output = self.session.cmd(cmd)
-            if not output.exit_status == 0:
-                self.fail("bond setup command failed in peer machine")
+                networkinterface = NetworkInterface(val, self.remotehost)
+                networkinterface.bring_up()
+            peerbond_networkinterface = NetworkInterface(self.bond_name, self.remotehost, if_type='Bond')
+            try:
+                peerbond_networkinterface.add_ipaddr(self.peer_first_ipinterface, self.net_mask[0])
+                peerbond_networkinterface.save(self.peer_first_ipinterface, self.net_mask[0])
+            except Exception:
+                peerbond_networkinterface.save(self.peer_first_ipinterface, self.net_mask[0])
+            peerbond_networkinterface.bring_up()
 
     def test_setup(self):
         '''
@@ -483,7 +492,7 @@ class Bonding(Test):
             try:
                 networkinterface.restore_from_backup()
             except Exception:
-                self.log.info("backup file not availbale, could not restore file.")
+                networkinterface.remove_cfg_file()
         try:
             for interface in self.peer_interfaces:
                 peer_networkinterface = NetworkInterface(interface, self.remotehost)
