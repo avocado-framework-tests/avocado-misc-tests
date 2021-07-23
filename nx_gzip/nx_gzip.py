@@ -22,6 +22,7 @@ from avocado.utils.software_manager import SoftwareManager
 from avocado.utils.partition import Partition
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
+IS_POWER10 = 'POWER10' in open('/proc/cpuinfo', 'r').read()
 
 
 class NXGZipTests(Test):
@@ -74,8 +75,9 @@ class NXGZipTests(Test):
         if failed_tests:
             self.fail("%s" % failed_tests)
 
-    @skipUnless(IS_POWER_NV,
-                "NX-GZIP tests are supported only on PowerNV platform.")
+    @skipUnless(IS_POWER_NV | IS_POWER10,
+                "NX-GZIP tests are supported only on PowerNV(POWER9) or "
+                "POWER10 platform.")
     def setUp(self):
         """
         Install pre-requisite packages
