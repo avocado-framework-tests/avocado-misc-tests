@@ -7,5 +7,4 @@ netmasks: ""
 peer_ip: ""
 mac_id: ""
 migratable: 1
-backup_device_type: "veth"
 backup_veth_vnetwork: ""
