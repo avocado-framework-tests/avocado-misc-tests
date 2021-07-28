@@ -10,4 +10,5 @@ hmc_pwd:      password of the HMC
 count:        Number of times the vfc interfaces has to remove and add back
 vfchost_id:   range of number of vfchosts separated by "-". (ex: 100-150). make sure that the range is conitenuous 
 vfc_count:    Number of vfchost to be created per vios.
-
+skip_host:    if we wish to skipp the bootable vfchost from unmapr/removal operation then add the corresponding client host for this parameter.
+              ll /sys/class/fc_host/ output and lsslot -c slot commands can be used to get corresponding client host.
