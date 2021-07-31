@@ -726,7 +726,7 @@ class NetworkVirtualization(Test):
         """
         device = self.find_device(mac)
         device_id = process.system_output("ls -l /sys/class/net/ | \
-                                           grep %s | cut -d '/' -f \
+                                           grep -w %s | cut -d '/' -f \
                                            5" % device,
                                           shell=True).decode("utf-8").strip()
         return device_id
