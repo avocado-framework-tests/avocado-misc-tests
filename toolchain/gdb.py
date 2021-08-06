@@ -48,7 +48,7 @@ class GDB(Test):
                             package)
         test_type = self.params.get('type', default='upstream')
         if test_type == 'upstream':
-            gdb_version = self.params.get('gdb_version', default='7.10')
+            gdb_version = self.params.get('gdb_version', default='10.2')
             tarball = self.fetch_asset(
                 "http://ftp.gnu.org/gnu/gdb/gdb-%s.tar.gz" % gdb_version)
             archive.extract(tarball, self.workdir)
