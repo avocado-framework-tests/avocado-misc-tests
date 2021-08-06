@@ -29,7 +29,8 @@ class GDB(Test):
     def setUp(self):
         sm = SoftwareManager()
         dist = distro.detect()
-        packages = ['gcc', 'dejagnu', 'flex', 'bison', 'texinfo']
+        packages = ['gcc', 'dejagnu', 'flex',
+                    'bison', 'texinfo', 'make', 'makeinfo']
         if dist.name == 'Ubuntu':
             packages.extend(['g++', 'binutils-dev'])
         # FIXME: "redhat" as the distro name for RHEL is deprecated
@@ -38,7 +39,8 @@ class GDB(Test):
         elif dist.name in ['rhel', 'fedora', 'redhat']:
             packages.extend(['gcc-c++', 'binutils-devel', 'texi2html'])
         elif dist.name == 'SuSE':
-            packages.extend(['gcc-c++', 'binutils-devel'])
+            packages.extend(['gcc-c++', 'binutils-devel',
+                             'glibc-devel', 'glibc-devel-static'])
 
         else:
             self.fail('no packages list for your distro.')
