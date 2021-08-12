@@ -52,9 +52,10 @@ class Numatop(Test):
                          'check'])
         elif distro_name in ['rhel', 'fedora']:
             deps.extend(['ncurses-devel', 'numactl-libs', 'numactl-devel',
-                         'check-devel'])
+                         'check-devel', 'libtool'])
         elif distro_name == 'suse':
-            deps.extend(['ncurses-devel', 'libnuma-devel', 'check-devel'])
+            deps.extend(['ncurses-devel', 'libnuma-devel', 'check-devel',
+                         'autoconf', 'libtool'])
         else:
             self.cancel("Install corresponding libnuma packages")
 
