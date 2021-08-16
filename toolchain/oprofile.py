@@ -38,6 +38,8 @@ class Oprofile(Test):
             deps.extend(["libxml2-utils", "tclsh"])
             if detected_distro.name == "Ubuntu":
                 deps.extend(["oprofile"])
+        elif (detected_distro.name == "rhel" and detected_distro.version >= "8"):
+            deps.append("perf")
         else:
             deps.append("oprofile")
         for package in deps:
