@@ -1,12 +1,12 @@
-switch_name: "x.xx.xx.xxx"
-userid: "admin"
-password: "**********"
-vlan_num: 1
-host_port: 38
-peer_port: 45
-interface: "enp128s0f4d1"
-peer_interface: "enP4p1s0f2"
-peer_public_ip: "x.xx.xx.xxx"
-peer_user: "root"
-peer_password: "********"
-cidr_value: "24"
+cidr_value:
+host_port: 
+interface: 
+password: 
+peer_interface: 
+peer_password: 
+peer_port: 
+peer_public_ip: 
+peer_user: 
+switch_name:
+userid: 
+vlan_num: 

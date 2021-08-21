@@ -15,12 +15,14 @@
 # VLAN Testcase
 
 import time
-import paramiko
 
 from avocado import Test
 from avocado.utils import process
-from avocado.utils.ssh import Session
+from avocado.utils.network.hosts import LocalHost, RemoteHost
+from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.process import CmdError
+
+import paramiko
 
 
 class VlanTest(Test):
@@ -44,31 +46,32 @@ class VlanTest(Test):
         """
         test parameters
         """
-        self.parameters()
-        self.switch_login(self.switch_name, self.userid, self.password)
-        self.session = Session(self.peer_ip, user=self.peer_user,
-                               password=self.peer_password)
-        if not self.session.connect():
-            self.cancel("failed connecting to peer")
-        self.get_ips()
-
-    def parameters(self):
         self.switch_name = self.params.get("switch_name", '*', default=None)
         self.userid = self.params.get("userid", '*', default=None)
         self.password = self.params.get("password", '*', default=None)
         self.vlan_num = self.params.get("vlan_num", '*', default=None)
         self.host_port = self.params.get("host_port", '*', default=None)
         self.peer_port = self.params.get("peer_port", '*', default=None)
-        self.host_intf = self.params.get("interface", '*', default=None)
-        if self.host_intf[0:2] == 'ib':
-            self.cancel("vlan is not supported for IB")
-        self.peer_intf = self.params.get("peer_interface", '*', default=None)
-        self.peer_ip = self.params.get("peer_public_ip", '*', default=None)
+        self.host_ip = self.params.get("host_ip", '*', default=None)
+        self.peer_ip = self.params.get("peer_ip", '*', default=None)
+        self.netmask = self.params.get("netmask", '*', default=None)
+        self.peer_public_ip = self.params.get("peer_public_ip", '*', default=None)
         self.peer_user = self.params.get("peer_user", '*', default=None)
-        self.peer_password = self.params.get("peer_password", '*',
-                                             default=None)
+        self.peer_password = self.params.get("peer_password", '*', default=None)
         self.cidr_value = self.params.get("cidr_value", '*', default=None)
+        self.local_host = LocalHost()
+        self.remote_host = RemoteHost(host=self.peer_ip, user=self.peer_user,
+                                      password=self.peer_password)
+        self.host_interface = NetworkInterface(self.params.get("interface", default=None),
+                                               self.local_host)
+        if 'ib' in self.host_interface.name:
+            self.cancel("vlan is not supported for IB")
+        self.peer_interface = NetworkInterface(self.params.get("peer_interface", default=None),
+                                               self.remote_host)
         self.prompt = ">"
+        self.test_type = None
+        self.host_vlan_interface = None
+        self.switch_login(self.switch_name, self.userid, self.password)
 
     def switch_login(self, ip, username, password):
         '''
@@ -107,50 +110,6 @@ class VlanTest(Test):
         response = self.remote_conn.recv(1000)
         return self._send_only_result(command, response)
 
-    def peer_logout(self):
-        '''
-        SSH Logout method for remote peer server
-        '''
-        self.session.quit()
-        return
-
-    def run_host_command(self, cmd):
-        """
-        Run command and fail the test if any command fails
-        """
-        try:
-            process.run(cmd, shell=True, sudo=True)
-        except CmdError as details:
-            self.fail("Command %s failed %s" % (cmd, details))
-
-    @staticmethod
-    def run_cmd_output(cmd):
-        """
-        Execute the command and return output
-        """
-        return process.system_output(cmd, ignore_status=True,
-                                     shell=True, sudo=True).decode("utf-8")
-
-    @staticmethod
-    def ping_check_host(intf, ip):
-        '''
-        ping check for peer in host
-        '''
-        cmd = "ping -I %s %s -c 5" % (intf, ip)
-        if process.system(cmd, sudo=True, shell=True, ignore_status=True) != 0:
-            return False
-        return True
-
-    def ping_check_peer(self, intf, ip):
-        '''
-        ping check for host in peer
-        '''
-        cmd = "ping -I %s %s -c 5" % (intf, ip)
-        output = self.session.cmd(cmd)
-        if output.exit_status == 0:
-            return True
-        return False
-
     def test_default_vlan1(self):
         """
         Scenario 1:  keep both host & peer in default VLAN id, VLAN 1.
@@ -158,14 +117,9 @@ class VlanTest(Test):
         """
         # PVID tagging should be disabled for this test
         self.vlan_port_conf("1", "1")
-        if not self.ping_check_host(self.host_intf,
-                                    self.ip_dic[self.peer_intf]):
-            self.fail("Ping test failed for default vlan 1 in host")
-        self.log.info("Ping test passed for default vlan 1 in host")
-        if not self.ping_check_peer(self.peer_intf,
-                                    self.ip_dic[self.host_intf]):
-            self.fail("Ping test failed for default vlan 1 in peer")
-        self.log.info("Ping test passed for default vlan 1 in peer")
+
+        self.host_interface.ping_check(peer_ip=self.peer_ip, count=5)
+        self.peer_interface.ping_check(peer_ip=self.host_interface.get_ipaddrs()[0], count=5)
 
     def test_vlan_1_2230(self):
         """
@@ -175,12 +129,9 @@ class VlanTest(Test):
         self.vlan_port_conf("1", "2230")
         # before ping need few sec for interface to set vlan
         time.sleep(5)
-        if self.ping_check_host(self.host_intf, self.ip_dic[self.peer_intf]):
-            self.fail("Ping test failed for vlan 1 & 2230 in host")
-        self.log.info("Ping test passed for vlan 1 % 2230 in host")
-        if self.ping_check_peer(self.peer_intf, self.ip_dic[self.host_intf]):
-            self.fail("Ping test failed for vlan 1 & 2230 in peer")
-        self.log.info("Ping test passed for vlan 1 % 2230 in peer")
+
+        self.host_interface.ping_check(peer_ip=self.peer_ip, count=5)
+        self.peer_interface.ping_check(peer_ip=self.peer_ip, count=5)
 
     def test_vlan_id(self):
         """
@@ -188,19 +139,19 @@ class VlanTest(Test):
                     create vlan interfaces and then ping. It should PASS.
         """
         # PVID tagging should be enabled for this test
-        self.test_type = "full"
         self.vlan_port_conf(self.vlan_num, self.vlan_num)
-        self.conf_host_vlan_intf(self.vlan_num)
-        self.conf_peer_vlan_intf(self.vlan_num)
+
+        host_vlan_intf = self.conf_vlan_intf(self.host_interface, self.vlan_num)
+        peer_vlan_intf = self.conf_vlan_intf(self.peer_interface, self.vlan_num)
+
         time.sleep(5)
-        if not self.ping_check_host("%s.%s" % (self.host_intf, self.vlan_num),
-                                    self.ip_dic[self.peer_intf]):
-            self.fail("Ping test failed for vlan %s in host" % self.vlan_num)
-        self.log.info("Ping test passed for vlan %s in host" % self.vlan_num)
-        if not self.ping_check_peer("%s.%s" % (self.peer_intf, self.vlan_num),
-                                    self.ip_dic[self.host_intf]):
-            self.fail("Ping test failed for vlan %s in peer" % self.vlan_num)
-        self.log.info("Ping test passed for vlan %s in peer" % self.vlan_num)
+        host_vlan_intf.ping_check(peer_ip=peer_vlan_intf.get_ipaddrs(), count=5)
+        peer_vlan_intf.ping_check(peer_ip=host_vlan_intf.get_ipaddrs(), count=5)
+
+        # Disable PVID tagging as other tests need it to be in disabled.
+        self.run_switch_command("no vlan dot1q tag native")
+        self.restore_intf(self.host_interface)
+        self.restore_intf(self.peer_interface)
 
     def vlan_port_conf(self, host_vlan, peer_vlan):
         """
@@ -229,7 +180,7 @@ class VlanTest(Test):
         # Enable PVID tagging only for test test_vlan_id
         if hasattr(self, 'test_type') and self.test_type == "full":
             self.run_switch_command("vlan dot1q tag native")
-        # Disable PVID tagging for other tests
+            # Disable PVID tagging for other tests
         else:
             self.run_switch_command("no vlan dot1q tag native")
         self.log.info("Saving the configuration")
@@ -237,74 +188,32 @@ class VlanTest(Test):
         self.run_switch_command("exit")
         self.run_switch_command(cmd)
 
-    def get_ips(self):
-        """
-        save current interface ips before test starts
-        """
-        self.ip_dic = {}
-        cmd = "ip addr list %s |grep 'inet ' |cut -d' ' -f6| \
-              cut -d/ -f1" % self.host_intf
-        self.ip_dic[self.host_intf] = self.run_cmd_output(cmd)
-        cmd = "ip addr list %s |grep \'inet \'" % self.peer_intf
-        output = self.session.cmd(cmd)
-        self.ip_dic[self.peer_intf] = output.stdout_text.splitlines()[0] \
-                                                        .split()[1].split('/')[0]
-        self.log.info("test interface & ips: %s", self.ip_dic)
 
-    def conf_host_vlan_intf(self, vlan_num):
+    def conf_vlan_intf(self, interface, vlan_num):
         """
-        Vlan configuration on Host
+        Vlan configuration of an interface
         """
-        ip = self.ip_dic[self.host_intf]
-        self.run_host_command("ip addr flush dev %s" % self.host_intf)
-        cmd = "ip link add link %s name %s.%s type vlan id %s" \
-              % (self.host_intf, self.host_intf, vlan_num, vlan_num)
-        self.run_host_command(cmd)
-        cmd = "ip addr add %s/%s dev %s.%s" \
-              % (ip, self.cidr_value, self.host_intf, vlan_num)
-        self.run_host_command(cmd)
-        self.run_host_command("ip link set %s.%s up" % (self.host_intf,
-                                                        vlan_num))
-        cmd = "ip addr show %s.%s" % (self.host_intf, vlan_num)
-        self.run_host_command(cmd)
+        ip = interface.get_ipaddrs()
+        vlan_interface_name = interface.name + '.' + vlan_num
+        interface.remove_ipaddr(ip, self.cidr_value)
+        interface.add_vlan_tag(vlan_num, vlan_interface_name)
+        vlan_interface = NetworkInterface(vlan_interface_name, interface.host)
+        vlan_interface.add_ipaddr(ip, self.cidr_value)
+        vlan_interface.bring_up()
+        return vlan_interface
 
-    def conf_peer_vlan_intf(self, vlan_num):
-        """
-        Vlan configuration on Peer
-        """
-        ip = self.ip_dic[self.peer_intf]
-        cmd = "ip addr flush dev %s" % self.peer_intf
-        self.session.cmd(cmd)
-        cmd = "ip link add link %s name %s.%s type vlan id %s" \
-              % (self.peer_intf, self.peer_intf, vlan_num, vlan_num)
-        self.session.cmd(cmd)
-        cmd = "ip addr add %s/%s dev %s.%s" \
-              % (ip, self.cidr_value, self.peer_intf, vlan_num)
-        self.session.cmd(cmd)
-        cmd = "ip link set %s.%s up" % (self.peer_intf, vlan_num)
-        self.session.cmd(cmd)
-        cmd = "ip addr show %s.%s" % (self.peer_intf, vlan_num)
-        self.session.cmd(cmd)
-
-    def restore_host_intf(self):
+    def restore_intf(self, interface):
         """
         Restore host interfaces
         """
-        cmd = "ip link delete %s.%s" % (self.host_intf, self.vlan_num)
-        self.run_host_command(cmd)
-        self.run_host_command("ifdown %s" % self.host_intf)
-        self.run_host_command("ifup %s" % self.host_intf)
-
-    def restore_peer_intf(self):
-        """
-        Restore peer interfaces
-        """
-        cmd = "ip link delete %s.%s" % (self.peer_intf, self.vlan_num)
-        self.session.cmd(cmd)
-        cmd = "ifdown %s" % self.peer_intf
-        self.session.cmd(cmd)
-        cmd = "ifup %s" % self.peer_intf
-        self.session.cmd(cmd)
+        ip = ""
+        for v in interface.vlans.values():
+            vlan_interface = NetworkInterface(v, interface.host)
+            ip = vlan_interface.get_ipaddrs()
+        interface.remove_all_vlans()
+        interface.bring_down()
+        interface.add_ipaddr(ip)
+        interface.bring_up()
 
     def tearDown(self):
         """
@@ -312,9 +221,4 @@ class VlanTest(Test):
         and also restore interfaces back when full test is run
         """
         self.vlan_port_conf("1", "1")
-        if hasattr(self, 'test_type') and self.test_type == "full":
-            # Disable PVID tagging as other tests need it to be in disabled.
-            self.run_switch_command("no vlan dot1q tag native")
-            self.restore_host_intf()
-            self.restore_peer_intf()
-        self.peer_logout()
+        self.remote_host.remote_session.quit()
