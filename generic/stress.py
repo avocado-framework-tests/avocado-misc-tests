@@ -43,7 +43,7 @@ class Stress(Test):
         """
         Build 'stress'.
         Source:
-         https://fossies.org/linux/privat/stress-1.0.4.tar.gz
+         https://fossies.org/linux/privat/old/stress-1.0.4.tar.gz
         """
         smm = SoftwareManager()
         for package in ['gcc', 'make']:
@@ -52,7 +52,7 @@ class Stress(Test):
                             package)
 
         tarball = self.fetch_asset(
-            'https://fossies.org/linux/privat/stress-1.0.4.tar.gz',
+            'https://fossies.org/linux/privat/old/stress-1.0.4.tar.gz',
             expire='7d')
         archive.extract(tarball, self.workdir)
         stress_version = os.path.basename(tarball.split('.tar.')[0])
