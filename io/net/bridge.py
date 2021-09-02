@@ -16,8 +16,10 @@
 # Bridge interface test
 
 
+import os
 import netifaces
 from avocado import Test
+from avocado.utils import distro
 from avocado.utils import process
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
@@ -61,6 +63,13 @@ class Bridging(Test):
         '''
         Set up the ethernet bridge configuration in the linux kernel
         '''
+        detected_distro = distro.detect()
+        net_path = 'network-scripts'
+        if detected_distro.name == "SuSE":
+            net_path = 'network'
+        if os.path.exists('/etc/sysconfig/%s/ifcfg-%s' % (net_path, self.bridge_interface)):
+            self.networkinterface.remove_cfg_file()
+            self.check_failure('ip link del %s' % self.bridge_interface)
         self.check_failure('ip link add dev %s type bridge'
                            % self.bridge_interface)
         check_flag = False
