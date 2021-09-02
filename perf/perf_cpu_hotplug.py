@@ -56,10 +56,13 @@ class perf_cpu_hotplug(Test):
         3. Offline the cpumask CPU and check cpumask moved to new CPU or not
         """
         smm = SoftwareManager()
+        processor_type = genio.read_file("/proc/cpuinfo")
 
         detected_distro = distro.detect()
         if 'ppc64' not in detected_distro.arch:
             self.cancel("Processor is not PowerPC")
+        if 'POWER10' not in processor_type:
+            self.cancel("Test is supported only on Power10")
 
         deps = ['gcc', 'make']
         if 'Ubuntu' in detected_distro.name:
