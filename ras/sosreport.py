@@ -124,7 +124,7 @@ class Sosreport(Test):
         directory_name = tempfile.mkdtemp()
         self.is_fail = 0
 
-        if self.run_cmd_out("%s --batch --tmp-dir=%s -n libraries | "
+        if 'libraries' not in self.run_cmd_out("%s --batch --tmp-dir=%s -n libraries | "
                             "grep libraries" % (self.sos_cmd, directory_name)):
             self.is_fail += 1
             self.log.info("--skip-plugins option failed")
@@ -136,8 +136,8 @@ class Sosreport(Test):
             self.is_fail += 1
             self.log.info("--enable-plugins option failed")
 
-        if self.run_cmd_out("%s --batch --tmp-dir=%s -o cups | "
-                            "grep kernel" % (self.sos_cmd, directory_name)):
+        if 'cups' not in self.run_cmd_out("%s --batch --tmp-dir=%s -o cups | "
+                            "grep cups" % (self.sos_cmd, directory_name)):
             self.is_fail += 1
             self.log.info("--only-plugins option failed")
 
