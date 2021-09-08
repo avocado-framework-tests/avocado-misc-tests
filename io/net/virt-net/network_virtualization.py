@@ -332,6 +332,7 @@ class NetworkVirtualization(Test):
         '''
         Check if the interface was disabled or enabled correctly
         '''
+        operation = "enable" if expect == '0' else "disable"
         cmd = "lshwres -m %s -r virtualio --rsubtype vnic --filter \
         \"lpar_names=%s\" -F slot_num:is_disabled" % (self.server, self.lpar)
         output = self.session_hmc.cmd(cmd).stdout_text
@@ -340,15 +341,10 @@ class NetworkVirtualization(Test):
             self.log.info("entry: %s", entry)
             if entry.startswith(self.slot_num[0]):
                 if entry.endswith(expect):
-                    if expect == '1':
-                        self.log.info("vNIC interface successfully disabled")
-                    else:
-                        self.log.info("vNIC interface successfully enabled")
+                    self.log.info("vNIC interface successfully %s" % operation)
                 else:
-                    if expect == '1':
-                        self.fail("Could not disable vNIC interface")
-                    else:
-                        self.fail("Could not enable vNIC interface")
+                    self.fail("Could not %s vNIC interface" % operation)
+
 
     def test_hmcfailover(self):
         '''
