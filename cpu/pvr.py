@@ -54,21 +54,23 @@ class pvr(Test):
                 rev = (line.split('revision')[1]).split()
                 self.log.info("Revision: %s %s" % (rev, rev[1]))
                 break
-        if 'pSeries|PowerNV' and 'POWER8' in val:
+        if 'pSeries|PowerNV' in val and 'POWER8' in val:
             self.pvr_value = parser.get('PVR_Values', 'pvr_value_p8')
-        elif 'pSeries' and '1.2' and 'POWER9' in val:
-            self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9LPAR_1.2')
-        elif 'pSeries' and '2.2' and 'POWER9' in val:
-            self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9LPAR_2.2')
-        elif 'pSeries' and '2.3' and 'POWER9' in val:
-            self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9LPAR_2.3')
-        elif 'PowerNV' and '2.1' and 'POWER9' in val:
-            self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9NV_2.1')
-        elif 'PowerNV' and '2.2' and 'POWER9' in val:
-            self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9NV_2.2')
-        elif 'PowerNV' and '2.3' and 'POWER9' in val:
-            self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9NV_2.3')
-        elif 'pSeries' and 'POWER10' in val:
+        elif 'pSeries' in val and 'POWER9' in val:
+            if (rev[1] == '1.2'):
+                self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9LPAR_1.2')
+            elif (rev[1] == '2.2'):
+                self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9LPAR_2.2')
+            elif (rev[1] == '2.3'):
+                self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9LPAR_2.3')
+        elif 'PowerNV' in val and 'POWER9' in val:
+            if (rev[1] == '2.1'):
+                self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9NV_2.1')
+            elif (rev[1] == '2.2'):
+                self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9NV_2.2')
+            elif (rev[1] == '2.3'):
+                self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9NV_2.3')
+        elif 'pSeries' in val and 'POWER10' in val:
             if (rev[1] == '1.0'):
                 self.pvr_value = parser.get('PVR_Values', 'pvr_value_p10_1')
             elif (rev[1] == '2.0'):
@@ -82,7 +84,7 @@ class pvr(Test):
         pvr_cpu = genio.read_file("/proc/cpuinfo")
         res = re.sub(' ', '', pvr_cpu)
         match = re.search(self.pvr_value, res)
-        self.log.info("self.pvr_value, res = %s" % res)
+        self.log.info('self.pvr_value = %s, res = %s' % (self.pvr_value, res))
         if match:
             self.log.info("PVR from /proc/cpuinfo for the system is correct")
         else:
