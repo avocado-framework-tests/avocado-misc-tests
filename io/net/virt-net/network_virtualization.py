@@ -305,12 +305,28 @@ class NetworkVirtualization(Test):
         self.disable_enable_dev('e')
         self.is_disabled_enabled_dev('0')
 
+        device = self.find_device(self.mac_id[0])
+        networkinterface = NetworkInterface(device, self.local)
+        if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
+            self.fail("Enabling and disabling of the interface has affected network connectivity")
+        self.check_dmesg_error()
+
     def disable_enable_dev(self, option):
         '''
         Disable or enable interface command
         '''
-        cmd = "chhwres -m %s -o %s -r virtualio --rsubtype vnic -p %s -s %s" % (self.server, option, self.lpar, self.slot_num[0])
-        self.session_hmc.cmd(cmd)
+        cmd = "chhwres -m %s -o %s -r virtualio --rsubtype vnic -p %s -s %s" % (self.server,
+                                                                                option,
+                                                                                self.lpar,
+                                                                                self.slot_num[0])
+        output = self.session_hmc.cmd(cmd)
+        if output.exit_status != 0:
+            if option == 'd':
+                self.fail("Could not disable interface: %s" % output.stdout_text)
+            elif option == 'e':
+                self.fail("Could not disable interface: %s" % output.stdout_text)
+            else:
+                self.fail("Invalid option sent to disable/enable interface.")
 
     def is_disabled_enabled_dev(self, expect):
         '''
