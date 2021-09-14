@@ -44,35 +44,32 @@ class Ras_tools(Test):
 
     def test1_nvsetenv(self):
         self.log.info("===Executing nvsetenv tool====")
-        self.is_fail = 0
         self.run_cmd("nvsetenv")
         value = self.params.get('nvsetenv_list', default=['load-base', 'load-base 7000'])
         for list_item in value:
             self.run_cmd('nvsetenv  %s ' % list_item )
-        if self.is_fail:
+        if self.fail_cmd:
             self.fail("%s command(s) failed to execute  "
                       % self.fail_cmd)
 
     def test2_usysattn(self):
         self.log.info("=====Executing usysattn tool test======")
-        self.is_fail = 0
         value = self.params.get('usysattn_list', default=['-h', '-V', '-P'])
         for list_item in value:
             self.run_cmd('usysattn  %s ' % list_item )
         loc_code = self.run_cmd_out("usysattn -P| awk '{print $1}'")
         self.run_cmd("usysattn -l %s -s normal -t" % loc_code)
-        if self.is_fail:
+        if self.fail_cmd:
             self.fail("%s command(s) failed to execute  "
                       % self.fail_cmd)
 
     def test3_usysfault(self):
         self.log.info("======Executing usysfault tool test======")
-        self.is_fail = 0
         value = self.params.get('usysfault_list', default=['-h', '-V', '-P'])
         for list_item in value:
             self.run_cmd('usysfault  %s ' % list_item )
         loc_code = self.run_cmd_out("usysfault -P | awk '{print $1}'")
         self.run_cmd("usysfault -l %s -s normal -t" % loc_code)
-        if self.is_fail:
+        if self.fail_cmd:
             self.fail("%s command(s) failed to execute  "
                       % self.fail_cmd)
