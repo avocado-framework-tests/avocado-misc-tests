@@ -338,7 +338,6 @@ class NetworkVirtualization(Test):
         output = self.session_hmc.cmd(cmd).stdout_text
 
         for entry in output.splitlines():
-            self.log.info("entry: %s", entry)
             if entry.startswith(self.slot_num[0]):
                 if entry.endswith(expect):
                     self.log.info("vNIC interface successfully %s" % operation)
