@@ -324,7 +324,7 @@ class NetworkVirtualization(Test):
             if option == 'd':
                 self.fail("Could not disable interface: %s" % output.stdout_text)
             elif option == 'e':
-                self.fail("Could not disable interface: %s" % output.stdout_text)
+                self.fail("Could not enable interface: %s" % output.stdout_text)
             else:
                 self.fail("Invalid option sent to disable/enable interface.")
 
