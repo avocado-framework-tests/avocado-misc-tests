@@ -13,6 +13,7 @@
 #
 # Copyright: 2016 IBM
 # Author: Narasimhan V <sim@linux.vnet.ibm.com>
+# Author: Naresh Bannoth <nbannoth@in.ibm.com>
 
 """
 Multipath Test.
@@ -128,7 +129,7 @@ class MultipathTest(Test):
                 if multipath.get_policy(path_dic["wwid"]) != policy:
                     msg += "%s for %s fails\n" % (policy, path_dic["wwid"])
 
-            def is_mpath_exists():
+            def is_mpath_available():
                 if operation == 'block':
                     if multipath.device_exists(path_dic["wwid"]) is True:
                         self.log.info("%s=False, not blocked" % test_mpath)
@@ -145,7 +146,7 @@ class MultipathTest(Test):
             self.log.info("flushing %s" % path_dic["name"])
             operation = 'block'
             multipath.flush_path(path_dic["name"])
-            if wait.wait_for(is_mpath_exists, timeout=10):
+            if wait.wait_for(is_mpath_available, timeout=10):
                 self.log.info("flush of %s success" % path_dic["name"])
             else:
                 msg += "Flush of %s fails\n" % path_dic["name"]
@@ -153,8 +154,9 @@ class MultipathTest(Test):
             operation = 'recover'
             self.mpath_svc.restart()
             wait.wait_for(self.mpath_svc.status, timeout=10)
-            if wait.wait_for(is_mpath_exists, timeout=10):
-                self.log.info("recovery of %s success" % path_dic["name"])
+            if wait.wait_for(is_mpath_available, timeout=10):
+                self.log.info("recovery of %s success after \
+                               flush" % path_dic["name"])
             else:
                 msg += "Recovery of %s fails after flush\n" % path_dic["name"]
 
@@ -164,19 +166,20 @@ class MultipathTest(Test):
             cmd = "wwid %s" % path_dic["wwid"]
             multipath.form_conf_mpath_file(blacklist=cmd, defaults_extra=plcy)
             operation = 'block'
-            if wait.wait_for(is_mpath_exists, timeout=10):
+            if wait.wait_for(is_mpath_available, timeout=10):
                 self.log.info("Blocklist of %s success" % path_dic["wwid"])
             else:
                 msg += "Blacklist of %s fails\n" % path_dic["wwid"]
             operation = 'recover'
             self.log.info("Recovering WWID after Black list.....")
             multipath.form_conf_mpath_file(defaults_extra=plcy)
-            if wait.wait_for(is_mpath_exists, timeout=10):
+            if wait.wait_for(is_mpath_available, timeout=10):
                 self.log.info("recovery of %s success" % path_dic["wwid"])
             else:
-                msg += "Recovery of %s fails\n" % path_dic["wwid"]
+                msg += "Recovery of %s fails after blocklist\n" \
+                        % path_dic["wwid"]
 
-            def is_path_exists():
+            def is_path_available():
                 if operation == 'block':
                     if multipath.device_exists(test_path) is True:
                         return False
@@ -197,16 +200,17 @@ class MultipathTest(Test):
                 cmd = "devnode %s" % disk
                 multipath.form_conf_mpath_file(blacklist=cmd,
                                                defaults_extra=plcy)
-                if wait.wait_for(is_path_exists, timeout=10):
+                if wait.wait_for(is_path_available, timeout=10):
                     self.log.info("block list of %s success" % disk)
                 else:
                     msg += "block list of %s fails\n" % disk
                 operation = 'recover'
                 multipath.form_conf_mpath_file(defaults_extra=plcy)
-                if wait.wait_for(is_mpath_exists, timeout=10):
+                if wait.wait_for(is_path_available, timeout=10):
                     self.log.info("recovery of %s success" % disk)
                 else:
-                    msg += "Recovery of %s fails\n" % path_dic["wwid"]
+                    msg += "Recovery of %s fails after blacklist %s\n" \
+                            % (disk, path_dic["wwid"])
 
             multipath.form_conf_mpath_file(defaults_extra=plcy)
         if msg:
