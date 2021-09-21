@@ -68,6 +68,7 @@ class TcpdumpTest(Test):
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
+        self.timeout = self.params.get("TIMEOUT", default="600")
         self.mtu = self.params.get("mtu", default=1500)
         self.mtu_timeout = self.params.get("mtu_timeout", default=30)
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
@@ -117,7 +118,7 @@ class TcpdumpTest(Test):
         else:
             obj = process.SubProcess(cmd, verbose=False, shell=True)
             obj.start()
-        cmd = "tcpdump -i %s -n -c %s" % (self.iface, self.count)
+        cmd = "timeout %s tcpdump -i %s -n -c %s" % (self.timeout, self.iface, self.count)
         if self.option in ('host', 'src'):
             cmd = "%s %s %s" % (cmd, self.option, self.host_ip)
         elif self.option == "dst":
