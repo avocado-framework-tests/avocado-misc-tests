@@ -253,6 +253,6 @@ class RASTools(Test):
             'rtas')
         cmd_result = process.run(
             cmd, ignore_status=True, sudo=True, shell=True)
-        if cmd_result.exit_status != 17:
+        if cmd_result.exit_status not in [17, 13]:
             self.fail("rtas_event_decode tool: %s command failed in "
                       "verification" % cmd)
