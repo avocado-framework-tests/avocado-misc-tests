@@ -25,7 +25,6 @@ from avocado import Test
 from avocado import skipUnless
 from avocado.utils import process
 from avocado.utils import build
-from avocado.utils import kernel
 from avocado.utils import git
 from avocado.utils import distro
 from avocado.utils import genio
@@ -59,8 +58,6 @@ class LibHugetlbfs(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel(' %s is needed for the test to be run' % package)
-
-        kernel.check_version("2.6.16")
 
         if detected_distro.name in ["Ubuntu", 'debian']:
             out = glob.glob("/usr/lib/*/libpthread.a")
