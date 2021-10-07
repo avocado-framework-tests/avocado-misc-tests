@@ -8,6 +8,8 @@
 
 # Valid options in avocado test are below:
 disk:
+raid_name: md127
+dir: /mnt
 uid-to-use: root
 number-to-stat: 10:100:10:1000
 data_size_to_pass: 0
