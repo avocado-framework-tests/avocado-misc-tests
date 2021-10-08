@@ -44,8 +44,12 @@ class PerfUprobe(Test):
         if 'Ubuntu' in self.distro_name:
             deps.extend(['linux-tools-common', 'linux-tools-%s' %
                          platform.uname()[2]])
-        elif self.distro_name in ['rhel', 'SuSE', 'fedora', 'centos']:
+        elif self.distro_name in ['SuSE', 'fedora', 'centos']:
             deps.extend(['perf'])
+        elif self.distro_name == 'rhel' and int(self.detected_distro.version) < 9:
+            deps.extend(['perf'])
+        elif self.distro_name == 'rhel' and int(self.detected_distro.version) >= 9:
+            deps.extend(['perf', 'perf-debuginfo'])
         else:
             self.cancel("Install the package for perf supported\
                       by %s" % self.detected_distro.name)
