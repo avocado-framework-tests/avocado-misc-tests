@@ -2,6 +2,7 @@ ubuntu_url: 'http://ausgsa.ibm.com/projects/r/rsctdev/builds/muthu/rmuts006a/ppc
 debs: ['src_3.2.0.6-15111_ppc64el.deb', 'rsct.core.utils_3.2.0.6-15111_ppc64el.deb', 'rsct.core.utils_3.2.0.6-15111_ppc64el.deb', 'rsct.core_3.2.0.6-15111_ppc64el.deb', 'rsct.basic_3.2.0.6-15111_ppc64el.deb', 'devices.chrp.base.servicerm_2.5.0.1-15111_ppc64el.deb', 'dynamicrm_2.0.1-3_ppc64el.deb']
 hmc_pwd: ""
 hmc_username: ""
+server:
 vios_ip: ""
 vios_username: ""
 vios_pwd: ""

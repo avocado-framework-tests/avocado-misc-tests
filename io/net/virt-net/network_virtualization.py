@@ -77,11 +77,12 @@ class NetworkVirtualization(Test):
             self.cancel("failed connecting to HMC")
         cmd = 'lssyscfg -r sys  -F name'
         output = self.session_hmc.cmd(cmd)
-        self.server = ''
-        for line in output.stdout_text.splitlines():
-            if line in self.lpar:
-                self.server = line
-                break
+        self.server = self.params.get("server", "*", default=None)
+        if not self.server:
+            for line in output.stdout_text.splitlines():
+                if line in self.lpar:
+                    self.server = line
+                    break
         if not self.server:
             self.cancel("Managed System not got")
         self.slot_num = self.params.get("slot_num", '*', default=None)
