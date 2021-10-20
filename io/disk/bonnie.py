@@ -50,7 +50,7 @@ class Bonnie(Test):
         Source:
         http://www.coker.com.au/bonnie++/experimental/bonnie++-1.03e.tgz
         """
-        fstype = self.params.get('fs', default='')
+        self.fstype = self.params.get('fs', default='')
         self.fs_create = False
         lv_needed = self.params.get('lv', default=False)
         self.lv_create = False
@@ -64,7 +64,7 @@ class Bonnie(Test):
             deps.extend(['g++'])
         else:
             deps.extend(['gcc-c++'])
-        if fstype == 'btrfs':
+        if self.fstype == 'btrfs':
             ver = int(distro.detect().version)
             rel = int(distro.detect().release)
             if distro.detect().name == 'rhel':
@@ -92,30 +92,40 @@ class Bonnie(Test):
             build.make(self.source, extra_args='install')
 
         self.disk = self.params.get('disk', default=None)
+        if not self.disk:
+            self.cancel("Provide the test disks to proceed !")
+        self.md_name = self.params.get('raid_name', default='md127')
+        self.mountpoint = self.params.get('dir', default='/mnt')
+        self.disk_obj = Partition(self.disk, mountpoint=self.mountpoint)
+        self.clear_disk(self.disk_obj, self.disk)
+        if not os.path.exists(self.mountpoint):
+            os.mkdir(self.mountpoint)
         self.uid_to_use = self.params.get('uid-to-use',
                                           default=getpass.getuser())
         self.number_to_stat = self.params.get('number-to-stat', default=2048)
         self.data_size = self.params.get('data_size_to_pass', default=0)
 
-        self.scratch_dir = self.disk
         if self.disk is not None:
             if self.disk in disk.get_disks():
                 if raid_needed:
-                    raid_name = '/dev/md/mdsraid'
+                    raid_name = '/dev/%s' % self.md_name
                     self.create_raid(self.disk, raid_name)
                     self.raid_create = True
                     self.disk = raid_name
-                    self.scratch_dir = self.disk
 
                 if lv_needed:
                     self.disk = self.create_lv(self.disk)
                     self.lv_create = True
-                    self.scratch_dir = self.disk
 
-                if fstype:
-                    self.scratch_dir = self.workdir
-                    self.create_fs(self.disk, self.scratch_dir, fstype)
+                if self.fstype:
+                    self.create_fs(self.disk, self.fstype)
                     self.fs_create = True
+
+    def clear_disk(self, obj, disk):
+        obj.unmount()
+        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % disk
+        if process.system(delete_fs, shell=True, ignore_status=True):
+            self.fail("Failed to delete filesystem on %s", disk)
 
     def create_raid(self, l_disk, l_raid_name):
         self.sraid = softwareraid.SoftwareRaid(l_raid_name, '0',
@@ -132,7 +142,7 @@ class Bonnie(Test):
         lv_size = lv_utils.get_device_total_space(l_disk) / 2330168
         lv_utils.vg_create(vgname, l_disk)
         lv_utils.lv_create(vgname, lvname, lv_size)
-        return '/dev/%s/%s' % (vgname, lvname)
+        return '/dev/mapper/%s-%s' % (vgname, lvname)
 
     def delete_lv(self):
         vgname = 'avocado_vg'
@@ -140,29 +150,23 @@ class Bonnie(Test):
         lv_utils.lv_remove(vgname, lvname)
         lv_utils.vg_remove(vgname)
 
-    def create_fs(self, l_disk, mountpoint, fstype):
+    def create_fs(self, l_disk, fstype):
         self.part_obj = Partition(l_disk,
-                                  mountpoint=mountpoint)
-        self.part_obj.unmount()
+                                  mountpoint=self.mountpoint)
+        self.part_obj.unmount(force=True)
         self.part_obj.mkfs(fstype)
         try:
             self.part_obj.mount()
         except PartitionError:
             self.fail("Mounting disk %s on directory %s failed"
-                      % (l_disk, mountpoint))
-
-    def delete_fs(self, l_disk):
-        self.part_obj.unmount()
-        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % l_disk
-        if process.system(delete_fs, shell=True, ignore_status=True):
-            self.fail("Failed to delete filesystem on %s", l_disk)
+                      % (l_disk, self.mountpoint))
 
     def test(self):
         """
         Run 'bonnie' with its arguments
         """
         args = []
-        args.append('-d %s' % self.scratch_dir)
+        args.append('-d %s' % self.mountpoint)
         args.append('-n %s' % self.number_to_stat)
         args.append('-s %s' % self.data_size)
         args.append('-u %s' % self.uid_to_use)
@@ -177,7 +181,7 @@ class Bonnie(Test):
         '''
         if self.disk is not None:
             if self.fs_create:
-                self.delete_fs(self.disk)
+                self.clear_disk(self.part_obj, self.disk)
             if self.lv_create:
                 self.delete_lv()
             if self.raid_create:
