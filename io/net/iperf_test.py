@@ -54,8 +54,13 @@ class Iperf(Test):
             self.cancel("%s interface is not available" % self.iface)
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
+        self.hbond = self.params.get("hbond", default=False)
         localhost = LocalHost()
-        self.networkinterface = NetworkInterface(self.iface, localhost)
+        if self.hbond:
+            self.networkinterface = NetworkInterface(self.iface, localhost,
+                                                     if_type='Bond')
+        else:
+            self.networkinterface = NetworkInterface(self.iface, localhost)
         try:
             self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
             self.networkinterface.save(self.ipaddr, self.netmask)
@@ -205,7 +210,10 @@ class Iperf(Test):
         try:
             self.networkinterface.restore_from_backup()
         except Exception:
+            self.networkinterface.remove_cfg_file()
             self.log.info("backup file not availbale, could not restore file.")
+        if self.hbond:
+            self.networkinterface.restore_slave_cfg_file()
         self.remotehost.remote_session.quit()
         self.remotehost_public.remote_session.quit()
         self.session.quit()
