@@ -64,13 +64,17 @@ class NetworkTest(Test):
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         self.ip_config = self.params.get("ip_config", default=True)
+        self.hbond = self.params.get("hbond", default=False)
         for root, dirct, files in os.walk("/root/.ssh"):
             for file in files:
                 if file.startswith("avocado-master-root"):
                     path = os.path.join(root, file)
                     os.remove(path)
         local = LocalHost()
-        self.networkinterface = NetworkInterface(self.iface, local)
+        if self.hbond:
+            self.networkinterface = NetworkInterface(self.iface, local, if_type='Bond')
+        else:
+            self.networkinterface = NetworkInterface(self.iface, local)
         if self.ip_config:
             try:
                 self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
@@ -318,7 +322,10 @@ class NetworkTest(Test):
             try:
                 self.networkinterface.restore_from_backup()
             except Exception:
+                self.networkinterface.remove_cfg_file()
                 self.log.info("backup file not availbale, could not restore file.")
+            if self.hbond:
+                self.networkinterface.restore_slave_cfg_file()
         self.remotehost.remote_session.quit()
         self.remotehost_public.remote_session.quit()
         if 'scp' or 'ssh' in str(self.name.name):

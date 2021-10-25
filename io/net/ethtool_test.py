@@ -60,6 +60,7 @@ class Ethtool(Test):
         self.iface = interface
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
+        self.hbond = self.params.get("hbond", default=False)
         self.peer = self.params.get("peer_ip")
         if not self.peer:
             self.cancel("No peer provided")
@@ -67,18 +68,16 @@ class Ethtool(Test):
         if self.iface[0:2] == 'ib':
             self.networkinterface = NetworkInterface(self.iface, local,
                                                      if_type='Infiniband')
-            try:
-                self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
-                self.networkinterface.save(self.ipaddr, self.netmask)
-            except Exception:
-                self.networkinterface.save(self.ipaddr, self.netmask)
+        elif self.hbond:
+            self.networkinterface = NetworkInterface(self.iface, local,
+                                                     if_type='Bond')
         else:
             self.networkinterface = NetworkInterface(self.iface, local)
-            try:
-                self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
-                self.networkinterface.save(self.ipaddr, self.netmask)
-            except Exception:
-                self.networkinterface.save(self.ipaddr, self.netmask)
+        try:
+            self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        except Exception:
+            self.networkinterface.save(self.ipaddr, self.netmask)
         self.networkinterface.bring_up()
         if not wait.wait_for(self.networkinterface.is_link_up, timeout=120):
             self.cancel("Link up of interface is taking longer than 120s")
@@ -185,4 +184,7 @@ class Ethtool(Test):
         try:
             self.networkinterface.restore_from_backup()
         except Exception:
+            self.networkinterface.remove_cfg_file()
             self.log.info("backup file not availbale, could not restore file.")
+        if self.hbond:
+            self.networkinterface.restore_slave_cfg_file()
