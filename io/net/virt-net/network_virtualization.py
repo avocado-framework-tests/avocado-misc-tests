@@ -297,6 +297,55 @@ class NetworkVirtualization(Test):
             self.fail("Failed to add backing device")
         self.check_dmesg_error()
 
+    def test_disable_enable_dev(self):
+        '''
+        Test if disabling and enabling of an adapter works
+        '''
+        self.disable_enable_dev('d')
+        self.is_disabled_enabled_dev('1')
+        self.disable_enable_dev('e')
+        self.is_disabled_enabled_dev('0')
+
+        device = self.find_device(self.mac_id[0])
+        networkinterface = NetworkInterface(device, self.local)
+        if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
+            self.fail("Enabling and disabling of the interface has affected network connectivity")
+        self.check_dmesg_error()
+
+    def disable_enable_dev(self, option):
+        '''
+        Disable or enable interface command
+        '''
+        cmd = "chhwres -m %s -o %s -r virtualio --rsubtype vnic -p %s -s %s" % (self.server,
+                                                                                option,
+                                                                                self.lpar,
+                                                                                self.slot_num[0])
+        output = self.session_hmc.cmd(cmd)
+        if output.exit_status != 0:
+            if option == 'd':
+                self.fail("Could not disable interface: %s" % output.stdout_text)
+            elif option == 'e':
+                self.fail("Could not enable interface: %s" % output.stdout_text)
+            else:
+                self.fail("Invalid option sent to disable/enable interface.")
+
+    def is_disabled_enabled_dev(self, expect):
+        '''
+        Check if the interface was disabled or enabled correctly
+        '''
+        operation = "enable" if expect == '0' else "disable"
+        cmd = "lshwres -m %s -r virtualio --rsubtype vnic --filter \
+        \"lpar_names=%s\" -F slot_num:is_disabled" % (self.server, self.lpar)
+        output = self.session_hmc.cmd(cmd).stdout_text
+
+        for entry in output.splitlines():
+            if entry.startswith(self.slot_num[0]):
+                if entry.endswith(expect):
+                    self.log.info("vNIC interface successfully %s" % operation)
+                else:
+                    self.fail("Could not %s vNIC interface" % operation)
+
+
     def test_hmcfailover(self):
         '''
         Triggers Failover for the Network virtualized
