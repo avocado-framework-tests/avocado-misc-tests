@@ -87,6 +87,8 @@ class NumaTest(Test):
 
     @skipIf(SINGLE_NODE, "Test requires two numa nodes to run")
     def test_movepages(self):
+        self.nr_pages = self.params.get(
+            'nr_pages', default=10)
         os.chdir(self.teststmpdir)
         self.log.info("Starting test...")
         cmd = './numa_test -m %s -n %s' % (self.map_type, self.nr_pages)
@@ -117,7 +119,7 @@ class NumaTest(Test):
         Test PFN's before and after offlining
         """
         self.nr_pages = self.params.get(
-            'nr_pages', default=100)
+            'nr_pages', default=10)
         os.chdir(self.teststmpdir)
         self.log.info("Starting test...")
         cmd = './bench_movepages -n %s' % self.nr_pages
