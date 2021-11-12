@@ -49,14 +49,16 @@ class Ltrace(Test):
 
         if dist_name == 'suse':
             packages.extend(['libdw-devel', 'libelf-devel', 'git-core',
-                             'elfutils', 'binutils-devel', 'libtool', 'gcc-c++'])
+                             'elfutils', 'binutils-devel', 'libtool',
+                             'gcc-c++'])
 
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
         elif dist_name in ("rhel", "fedora", "redhat"):
             packages.extend(['elfutils-devel', 'elfutils-libelf-devel', 'git',
-                             'elfutils-libelf', 'elfutils-libs', 'libtool-ltdl'])
+                             'elfutils-libelf', 'elfutils-libs',
+                             'libtool-ltdl'])
 
         elif dist_name == 'ubuntu':
             packages.extend(['elfutils', 'libelf-dev', 'libtool', 'git',
@@ -77,7 +79,8 @@ class Ltrace(Test):
 
             self.src_lt = os.path.join(self.workdir, "ltrace")
             os.chdir(self.src_lt)
-            process.run('patch -p1 < %s' % self.get_data('ltrace.patch'), shell=True)
+            process.run('patch -p1 < %s' % self.get_data('ltrace.patch'),
+                        shell=True)
         elif run_type == "distro":
             self.src_lt = os.path.join(self.workdir, "ltrace-distro")
             if not os.path.exists(self.src_lt):
