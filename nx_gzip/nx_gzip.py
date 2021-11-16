@@ -35,20 +35,21 @@ class NXGZipTests(Test):
         '''
         Get linux source tarball for compress/decompress
         '''
-        url = 'https://git.kernel.org/torvalds/t/linux-5.10-rc2.tar.gz'
+        url = 'https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.15.tar.gz'
         tarball = self.fetch_asset(self.params.get("linuxsrc_url",
                                    default=url))
         os.chdir(self.workdir)
         archive.extract(tarball, self.workdir)
-        archive.compress("%s/linux-5.10-rc2.tar" % self.workdir, self.workdir)
+        archive.compress("%s/linux-src.tar" % self.workdir, self.workdir)
 
     def create_ddfile(self):
         '''
         create dd file for compress/decompress
         '''
-        file_size = self.params.get('file_size', default='5')
-        dd_cmd = 'dd if=/dev/urandom of=%sgb-file bs=1000000000 count=%s'\
-                 % (file_size, file_size)
+        blk_size = self.params.get('blk_size', default='1073741824')
+        file_size = self.params.get('file_size', default='150')
+        dd_cmd = 'dd if=/dev/urandom of=%sgb-file bs=%s count=%s'\
+                 % (file_size, blk_size, file_size)
         if process.system(dd_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: create_ddfile: dd file creation failed")
 
@@ -133,7 +134,7 @@ class NXGZipTests(Test):
                       Compress/Decompress using zpipe which uses nx-gzip")
         self.build_tests("samples")
 
-        file_size = self.params.get('file_size', default='5')
+        file_size = self.params.get('file_size', default='150')
         out_file = self.params.get('out_file', default='out_file')
         new_file = self.params.get('new_file', default='new_file')
         self.create_ddfile()
@@ -155,7 +156,7 @@ class NXGZipTests(Test):
         self.create_ddfile()
 
         mnt_path = "/mnt/ramdisk"
-        file_size = self.params.get('file_size', default='5')
+        file_size = self.params.get('file_size', default='150')
         tmpfs_size = self.params.get('tmpfs_size', default='50')
 
         free_mem = memory.meminfo.MemFree.m
@@ -188,7 +189,7 @@ class NXGZipTests(Test):
         self.build_tests("samples")
         self.create_ddfile()
 
-        file_size = self.params.get('file_size', default='5')
+        file_size = self.params.get('file_size', default='150')
         numamany_cmd = './runnumamany.sh %sgb-file' % file_size
         if process.system(numamany_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_numamany: numa node tests failed")
@@ -201,7 +202,7 @@ class NXGZipTests(Test):
         self.build_tests("samples")
         self.create_ddfile()
 
-        file_size = self.params.get('file_size', default='5')
+        file_size = self.params.get('file_size', default='150')
         dcomp_cmd = 'sh ./rundecomp.sh %sgb-file' % file_size
         if process.system(dcomp_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_simple_dcomp: dcomp tests failed")
@@ -220,7 +221,7 @@ class NXGZipTests(Test):
         if process.system(gcc_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_zpipe_repeat: zpipe repeat tests failed")
 
-        zpipe_cmd = './zpipe-repeat-test < %s/linux-5.10-rc2.tar> %s/junk.Z' \
+        zpipe_cmd = './zpipe-repeat-test < %s/linux-src.tar> %s/junk.Z' \
                     % (self.workdir, self.workdir)
         if process.system(zpipe_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_zpipe_repeat: zpipe repeat tests failed")
@@ -244,7 +245,7 @@ class NXGZipTests(Test):
         thr = self.params.get('comp_decomp_thr', default='100')
         iters = self.params.get('comp_decomp_iter', default='5')
 
-        compdecomp_cmd = './compdecomp_th %s/linux-5.10-rc2.tar %s %s'\
+        compdecomp_cmd = './compdecomp_th %s/linux-src.tar %s %s'\
                          % (self.workdir, thr, iters)
         if process.system(compdecomp_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_compdecomp_threads:\
@@ -258,8 +259,11 @@ class NXGZipTests(Test):
                       Run deflate/inflate with dictionary file")
         self.download_tarball()
         self.build_tests("samples")
+        make_cmd = 'make zpipe_dict'
+        if process.system(make_cmd, shell=True, ignore_status=True):
+            self.fail("NX-GZIP: test_dictionary: make failed")
 
-        dict_cmd = './dict-test.sh alice29.txt %s/linux-5.10-rc2.tar'\
+        dict_cmd = './dict-test.sh alice29.txt %s/linux-src.tar'\
                    % self.workdir
         if process.system(dict_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_test_dictionary:\
@@ -273,7 +277,7 @@ class NXGZipTests(Test):
         self.download_tarball()
         self.build_tests("samples")
 
-        nxdht_cmd = './gzip_nxdht_test %s/linux-5.10-rc2.tar' % self.workdir
+        nxdht_cmd = './gzip_nxdht_test %s/linux-src.tar' % self.workdir
         if process.system(nxdht_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_nxdht: nxdht tests failed")
 
@@ -286,7 +290,7 @@ class NXGZipTests(Test):
         self.build_tests("samples")
         self.create_ddfile()
 
-        file_size = self.params.get('file_size', default='5')
+        file_size = self.params.get('file_size', default='150')
         zlib_cmd = './zlib-run-series.sh %sgb-file' % file_size
         if process.system(zlib_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_zlib_series: zlib test series failed")
@@ -300,7 +304,7 @@ class NXGZipTests(Test):
         self.build_tests("samples")
         self.create_ddfile()
 
-        file_size = self.params.get('file_size', default='5')
+        file_size = self.params.get('file_size', default='150')
         nx2_cmd = './run-series_2nx.sh %sgb-file' % file_size
         if process.system(nx2_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_compdecomp_2nx:\
