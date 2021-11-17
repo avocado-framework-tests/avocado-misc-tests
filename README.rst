@@ -52,15 +52,17 @@ Tags by access privileges:
   root account
 Note*
 * --test-runner runner  need to passed as avocado `run` command line as it default lagacy runner as most of the test in avocado misc test wrote in way to execute sequential manner so newer avocado (aka avocado 91 onwards we need to pass this option explicitly as implicit it uses nrunner)  
-exmaple can be like :
-    $ avocado run --test-runner runner avocado-misc-tests/perf/stress.py
-    JOB ID     : 0018adbc07c5d90d242dd6b341c87972b8f77a0b
-    JOB LOG    : $HOME/avocado/job-results/job-2021-11-12T10.32-001adw/job.log
-    TESTS      : 1
-     (1/1) avocado-misc-tests/perf/stress.py:Stress.test: PASS (62.67 s)
-    RESULTS    : PASS 1 | ERROR 0 | FAIL 0 | SKIP 0 | WARN 0 | INTERRUPT 0
-    JOB HTML   : $HOME/avocado/job-results/job--2021-11-12T10.32-001adw//html/results.html
-    TIME       : 69.67 s
+exmaple can be like ::
+
+  # avocado run --test-runner runner avocado-misc-tests/perf/stress.py
+  JOB ID     : 0018adbc07c5d90d242dd6b341c87972b8f77a0b
+  JOB LOG    : $HOME/avocado/job-results/job-2021-11-12T10.32-001adw/job.log
+  TESTS      : 1
+  (1/1) avocado-misc-tests/perf/stress.py:Stress.test: PASS (62.67 s)
+  RESULTS    : PASS 1 | ERROR 0 | FAIL 0 | SKIP 0 | WARN 0 | INTERRUPT 0
+  JOB HTML   : $HOME/avocado/job-results/job--2021-11-12T10.32-001adw//html/results.html
+  TIME       : 69.67 s
+
 * For more details please refer 3rd point in References section.
 
 References:
