@@ -99,7 +99,7 @@ class Kprobe(Test):
         makefile = open("Makefile", "w")
         makefile.write('obj-m := kprobe_example.o\nKDIR := /lib/modules/$(shell uname -r)/build'
                        '\nPWD := $(shell pwd)\ndefault:\n\t'
-                       '$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules\n')
+                       '$(MAKE) -C $(KDIR) M=$(shell pwd) modules\n')
         makefile.close()
 
         self.is_fail = 0
@@ -120,11 +120,11 @@ class Kprobe(Test):
             self.fail("kprobe couldn't be planted, check dmesg for more information")
 
         """
-        Execute date to trigger do_fork syscall
+        Execute date to trigger kernel_clone syscall
         """
         self.run_cmd("date")
 
-        if "pre_handler" not in self.run_cmd_out("dmesg |grep -i _do_fork"):
+        if "handler_pre" not in self.run_cmd_out("dmesg |grep -i kernel_clone"):
             self.fail("kprobe probing issues, check dmesg for more information")
 
         self.run_cmd("rmmod kprobe_example")
