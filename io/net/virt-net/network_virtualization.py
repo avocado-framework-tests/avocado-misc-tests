@@ -305,9 +305,9 @@ class NetworkVirtualization(Test):
         self.is_disabled_enabled_dev('1')
         self.disable_enable_dev('e')
         self.is_disabled_enabled_dev('0')
-
         device = self.find_device(self.mac_id[0])
         networkinterface = NetworkInterface(device, self.local)
+        wait.wait_for(networkinterface.is_link_up, timeout=60)
         if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
             self.fail("Enabling and disabling of the interface has affected network connectivity")
         self.check_dmesg_error()
