@@ -63,7 +63,8 @@ class NXGZipTests(Test):
           "": "check",
           "selftest": "run_tests",
           "test": "unsafe-check",
-          "samples": "bench"
+          "samples": "bench",
+          "oct": "-j16"
         }
 
         failed_tests = []
@@ -309,3 +310,17 @@ class NXGZipTests(Test):
         if process.system(nx2_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_compdecomp_2nx:\
                       comp/decomp on 2nx devices tests failed")
+
+    def test_oct(self):
+        '''
+        Running NX-GZIP: Run OCT - Libnxz Output Comparison Tests
+        '''
+        self.log.info("NX-GZIP: test_oct:\
+                      Libnxz Output Comparison Tests")
+        test_dir = os.path.join(self.teststmpdir, "oct")
+        shutil.copyfile(self.get_data('minigzipsh'),
+                        os.path.join(test_dir, 'minigzipsh'))
+        os.chdir(test_dir)
+        os.chmod('minigzipsh', 0o777)
+        self.build_tests("oct")
+
