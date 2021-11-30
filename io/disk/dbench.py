@@ -58,6 +58,15 @@ class Dbench(Test):
         raid_needed = self.params.get('raid', default=False)
         self.raid_create = False
         self.disk = self.params.get('disk', default=None)
+        if not self.disk:
+            self.cancel("Provide the test disks to proceed !")
+        self.md_name = self.params.get('raid_name', default='md127')
+        self.mountpoint = self.params.get('dir', default='/mnt')
+        self.disk_obj = Partition(self.disk, mountpoint=self.mountpoint)
+        self.pre_cleanup()
+        self.clear_disk(self.disk_obj, self.disk)
+        if not os.path.exists(self.mountpoint):
+            os.mkdir(self.mountpoint)
         sm = SoftwareManager()
         pkgs = ["gcc", "patch"]
         if raid_needed:
@@ -89,23 +98,35 @@ class Dbench(Test):
         process.run('patch -p1 < %s' % self.get_data(patch), shell=True)
         process.run('./configure')
         build.make(self.sourcedir)
-        self.dirs = self.disk
         if self.disk is not None:
             if self.disk in disk.get_disks():
                 if raid_needed:
-                    raid_name = '/dev/md/mdsraid'
+                    raid_name = '/dev/%s' % self.md_name
                     self.create_raid(self.disk, raid_name)
                     self.raid_create = True
                     self.disk = raid_name
-                    self.dirs = self.disk
                 if lv_needed:
                     self.disk = self.create_lv(self.disk)
                     self.lv_create = True
-                    self.dirs = self.disk
                 if fstype:
-                    self.dirs = self.workdir
-                    self.create_fs(self.disk, self.dirs, fstype)
+                    self.create_fs(self.disk, fstype)
                     self.fs_create = True
+
+    def pre_cleanup(self):
+        umount_dir = "umount -f %s" % self.mountpoint
+        process.system(umount_dir, shell=True, ignore_status=True)
+        delete_lv = "lvremove -f /dev/mapper/avocado_vg-avocado_lv"
+        process.system(delete_lv, shell=True, ignore_status=True)
+        delete_vg = "vgremove -f avocado_vg"
+        process.system(delete_vg, shell=True, ignore_status=True)
+        delete_rd = 'mdadm --stop /dev/%s' % self.md_name
+        process.system(delete_rd, shell=True, ignore_status=True)
+
+    def clear_disk(self, obj, disk):
+        obj.unmount()
+        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % disk
+        if process.system(delete_fs, shell=True, ignore_status=False):
+            self.fail("Failed to delete filesystem on %s", disk)
 
     def create_raid(self, l_disk, l_raid_name):
         self.sraid = softwareraid.SoftwareRaid(l_raid_name, '0',
@@ -122,7 +143,7 @@ class Dbench(Test):
         lv_size = lv_utils.get_device_total_space(l_disk) / 2330168
         lv_utils.vg_create(vgname, l_disk)
         lv_utils.lv_create(vgname, lvname, lv_size)
-        return '/dev/%s/%s' % (vgname, lvname)
+        return '/dev/mapper/%s-%s' % (vgname, lvname)
 
     def delete_lv(self):
         vgname = 'avocado_vg'
@@ -130,27 +151,20 @@ class Dbench(Test):
         lv_utils.lv_remove(vgname, lvname)
         lv_utils.vg_remove(vgname)
 
-    def create_fs(self, l_disk, mountpoint, fstype):
-        self.part_obj = Partition(l_disk, mountpoint=mountpoint)
-        self.part_obj.unmount()
+    def create_fs(self, l_disk, fstype):
+        self.part_obj = Partition(l_disk, mountpoint=self.mountpoint)
+        self.part_obj.unmount(force=True)
         self.part_obj.mkfs(fstype)
         try:
             self.part_obj.mount()
         except PartitionError:
             self.fail("Mounting disk %s on directory %s failed"
-                      % (l_disk, mountpoint))
-
-    def delete_fs(self, l_disk):
-        self.part_obj.unmount()
-        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % l_disk
-        if process.system(delete_fs, shell=True, ignore_status=True):
-            self.fail("Failed to delete filesystem on %s" % l_disk)
+                      % (l_disk, self.mountpoint))
 
     def test(self):
         '''
         Test Execution with necessary args
         '''
-        dir = self.params.get('dir', default='.')
         nprocs = self.params.get('nprocs', default=None)
         seconds = self.params.get('seconds', default=60)
         args = self.params.get('args', default='')
@@ -158,7 +172,7 @@ class Dbench(Test):
             nprocs = multiprocessing.cpu_count()
         loadfile = os.path.join(self.sourcedir, 'client.txt')
         cmd = '%s/dbench %s %s -D %s -c %s -t %d' % (self.sourcedir, nprocs,
-                                                     args, dir, loadfile,
+                                                     args, self.mountpoint, loadfile,
                                                      seconds)
         process.run(cmd)
 
@@ -174,7 +188,7 @@ class Dbench(Test):
         '''
         if self.disk is not None:
             if self.fs_create:
-                self.delete_fs(self.disk)
+                self.clear_disk(self.part_obj, self.disk)
             if self.lv_create:
                 self.delete_lv()
             if self.raid_create:
