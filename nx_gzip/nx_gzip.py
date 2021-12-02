@@ -57,14 +57,18 @@ class NXGZipTests(Test):
         '''
         build different test builds
         '''
-        test_dir = os.path.join(self.teststmpdir, testdir_name)
+        if self.name.uid == 15:
+           test_dir = os.path.join(self.buldir, testdir_name)
+        else:
+           test_dir = os.path.join(self.teststmpdir, testdir_name)
         os.chdir(test_dir)
         testdir_dict = {
           "": "check",
           "selftest": "run_tests",
           "test": "unsafe-check",
           "samples": "bench",
-          "oct": "-j16"
+          "oct": "-j16",
+          "tools/testing/selftests/powerpc/nx-gzip": "run_tests"
         }
 
         failed_tests = []
@@ -97,7 +101,7 @@ class NXGZipTests(Test):
 
         self.url = self.params.get(
             'url', default="https://github.com/libnxz/power-gzip")
-        self.branch = self.params.get('branch', default='master')
+        self.branch = self.params.get('git_branch', default='master')
         git.get_repo(self.url, branch=self.branch,
                      destination_dir=self.teststmpdir)
 
@@ -324,3 +328,20 @@ class NXGZipTests(Test):
         os.chmod('minigzipsh', 0o777)
         self.build_tests("oct")
 
+    def test_kself_nxgzip(self):
+        '''
+        nx-gzip tests from kself tests
+        '''
+        self.testdir = "tools/testing/selftests/powerpc/nx-gzip"
+        linux_src = 'https://github.com/torvalds/linux/archive/master.zip'
+        self.output = "linux-master"
+        match = next(
+                (ext for ext in [".zip", ".tar"] if ext in linux_src), None)
+        if match:
+           tarball = self.fetch_asset("kselftest%s" % match,
+                                      locations=[linux_src], expire='1d')
+           archive.extract(tarball, self.teststmpdir)
+        else:
+           git.get_repo(linux_src, destination_dir=self.teststmpdir)
+        self.buldir = os.path.join(self.teststmpdir, self.output)
+        self.build_tests(self.testdir)
