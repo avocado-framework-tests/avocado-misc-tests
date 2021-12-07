@@ -1,4 +1,5 @@
 disk:
+dir:
 setup:
     duration: !mux
         default:
