@@ -47,9 +47,10 @@ class NXGZipTests(Test):
         create dd file for compress/decompress
         '''
         blk_size = self.params.get('blk_size', default='1073741824')
-        file_size = self.params.get('file_size', default='150')
+        file_size = self.params.get('file_size', default='5')
+        count = self.params.get('count', default='150')
         dd_cmd = 'dd if=/dev/urandom of=%sgb-file bs=%s count=%s'\
-                 % (file_size, blk_size, file_size)
+                 % (file_size, blk_size, count)
         if process.system(dd_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: create_ddfile: dd file creation failed")
 
@@ -57,7 +58,7 @@ class NXGZipTests(Test):
         '''
         build different test builds
         '''
-        if self.name.uid == 15:
+        if self.name.uid == 13:
            test_dir = os.path.join(self.buldir, testdir_name)
         else:
            test_dir = os.path.join(self.teststmpdir, testdir_name)
@@ -104,7 +105,7 @@ class NXGZipTests(Test):
         self.branch = self.params.get('git_branch', default='master')
         git.get_repo(self.url, branch=self.branch,
                      destination_dir=self.teststmpdir)
-
+        process.run('./configure', sudo=True, shell=True)
         os.chdir(self.teststmpdir)
         build.make(self.teststmpdir)
 
@@ -139,7 +140,7 @@ class NXGZipTests(Test):
                       Compress/Decompress using zpipe which uses nx-gzip")
         self.build_tests("samples")
 
-        file_size = self.params.get('file_size', default='150')
+        file_size = self.params.get('file_size', default='5')
         out_file = self.params.get('out_file', default='out_file')
         new_file = self.params.get('new_file', default='new_file')
         self.create_ddfile()
@@ -161,7 +162,7 @@ class NXGZipTests(Test):
         self.create_ddfile()
 
         mnt_path = "/mnt/ramdisk"
-        file_size = self.params.get('file_size', default='150')
+        file_size = self.params.get('file_size', default='5')
         tmpfs_size = self.params.get('tmpfs_size', default='50')
 
         free_mem = memory.meminfo.MemFree.m
@@ -194,7 +195,7 @@ class NXGZipTests(Test):
         self.build_tests("samples")
         self.create_ddfile()
 
-        file_size = self.params.get('file_size', default='150')
+        file_size = self.params.get('file_size', default='5')
         numamany_cmd = './runnumamany.sh %sgb-file' % file_size
         if process.system(numamany_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_numamany: numa node tests failed")
@@ -207,7 +208,7 @@ class NXGZipTests(Test):
         self.build_tests("samples")
         self.create_ddfile()
 
-        file_size = self.params.get('file_size', default='150')
+        file_size = self.params.get('file_size', default='5')
         dcomp_cmd = 'sh ./rundecomp.sh %sgb-file' % file_size
         if process.system(dcomp_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_simple_dcomp: dcomp tests failed")
@@ -216,6 +217,8 @@ class NXGZipTests(Test):
         '''
         Running NX-GZIP: Run zpipe repeates tests
         '''
+        self.cancel("NX-GZIP:Intentionally Cancelled test_zpipe_repeat tests,\
+                    due to test case issues.")
         self.log.info("NX-GZIP: test_zpipe: Repeated zpipe tests")
         self.download_tarball()
         self.build_tests("samples")
@@ -286,35 +289,6 @@ class NXGZipTests(Test):
         if process.system(nxdht_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_nxdht: nxdht tests failed")
 
-    def test_zlib_series(self):
-        '''
-        Running NX-GZIP: Run compress/decompress zlib series
-        '''
-        self.log.info("NX-GZIP: test_zlib_series:\
-                      Run compress/decomp zlib test series")
-        self.build_tests("samples")
-        self.create_ddfile()
-
-        file_size = self.params.get('file_size', default='150')
-        zlib_cmd = './zlib-run-series.sh %sgb-file' % file_size
-        if process.system(zlib_cmd, shell=True, ignore_status=True):
-            self.fail("NX-GZIP: test_zlib_series: zlib test series failed")
-
-    def test_compdecomp_2nx(self):
-        '''
-        Running NX-GZIP: Run compress/decompress on 2nx devices
-        '''
-        self.log.info("NX-GZIP: test_compdecomp_2nx:\
-                      Run compress/decompress on 2nx devices")
-        self.build_tests("samples")
-        self.create_ddfile()
-
-        file_size = self.params.get('file_size', default='150')
-        nx2_cmd = './run-series_2nx.sh %sgb-file' % file_size
-        if process.system(nx2_cmd, shell=True, ignore_status=True):
-            self.fail("NX-GZIP: test_compdecomp_2nx:\
-                      comp/decomp on 2nx devices tests failed")
-
     def test_oct(self):
         '''
         Running NX-GZIP: Run OCT - Libnxz Output Comparison Tests
@@ -345,3 +319,44 @@ class NXGZipTests(Test):
            git.get_repo(linux_src, destination_dir=self.teststmpdir)
         self.buldir = os.path.join(self.teststmpdir, self.output)
         self.build_tests(self.testdir)
+
+    def test_bench_initend(self):
+        '''
+        Running NX-GZIP: Running bench tests with deflat/inflate - init/end
+        '''
+        self.log.info("NX-GZIP: test_bench_initend:\
+                      Running tests with Deflat/Inflate InitEnd")
+        self.build_tests("samples")
+
+        bench_cmd = './bench_initend'
+        if process.system(bench_cmd, shell=True, ignore_status=True):
+            self.fail("NX-GZIP:test_bench_initend:bench_initend tests failed")
+
+    def test_compdecomp_2nx(self):
+        '''
+        Running NX-GZIP: Run compress/decompress on 2nx devices
+        '''
+        self.log.info("NX-GZIP: test_compdecomp_2nx:\
+                      Run compress/decompress on 2nx devices")
+        self.build_tests("samples")
+        self.create_ddfile()
+
+        file_size = self.params.get('file_size', default='5')
+        nx2_cmd = './run-series_2nx.sh %sgb-file' % file_size
+        if process.system(nx2_cmd, shell=True, ignore_status=True):
+            self.fail("NX-GZIP: test_compdecomp_2nx:\
+                      comp/decomp on 2nx devices tests failed")
+
+    def test_zlib_series(self):
+        '''
+        Running NX-GZIP: Run compress/decompress zlib series
+        '''
+        self.log.info("NX-GZIP: test_zlib_series:\
+                      Run compress/decomp zlib test series")
+        self.build_tests("samples")
+        self.create_ddfile()
+
+        file_size = self.params.get('file_size', default='5')
+        zlib_cmd = './zlib-run-series.sh %sgb-file' % file_size
+        if process.system(zlib_cmd, shell=True, ignore_status=True):
+            self.fail("NX-GZIP: test_zlib_series: zlib test series failed")
