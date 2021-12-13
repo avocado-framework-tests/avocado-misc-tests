@@ -91,7 +91,7 @@ class NXGZipTests(Test):
         """
         smg = SoftwareManager()
         self.dist = distro.detect()
-        if self.dist.name not in ['rhel']:
+        if self.dist.name not in ['rhel', 'SuSE']:
             self.cancel('Unsupported OS %s' % self.dist.name)
 
         deps = ['gcc', 'make', 'glibc-static', 'zlib', 'zlib-devel']
