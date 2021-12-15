@@ -18,7 +18,7 @@
 
 import os
 import shutil
-
+from avocado.utils import wait
 from avocado import Test
 from avocado import skipIf
 from avocado.utils import process, build, memory, distro, genio
@@ -102,13 +102,18 @@ class NumaTest(Test):
         """
         Test PFN's before and after offlining
         """
+        def is_softoffline():
+            if ret != 0:
+                return False
+            return True
+
         self.nr_pages = self.params.get(
             'nr_pages', default=50)
         os.chdir(self.teststmpdir)
         self.log.info("Starting test...")
         cmd = './softoffline -m %s -n %s' % (self.map_type, self.nr_pages)
         ret = process.system(cmd, shell=True, sudo=True, ignore_status=True)
-        if ret != 0:
+        if not wait.wait_for(is_softoffline, timeout=60):
             self.fail('Please check the logs for failure')
 
     @skipIf(SINGLE_NODE, "Test requires two numa nodes to run")
@@ -116,11 +121,15 @@ class NumaTest(Test):
         """
         Test PFN's before and after offlining
         """
+        def is_page_moved():
+            if ret != 0:
+                return False
+            return True
         self.nr_pages = self.params.get(
             'nr_pages', default=100)
         os.chdir(self.teststmpdir)
         self.log.info("Starting test...")
         cmd = './bench_movepages -n %s' % self.nr_pages
         ret = process.system(cmd, shell=True, sudo=True, ignore_status=True)
-        if ret != 0:
+        if not wait.wait_for(is_page_moved, timeout=60):
             self.fail('Please check the logs for failure')
