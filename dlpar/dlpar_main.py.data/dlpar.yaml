@@ -1,0 +1,11 @@
+config:
+    lpar_mode: !mux
+        dedicated:
+            mode: 'dedicated'
+        shared:
+            mode: 'shared'
+    test_type: !mux
+         cpu_dlpar:
+             test_case: 'cpu'
+         mem_dlpar:
+             test_case: 'mem'
