@@ -49,11 +49,11 @@ class CpuUnit(TestCase):
           1 - Shutdown the partition (shared);
           2 - Define dedicated partition with min, desired, max from config
         """
-        u_cmd = 'chsyscfg -r prof -m %s -p %s -i \
+        u_cmd = 'chsyscfg -r prof -m %s -i \
                 "lpar_name=%s,name=default_profile,proc_mode=shared, \
                 min_proc_units=%s,desired_proc_units=%s,max_proc_units=%s, \
                 min_procs=%s,desired_procs=%s,max_procs=%s,sharing_mode=%s" --force' % \
-                (linux_machine.machine,linux_machine.partition, \
+                (linux_machine.machine, \
                 linux_machine.name,self.min_proc_units,self.desired_proc_units, \
                 self.max_proc_units,self.min_procs,self.desired_procs, \
                 self.max_procs, self.sharing_mode)
