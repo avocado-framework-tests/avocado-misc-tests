@@ -48,11 +48,11 @@ class Memory(TestCase):
           1 - Shutdown the partition (shared);
           2 - Define memory profile with min, desired, max from config
         """
-        u_cmd = 'chsyscfg -r prof -m %s -p %s -i "lpar_name=%s,name=default_profile, \
+        u_cmd = 'chsyscfg -r prof -m %s -i "lpar_name=%s,name=default_profile, \
                 min_mem=%d,desired_mem=%d,max_mem=%d, \
                 min_num_huge_pages=0,desired_num_huge_pages=0, \
                 max_num_huge_pages=0" --force' % \
-                (linux_machine.machine,linux_machine.partition,linux_machine.name, \
+                (linux_machine.machine,linux_machine.name, \
                 self.min_mem,self.desired_mem,self.max_mem)
 
         self.log.info('DEBUG: Memory lpar setup %s' % u_cmd)

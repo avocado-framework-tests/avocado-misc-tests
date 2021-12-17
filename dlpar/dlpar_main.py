@@ -19,13 +19,17 @@ import os
 
 from avocado import Test
 from avocado.utils import process
+from avocado import skipUnless
 
+IS_POWER_VM = 'pSeries' in open('/proc/cpuinfo', 'r').read()
 
 class DlparTests(Test):
 
     """
     Dlpar CPU/MEMORY  tests - ADD/REMOVE/MOVE
     """
+    @skipUnless(IS_POWER_VM,
+                "DLPAR test is supported only on PowerVM platform")
     def setUp(self):
         self.lpar_mode = self.params.get('mode', default='dedicated')
 

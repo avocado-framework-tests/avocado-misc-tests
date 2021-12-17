@@ -52,10 +52,10 @@ class DedicatedCpu(TestCase):
           1 - Shutdown the partition (dedicated);
           2 - Define dedicated partition with min, desired, max from config 
         """
-        u_cmd = 'chsyscfg -r prof -m %s -p %s -i \
+        u_cmd = 'chsyscfg -r prof -m %s -i \
                 "lpar_name=%s,name=default_profile,proc_mode=ded, \
                 min_procs=%s,desired_procs=%s,max_procs=%s,sharing_mode=keep_idle_procs" \
-                --force' % (linux_machine.machine,linux_machine.partition, \
+                --force' % (linux_machine.machine, \
                 linux_machine.name,self.min_procs,self.desired_procs,self.max_procs)
         self.log.info('DEBUG: Dedicated lpar setup %s' % u_cmd)
         self.hmc.sshcnx.run_command(u_cmd, False)
