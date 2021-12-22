@@ -68,6 +68,9 @@ class MyPxssh(pxssh):
         # In some situations, with asynchronous commands, we might not get 
         # an answer right after we try to check the exit code. so in this
         # case, we need to wait and try again.
+        self.sendline("bind 'set enable-bracketed-paste off'")
+        self.expect('\r\n')
+        self.prompt()
         self.sendline(command)
         self.expect('\r\n')
         self.prompt()
