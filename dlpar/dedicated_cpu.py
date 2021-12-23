@@ -143,7 +143,7 @@ class DedicatedCpu(TestCase):
             m_cmd = 'chhwres -m ' + linux_machine.machine + \
                     ' -r proc -o r --procs ' + \
                     str(curr_procs - curr_min_procs) + \
-                    ' -p "' + linux_machine.partition + '"'
+                    ' -p "' + linux_machine.partition + '"' + ' -w 0 '
             self.hmc.sshcnx.run_command(m_cmd, False)
 
             self.log.debug('Sleeping for %s seconds before proceeding' %
@@ -196,7 +196,7 @@ class DedicatedCpu(TestCase):
         # Add the cpus
         a_cmd = 'chhwres -m ' + linux_machine.machine + \
                 ' -r proc -o a --procs ' + str(quantity) + \
-                ' -p "' + linux_machine.partition + '"'
+                ' -p "' + linux_machine.partition + '"' + ' -w 0 '
         cmd_result = self.hmc.sshcnx.run_command(a_cmd)
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
@@ -231,7 +231,7 @@ class DedicatedCpu(TestCase):
         m_cmd = 'chhwres -m ' + linux_machine_1.machine + \
                 ' -r proc -o m --procs ' + str(quantity) + \
                 ' -p "' + linux_machine_1.partition + '"' + \
-                ' -t "' + linux_machine_2.partition + '"'
+                ' -t "' + linux_machine_2.partition + '"' + ' -w 0 '
         cmd_result = self.hmc.sshcnx.run_command(m_cmd)
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
@@ -260,7 +260,7 @@ class DedicatedCpu(TestCase):
         # Remove the cpus
         r_cmd = 'chhwres -m ' + linux_machine.machine + \
                 ' -r proc -o r --procs ' + str(quantity) + \
-                ' -p "' + linux_machine.partition + '"'
+                ' -p "' + linux_machine.partition + '"' + ' -w 0 '
         self.hmc.sshcnx.run_command(r_cmd)
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
