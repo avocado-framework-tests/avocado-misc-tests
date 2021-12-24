@@ -212,7 +212,7 @@ class CpuUnit(TestCase):
         # Add the cpus
         a_cmd = 'chhwres -m ' + linux_machine.machine + \
                 ' -r proc -o a --procunits ' + str(quantity) + \
-                ' -p "' + linux_machine.partition + '"'
+                ' -p "' + linux_machine.partition + '"' + ' -w 0 '
         self.hmc.sshcnx.run_command(a_cmd)
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
@@ -245,7 +245,7 @@ class CpuUnit(TestCase):
         m_cmd = 'chhwres -m ' + linux_machine_1.machine + \
                 ' -r proc -o m --procunits ' + str(quantity) + \
                 ' -p "' + linux_machine_1.partition + '"' + \
-                ' -t "' + linux_machine_2.partition + '"'
+                ' -t "' + linux_machine_2.partition + '"' + ' -w 0 '
 
         self.hmc.sshcnx.run_command(m_cmd)
         self.log.debug('Sleeping for %s seconds before proceeding' %
@@ -279,7 +279,7 @@ class CpuUnit(TestCase):
         # Remove the cpus
         r_cmd = 'chhwres -m ' + linux_machine.machine + \
                 ' -r proc -o r --procunits ' + str(quantity) + \
-                ' -p "' + linux_machine.partition + '"'
+                ' -p "' + linux_machine.partition + '"' + ' -w 0 '
         self.hmc.sshcnx.run_command(r_cmd)
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)

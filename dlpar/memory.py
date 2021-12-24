@@ -215,7 +215,8 @@ class Memory(TestCase):
 
         # Add the memory
         a_cmd = 'chhwres -m ' + linux_machine.machine + ' -r mem -o a -q ' + \
-                str(quantity) + ' -p "' + linux_machine.partition + '"'
+                str(quantity) + ' -p "' + linux_machine.partition + '"' + \
+                ' -w 0 '
         self.hmc.sshcnx.run_command(a_cmd)
 
         self.log.debug('Sleeping for %s seconds before proceeding' %
@@ -249,7 +250,8 @@ class Memory(TestCase):
 
         # Remove the memory
         r_cmd = 'chhwres -m ' + linux_machine.machine + ' -r mem -o r -q ' + \
-                str(quantity) + ' -p "' + linux_machine.partition + '"'
+                str(quantity) + ' -p "' + linux_machine.partition + '"' + \
+                ' -w 0 '
         self.hmc.sshcnx.run_command(r_cmd)
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
@@ -290,7 +292,7 @@ class Memory(TestCase):
         # Move the memory
         m_cmd = 'chhwres -m ' + linux_machine_1.machine + ' -r mem -o m -q ' + \
                 str(quantity) + ' -p "' + linux_machine_1.partition + \
-                ' -t "' + linux_machine_2.partition + '"'
+                ' -t "' + linux_machine_2.partition + '"' + ' -w 0 '
         self.hmc.sshcnx.run_command(m_cmd)
         self.log.debug('Going to sleep for %s s' % self.sleep_time)
         time.sleep(self.sleep_time)
