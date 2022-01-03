@@ -44,6 +44,8 @@ class PPC64Test(Test):
         if SoftwareManager().check_installed("powerpc-utils") is False:
             if SoftwareManager().install("powerpc-utils") is False:
                 self.cancel("powerpc-utils is not installing")
+        
+        self.loop = int(self.params.get('test_loop', default=100))
         self.smt_str = "ppc64_cpu --smt"
         # Dynamically set max SMT specified at boot time
         process.system("%s=on" % self.smt_str, shell=True)
@@ -158,7 +160,7 @@ class PPC64Test(Test):
         """
         Tests smt on/off in a loop
         """
-        for _ in range(1, 100):
+        for _ in range(1, self.loop):
             if process.system("%s=off && %s=on" % (self.smt_str, self.smt_str),
                               shell=True):
                 self.fail('SMT loop test failed')
