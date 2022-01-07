@@ -59,9 +59,9 @@ class NXGZipTests(Test):
         build different test builds
         '''
         if self.name.uid == 13:
-           test_dir = os.path.join(self.buldir, testdir_name)
+            test_dir = os.path.join(self.buldir, testdir_name)
         else:
-           test_dir = os.path.join(self.teststmpdir, testdir_name)
+            test_dir = os.path.join(self.teststmpdir, testdir_name)
         os.chdir(test_dir)
         testdir_dict = {
           "": "check",
@@ -312,11 +312,11 @@ class NXGZipTests(Test):
         match = next(
                 (ext for ext in [".zip", ".tar"] if ext in linux_src), None)
         if match:
-           tarball = self.fetch_asset("kselftest%s" % match,
-                                      locations=[linux_src], expire='1d')
-           archive.extract(tarball, self.teststmpdir)
+            tarball = self.fetch_asset("kselftest%s" % match,
+                                       locations=[linux_src], expire='1d')
+            archive.extract(tarball, self.teststmpdir)
         else:
-           git.get_repo(linux_src, destination_dir=self.teststmpdir)
+            git.get_repo(linux_src, destination_dir=self.teststmpdir)
         self.buldir = os.path.join(self.teststmpdir, self.output)
         self.build_tests(self.testdir)
 
