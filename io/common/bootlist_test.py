@@ -16,7 +16,7 @@
 Bootlist Test
 """
 
-import netifaces
+import os
 from avocado import Test
 from avocado.utils import process
 from avocado import skipUnless
@@ -42,7 +42,7 @@ class BootlisTest(Test):
             if not self.host_interfaces:
                 self.cancel("user should specify host interfaces")
             self.names = self.host_interfaces
-            interfaces = netifaces.interfaces()
+            interfaces = os.listdir('/sys/class/net')
             for host_interface in self.host_interfaces.split(" "):
                 if host_interface not in interfaces:
                     self.cancel("interface is not available")
