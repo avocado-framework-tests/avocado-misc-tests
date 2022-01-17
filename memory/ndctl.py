@@ -135,6 +135,7 @@ class NdctlTest(Test):
         self.package = self.params.get('package', default='upstream')
         self.preserve_setup = self.params.get('preserve_change', default=False)
         self.mode_to_use = self.params.get('modes', default='fsdax')
+        location = self.params.get('location', default='.')
 
         if self.dist.name not in ['SuSE', 'rhel']:
             self.cancel('Unsupported OS %s' % self.dist.name)
@@ -174,6 +175,9 @@ class NdctlTest(Test):
             build.make(".")
             self.ndctl = os.path.abspath('./ndctl/ndctl')
             self.daxctl = os.path.abspath('./daxctl/daxctl')
+        elif self.package == 'local':
+            self.ndctl = os.path.abspath(os.path.join(location, 'ndctl/ndctl'))
+            self.daxctl = os.path.abspath(os.path.join(location,'daxctl/daxctl'))
         else:
             deps.extend(['ndctl'])
             if self.dist.name == 'rhel':
