@@ -6,6 +6,15 @@ subsystem: !mux
                 option: messaging
             sched_pipe:
                 option: pipe
+            sched_all:
+                option: all
+    syscall:
+        name: syscall
+        variants: !mux
+            syscall_basic:
+                option: basic
+            syscall_all:
+                option: all
     mem:
         name: mem
         variants: !mux
@@ -13,6 +22,10 @@ subsystem: !mux
                 option: memcpy
             mem_memset:
                 option: memset
+            mem_find_bit:
+                option: find_bit
+            mem_all:
+                option: all
     numa:
         name: numa
         variants: !mux
@@ -33,5 +46,25 @@ subsystem: !mux
                 option: requeue
             futex_lock_pi:
                 option: lock-pi
+            futes_all:
+                option: all
+    epoll:
+        name: epoll
+        variants: !mux
+            epoll_wait:
+                option: wait
+            epoll_ctl:
+                option: ctl
+            epoll_all:
+                option: all
+    internals:
+        name: internals
+        variants: !mux
+            internals_synthesize:
+                option: synthesize
+            internals_kallsyms_parse:
+                option: kallsyms-parse
+            internals_inject_build_id:
+                option: inject-build-id
     all:
         name: all
