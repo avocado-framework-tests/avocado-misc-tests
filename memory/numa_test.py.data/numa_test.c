@@ -144,7 +144,7 @@ int test_func(unsigned long nr_nodes, int mapflag, unsigned long nr_pages, unsig
 int main(int argc, char *argv[])
 {
 	int c, i, mapflag = MAP_ANONYMOUS;
-	unsigned long nr_nodes = numa_max_node() + 1, page_size = getpagesize(), nr_pages;
+	unsigned long nr_nodes = numa_max_node() + 1, page_size = getpagesize() / 1024, nr_pages;
 
 	while ((c = getopt(argc, argv, "vm:n:Hh")) != -1) {
 		switch(c) {

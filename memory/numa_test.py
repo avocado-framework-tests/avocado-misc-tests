@@ -18,6 +18,7 @@
 
 import os
 import shutil
+import time
 
 from avocado import Test
 from avocado import skipIf
@@ -116,6 +117,7 @@ class NumaTest(Test):
         """
         Test PFN's before and after offlining
         """
+        time.sleep(200)
         self.nr_pages = self.params.get(
             'nr_pages', default=100)
         os.chdir(self.teststmpdir)

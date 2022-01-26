@@ -101,8 +101,8 @@ int main(int argc, char *argv[])
         unsigned long src_node;
         double thp_time, bp_time;
 
-	page_size = getpagesize();
-	hpage_size = gethugepagesize();
+	page_size = getpagesize() / 1024;
+	hpage_size = gethugepagesize() / 1024;
 
         while ((c = getopt(argc, argv, "n:vh")) != -1) {
 		switch(c) {
