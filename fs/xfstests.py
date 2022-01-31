@@ -196,10 +196,14 @@ class Xfstests(Test):
             else:
                 packages.extend(['btrfs-progs-devel'])
 
+            packages_remove = ['indent', 'btrfs-progs-devel']
             if self.detected_distro.name == 'rhel' and\
                     self.detected_distro.version.startswith('8'):
-                packages.remove('indent')
-                packages.remove('btrfs-progs-devel')
+                packages = list(set(packages)-set(packages_remove))
+            elif self.detected_distro.name == 'rhel' and\
+                    self.detected_distro.version.startswith('9'):
+                packages_remove.extend(['dump'])
+                packages = list(set(packages)-set(packages_remove))
 
             if self.detected_distro.name in ['centos', 'fedora']:
                 packages.extend(['fio', 'dbench'])
