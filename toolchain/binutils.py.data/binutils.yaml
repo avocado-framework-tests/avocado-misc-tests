@@ -1,6 +1,6 @@
 run_type: !mux
     upstream:
         type: 'upstream'
-        binutils_version: "2.27"
+        binutils_version: "2.37"
     distro:
         type: 'distro'
