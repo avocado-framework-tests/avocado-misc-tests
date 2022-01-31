@@ -62,7 +62,7 @@ class Binutils(Test):
         # Extract - binutils
         # Source: https://ftp.gnu.org/gnu/binutils/binutils-2.26.tar.bz2
         if run_type == "upstream":
-            version = self.params.get('binutils_version', default='2.27')
+            version = self.params.get('binutils_version', default='2.37')
             locations = [
                 "https://www.mirrorservice.org/sites/sourceware.org"
                 "/pub/binutils/releases/binutils-%s.tar.bz2" % version]
