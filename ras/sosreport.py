@@ -70,7 +70,7 @@ class Sosreport(Test):
         - case-id
         """
         self.log.info(
-            "===============Executing sosreport tool test (short)===============")
+            "===========Executing sosreport tool test (short)===========")
         directory_name = tempfile.mkdtemp()
         self.is_fail = 0
         self.run_cmd("%s -h" % self.sos_cmd, False)
@@ -79,7 +79,8 @@ class Sosreport(Test):
                      (self.sos_cmd, directory_name))
         case_id = self.params.get('case_id', default='testid')
         if case_id not in self.run_cmd_out("%s --batch --case-id=%s | "
-                                           "grep tar.xz" % (self.sos_cmd, case_id)):
+                                           "grep tar.xz"
+                                           % (self.sos_cmd, case_id)):
             self.is_fail += 1
             self.log.info("--case-id option failed")
 
@@ -100,7 +101,7 @@ class Sosreport(Test):
         - capture user provided information
         """
         self.log.info(
-            "===============Executing sosreport tool test (User)===============")
+            "============Executing sosreport tool test (User)============")
         directory_name = tempfile.mkdtemp()
         self.is_fail = 0
         list = self.params.get('list', default=['--all-logs'])
@@ -181,7 +182,8 @@ class Sosreport(Test):
             self.log.info("--build option failed")
 
         if "version" not in self.run_cmd_out("%s --batch --tmp-dir=%s --quiet "
-                                             "--no-report -e ntp,numa1" % (self.sos_cmd, directory_name)):
+                                             "--no-report -e ntp,numa1"
+                                             % (self.sos_cmd, directory_name)):
             self.is_fail += 1
             self.log.info("--quiet --no-report option failed")
         self.run_cmd("%s --batch --tmp-dir=%s --debug" %
