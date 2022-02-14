@@ -21,6 +21,7 @@ from avocado.utils import process, genio, distro
 from avocado import skipIf
 
 IS_POWER_NV = 'PowerNV' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0')
+IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
 
 
 class Cpu_VpaData(Test):
@@ -29,12 +30,12 @@ class Cpu_VpaData(Test):
     checks for cpu files and MaxMem
     '''
 
-    @skipIf(IS_POWER_NV, "This test is supported on PowerVM environment")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,  "This test is supported on PowerVM environment")
     def setUp(self):
         detected_distro = distro.detect()
         if detected_distro.name not in ['rhel', 'SuSE']:
             self.cancel("Test case is supported only on RHEL and SLES")
-        
+
     def test(self):
 
         self.log.info("===Checking for cpu VPA data and MaxMem==")
@@ -42,16 +43,19 @@ class Cpu_VpaData(Test):
         output = genio.read_file('/proc/powerpc/lparcfg').rstrip('\t\r\n\0')
         for line in output.splitlines():
             if 'MaxMem=' in line:
-            	maxmem = line.split('=')[1].strip()
+                maxmem = line.split('=')[1].strip()
         output = process.system_output('lscpu', shell=True, ignore_status=True)
         for line in output.decode().splitlines():
             if line.startswith('CPU'):
-            	total_cpus = line.split(':')[1].strip()
-        output = process.system_output('lparstat -i',shell=True, ignore_status=True)
+                total_cpus = line.split(':')[1].strip()
+        output = process.system_output(
+            'lparstat -i', shell=True, ignore_status=True)
         for line in output.decode().splitlines():
             if 'Maximum Memory' in line:
-            	lmaxmem = line.split(':')[1].strip()
+                lmaxmem = line.split(':')[1].strip()
         if ((cpu_count == int(total_cpus)) and (maxmem == lmaxmem)):
-            self.log.info("Files are generated for all cpu's and maxmem values are same")
+            self.log.info(
+                "Files are generated for all cpu's and maxmem values are same")
         else:
-            self.fail("Files are not generated for all cpu's and maxmem values are not same")
+            self.fail(
+                "Files are not generated for all cpu's and maxmem values are not same")
