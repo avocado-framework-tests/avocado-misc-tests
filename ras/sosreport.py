@@ -49,7 +49,7 @@ class Sosreport(Test):
         sm = SoftwareManager()
         if dist.name in ['Ubuntu', 'debian']:
             sos_pkg = 'sosreport'
-        elif dist.name in ['rhel', 'centos']:
+        elif dist.name in ['rhel', 'centos', 'fedora']:
             sos_pkg = 'sos'
         else:
             self.cancel("sosreport is not supported on %s" % dist.name)
