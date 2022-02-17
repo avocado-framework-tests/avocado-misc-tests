@@ -49,7 +49,7 @@ class Valgrind(Test):
         run_type = self.params.get('type', default='upstream')
         if run_type == "upstream":
             url = self.params.get('url', default="ftp://sourceware.org/pub/"
-                                  "valgrind/valgrind-3.15.0.tar.bz2")
+                                  "valgrind/valgrind-3.18.1.tar.bz2")
             tarball = self.fetch_asset(url)
             archive.extract(tarball, self.workdir)
             version = os.path.basename(tarball.split('.tar.')[0])
