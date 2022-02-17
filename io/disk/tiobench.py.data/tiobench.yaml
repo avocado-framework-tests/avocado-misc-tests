@@ -1,4 +1,5 @@
 disk:
+dir:
 fs: !mux
     ext4:
         fs: 'ext4'
