@@ -30,7 +30,7 @@ class GDB(Test):
         sm = SoftwareManager()
         dist = distro.detect()
         packages = ['gcc', 'dejagnu', 'flex',
-                    'bison', 'texinfo', 'make', 'makeinfo']
+                    'bison', 'texinfo', 'make']
         if dist.name == 'Ubuntu':
             packages.extend(['g++', 'binutils-dev'])
         # FIXME: "redhat" as the distro name for RHEL is deprecated
