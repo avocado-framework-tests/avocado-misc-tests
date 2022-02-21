@@ -72,8 +72,8 @@ class Ltrace(Test):
                             package)
         run_type = self.params.get("type", default="upstream")
         if run_type == "upstream":
-            source = self.params.get('url', default="git@gitlab.com:cespedes/"
-                                     "ltrace.git")
+            source = self.params.get('url', default="https://gitlab.com/"
+                                     "cespedes/ltrace.git")
             git.get_repo(source, destination_dir=os.path.join(
                 self.workdir, 'ltrace'))
 
