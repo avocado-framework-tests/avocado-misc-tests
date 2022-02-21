@@ -103,7 +103,7 @@ class Livepatch(Test):
         makefile.write('obj-m := livepatch-sample.o\nKDIR '
                        ':= /lib/modules/$(shell uname -r)/build'
                        '\nPWD := $(shell pwd)\ndefault:\n\t'
-                       '$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules\n')
+                       '$(MAKE) -C $(KDIR) M=$(PWD) modules\n')
         makefile.close()
 
         if build.make(self.sourcedir) >= 1:
