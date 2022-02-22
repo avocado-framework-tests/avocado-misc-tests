@@ -57,7 +57,7 @@ class Ltrace(Test):
         # enabler for older runners, but should be removed soon
         elif dist_name in ("rhel", "fedora", "redhat"):
             packages.extend(['elfutils-devel', 'elfutils-libelf-devel', 'git',
-                             'elfutils-libelf', 'elfutils-libs',
+                             'elfutils-libelf', 'elfutils-libs', 'libtool',
                              'libtool-ltdl'])
 
         elif dist_name == 'ubuntu':
@@ -72,8 +72,7 @@ class Ltrace(Test):
                             package)
         run_type = self.params.get("type", default="upstream")
         if run_type == "upstream":
-            source = self.params.get('url', default="git@gitlab.com:cespedes/"
-                                     "ltrace.git")
+            source = self.params.get('url', default="https://gitlab.com/cespedes/ltrace.git")
             git.get_repo(source, destination_dir=os.path.join(
                 self.workdir, 'ltrace'))
 
