@@ -58,7 +58,7 @@ class Ltrace(Test):
         elif dist_name in ("rhel", "fedora", "redhat"):
             packages.extend(['elfutils-devel', 'elfutils-libelf-devel', 'git',
                              'elfutils-libelf', 'elfutils-libs',
-                             'libtool-ltdl'])
+                             'libtool', 'libtool-ltdl'])
 
         elif dist_name == 'ubuntu':
             packages.extend(['elfutils', 'libelf-dev', 'libtool', 'git',
