@@ -1,6 +1,6 @@
 run_type: !mux
     upstream:
-        url: 'git@gitlab.com:cespedes/ltrace.git'
+        url: 'https://gitlab.com/cespedes/ltrace.git'
         type: 'upstream'
     distro:
         type: 'distro'
