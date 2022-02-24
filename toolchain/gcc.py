@@ -87,7 +87,7 @@ class GCC(Test):
         ret = build.run_make(
             self.sourcedir, extra_args='check',
             process_kwargs={'ignore_status': True})
-        self.summary = ret.stdout.splitlines()
+        self.summary = ret.stdout.decode("utf-8").splitlines()
         for index, line in enumerate(self.summary):
             if "=== gcc Summary ===" in line:
                 self.get_summary(index + 2)
