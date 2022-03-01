@@ -344,12 +344,10 @@ class Bonding(Test):
                                                          self.remotehost)
                 if peer_networkinterface.set_mtu(mtu) is not None:
                     self.cancel("Failed to set mtu in peer")
-            if self.ping_check():
-                self.log.info("Ping passed for Mode %s", self.mode,
-                              mtu)
+            if not self.ping_check():
+                self.fail("Ping fail in mode %s after MTU change to %s" % (self.mode, mtu))
             else:
-                error_str = "Ping fail in Mode %s after MTU change to %s"\
-                    % (arg1, mtu)
+                self.log.info("Ping success for mode %s bond with  MTU %s" % (self.mode, mtu))
             if self.bond_networkinterface.set_mtu('1500'):
                 self.cancel("Failed to set mtu back to 1500 in host")
             for interface in self.peer_interfaces:
