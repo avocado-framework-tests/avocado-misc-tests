@@ -57,23 +57,26 @@ class pvr(Test):
         if 'pSeries|PowerNV' in val and 'POWER8' in val:
             self.pvr_value = parser.get('PVR_Values', 'pvr_value_p8')
         elif 'pSeries' in val and 'POWER9' in val:
-            if (rev[1] == '1.2'):
-                self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9LPAR_1.2')
-            elif (rev[1] == '2.2'):
-                self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9LPAR_2.2')
-            elif (rev[1] == '2.3'):
-                self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9LPAR_2.3')
+            if rev[1] == '1.2':
+                self.pvr_value = parser.get('PVR_Values',
+                                            'pvr_value_p9LPAR_1.2')
+            elif rev[1] == '2.2':
+                self.pvr_value = parser.get('PVR_Values',
+                                            'pvr_value_p9LPAR_2.2')
+            elif rev[1] == '2.3':
+                self.pvr_value = parser.get('PVR_Values',
+                                            'pvr_value_p9LPAR_2.3')
         elif 'PowerNV' in val and 'POWER9' in val:
-            if (rev[1] == '2.1'):
+            if rev[1] == '2.1':
                 self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9NV_2.1')
-            elif (rev[1] == '2.2'):
+            elif rev[1] == '2.2':
                 self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9NV_2.2')
-            elif (rev[1] == '2.3'):
+            elif rev[1] == '2.3':
                 self.pvr_value = parser.get('PVR_Values', 'pvr_value_p9NV_2.3')
         elif 'pSeries' in val and 'POWER10' in val:
-            if (rev[1] == '1.0'):
+            if rev[1] == '1.0':
                 self.pvr_value = parser.get('PVR_Values', 'pvr_value_p10_1')
-            elif (rev[1] == '2.0'):
+            elif rev[1] == '2.0':
                 self.pvr_value = parser.get('PVR_Values', 'pvr_value_p10_2')
         else:
             self.fail("Unsupported processor family")
