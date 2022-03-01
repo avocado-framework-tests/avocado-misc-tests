@@ -72,7 +72,7 @@ class Iperf(Test):
         if not self.session.connect():
             self.cancel("failed connecting to peer")
         smm = SoftwareManager()
-        for pkg in ["gcc", "autoconf", "perl", "m4", "libtool"]:
+        for pkg in ["gcc", "autoconf", "perl", "m4", "libtool", "gcc-c++"]:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
             cmd = "%s install %s" % (smm.backend.base_command, pkg)
