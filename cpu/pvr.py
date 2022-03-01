@@ -54,7 +54,9 @@ class pvr(Test):
                 rev = (line.split('revision')[1]).split()
                 self.log.info("Revision: %s %s" % (rev, rev[1]))
                 break
-        if 'pSeries|PowerNV' in val and 'POWER8' in val:
+        if 'pSeries' in val and 'POWER8' in val:
+            self.pvr_value = parser.get('PVR_Values', 'pvr_value_p8')
+        elif 'PowerNV' in val and 'POWER8' in val:
             self.pvr_value = parser.get('PVR_Values', 'pvr_value_p8')
         elif 'pSeries' in val and 'POWER9' in val:
             if rev[1] == '1.2':
