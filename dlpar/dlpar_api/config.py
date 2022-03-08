@@ -24,13 +24,14 @@ from os import path
 
 __all__ = ['TestConfig']
 
+
 class TestConfig:
     """Base class of the configuration parser"""
 
     def __init__(self, filename="dlpar.conf"):
         self.filename = filename
         if not path.isfile(self.filename):
-            raise IOError ("File '%s' not found" % (self.filename))
+            raise IOError("File '%s' not found" % (self.filename))
         self.parser = ConfigParser()
         self.parser.read(self.filename)
 
@@ -59,12 +60,10 @@ class TestConfig:
             self.parser.add_section(section)
         return self.parser.set(section, option, value)
 
-
     def remove(self, section, option):
         """Remove an option."""
         if self.parser.has_section(section):
             self.parser.remove_option(section, option)
-
 
     def save(self):
         """Save the configuration file with all modifications"""

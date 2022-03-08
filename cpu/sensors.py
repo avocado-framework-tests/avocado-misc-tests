@@ -29,6 +29,7 @@ from avocado.utils import cpu
 ERRORS = ['I/O error']
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 
+
 class Sensors(Test):
 
     """
@@ -48,7 +49,7 @@ class Sensors(Test):
             if error in s_output:
                 errs.append(error)
         return errs
-    
+
     @skipIf(not IS_POWER_NV, "This test is not supported on PowerVM platform")
     def setUp(self):
         """

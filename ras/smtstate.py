@@ -43,18 +43,22 @@ class smtstate_tool(Test):
     def test(self):
 
         process.system("ppc64_cpu --smt=on")
-        for i in [ "off", "on", 4, 2 ]:
-            for j in [ 2, 4, "on", "off" ]:
+        for i in ["off", "on", 4, 2]:
+            for j in [2, 4, "on", "off"]:
                 process.system("ppc64_cpu --smt=%s" % j)
-                smt_initial = process.system_output("ppc64_cpu --smt", shell=True)
+                smt_initial = process.system_output(
+                    "ppc64_cpu --smt", shell=True)
                 if process.system("smtstate --save", ignore_status=True):
                     self.fail("smtstate save failed")
                 process.system("ppc64_cpu --smt=%s" % i)
-                self.log.info("SMT level before load = %s" % process.system_output("ppc64_cpu --smt"))
+                self.log.info("SMT level before load = %s" %
+                              process.system_output("ppc64_cpu --smt"))
                 if process.system("smtstate --load", ignore_status=True):
                     self.fail("smtstate load failed")
-                smt_final = process.system_output("ppc64_cpu --smt", shell=True)
-                self.log.info("SMT level after load = %s" % process.system_output("ppc64_cpu --smt"))
+                smt_final = process.system_output(
+                    "ppc64_cpu --smt", shell=True)
+                self.log.info("SMT level after load = %s" %
+                              process.system_output("ppc64_cpu --smt"))
                 if smt_initial == smt_final:
                     print("SMT load is successful for SMT=%s" % j)
                 else:
