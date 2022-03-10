@@ -36,22 +36,35 @@ class Strace(Test):
         Source:
         http://github.com/strace/strace.git
         """
+
         smm = SoftwareManager()
         for package in ['make', 'gcc', 'autoconf', 'automake']:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel(' %s is needed for the test to be run' % package)
-        git.get_repo('https://github.com/strace/strace.git',
-                     destination_dir=self.workdir)
-        os.chdir(self.workdir)
-        process.run('./bootstrap', ignore_status=True, sudo=True)
+
+        run_type = self.params.get("type", default="distro")
+        if run_type == "upstream":
+            source = self.params.get('url', default="https://github.com/"
+                                     "strace/strace.git")
+            git.get_repo(source, destination_dir=os.path.join(
+                self.workdir, 'strace'))
+            self.src_st = os.path.join(self.workdir, "strace")
+            os.chdir(self.src_st)
+            process.run('./bootstrap', ignore_status=True, sudo=True)
+        elif run_type == "distro":
+            self.src_st = os.path.join(self.workdir, "strace-distro")
+            if not os.path.exists(self.src_st):
+                self.src_st = smm.get_source("strace", self.src_st)
+            os.chdir(self.src_st)
+
         process.run('./configure', ignore_status=True, sudo=True)
-        build.make(self.workdir)
+        build.make(self.src_st)
 
     def test(self):
         """
         Execute strace self tests
         """
-        results = build.run_make(self.workdir, extra_args='-k check',
+        results = build.run_make(self.src_st, extra_args='-k check',
                                  process_kwargs={'ignore_status': True}).stdout
 
         fail_list = ['FAIL', 'XFAIL', 'ERROR']
