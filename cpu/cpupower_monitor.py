@@ -20,7 +20,7 @@ import time
 from avocado import Test
 from avocado import skipIf
 from avocado.utils import archive
-from avocado.utils import build
+from avocado.utils import build, distro
 from avocado.utils import process, cpu
 from avocado.utils.software_manager import SoftwareManager
 
@@ -28,18 +28,26 @@ from avocado.utils.software_manager import SoftwareManager
 class CpupowerMonitor(Test):
 
     """
-    Test to validate idle states using cpupowe monitor tool.
+    Test to validate idle states using cpupower monitor tool.
     """
 
     def setUp(self):
         sm = SoftwareManager()
-        for package in ['gcc', 'make']:
+        distro_name = distro.detect().name
+        deps = ['gcc', 'make']
+        if distro_name in ['rhel', 'fedora', 'centos']:
+            deps.extend(['kernel-tools'])
+        elif 'SuSE' in distro_name:
+            deps.extend(['cpupower'])
+
+        for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel("%s is needed for the test to be run" % package)
         output = self.run_cmd_out("cpupower idle-info --silent")
         for line in output.splitlines():
             if 'Available idle states: ' in line:
-                self.states_list = (line.split('Available idle states: ')[-1]).split()
+                self.states_list = (line.split('Available idle states: ')[-1])\
+                                   .split()
                 break
         self.log.info("Idle states on the system are: %s" % self.states_list)
 
@@ -104,16 +112,17 @@ class CpupowerMonitor(Test):
         for i in range(self.states_tot - 1):
             zero_nonzero = zero_nonzero + self.check_zero_nonzero(i + 1)
         if not zero_nonzero:
-            self.fail("cpus have not entered idle states after killing ebizzy workload")
+            self.fail("cpus have not entered idle states after killing"
+                      " ebizzy workload")
         self.log.info("cpus have entered idle states after killing work load")
 
     def test_disable_idlestate(self):
 
         """
         1. Collect list of supported idle states.
-        2. Disable first idle state and check if cpus have not entered first idle state.
+        2. Disable first idle statei, check cpus have not entered this state.
         3. Enable all idle states.
-        4. Disable second idle state and check if cpus have not entered first idle state.
+        4. Disable second idle state, check cpus have not entered this state.
         5. Repeat test for all states.
         """
 
