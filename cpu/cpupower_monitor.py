@@ -20,7 +20,7 @@ import time
 from avocado import Test
 from avocado import skipIf
 from avocado.utils import archive
-from avocado.utils import build
+from avocado.utils import build, distro
 from avocado.utils import process, cpu
 from avocado.utils.software_manager import SoftwareManager
 
@@ -33,7 +33,14 @@ class CpupowerMonitor(Test):
 
     def setUp(self):
         sm = SoftwareManager()
-        for package in ['gcc', 'make']:
+        distro_name = distro.detect().name
+        deps = ['gcc', 'make']
+        if distro_name in ['rhel', 'fedora', 'centos']:
+            deps.extend(['kernel-tools'])
+        elif 'SuSE' in distro_name:
+            deps.extend(['cpupower'])
+
+        for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel("%s is needed for the test to be run" % package)
         output = self.run_cmd_out("cpupower idle-info --silent")
