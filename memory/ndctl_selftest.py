@@ -59,7 +59,7 @@ class NdctlTest(Test):
         smg = SoftwareManager()
         self.url = self.params.get(
             'url', default="https://github.com/pmem/ndctl.git")
-        self.branch = self.params.get('branch', default='master')
+        self.branch = self.params.get('branch', default='main')
         deps = ['gcc', 'make', 'automake', 'autoconf', 'patch', 'jq']
         detected_distro = distro.detect()
         if detected_distro.name in ['SuSE', 'rhel']:
@@ -117,9 +117,9 @@ class NdctlTest(Test):
         """
         self.log.info("Running NDCTL selftests")
         failed_tests = []
-        output = build.run_make(
-            self.sourcedir, extra_args='check -j 1',
-            process_kwargs={"ignore_status": True})
+        output = build.run_make(self.sourcedir,
+                                extra_args='check -j 1',
+                                process_kwargs={"ignore_status": True})
         for line in output.stdout.decode('utf-8').splitlines():
             if "Testsuite summary" in line:
                 break
