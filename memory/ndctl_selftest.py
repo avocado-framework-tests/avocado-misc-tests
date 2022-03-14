@@ -118,7 +118,8 @@ class NdctlTest(Test):
         self.log.info("Running NDCTL selftests")
         failed_tests = []
         output = build.run_make(
-            self.sourcedir, extra_args='check -j 1', process_kwargs={"ignore_status": True})
+            self.sourcedir, extra_args='check -j 1',
+            process_kwargs={"ignore_status": True})
         for line in output.stdout.decode('utf-8').splitlines():
             if "Testsuite summary" in line:
                 break
