@@ -242,7 +242,7 @@ class TestCase:
                 self.log.debug('Login to 2nd linux LPAR successful.')
 
             self.log.check_log('Getting Machine connections.', True)
-        except:
+        except: # pylint: disable=bare-except
             self.log.check_log('Getting Machine connections.', False, False)
             raise
 

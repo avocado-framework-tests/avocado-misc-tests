@@ -99,7 +99,7 @@ class CpuUnit(TestCase):
         self.sharing_mode = self.config.get('cpu_unit',
                                             'sharing_mode')
         self.log.check_log('Getting Test configuration.',
-                           self.quant_to_test != None)
+                           self.quant_to_test is not None)
         self.log.debug("Testing with %s CPU Units." % self.quant_to_test)
 
         # shutdown the paritition, update profile with min,desired,max, activate
@@ -118,7 +118,7 @@ class CpuUnit(TestCase):
         Check:
         1 - Processor type (dedicated, shared);
         2 - Max cpu units;
-        3 - Have enought virtual cpu units; 
+        3 - Have enought virtual cpu units;
         """
         self.log.info("Checking partition '%s' configuration." %
                       linux_machine.partition)

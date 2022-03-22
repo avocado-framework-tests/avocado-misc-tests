@@ -58,5 +58,6 @@ class test_generic_events(Test):
             self.log.info('FILE in %s is %s' % (dir, file))
             self.log.info('PASS : Expected value: %s and got'
                           '%s' % (val, raw_code))
+
         if nfail != 0:
             self.fail('Failed to verify generic PMU event codes')

@@ -224,16 +224,16 @@ def run(command, timeout=-1, withexitstatus=False, events=None, extra_args=None,
     while 1:
         try:
             index = child.expect(patterns)
-            if type(child.after) in types.StringTypes:
+            if isinstance(child.after, types.StringTypes):
                 child_result_list.append(child.before + child.after)
             else:  # child.after may have been a TIMEOUT or EOF, so don't cat those.
                 child_result_list.append(child.before)
-            if type(responses[index]) in types.StringTypes:
+            if isinstance(responses[index], types.StringTypes):
                 child.send(responses[index])
-            elif type(responses[index]) is types.FunctionType:
+            elif isinstance(responses[index], types.FunctionType):
                 callback_result = responses[index](locals())
                 sys.stdout.flush()
-                if type(callback_result) in types.StringTypes:
+                if isinstance(callback_result, types.StringTypes):
                     child.send(callback_result)
                 elif callback_result:
                     break
@@ -493,12 +493,12 @@ class spawn (object):
         # that performs some task; creates no stdout output; and then dies.
 
         # If command is an int type then it may represent a file descriptor.
-        if type(command) == type(0):
+        if isinstance(command, type(0)):
             raise ExceptionPexpect(
                 'Command is an int type. If this is a file descriptor then maybe you want to use fdpexpect.fdspawn which takes an existing file descriptor instead of a command string.')
 
-        if type(args) != type([]):
-            raise TypeError('The argument, args, must be a list.')
+        # if type(args) != type([]):
+        #    raise TypeError('The argument, args, must be a list.')
 
         if args == []:
             self.args = split_command_line(command)
@@ -1206,13 +1206,13 @@ class spawn (object):
             compile_flags = compile_flags | re.IGNORECASE
         compiled_pattern_list = []
         for p in patterns:
-            if type(p) is str:
+            if isinstance(p, str):
                 compiled_pattern_list.append(re.compile(p, compile_flags))
             elif p is EOF:
                 compiled_pattern_list.append(EOF)
             elif p is TIMEOUT:
                 compiled_pattern_list.append(TIMEOUT)
-            elif type(p) is type(re.compile('')):
+            elif isinstance(p, type(re.compile(''))):
                 compiled_pattern_list.append(p)
             else:
                 raise TypeError(
@@ -1393,7 +1393,7 @@ class spawn (object):
                 self.match = None
                 self.match_index = None
                 raise TIMEOUT(str(e) + '\n' + str(self))
-        except:
+        except as e:
             self.before = incoming
             self.after = None
             self.match = None
@@ -1751,7 +1751,7 @@ def which(filename):
         if os.access(filename, os.X_OK):
             return filename
 
-    if not 'PATH' in os.environ:
+    if 'PATH' not in os.environ:
         p = os.defpath
     else:
         p = os.environ['PATH']

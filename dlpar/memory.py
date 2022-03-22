@@ -117,7 +117,7 @@ class Memory(TestCase):
         self.log.debug("Testing with %s megabytes of memory." %
                        self.quant_to_test)
         c_msg = 'Getting Test configuration.'
-        c_condition = self.quant_to_test != None
+        c_condition = self.quant_to_test is not None
         self.log.check_log(c_msg, c_condition)
 
         # Check linux partitions configuration

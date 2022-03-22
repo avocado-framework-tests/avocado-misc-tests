@@ -21,7 +21,7 @@ from avocado.utils.software_manager import SoftwareManager
 class smtstate_tool(Test):
 
     '''
-    smtstate tool allows to save the current smt value and restore it.  
+    smtstate tool allows to save the current smt value and restore it
     '''
 
     def setUp(self):

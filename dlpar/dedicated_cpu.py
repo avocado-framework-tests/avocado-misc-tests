@@ -92,7 +92,7 @@ class DedicatedCpu(TestCase):
         self.max_procs = int(self.config.get('dedicated_cpu',
                                              'max_procs'))
         self.log.check_log('Getting Test configuration.',
-                           (self.quant_to_test != None))
+                           (self.quant_to_test is not None))
         self.log.debug("Testing with %s Dedicated CPU units." %
                        self.quant_to_test)
 

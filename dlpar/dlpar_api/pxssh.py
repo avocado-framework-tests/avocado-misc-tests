@@ -88,12 +88,12 @@ class pxssh (spawn):
         # prompt command different than the regex.
 
         # used to match the command-line prompt
-        self.UNIQUE_PROMPT = "\[PEXPECT\][\$\#] "
+        self.UNIQUE_PROMPT = r"\[PEXPECT\][\$\#] "
         self.PROMPT = self.UNIQUE_PROMPT
 
         # used to set shell command-line prompt to UNIQUE_PROMPT.
-        self.PROMPT_SET_SH = "PS1='[PEXPECT]\$ '"
-        self.PROMPT_SET_CSH = "set prompt='[PEXPECT]\$ '"
+        self.PROMPT_SET_SH = r"PS1='[PEXPECT]\$ '"
+        self.PROMPT_SET_CSH = r"set prompt='[PEXPECT]\$ '"
         self.SSH_OPTS = "-o'RSAAuthentication=no' -o 'PubkeyAuthentication=no'"
         # Disabling X11 forwarding gets rid of the annoying SSH_ASKPASS from
         # displaying a GUI password dialog. I have not figured out how to
