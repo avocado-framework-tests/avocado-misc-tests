@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
         while ((c = getopt(argc, argv, "n:vh")) != -1) {
 		switch(c) {
 		case 'n':
-			nr_pages = strtoul(optarg, NULL, 10);
+			nr_pages = strtoul(optarg, NULL, 3);
 			/* Now update nr_pages using system page size */
 			nr_pages = nr_pages * hpage_size/page_size;
 			break;
