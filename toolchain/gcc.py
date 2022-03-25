@@ -52,18 +52,16 @@ class GCC(Test):
                              'gmp-devel', 'glibc-devel', 'mpfr-devel',
                              'makeinfo', 'texinfo', 'mpc-devel'])
         else:
-            packages.extend(['glibc-static', 'autogen', 'guile',
-                             'guile-devel', 'libgo', 'libgo-devel',
-                             'libgo-static', 'elfutils-devel',
+            packages.extend(['glibc-static', 'elfutils-devel',
                              'texinfo-tex', 'texinfo', 'elfutils-libelf-devel',
                              'gmp-devel', 'mpfr-devel', 'libmpc-devel',
-                             'gcc-gnat', 'libgnat', 'zlib-devel',
-                             'gettext', 'libgcc', 'libgomp'])
+                             'zlib-devel', 'gettext', 'libgcc', 'libgomp'])
+            if dist.name == 'rhel and (int(dist.version)==8 and int(dist.release >= 6))':
 
-        for package in packages:
-            if not smm.check_installed(package) and not smm.install(package):
-                self.cancel(
-                    "Failed to install %s required for this test." % package)
+                for package in packages:
+                    if not smm.check_installed(package) and not smm.install(package):
+                        self.cancel(
+                            "Failed to install %s required for this test." % package)
         tarball = self.fetch_asset('gcc.zip', locations=[
                                    'https://github.com/gcc-mirror/gcc/archive'
                                    '/master.zip'], expire='7d')
