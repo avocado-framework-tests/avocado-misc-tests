@@ -51,12 +51,12 @@ class test_generic_events(Test):
             event_code = events_file.readline()
             val = self.generic_events.get(file, 9)
             raw_code = event_code.split('=', 2)[1].rstrip()
+            self.log.info('FILE in %s is %s' % (dir, file))
             if raw_code != val:
                 nfail += 1
-                self.log.warn('FAIL : Expected value is %s but got'
+                self.log.warn('FAIL : Expected value is %s but got '
                               '%s' % (val, raw_code))
             else:
-                            else:
                 self.log.info('PASS : Expected value: %s and got '
                           '%s' % (val, raw_code))
         if nfail != 0:
