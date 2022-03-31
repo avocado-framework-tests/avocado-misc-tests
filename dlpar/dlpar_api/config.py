@@ -69,7 +69,7 @@ class TestConfig:
         """Save the configuration file with all modifications"""
         if not self.filename:
             return
-        fileobj = file(self.filename, 'w')
+        fileobj = open(self.filename, 'w')
         try:
             self.parser.write(fileobj)
         finally:

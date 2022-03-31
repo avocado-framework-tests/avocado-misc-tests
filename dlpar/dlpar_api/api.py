@@ -32,7 +32,8 @@ import re
 import time
 
 # DLPAR API imports
-from dlpar_api.pxssh import pxssh
+
+from pexpect import pxssh
 from dlpar_api.config import TestConfig
 
 __all__ = ['TestException', 'MyPxssh', 'SshMachine', 'TestLog', 'TestCase']
@@ -242,7 +243,7 @@ class TestCase:
                 self.log.debug('Login to 2nd linux LPAR successful.')
 
             self.log.check_log('Getting Machine connections.', True)
-        except: # pylint: disable=bare-except
+        except Exception:
             self.log.check_log('Getting Machine connections.', False, False)
             raise
 
