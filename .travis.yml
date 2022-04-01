@@ -2,13 +2,14 @@ language: python
 
 matrix:
   allow_failures:
-        - python: "3.4" ## failing as recent changes in colorama failed to install 
+        - python: "3.4" ## failing as recent changes in colorama failed to install
+        - python: "3.7" ## failing as recent changes in inspektor failed to install 
 
 python:
-    #- "3.4"
-    #- "3.5"
-    #- "3.6"
-    #- "3.7"
+    - "3.4"
+    - "3.5"
+    - "3.6"
+    - "3.7"
     - "3.8"
 branches:
     only:
