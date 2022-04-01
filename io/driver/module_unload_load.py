@@ -65,7 +65,7 @@ class ModuleLoadUnload(Test):
         config_path = os.path.join(os.path.abspath(''),
                                    "module_unload_load.py.data/config")
         for line in genio.read_all_lines(config_path):
-            if module in line:
+            if module == line.split('=')[0]:
                 return line.split('=')[-1]
 
     def flush_mpath(self, mdl):
