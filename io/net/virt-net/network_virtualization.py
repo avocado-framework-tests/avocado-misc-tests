@@ -124,7 +124,8 @@ class NetworkVirtualization(Test):
         self.mac_id = self.params.get('mac_id',
                                       default="02:03:03:03:03:01").split(' ')
         self.mac_id = [mac.replace(':', '') for mac in self.mac_id]
-        self.netmask = self.params.get('netmasks', '*', default=None).split(' ')
+        self.netmask = self.params.get(
+            'netmasks', '*', default=None).split(' ')
         self.peer_ip = self.params.get('peer_ip', default=None).split(' ')
         dmesg.clear_dmesg()
         self.session_hmc.cmd("uname -a")
@@ -137,7 +138,8 @@ class NetworkVirtualization(Test):
             cmd = 'lssyscfg -m ' + self.server + \
                   ' -r lpar --filter lpar_names=' + vios_name + \
                   ' -F lpar_id'
-            self.vios_id.append(self.session_hmc.cmd(cmd).stdout_text.split()[0])
+            self.vios_id.append(self.session_hmc.cmd(
+                cmd).stdout_text.split()[0])
         cmd = 'lshwres -m %s -r sriov --rsubtype adapter -F \
               phys_loc:adapter_id' % self.server
         adapter_id_output = self.session_hmc.cmd(cmd).stdout_text
@@ -309,7 +311,8 @@ class NetworkVirtualization(Test):
         networkinterface = NetworkInterface(device, self.local)
         wait.wait_for(networkinterface.is_link_up, timeout=60)
         if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
-            self.fail("Enabling and disabling of the interface has affected network connectivity")
+            self.fail(
+                "Enabling and disabling of the interface has affected network connectivity")
         self.check_dmesg_error()
 
     def disable_enable_dev(self, option):
@@ -323,9 +326,11 @@ class NetworkVirtualization(Test):
         output = self.session_hmc.cmd(cmd)
         if output.exit_status != 0:
             if option == 'd':
-                self.fail("Could not disable interface: %s" % output.stdout_text)
+                self.fail("Could not disable interface: %s" %
+                          output.stdout_text)
             elif option == 'e':
-                self.fail("Could not enable interface: %s" % output.stdout_text)
+                self.fail("Could not enable interface: %s" %
+                          output.stdout_text)
             else:
                 self.fail("Invalid option sent to disable/enable interface.")
 
@@ -344,7 +349,6 @@ class NetworkVirtualization(Test):
                     self.log.info("vNIC interface successfully %s" % operation)
                 else:
                     self.fail("Could not %s vNIC interface" % operation)
-
 
     def test_hmcfailover(self):
         '''
@@ -405,13 +409,17 @@ class NetworkVirtualization(Test):
         if len(self.backing_adapter) >= 2:
             for _ in range(self.count):
                 self.update_backing_devices(self.slot_num[0])
-                backing_logport = self.get_backing_device_logport(self.slot_num[0])
-                active_logport = self.get_active_device_logport(self.slot_num[0])
+                backing_logport = self.get_backing_device_logport(
+                    self.slot_num[0])
+                active_logport = self.get_active_device_logport(
+                    self.slot_num[0])
                 if self.enable_auto_failover():
                     if not self.change_failover_priority(backing_logport, '1'):
-                        self.fail("Fail to change the priority for backing device %s", backing_logport)
+                        self.fail(
+                            "Fail to change the priority for backing device %s", backing_logport)
                     if not self.change_failover_priority(active_logport, '100'):
-                        self.fail("Fail to change the priority for active device %s", active_logport)
+                        self.fail(
+                            "Fail to change the priority for active device %s", active_logport)
                     time.sleep(60)
                     if backing_logport != self.get_active_device_logport(self.slot_num[0]):
                         self.fail("Auto failover of backing device failed")
@@ -454,7 +462,8 @@ class NetworkVirtualization(Test):
 
         self.validate_vios_command('rmdev -l %s' % vnic_server, 'Defined')
         if vnic_backing_device:
-            self.validate_vios_command('rmdev -l %s' % vnic_backing_device, 'Defined')
+            self.validate_vios_command(
+                'rmdev -l %s' % vnic_backing_device, 'Defined')
 
         after = self.get_active_device_logport(self.slot_num[0])
         self.log.debug("Active backing device after: %s", after)
@@ -464,7 +473,8 @@ class NetworkVirtualization(Test):
         time.sleep(60)
 
         if vnic_backing_device:
-            self.validate_vios_command('mkdev -l %s' % vnic_backing_device, 'Available')
+            self.validate_vios_command(
+                'mkdev -l %s' % vnic_backing_device, 'Available')
         self.validate_vios_command('mkdev -l %s' % vnic_server, 'Available')
 
         networkinterface = NetworkInterface(device, self.local)
@@ -867,7 +877,8 @@ class NetworkVirtualization(Test):
         for _ in range(0, 120, 10):
             for interface in netifaces.interfaces():
                 if device_name == interface:
-                    self.log.info("Network virtualized device %s is up", device_name)
+                    self.log.info(
+                        "Network virtualized device %s is up", device_name)
                     return True
                 time.sleep(5)
         return False
@@ -876,7 +887,8 @@ class NetworkVirtualization(Test):
         """
         check for dmesg error
         """
-        error = ['uevent: failed to send synthetic uevent', 'failed to send uevent', 'registration failed']
+        error = ['uevent: failed to send synthetic uevent',
+                 'failed to send uevent', 'registration failed']
         self.log.info("Gathering kernel errors if any")
         try:
             dmesg.collect_errors_by_level(skip_errors=error)

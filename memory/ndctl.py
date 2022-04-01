@@ -77,7 +77,8 @@ class NdctlTest(Test):
         Note: Function to be used after creation of namespace(s)
         """
         idx = re.findall(r'\d+', region)[0]
-        map_align = int(genio.read_one_line("/sys/bus/nd/devices/pfn%s.0/align" % idx))
+        map_align = int(genio.read_one_line(
+            "/sys/bus/nd/devices/pfn%s.0/align" % idx))
         namespaces = self.plib.run_ndctl_list('-N -r %s' % region)
         for ns in namespaces:
             ns_name = self.plib.run_ndctl_list_val(ns, 'dev')
@@ -97,10 +98,12 @@ class NdctlTest(Test):
         if not os.path.exists("/sys/bus/nd/devices/region0/align"):
             size_align = 1
         else:
-            size_align = int(genio.read_one_line("/sys/bus/nd/devices/region0/align"), 16)
+            size_align = int(genio.read_one_line(
+                "/sys/bus/nd/devices/region0/align"), 16)
         if not os.path.exists("/sys/bus/nd/devices/pfn0.0/align"):
             self.cancel("Cannot determine the mapping alignment size")
-        map_align = int(genio.read_one_line("/sys/bus/nd/devices/pfn0.0/align"))
+        map_align = int(genio.read_one_line(
+            "/sys/bus/nd/devices/pfn0.0/align"))
         return self.lcm(size_align, map_align)
 
     def build_fio(self):
@@ -177,7 +180,8 @@ class NdctlTest(Test):
             self.daxctl = os.path.abspath('./daxctl/daxctl')
         elif self.package == 'local':
             self.ndctl = os.path.abspath(os.path.join(location, 'ndctl/ndctl'))
-            self.daxctl = os.path.abspath(os.path.join(location,'daxctl/daxctl'))
+            self.daxctl = os.path.abspath(
+                os.path.join(location, 'daxctl/daxctl'))
         else:
             deps.extend(['ndctl'])
             if self.dist.name == 'rhel':
@@ -230,13 +234,15 @@ class NdctlTest(Test):
             health = self.plib.run_ndctl_list_val(dimm, 'health')
             nmem = self.plib.run_ndctl_list_val(dimm, 'dev')
             region = "region%s" % re.findall(r'\d+', nmem)[0]
-            dev_type = genio.read_one_line("/sys/bus/nd/devices/%s/devtype" % region)
+            dev_type = genio.read_one_line(
+                "/sys/bus/nd/devices/%s/devtype" % region)
             if not health:
                 self.cancel("kernel/ndctl does not support health reporting")
             if dev_type == "nd_pmem":
                 if 'life_used_percentage' not in health:
                     self.fail("life_used_percentage missing for HMS")
-                self.log.info("%s life is %s", nmem, health['life_used_percentage'])
+                self.log.info("%s life is %s", nmem,
+                              health['life_used_percentage'])
             if 'health_state' in health:
                 if health['health_state'] != "ok":
                     self.log.warn("%s health is bad", nmem)
@@ -512,7 +518,8 @@ class NdctlTest(Test):
         self.plib.destroy_namespace()
         self.log.info("Creating sector namespace using %s", region)
         self.plib.create_namespace(region=region, mode='sector')
-        ns_sec_dev = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list()[0], 'dev')
+        ns_sec_dev = self.plib.run_ndctl_list_val(
+            self.plib.run_ndctl_list()[0], 'dev')
         self.plib.disable_namespace(namespace=ns_sec_dev)
         self.log.info("Checking BTT metadata")
         if process.system("%s check-namespace %s" % (self.ndctl, ns_sec_dev),
@@ -527,7 +534,8 @@ class NdctlTest(Test):
             self.fail("Numa node entries not found!")
         for val in regions:
             reg = self.plib.run_ndctl_list_val(val, 'dev')
-            numa = genio.read_one_line('/sys/bus/nd/devices/%s/numa_node' % reg)
+            numa = genio.read_one_line(
+                '/sys/bus/nd/devices/%s/numa_node' % reg)
             # Check numa config in ndctl and sys interface
             if len(self.plib.run_ndctl_list('-r %s -R -U %s' % (reg, numa))) != 1:
                 self.fail('Region mismatch between ndctl and sys interface')
@@ -871,7 +879,8 @@ class NdctlTest(Test):
         size = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
             "-N -r %s" % region)[0], 'size')
         mnt_path = self.params.get('mnt_point', default='/pmem')
-        self.part = partition.Partition(self.disk, mountpoint=mnt_path, mount_options='dax')
+        self.part = partition.Partition(
+            self.disk, mountpoint=mnt_path, mount_options='dax')
         self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512 %s' %
                        (memory.get_page_size(), self.reflink))
         if not os.path.exists(mnt_path):
@@ -894,7 +903,8 @@ class NdctlTest(Test):
         self.disk = '/dev/%s' % self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'blockdev')
         mnt_path = self.params.get('mnt_point', default='/pmem_map')
-        self.part = partition.Partition(self.disk, mountpoint=mnt_path, mount_options='dax')
+        self.part = partition.Partition(
+            self.disk, mountpoint=mnt_path, mount_options='dax')
         self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512 %s' %
                        (memory.get_page_size(), self.reflink))
         if not os.path.exists(mnt_path):

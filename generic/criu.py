@@ -43,8 +43,8 @@ class CRIU(Test):
                             package)
         criu_version = self.params.get('criu_version', default='3.13')
         tarball = self.fetch_asset(
-                  "http://download.openvz.org/criu/criu-%s.tar.bz2" % criu_version,
-                  expire='10d')
+            "http://download.openvz.org/criu/criu-%s.tar.bz2" % criu_version,
+            expire='10d')
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(
             self.workdir, os.path.basename(tarball.split('.tar')[0]))
@@ -56,17 +56,17 @@ class CRIU(Test):
         process.run("./zdtm.py run -a --report sergeyb",
                     ignore_status=True, sudo=True)
         logfile = os.path.join(self.logdir, "stdout")
-        op_file = genio.read_file(logfile);
+        op_file = genio.read_file(logfile)
         passed_tests = 0
         failed_tests = 0
         for line in op_file.splitlines():
             if 'PASS' in line:
-               passed_tests = passed_tests + 1
+                passed_tests = passed_tests + 1
             elif 'FAILED' in line:
-               failed_tests = failed_tests + 1
-        self.log.info("CRIU Tests Summary: PASS=%s, FAIL=%s" %\
-            (passed_tests, failed_tests))
+                failed_tests = failed_tests + 1
+        self.log.info("CRIU Tests Summary: PASS=%s, FAIL=%s" %
+                      (passed_tests, failed_tests))
         if failed_tests:
             self.fail("CRIU Tests Summary: PASS=%s, FAIL=%s,\
-            please check log for the failed test cases" %\
-            (passed_tests, failed_tests))
+            please check log for the failed test cases" %
+                      (passed_tests, failed_tests))
