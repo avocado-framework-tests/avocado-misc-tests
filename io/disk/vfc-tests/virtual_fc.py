@@ -55,7 +55,7 @@ class VirtualFC(Test):
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default=None)
         self.hmc_username = self.params.get("hmc_username", '*', default=None)
         self.count = self.params.get("count", default=1)
-        # TO_DO: self.skip_host parameter can be remove 
+        # TO_DO: self.skip_host parameter can be remove
         # if script is self reliable to find bootable disk
         self.skip_host = self.params.get("skip_host", default=None)
         self.vfc_id = self.params.get("vfchost_id", default=None)
@@ -241,11 +241,11 @@ class VirtualFC(Test):
         self.log.info("%sing %s" % (operation, vfc_dic["vfchost"]))
         if operation == 'map':
             cmd = 'viosvrcmd -m %s -p %s -c "vfcmap -vadapter %s -fcp %s"' \
-                   % (self.server, vfc_dic["vios"],
-                      vfc_dic["vfchost"], vfc_dic["fcs"])
+                % (self.server, vfc_dic["vios"],
+                   vfc_dic["vfchost"], vfc_dic["fcs"])
         else:
             cmd = 'viosvrcmd -m %s -p %s -c "vfcmap -vadapter %s -fcp"' \
-                   % (self.server, vfc_dic["vios"], vfc_dic["vfchost"])
+                % (self.server, vfc_dic["vios"], vfc_dic["vfchost"])
 
         output = self.session.cmd(cmd)
         if output.exit_status != 0:
@@ -388,10 +388,10 @@ class VirtualFC(Test):
         '''
         if operation == 'remove':
             cmd = 'viosvrcmd -m %s -p %s -c "rmdev -dev %s -ucfg"' \
-                   % (self.server, vfc_dic["vios"], vfc_dic["vfchost"])
+                % (self.server, vfc_dic["vios"], vfc_dic["vfchost"])
         else:
             cmd = 'viosvrcmd -m %s -p %s -c "cfgdev -dev %s"' \
-                   % (self.server, vfc_dic["vios"], vfc_dic["vfchost"])
+                % (self.server, vfc_dic["vios"], vfc_dic["vfchost"])
         output = self.session.cmd(cmd)
         if output.exit_status != 0:
             self.log.debug(output.stderr)

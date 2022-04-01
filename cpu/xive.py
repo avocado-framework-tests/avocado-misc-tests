@@ -62,16 +62,20 @@ class XIVE(Test):
         if self.intr == 'XIVE':
             xive_file_path = "/sys/kernel/debug/powerpc/xive"
             if not os.path.exists(xive_file_path):
-                self.cancel("storeEOI feature is not Available %s / %s" % (self.hw, self.intr))
+                self.cancel("storeEOI feature is not Available %s / %s" %
+                            (self.hw, self.intr))
             else:
                 flags = genio.read_file(xive_file_path)
                 match = re.search("flags=S", flags)
                 self.log.info("MATCH = %s" % match)
                 if match:
-                    self.log.info("storeEOI feature Available and 'S' flag is set for %s / %s" % (self.hw, self.intr))
+                    self.log.info(
+                        "storeEOI feature Available and 'S' flag is set for %s / %s" % (self.hw, self.intr))
                 else:
-                    self.cancel("storeEOI feature 'S' flag is not set for %s / %s" % (self.hw, self.intr))
+                    self.cancel(
+                        "storeEOI feature 'S' flag is not set for %s / %s" % (self.hw, self.intr))
         elif self.intr == 'XICS':
-           self.cancel("storeEOI feature is not Available for %s / %s" % (self.hw, self.intr))
+            self.cancel("storeEOI feature is not Available for %s / %s" %
+                        (self.hw, self.intr))
         else:
-           self.fail("storeEOI tests failed")
+            self.fail("storeEOI tests failed")

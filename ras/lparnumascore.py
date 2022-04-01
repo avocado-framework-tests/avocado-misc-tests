@@ -42,7 +42,7 @@ class lparnumascore(Test):
     def setUp(self):
         det_dist = distro.detect()
         if det_dist.name == 'SuSE' or det_dist.name \
-           == 'rhel' and int(det_dist.version) <= 8 :
+           == 'rhel' and int(det_dist.version) <= 8:
             self.cancel("lparnumascore is not supported on %s" % det_dist.name)
         sm = SoftwareManager()
         if not sm.check_installed("powerpc-utils") and \

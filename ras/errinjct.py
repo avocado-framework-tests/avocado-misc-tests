@@ -20,6 +20,7 @@ from avocado import skipIf
 
 IS_POWER_NV = 'PowerNV' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0')
 
+
 class Errinjct(Test):
     """
     :avocado: tags=privileged
@@ -52,7 +53,8 @@ class Errinjct(Test):
         self.log.info("===Executing errinjct tool====")
         token = self.run_cmd_out("errinjct open| awk -F '=' '{print $2}'")
         runcmd = self.params.get('runcmd', default='corrupted-dcache-start')
-        run_option = self.params.get('run_option', default='-a 0 -C 0 --dry-run')
+        run_option = self.params.get(
+            'run_option', default='-a 0 -C 0 --dry-run')
         self.run_cmd("errinjct %s %s -k %s" % (runcmd, run_option, token))
         self.run_cmd("errinjct close -k %s" % token)
         if self.fail_cmd:

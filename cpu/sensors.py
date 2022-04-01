@@ -20,14 +20,13 @@ Test for sensors command
 """
 from avocado import Test
 from avocado import skipIf
-from avocado.utils import process, linux_modules
-from avocado.utils import distro
+from avocado.utils import process, linux_modules, distro
 from avocado.utils.software_manager import SoftwareManager
-from avocado.utils import cpu
 
 # TODO: Add possible errors of sensors command
 ERRORS = ['I/O error']
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
+
 
 class Sensors(Test):
 
@@ -48,7 +47,7 @@ class Sensors(Test):
             if error in s_output:
                 errs.append(error)
         return errs
-    
+
     @skipIf(not IS_POWER_NV, "This test is not supported on PowerVM platform")
     def setUp(self):
         """
