@@ -27,8 +27,8 @@ import time
 from dlpar_api.api import TestCase, TestException
 
 
- 
 __all__ = ['DedicatedCpu']
+
 
 class DedicatedCpu(TestCase):
     """
@@ -40,7 +40,7 @@ class DedicatedCpu(TestCase):
      3 - Test (see run_test())
 
     Everything is fine if we don't have troubles with the HMC and the linux
-    partitions are recognizing all added/removed cpus 
+    partitions are recognizing all added/removed cpus
     (using dmesg and /var/log/messages).
     """
 
@@ -50,30 +50,30 @@ class DedicatedCpu(TestCase):
 
          Check:
           1 - Shutdown the partition (dedicated);
-          2 - Define dedicated partition with min, desired, max from config 
+          2 - Define dedicated partition with min, desired, max from config
         """
         u_cmd = 'chsyscfg -r prof -m %s -i \
                 "lpar_name=%s,name=default_profile,proc_mode=ded, \
                 min_procs=%s,desired_procs=%s,max_procs=%s,sharing_mode=keep_idle_procs" \
-                --force' % (linux_machine.machine, \
-                linux_machine.name,self.min_procs,self.desired_procs,self.max_procs)
+                --force' % (linux_machine.machine,
+                            linux_machine.name, self.min_procs, self.desired_procs, self.max_procs)
         self.log.info('DEBUG: Dedicated lpar setup %s' % u_cmd)
         self.hmc.sshcnx.run_command(u_cmd, False)
 
         d_cmd = 'chsysstate -m %s -o shutdown -r lpar -n %s --immed' % \
-                (linux_machine.machine,linux_machine.name)
+                (linux_machine.machine, linux_machine.name)
         self.log.info('DEBUG: Dedicated lpar setup %s' % d_cmd)
         self.hmc.sshcnx.run_command(d_cmd, False)
         time.sleep(20)
 
         a_cmd = 'chsysstate -m %s -r lpar -o on -n %s -f default_profile \
-                --force' % (linux_machine.machine,linux_machine.name)
+                --force' % (linux_machine.machine, linux_machine.name)
         self.log.info('DEBUG: Dedicated lpar setup %s' % a_cmd)
         self.hmc.sshcnx.run_command(a_cmd, False)
         time.sleep(120)
 
+    def __init__(self, log='dedicated_cpu.log'):
 
-    def __init__(self, log = 'dedicated_cpu.log'):
         TestCase.__init__(self, log, 'Dedicated CPU')
 
         self.get_connections()
@@ -86,14 +86,14 @@ class DedicatedCpu(TestCase):
         self.iterations = int(self.config.get('dedicated_cpu',
                                               'iterations'))
         self.min_procs = int(self.config.get('dedicated_cpu',
-                                              'min_procs'))
+                                             'min_procs'))
         self.desired_procs = int(self.config.get('dedicated_cpu',
-                                              'desired_procs'))
+                                                 'desired_procs'))
         self.max_procs = int(self.config.get('dedicated_cpu',
-                                              'max_procs'))
-        self.log.check_log('Getting Test configuration.', 
-                           self.quant_to_test != None)
-        self.log.debug("Testing with %s Dedicated CPU units." % \
+                                             'max_procs'))
+        self.log.check_log('Getting Test configuration.',
+                           (self.quant_to_test is not None))
+        self.log.debug("Testing with %s Dedicated CPU units." %
                        self.quant_to_test)
 
         # shutdown the paritition, update profile with min,desired,max, activate
@@ -114,9 +114,9 @@ class DedicatedCpu(TestCase):
         Check:
          1 - Processor type (dedicated, shared);
          2 - Max cpus;
-         3 - Have enought processor units; 
+         3 - Have enought processor units;
         """
-        self.log.info("Checking partition '%s' configuration." % \
+        self.log.info("Checking partition '%s' configuration." %
                       linux_machine.partition)
         self.log.debug("Machine: %s" % linux_machine.name)
 
@@ -135,7 +135,7 @@ class DedicatedCpu(TestCase):
 
         # Check dedicated cpu quantity
 
-        ## Set the curr_procs to curr_min_procs if we need it
+        # Set the curr_procs to curr_min_procs if we need it
         if curr_min_procs != curr_procs:
             s_msg = 'Setting the curr_procs to curr_min_procs at %s' \
                     % linux_machine.partition
@@ -152,15 +152,14 @@ class DedicatedCpu(TestCase):
 
             m_msg = 'Removing %s dedicated cpus form partition %s.' % \
                     (curr_procs - curr_min_procs, linux_machine.partition)
-            m_condition = int(self.get_cpu_option(linux_machine, 
+            m_condition = int(self.get_cpu_option(linux_machine,
                                                   'curr_procs')) == \
-                              curr_min_procs
+                curr_min_procs
             self.log.check_log(m_msg, m_condition)
 
         o_msg = 'Configuration settings for partition %s all correct.' % \
                 linux_machine.partition
         self.log.info(o_msg)
-
 
     def run_test(self):
         """Run the test.
@@ -185,7 +184,6 @@ class DedicatedCpu(TestCase):
             self.__remove_dedicated_cpu(self.linux_1, self.quant_to_test)
         self.log.info("Test finished successfully :)")
 
-
     def __add_dedicated_cpu(self, linux_machine, quantity):
         """Add 'quantity' dedicated cpus at the a linux partition."""
         # Get all values before adding
@@ -206,7 +204,7 @@ class DedicatedCpu(TestCase):
         a_msg = 'Adding %d dedicated cpus to partition %s.' % \
                 (quantity, linux_machine.partition)
         a_condition = int(self.get_cpu_option(linux_machine, 'curr_procs')) == \
-                      curr_procs_before + quantity
+            curr_procs_before + quantity
         if not self.log.check_log(a_msg, a_condition, False):
             e_msg = 'Error adding %d dedicated cpus to partition %s.' % \
                     (quantity, linux_machine.partition)
@@ -214,9 +212,8 @@ class DedicatedCpu(TestCase):
             self.log.error(e_msg)
             raise TestException(cmd_result)
 
-        ## Check at Linux Partition
+        # Check at Linux Partition
         self.linux_check_add_cpu(linux_machine, quantity)
-
 
     def __move_dedicated_cpu(self, linux_machine_1, linux_machine_2, quantity):
         """
@@ -239,11 +236,11 @@ class DedicatedCpu(TestCase):
         # Check at HMC
         m_msg = 'Moving %s dedicated cpus from %s to %s.' % \
                 (quantity, linux_machine_1.partition, linux_machine_2.partition)
-        m_condition = (int(self.get_cpu_option(linux_machine_1, 'curr_procs')) \
+        m_condition = (int(self.get_cpu_option(linux_machine_1, 'curr_procs'))
                        == curr_procs_before_1 - quantity) \
-                       and (int(self.get_cpu_option(linux_machine_2, 
-                                                    'curr_procs')) \
-                       == curr_procs_before_2 + quantity)
+            and (int(self.get_cpu_option(linux_machine_2,
+                                         'curr_procs'))
+                 == curr_procs_before_2 + quantity)
         if not self.log.check_log(m_msg, m_condition, False):
             self.log.error(cmd_result)
             raise TestException(cmd_result)
@@ -269,7 +266,7 @@ class DedicatedCpu(TestCase):
         r_msg = 'Removing %s dedicated cpus from partition %s.' % \
                 (quantity, linux_machine.partition)
         r_condition = int(self.get_cpu_option(linux_machine, 'curr_procs')) == \
-                      (curr_procs_before - quantity)
+            (curr_procs_before - quantity)
         if not self.log.check_log(r_msg, r_condition, False):
             e_msg = 'Error removing %s dedicated cpus from partition %s.' % \
                     (quantity, linux_machine.partition)
@@ -277,8 +274,9 @@ class DedicatedCpu(TestCase):
             self.log.error(e_msg)
             raise TestException(e_msg)
 
-        ## Check at Linux Partition
+        # Check at Linux Partition
         self.linux_check_rm_cpu(linux_machine, curr_procs_before, quantity)
+
 
 if __name__ == "__main__":
     DEDICATED_CPU = DedicatedCpu()
