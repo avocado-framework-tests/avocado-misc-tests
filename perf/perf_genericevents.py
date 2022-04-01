@@ -58,6 +58,6 @@ class test_generic_events(Test):
                               '%s' % (val, raw_code))
             else:
                 self.log.info('PASS : Expected value: %s and got '
-                          '%s' % (val, raw_code))
+                              '%s' % (val, raw_code))
         if nfail != 0:
             self.fail('Failed to verify generic PMU event codes')
