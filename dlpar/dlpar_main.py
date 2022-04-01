@@ -23,6 +23,7 @@ from avocado import skipUnless
 
 IS_POWER_VM = 'pSeries' in open('/proc/cpuinfo', 'r').read()
 
+
 class DlparTests(Test):
 
     """
@@ -38,25 +39,25 @@ class DlparTests(Test):
         Execute dlpar dedicated/shared and memory tests
         '''
         if self.lpar_mode == 'dedicated':
-           self.log.info("Dedicated Lpar....")
-           self.test_case = self.params.get('test_case', default='cpu')
-           self.log.info("TestCase: %s" % self.test_case)
-           if self.test_case == 'cpu':
-              self.log.info("DED: Calling dedicated_cpu.py")
-              test_cmd = './dedicated_cpu.py'
-           elif self.test_case  == 'mem':
-              self.log.info("DED: Calling memory.py")
-              test_cmd = './memory.py'
+            self.log.info("Dedicated Lpar....")
+            self.test_case = self.params.get('test_case', default='cpu')
+            self.log.info("TestCase: %s" % self.test_case)
+            if self.test_case == 'cpu':
+                self.log.info("DED: Calling dedicated_cpu.py")
+                test_cmd = './dedicated_cpu.py'
+            elif self.test_case == 'mem':
+                self.log.info("DED: Calling memory.py")
+                test_cmd = './memory.py'
         elif self.lpar_mode == 'shared':
-           self.log.info("Shared Lpar.....")
-           self.test_case = self.params.get('test_case', default='cpu')
-           self.log.info("TestCase: %s" % self.test_case)
-           if self.test_case == 'cpu':
-              self.log.info("SHR: Calling cpu_unit.py")
-              test_cmd = './cpu_unit.py'
-           elif self.test_case  == 'mem':
-              self.log.info("SHR: Calling memory.py")
-              test_cmd = './memory.py'
+            self.log.info("Shared Lpar.....")
+            self.test_case = self.params.get('test_case', default='cpu')
+            self.log.info("TestCase: %s" % self.test_case)
+            if self.test_case == 'cpu':
+                self.log.info("SHR: Calling cpu_unit.py")
+                test_cmd = './cpu_unit.py'
+            elif self.test_case == 'mem':
+                self.log.info("SHR: Calling memory.py")
+                test_cmd = './memory.py'
 
         os.chmod(test_cmd, 0o755)
         result = process.run(test_cmd, shell=True)
