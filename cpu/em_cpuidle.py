@@ -25,6 +25,7 @@ from avocado.utils.software_manager import SoftwareManager
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 
+
 class cpuidle(Test):
     """
     Test to validate the number of cpu idle states

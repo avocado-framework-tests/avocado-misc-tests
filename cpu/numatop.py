@@ -24,6 +24,7 @@ from avocado.utils.software_manager import SoftwareManager
 
 IS_POWER10 = 'POWER10' in open('/proc/cpuinfo', 'r').read()
 
+
 class Numatop(Test):
 
     """
@@ -34,7 +35,7 @@ class Numatop(Test):
     """
 
     @skipIf(IS_POWER10,
-                "numatop is not supported on POWER10 Architecture")
+            "numatop is not supported on POWER10 Architecture")
     def setUp(self):
         '''
         Build numatop Test
