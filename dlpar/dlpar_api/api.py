@@ -27,15 +27,19 @@ useful methods to let you test DLPAR.
 """
 
 # Standard library imports
-import logging, re, time
+import logging
+import re
+import time
 
 # DLPAR API imports
-from dlpar_api.pxssh import pxssh
+
+from pexpect import pxssh
 from dlpar_api.config import TestConfig
 
 __all__ = ['TestException', 'MyPxssh', 'SshMachine', 'TestLog', 'TestCase']
 
 CONFIG_FILE = TestConfig("config/tests.cfg")
+
 
 class TestException(Exception):
     """Base Class for all test exceptions."""
@@ -51,13 +55,12 @@ class TestException(Exception):
 class MyPxssh(pxssh):
     """My pxssh class, with more methods."""
 
-    def __init__(self, log = None):
+    def __init__(self, log=None):
         pxssh.__init__(self)
         # Set the log file if we have one
         self.log = log
 
-
-    def run_command(self, command, string = True, code = False):
+    def run_command(self, command, string=True, code=False):
         """Execute a command at the ssh conection.
 
         You can choose if you want the returned string, the return code
@@ -65,7 +68,7 @@ class MyPxssh(pxssh):
         """
         self.__log("SSH command on %s: '%s'" % (self.server, command))
 
-        # In some situations, with asynchronous commands, we might not get 
+        # In some situations, with asynchronous commands, we might not get
         # an answer right after we try to check the exit code. so in this
         # case, we need to wait and try again.
         self.sendline("bind 'set enable-bracketed-paste off'")
@@ -105,7 +108,6 @@ class MyPxssh(pxssh):
         elif code:
             return return_code
 
-
     def __log(self, message):
         """Just to use the log if we have one."""
         if self.log:
@@ -119,7 +121,7 @@ class SshMachine:
     and also the ssh connection.
     """
 
-    def __init__(self, machine_type, log = None):
+    def __init__(self, machine_type, log=None):
         """Get every machine information."""
         self.name = CONFIG_FILE.get(machine_type, 'name')
         self.user = CONFIG_FILE.get(machine_type, 'user')
@@ -154,7 +156,7 @@ class TestLog(logging.Logger):
         # file log output configuration
         log_file = logging.FileHandler(logpath, 'w')
         log_file.setLevel(self.__get_log_level(CONFIG_FILE.get('log',
-                                                           'file_level')))
+                                                               'file_level')))
         format_string = '%(asctime)s %(levelname)-8s %(message)s'
         formatter = logging.Formatter(format_string,
                                       datefmt='%a, %d %b %Y %H:%M:%S')
@@ -169,22 +171,20 @@ class TestLog(logging.Logger):
         console.setFormatter(formatter)
         self.addHandler(console)
 
-
     def __get_log_level(self, log_level):
         """Just to translate the strig format to logging format."""
         if log_level not in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'):
-            self.warning('Misconfigured log level %s. Assuming INFO.' % \
+            self.warning('Misconfigured log level %s. Assuming INFO.' %
                          log_level)
             return logging.INFO
         return getattr(logging, log_level)
 
-
-    def check_log(self, message, code, die = True):
+    def check_log(self, message, code, die=True):
         """Catch the code and print the message accordantly
 
         'code' can be both integer or boolean.
-        """ 
-        if type(code) is int:  
+        """
+        if type(code) is int:
             if code < 0:
                 self.error('[FAILED] %s' % message)
                 if die:
@@ -218,10 +218,9 @@ class TestCase:
 
         # Get test configuration
         self.config = CONFIG_FILE
-        ## Get common values for any test case
+        # Get common values for any test case
         self.cpu_per_processor = int(self.config.get('machine_cfg',
                                                      'cpu_per_processor'))
-
 
     def get_connections(self, clients='both'):
         """
@@ -244,15 +243,13 @@ class TestCase:
                 self.log.debug('Login to 2nd linux LPAR successful.')
 
             self.log.check_log('Getting Machine connections.', True)
-        except:
+        except Exception:
             self.log.check_log('Getting Machine connections.', False, False)
             raise
-
 
     def run_test(self):
         """Run the test case."""
         pass
-
 
     def get_cpu_option(self, linux_machine, option):
         """Just to help getting a cpu option from hmc."""
@@ -263,10 +260,9 @@ class TestCase:
         opt_value = self.hmc.sshcnx.run_command(o_cmd)
 
         d_msg = option + ": " + opt_value + " for partition " + \
-                linux_machine.partition
+            linux_machine.partition
         self.log.debug(d_msg)
         return opt_value
-
 
     def get_mem_option(self, linux_machine, option):
         """Just to help getting a memory option from hmc."""
@@ -277,10 +273,9 @@ class TestCase:
         opt_value = self.hmc.sshcnx.run_command(o_cmd)
 
         d_msg = option + ": " + opt_value + " for partition " + \
-                linux_machine.partition
+            linux_machine.partition
         self.log.debug(d_msg)
         return opt_value
-
 
     def linux_check_add_cpu(self, linux_machine, quantity):
         """Check if the processors were added at the linux partition.
@@ -296,17 +291,16 @@ class TestCase:
                                         linux_machine.sshcnx.run_command(c_cmd))
         d_msg = 'Checking if /proc/cpuinfo shows all processors correctly.'
         d_condition = len(cpuinfo_proc_lines) == \
-                      ((quantity + int(self.get_cpu_option(linux_machine,
-                                       'curr_min_procs'))) * \
-                                       self.cpu_per_processor)
-        self.log.check_log(d_msg, d_condition) 
-
+            ((quantity + int(self.get_cpu_option(linux_machine,
+                                                 'curr_min_procs'))) *
+             self.cpu_per_processor)
+        self.log.check_log(d_msg, d_condition)
 
     def linux_check_rm_cpu(self, linux_machine, quantity_before,
                            quantity_removed):
         """Check if the processors were removed at the linux partition.
 
-        Check both dmesg and /proc/cpuingo to see if the current processor 
+        Check both dmesg and /proc/cpuingo to see if the current processor
         units are what they should be. Remember that you have to clean dmesg
         before removing and calling this function.
         """
@@ -317,10 +311,9 @@ class TestCase:
                                         linux_machine.sshcnx.run_command(c_cmd))
         d_msg = 'Checking if /proc/cpuinfo shows all processors correctly.'
         d_condition = len(cpuinfo_proc_lines) == \
-                      ((quantity_before - quantity_removed) * \
-                      self.cpu_per_processor)
+            ((quantity_before - quantity_removed) *
+             self.cpu_per_processor)
         self.log.check_log(d_msg, d_condition)
-
 
     def set_virtual_proc_and_proc_units(self, linux_machine, ideal_procs,
                                         ideal_proc_units, sleep_time):
@@ -343,7 +336,7 @@ class TestCase:
                 # Get the procs limit to know how much we can add
                 procs_limit = int(curr_proc_units * 10) - curr_procs
                 # Set how much we'll add
-                if procs_to_add > procs_limit:  
+                if procs_to_add > procs_limit:
                     procs_to_add = procs_limit
                 if procs_to_add > 0:
                     # Add 'procs_to_add'
@@ -362,7 +355,7 @@ class TestCase:
                     a_msg = 'Adding %s virtual cpus to partition %s.' % \
                             (procs_to_add, linux_machine.partition)
                     a_condition = int(self.get_cpu_option(linux_machine,
-                                      'curr_procs') == \
+                                                          'curr_procs') ==
                                       (curr_procs + procs_to_add))
                     self.log.check_log(a_msg, a_condition)
                     curr_procs += procs_to_add
@@ -373,9 +366,9 @@ class TestCase:
                 # Get the procs limit to know how much we need to have, at least
                 procs_limit = int(curr_proc_units) + 1
                 # Set how much we'll remove
-                if (curr_procs - procs_to_remove) < procs_limit:  
+                if (curr_procs - procs_to_remove) < procs_limit:
                     procs_to_remove -= procs_limit - \
-                                       (curr_procs - procs_to_remove)
+                        (curr_procs - procs_to_remove)
                 # Remove 'procs_to_remove'
                 r_cmd = 'chhwres -m ' + linux_machine.machine + \
                         ' -r proc -o r --procs ' + str(procs_to_remove) + \
@@ -390,8 +383,8 @@ class TestCase:
                 r_msg = 'Removing %s virtual cpus form partition %s.' % \
                         (procs_to_remove, linux_machine.partition)
                 r_condition = int(self.get_cpu_option(linux_machine,
-                                                      'curr_procs') == \
-                              (curr_procs - procs_to_remove))
+                                                      'curr_procs') ==
+                                  (curr_procs - procs_to_remove))
                 self.log.check_log(r_msg, r_condition)
                 curr_procs -= procs_to_remove
 
@@ -402,7 +395,7 @@ class TestCase:
                 # Get the proc units limit to know how much we can add
                 proc_units_limit = curr_procs - curr_proc_units
                 # Set how much we'll add
-                if proc_units_to_add > proc_units_limit:  
+                if proc_units_to_add > proc_units_limit:
                     procs_to_add = proc_units_limit
                 if proc_units_to_add > 0:
                     # Add 'proc_units_to_add'
@@ -419,12 +412,12 @@ class TestCase:
                                 (cmd_retcode)
                         raise TestException(e_msg)
                     time.sleep(sleep_time)
-                    self.log.check_log('Adding %s proc units to %s.' % \
+                    self.log.check_log('Adding %s proc units to %s.' %
                                        (proc_units_to_add,
-                                       linux_machine.partition),
+                                        linux_machine.partition),
                                        float(self.get_cpu_option(linux_machine,
-                                       'curr_proc_units') == \
-                                       (curr_proc_units + proc_units_to_add)))
+                                                                 'curr_proc_units') ==
+                                             (curr_proc_units + proc_units_to_add)))
                     curr_proc_units += proc_units_to_add
 
             # Remove proc units
@@ -437,8 +430,8 @@ class TestCase:
                 # Set how much we'll remove
                 if (curr_proc_units - proc_units_to_remove) < proc_units_limit:
                     proc_units_to_remove -= proc_units_limit - \
-                                            (curr_proc_units - \
-                                            proc_units_to_remove)
+                        (curr_proc_units -
+                         proc_units_to_remove)
 
                 # Remove 'procs_to_remove'
                 r_cmd = 'chhwres -m ' + linux_machine.machine + \
@@ -454,8 +447,8 @@ class TestCase:
                 time.sleep(sleep_time)
                 r_msg = 'Removing %s proc units form partition %s.' % \
                         (proc_units_to_remove, linux_machine.partition)
-                r_condition = float(self.get_cpu_option(linux_machine, 
-                                                        'curr_proc_units') == \
-                              (curr_proc_units - proc_units_to_remove))
+                r_condition = float(self.get_cpu_option(linux_machine,
+                                                        'curr_proc_units') ==
+                                    (curr_proc_units - proc_units_to_remove))
                 self.log.check_log(r_msg, r_condition)
                 curr_proc_units -= proc_units_to_remove
