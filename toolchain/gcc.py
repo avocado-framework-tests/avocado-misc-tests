@@ -56,8 +56,8 @@ class GCC(Test):
                              'texinfo-tex', 'texinfo', 'elfutils-libelf-devel',
                              'gmp-devel', 'mpfr-devel', 'libmpc-devel',
                              'zlib-devel', 'gettext', 'libgcc', 'libgomp'])
-            if dist.name == 'rhel' and (int(dist.version)==8 and int(dist.release) >= 6):
-                packages.extend(['autogen', 'guile', 'guile-devel'])
+        if dist.name == 'rhel' and (int(dist.version) == 8 and int(dist.release) >= 6):
+            packages.extend(['autogen', 'guile', 'guile-devel'])
 
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
