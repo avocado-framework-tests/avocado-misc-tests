@@ -52,13 +52,12 @@ class GCC(Test):
                              'gmp-devel', 'glibc-devel', 'mpfr-devel',
                              'makeinfo', 'texinfo', 'mpc-devel'])
         else:
-            packages.extend(['glibc-static', 'autogen', 'guile',
-                             'guile-devel', 'libgo', 'libgo-devel',
-                             'libgo-static', 'elfutils-devel',
+            packages.extend(['glibc-static', 'elfutils-devel',
                              'texinfo-tex', 'texinfo', 'elfutils-libelf-devel',
                              'gmp-devel', 'mpfr-devel', 'libmpc-devel',
-                             'gcc-gnat', 'libgnat', 'zlib-devel',
-                             'gettext', 'libgcc', 'libgomp'])
+                             'zlib-devel', 'gettext', 'libgcc', 'libgomp'])
+            if dist.name == 'rhel' and (int(dist.version)==8 and int(dist.release) >= 6):
+                packages.extend(['autogen', 'guile', 'guile-devel'])
 
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
@@ -88,7 +87,7 @@ class GCC(Test):
         ret = build.run_make(
             self.sourcedir, extra_args='check',
             process_kwargs={'ignore_status': True})
-        self.summary = ret.stdout.splitlines()
+        self.summary = ret.stdout.decode("utf-8").splitlines()
         for index, line in enumerate(self.summary):
             if "=== gcc Summary ===" in line:
                 self.get_summary(index + 2)
