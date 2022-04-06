@@ -100,18 +100,39 @@ class Iperf(Test):
             build.make(self.n_map)
             process.system('./nping/nping -h', shell=True)
 
+        if detected_distro.name == "Ubuntu":
+            cmd_fw = "service ufw stop"
+        elif detected_distro.name in ['rhel', 'fedora', 'redhat']:
+            cmd_fw = "systemctl stop firewalld"
+        elif detected_distro.name == "SuSE":
+            if detected_distro.version == 15:
+                cmd_fw = "systemctl stop firewalld"
+            else:
+                cmd_fw = "rcSuSEfirewall2 stop"
+        elif detected_distro.name == "centos":
+            cmd_fw = "service iptables stop"
+        else:
+            self.cancel("Distro not supported")
+        if process.system(cmd_fw, ignore_status=True, shell=True) != 0:
+            self.cancel("Unable to disable firewall on host")
+        output = self.session.cmd(cmd_fw)
+        if output.exit_status != 0:
+            self.cancel("Unable to disable firewall service on peer")
+
         if self.peer_ip == "":
             self.cancel("%s peer machine is not available" % self.peer_ip)
         self.mtu = self.params.get("mtu", default=1500)
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
                                      password=self.peer_password)
-        self.peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip).name
+        self.peer_interface = self.remotehost.get_interface_by_ipaddr(
+                                               self.peer_ip).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
                                                       self.remotehost)
-        self.remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
-                                            password=self.peer_password)
-        self.peer_public_networkinterface = NetworkInterface(self.peer_interface,
-                                                             self.remotehost_public)
+        self.remotehost_public = RemoteHost(
+                self.peer_public_ip, self.peer_user,
+                password=self.peer_password)
+        self.peer_public_networkinterface = NetworkInterface(
+                           self.peer_interface, self.remotehost_public)
         if self.peer_networkinterface.set_mtu(self.mtu) is not None:
             self.cancel("Failed to set mtu in peer")
         if self.networkinterface.set_mtu(self.mtu) is not None:
