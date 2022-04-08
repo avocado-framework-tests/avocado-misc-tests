@@ -1,0 +1,74 @@
+module: 'nvme'
+disk: '/dev/nvme0n1'
+Test: !mux
+    io_queue_depth:
+        module_param_name: "io_queue_depth"
+        value: !mux
+            io_queue_depth_100:
+                module_param_value: "100"
+            io_queue_depth_2048:
+                module_param_value: "2048"
+            io_queue_depth_3072:
+                module_param_value: "3072"
+            io_queue_depth_4095:
+                module_param_value: "4095"
+    max_host_mem_size_mb:
+        module_param_name: "max_host_mem_size_mb"
+        value: !mux
+            max_host_mem_size_mb_10:
+                module_param_value: "10"
+            max_host_mem_size_mb_64:
+                module_param_value: "64"
+            max_host_mem_size_mb_256:
+                module_param_value: "256"
+            max_host_mem_size_mb_1280:
+                module_param_value: "1280"
+    noacpi:
+        module_param_name: "noacpi"
+        value: !mux
+            noacpi_Y:
+                module_param_value: "Y"
+            noacpi_N:
+                module_param_value: "N"
+    poll_queues:
+        # range of values supported [0-8]
+        module_param_name: "poll_queues"
+        value: !mux
+            poll_queues_0:
+                module_param_value: "0"
+            poll_queues_2:
+                module_param_value: "2"
+            poll_queues_4:
+                module_param_value: "4"
+            poll_queues_8:
+                module_param_value: "8"
+    sgl_threshold:
+        module_param_name: "sgl_threshold"
+        value: !mux
+            sgl_threshold_1000:
+                module_param_value: "1000"
+            sgl_threshold_10000:
+                module_param_value: "10000"
+            sgl_threshold_32000:
+                module_param_value: "32000"
+            sgl_threshold_64000:
+                module_param_value: "64000"
+    use_cmb_sqes:
+        module_param_name: "use_cmb_sqes"
+        value: !mux
+            use_cmb_sqes_Y:
+                module_param_value: "Y"
+            use_cmb_sqes_N:
+                module_param_value: "N"
+    write_queues:
+        # supported value range are [0-8]
+        module_param_name: "write_queues"
+        value: !mux
+            write_queues_0:
+                module_param_value: "0"
+            write_queues_2:
+                module_param_value: "2"
+            write_queues_4:
+                module_param_value: "4"
+            write_queues_8:
+                module_param_value: "8"
