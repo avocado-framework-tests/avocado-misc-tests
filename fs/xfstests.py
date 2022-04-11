@@ -173,7 +173,10 @@ class Xfstests(Test):
             packages.extend(
                 ['xfslibs-dev', 'uuid-dev', 'libuuid1',
                  'libattr1-dev', 'libacl1-dev', 'libgdbm-dev',
-                 'uuid-runtime', 'libaio-dev', 'fio', 'dbench'])
+                 'uuid-runtime', 'libaio-dev', 'fio', 'dbench',
+                 'gettext', 'libinih-dev', 'liburcu-dev', 'libblkid-dev',
+                 'liblzo2-dev', 'zlib1g-dev', 'e2fslibs-dev', 'asciidoc',
+                 'xmlto', 'libzstd-dev', 'libudev-dev'])
             if self.detected_distro.version in ['14']:
                 packages.extend(['libtool'])
             elif self.detected_distro.version in ['18', '20']:
@@ -189,12 +192,17 @@ class Xfstests(Test):
             packages.extend(['acl', 'bc', 'dump', 'indent', 'libtool', 'lvm2',
                              'xfsdump', 'psmisc', 'sed', 'libacl-devel',
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
-                             'openssl-devel', 'xfsprogs-devel'])
+                             'openssl-devel', 'xfsprogs-devel', 'gettext',
+                             'libblkid-devel', 'lzo-devel', 'zlib-devel',
+                             'e2fsprogs-devel', 'asciidoc', 'xmlto',
+                             'libzstd-devel', 'systemd-devel', 'meson',
+                             'gcc-c++'])
 
             if self.detected_distro.name == 'SuSE':
-                packages.extend(['libbtrfs-devel', 'libcap-progs'])
+                packages.extend(['libbtrfs-devel', 'libcap-progs',
+                                'liburcu-devel', 'libinih-devel'])
             else:
-                packages.extend(['btrfs-progs-devel'])
+                packages.extend(['btrfs-progs-devel', 'userspace-rcu-devel'])
 
             packages_remove = ['indent', 'btrfs-progs-devel']
             if self.detected_distro.name == 'rhel' and\
@@ -221,6 +229,88 @@ class Xfstests(Test):
         self.test_mnt = self.params.get('test_mnt', default='/mnt/test')
         self.disk_mnt = self.params.get('disk_mnt', default='/mnt/loop_device')
         self.fs_to_test = self.params.get('fs', default='ext4')
+        self.run_type = self.params.get('run_type', default='distro')
+
+        if self.run_type == 'upstream':
+            prefix = "/usr/local"
+            bin_prefix = "/usr/local/bin"
+
+            if self.detected_distro.name == 'SuSE':
+                # SuSE has /sbin at a higher priority than /usr/local/bin
+                # in $PATH, so install all the binaries in /sbin to make
+                # sure they are picked up correctly by xfstests.
+                #
+                # We still install in /usr/local but binaries are kept in
+                # /sbin
+                bin_prefix = "/sbin"
+
+            if self.fs_to_test == "ext4":
+                # Build e2fs progs
+                e2fsprogs_dir = os.path.join(self.teststmpdir, 'e2fsprogs')
+                if not os.path.exists(e2fsprogs_dir):
+                    os.makedirs(e2fsprogs_dir)
+                e2fsprogs_url = self.params.get('e2fsprogs_url')
+                git.get_repo(e2fsprogs_url, destination_dir=e2fsprogs_dir)
+                e2fsprogs_build_dir = os.path.join(e2fsprogs_dir, 'build')
+                if not os.path.exists(e2fsprogs_build_dir):
+                    os.makedirs(e2fsprogs_build_dir)
+                os.chdir(e2fsprogs_build_dir)
+                process.run("../configure --prefix=%s --bindir=%s --sbindir=%s"
+                            % (prefix, bin_prefix, bin_prefix), verbose=True)
+                build.make(e2fsprogs_build_dir)
+                build.make(e2fsprogs_build_dir, extra_args='install')
+
+            if self.fs_to_test == "xfs":
+                if self.detected_distro.name in ['centos', 'fedora', 'rhel']:
+                    libini_path = process.run("ldconfig -p | grep libini",
+                                              verbose=True, ignore_status=True)
+                    if not libini_path:
+                        # Build libini.h as it is needed for xfsprogs
+                        libini_dir = os.path.join(self.teststmpdir, 'libini')
+                        if not os.path.exists(libini_dir):
+                            os.makedirs(libini_dir)
+                        git.get_repo('https://github.com/benhoyt/inih',
+                                     destination_dir=libini_dir)
+                        os.chdir(libini_dir)
+                        process.run("meson build", verbose=True)
+                        libini_build_dir = os.path.join(libini_dir, 'build')
+                        if os.path.exists(libini_build_dir):
+                            os.chdir(libini_build_dir)
+                            process.run("meson install", verbose=True)
+                        else:
+                            self.fail('Something went wrong while building \
+                                      libini. Please check the logs.')
+                # Build xfs progs
+                xfsprogs_dir = os.path.join(self.teststmpdir, 'xfsprogs')
+                if not os.path.exists(xfsprogs_dir):
+                    os.makedirs(xfsprogs_dir)
+                xfsprogs_url = self.params.get('xfsprogs_url')
+                git.get_repo(xfsprogs_url, destination_dir=xfsprogs_dir)
+                os.chdir(xfsprogs_dir)
+                build.make(xfsprogs_dir)
+                process.run("./configure --prefix=%s --bindir=%s --sbindir=%s"
+                            % (prefix, bin_prefix, bin_prefix), verbose=True)
+                build.make(xfsprogs_dir, extra_args='install')
+
+            if self.fs_to_test == "btrfs":
+                # Build btrfs progs
+                btrfsprogs_dir = os.path.join(self.teststmpdir, 'btrfsprogs')
+                if not os.path.exists(btrfsprogs_dir):
+                    os.makedirs(btrfsprogs_dir)
+                btrfsprogs_url = self.params.get('btrfsprogs_url')
+                git.get_repo(btrfsprogs_url, destination_dir=btrfsprogs_dir)
+                os.chdir(btrfsprogs_dir)
+                process.run("./autogen.sh", verbose=True)
+                process.run("./configure --prefix=%s --bindir=%s --sbindir=%s --disable-documentation"
+                            % (prefix, bin_prefix, bin_prefix), verbose=True)
+                build.make(btrfsprogs_dir)
+                build.make(btrfsprogs_dir, extra_args='install')
+
+        # Check versions of fsprogs
+        fsprogs_ver = process.system_output("mkfs.%s -V" % self.fs_to_test,
+                                            ignore_status=True,
+                                            shell=True).decode("utf-8")
+        self.log.info(fsprogs_ver)
 
         if process.system('which mkfs.%s' % self.fs_to_test,
                           ignore_status=True):
@@ -394,6 +484,8 @@ class Xfstests(Test):
             shutil.rmtree(self.scratch_mnt)
         if os.path.exists(self.test_mnt):
             shutil.rmtree(self.test_mnt)
+        if os.path.exists(self.teststmpdir + "/libini"):
+            shutil.rmtree(self.teststmpdir + "/libini")
         if self.dev_type == 'loop':
             for dev in self.devices:
                 process.system('losetup -d %s' % dev, shell=True,
