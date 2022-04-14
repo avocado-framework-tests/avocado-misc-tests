@@ -30,7 +30,8 @@ class Cpu_VpaData(Test):
     checks for cpu files and MaxMem
     '''
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST,  "This test is supported on PowerVM environment")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is supported on PowerVM environment")
     def setUp(self):
         detected_distro = distro.detect()
         if detected_distro.name not in ['rhel', 'SuSE']:
@@ -57,5 +58,5 @@ class Cpu_VpaData(Test):
             self.log.info(
                 "Files are generated for all cpu's and maxmem values are same")
         else:
-            self.fail(
-                "Files are not generated for all cpu's and maxmem values are not same")
+            self.fail("Files are not generated for all cpu's and"
+                      " maxmem values are not same")
