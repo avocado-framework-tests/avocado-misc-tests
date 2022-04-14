@@ -92,6 +92,7 @@ class Bonding(Test):
             for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
                 networkinterface = NetworkInterface(interface, self.localhost)
                 try:
+                    networkinterface.flush_ipaddr()
                     networkinterface.add_ipaddr(ipaddr, self.netmask)
                     networkinterface.save(ipaddr, self.netmask)
                 except Exception:
@@ -507,6 +508,7 @@ class Bonding(Test):
         for ipaddr, host_interface in zip(self.ipaddr, self.host_interfaces):
             networkinterface = NetworkInterface(host_interface, self.localhost)
             try:
+                networkinterface.flush_ipaddr()
                 networkinterface.add_ipaddr(ipaddr, self.netmask)
                 networkinterface.bring_up()
             except Exception:
