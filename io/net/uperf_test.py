@@ -69,9 +69,11 @@ class Uperf(Test):
             self.cancel("failed connecting to peer")
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        pkgs = ["gcc", "autoconf", "perl", "m4", "git-core", "automake"]
+        pkgs = ["gcc", "gcc-c++", "autoconf", "perl", "m4", "git-core", "automake"]
         if detected_distro.name == "Ubuntu":
             pkgs.extend(["libsctp1", "libsctp-dev", "lksctp-tools"])
+        elif detected_distro.name == "rhel":
+            pkgs.extend(["nmap"])
         else:
             pkgs.extend(["lksctp-tools", "lksctp-tools-devel"])
         for pkg in pkgs:
@@ -82,6 +84,20 @@ class Uperf(Test):
             if not output.exit_status == 0:
                 self.cancel("unable to install the package %s on peer machine "
                             % pkg)
+        if detected_distro.name == "SuSE":
+            self.nmap = os.path.join(self.teststmpdir, 'nmap')
+            nmap_download = self.params.get("nmap_download", default="https:"
+                                            "//nmap.org/dist/"
+                                            "nmap-7.80.tar.bz2")
+            tarball = self.fetch_asset(nmap_download)
+            self.version = os.path.basename(tarball.split('.tar')[0])
+            self.n_map = os.path.join(self.nmap, self.version)
+            archive.extract(tarball, self.nmap)
+            os.chdir(self.n_map)
+            process.system('./configure ppc64le', shell=True)
+            build.make(self.n_map)
+            process.system('./nping/nping -h', shell=True)
+
         if self.peer_ip == "":
             self.cancel("%s peer machine is not available" % self.peer_ip)
         self.mtu = self.params.get("mtu", default=1500)
@@ -126,6 +142,19 @@ class Uperf(Test):
         build.make(self.uperf_dir)
         self.expected_tp = self.params.get("EXPECTED_THROUGHPUT", default="85")
 
+    def nping(self):
+        """
+        Run nping test with tcp packets
+        """
+        detected_distro = distro.detect()
+        if detected_distro.name == "SuSE":
+            os.chdir(self.n_map)
+            cmd = "./nping/nping --tcp %s -c 10" % self.peer_ip
+            return process.run(cmd, verbose=False, shell=True)
+        else:
+            cmd = "nping --tcp %s -c 10" % self.peer_ip
+            return process.run(cmd, verbose=False, shell=True)
+
     def test(self):
         """
         Test run is a One way throughput test. In this test, we have one host
@@ -150,6 +179,12 @@ class Uperf(Test):
                               ", Throughput Actual value - %s "
                               % ((tput*100)/speed, self.expected_tp,
                                  str(tput)+'Mb/sec'))
+        nping_result = self.nping()
+        for line in nping_result.stdout.decode("utf-8").splitlines():
+            if 'Raw packets' in line:
+                lost = int(line.split("|")[2].split(" ")[2])*10
+                if lost > 60:
+                    self.fail("FAIL: Ping fails after uperf test")
         if 'WARNING' in result.stdout.decode("utf-8"):
             self.log.warn('Test completed with warning')
 
