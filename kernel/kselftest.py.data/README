@@ -1,2 +1,30 @@
 This program runs the selftest available with the linux kernel source.
 Compile and run the tests available at /tools/testing/selftests
+
+Run test_kself:-
+Supported <test type>:
+-M (page merging)
+-Z (zero pages merging)
+-N (merging of pages in different NUMA nodes)
+-U (page unmerging)
+-C evaluate the time required to break COW of merged pages.
+-P evaluate merging time and speed.
+For this test, the size of duplicated memory area (in MiB) must be provided using -s option
+-H evaluate merging time and speed of area allocated mostly with huge pages For this test, the size of duplicated memory area(in MiB)
+must be provided using -s option
+
+Inside kernel/kselftest.py.data/ksmtest.yaml we have below sections:
+1. test_type   -> Kself supported test types.
+2. Size        -> Size of duplicated memory area(in MiB) must be provided using -s option.
+3. Dup_MM_Area -> Size of duplicated memory area (in MiB).
+
+To run the -P and -H test types, the user must pass the value as shown below
+Ex: test_type: "-H"
+    Size: "-s"
+    Dup_MM_Area: "100"
+Note: The value of Dup_MM_Area depends on the use case.
+
+To run the M-, -Z, -N, -U and -C test types, the user no need to pass the "Size" and "Dup_MM_Area" parameters.
+Ex: test_type: "-M"
+    Size: ""
+    Dup_MM_Area: ""
