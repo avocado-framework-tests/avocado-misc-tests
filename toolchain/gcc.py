@@ -60,7 +60,8 @@ class GCC(Test):
                              'zlib-devel', 'gettext', 'libgcc', 'libgomp',
                              'dblatex', 'doxygen', 'texlive-collection-latex',
                              'python3-sphinx', 'systemtap-sdt-devel'])
-        if dist.name == 'rhel' and (int(dist.version) == 8 and int(dist.release) >= 6):
+        if dist.name == 'rhel' and \
+           (int(dist.version) == 8 and int(dist.release) >= 6):
             packages.extend(['autogen', 'guile', 'guile-devel',
                              'isl-devel', 'docbook5-style-xsl'])
 
@@ -94,6 +95,9 @@ class GCC(Test):
         build.make(self.sourcedir, ignore_status=True)
 
     def get_summary(self, index):
+        """
+        subroutine to print test result summary.
+        """
         with open(os.path.join(self.outputdir, 'gcc_summary'), 'a') as f_obj:
             while self.summary[index].startswith('#'):
                 f_obj.write('%s\n' % self.summary[index])
