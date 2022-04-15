@@ -16,6 +16,7 @@
 
 from avocado import Test
 from avocado.utils import process
+from avocado.utils import distro
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -31,9 +32,14 @@ class lparstat(Test):
 
     def setUp(self):
         sm = SoftwareManager()
-        if not sm.check_installed("powerpc-utils-core") and \
-           not sm.install("powerpc-utils-core"):
-            self.cancel("Fail to install required 'powerpc-utils-core' package")
+        detected_distro = distro.detect()
+        if 'SuSE' in detected_distro.name:
+            package = "powerpc-utils"
+        elif 'rhel' in detected_distro.name:
+            package = "powerpc-utils-core"
+
+        if not sm.check_installed(package) and not sm.install(package):
+            self.cancel("Failed to install %s" % package)
 
     def test_list(self):
         """
