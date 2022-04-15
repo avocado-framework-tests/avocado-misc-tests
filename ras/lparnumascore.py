@@ -27,14 +27,15 @@ class lparnumascore(Test):
     """
     lparnumascore display the NUMA affinity score for the running LPAR.
     The score is a number between 0 and 100. A score of 100 means that all the
-    resources are seen correctly, while a score of 0 means that all the resources
-    have been moved to different nodes. There is a dedicated score for
-    each resource type
+    resources are seen correctly, while a score of 0 means that all the
+    resource have been moved to different nodes. There is a dedicated score
+    for each resource type
     """
     is_fail = 0
 
     def run_cmd(self, cmd):
-        if (process.run(cmd, ignore_status=True, sudo=True, shell=True)).exit_status:
+        if (process.run(cmd, ignore_status=True, sudo=True,
+                        shell=True)).exit_status:
             self.is_fail += 1
         return
 
