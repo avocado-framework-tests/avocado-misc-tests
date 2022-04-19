@@ -15,6 +15,8 @@
 # Author: Nageswara R Sastry <rnsastry@linux.vnet.ibm.com>
 
 import os
+import shlex
+import subprocess
 import platform
 import tempfile
 from avocado import Test
@@ -35,7 +37,6 @@ class perf_c2c(Test):
         '''
         Install the basic packages to support perf
         '''
-
         # Check for basic utilities
         smm = SoftwareManager()
         detected_distro = distro.detect()
@@ -88,20 +89,41 @@ class perf_c2c(Test):
         except process.CmdError as details:
             self.fail("Command %s failed: %s" % (cmd, details))
 
+    def run_record_cmd(self, cmd):
+        """
+        Run record command
+        """
+        try:
+            cmd_output = subprocess.Popen(cmd,
+                                          stdout=subprocess.DEVNULL,
+                                          stderr=subprocess.PIPE)
+            cmd_output = process.communicate()[1]
+            self.log.info("Command Excuted ..{} {}".format(cmd, cmd_output))
+        except SystemError:
+            self.fail("Command failed: {}".format(cmd))
+
     def test_c2c(self):
         # When input is used for report, then need to pass the file argument
         # to the same file, record should log the data. So altering record,
         # report options to have the proper arguments.
+        call_cmd_flag = 1
         if self.report == "-i":
             self.report = "-i %s" % self.temp_file
             self.record = self.record + " -o %s" % self.temp_file
+            call_cmd_flag = 0
         elif self.report == "--input":
             self.report = "--input=%s" % self.temp_file
             self.record = self.record + " -o %s" % self.temp_file
+            call_cmd_flag = 0
 
         # Record command
         record_cmd = "perf c2c record %s -- ls" % self.record
-        self.run_cmd(record_cmd)
+        if call_cmd_flag:
+            record_cmd = shlex.split(record_cmd)
+            self.run_record_cmd(record_cmd)
+        else:
+            self.run_cmd(record_cmd)
+
         # Report command
         report_cmd = "perf c2c report %s" % self.report
         self.run_cmd(report_cmd)
@@ -110,5 +132,7 @@ class perf_c2c(Test):
 
     def tearDown(self):
         # Delete the temporary file
+        if os.path.isfile("perf.data"):
+            os.remove("perf.data")
         if os.path.isfile(self.temp_file):
             process.run('rm -f %s' % self.temp_file)
