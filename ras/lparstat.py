@@ -16,19 +16,37 @@
 
 from avocado import Test
 from avocado.utils import process
+from avocado.utils import distro
 from avocado.utils.software_manager import SoftwareManager
 
 
 class lparstat(Test):
 
+    """
+    Test case to validate lparstat functionality. lparstat is
+    a tool to display logical partition related information and
+    statistics
+
+    :avocado: tags=ras,ppc64le
+    """
+
     def setUp(self):
         sm = SoftwareManager()
-        if not sm.check_installed("powerpc-utils-core") and \
-           not sm.install("powerpc-utils-core"):
-            self.cancel("Fail to install required 'powerpc-utils-core' package")
+        detected_distro = distro.detect()
+        if 'SuSE' in detected_distro.name:
+            package = "powerpc-utils"
+        elif 'rhel' in detected_distro.name:
+            package = "powerpc-utils-core"
+
+        if not sm.check_installed(package) and not sm.install(package):
+            self.cancel("Failed to install %s" % package)
 
     def test_list(self):
-        lists = self.params.get('list', default=['-i', '-x', '-E', '-l', '1 2'])
+        """
+        Test supported command line options
+        """
+        lists = self.params.get('list',
+                                default=['-i', '-x', '-E', '-l', '1 2'])
         for list_item in lists:
             cmd = "lparstat %s" % list_item
             if process.system(cmd, ignore_status=True, sudo=True):
@@ -36,7 +54,9 @@ class lparstat(Test):
                 self.fail("lparstat: %s command failed to execute" % cmd)
 
     def test_nlist(self):
-        # Negative tests
+        """
+        Negative tests
+        """
         lists = self.params.get('nlist', default=['--nonexistingoption'])
         for list_item in lists:
             cmd = "lparstat %s" % list_item
