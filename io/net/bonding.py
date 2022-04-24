@@ -517,13 +517,14 @@ class Bonding(Test):
                 networkinterface.restore_from_backup()
             except Exception:
                 self.log.info("backup file not availbale, could not restore file.")
-            try:
-                for interface in self.peer_interfaces:
-                    peer_networkinterface = NetworkInterface(interface, self.remotehost)
-                    peer_networkinterface.set_mtu("1500")
-                self.remotehost.remote_session.quit()
-            except Exception:
-                self.log.debug("Could not revert peer interface MTU to 1500")
+
+        try:
+            for interface in self.peer_interfaces:
+                peer_networkinterface = NetworkInterface(interface, self.remotehost)
+                peer_networkinterface.set_mtu("1500")
+            self.remotehost.remote_session.quit()
+        except Exception:
+            self.log.debug("Could not revert peer interface MTU to 1500")
 
     def error_check(self):
         if self.err:
