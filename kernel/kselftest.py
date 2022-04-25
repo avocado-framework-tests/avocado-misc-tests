@@ -20,14 +20,13 @@ import glob
 import shutil
 
 from avocado import Test
-from avocado.utils import build
+from avocado.utils import build, process
 from avocado.utils import distro
 from avocado.utils import archive, git
 from avocado.utils.software_manager import SoftwareManager
 
 
 class kselftest(Test):
-
     """
     Linux Kernel Selftest available as a part of kernel source code.
     run the selftest available at tools/testing/selftest
@@ -37,7 +36,6 @@ class kselftest(Test):
 
     :avocado: tags=kernel
     """
-
     testdir = 'tools/testing/selftests'
 
     def find_match(self, match_str, line):
@@ -52,6 +50,9 @@ class kselftest(Test):
         Resolve the packages dependencies and download the source.
         """
         smg = SoftwareManager()
+        self.test_type = self.params.get('test_type', default='-H')
+        self.Size_flag = self.params.get('Size', default='-s')
+        self.Dup_MM_Area = self.params.get('Dup_MM_Area', default='100')
         self.comp = self.params.get('comp', default='')
         self.run_type = self.params.get('type', default='upstream')
         if self.comp:
@@ -77,7 +78,8 @@ class kselftest(Test):
                          'libcap-ng', 'libcap', 'libcap-devel',
                          'libcap-ng-devel', 'popt-devel',
                          'libhugetlbfs-devel'])
-            if detected_distro.name == 'rhel' and int(detected_distro.version) >= 9:
+            dis_ver = int(detected_distro.version)
+            if detected_distro.name == 'rhel' and dis_ver >= 9:
                 deps.extend(['fuse3-devel'])
             else:
                 deps.extend(['fuse-devel'])
@@ -85,7 +87,7 @@ class kselftest(Test):
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
                 self.cancel(
-                    "Fail to install %s required for this test." % (package))
+                    "Fail to install %s package" % (package))
 
         if self.run_type == 'upstream':
             location = self.params.get('location', default='https://github.c'
@@ -129,8 +131,10 @@ class kselftest(Test):
                 self.buldir = "/usr/src/linux"
 
         self.sourcedir = os.path.join(self.buldir, self.testdir)
-        if build.make(self.sourcedir):
-            self.fail("Compilation failed, Please check the build logs !!")
+        ksm_test_dir = self.sourcedir + "/vm/ksm_tests"
+        if not os.path.isfile(ksm_test_dir):
+            if build.make(self.sourcedir):
+                self.fail("Compilation failed, Please check the build logs")
 
     def test(self):
         """
@@ -152,6 +156,39 @@ class kselftest(Test):
 
         if self.error:
             self.fail("Testcase failed during selftests")
+
+    def run_cmd(self, cmd):
+        """
+        Run the command:
+        Ex: ./ksm_tests -M
+        """
+        try:
+            process.run(cmd, ignore_status=False, sudo=True)
+        except process.CmdError as details:
+            self.fail("Command %s failed: %s" % (cmd, details))
+
+    def test_kself(self):
+        """
+        Run the different ksm test types:
+        Ex: -M (page merging)
+        """
+        ksm_test_dir = self.sourcedir + "/vm/"
+        self.test_list = ["-M", "-Z", "-N", "-U", "-C"]
+        if os.path.exists(ksm_test_dir):
+            os.chdir(ksm_test_dir)
+            if(self.test_type == "-H" or self.test_type == "-P"):
+                arg_payload = " ".join(["./ksm_tests", self.test_type,
+                                       self.Size_flag, self.Dup_MM_Area])
+                self.run_cmd(arg_payload)
+            elif(self.test_type in self.test_list):
+                arg_payload = " ".join(["./ksm_tests", self.test_type])
+                self.run_cmd(arg_payload)
+            else:
+                self.cancel("Invalid test_type for ksm_tests:- {}"
+                            .format(self.test_type))
+        else:
+            self.cancel("Invalid ksm_tests build path:- {}"
+                        .format(ksm_test_dir))
 
     def tearDown(self):
         self.log.info('Cleaning up')

@@ -1,0 +1,4 @@
+component: !mux
+        test_type: ""
+        Size: ""
+        Dup_MM_Area: ""
