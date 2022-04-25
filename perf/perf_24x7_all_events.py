@@ -57,7 +57,7 @@ class hv_24x7_all_events(Test):
                 self.cancel('%s is needed for the test to be run' % package)
 
         cpu_family = cpu.get_family()
-        perf_args = "perf stat -v -C 0 -e"
+        perf_args = "perf stat -v -e"
         if cpu_family == 'power8':
             perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % perf_args
         elif cpu_family == 'power9':
@@ -82,7 +82,7 @@ class hv_24x7_all_events(Test):
         # Check if its enabled
         result_perf = process.run("%s,domain=2,core=1/ sleep 1"
                                   % perf_stat, ignore_status=True)
-        if "not supported" in result_perf.stderr.decode("utf-8"):
+        if "operations is limited" in result_perf.stderr.decode("utf-8"):
             self.cancel("Please enable LPAR to allow collecting"
                         " the 24x7 counters info")
 
@@ -102,10 +102,10 @@ class hv_24x7_all_events(Test):
             self.list_of_hv_24x7_events.append(lne)
 
         # Clear the dmesg to capture the delta at the end of the test.
-        process.run("dmesg -c", sudo=True)
+        process.run("dmesg -C", sudo=True)
 
     def test_all_events(self):
-        perf_args = "-C 9 -v -e"
+        perf_args = "-v -e"
         for line in self.list_of_hv_24x7_events:
             if line.startswith('HP') or line.startswith('CP'):
                 # Running for domain range from 1-6
