@@ -52,6 +52,12 @@ class PerfCoreIMCNonZeroEvents(Test):
         process.run("ppc64_cpu --frequency -t 10 &", shell=True,
                     ignore_status=True, verbose=True, ignore_bg_processes=True)
 
+        output = process.run('perf list')
+        if 'core_imc' in output.stdout_text:
+            self.log.info('core_imc is present')
+        else:
+            self.cancel("core_imc not found")
+
     def parse_op(self, cmd):
         fail_count = 0
         output = process.system_output(cmd, ignore_status=True,
