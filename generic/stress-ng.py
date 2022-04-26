@@ -87,7 +87,7 @@ class Stressng(Test):
         for line in str(result).splitlines():
             if 'error:' in line:
                 self.cancel(
-                    "Unsupported OS, Please check the build logs !!")
+                    "Build Failed, Please check the build logs for details !!")
         build.make(sourcedir, extra_args='install')
         clear_dmesg()
 
