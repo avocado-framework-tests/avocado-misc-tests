@@ -99,7 +99,7 @@ class Producer_Consumer(Test):
         for line in lines:
             if line.startswith('Consumer(0) :'):
                 print(line)
-                pattern = re.compile(r":    (.*?) iterations")
+                pattern = re.compile(r":\s(.*?) iterations")
                 iteration = pattern.findall(line)[0]
                 pattern = re.compile(r"time/iteration: (.*?) ns")
                 time_iter = pattern.findall(line)[0]
