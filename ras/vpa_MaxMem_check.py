@@ -30,7 +30,8 @@ class Cpu_VpaData(Test):
     checks for cpu files and MaxMem
     '''
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST,  "This test is supported on PowerVM environment")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is supported on PowerVM environment")
     def setUp(self):
         detected_distro = distro.detect()
         if detected_distro.name not in ['rhel', 'SuSE']:
@@ -44,18 +45,17 @@ class Cpu_VpaData(Test):
         for line in output.splitlines():
             if 'MaxMem=' in line:
                 maxmem = line.split('=')[1].strip()
-        output = process.system_output('lscpu', shell=True, ignore_status=True)
-        for line in output.decode().splitlines():
-            if line.startswith('CPU'):
-                total_cpus = line.split(':')[1].strip()
+        possible_cpus = "/sys/devices/system/cpu/possible"
+        output = genio.read_file(possible_cpus).rstrip('\t\r\n\0')
+        total_cpus = output.split('-')[1].strip()
         output = process.system_output(
             'lparstat -i', shell=True, ignore_status=True)
         for line in output.decode().splitlines():
             if 'Maximum Memory' in line:
                 lmaxmem = line.split(':')[1].strip()
-        if ((cpu_count == int(total_cpus)) and (maxmem == lmaxmem)):
+        if ((cpu_count == int(total_cpus)+1) and (maxmem == lmaxmem)):
             self.log.info(
                 "Files are generated for all cpu's and maxmem values are same")
         else:
-            self.fail(
-                "Files are not generated for all cpu's and maxmem values are not same")
+            self.fail("Files are not generated for all cpu's and"
+                      " maxmem values are not same")
