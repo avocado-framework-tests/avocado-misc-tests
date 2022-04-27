@@ -36,7 +36,7 @@ class PerfProbe(Test):
         elif 'rhel' in distro_name:
             deps.extend(['perf', 'kernel-debuginfo'])
         elif 'SuSE' in distro_name:
-            deps.extend(['perf', 'kernel-default-base-debuginfo'])
+            deps.extend(['perf', 'kernel-default-debuginfo'])
         else:
             self.cancel("Install the package for perf supported\
                       by %s" % distro_name)
