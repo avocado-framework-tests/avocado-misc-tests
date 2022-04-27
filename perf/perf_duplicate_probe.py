@@ -45,18 +45,18 @@ class PerfProbe(Test):
                 self.cancel('%s is needed for the test to be run' % package)
         self.fail_flag = False
 
-    def _check_duplicate_probe(self, output):
-        if 'select_task_rq_fair' in output and 'select_task_rq_fair_' in output:
+    def _check_duplicate_probe(self, outpt):
+        if 'select_task_rq_fair' in outpt and 'select_task_rq_fair_' in outpt:
             self.fail_flag = True
 
     def test_probe(self):
-        output = process.run("perf probe select_task_rq_fair:0", sudo=True)
-        output = output.stderr.decode("utf-8")
-        self._check_duplicate_probe(output)
-        output = genio.read_all_lines("/sys/kernel/debug/tracing/kprobe_events")
-        self._check_duplicate_probe(output)
+        outpt = process.run("perf probe select_task_rq_fair:0", sudo=True)
+        outpt = outpt.stderr.decode("utf-8")
+        self._check_duplicate_probe(outpt)
+        outpt = genio.read_all_lines("/sys/kernel/debug/tracing/kprobe_events")
+        self._check_duplicate_probe(outpt)
         if self.fail_flag:
-            self.fail("perf probe is placing multiple probe at the same location ")
+            self.fail("perf is placing multiple probes at the same location ")
 
     def tearDown(self):
         # Deleting all the probed events
