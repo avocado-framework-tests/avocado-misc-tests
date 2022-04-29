@@ -26,7 +26,6 @@ import glob
 import re
 import shutil
 
-import avocado
 from avocado import Test
 from avocado.utils import process, build, git, distro, partition
 from avocado.utils import disk, data_structures, pmem
@@ -61,10 +60,8 @@ class Xfstests(Test):
         namespace_size = (namespace_size // size_align) * size_align
         return namespace_size
 
-    @avocado.fail_on(pmem.PMemException)
     def setup_nvdimm(self):
         self.logflag = self.params.get('logdev', default=False)
-
         self.plib = pmem.PMem()
         self.plib.enable_region()
         regions = sorted(self.plib.run_ndctl_list('-R'),
@@ -502,7 +499,7 @@ class Xfstests(Test):
         na_detail_re = re.compile(r'(\d{3})\s*(\[not run\])\s*(.*)')
         failed_re = re.compile(r'Failed \d+ of \d+ tests')
 
-        lines = output.decode("utf-8").split('\n')
+        lines = output.decode("ISO-8859-1").split('\n')
         result_line = lines[-3]
 
         error_msg = None
