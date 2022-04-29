@@ -86,16 +86,6 @@ class NdctlTest(Test):
 
         self.sourcedir = self.teststmpdir
         os.chdir(self.sourcedir)
-
-        # TODO: remove patches once merged upstream
-        upstream_patch = self.fetch_asset("upstream.patch", locations=[
-            "https://patchwork.kernel.org/series/177255/mbox/"], expire='7d')
-
-        process.run('patch -p1 < %s' % upstream_patch, shell=True)
-        if detected_distro.arch in ["ppc64", "ppc64le"]:
-            process.run('patch -p1 < %s' %
-                        self.get_data('ppc.patch'), shell=True)
-
         process.run('./autogen.sh', sudo=True, shell=True)
         process.run(
             "./configure CFLAGS='-g -O2' --prefix=/usr "
