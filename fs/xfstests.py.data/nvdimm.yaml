@@ -7,7 +7,7 @@ fs_type: !mux
         fs: 'ext4'
         mkfs_opt: '-b 65536'
         test_range: "null"
-        exclude: "null"
+        exclude: "048"
         gen_exclude: "null"
         share_exclude: "null"
     fs_xfs:
