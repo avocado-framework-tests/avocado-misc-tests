@@ -110,8 +110,8 @@ class Bonding(Test):
         self.bonding_masters_file = "%s/bonding_masters" % self.net_path
         self.peer_bond_needed = self.params.get("peer_bond_needed",
                                                 default=False)
-        self.peer_wait_time = self.params.get("peer_wait_time", default=5)
-        self.sleep_time = int(self.params.get("sleep_time", default=5))
+        self.peer_wait_time = self.params.get("peer_wait_time", default=20)
+        self.sleep_time = int(self.params.get("sleep_time", default=10))
         self.mtu = self.params.get("mtu", default=1500)
         for root, dirct, files in os.walk("/root/.ssh"):
             for file in files:
