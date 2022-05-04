@@ -48,8 +48,7 @@ class Kernbench(Test):
             build.make(self.sourcedir, extra_args='defconfig')
         else:
             build.make(self.sourcedir, extra_args='olddefconfig')
-        if 'rhel' in self.detected_distro.name:
-            self.rhel_config_fix()
+        self.kernel_config_fix()
         if make_opts:
             build_string = "/usr/bin/time -o %s make %s -j %s vmlinux" % (
                 timefile, make_opts, threads)
@@ -80,11 +79,11 @@ class Kernbench(Test):
             results.append(tuple([self.to_seconds(elt) for elt in result]))
         return results
 
-    def rhel_config_fix(self):
+    def kernel_config_fix(self):
         '''
-        In Rhel Based Distro kernel build is failing as system config file
-        has crypto module . This work around disabled those so it allow to
-        build kernel
+        Distro specific config based kernel build can fail if config file
+        has trusted/module signature key options enabled. Modify the config
+        options in question to allow successful kernel build
         '''
         process.system("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYS/#&/g' .config",
                        shell=True, sudo=True)
