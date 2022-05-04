@@ -35,11 +35,12 @@ class smtstate_tool(Test):
         distro_ver = self.detected_distro.version
         distro_rel = self.detected_distro.release
         if distro_name == "rhel":
-            if (distro_ver < "8" or distro_rel < "4"):
-                self.cancel("smtstate tool is supported only after rhel8.4")
+            if (distro_ver == "7" or
+                    (distro_ver == "8" and distro_rel < "4")):
+                self.cancel("smtstate tool is supported only after RHEL8.4")
         elif distro_name == "SuSE":
-            if (distro_ver < 15 or distro_rel < 3):
-                self.cancel("smtstate tool is supported only after sles15 sp3")
+            if (distro_ver == "12" or (distro_ver == "15" and distro_rel < 3)):
+                self.cancel("smtstate tool is supported only after SLES15 SP3")
         else:
             self.cancel("Test case is supported only on RHEL and SLES")
 
