@@ -87,8 +87,8 @@ class Kernbench(Test):
         '''
         process.system("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYS/#&/g' .config",
                        shell=True, sudo=True)
-        process.system("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYRING/#&/g' .config",
-                       shell=True, sudo=True)
+        process.system("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYRING/#&/g' \
+                       .config", shell=True, sudo=True)
         process.system("sed -i 's/^.*CONFIG_MODULE_SIG_KEY/#&/g' .config",
                        shell=True, sudo=True)
         process.system("sed -i 's/^.*CONFIG_DEBUG_INFO_BTF/#&/g' .config",
