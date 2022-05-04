@@ -58,7 +58,7 @@ class NetworkVirtualization(Test):
         set up required packages and gather necessary test inputs
         '''
         self.install_packages()
-        self.hmc_ip = self.get_mcp_component("HMCIPAddr")
+        self.hmc_ip = wait.wait_for(lambda: self.get_mcp_component("HMCIPAddr"), timeout=30)
         if not self.hmc_ip:
             self.cancel("HMC IP not got")
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default=None)
