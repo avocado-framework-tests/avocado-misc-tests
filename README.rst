@@ -71,3 +71,13 @@ References:
 1. https://github.com/avocado-framework/avocado
 2. https://avocado-framework.readthedocs.io/en/77.0/guides/writer/chapters/writing.html#categorizing-tests
 3. https://avocado-framework.readthedocs.io/en/91.0/guides/contributor/chapters/runners.html
+
+Contact information:
+--------------------
+
+
+
+If looking for help like the real-time discussion  we are available on the IRC channel  based on time zone 
+
+
+IRC channel: irc.oftc.net #avocadoTest
