@@ -173,8 +173,9 @@ class kselftest(Test):
         Ex: -M (page merging)
         """
         ksm_test_dir = self.sourcedir + "/vm/"
+        ksm_test_bin = ksm_test_dir+"/ksm_tests"
         self.test_list = ["-M", "-Z", "-N", "-U", "-C"]
-        if os.path.exists(ksm_test_dir):
+        if os.path.exists(ksm_test_bin):
             os.chdir(ksm_test_dir)
             if(self.test_type == "-H" or self.test_type == "-P"):
                 arg_payload = " ".join(["./ksm_tests", self.test_type,
