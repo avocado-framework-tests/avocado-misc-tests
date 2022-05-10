@@ -6,42 +6,62 @@ run_type: !mux
         location: "https://github.com/torvalds/linux/archive/master.zip"
 component: !mux
     alignment:
-        comp: 'powerpc/alignment'
+        comp: 'powerpc'
+        subtest: 'alignment'
     benchmarks:
-        comp: 'powerpc/benchmarks'
+        comp: 'powerpc'
+        subtest: 'benchmarks'
     cache_shape:
-        comp: 'powerpc/cache_shape'
+        comp: 'powerpc'
+        subtest: 'cache_shape'
     copyloops:
-        comp: 'powerpc/copyloops'
+        comp: 'powerpc'
+        subtest: 'copyloops'
     dscr:
-       comp: 'powerpc/dscr'
+       comp: 'powerpc'
+       subtest: 'dscr'
     eeh:
-       comp: 'powerpc/eeh'
+       comp: 'powerpc'
+       subtest: 'eeh'
     math:
-       comp: 'powerpc/math'
+       comp: 'powerpc'
+       subtest: 'math'
     mm:
-       comp: 'powerpc/mm'
+       comp: 'powerpc'
+       subtest: 'mm'
     nx-gzip:
-       comp: 'powerpc/nx-gzip'
+       comp: 'powerpc'
+       subtest: 'nx-gzip'
     pmu:
-       comp: 'powerpc/pmu'
+       comp: 'powerpc'
+       subtest: 'pmu/ebb'
     primitives:
-       comp: 'powerpc/primitives'
+       comp: 'powerpc'
+       subtest: 'primitives'
     ptrace:
-       comp: 'powerpc/ptrace'
+       comp: 'powerpc'
+       subtest: 'ptrace'
     scripts:
-       comp: 'powerpc/scripts'
+       comp: 'powerpc'
+       subtest: 'scripts'
     security:
-       comp: 'powerpc/security'
+       comp: 'powerpc'
+       subtest: 'security'
     signal:
-       comp: 'powerpc/signal'
+       comp: 'powerpc'
+       subtest: 'signal'
     stringloops:
-       comp: 'powerpc/stringloops'
+       comp: 'powerpc'
+       subtest: 'stringloops'
     switch_endian:
-       comp: 'powerpc/switch_endian'
+       comp: 'powerpc'
+       subtest: 'switch_endian'
     syscalls:
-       comp: 'powerpc/syscalls'
+       comp: 'powerpc'
+       subtest: 'syscalls'
     tm:
-       comp: 'powerpc/tm'
+       comp: 'powerpc'
+       subtest: 'tm'
     vphn:
-       comp: 'powerpc/vphn'
+       comp: 'powerpc'
+       subtest: 'vphn'
