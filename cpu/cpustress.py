@@ -302,3 +302,4 @@ class cpustresstest(Test):
             "ppc64_cpu --smt=off && ppc64_cpu --smt=on && ppc64_cpu --smt=%s"
             % self.curr_smt, shell=True)
         self.__online_cpus(totalcpus)
+        process.run("pkill -f \"/bin/sh -c while :; do :; done\"")
