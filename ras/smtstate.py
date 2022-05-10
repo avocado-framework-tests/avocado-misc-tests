@@ -64,6 +64,6 @@ class smtstate_tool(Test):
                 self.log.info("SMT level after load = %s" %
                               process.system_output("ppc64_cpu --smt"))
                 if smt_initial == smt_final:
-                    print("SMT load is successful for SMT=%s" % j)
+                    self.log.info("SMT load is successful for SMT=%s" % j)
                 else:
                     self.fail("smt load failed")
