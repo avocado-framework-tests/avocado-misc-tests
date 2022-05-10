@@ -28,15 +28,19 @@ class smtstate_tool(Test):
 
         sm = SoftwareManager()
         self.detected_distro = distro.detect()
-        if not sm.check_installed("powerpc-utils") and not sm.install("powerpc-utils"):
+        if not sm.check_installed("powerpc-utils") and \
+                not sm.install("powerpc-utils"):
             self.cancel("powerpc-utils is needed for the test to be run")
         distro_name = self.detected_distro.name
+        distro_ver = self.detected_distro.version
+        distro_rel = self.detected_distro.release
         if distro_name == "rhel":
-            if (self.detected_distro.version < "8" or self.detected_distro.release < "4"):
-                self.cancel("smtstate tool is supported only after rhel8.4")
+            if (distro_ver == "7" or
+                    (distro_ver == "8" and distro_rel < "4")):
+                self.cancel("smtstate tool is supported only after RHEL8.4")
         elif distro_name == "SuSE":
-            if (self.detected_distro.version < 15 or self.detected_distro.release < 3):
-                self.cancel("smtstate tool is supported only after sles15 sp3")
+            if (distro_ver == "12" or (distro_ver == "15" and distro_rel < 3)):
+                self.cancel("smtstate tool is supported only after SLES15 SP3")
         else:
             self.cancel("Test case is supported only on RHEL and SLES")
 
