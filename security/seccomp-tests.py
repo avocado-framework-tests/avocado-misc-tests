@@ -41,10 +41,10 @@ class SecComp(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        url = "https://github.com/seccomp/libseccomp/archive/master.zip"
+        url = "https://github.com/seccomp/libseccomp/archive/refs/heads/main.zip"
         tarball = self.fetch_asset(url, expire='7d')
         archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'libseccomp-master')
+        self.sourcedir = os.path.join(self.workdir, 'libseccomp-main')
         os.chdir(self.sourcedir)
         process.run("./autogen.sh")
         process.run("./configure")
