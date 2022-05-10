@@ -1,0 +1,24 @@
+skip_dangerous: True
+scratch_mnt: '/mnt/scratch'
+test_mnt: '/mnt/test'
+disk_mnt: '/mnt/loop-device'
+test_range: '54-55'
+fs_type: !mux
+  fs_btrfs:
+    fs: 'btrfs'
+    mkfs_opt: " -s 4096"
+    gen_exclude: true
+loop_type: !mux
+    type: 'loop'
+    loop_size: '7GiB'
+    # Option to provide disk for loop device creation,
+    # Uses '/' by default for file creation
+    disk: "null"
+run_type: !mux
+  upstream:
+    # run_type can either be "upstream" or "distro". When using upstream
+    # fsprgos are pulled and built from upstream URLs instead of distro releases.
+    run_type: 'upstream'
+    xfsprogs_url: 'https://git.kernel.org/pub/scm/fs/xfs/xfsprogs-dev.git'
+    e2fsprogs_url: 'https://git.kernel.org/pub/scm/fs/ext2/e2fsprogs.git'
+    btrfsprogs_url: 'https://git.kernel.org/pub/scm/linux/kernel/git/kdave/btrfs-progs.git'
