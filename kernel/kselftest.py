@@ -80,6 +80,8 @@ class kselftest(Test):
                          'libhugetlbfs-devel'])
             dis_ver = int(detected_distro.version)
             if detected_distro.name == 'rhel' and dis_ver >= 9:
+                packages_remove = ['libhugetlbfs-devel']
+                deps = list(set(deps)-set(packages_remove))
                 deps.extend(['fuse3-devel'])
             else:
                 deps.extend(['fuse-devel'])
