@@ -82,11 +82,13 @@ class Bonding(Test):
         for self.host_interface in self.host_interfaces:
             if self.host_interface not in interfaces:
                 self.cancel("interface is not available")
-        self.peer_first_ipinterface = self.params.get("peer_ip", default="")
+        self.peer_first_ipinterface = self.params.get("peer_ip", default="").split(" ")
         if not self.peer_interfaces or self.peer_first_ipinterface == "":
             self.cancel("peer machine should available")
         self.ipaddr = self.params.get("host_ips", default="").split(" ")
         self.netmask = self.params.get("netmask", default="")
+        self.peer_bond_needed = self.params.get("peer_bond_needed",
+                                                default=False)
         self.localhost = LocalHost()
         if 'setup' in str(self.name.name):
             for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
@@ -98,6 +100,21 @@ class Bonding(Test):
                 except Exception:
                     networkinterface.save(ipaddr, self.netmask)
                 networkinterface.bring_up()
+            for ipaddr, interface in zip(self.peer_first_ipinterface,
+                                         self.peer_interfaces):
+                if self.peer_bond_needed:
+                    self.remotehost = RemoteHost(
+                                    self.peer_public_ip,
+                                    self.user, password=self.password)
+                    peer_networkinterface = NetworkInterface(interface,
+                                                             self.remotehost)
+                    try:
+                        peer_networkinterface.flush_ipaddr()
+                        peer_networkinterface.add_ipaddr(ipaddr, self.netmask)
+                        peer_networkinterface.save(ipaddr, self.netmask)
+                    except Exception:
+                        peer_networkinterface.save(ipaddr, self.netmask)
+                    networkinterface.bring_up()
         self.miimon = self.params.get("miimon", default="100")
         self.fail_over_mac = self.params.get("fail_over_mac",
                                              default="2")
@@ -108,8 +125,6 @@ class Bonding(Test):
         self.bond_dir = os.path.join(self.net_path, self.bond_name)
         self.bonding_slave_file = "%s/bonding/slaves" % self.bond_dir
         self.bonding_masters_file = "%s/bonding_masters" % self.net_path
-        self.peer_bond_needed = self.params.get("peer_bond_needed",
-                                                default=False)
         self.peer_wait_time = self.params.get("peer_wait_time", default=5)
         self.sleep_time = int(self.params.get("sleep_time", default=5))
         self.mtu = self.params.get("mtu", default=1500)
@@ -494,17 +509,6 @@ class Bonding(Test):
                 (self.gateway)
             process.system(cmd, shell=True, ignore_status=True)
 
-        if self.peer_bond_needed:
-            self.bond_remove("peer")
-            for val in self.peer_interfaces:
-                cmd = "ifdown %s; ifup %s; sleep %s"\
-                      % (val, val, self.peer_wait_time)
-                output = self.session.cmd(cmd)
-                if not output.exit_status == 0:
-                    self.log.warn("unable to bring to original state in peer")
-                time.sleep(self.sleep_time)
-        self.error_check()
-
         for ipaddr, host_interface in zip(self.ipaddr, self.host_interfaces):
             networkinterface = NetworkInterface(host_interface, self.localhost)
             try:
@@ -519,6 +523,19 @@ class Bonding(Test):
                 networkinterface.restore_from_backup()
             except Exception:
                 self.log.info("backup file not availbale, could not restore file.")
+
+        detected_distro = distro.detect()
+        if detected_distro.name == "rhel":
+            cmd = "systemctl restart NetworkManager.service"
+        elif detected_distro.name == "Ubuntu":
+            cmd = "systemctl restart networking"
+        else:
+            cmd = "systemctl restart network"
+        if process.system(cmd, shell=True, ignore_status=True) != 0:
+            self.fail("Failed to restart the network service on host")
+        output = self.session_public_ip.cmd(cmd)
+        if not output.exit_status == 0:
+            self.log.warn("Failed to restart the network service on peer")
 
         try:
             for interface in self.peer_interfaces:
