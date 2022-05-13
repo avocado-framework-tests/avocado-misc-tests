@@ -132,7 +132,7 @@ class Bonding(Test):
             self.session = Session(self.peer_public_ip, user=self.user,
                                    password=self.password)
         else:
-            self.session = Session(self.peer_first_ipinterface, user=self.user,
+            self.session = Session(self.peer_first_ipinterface[0], user=self.user,
                                    password=self.password)
 
         if not self.session.connect():
@@ -159,7 +159,7 @@ class Bonding(Test):
             self.remotehost = RemoteHost(self.peer_public_ip, self.user,
                                          password=self.password)
         else:
-            self.remotehost = RemoteHost(self.peer_first_ipinterface, self.user,
+            self.remotehost = RemoteHost(self.peer_first_ipinterface[0], self.user,
                                          password=self.password)
 
         if 'setup' in str(self.name.name):
@@ -194,7 +194,7 @@ class Bonding(Test):
             interface = self.host_interfaces[0]
         else:
             interface = self.bond_name
-        cmd = "ip addr show  | grep %s" % self.peer_first_ipinterface
+        cmd = "ip addr show  | grep %s" % self.peer_first_ipinterface[0]
         output = self.session.cmd(cmd)
         result = ""
         result = result.join(output.stdout.decode("utf-8"))
@@ -254,7 +254,7 @@ class Bonding(Test):
                                          self.bonding_masters_file)
             cmd += 'rmmod bonding;'
             cmd += 'ip addr add %s/%s dev %s;ip link set %s up;sleep 5;'\
-                   % (self.peer_first_ipinterface, self.net_mask[0],
+                   % (self.peer_first_ipinterface[0], self.net_mask[0],
                       self.peer_interfaces[0], self.peer_interfaces[0])
             output = self.session.cmd(cmd)
             if not output.exit_status == 0:
@@ -267,7 +267,7 @@ class Bonding(Test):
         # need some time for specific interface before ping
         time.sleep(10)
         cmd = "ping -I %s %s -c 5"\
-              % (self.bond_name, self.peer_first_ipinterface)
+              % (self.bond_name, self.peer_first_ipinterface[0])
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             return False
         return True
@@ -452,7 +452,7 @@ class Bonding(Test):
             for val in self.peer_interfaces:
                 cmd += 'ip link set %s up;' % val
             cmd += 'ip addr add %s/%s dev %s;ip link set %s up;sleep 5;'\
-                   % (self.peer_first_ipinterface, self.net_mask[0],
+                   % (self.peer_first_ipinterface[0], self.net_mask[0],
                       self.bond_name, self.bond_name)
             output = self.session.cmd(cmd)
             if not output.exit_status == 0:
@@ -494,17 +494,6 @@ class Bonding(Test):
                 (self.gateway)
             process.system(cmd, shell=True, ignore_status=True)
 
-        if self.peer_bond_needed:
-            self.bond_remove("peer")
-            for val in self.peer_interfaces:
-                cmd = "ifdown %s; ifup %s; sleep %s"\
-                      % (val, val, self.peer_wait_time)
-                output = self.session.cmd(cmd)
-                if not output.exit_status == 0:
-                    self.log.warn("unable to bring to original state in peer")
-                time.sleep(self.sleep_time)
-        self.error_check()
-
         for ipaddr, host_interface in zip(self.ipaddr, self.host_interfaces):
             networkinterface = NetworkInterface(host_interface, self.localhost)
             try:
@@ -519,6 +508,24 @@ class Bonding(Test):
                 networkinterface.restore_from_backup()
             except Exception:
                 self.log.info("backup file not availbale, could not restore file.")
+
+        if self.peer_bond_needed:
+            self.bond_remove("peer")
+            for ipaddr, interface in zip(self.peer_first_ipinterface,
+                                         self.peer_interfaces):
+                self.remotehost = RemoteHost(
+                                self.peer_public_ip, self.user,
+                                password=self.password)
+                peer_networkinterface = NetworkInterface(interface,
+                                                         self.remotehost)
+                try:
+                    peer_networkinterface.flush_ipaddr()
+                    peer_networkinterface.add_ipaddr(ipaddr, self.netmask)
+                    peer_networkinterface.bring_up()
+                except Exception:
+                    peer_networkinterface.save(ipaddr, self.netmask)
+                time.sleep(self.sleep_time)
+        self.error_check()
 
         try:
             for interface in self.peer_interfaces:
