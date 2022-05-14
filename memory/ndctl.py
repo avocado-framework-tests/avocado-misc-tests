@@ -35,6 +35,7 @@ from avocado.utils import memory
 from avocado.utils import partition
 from avocado.utils import pmem
 from avocado.utils import git
+from avocado.utils.git import GitRepoHelper
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -130,6 +131,17 @@ class NdctlTest(Test):
                 return os.path.join(sourcedir, "fio")
         return pkg
 
+    def autotools_build_system(self):
+        process.run('./autogen.sh', sudo=True, shell=True)
+        process.run("./configure CFLAGS='-g -O2' --prefix=/usr "
+                    "--disable-docs "
+                    "--sysconfdir=/etc --libdir="
+                    "/usr/lib64", shell=True, sudo=True)
+        build.make(".")
+
+        self.ndctl = os.path.abspath('./ndctl/ndctl')
+        self.daxctl = os.path.abspath('./daxctl/daxctl')
+
     def meson_build_system(self, deps):
         if self.dist.name == 'SuSE':
             deps.extend(['xmlto', 'libgudev-1_0-devel', 'libuuid-devel',
@@ -197,15 +209,15 @@ class NdctlTest(Test):
             os.chdir(self.teststmpdir)
 
             if ndctl_project_version:
+                ndctl_tag_name = "v" + ndctl_project_version
+
+                # Checkout the desired tag
+                git_helper = GitRepoHelper(
+                    url, destination_dir=self.teststmpdir)
+                git_helper.checkout(branch=ndctl_tag_name, commit=None)
+
                 if (float(ndctl_project_version) < 73):
-                    process.run('./autogen.sh', sudo=True, shell=True)
-                    process.run("./configure CFLAGS='-g -O2' --prefix=/usr "
-                                "--disable-docs "
-                                "--sysconfdir=/etc --libdir="
-                                "/usr/lib64", shell=True, sudo=True)
-                    build.make(".")
-                    self.ndctl = os.path.abspath('./ndctl/ndctl')
-                    self.daxctl = os.path.abspath('./daxctl/daxctl')
+                    self.autotools_build_system()
                 else:
                     self.meson_build_system(deps)
 
