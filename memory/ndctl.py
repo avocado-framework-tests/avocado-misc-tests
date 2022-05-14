@@ -131,7 +131,22 @@ class NdctlTest(Test):
                 return os.path.join(sourcedir, "fio")
         return pkg
 
+    def copyutil(self, file_name, iniparser_dir):
+        shutil.copy(file_name, iniparser_dir)
+
     def autotools_build_system(self):
+        # Check if /usr/include/iniparser directory is present or not
+        # If not present then create it and then  copy the iniparser.h
+        # and dictionary.h headers to /usr/include/iniparser/
+
+        iniparser_dir = "/usr/include/iniparser/"
+        if not os.path.exists(iniparser_dir):
+            os.makedirs(iniparser_dir)
+
+        for file_name in ['/usr/include/iniparser.h',
+                          '/usr/include/dictionary.h']:
+            self.copyutil(file_name, iniparser_dir)
+
         process.run('./autogen.sh', sudo=True, shell=True)
         process.run("./configure CFLAGS='-g -O2' --prefix=/usr "
                     "--disable-docs "
@@ -151,12 +166,11 @@ class NdctlTest(Test):
         elif self.dist.name == 'rhel':
             # Skipping this for now, due to non-availibility of dependednt
             # packages.
-            self.cancel("Cancelling the test due to the non-availability of
-                        dependent packages.")
+            self.cancel("Cancelling the test due to the non-availability of"
+                        "dependent packages.")
 
         for pkg in deps:
-            if not self.smm.check_installed(pkg) and not \
-                    self.smm.install(pkg):
+            if not self.smm.check_installed(pkg) and not self.smm.install(pkg):
                 self.cancel('%s is needed for the test to be run' % pkg)
 
         process.run("meson setup build", sudo=True, shell=True)
@@ -174,7 +188,7 @@ class NdctlTest(Test):
         self.preserve_setup = self.params.get('preserve_change', default=False)
         self.mode_to_use = self.params.get('modes', default='fsdax')
         location = self.params.get('location', default='.')
-        git_branch = self.params.get('git_branch', default='pending')
+
         ndctl_project_version = self.params.get(
             'ndctl_project_version', default='')
         url = "https://github.com/pmem/ndctl.git"
@@ -202,14 +216,13 @@ class NdctlTest(Test):
                         self.smm.install(pkg):
                     self.cancel('%s is needed for the test to be run' % pkg)
 
-            # Using get_repo() API
-            # Clone the branch
-            git.get_repo(url, branch=git_branch,
-                         destination_dir=self.teststmpdir)
-            os.chdir(self.teststmpdir)
-
             if ndctl_project_version:
                 ndctl_tag_name = "v" + ndctl_project_version
+
+                # Clone the 'main' branch
+                git.get_repo(url, branch='main',
+                             destination_dir=self.teststmpdir)
+                os.chdir(self.teststmpdir)
 
                 # Checkout the desired tag
                 git_helper = GitRepoHelper(
@@ -223,6 +236,11 @@ class NdctlTest(Test):
 
             # default to the meson way of building ndctl library
             else:
+                # Clone the 'pending' branch
+                git_branch = self.params.get('git_branch', default='pending')
+                git.get_repo(url, branch=git_branch,
+                             destination_dir=self.teststmpdir)
+                os.chdir(self.teststmpdir)
                 self.meson_build_system(deps)
 
         elif self.package == 'local':
