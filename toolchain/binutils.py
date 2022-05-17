@@ -58,7 +58,7 @@ class Binutils(Test):
             needed_deps.extend(['build-essential'])
         for pkg in needed_deps:
             self.check_install(pkg)
-        run_type = self.params.get("type", default="upstream")
+        run_type = self.params.get("type", default="distro")
         # Extract - binutils
         # Source: https://ftp.gnu.org/gnu/binutils/binutils-2.26.tar.bz2
         if run_type == "upstream":

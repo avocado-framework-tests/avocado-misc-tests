@@ -41,7 +41,7 @@ class Libpfm(Test):
         for pkg in pkgs:
             if not softm.check_installed(pkg) and not softm.install(pkg):
                 self.cancel("%s is needed for the test to be run" % pkg)
-        test_type = self.params.get('type', default='upstream')
+        test_type = self.params.get('type', default='distro')
 
         if test_type == 'upstream':
             tarball = self.fetch_asset(

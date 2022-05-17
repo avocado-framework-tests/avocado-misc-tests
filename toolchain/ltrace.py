@@ -70,7 +70,7 @@ class Ltrace(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("Fail to install %s required for this test." %
                             package)
-        run_type = self.params.get("type", default="upstream")
+        run_type = self.params.get("type", default="distro")
         if run_type == "upstream":
             source = self.params.get('url', default="https://gitlab.com/"
                                      "cespedes/ltrace.git")

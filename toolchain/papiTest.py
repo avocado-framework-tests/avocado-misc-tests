@@ -36,7 +36,7 @@ class papitest(Test):
         for package in ['gcc', 'make']:
             if not softm.check_installed(package) and not softm.install(package):
                 self.cancel("%s is needed for the test to be run" % package)
-        test_type = self.params.get('type', default='upstream')
+        test_type = self.params.get('type', default='distro')
 
         if test_type == 'upstream':
             git.get_repo('https://github.com/arm-hpc/papi.git',

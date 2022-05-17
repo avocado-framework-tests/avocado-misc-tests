@@ -34,7 +34,7 @@ class Glibc(Test):
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        run_type = self.params.get('type', default='upstream')
+        run_type = self.params.get('type', default='distro')
         if run_type == "upstream":
             url = 'https://github.com/bminor/glibc/archive/master.zip'
             tarball = self.fetch_asset("glibc.zip", locations=[url],
