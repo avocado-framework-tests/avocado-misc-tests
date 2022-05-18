@@ -440,7 +440,7 @@ class NetworkVirtualization(Test):
 
         self.session = Session(self.vios_ip, user=self.vios_user,
                                password=self.vios_pwd)
-        if not self.session.connect():
+        if not wait.wait_for(self.session.connect, timeout=30):
             self.fail("Failed connecting to VIOS")
 
         cmd = "ioscli lsmap -all -vnic -cpid %s" % self.lpar_id
@@ -465,11 +465,14 @@ class NetworkVirtualization(Test):
             self.validate_vios_command(
                 'rmdev -l %s' % vnic_backing_device, 'Defined')
 
-        after = self.get_active_device_logport(self.slot_num[0])
-        self.log.debug("Active backing device after: %s", after)
+        time.sleep(10)
 
-        if before == after:
-            self.fail("failover not occur")
+        for backing_dev in self.backing_dev_list().splitlines():
+            if backing_dev.startswith('%s,' % self.slot_num[0]):
+                backing_dev = backing_dev.strip('%s,"' % self.slot_num[0])
+                if 'Powered Off' not in backing_dev:
+                    self.fail("Failover did not occur")
+
         time.sleep(60)
 
         if vnic_backing_device:
