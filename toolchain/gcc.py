@@ -63,7 +63,7 @@ class GCC(Test):
         if dist.name == 'rhel' and \
            (int(dist.version) == 8 and int(dist.release) >= 6):
             packages.extend(['autogen', 'guile', 'guile-devel',
-                             'isl-devel', 'docbook5-style-xsl'])
+                             'isl-devel', 'docbook-style-xsl'])
 
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
