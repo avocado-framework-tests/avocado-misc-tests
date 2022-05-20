@@ -24,7 +24,7 @@ import re
 from avocado import Test
 from avocado.utils import process, distro, cpu, genio
 from avocado import skipIf
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 IS_POWER_NV = 'PowerNV' not in open('/proc/cpuinfo', 'r').read()
 

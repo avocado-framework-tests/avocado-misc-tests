@@ -22,7 +22,7 @@ import shutil
 from avocado import Test
 from avocado import skipIf
 from avocado.utils import process, build, memory, distro, genio
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 SINGLE_NODE = len(memory.numa_nodes_with_memory()) < 2
 

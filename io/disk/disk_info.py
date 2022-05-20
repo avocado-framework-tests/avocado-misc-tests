@@ -29,7 +29,7 @@ from avocado.utils import genio
 from avocado.utils import distro
 from avocado.utils import multipath
 from avocado.utils.partition import Partition
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.process import CmdError
 from avocado.utils.partition import PartitionError
 

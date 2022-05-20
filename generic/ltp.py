@@ -26,7 +26,7 @@ from avocado.utils import build, distro, genio
 from avocado.utils import process, archive
 from avocado.utils.partition import Partition
 
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 def clear_dmesg():

@@ -36,7 +36,7 @@ from avocado.utils import partition
 from avocado.utils import pmem
 from avocado.utils import git
 from avocado.utils.git import GitRepoHelper
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class NdctlTest(Test):

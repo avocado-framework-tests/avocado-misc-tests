@@ -20,7 +20,7 @@ import platform
 import multiprocessing
 from avocado import Test
 from avocado.utils import process, memory, build, archive
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 MEM_PATH = '/sys/devices/system/memory'

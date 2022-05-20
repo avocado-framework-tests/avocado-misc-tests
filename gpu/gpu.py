@@ -18,7 +18,7 @@ import os
 import shutil
 from avocado import Test, skipUnless
 from avocado.utils import build, process, distro, git
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_POWER9 = 'POWER9' in open('/proc/cpuinfo', 'r').read()

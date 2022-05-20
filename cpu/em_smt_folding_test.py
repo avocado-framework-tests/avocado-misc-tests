@@ -22,7 +22,7 @@ from threading import Thread
 from avocado import Test
 from avocado.utils import archive, build
 from avocado.utils import process, cpu, distro, genio
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class SmtFolding(Test):

@@ -19,7 +19,7 @@ import platform
 from avocado import Test
 from avocado import skipIf
 from avocado.utils import process, distro
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 # TODO : Logic need to change when we have lib fix

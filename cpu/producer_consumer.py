@@ -22,7 +22,7 @@ import re
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import build, distro, git
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class Producer_Consumer(Test):

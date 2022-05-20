@@ -24,7 +24,7 @@ from avocado.utils import process
 from avocado.utils import cpu
 from avocado.utils import distro
 from avocado.utils import genio
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from math import ceil
 
 

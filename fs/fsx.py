@@ -16,7 +16,7 @@
 import os
 from avocado import Test
 from avocado.utils import process, genio
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.partition import Partition
 
 
