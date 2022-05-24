@@ -56,8 +56,11 @@ class Sosreport(Test):
         if not sm.check_installed(sos_pkg) and not sm.install(sos_pkg):
             self.cancel(
                 "Package %s is missing and could not be installed" % sos_pkg)
-        if dist.name == "rhel" and dist.version > "7" and dist.release >= "4":
-            self.sos_cmd = "sos report"
+        if dist.name == "rhel":
+            if dist.version <= "7" and dist.release <= "4":
+                self.sos_cmd = "sosreport"
+            else:
+                self.sos_cmd = "sos report"
         else:
             self.sos_cmd = "sosreport"
 
@@ -170,8 +173,8 @@ class Sosreport(Test):
         self.run_cmd("%s --batch --tmp-dir=%s -p boot,memory" %
                      (self.sos_cmd, directory_name))
 
-        if "java" not in self.run_cmd_out("%s --batch --tmp-dir=%s -p webserver | "
-                                          "grep java" % (self.sos_cmd, directory_name)):
+        if "perl" not in self.run_cmd_out("%s --batch --tmp-dir=%s -p webserver | "
+                                          "grep perl" % (self.sos_cmd, directory_name)):
             self.is_fail += 1
             self.log.info("--profile option failed")
 
