@@ -169,6 +169,7 @@ class PPC64Test(Test):
         """
         Sets back SMT to original value as was before the test.
         """
-        process.system_output("%s=%s" % (self.smt_str,
-                                         self.curr_smt), shell=True)
-        process.system_output("dmesg")
+        if hasattr(self, 'smt_str'):
+            process.system_output("%s=%s" % (self.smt_str,
+                                             self.curr_smt), shell=True)
+            process.system_output("dmesg")
