@@ -133,13 +133,18 @@ class NetworkVirtualization(Test):
               ' -r lpar --filter lpar_names=' + self.lpar + \
               ' -F lpar_id'
         self.lpar_id = self.session_hmc.cmd(cmd).stdout_text.split()[0]
+        if not self.lpar_id.isnumeric():
+            self.fail("Could not get LPAR ID")
         self.vios_id = []
         for vios_name in self.vios_name:
             cmd = 'lssyscfg -m ' + self.server + \
                   ' -r lpar --filter lpar_names=' + vios_name + \
                   ' -F lpar_id'
-            self.vios_id.append(self.session_hmc.cmd(
-                cmd).stdout_text.split()[0])
+            __vios_id = self.session_hmc.cmd(cmd).stdout_text.split()[0]
+            if __vios_id.isnumeric():
+                self.vios_id.append(__vios_id)
+            else:
+                self.fail("Could not get VIOS ID of %s" % __vios_id)
         cmd = 'lshwres -m %s -r sriov --rsubtype adapter -F \
               phys_loc:adapter_id' % self.server
         adapter_id_output = self.session_hmc.cmd(cmd).stdout_text
