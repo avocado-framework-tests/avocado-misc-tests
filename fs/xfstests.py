@@ -468,8 +468,8 @@ class Xfstests(Test):
 
     def tearDown(self):
         if self.detected_distro.name is not 'SuSE':
-            process.system('userdel 123456-fsgqa', sudo=True)
-            process.system('userdel fsgqa', sudo=True)
+            process.system('userdel -f 123456-fsgqa', sudo=True)
+            process.system('userdel -f fsgqa', sudo=True)
         else:
             process.system('userdel -r -f fsgqa', sudo=True)
             process.system('groupdel fsgqa', sudo=True)
