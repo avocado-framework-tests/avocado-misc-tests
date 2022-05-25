@@ -19,8 +19,11 @@ import subprocess
 import re
 import platform
 from avocado import Test
+from avocado import skipIf
 from avocado.utils import process, distro, cpu
 from avocado.utils.software_manager import SoftwareManager
+
+IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 
 
 class cpuidle(Test):
@@ -28,15 +31,8 @@ class cpuidle(Test):
     Test to validate the number of cpu idle states
     """
 
+    @skipIf(not IS_POWER_NV, "This test is not supported on PowerVM platform")
     def setUp(self):
-        """
-        Verify it is baremetal
-        Install the cpupower tool
-
-        :avocado: tags=cpu,power
-        """
-        if not os.path.exists('/proc/device-tree/ibm,opal/power-mgt'):
-            self.cancel("Supported only on Power Non Virutalized environment")
         smm = SoftwareManager()
         detected_distro = distro.detect()
         if 'Ubuntu' in detected_distro.name:

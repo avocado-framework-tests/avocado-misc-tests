@@ -45,14 +45,14 @@ class rt_tests(Test):
         if detected_distro.name == "Ubuntu":
             deps.append("build-essential")
             deps.append("libnuma-dev")
-        elif detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
+        elif detected_distro.name in ['centos', 'fedora', 'rhel']:
             deps.append("numactl-devel")
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        tarball = self.fetch_asset(
-            "https://www.kernel.org/pub/linux/utils/rt-tests/"
-            "rt-tests-1.0.tar.gz")
+        url = 'https://www.kernel.org/pub/linux/utils/rt-tests/rt-tests-1.10.tar.gz'
+        rttest_url = self.params.get("rttest_url", default=url)
+        tarball = self.fetch_asset(rttest_url)
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(
             self.workdir, os.path.basename(tarball.split('.tar.')[0]))

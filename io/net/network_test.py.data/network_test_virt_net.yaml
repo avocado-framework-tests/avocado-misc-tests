@@ -5,6 +5,7 @@ peer_user: "root"
 peer_password: "********"
 host_ip:
 netmask:
+hbond:
 mtu: !mux
     1500:
         mtu: 1500

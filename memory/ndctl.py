@@ -34,6 +34,8 @@ from avocado.utils import genio
 from avocado.utils import memory
 from avocado.utils import partition
 from avocado.utils import pmem
+from avocado.utils import git
+from avocado.utils.git import GitRepoHelper
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -77,7 +79,8 @@ class NdctlTest(Test):
         Note: Function to be used after creation of namespace(s)
         """
         idx = re.findall(r'\d+', region)[0]
-        map_align = int(genio.read_one_line("/sys/bus/nd/devices/pfn%s.0/align" % idx))
+        map_align = int(genio.read_one_line(
+            "/sys/bus/nd/devices/pfn%s.0/align" % idx))
         namespaces = self.plib.run_ndctl_list('-N -r %s' % region)
         for ns in namespaces:
             ns_name = self.plib.run_ndctl_list_val(ns, 'dev')
@@ -97,10 +100,12 @@ class NdctlTest(Test):
         if not os.path.exists("/sys/bus/nd/devices/region0/align"):
             size_align = 1
         else:
-            size_align = int(genio.read_one_line("/sys/bus/nd/devices/region0/align"), 16)
+            size_align = int(genio.read_one_line(
+                "/sys/bus/nd/devices/region0/align"), 16)
         if not os.path.exists("/sys/bus/nd/devices/pfn0.0/align"):
             self.cancel("Cannot determine the mapping alignment size")
-        map_align = int(genio.read_one_line("/sys/bus/nd/devices/pfn0.0/align"))
+        map_align = int(genio.read_one_line(
+            "/sys/bus/nd/devices/pfn0.0/align"))
         return self.lcm(size_align, map_align)
 
     def build_fio(self):
@@ -126,6 +131,53 @@ class NdctlTest(Test):
                 return os.path.join(sourcedir, "fio")
         return pkg
 
+    def copyutil(self, file_name, iniparser_dir):
+        shutil.copy(file_name, iniparser_dir)
+
+    def autotools_build_system(self):
+        # Check if /usr/include/iniparser directory is present or not
+        # If not present then create it and then  copy the iniparser.h
+        # and dictionary.h headers to /usr/include/iniparser/
+
+        iniparser_dir = "/usr/include/iniparser/"
+        if not os.path.exists(iniparser_dir):
+            os.makedirs(iniparser_dir)
+
+        for file_name in ['/usr/include/iniparser.h',
+                          '/usr/include/dictionary.h']:
+            self.copyutil(file_name, iniparser_dir)
+
+        process.run('./autogen.sh', sudo=True, shell=True)
+        process.run("./configure CFLAGS='-g -O2' --prefix=/usr "
+                    "--disable-docs "
+                    "--sysconfdir=/etc --libdir="
+                    "/usr/lib64", shell=True, sudo=True)
+        build.make(".")
+
+        self.ndctl = os.path.abspath('./ndctl/ndctl')
+        self.daxctl = os.path.abspath('./daxctl/daxctl')
+
+    def meson_build_system(self, deps):
+        if self.dist.name == 'SuSE':
+            deps.extend(['xmlto', 'libgudev-1_0-devel', 'libuuid-devel',
+                         'libiniparser-devel', 'libiniparser1',
+                         'ruby2.5-rubygem-asciidoctor-doc',
+                         'systemd-rpm-macros', 'pkg-config', 'meson', 'cmake'])
+        elif self.dist.name == 'rhel':
+            # Skipping this for now, due to non-availibility of dependednt
+            # packages.
+            self.cancel("Cancelling the test due to the non-availability of"
+                        "dependent packages.")
+
+        for pkg in deps:
+            if not self.smm.check_installed(pkg) and not self.smm.install(pkg):
+                self.cancel('%s is needed for the test to be run' % pkg)
+
+        process.run("meson setup build", sudo=True, shell=True)
+        process.run("meson install -C build", sudo=True, shell=True)
+        self.ndctl = os.path.abspath('/usr/bin/ndctl')
+        self.daxctl = os.path.abspath('/usr/bin/daxctl')
+
     def setUp(self):
         """
         Build 'ndctl' and setup the binary.
@@ -135,6 +187,11 @@ class NdctlTest(Test):
         self.package = self.params.get('package', default='upstream')
         self.preserve_setup = self.params.get('preserve_change', default=False)
         self.mode_to_use = self.params.get('modes', default='fsdax')
+        location = self.params.get('location', default='.')
+
+        ndctl_project_version = self.params.get(
+            'ndctl_project_version', default='')
+        url = "https://github.com/pmem/ndctl.git"
 
         if self.dist.name not in ['SuSE', 'rhel']:
             self.cancel('Unsupported OS %s' % self.dist.name)
@@ -159,21 +216,37 @@ class NdctlTest(Test):
                         self.smm.install(pkg):
                     self.cancel('%s is needed for the test to be run' % pkg)
 
-            git_branch = self.params.get('git_branch', default='pending')
-            location = "https://github.com/pmem/ndctl/archive/"
-            location = location + git_branch + ".zip"
-            tarball = self.fetch_asset("ndctl.zip", locations=location,
-                                       expire='7d')
-            archive.extract(tarball, self.teststmpdir)
-            os.chdir("%s/ndctl-%s" % (self.teststmpdir, git_branch))
-            process.run('./autogen.sh', sudo=True, shell=True)
-            process.run("./configure CFLAGS='-g -O2' --prefix=/usr "
-                        "--disable-docs "
-                        "--sysconfdir=/etc --libdir="
-                        "/usr/lib64", shell=True, sudo=True)
-            build.make(".")
-            self.ndctl = os.path.abspath('./ndctl/ndctl')
-            self.daxctl = os.path.abspath('./daxctl/daxctl')
+            if ndctl_project_version:
+                ndctl_tag_name = "v" + ndctl_project_version
+
+                # Clone the 'main' branch
+                git.get_repo(url, branch='main',
+                             destination_dir=self.teststmpdir)
+                os.chdir(self.teststmpdir)
+
+                # Checkout the desired tag
+                git_helper = GitRepoHelper(
+                    url, destination_dir=self.teststmpdir)
+                git_helper.checkout(branch=ndctl_tag_name, commit=None)
+
+                if (float(ndctl_project_version) < 73):
+                    self.autotools_build_system()
+                else:
+                    self.meson_build_system(deps)
+
+            # default to the meson way of building ndctl library
+            else:
+                # Clone the 'pending' branch
+                git_branch = self.params.get('git_branch', default='pending')
+                git.get_repo(url, branch=git_branch,
+                             destination_dir=self.teststmpdir)
+                os.chdir(self.teststmpdir)
+                self.meson_build_system(deps)
+
+        elif self.package == 'local':
+            self.ndctl = os.path.abspath(os.path.join(location, 'ndctl/ndctl'))
+            self.daxctl = os.path.abspath(
+                os.path.join(location, 'daxctl/daxctl'))
         else:
             deps.extend(['ndctl'])
             if self.dist.name == 'rhel':
@@ -226,13 +299,15 @@ class NdctlTest(Test):
             health = self.plib.run_ndctl_list_val(dimm, 'health')
             nmem = self.plib.run_ndctl_list_val(dimm, 'dev')
             region = "region%s" % re.findall(r'\d+', nmem)[0]
-            dev_type = genio.read_one_line("/sys/bus/nd/devices/%s/devtype" % region)
+            dev_type = genio.read_one_line(
+                "/sys/bus/nd/devices/%s/devtype" % region)
             if not health:
                 self.cancel("kernel/ndctl does not support health reporting")
             if dev_type == "nd_pmem":
                 if 'life_used_percentage' not in health:
                     self.fail("life_used_percentage missing for HMS")
-                self.log.info("%s life is %s", nmem, health['life_used_percentage'])
+                self.log.info("%s life is %s", nmem,
+                              health['life_used_percentage'])
             if 'health_state' in health:
                 if health['health_state'] != "ok":
                     self.log.warn("%s health is bad", nmem)
@@ -508,7 +583,8 @@ class NdctlTest(Test):
         self.plib.destroy_namespace()
         self.log.info("Creating sector namespace using %s", region)
         self.plib.create_namespace(region=region, mode='sector')
-        ns_sec_dev = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list()[0], 'dev')
+        ns_sec_dev = self.plib.run_ndctl_list_val(
+            self.plib.run_ndctl_list()[0], 'dev')
         self.plib.disable_namespace(namespace=ns_sec_dev)
         self.log.info("Checking BTT metadata")
         if process.system("%s check-namespace %s" % (self.ndctl, ns_sec_dev),
@@ -523,9 +599,11 @@ class NdctlTest(Test):
             self.fail("Numa node entries not found!")
         for val in regions:
             reg = self.plib.run_ndctl_list_val(val, 'dev')
-            numa = genio.read_one_line('/sys/bus/nd/devices/%s/numa_node' % reg)
+            numa = genio.read_one_line(
+                '/sys/bus/nd/devices/%s/numa_node' % reg)
             # Check numa config in ndctl and sys interface
-            if len(self.plib.run_ndctl_list('-r %s -R -U %s' % (reg, numa))) != 1:
+            if len(self.plib.run_ndctl_list('-r %s -R -U %s'
+                                            % (reg, numa))) != 1:
                 self.fail('Region mismatch between ndctl and sys interface')
 
     @avocado.fail_on(pmem.PMemException)
@@ -546,14 +624,16 @@ class NdctlTest(Test):
                         region=region, mode='fsdax', size='64M')
 
             namespaces = self.plib.run_ndctl_list('-N -r %s' % region)
-            if not os.path.exists('/sys/bus/nd/devices/namespace0.0/numa_node'):
+            if not os.path.exists(
+                    '/sys/bus/nd/devices/namespace0.0/numa_node'):
                 self.fail("Numa node entries not found!")
             for val in namespaces:
                 ns_name = self.plib.run_ndctl_list_val(val, 'dev')
                 numa = genio.read_one_line(
                     '/sys/bus/nd/devices/%s/numa_node' % ns_name)
                 # Check numa config in ndctl and sys interface
-                if len(self.plib.run_ndctl_list('-N -n %s -U %s' % (ns_name, numa))) != 1:
+                if len(self.plib.run_ndctl_list('-N -n %s -U %s'
+                                                % (ns_name, numa))) != 1:
                     self.fail('Numa mismatch between ndctl and sys interface')
 
     @avocado.fail_on(pmem.PMemException)
@@ -566,7 +646,8 @@ class NdctlTest(Test):
         self.log.info("Using %s for testing labels", region)
         self.plib.disable_region(name=region)
         self.log.info("Filling zeros to start test")
-        if process.system('%s zero-labels %s' % (self.ndctl, nmem), shell=True):
+        if process.system('%s zero-labels %s'
+                          % (self.ndctl, nmem), shell=True):
             self.fail("Label zero-fill failed")
 
         self.plib.enable_region(name=region)
@@ -574,18 +655,21 @@ class NdctlTest(Test):
         self.log.info("Storing labels with a namespace")
         old_op = process.system_output(
             '%s check-labels %s' % (self.ndctl, nmem), shell=True)
-        if process.system('%s read-labels %s -o output' % (self.ndctl, nmem), shell=True):
+        if process.system('%s read-labels %s -o output'
+                          % (self.ndctl, nmem), shell=True):
             self.fail("Label read failed")
 
         self.log.info("Refilling zeroes before a restore")
         self.plib.disable_namespace(region=region)
         self.plib.destroy_namespace(region=region)
         self.plib.disable_region(name=region)
-        if process.system('%s zero-labels %s' % (self.ndctl, nmem), shell=True):
+        if process.system('%s zero-labels %s'
+                          % (self.ndctl, nmem), shell=True):
             self.fail("Label zero-fill failed after read")
 
         self.log.info("Re-storing labels with a namespace")
-        if process.system('%s write-labels %s -i output' % (self.ndctl, nmem), shell=True):
+        if process.system('%s write-labels %s -i output'
+                          % (self.ndctl, nmem), shell=True):
             self.fail("Label write failed")
         self.plib.enable_region(name=region)
 
@@ -698,7 +782,8 @@ class NdctlTest(Test):
                                   size=size, mode='devdax')
         read_out = self.plib.read_infoblock(namespace=ns_name)
         if align:
-            if align != int(self.plib.run_ndctl_list_val(read_out[0], 'align')):
+            if align != int(self.plib.run_ndctl_list_val
+                            (read_out[0], 'align')):
                 self.fail("Alignment has not changed")
         return read_out[0]
 
@@ -841,13 +926,13 @@ class NdctlTest(Test):
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'blockdev')
         size = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
             "-N -r %s" % region)[0], 'size')
-        self.part = partition.Partition(self.disk)
+        mnt_path = self.params.get('mnt_point', default='/pmemS')
+        self.part = partition.Partition(self.disk, mountpoint=mnt_path)
         self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512' %
                        memory.get_page_size())
-        mnt_path = self.params.get('mnt_point', default='/pmemS')
         if not os.path.exists(mnt_path):
             os.makedirs(mnt_path)
-        self.part.mount(mountpoint=mnt_path)
+        self.part.mount()
         self.log.info("Test will run on %s", mnt_path)
         fio_job = self.params.get('fio_job', default='sector-fio.job')
         cmd = '%s --directory %s --filename mmap-pmem --size %s %s' % (
@@ -866,13 +951,14 @@ class NdctlTest(Test):
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'blockdev')
         size = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
             "-N -r %s" % region)[0], 'size')
-        self.part = partition.Partition(self.disk)
+        mnt_path = self.params.get('mnt_point', default='/pmem')
+        self.part = partition.Partition(
+            self.disk, mountpoint=mnt_path, mount_options='dax')
         self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512 %s' %
                        (memory.get_page_size(), self.reflink))
-        mnt_path = self.params.get('mnt_point', default='/pmem')
         if not os.path.exists(mnt_path):
             os.makedirs(mnt_path)
-        self.part.mount(mountpoint=mnt_path, args='-o dax')
+        self.part.mount()
         self.log.info("Test will run on %s", mnt_path)
         fio_job = self.params.get('fio_job', default='ndctl-fio.job')
         cmd = '%s --directory %s --filename mmap-pmem --size %s %s' % (
@@ -889,19 +975,21 @@ class NdctlTest(Test):
         self.plib.create_namespace(region=region, mode='fsdax')
         self.disk = '/dev/%s' % self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'blockdev')
-        self.part = partition.Partition(self.disk)
+        mnt_path = self.params.get('mnt_point', default='/pmem_map')
+        self.part = partition.Partition(
+            self.disk, mountpoint=mnt_path, mount_options='dax')
         self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512 %s' %
                        (memory.get_page_size(), self.reflink))
-        mnt_path = self.params.get('mnt_point', default='/pmem_map')
         if not os.path.exists(mnt_path):
             os.makedirs(mnt_path)
-        self.part.mount(mountpoint=mnt_path, args='-o dax')
+        self.part.mount()
         self.log.info("Testing MAP_SYNC on %s", mnt_path)
         src_file = os.path.join(self.teststmpdir, 'map_sync.c')
         shutil.copyfile(self.get_data('map_sync.c'), src_file)
         process.system('gcc %s -o map_sync' % src_file)
         process.system('fallocate -l 64k %s/new_file' % mnt_path)
-        if process.system('./map_sync %s/new_file' % mnt_path, ignore_status=True):
+        if process.system('./map_sync %s/new_file'
+                          % mnt_path, ignore_status=True):
             self.fail('Write with MAP_SYNC flag failed')
 
     @avocado.fail_on(pmem.PMemException)
@@ -913,7 +1001,9 @@ class NdctlTest(Test):
         self.plib.create_namespace(region=region, mode='devdax')
         daxdev = "/dev/%s" % self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'chardev')
-        if process.system("%s -b no -i /dev/urandom -o %s" % (self.get_data("daxio.static"), daxdev), ignore_status=True):
+        if process.system(
+                "%s -b no -i /dev/urandom -o %s"
+                % (self.get_data("daxio.static"), daxdev), ignore_status=True):
             self.fail("DAXIO write on devdax failed")
 
     @avocado.fail_on(pmem.PMemException)

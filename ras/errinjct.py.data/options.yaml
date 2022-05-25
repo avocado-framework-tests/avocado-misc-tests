@@ -1,0 +1,22 @@
+runargs: !mux
+    value1:
+        runcmd : corrupted-dcache-start
+        run_option : '-a 0 -C 0 --dry-run'
+    value2:
+        runcmd : corrupted-dcache-end
+        run_option : '-a 0 -C 0 --dry-run'
+    value3:
+        runcmd : corrupted-icache-start
+        run_option : '-a 0 -n 0 -C 0 --dry-run'
+    value4:
+        runcmd : corrupted-icache-end
+        run_option : '-a 0 -n 0 -C 0 --dry-run'
+    value5:
+        runcmd : corrupted-slb
+        run_option : '-a 0000000 --dry-run'
+    value6:
+        runcmd : corrupted-tlb-start
+        run_option : '-C 0 --dry-run'
+    value7:
+        runcmd : corrupted-tlb-end
+        run_option : '-C 0 --dry-run'

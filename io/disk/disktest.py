@@ -79,9 +79,17 @@ class Disktest(Test):
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
+
+        if (lv_utils.get_device_total_space(self.disk) < 1073741824):
+            self.cancel("Device total space is lower than 1073741824 bytes. Need to provide a device with greater than 1 Gigabye size")
+
         gigabytes = lv_utils.get_device_total_space(self.disk) // 1073741824
+        if gigabytes == 0:
+            self.cancel("Gigabytes value is 0 which means that the disk provided as input is not of Gigabyte size")
         memory_mb = memory.meminfo.MemTotal.m
         self.chunk_mb = gigabytes * 950
+        if self.chunk_mb == 0:
+            self.cancel("chunk_mb is 0 which means that there is no sufficient chunks in MB available")
 
         self.no_chunks = 1024 * gigabytes // self.chunk_mb
         if self.no_chunks == 0:

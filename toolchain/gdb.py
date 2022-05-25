@@ -29,7 +29,8 @@ class GDB(Test):
     def setUp(self):
         sm = SoftwareManager()
         dist = distro.detect()
-        packages = ['gcc', 'dejagnu', 'flex', 'bison', 'texinfo']
+        packages = ['gcc', 'dejagnu', 'flex',
+                    'bison', 'texinfo', 'make']
         if dist.name == 'Ubuntu':
             packages.extend(['g++', 'binutils-dev'])
         # FIXME: "redhat" as the distro name for RHEL is deprecated
@@ -38,7 +39,8 @@ class GDB(Test):
         elif dist.name in ['rhel', 'fedora', 'redhat']:
             packages.extend(['gcc-c++', 'binutils-devel', 'texi2html'])
         elif dist.name == 'SuSE':
-            packages.extend(['gcc-c++', 'binutils-devel'])
+            packages.extend(['gcc-c++', 'binutils-devel',
+                             'glibc-devel', 'glibc-devel-static'])
 
         else:
             self.fail('no packages list for your distro.')
@@ -48,7 +50,7 @@ class GDB(Test):
                             package)
         test_type = self.params.get('type', default='upstream')
         if test_type == 'upstream':
-            gdb_version = self.params.get('gdb_version', default='7.10')
+            gdb_version = self.params.get('gdb_version', default='10.2')
             tarball = self.fetch_asset(
                 "http://ftp.gnu.org/gnu/gdb/gdb-%s.tar.gz" % gdb_version)
             archive.extract(tarball, self.workdir)

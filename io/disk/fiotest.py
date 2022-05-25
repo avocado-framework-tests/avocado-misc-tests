@@ -83,6 +83,8 @@ class FioTest(Test):
             pkg_list = ['libaio-dev']
             if fstype == 'btrfs':
                 pkg_list.append('btrfs-progs')
+        elif distro.detect().name is 'SuSE':
+            pkg_list = ['libaio1', 'libaio-devel']
         else:
             pkg_list = ['libaio', 'libaio-devel']
             if self.disk_type == 'nvdimm':

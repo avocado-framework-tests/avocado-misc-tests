@@ -92,6 +92,7 @@ class Bonding(Test):
             for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
                 networkinterface = NetworkInterface(interface, self.localhost)
                 try:
+                    networkinterface.flush_ipaddr()
                     networkinterface.add_ipaddr(ipaddr, self.netmask)
                     networkinterface.save(ipaddr, self.netmask)
                 except Exception:
@@ -109,23 +110,58 @@ class Bonding(Test):
         self.bonding_masters_file = "%s/bonding_masters" % self.net_path
         self.peer_bond_needed = self.params.get("peer_bond_needed",
                                                 default=False)
-        self.peer_wait_time = self.params.get("peer_wait_time", default=5)
-        self.sleep_time = int(self.params.get("sleep_time", default=5))
+        self.peer_wait_time = self.params.get("peer_wait_time", default=20)
+        self.sleep_time = int(self.params.get("sleep_time", default=10))
         self.mtu = self.params.get("mtu", default=1500)
+        for root, dirct, files in os.walk("/root/.ssh"):
+            for file in files:
+                if file.startswith("avocado-master-"):
+                    path = os.path.join(root, file)
+                    os.remove(path)
         self.ib = False
         if self.host_interface[0:2] == 'ib':
             self.ib = True
         self.log.info("Bond Test on IB Interface? = %s", self.ib)
-        self.session = Session(self.peer_first_ipinterface, user=self.user,
-                               password=self.password)
+
+        '''
+        An individual interface, that has a LACP PF, cannot communicate without
+        being bonded. So the test uses the public ip address to create an SSH
+        session instead of the private one when setting up a bonding interface.
+        '''
+        if self.mode == "4" and "setup" in str(self.name.name):
+            self.session = Session(self.peer_public_ip, user=self.user,
+                                   password=self.password)
+        else:
+            self.session = Session(self.peer_first_ipinterface, user=self.user,
+                                   password=self.password)
+
         if not self.session.connect():
-            self.cancel("failed connecting to peer")
+            '''
+            LACP bond interface takes some time to get it to ping peer after it
+            is setup. This code block tries at most 5 times to get it to connect
+            to the peer.
+            '''
+            if self.mode == "4":
+                connect = False
+                for _ in range(5):
+                    if self.session.connect():
+                        connect = True
+                        self.log.info("Was able to connect to peer.")
+                        break
+                    time.sleep(5)
+                if not connect:
+                    self.cancel("failed connecting to peer")
+            else:
+                self.cancel("failed connecting to peer")
         self.setup_ip()
         self.err = []
-        self.remotehost = RemoteHost(self.peer_first_ipinterface, self.user,
-                                     password=self.password)
-        self.remotehost_public = RemoteHost(self.peer_public_ip, self.user,
-                                            password=self.password)
+        if self.mode == "4" and "setup" in str(self.name.name):
+            self.remotehost = RemoteHost(self.peer_public_ip, self.user,
+                                         password=self.password)
+        else:
+            self.remotehost = RemoteHost(self.peer_first_ipinterface, self.user,
+                                         password=self.password)
+
         if 'setup' in str(self.name.name):
             for interface in self.peer_interfaces:
                 peer_networkinterface = NetworkInterface(interface, self.remotehost)
@@ -309,12 +345,10 @@ class Bonding(Test):
                                                          self.remotehost)
                 if peer_networkinterface.set_mtu(mtu) is not None:
                     self.cancel("Failed to set mtu in peer")
-            if self.ping_check():
-                self.log.info("Ping passed for Mode %s", self.mode,
-                              mtu)
+            if not self.ping_check():
+                self.fail("Ping fail in mode %s after MTU change to %s" % (self.mode, mtu))
             else:
-                error_str = "Ping fail in Mode %s after MTU change to %s"\
-                    % (arg1, mtu)
+                self.log.info("Ping success for mode %s bond with  MTU %s" % (self.mode, mtu))
             if self.bond_networkinterface.set_mtu('1500'):
                 self.cancel("Failed to set mtu back to 1500 in host")
             for interface in self.peer_interfaces:
@@ -474,6 +508,7 @@ class Bonding(Test):
         for ipaddr, host_interface in zip(self.ipaddr, self.host_interfaces):
             networkinterface = NetworkInterface(host_interface, self.localhost)
             try:
+                networkinterface.flush_ipaddr()
                 networkinterface.add_ipaddr(ipaddr, self.netmask)
                 networkinterface.bring_up()
             except Exception:
@@ -484,17 +519,14 @@ class Bonding(Test):
                 networkinterface.restore_from_backup()
             except Exception:
                 self.log.info("backup file not availbale, could not restore file.")
+
         try:
             for interface in self.peer_interfaces:
                 peer_networkinterface = NetworkInterface(interface, self.remotehost)
                 peer_networkinterface.set_mtu("1500")
+            self.remotehost.remote_session.quit()
         except Exception:
-            for interface in self.peer_interfaces:
-                peer_public_networkinterface = NetworkInterface(interface,
-                                                                self.remotehost_public)
-                peer_public_networkinterface.set_mtu("1500")
-        self.remotehost.remote_session.quit()
-        self.remotehost_public.remote_session.quit()
+            self.log.debug("Could not revert peer interface MTU to 1500")
 
     def error_check(self):
         if self.err:

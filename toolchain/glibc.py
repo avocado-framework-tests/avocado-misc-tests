@@ -37,7 +37,8 @@ class Glibc(Test):
         run_type = self.params.get('type', default='upstream')
         if run_type == "upstream":
             url = 'https://github.com/bminor/glibc/archive/master.zip'
-            tarball = self.fetch_asset("glibc.zip", locations=[url], expire='7d')
+            tarball = self.fetch_asset("glibc.zip", locations=[url],
+                                       expire='7d')
             archive.extract(tarball, self.workdir)
             glibc_dir = os.path.join(self.workdir, "glibc-master")
         elif run_type == "distro":
@@ -62,9 +63,10 @@ class Glibc(Test):
                 for index, line in enumerate(file_buff):
                     if 'Summary' in line:
                         failures = file_buff[index + 1].split()[3]
-                        if int(failures) != 0:
+                        if failures.isdigit() and int(failures) != 0:
                             self.fail("No of Failures occured %s"
-                                      "\nCheck logs for more info" % failures)
+                                      "\nCheck logs for more info" %
+                                      failures)
         else:
             self.log.info("Tests Have been Passed\n"
                           "Please Check Logfile %s run info" % logfile)

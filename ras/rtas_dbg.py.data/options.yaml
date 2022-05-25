@@ -1,0 +1,2 @@
+list: ['-l', '-l 14', '-l get-power-level', '-l get-sensor-state']
+neg_list: ['-l get-power', '-l 32', '-l 100']

@@ -13,6 +13,7 @@
 #
 # Copyright: 2016 IBM
 # Author: Narasimhan V <sim@linux.vnet.ibm.com>
+# Author: Naresh Bannoth <nbannoth@in.ibm.com>
 
 """
 Multipath Test.
@@ -117,40 +118,100 @@ class MultipathTest(Test):
         plcy = "path_selector \"%s 0\"" % self.policy
         multipath.form_conf_mpath_file(defaults_extra=plcy)
         for path_dic in self.mpath_list:
+            operation = ''
             self.log.debug("operating on paths: %s", path_dic["paths"])
             # Path Selector policy
             self.log.info("changing Selector policy")
             for policy in self.policies:
                 cmd = "path_selector \"%s 0\"" % policy
                 multipath.form_conf_mpath_file(defaults_extra=cmd)
+                time.sleep(5)
                 if multipath.get_policy(path_dic["wwid"]) != policy:
                     msg += "%s for %s fails\n" % (policy, path_dic["wwid"])
 
+            def is_mpath_available():
+                if operation == 'block':
+                    if multipath.device_exists(path_dic["wwid"]) is True:
+                        self.log.info("%s=False, not blocked" % test_mpath)
+                        return False
+                    return True
+                elif operation == 'recover':
+                    if multipath.device_exists(path_dic["wwid"]) is False:
+                        self.log.info("%s=False, not recovered" % test_mpath)
+                        return False
+                    return True
+
             # mutipath -f mpathX
-            if not multipath.flush_path(path_dic["name"]):
+            test_mpath = path_dic["name"]
+            self.log.info("flushing %s" % path_dic["name"])
+            operation = 'block'
+            multipath.flush_path(path_dic["name"])
+            if wait.wait_for(is_mpath_available, timeout=10):
+                self.log.info("flush of %s success" % path_dic["name"])
+            else:
                 msg += "Flush of %s fails\n" % path_dic["name"]
+            self.log.info("Recovering %s after flush.." % path_dic["name"])
+            operation = 'recover'
             self.mpath_svc.restart()
             wait.wait_for(self.mpath_svc.status, timeout=10)
+            if wait.wait_for(is_mpath_available, timeout=10):
+                self.log.info("recovery of %s success after \
+                               flush" % path_dic["name"])
+            else:
+                msg += "Recovery of %s fails after flush\n" % path_dic["name"]
 
             # Blacklisting wwid
+            test_mpath = path_dic["wwid"]
             self.log.info("Black listing WWIDs")
             cmd = "wwid %s" % path_dic["wwid"]
             multipath.form_conf_mpath_file(blacklist=cmd, defaults_extra=plcy)
-            if multipath.device_exists(path_dic["wwid"]):
-                msg += "Blacklist of %s fails\n" % path_dic["wwid"]
+            operation = 'block'
+            if wait.wait_for(is_mpath_available, timeout=10):
+                self.log.info("Blocklist of %s success" % path_dic["wwid"])
             else:
-                multipath.form_conf_mpath_file(defaults_extra=plcy)
-                if not multipath.device_exists(path_dic["wwid"]):
-                    msg += "Recovery of %s fails\n" % path_dic["wwid"]
+                msg += "Blacklist of %s fails\n" % path_dic["wwid"]
+            operation = 'recover'
+            self.log.info("Recovering WWID after Black list.....")
+            multipath.form_conf_mpath_file(defaults_extra=plcy)
+            if wait.wait_for(is_mpath_available, timeout=10):
+                self.log.info("recovery of %s success" % path_dic["wwid"])
+            else:
+                msg += "Recovery of %s fails after blocklist\n" \
+                        % path_dic["wwid"]
+
+            def is_path_available():
+                if operation == 'block':
+                    if multipath.device_exists(test_path) is True:
+                        return False
+                    return True
+                elif operation == 'recover':
+                    if multipath.device_exists(test_path) is False:
+                        self.log.info("%s=False still not recover" % test_path)
+                        return False
+                    return True
 
             # Blacklisting sdX
             self.log.info("Black listing individual paths")
+            test_path = ''
             for disk in path_dic["paths"]:
+                test_path = disk
+                self.log.info("Black_listing %s" % disk)
+                operation = 'block'
                 cmd = "devnode %s" % disk
                 multipath.form_conf_mpath_file(blacklist=cmd,
                                                defaults_extra=plcy)
-                if disk in multipath.get_paths(path_dic["wwid"]):
-                    msg += "Blacklist of %s fails\n" % disk
+                if wait.wait_for(is_path_available, timeout=10):
+                    self.log.info("block list of %s success" % disk)
+                else:
+                    msg += "block list of %s fails\n" % disk
+                operation = 'recover'
+                multipath.form_conf_mpath_file(defaults_extra=plcy)
+                if wait.wait_for(is_path_available, timeout=10):
+                    self.log.info("recovery of %s success" % disk)
+                else:
+                    msg += "Recovery of %s fails after blacklist %s\n" \
+                            % (disk, path_dic["wwid"])
+
             multipath.form_conf_mpath_file(defaults_extra=plcy)
         if msg:
             self.fail("Some tests failed. Find details below:\n%s" % msg)

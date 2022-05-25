@@ -56,16 +56,15 @@ class hv_24x7_all_events(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
-        self.cpu_family = cpu.get_family()
-        self.perf_args = "perf stat -v -C 0 -e"
-        if self.cpu_family == 'power8':
-            self.perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % \
-                              self.perf_args
-        elif self.cpu_family == 'power9':
-            self.perf_stat = "%s hv_24x7/CPM_TLBIE" % self.perf_args
-        elif self.cpu_family == 'power10':
-            self.perf_stat = "%s hv_24x7/CPM_TLBIE_FIN" % self.perf_args
-        self.event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
+        cpu_family = cpu.get_family()
+        perf_args = "perf stat -v -e"
+        if cpu_family == 'power8':
+            perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % perf_args
+        elif cpu_family == 'power9':
+            perf_stat = "%s hv_24x7/CPM_TLBIE" % perf_args
+        elif cpu_family == 'power10':
+            perf_stat = "%s hv_24x7/CPM_TLBIE_FIN" % perf_args
+        event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
 
         # Check if this is a guest
         # 24x7 is not suported on guest
@@ -73,17 +72,17 @@ class hv_24x7_all_events(Test):
             self.cancel("This test is not supported on guest")
 
         # Check if 24x7 is present
-        if os.path.exists(self.event_sysfs):
+        if os.path.exists(event_sysfs):
             self.log.info('hv_24x7 present')
         else:
             self.cancel("%s doesn't exist.This test is supported"
-                        " only on PowerVM" % self.event_sysfs)
+                        " only on PowerVM" % event_sysfs)
 
         # Performance measurement has to be enabled in lpar through BMC
         # Check if its enabled
         result_perf = process.run("%s,domain=2,core=1/ sleep 1"
-                                  % self.perf_stat, ignore_status=True)
-        if "not supported" in result_perf.stderr.decode("utf-8"):
+                                  % perf_stat, ignore_status=True)
+        if "operations is limited" in result_perf.stderr.decode("utf-8"):
             self.cancel("Please enable LPAR to allow collecting"
                         " the 24x7 counters info")
 
@@ -103,10 +102,10 @@ class hv_24x7_all_events(Test):
             self.list_of_hv_24x7_events.append(lne)
 
         # Clear the dmesg to capture the delta at the end of the test.
-        process.run("dmesg -c", sudo=True)
+        process.run("dmesg -C", sudo=True)
 
     def test_all_events(self):
-        perf_args = "-C 9 -v -e"
+        perf_args = "-v -e"
         for line in self.list_of_hv_24x7_events:
             if line.startswith('HP') or line.startswith('CP'):
                 # Running for domain range from 1-6

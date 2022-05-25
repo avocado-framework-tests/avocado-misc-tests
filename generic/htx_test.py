@@ -70,7 +70,7 @@ class HtxTest(Test):
         """
         detected_distro = distro.detect()
         packages = ['git', 'gcc', 'make']
-        if detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
+        if detected_distro.name in ['centos', 'fedora', 'rhel']:
             packages.extend(['gcc-c++', 'ncurses-devel', 'tar'])
         elif detected_distro.name == "Ubuntu":
             packages.extend(['libncurses5', 'g++',

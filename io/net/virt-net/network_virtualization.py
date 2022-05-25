@@ -58,7 +58,7 @@ class NetworkVirtualization(Test):
         set up required packages and gather necessary test inputs
         '''
         self.install_packages()
-        self.hmc_ip = self.get_mcp_component("HMCIPAddr")
+        self.hmc_ip = wait.wait_for(lambda: self.get_mcp_component("HMCIPAddr"), timeout=30)
         if not self.hmc_ip:
             self.cancel("HMC IP not got")
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default=None)
@@ -68,7 +68,7 @@ class NetworkVirtualization(Test):
             self.cancel("LPAR Name not got from lparstat command")
         for root, dirct, files in os.walk("/root/.ssh"):
             for file in files:
-                if file.startswith("avocado-master-root"):
+                if file.startswith("avocado-master-"):
                     path = os.path.join(root, file)
                     os.remove(path)
         self.session_hmc = Session(self.hmc_ip, user=self.hmc_username,
@@ -77,11 +77,12 @@ class NetworkVirtualization(Test):
             self.cancel("failed connecting to HMC")
         cmd = 'lssyscfg -r sys  -F name'
         output = self.session_hmc.cmd(cmd)
-        self.server = ''
-        for line in output.stdout_text.splitlines():
-            if line in self.lpar:
-                self.server = line
-                break
+        self.server = self.params.get("server", "*", default=None)
+        if not self.server:
+            for line in output.stdout_text.splitlines():
+                if line in self.lpar:
+                    self.server = line
+                    break
         if not self.server:
             self.cancel("Managed System not got")
         self.slot_num = self.params.get("slot_num", '*', default=None)
@@ -123,7 +124,8 @@ class NetworkVirtualization(Test):
         self.mac_id = self.params.get('mac_id',
                                       default="02:03:03:03:03:01").split(' ')
         self.mac_id = [mac.replace(':', '') for mac in self.mac_id]
-        self.netmask = self.params.get('netmasks', '*', default=None).split(' ')
+        self.netmask = self.params.get(
+            'netmasks', '*', default=None).split(' ')
         self.peer_ip = self.params.get('peer_ip', default=None).split(' ')
         dmesg.clear_dmesg()
         self.session_hmc.cmd("uname -a")
@@ -258,7 +260,8 @@ class NetworkVirtualization(Test):
             if not self.check_slot_availability(slot):
                 self.fail("Slot does not exist")
             self.device_add_remove(slot, mac, sriov_port, adapter_id, 'add')
-            self.interface_naming(mac, slot)
+            # Call interface_naming() if required
+            # self.interface_naming(mac, slot)
             output = self.list_device(slot)
             if 'slot_num=%s' % slot not in str(output):
                 self.log.debug(output)
@@ -300,6 +303,57 @@ class NetworkVirtualization(Test):
                            self.backingdev_count)
             self.fail("Failed to add backing device")
         self.check_dmesg_error()
+
+    def test_disable_enable_dev(self):
+        '''
+        Test if disabling and enabling of an adapter works
+        '''
+        self.disable_enable_dev('d')
+        self.is_disabled_enabled_dev('1')
+        self.disable_enable_dev('e')
+        self.is_disabled_enabled_dev('0')
+        device = self.find_device(self.mac_id[0])
+        networkinterface = NetworkInterface(device, self.local)
+        wait.wait_for(networkinterface.is_link_up, timeout=60)
+        if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
+            self.fail(
+                "Enabling and disabling of the interface has affected network connectivity")
+        self.check_dmesg_error()
+
+    def disable_enable_dev(self, option):
+        '''
+        Disable or enable interface command
+        '''
+        cmd = "chhwres -m %s -o %s -r virtualio --rsubtype vnic -p %s -s %s" % (self.server,
+                                                                                option,
+                                                                                self.lpar,
+                                                                                self.slot_num[0])
+        output = self.session_hmc.cmd(cmd)
+        if output.exit_status != 0:
+            if option == 'd':
+                self.fail("Could not disable interface: %s" %
+                          output.stdout_text)
+            elif option == 'e':
+                self.fail("Could not enable interface: %s" %
+                          output.stdout_text)
+            else:
+                self.fail("Invalid option sent to disable/enable interface.")
+
+    def is_disabled_enabled_dev(self, expect):
+        '''
+        Check if the interface was disabled or enabled correctly
+        '''
+        operation = "enable" if expect == '0' else "disable"
+        cmd = "lshwres -m %s -r virtualio --rsubtype vnic --filter \
+        \"lpar_names=%s\" -F slot_num:is_disabled" % (self.server, self.lpar)
+        output = self.session_hmc.cmd(cmd).stdout_text
+
+        for entry in output.splitlines():
+            if entry.startswith(self.slot_num[0]):
+                if entry.endswith(expect):
+                    self.log.info("vNIC interface successfully %s" % operation)
+                else:
+                    self.fail("Could not %s vNIC interface" % operation)
 
     def test_hmcfailover(self):
         '''
@@ -360,13 +414,17 @@ class NetworkVirtualization(Test):
         if len(self.backing_adapter) >= 2:
             for _ in range(self.count):
                 self.update_backing_devices(self.slot_num[0])
-                backing_logport = self.get_backing_device_logport(self.slot_num[0])
-                active_logport = self.get_active_device_logport(self.slot_num[0])
+                backing_logport = self.get_backing_device_logport(
+                    self.slot_num[0])
+                active_logport = self.get_active_device_logport(
+                    self.slot_num[0])
                 if self.enable_auto_failover():
                     if not self.change_failover_priority(backing_logport, '1'):
-                        self.fail("Fail to change the priority for backing device %s", backing_logport)
+                        self.fail(
+                            "Fail to change the priority for backing device %s", backing_logport)
                     if not self.change_failover_priority(active_logport, '100'):
-                        self.fail("Fail to change the priority for active device %s", active_logport)
+                        self.fail(
+                            "Fail to change the priority for active device %s", active_logport)
                     time.sleep(60)
                     if backing_logport != self.get_active_device_logport(self.slot_num[0]):
                         self.fail("Auto failover of backing device failed")
@@ -387,7 +445,7 @@ class NetworkVirtualization(Test):
 
         self.session = Session(self.vios_ip, user=self.vios_user,
                                password=self.vios_pwd)
-        if not self.session.connect():
+        if not wait.wait_for(self.session.connect, timeout=30):
             self.fail("Failed connecting to VIOS")
 
         cmd = "ioscli lsmap -all -vnic -cpid %s" % self.lpar_id
@@ -409,17 +467,22 @@ class NetworkVirtualization(Test):
 
         self.validate_vios_command('rmdev -l %s' % vnic_server, 'Defined')
         if vnic_backing_device:
-            self.validate_vios_command('rmdev -l %s' % vnic_backing_device, 'Defined')
+            self.validate_vios_command(
+                'rmdev -l %s' % vnic_backing_device, 'Defined')
 
-        after = self.get_active_device_logport(self.slot_num[0])
-        self.log.debug("Active backing device after: %s", after)
+        time.sleep(10)
 
-        if before == after:
-            self.fail("failover not occur")
+        for backing_dev in self.backing_dev_list().splitlines():
+            if backing_dev.startswith('%s,' % self.slot_num[0]):
+                backing_dev = backing_dev.strip('%s,"' % self.slot_num[0])
+                if 'Powered Off' not in backing_dev:
+                    self.fail("Failover did not occur")
+
         time.sleep(60)
 
         if vnic_backing_device:
-            self.validate_vios_command('mkdev -l %s' % vnic_backing_device, 'Available')
+            self.validate_vios_command(
+                'mkdev -l %s' % vnic_backing_device, 'Available')
         self.validate_vios_command('mkdev -l %s' % vnic_server, 'Available')
 
         networkinterface = NetworkInterface(device, self.local)
@@ -732,7 +795,7 @@ class NetworkVirtualization(Test):
         """
         device = self.find_device(mac)
         device_id = process.system_output("ls -l /sys/class/net/ | \
-                                           grep %s | cut -d '/' -f \
+                                           grep -w %s | cut -d '/' -f \
                                            5" % device,
                                           shell=True).decode("utf-8").strip()
         return device_id
@@ -766,6 +829,7 @@ class NetworkVirtualization(Test):
         Get the logical port id of the
         backing device
         '''
+        logport = None
         for backing_dev in self.backing_dev_list().splitlines():
             if backing_dev.startswith('%s,' % slot):
                 backing_dev = backing_dev.strip('%s,"' % slot)
@@ -774,6 +838,9 @@ class NetworkVirtualization(Test):
                     if '0' in entry[2] and 'Operational' in entry[3]:
                         logport = entry[1]
                         break
+        if not logport:
+            self.log.info("Logport: %s" % logport)
+            self.cancel("Could not get logical port id of backing device")
         return logport
 
     def get_active_device_logport(self, slot):
@@ -781,6 +848,7 @@ class NetworkVirtualization(Test):
         Get the logical port id of the Network
         virtualized device
         '''
+        logport = None
         for backing_dev in self.backing_dev_list().splitlines():
             if backing_dev.startswith('%s,' % slot):
                 backing_dev = backing_dev.strip('%s,"' % slot)
@@ -789,6 +857,8 @@ class NetworkVirtualization(Test):
                     if '1' in entry[2]:
                         logport = entry[1]
                         break
+        if not logport:
+            self.cancel("Could not get logical port id of active backing device")
         return logport
 
     def is_backing_device_active(self, slot):
@@ -808,16 +878,12 @@ class NetworkVirtualization(Test):
         naming to vnic interface
         '''
         mac_addrs = ':'.join(mac[i:i+2] for i in range(0, 12, 2))
-        file = "/etc/udev/rules.d/70-persistent-net.rules-%s" % slot
-        with open(file, "w") as interface_conf:
-            interface_conf.write("SUBSYSTEM==net \n")
-            interface_conf.write("ACTION==add \n")
-            interface_conf.write("DRIVERS==? \n")
-            interface_conf.write("ATTR{address}==%s \n" % mac_addrs)
-            interface_conf.write("ATTR{dev_id}==0x0 \n")
-            interface_conf.write("ATTR{type}==1 \n")
-            interface_conf.write("KERNEL==vnic \n")
-            interface_conf.write("NAME=vnic%s \n" % slot)
+        file = "/etc/udev/rules.d/70-persistent-net.rules"
+        with open(file, "a+") as interface_conf:
+            interface_conf.write("SUBSYSTEM==\"net\", ")
+            interface_conf.write("ACTION==\"add\", ")
+            interface_conf.write("DRIVERS==\"?*\", ")
+            interface_conf.write("ATTR{address}==\"%s\", " % mac_addrs)
 
     def wait_intrerface(self, device_name):
         """
@@ -826,7 +892,8 @@ class NetworkVirtualization(Test):
         for _ in range(0, 120, 10):
             for interface in netifaces.interfaces():
                 if device_name == interface:
-                    self.log.info("Network virtualized device %s is up", device_name)
+                    self.log.info(
+                        "Network virtualized device %s is up", device_name)
                     return True
                 time.sleep(5)
         return False
@@ -835,7 +902,8 @@ class NetworkVirtualization(Test):
         """
         check for dmesg error
         """
-        error = ['uevent: failed to send synthetic uevent', 'failed to send uevent', 'registration failed']
+        error = ['uevent: failed to send synthetic uevent',
+                 'failed to send uevent', 'registration failed']
         self.log.info("Gathering kernel errors if any")
         try:
             dmesg.collect_errors_by_level(skip_errors=error)

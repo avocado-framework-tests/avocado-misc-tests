@@ -25,7 +25,7 @@ from avocado.utils.software_manager import SoftwareManager
 class PerfRawevents(Test):
 
     """
-    Tests raw events on Power8 and Power9 along with
+    Tests raw events on Power8, Power9 and Power10 along with
     named events
     :avocado: tags=perf,rawevents,events
     """
@@ -45,6 +45,7 @@ class PerfRawevents(Test):
         smm = SoftwareManager()
         detected_distro = distro.detect()
         self.distro_name = detected_distro.name
+        self.cpu_family = cpu.get_family()[5:]
         if detected_distro.arch != 'ppc64le':
             self.cancel('This test is not supported on %s architecture'
                         % detected_distro.arch)
@@ -63,18 +64,15 @@ class PerfRawevents(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
-        for filename in ['name_events_p8', 'raw_codes_p8', 'raw_codes_p9']:
+        for filename in ['name_events_p8', 'raw_codes_p8', 'name_events_p9',
+                         'raw_codes_p9', 'name_events_p10', 'raw_codes_p10']:
             self.copy_files(filename)
 
         os.chdir(self.teststmpdir)
         # Clear the dmesg to capture the delta at the end of the test.
-        process.run("dmesg -c")
+        process.run("dmesg -C")
 
-    def run_event(self, filename, eventname):
-        if eventname == 'raw':
-            perf_flags = "perf stat -e r"
-        elif eventname == 'name':
-            perf_flags = "perf stat -e "
+    def run_event(self, filename, perf_flags):
         for line in genio.read_all_lines(filename):
             cmd = "%s%s sleep 1" % (perf_flags, line)
             output = process.run(cmd, shell=True,
@@ -88,18 +86,17 @@ class PerfRawevents(Test):
                 self.log.info("Failed command: %s", self.fail_cmd[cmd])
             self.fail("perf_raw_events: refer log file for failed events")
 
-    def test(self):
-        cpu_family = cpu.get_family()
-        if cpu_family == 'power8':
-            self.run_event('raw_codes_p8', 'raw')
-            self.error_check()
-            self.run_event('name_events_p8', 'name')
-            self.error_check()
-        elif cpu_family == 'power9':
-            self.run_event('raw_codes_p9', 'raw')
-            self.error_check()
-        else:
-            self.cancel('This test is not supported on %s' % cpu_family)
+    def test_raw_code(self):
+        file_name = 'raw_codes_p' + self.cpu_family
+        perf_flags = "perf stat -e r"
+        self.run_event(file_name, perf_flags)
+        self.error_check()
+
+    def test_name_event(self):
+        file_name = 'name_events_p' + self.cpu_family
+        perf_flags = "perf stat -e "
+        self.run_event(file_name, perf_flags)
+        self.error_check()
 
     def tearDown(self):
         # Collect the dmesg

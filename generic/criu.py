@@ -20,6 +20,7 @@ from avocado.utils import archive
 from avocado.utils import build
 from avocado.utils import distro
 from avocado.utils import process
+from avocado.utils import genio
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -42,8 +43,8 @@ class CRIU(Test):
                             package)
         criu_version = self.params.get('criu_version', default='3.13')
         tarball = self.fetch_asset(
-                  "http://download.openvz.org/criu/criu-%s.tar.bz2" % criu_version,
-                  expire='10d')
+            "http://download.openvz.org/criu/criu-%s.tar.bz2" % criu_version,
+            expire='10d')
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(
             self.workdir, os.path.basename(tarball.split('.tar')[0]))
@@ -52,10 +53,20 @@ class CRIU(Test):
 
     def test(self):
         os.chdir(self.sourcedir)
-        process.run("./zdtm.py run -a --report sergeyb --keep-going",
+        process.run("./zdtm.py run -a --report sergeyb",
                     ignore_status=True, sudo=True)
         logfile = os.path.join(self.logdir, "stdout")
-        failed_tests = process.system_output(
-            "grep -w FAIL %s" % logfile, shell=True, ignore_status=True).decode("utf-8")
+        op_file = genio.read_file(logfile)
+        passed_tests = 0
+        failed_tests = 0
+        for line in op_file.splitlines():
+            if 'PASS' in line:
+                passed_tests = passed_tests + 1
+            elif 'FAILED' in line:
+                failed_tests = failed_tests + 1
+        self.log.info("CRIU Tests Summary: PASS=%s, FAIL=%s" %
+                      (passed_tests, failed_tests))
         if failed_tests:
-            self.fail("test failed, Please check debug log for failed test cases")
+            self.fail("CRIU Tests Summary: PASS=%s, FAIL=%s,\
+            please check log for the failed test cases" %
+                      (passed_tests, failed_tests))

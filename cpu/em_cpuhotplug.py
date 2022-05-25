@@ -52,7 +52,8 @@ class Cpuhotplug_Test(Test):
         genio.write_one_line('/proc/sys/kernel/printk', "8")
         # Set SMT to max SMT value (restricted at boot time) and get its value
         process.system("ppc64_cpu --smt=%s" % "on", shell=True)
-        self.max_smt_s = process.system_output("ppc64_cpu --smt", shell=True).decode()
+        ppc_smt = "ppc64_cpu --smt"
+        self.max_smt_s = process.system_output(ppc_smt, shell=True).decode()
         self.max_smt = int(self.max_smt_s[4:])
         self.path = "/sys/devices/system/cpu"
 
@@ -85,14 +86,14 @@ class Cpuhotplug_Test(Test):
                 for cpu_num in cpu_list:
                     # If only one core then don't disable cpu 0 - busy
                     if core != 0 or (core == 0 and cpu_num != 0):
-                        self.offline_cpu(cpu_num)
+                        self.cpu_on_off("offline", cpu_num)
                 cpu_list = self.random_gen_cpu(core)
                 if core == 0:
                     cpu_list.remove(0)
                 self.log.info("Onlining the threads : %s for "
                               "the core : %s" % (cpu_list, core))
                 for cpu_num in cpu_list:
-                    self.online_cpu(cpu_num)
+                    self.cpu_on_off("online", cpu_num)
         if self.nfail > 0:
             self.fail(" Unable to online/offline few cpus")
 
@@ -116,22 +117,20 @@ class Cpuhotplug_Test(Test):
         random.shuffle(nums)
         return nums
 
-    def offline_cpu(self, cpu_num):
+    def cpu_on_off(self, cpu_mode, cpu_num):
         """
-        Offline the particular cpu
+        online and offline the particular CPU.
+        cpu_mode:
+        1. online mode.
+        2. offline mode.
+        cpu_num: which cpu need to online or offline.
         """
-        if cpu.offline(cpu_num):
-            self.nfail += 1
-            self.log.info("Failed to offline the cpu %s" % cpu_num)
+        cpu_call = getattr(cpu, cpu_mode)
+        return_status = cpu_call(cpu_num)
+        if (cpu_mode == "online" and return_status):
+            self.log.info("{} the cpu : {}".format(cpu_mode, cpu_num))
+        elif (cpu_mode == "offline" and not return_status):
+            self.log.info("{} the cpu : {}".format(cpu_mode, cpu_num))
         else:
-            self.log.info("Offline the cpu : %s" % cpu_num)
-
-    def online_cpu(self, cpu_num):
-        """
-        Online the particular cpu
-        """
-        if cpu.online(cpu_num):
             self.nfail += 1
-            self.log.info("Failed to online the cpu %s" % cpu_num)
-        else:
-            self.log.info("Online the cpu : %s" % cpu_num)
+            self.log.info("Failed to {} the cpu: {}".format(cpu_mode, cpu_num))

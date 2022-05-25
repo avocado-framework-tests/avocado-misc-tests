@@ -55,6 +55,9 @@ class VirtualFC(Test):
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default=None)
         self.hmc_username = self.params.get("hmc_username", '*', default=None)
         self.count = self.params.get("count", default=1)
+        # TO_DO: self.skip_host parameter can be remove
+        # if script is self reliable to find bootable disk
+        self.skip_host = self.params.get("skip_host", default=None)
         self.vfc_id = self.params.get("vfchost_id", default=None)
         self.vfchost_count = int(self.params.get("vfc_count", default=1))
         # Since the command in each layer doesn't take same time to complete
@@ -91,7 +94,8 @@ class VirtualFC(Test):
                 vfc_dic["fcs"] = self.get_fcs_name(vfchost, vios)
                 vfc_dic["vfc_client"] = self.get_vfc_client(vfchost, vios)
                 vfc_dic["paths"] = self.get_paths(vfc_dic["vfc_client"])
-                self.dic_list.append(vfc_dic)
+                if vfc_dic["vfc_client"] != self.skip_host:
+                    self.dic_list.append(vfc_dic)
 
         self.log.info("complete list : %s" % self.dic_list)
 
@@ -172,8 +176,9 @@ class VirtualFC(Test):
         vfchost = []
         cmd = 'viosvrcmd -m %s -p %s -c "lsmap -all -npiv -field  Name \
                ClntName -fmt :"' % (self.server, vios_name)
-        for line in self.session.cmd(cmd).stdout_text:
-            if self.lpar in line.splitlines():
+        output = self.session.cmd(cmd).stdout_text
+        for line in output.splitlines():
+            if self.lpar in line:
                 vfchost.append(line.split(":")[0])
         return vfchost
 
@@ -236,24 +241,26 @@ class VirtualFC(Test):
         self.log.info("%sing %s" % (operation, vfc_dic["vfchost"]))
         if operation == 'map':
             cmd = 'viosvrcmd -m %s -p %s -c "vfcmap -vadapter %s -fcp %s"' \
-                   % (self.server, vfc_dic["vios"],
-                      vfc_dic["vfchost"], vfc_dic["fcs"])
+                % (self.server, vfc_dic["vios"],
+                   vfc_dic["vfchost"], vfc_dic["fcs"])
         else:
             cmd = 'viosvrcmd -m %s -p %s -c "vfcmap -vadapter %s -fcp"' \
-                   % (self.server, vfc_dic["vios"], vfc_dic["vfchost"])
+                % (self.server, vfc_dic["vios"], vfc_dic["vfchost"])
 
         output = self.session.cmd(cmd)
         if output.exit_status != 0:
             self.log.debug(output.stderr)
             self.fail("vfchost %s operation failed" % operation)
+        time.sleep(5)
         self.vfchost_status_verify(operation, vfc_dic["vfchost"],
                                    vfc_dic["vios"])
+        time.sleep(5)
         self.vfc_client_status_verify(operation, vfc_dic["vfc_client"])
         self.mpath_verification(operation, vfc_dic["paths"])
 
     def vfc_client_status_verify(self, operation, vfc_client):
         '''
-        Returns the WWPNs of give client slot number
+        Verifies client host status after running given operation
         '''
         self.log.info("verifying %s status after %s its \
                        vfchost" % (vfc_client, operation))
@@ -261,21 +268,31 @@ class VirtualFC(Test):
         def is_host_online():
             file_name = '/sys/class/fc_host/%s/port_state' % vfc_client
             status = genio.read_file(file_name).strip("\n")
-            if operation == "map":
+            if operation in ('map', 'add'):
                 if status == 'Online':
+                    self.log.info("operation:%s host:%s status=%s return:True \
+                                   " % (operation, vfc_client, status))
                     return True
-                return False
-            elif operation == 'unmap':
-                if status == 'Linkdown':
+                else:
+                    self.log.info("operation:%s host:%s status=%s return:True \
+                                   " % (operation, vfc_client, status))
+                    return False
+            elif operation in ('unmap', 'remove'):
+                if status in ('Linkdown', 'Offline'):
+                    self.log.info("operation:%s host:%s status=%s return:True \
+                                   " % (operation, vfc_client, status))
                     return True
-                return False
+                else:
+                    self.log.info("opertion:%s host:%s status=%s return:False \
+                                   " % (operation, vfc_client, status))
+                    return False
 
         if not wait.wait_for(is_host_online, timeout=10):
-            self.err_mesg.append("after %s %s staus change \
-                                  failed" % (operation, vfc_client))
+            self.err_mesg.append("operation:%s client_host:%s verify failed \
+                                  " % (operation, vfc_client))
         else:
-            self.log.info("%s status change success \
-                           after %s" % (operation, vfc_client))
+            self.log.info("operation:%s client_host:%s verify success \
+                           " % (operation, vfc_client))
 
     def vfchost_status_verify(self, operation, vfchost, vios_name):
         '''
@@ -295,8 +312,8 @@ class VirtualFC(Test):
                 return False
 
         if not wait.wait_for(status_check, timeout=10):
-            self.err_mesg.append("after %s %s staus change \
-                                  failed" % (operation, vfchost))
+            self.err_mesg.append("after %s %s staus change failed \
+                                  " % (operation, vfchost))
         else:
             self.log.info("%s status change success \
                            after %s" % (operation, vfchost))
@@ -310,60 +327,93 @@ class VirtualFC(Test):
                        paths: %s" % (operation, paths))
 
         def is_path_online():
+            path_stat = []
+            process.system("multipathd -k'show paths'", ignore_status=True)
             path_stat = multipath.get_path_status(self.path)
-            if operation == "map":
+            self.log.info("operation:%s path=%s path_stat=%s \
+                           " % (operation, self.path, path_stat))
+            if operation in ('map', 'add'):
                 if path_stat[0] != "active" or path_stat[2] != "ready":
+                    self.log.info("operation:%s path=%s stat=%s return=False \
+                                   " % (operation, self.path, path_stat))
                     return False
-                return True
-            elif operation == "unmap":
+                else:
+                    self.log.info("operation:%s path=%s stat=%s return=True \
+                                   " % (operation, self.path, path_stat))
+                    return True
+            elif operation in ('unmap', 'remove'):
                 if path_stat[0] != "failed" or path_stat[2] != "faulty":
+                    self.log.info("operation:%s path=%s stat=%s return=False \
+                                   " % (operation, self.path, path_stat))
                     return False
-                return True
+                else:
+                    self.log.info("operation:%s path=%s stat=%s return=True \
+                                   " % (operation, self.path, path_stat))
+                    return True
+            else:
+                self.log.info("Operation unknown, provide correct opertion")
 
         for path in paths:
             self.path = path
             if not wait.wait_for(is_path_online, timeout=10):
-                self.err_mesg.append("after %s path %s status did not \
-                                      changed" % (operation, path))
+                self.err_mesg.append("operation:%s path:%s verify failed \
+                                      " % (operation, path))
             else:
-                self.log.info("%s mpath verification success " % operation)
+                self.log.info("operation:%s path:%s verify success \
+                               " % (operation, path))
 
-    def test_undefine_define(self):
+    def test_remove_add(self):
         '''
-        Undefin and define the vfchost from vios
+        remove and add back the vfchost from vios
         '''
         self.err_mesg = []
+        self.log.info("\nvfchost remove_add operations\n")
         for _ in range(self.count):
             for vfc_dic in self.dic_list:
-                self.vfchost_define_undefine("undefine", vfc_dic)
+                self.log.info("%s/%s remove operation on \
+                               dic :%s" % (_, self.count, vfc_dic))
+                self.vfchost_remove_add("remove", vfc_dic)
                 time.sleep(self.opp_sleep_time)
-                self.vfchost_define_undefine("define", vfc_dic)
+                self.log.info("%s/%s add operation on \
+                               dic : %s" % (_, vfc_dic, self.count))
+                self.vfchost_remove_add("add", vfc_dic)
                 # sleep time between operations, can be enhanced in future.
                 time.sleep(self.opp_sleep_time)
         if self.err_mesg:
             self.fail("test failed due to folowing reasons:%s" % self.err_mesg)
 
-    def vfchost_define_undefine(self, operation, vfc_dic):
+    def vfchost_remove_add(self, operation, vfc_dic):
         '''
         removes and adds back the vfchost from vios as a root user.
         '''
-        if operation == 'undefine':
+        if operation == 'remove':
             cmd = 'viosvrcmd -m %s -p %s -c "rmdev -dev %s -ucfg"' \
-                   % (self.server, vfc_dic["vios"], vfc_dic["vfchost"])
+                % (self.server, vfc_dic["vios"], vfc_dic["vfchost"])
         else:
             cmd = 'viosvrcmd -m %s -p %s -c "cfgdev -dev %s"' \
-                   % (self.server, vfc_dic["vios"], vfc_dic["vfchost"])
+                % (self.server, vfc_dic["vios"], vfc_dic["vfchost"])
         output = self.session.cmd(cmd)
         if output.exit_status != 0:
             self.log.debug(output.stderr)
             self.fail("vfchost %s operation failed" % operation)
+        else:
+            self.log.info("%s of %s succes" % (operation, vfc_dic["vfchost"]))
+        time.sleep(5)
+        self.log.info("verifying %s status after %s operation.... \
+                       " % (vfc_dic["vfchost"], operation))
         self.vfchost_config_status_verify(operation, vfc_dic["vfchost"],
                                           vfc_dic["vios"])
+        self.log.info("verifying %s status after %s operation.... \
+                       " % (vfc_dic["vfc_client"], operation))
         self.vfc_client_status_verify(operation, vfc_dic["vfc_client"])
+        time.sleep(8)
+        self.log.info("verifying mpath status after %s operation, paths=%s \
+                        " % (operation, vfc_dic["paths"]))
         self.mpath_verification(operation, vfc_dic["paths"])
 
     def get_vfchost_config_status(self, vios, vfchost):
         '''
+        Returns vfchost status as defined or available for vfchost add_remove
         '''
         cmd = 'viosvrcmd -m %s -p %s -c "lsdev -dev %s -field  name status \
                -fmt :"' % (self.server, vios, vfchost)
@@ -378,17 +428,17 @@ class VirtualFC(Test):
         '''
         check the vfchost config status and returns True or False
         '''
-        def is_define():
+        def is_removed():
             status = self.get_vfchost_config_status(vios, vfchost)
-            if operation == 'define':
+            if operation == 'add':
                 if status == 'Available':
                     return True
                 return False
-            elif operation == 'undefine':
+            elif operation == 'remove':
                 if status == 'Defined':
                     return True
                 return False
-        if not wait.wait_for(is_define, timeout=30):
+        if not wait.wait_for(is_removed, timeout=30):
             self.err_mesg.append("after %s %s staus change \
                                   failed" % (operation, vfchost))
         else:

@@ -5,3 +5,5 @@ peer_user: "root"
 peer_password: "********"
 host_ip:
 netmask:
+ip_config:
+hbond:

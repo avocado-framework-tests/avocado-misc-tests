@@ -41,7 +41,7 @@ class Cpuidle_latency(Test):
         '''
         sm = SoftwareManager()
         distro_name = distro.detect().name
-        deps = ['gcc', 'make']
+        deps = ['gcc', 'make', 'kernel-devel']
         if 'Ubuntu' in distro_name:
             deps.extend(['linux-tools-common', 'linux-tools-%s' %
                          platform.uname()[2]])

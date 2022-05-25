@@ -93,7 +93,7 @@ class MemoHog(Test):
         srcdir = os.path.join(self.workdir, 'memhog')
         if not os.path.exists(srcdir):
             os.makedirs(srcdir)
-        for fname in ['memhog.c', 'util.c', 'util.h']:
+        for fname in ['memhog.c', 'util.c', 'util.h', 'numaif.h', 'numa.h']:
             fetch_file = self.fetch_asset(
                 fname, locations=['https://raw.githubusercontent.com/numactl/'
                                   'numactl/master/%s' % fname], expire='7d')

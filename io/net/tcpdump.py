@@ -47,6 +47,7 @@ class TcpdumpTest(Test):
         self.drop = self.params.get("drop_accepted", default="10")
         self.host_ip = self.params.get("host_ip", default="")
         self.option = self.params.get("option", default='')
+        self.hbond = self.params.get("hbond", default=False)
         # Check if interface exists in the system
         interfaces = netifaces.interfaces()
         if self.iface not in interfaces:
@@ -56,7 +57,11 @@ class TcpdumpTest(Test):
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         localhost = LocalHost()
-        self.networkinterface = NetworkInterface(self.iface, localhost)
+        if self.hbond:
+            self.networkinterface = NetworkInterface(self.iface, localhost,
+                                                     if_type='Bond')
+        else:
+            self.networkinterface = NetworkInterface(self.iface, localhost)
         try:
             self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
             self.networkinterface.save(self.ipaddr, self.netmask)
@@ -68,6 +73,7 @@ class TcpdumpTest(Test):
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
+        self.timeout = self.params.get("TIMEOUT", default="600")
         self.mtu = self.params.get("mtu", default=1500)
         self.mtu_timeout = self.params.get("mtu_timeout", default=30)
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
@@ -117,7 +123,7 @@ class TcpdumpTest(Test):
         else:
             obj = process.SubProcess(cmd, verbose=False, shell=True)
             obj.start()
-        cmd = "tcpdump -i %s -n -c %s" % (self.iface, self.count)
+        cmd = "timeout %s tcpdump -i %s -n -c %s" % (self.timeout, self.iface, self.count)
         if self.option in ('host', 'src'):
             cmd = "%s %s %s" % (cmd, self.option, self.host_ip)
         elif self.option == "dst":
@@ -138,7 +144,10 @@ class TcpdumpTest(Test):
         """
         perform nping
         """
-        nping_count = round((120 * int(self.count)) / 100)
+        if self.count <= 10:
+            nping_count = round((200 * int(self.count)) / 100)
+        else:
+            nping_count = round((120 * int(self.count)) / 100)
         detected_distro = distro.detect()
         if detected_distro.name == "SuSE":
             cmd = "./nping/nping --%s %s -c %s" % (param,
@@ -162,6 +171,9 @@ class TcpdumpTest(Test):
         try:
             self.networkinterface.restore_from_backup()
         except Exception:
+            self.networkinterface.remove_cfg_file()
             self.log.info("backup file not availbale, could not restore file.")
+        if self.hbond:
+            self.networkinterface.restore_slave_cfg_file()
         self.remotehost.remote_session.quit()
         self.remotehost_public.remote_session.quit()

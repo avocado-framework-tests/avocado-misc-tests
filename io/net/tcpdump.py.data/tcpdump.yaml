@@ -5,7 +5,9 @@ peer_user:
 peer_password:
 host_ip:
 netmask:
+TIMEOUT:
 count: 100
+hbond:
 # interface packet drop accepted in percentage (eg 10 for 10%)
 drop_accepted: 10
 nmap_download: "https://nmap.org/dist/nmap-7.80.tar.bz2"

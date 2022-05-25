@@ -1,6 +1,6 @@
 run_type: !mux
     upstream:
         type: "upstream"
-        gdb_version: "7.11"
+        gdb_version: "10.2"
     distro:
         type: "distro"

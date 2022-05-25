@@ -1,3 +1,4 @@
+rttest_url: 'https://www.kernel.org/pub/linux/utils/rt-tests/rt-tests-1.10.tar.gz'
 general: !mux
     signaltest:
         test_to_run: signaltest

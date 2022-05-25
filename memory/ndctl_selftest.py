@@ -49,15 +49,17 @@ class NdctlTest(Test):
         """
         Prequisite for ndctl selftest on non-NFIT devices
         """
-        nstype = genio.read_file("/sys/bus/nd/devices/region0"
-                                 "/nstype").rstrip("\n")
+        nstype_file = "/sys/bus/nd/devices/region0/nstype"
+        if not os.path.isfile(nstype_file):
+            self.cancel("Not found required sysfs file: %s." % nstype_file)
+        nstype = genio.read_file(nstype_file).rstrip("\n")
         if nstype == "4":
             self.cancel("Test not supported on legacy hardware")
 
         smg = SoftwareManager()
         self.url = self.params.get(
             'url', default="https://github.com/pmem/ndctl.git")
-        self.branch = self.params.get('branch', default='master')
+        self.branch = self.params.get('branch', default='main')
         deps = ['gcc', 'make', 'automake', 'autoconf', 'patch', 'jq']
         detected_distro = distro.detect()
         if detected_distro.name in ['SuSE', 'rhel']:
@@ -115,8 +117,9 @@ class NdctlTest(Test):
         """
         self.log.info("Running NDCTL selftests")
         failed_tests = []
-        output = build.run_make(
-            self.sourcedir, extra_args='check -j 1', process_kwargs={"ignore_status": True})
+        output = build.run_make(self.sourcedir,
+                                extra_args='check -j 1',
+                                process_kwargs={"ignore_status": True})
         for line in output.stdout.decode('utf-8').splitlines():
             if "Testsuite summary" in line:
                 break

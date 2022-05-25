@@ -2,6 +2,7 @@ interface:
 peer_ip:
 host_ip:
 netmask:
+hbond:
 args: !mux
     PrivateFlag:
         privflag_test: True

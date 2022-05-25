@@ -49,10 +49,7 @@ class Perf_subsystem(Test):
         elif 'debian' in detected_distro.name:
             kernel_ver = platform.uname()[2][3]
             deps.extend(['linux-tools-%s' % kernel_ver])
-        # FIXME: "redhat" as the distro name for RHEL is deprecated
-        # on Avocado versions >= 50.0.  This is a temporary compatibility
-        # enabler for older runners, but should be removed soon
-        elif detected_distro.name in ['rhel', 'SuSE', 'fedora', 'redhat']:
+        elif detected_distro.name in ['rhel', 'SuSE', 'fedora']:
             deps.extend(['perf'])
         else:
             self.cancel("Install the package for perf supported by %s"

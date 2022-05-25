@@ -66,7 +66,7 @@ class EliminateDomainSuffix(Test):
                 self.cancel('%s is needed for the test to be run' % package)
 
         self.cpu_family = cpu.get_family()
-        self.perf_args = "perf stat -v -C 0 -e"
+        self.perf_args = "perf stat -v -e"
         if self.cpu_family == 'power8':
             self.perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % self.perf_args
         if self.cpu_family == 'power9':
@@ -86,7 +86,7 @@ class EliminateDomainSuffix(Test):
         # Check if its enabled
         result_perf = process.run("%s,domain=2,core=1/ sleep 1"
                                   % self.perf_stat, ignore_status=True)
-        if "not supported" in result_perf.stderr.decode("utf-8"):
+        if "operations is limited" in result_perf.stderr.decode("utf-8"):
             self.cancel("Please enable lpar to allow collecting"
                         " the 24x7 counters info")
         if "You may not have permission to collect stats." in result_perf.stderr.decode("utf-8"):
@@ -106,6 +106,14 @@ class EliminateDomainSuffix(Test):
             self.fail('Unable to display domain indices in sysfs')
 
     def test_event_phys_core_param(self):
+        found_flag = False
+        for lne in process.get_command_output_matching('perf list', 'hv_24x7'):
+            lne = lne.split(',')[0].split('/')[1]
+            if 'HPM_0THRD_NON_IDLE_CCYC__PHYS_CORE' in lne:
+                found_flag = True
+                break
+        if not found_flag:
+            self.cancel("HPM_0THRD_NON_IDLE_CCYC__PHYS_CORE not found")
         result1 = self.event_stat('__PHYS_CORE,core=1/ sleep 1')
         if "Invalid event/parameter" not in result1.stdout.decode("utf-8"):
             self.fail('perf unable to recognize'
@@ -178,7 +186,7 @@ class EliminateDomainSuffix(Test):
             self.fail('performance counter stats for missing')
 
     def test_domain_chip_offset(self):
-        cmd = "perf stat -r 10 -C 0 -x ' ' perf stat -r 10 -C 0 -x ' ' \
+        cmd = "perf stat -r 10 -x ' ' perf stat -r 10 -x ' ' \
                -e hv_24x7/domain=2,offset=0xe0,core=0/ sleep 1"
         process.run(cmd)
 

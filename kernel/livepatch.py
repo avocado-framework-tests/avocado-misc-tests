@@ -23,6 +23,7 @@ from avocado.utils import distro
 from avocado.utils import process
 from avocado.utils import linux_modules
 from avocado.utils import genio
+from avocado.utils import dmesg
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -47,11 +48,9 @@ class Livepatch(Test):
         return process.system_output(cmd, shell=True, ignore_status=True,
                                      sudo=True).decode("utf-8")
 
-    def clear_dmesg(self):
-        process.run("dmesg -C ", sudo=True)
-
     def check_kernel_support(self):
-        if linux_modules.check_kernel_config("CONFIG_LIVEPATCH") == linux_modules.ModuleConfig.NOT_SET:
+        if linux_modules.check_kernel_config("CONFIG_LIVEPATCH") \
+                == linux_modules.ModuleConfig.NOT_SET:
             self.fail("Livepatch support not available")
 
     def setUp(self):
@@ -104,7 +103,7 @@ class Livepatch(Test):
         makefile.write('obj-m := livepatch-sample.o\nKDIR '
                        ':= /lib/modules/$(shell uname -r)/build'
                        '\nPWD := $(shell pwd)\ndefault:\n\t'
-                       '$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules\n')
+                       '$(MAKE) -C $(KDIR) M=$(PWD) modules\n')
         makefile.close()
 
         if build.make(self.sourcedir) >= 1:
@@ -114,7 +113,7 @@ class Livepatch(Test):
 
     def execute_test(self):
         self.log.info("============== Enabling livepatching ===============")
-        self.clear_dmesg()
+        dmesg.clear_dmesg()
         self.is_fail = 0
         self.run_cmd("insmod ./livepatch-sample.ko")
         if self.is_fail >= 1:
@@ -141,8 +140,8 @@ class Livepatch(Test):
             self.fail("Unable to disable livepatch "
                       "for livepatch_sample module")
 
-        if "unpatching transition" not in self.run_cmd_out("dmesg |grep "
-                                                           "-i livepatch_sample"):
+        if "unpatching transition" not in \
+                self.run_cmd_out("dmesg |grep -i livepatch_sample"):
             self.fail(
                 "livepatch couldn't be disabled, check dmesg "
                 "for more information")

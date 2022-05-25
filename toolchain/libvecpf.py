@@ -19,7 +19,7 @@ import os
 import re
 
 from avocado import Test
-from avocado.utils import build, distro, archive
+from avocado.utils import build, archive
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -36,9 +36,6 @@ class Libvecpf(Test):
         Source:
         http://github.com/Libvecpf/libvecpf.git
         """
-        if not distro.detect().name.lower() == 'ubuntu':
-            self.cancel('Upsupported OS %s' % distro.detect().name.lower())
-
         smm = SoftwareManager()
         for package in ['gcc', 'make']:
             if not smm.check_installed(package) and not smm.install(package):
@@ -63,7 +60,8 @@ class Libvecpf(Test):
         failures = []
         for failure in fail_list:
             num_fails = re.compile(r"# %s:(.*)" %
-                                   failure).findall(results)[0].strip()
+                                   failure).findall(results.decode('utf-8')
+                                                    )[0].strip()
             if int(num_fails):
                 failures.append({failure: num_fails})
 
