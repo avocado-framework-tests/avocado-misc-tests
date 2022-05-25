@@ -824,6 +824,7 @@ class NetworkVirtualization(Test):
         Get the logical port id of the
         backing device
         '''
+        logport = None
         for backing_dev in self.backing_dev_list().splitlines():
             if backing_dev.startswith('%s,' % slot):
                 backing_dev = backing_dev.strip('%s,"' % slot)
@@ -832,6 +833,9 @@ class NetworkVirtualization(Test):
                     if '0' in entry[2] and 'Operational' in entry[3]:
                         logport = entry[1]
                         break
+        if not logport:
+            self.log.info("Logport: %s" % logport)
+            self.cancel("Could not get logical port id of backing device")
         return logport
 
     def get_active_device_logport(self, slot):
@@ -839,6 +843,7 @@ class NetworkVirtualization(Test):
         Get the logical port id of the Network
         virtualized device
         '''
+        logport = None
         for backing_dev in self.backing_dev_list().splitlines():
             if backing_dev.startswith('%s,' % slot):
                 backing_dev = backing_dev.strip('%s,"' % slot)
@@ -847,6 +852,8 @@ class NetworkVirtualization(Test):
                     if '1' in entry[2]:
                         logport = entry[1]
                         break
+        if not logport:
+            self.cancel("Could not get logical port id of active backing device")
         return logport
 
     def is_backing_device_active(self, slot):
