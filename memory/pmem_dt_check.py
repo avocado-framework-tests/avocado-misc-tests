@@ -171,5 +171,5 @@ class NdctlDeviceTreeCheck(Test):
 
     @avocado.fail_on(pmem.PMemException)
     def tearDown(self):
-        if self.plib:
+        if hasattr(self, 'plib') and self.plib:
             self.plib.disable_region()

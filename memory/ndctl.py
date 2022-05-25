@@ -1016,15 +1016,16 @@ class NdctlTest(Test):
 
     @avocado.fail_on(pmem.PMemException)
     def tearDown(self):
-        if self.part:
+        if hasattr(self, 'part') and self.part:
             self.part.unmount()
-        if self.disk:
+        if hasattr(self, 'disk') and self.disk:
             self.log.info("Removing the FS meta created on %s", self.disk)
             delete_fs = "dd if=/dev/zero bs=1M count=1024 of=%s" % self.disk
             if process.system(delete_fs, shell=True, ignore_status=True):
                 self.fail("Failed to delete filesystem on %s" % self.disk)
 
-        if not self.preserve_setup:
-            if self.plib.run_ndctl_list('-N'):
-                self.plib.destroy_namespace(force=True)
-            self.plib.disable_region()
+        if hasattr(self, 'preserve_setup') and not self.preserve_setup:
+            if hasattr(self, 'plib'):
+                if self.plib.run_ndctl_list('-N'):
+                    self.plib.destroy_namespace(force=True)
+                self.plib.disable_region()

@@ -202,8 +202,9 @@ class PmemDeviceMapper(Test):
 
     @avocado.fail_on(pmem.PMemException)
     def tearDown(self):
-        self.part.unmount()
-        if not self.preserve_dm:
+        if hasattr(self, 'part'):
+            self.part.unmount()
+        if not self.preserve_dm and hasattr(self, 'plib'):
             process.system('dmsetup remove linear-pmem',
                            sudo=True, ignore_status=True)
             self.plib.destroy_namespace(force=True)
