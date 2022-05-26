@@ -43,6 +43,8 @@ class GenWQETest(Test):
         self.card = self.params.get('device', default='0')
         url = "http://corpus.canterbury.ac.nz/resources/cantrbry.tar.gz"
         self.url = self.params.get('test_tar_url', default=url)
+        self.files_used = []
+        self.dirs_used = []
         if not os.path.isdir("/sys/class/genwqe/genwqe%s_card/" % self.card):
             self.cancel("Device %s does not exist" % self.card)
         smm = SoftwareManager()
@@ -51,7 +53,6 @@ class GenWQETest(Test):
                 self.cancel('%s is needed for the test to be run' % pkg)
         self.test_tar = download.get_file(self.url, "cantrbry.tar.gz")
         self.files_used = [self.test_tar]
-        self.dirs_used = []
 
     def test_genwqe_echo(self):
         """
