@@ -170,8 +170,8 @@ class Sosreport(Test):
         self.run_cmd("%s --batch --tmp-dir=%s -p boot,memory" %
                      (self.sos_cmd, directory_name))
 
-        if "java" not in self.run_cmd_out("%s --batch --tmp-dir=%s -p webserver | "
-                                          "grep java" % (self.sos_cmd, directory_name)):
+        if "perl" not in self.run_cmd_out("%s --batch --tmp-dir=%s -p webserver | "
+                                          "grep perl" % (self.sos_cmd, directory_name)):
             self.is_fail += 1
             self.log.info("--profile option failed")
 
