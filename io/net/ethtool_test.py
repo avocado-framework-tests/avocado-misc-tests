@@ -62,6 +62,10 @@ class Ethtool(Test):
         self.netmask = self.params.get("netmask", default="")
         self.hbond = self.params.get("hbond", default=False)
         self.peer = self.params.get("peer_ip")
+        self.tx = self.params.get("tx_channel", default='')
+        self.rx = self.params.get("rx_channel", default='')
+        self.other = self.params.get("other_channel", default='')
+        self.combined = self.params.get("combined_channel", default='')
         if not self.peer:
             self.cancel("No peer provided")
         local = LocalHost()
@@ -131,17 +135,79 @@ class Ethtool(Test):
         for state, status in zip(["down", "up"], ["no", "yes"]):
             if not self.interface_state_change(self.iface, state, status):
                 self.fail("interface %s failed" % state)
-            cmd = "ethtool %s %s %s" % (self.args, self.iface, self.elapse)
-            ret = process.run(cmd, shell=True, verbose=True,
-                              ignore_status=True)
-            if ret.exit_status != 0:
-                if "Operation not supported" in ret.stderr_text:
-                    self.log.warn("%s failed" % self.args)
+            if self.args == "-L":
+                value = [self.tx, self.rx, self.other, self.combined]
+                self.param = ['tx', 'rx', 'other', 'combined']
+                default = []
+                cmd_l = "ethtool %s %s %s" % ("-l", self.iface, self.elapse)
+                output = process.run(cmd_l, shell=True, verbose=True,
+                                     ignore_status=True).stdout_text \
+                                                        .splitlines()[2:6]
+                for i in range(len(output)):
+                    default.append(output[i].split(':')[1])
+                    if 'n/a' in output[i]:
+                        self.param[i], value[i], default[i] = '', '', ''
+                self.default_set = default.copy()
+                elements = all([elem == '' for elem in value])
+                if elements:
+                    self.log.warn("Cannot set device channel for null")
                 else:
-                    self.fail("failed")
-        if self.networkinterface.ping_check(self.peer, count=10000,
-                                            options='-f') is not None:
-            self.fail("flood ping test failed")
+                    for i in range(4):
+                        if default[i] != '':
+                            default[i] = ['0', '1', int(default[i])//2,
+                                          default[i], int(default[i])+1]
+                            for j in range(5):
+                                if value[i] != '':
+                                    cmd = "ethtool %s %s %s %s" % (
+                                            self.args, self.iface,
+                                            self.param[i], default[i][j])
+                                    result = process.run(cmd, shell=True,
+                                                         verbose=True,
+                                                         ignore_status=True)
+                                    if state is 'up':
+                                        if self.networkinterface.ping_check(
+                                           self.peer, count=5) is not None:
+                                            self.cancel("ping fail value %s \
+                                                    to %s parameter" % (
+                                                    default[i][j],
+                                                    self.param[i]))
+                                    err_channel = "no RX or TX channel"
+                                    err_count = "count exceeds maximum"
+                                    if result.exit_status != 0:
+                                        if err_channel in result.stderr_text:
+                                            self.log.info("Cannot set %s \
+                                                    value on %s parameter" % (
+                                                    default[i][j],
+                                                    self.param[i]))
+                                        elif err_count in result.stderr_text:
+                                            self.log.info("Cannot set %s \
+                                                    value on %s parameter" % (
+                                                    default[i][j],
+                                                    self.param[i]))
+                                        else:
+                                            self.fail("%s %s" % (
+                                                self.args, result.stderr_text))
+                    cmd = "ethtool %s %s %s %s %s %s %s %s %s %s" % (
+                        self.args, self.iface, self.param[0], value[0],
+                        self.param[1], value[1], self.param[2], value[2],
+                        self.param[3], value[3])
+                    ret = process.run(cmd, shell=True, verbose=True,
+                                      ignore_status=True)
+                    if ret.exit_status != 0:
+                        self.fail("%s %s" % (self.args, ret.stderr_text))
+            else:
+                cmd = "ethtool %s %s %s" % (self.args, self.iface, self.elapse)
+                ret = process.run(cmd, shell=True, verbose=True,
+                                  ignore_status=True)
+                if ret.exit_status != 0:
+                    if "Operation not supported" in ret.stderr_text:
+                        self.log.warn("%s failed" % self.args)
+                    else:
+                        self.fail("%s failed" % self.args)
+        if not wait.wait_for(lambda: self.networkinterface.are_packets_lost(
+                        self.peer, options=['-c 1000', '-f']), timeout=30):
+            self.cancel("Packet recieved in Ping flood is not 100 percent \
+                         after waiting for 30sec")
         if self.priv_test:
             self.ethtool_toggle_priv_flags()
 
@@ -179,6 +245,15 @@ class Ethtool(Test):
         '''
         Set the interface up at the end of test.
         '''
+        if self.args == "-L":
+            cmd = "ethtool %s %s %s %s %s %s %s %s %s %s" % (
+                self.args, self.iface, self.param[0], self.default_set[0],
+                self.param[1], self.default_set[1], self.param[2],
+                self.default_set[2], self.param[3], self.default_set[3])
+            ret = process.run(cmd, shell=True, verbose=True,
+                              ignore_status=True)
+            if ret.exit_status != 0:
+                self.fail("%s %s" % (self.args, ret.stderr_text))
         self.interface_state_change(self.iface, "up", "yes")
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
         try:
