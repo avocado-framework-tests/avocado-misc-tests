@@ -38,3 +38,11 @@ args: !mux
     Get-phy-tunable:
         arg: --get-phy-tunable
         action_elapse: downshift
+    Show-channels:
+        arg: -l
+    Set-channels:
+        arg: -L
+        tx_channel:
+        rx_channel:
+        other_channel:
+        combined_channel:
