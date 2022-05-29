@@ -31,7 +31,7 @@ class XIVE(Test):
 
     def setUp(self):
         if "ppc" not in os.uname()[4]:
-            self.cancel("Supported only on Power Systems")
+            self.cancel("Test case is supported only on IBM Power Servers")
 
         cpu_info = genio.read_file("/proc/cpuinfo")
         if 'POWER9' in cpu_info:
@@ -62,8 +62,8 @@ class XIVE(Test):
         if self.intr == 'XIVE':
             xive_file_path = "/sys/kernel/debug/powerpc/xive"
             if not os.path.exists(xive_file_path):
-                self.cancel("storeEOI feature is not Available %s / %s" %
-                            (self.hw, self.intr))
+                self.fail("Unexpected failure: XIVE specific information is "
+                          "missing %s / %s" % (self.hw, self.intr))
             else:
                 flags = genio.read_file(xive_file_path)
                 match = re.search("flags=S", flags)
@@ -72,7 +72,7 @@ class XIVE(Test):
                     self.log.info("storeEOI feature is available and 'S' flag "
                                   "is set for %s / %s" % (self.hw, self.intr))
                 else:
-                    self.cancel("storeEOI feature 'S' flag is not set for "
+                    self.fail("storeEOI feature 'S' flag is not set for "
                                 "%s / %s" % (self.hw, self.intr))
         elif self.intr == 'XICS':
             self.cancel("storeEOI feature is not Available for %s / %s" %
