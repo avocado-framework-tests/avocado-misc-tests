@@ -69,11 +69,11 @@ class XIVE(Test):
                 match = re.search("flags=S", flags)
                 self.log.info("MATCH = %s" % match)
                 if match:
-                    self.log.info(
-                        "storeEOI feature Available and 'S' flag is set for %s / %s" % (self.hw, self.intr))
+                    self.log.info("storeEOI feature is available and 'S' flag "
+                                  "is set for %s / %s" % (self.hw, self.intr))
                 else:
-                    self.cancel(
-                        "storeEOI feature 'S' flag is not set for %s / %s" % (self.hw, self.intr))
+                    self.cancel("storeEOI feature 'S' flag is not set for "
+                                "%s / %s" % (self.hw, self.intr))
         elif self.intr == 'XICS':
             self.cancel("storeEOI feature is not Available for %s / %s" %
                         (self.hw, self.intr))
