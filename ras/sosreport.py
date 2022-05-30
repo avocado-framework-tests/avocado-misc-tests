@@ -54,9 +54,10 @@ class Sosreport(Test):
             sos_pkg = 'sos'
         else:
             self.cancel("sosreport is not supported on %s" % dist.name)
-        if not sm.check_installed(sos_pkg) and not sm.install(sos_pkg):
-            self.cancel(
-                "Package %s is missing and could not be installed" % sos_pkg)
+        for package in (sos_pkg, 'java'):
+            if not sm.check_installed(package) and not sm.install(package):
+                self.cancel(
+                    "Package %s is missing and could not be installed" % (package))
         if dist.name == "rhel":
             self.sos_cmd = "sos report"
             if dist.version <= "7" and dist.release <= "4":
