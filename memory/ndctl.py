@@ -139,13 +139,16 @@ class NdctlTest(Test):
         # If not present then create it and then  copy the iniparser.h
         # and dictionary.h headers to /usr/include/iniparser/
 
-        iniparser_dir = "/usr/include/iniparser/"
-        if not os.path.exists(iniparser_dir):
-            os.makedirs(iniparser_dir)
+        # Skip this code for releases which ships required header files
+        # as a part of /usr/include/iniparser/ directory.
+        if not self.dist.name == 'rhel':
+            iniparser_dir = "/usr/include/iniparser/"
+            if not os.path.exists(iniparser_dir):
+                os.makedirs(iniparser_dir)
 
-        for file_name in ['/usr/include/iniparser.h',
-                          '/usr/include/dictionary.h']:
-            self.copyutil(file_name, iniparser_dir)
+            for file_name in ['/usr/include/iniparser.h',
+                              '/usr/include/dictionary.h']:
+                self.copyutil(file_name, iniparser_dir)
 
         process.run('./autogen.sh', sudo=True, shell=True)
         process.run("./configure CFLAGS='-g -O2' --prefix=/usr "
@@ -158,16 +161,13 @@ class NdctlTest(Test):
         self.daxctl = os.path.abspath('./daxctl/daxctl')
 
     def meson_build_system(self, deps):
+        deps.extend(['xmlto', 'libuuid-devel', 'meson', 'cmake'])
         if self.dist.name == 'SuSE':
-            deps.extend(['xmlto', 'libgudev-1_0-devel', 'libuuid-devel',
-                         'libiniparser-devel', 'libiniparser1',
+            deps.extend(['libgudev-1_0-devel', 'libiniparser1', 'pkg-config',
                          'ruby2.5-rubygem-asciidoctor-doc',
-                         'systemd-rpm-macros', 'pkg-config', 'meson', 'cmake'])
+                         'systemd-rpm-macros', 'libiniparser-devel'])
         elif self.dist.name == 'rhel':
-            # Skipping this for now, due to non-availibility of dependednt
-            # packages.
-            self.cancel("Cancelling the test due to the non-availability of"
-                        "dependent packages.")
+            deps.extend(['libgudev-devel', 'rubygem-asciidoctor'])
 
         for pkg in deps:
             if not self.smm.check_installed(pkg) and not self.smm.install(pkg):
@@ -200,6 +200,12 @@ class NdctlTest(Test):
         self.reflink = '-m reflink=0'
         self.smm = SoftwareManager()
         if self.package == 'upstream':
+            # Skipping this for now, due to non-availibility of
+            # dependent packages.
+            if self.dist.name == 'SuSE' and int(self.dist.version) <= 15:
+                self.cancel("Cancelling the test due to "
+                            "non-availability of dependent packages.")
+
             deps.extend(['gcc', 'make', 'automake', 'autoconf'])
             if self.dist.name == 'SuSE':
                 deps.extend(['libtool',
@@ -210,7 +216,8 @@ class NdctlTest(Test):
             elif self.dist.name == 'rhel':
                 deps.extend(['libtool', 'bash-completion', 'parted',
                              'kmod-devel', 'libuuid-devel', 'json-c-devel',
-                             'systemd-devel', 'keyutils-libs-devel', 'jq'])
+                             'systemd-devel', 'keyutils-libs-devel', 'jq',
+                             'iniparser', 'iniparser-devel'])
             for pkg in deps:
                 if not self.smm.check_installed(pkg) and not \
                         self.smm.install(pkg):
