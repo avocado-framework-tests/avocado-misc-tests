@@ -47,6 +47,8 @@ class LibHugetlbfs(Test):
         # Check for basic utilities
         smm = SoftwareManager()
         detected_distro = distro.detect()
+        if (detected_distro.name == 'rhel' and detected_distro.version == '9'):
+            self.cancel("libhugetlbfs is not available RHEL 9.x onwards")
         deps = ['gcc', 'make', 'patch']
         if detected_distro.name in ["Ubuntu", 'debian']:
             deps += ['libpthread-stubs0-dev', 'git']
