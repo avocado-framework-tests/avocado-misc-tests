@@ -133,18 +133,13 @@ class NetworkVirtualization(Test):
               ' -r lpar --filter lpar_names=' + self.lpar + \
               ' -F lpar_id'
         self.lpar_id = self.session_hmc.cmd(cmd).stdout_text.split()[0]
-        if not self.lpar_id.isnumeric():
-            self.fail("Could not get LPAR ID")
         self.vios_id = []
         for vios_name in self.vios_name:
             cmd = 'lssyscfg -m ' + self.server + \
                   ' -r lpar --filter lpar_names=' + vios_name + \
                   ' -F lpar_id'
-            __vios_id = self.session_hmc.cmd(cmd).stdout_text.split()[0]
-            if __vios_id.isnumeric():
-                self.vios_id.append(__vios_id)
-            else:
-                self.fail("Could not get VIOS ID of %s" % __vios_id)
+            self.vios_id.append(self.session_hmc.cmd(
+                cmd).stdout_text.split()[0])
         cmd = 'lshwres -m %s -r sriov --rsubtype adapter -F \
               phys_loc:adapter_id' % self.server
         adapter_id_output = self.session_hmc.cmd(cmd).stdout_text
@@ -528,10 +523,89 @@ class NetworkVirtualization(Test):
                 self.fail("slot not found")
         self.check_dmesg_error()
 
+    def test_vnic_hmc_dlpar(self):
+        """
+        Perform vNIC device hot add and hot remove
+        """
+        for slot_no, device_ip, netmask, mac, peer_ip, sriov_port, adapter_id in zip(self.slot_num,
+                                                                                     self.device_ip,
+                                                                                     self.netmask,
+                                                                                     self.mac_id,
+                                                                                     self.peer_ip,
+                                                                                     self.sriov_port,
+                                                                                     self.backing_adapter_id):
+            self.update_backing_devices(slot_no)
+            device_name = self.find_device(mac)
+            networkinterface = NetworkInterface(device_name, self.local)
+            count = 0
+            self.log.info("Preforming DLPAR on %s" % device_name)
+            for _ in range(self.num_of_dlpar):
+                self.log.info("DLPAR iteration #%d" % count)
+                num_backingdevs = self.backing_dev_count_w_slot_num(slot_no)
+
+                self.device_add_remove(slot_no, '', '', '', 'remove')
+                if networkinterface.is_available():
+                    self.fail("DLPAR remove did not remove interface")
+
+                self.device_add_remove(slot_no, mac, sriov_port, adapter_id, 'add')
+                for c in range(1, num_backingdevs):
+                    self.backing_dev_add_remove('add', c)
+                    self.wait_interface(device_name)
+
+                try:
+                    networkinterface.add_ipaddr(device_ip, netmask)
+                except Exception:
+                    networkinterface.save(device_ip, netmask)
+                    networkinterface.add_ipaddr(device_ip, netmask)
+                networkinterface.bring_up()
+
+                if not wait.wait_for(networkinterface.is_link_up, timeout=120):
+                    self.fail("Unable to bring up the link on the Network virtualized device")
+
+                time.sleep(5)
+
+                if networkinterface.ping_check(peer_ip, count=5) is not None:
+                    self.fail("dlpar has affected Network connectivity")
+                count += 1
+        self.check_dmesg_error()
+
+    def backing_dev_count_w_slot_num(self, slot):
+        """
+        Lists the count of backing devices
+        :param slot: vnic slot
+        :type slot: str
+
+        :returns: backing device count
+        :rtype: int
+        """
+        count = 0
+        output = self.backing_dev_list()
+        for i in output.splitlines():
+            if i.startswith('%s,' % slot):
+                count = len(i.split(',')[1:])
+        return count
+
+    def wait_interface(self, device_name):
+        """
+        Wait till interface comes up
+        :param device_name: vnic device that is tested
+        :type device_name: str
+
+        :returns: if the device is up or down
+        :rtype: bool
+        """
+        for _ in range(0, 120, 10):
+            for interface in netifaces.interfaces():
+                if device_name == interface:
+                    self.log.info("Network virtualized device %s is up", device_name)
+                    return True
+                time.sleep(5)
+        return False
+
     def test_backingdevremove(self):
-        '''
+        """
         Removing Backing device for Network virtualized device
-        '''
+        """
         for slot in self.slot_num:
             if self.check_slot_availability(slot):
                 self.fail("Slot does not exist")
@@ -829,7 +903,6 @@ class NetworkVirtualization(Test):
         Get the logical port id of the
         backing device
         '''
-        logport = None
         for backing_dev in self.backing_dev_list().splitlines():
             if backing_dev.startswith('%s,' % slot):
                 backing_dev = backing_dev.strip('%s,"' % slot)
@@ -838,9 +911,6 @@ class NetworkVirtualization(Test):
                     if '0' in entry[2] and 'Operational' in entry[3]:
                         logport = entry[1]
                         break
-        if not logport:
-            self.log.info("Logport: %s" % logport)
-            self.cancel("Could not get logical port id of backing device")
         return logport
 
     def get_active_device_logport(self, slot):
@@ -848,7 +918,6 @@ class NetworkVirtualization(Test):
         Get the logical port id of the Network
         virtualized device
         '''
-        logport = None
         for backing_dev in self.backing_dev_list().splitlines():
             if backing_dev.startswith('%s,' % slot):
                 backing_dev = backing_dev.strip('%s,"' % slot)
@@ -857,8 +926,6 @@ class NetworkVirtualization(Test):
                     if '1' in entry[2]:
                         logport = entry[1]
                         break
-        if not logport:
-            self.cancel("Could not get logical port id of active backing device")
         return logport
 
     def is_backing_device_active(self, slot):
@@ -915,8 +982,7 @@ class NetworkVirtualization(Test):
         self.session_hmc.quit()
         if 'vios' in str(self.name.name):
             self.session.quit()
-        if 'test_remove' in str(self.name.name):
-            cmd = "echo 'module ibmvnic -pt; func send_subcrq -pt' > /sys/kernel/debug/dynamic_debug/control"
-            result = process.run(cmd, shell=True, ignore_status=True)
-            if result.exit_status:
-                self.log.debug("failed to disable debug mode")
+        cmd = "echo 'module ibmvnic -pt; func send_subcrq -pt' > /sys/kernel/debug/dynamic_debug/control"
+        result = process.run(cmd, shell=True, ignore_status=True)
+        if result.exit_status:
+            self.log.debug("failed to disable debug mode")
