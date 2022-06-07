@@ -31,7 +31,7 @@ class XIVE(Test):
 
     def setUp(self):
         if "ppc" not in os.uname()[4]:
-            self.cancel("Supported only on Power Systems")
+            self.cancel("Test case is supported only on IBM Power Servers")
 
         cpu_info = genio.read_file("/proc/cpuinfo")
         if 'POWER9' in cpu_info:
@@ -60,20 +60,31 @@ class XIVE(Test):
     def test_storeEOI(self):
         self.log.info("HW: %s Mode: %s" % (self.hw, self.intr))
         if self.intr == 'XIVE':
-            xive_file_path = "/sys/kernel/debug/powerpc/xive"
-            if not os.path.exists(xive_file_path):
-                self.cancel("storeEOI feature is not Available %s / %s" %
-                            (self.hw, self.intr))
+            xive_path = "/sys/kernel/debug/powerpc/xive"
+            # Kernel commit baed14de78b5 changed the debugfs file xive into a
+            # directory. Add a check for the same.
+            is_dir = os.path.isdir(xive_path)
+            if not is_dir and not os.path.exists(xive_path):
+                self.fail("Unexpected failure: XIVE specific information is "
+                          "missing %s / %s" % (self.hw, self.intr))
+            if is_dir:
+                # If xive is a directory then read from store-eoi file
+                xive_path = "/sys/kernel/debug/powerpc/xive/store-eoi"
+
+            flags = genio.read_file(xive_path)
+            if is_dir:
+                # store-eoi value can be enabled or disable via kernel command
+                # line or using sysfs debug directory.
+                match = re.search("Y", flags) or re.search("N", flags)
             else:
-                flags = genio.read_file(xive_file_path)
                 match = re.search("flags=S", flags)
-                self.log.info("MATCH = %s" % match)
-                if match:
-                    self.log.info(
-                        "storeEOI feature Available and 'S' flag is set for %s / %s" % (self.hw, self.intr))
-                else:
-                    self.cancel(
-                        "storeEOI feature 'S' flag is not set for %s / %s" % (self.hw, self.intr))
+            self.log.info("MATCH = %s" % match)
+            if match:
+                self.log.info("storeEOI feature is available and 'S' flag "
+                              "is present for %s / %s" % (self.hw, self.intr))
+            else:
+                self.fail("storeEOI feature 'S' flag is absent for "
+                          "%s / %s" % (self.hw, self.intr))
         elif self.intr == 'XICS':
             self.cancel("storeEOI feature is not Available for %s / %s" %
                         (self.hw, self.intr))
