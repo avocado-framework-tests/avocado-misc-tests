@@ -120,6 +120,7 @@ class PerfBasic(Test):
         sysfs_file = "/sys/devices/system/cpu/cpu0/"
 
         sysfs_dict = {"power8": ['mmcr0', 'mmcr1', 'mmcra'],
+                      "power8e": ['mmcr0', 'mmcr1', 'mmcra'],
                       "power9": ['mmcr0', 'mmcr1', 'mmcra'],
                       "power10": ['mmcr0', 'mmcr1', 'mmcr3', 'mmcra']}
 
@@ -192,7 +193,7 @@ class PerfBasic(Test):
             self.fail("sysfs events folder not found")
 
         if not os.path.isdir(base_dir + event_type):
-            self.fail("sysfs %s folder not found" % event_type)
+            self.cancel("sysfs %s folder not found" % event_type)
 
         sys_fs_events = os.listdir(os.path.join(base_dir, event_type, 'events'))
         if len(sys_fs_events) < 21:
@@ -226,7 +227,7 @@ class PerfBasic(Test):
             if pmu_type in entry:
                 sysfs_pmu_list.append(entry)
         if not len(sysfs_pmu_list):
-            self.fail("%s PMUs not found in sysfs" % pmu_type)
+            self.cancel("%s PMUs not found in sysfs" % pmu_type)
         return sysfs_pmu_list
 
     def _sysfs_pmu_cpumask(self, pmu_list):
