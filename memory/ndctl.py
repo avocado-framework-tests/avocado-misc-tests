@@ -200,19 +200,20 @@ class NdctlTest(Test):
         self.reflink = '-m reflink=0'
         self.smm = SoftwareManager()
         if self.package == 'upstream':
-            # Skipping this for now, due to non-availibility of
-            # dependent packages.
-            if self.dist.name == 'SuSE' and int(self.dist.version) <= 15:
-                self.cancel("Cancelling the test due to "
-                            "non-availability of dependent packages.")
-
             deps.extend(['gcc', 'make', 'automake', 'autoconf'])
             if self.dist.name == 'SuSE':
-                deps.extend(['libtool',
-                             'libkmod-devel', 'libudev-devel', 'systemd-devel',
-                             'libuuid-devel-static', 'libjson-c-devel',
-                             'keyutils-devel', 'kmod-bash-completion',
-                             'bash-completion-devel'])
+                # Cancel this for now, due to non-availibility of
+                # dependent packages for suse versions below sles15sp3.
+                if self.dist.release < 3:
+                    self.cancel("Cancelling the test due to "
+                                "non-availability of dependent packages.")
+                else:
+                    deps.extend(['libtool', 'libkmod-devel', 'libudev-devel',
+                                 'systemd-devel', 'libuuid-devel-static',
+                                 'libjson-c-devel', 'keyutils-devel',
+                                 'kmod-bash-completion',
+                                 'bash-completion-devel'])
+
             elif self.dist.name == 'rhel':
                 deps.extend(['libtool', 'bash-completion', 'parted',
                              'kmod-devel', 'libuuid-devel', 'json-c-devel',
