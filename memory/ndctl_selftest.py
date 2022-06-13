@@ -18,9 +18,11 @@
 
 import os
 import json
+import shutil
 
 from avocado import Test
 from avocado.utils import process, build, distro, git, genio
+from avocado.utils.git import GitRepoHelper
 from avocado.utils.software_manager import SoftwareManager
 
 
@@ -45,10 +47,59 @@ class NdctlTest(Test):
                     bus_ids.append(value)
         return bus_ids
 
+    def copyutil(self, file_name, iniparser_dir):
+        shutil.copy(file_name, iniparser_dir)
+
+    def autotools_build_system(self):
+        # Check if /usr/include/iniparser directory is present or not
+        # If not present then create it and then  copy the iniparser.h
+        # and dictionary.h headers to /usr/include/iniparser/
+
+        # Skip this code for releases which ships required header files
+        # as a part of /usr/include/iniparser/ directory.
+        if not self.detected_distro.name == 'rhel':
+            iniparser_dir = "/usr/include/iniparser/"
+            if not os.path.exists(iniparser_dir):
+                os.makedirs(iniparser_dir)
+
+            for file_name in ['/usr/include/iniparser.h',
+                              '/usr/include/dictionary.h']:
+                self.copyutil(file_name, iniparser_dir)
+
+        process.run('./autogen.sh', sudo=True, shell=True)
+        process.run("./configure CFLAGS='-g -O2' --prefix=/usr "
+                    "--disable-docs "
+                    "--sysconfdir=/etc --libdir="
+                    "/usr/lib64", shell=True, sudo=True)
+        build.make(".")
+
+        self.ndctl = os.path.abspath('./ndctl/ndctl')
+        self.daxctl = os.path.abspath('./daxctl/daxctl')
+
+    def meson_build_system(self, deps):
+        deps.extend(['xmlto', 'libuuid-devel', 'meson', 'cmake'])
+        if self.detected_distro.name == 'SuSE':
+            deps.extend(['libgudev-1_0-devel', 'libiniparser-devel',
+                         'libiniparser1', 'ruby2.5-rubygem-asciidoctor-doc',
+                         'systemd-rpm-macros', 'pkg-config'])
+        elif self.detected_distro.name == 'rhel':
+            deps.extend(['libgudev-devel', 'rubygem-asciidoctor'])
+
+        for pkg in deps:
+            if not self.smg.check_installed(pkg) \
+                    and not self.smg.install(pkg):
+                self.cancel('%s is needed for the test to be run' % pkg)
+
+        process.run("meson setup build", sudo=True, shell=True)
+        process.run("meson install -C build", sudo=True, shell=True)
+        self.ndctl = os.path.abspath('/usr/bin/ndctl')
+        self.daxctl = os.path.abspath('/usr/bin/daxctl')
+
     def setUp(self):
         """
         Prequisite for ndctl selftest on non-NFIT devices
         """
+
         nstype_file = "/sys/bus/nd/devices/region0/nstype"
         if not os.path.isfile(nstype_file):
             self.cancel("Not found required sysfs file: %s." % nstype_file)
@@ -56,44 +107,61 @@ class NdctlTest(Test):
         if nstype == "4":
             self.cancel("Test not supported on legacy hardware")
 
-        smg = SoftwareManager()
+        self.smg = SoftwareManager()
         self.url = self.params.get(
             'url', default="https://github.com/pmem/ndctl.git")
         self.branch = self.params.get('branch', default='main')
+        ndctl_project_version = self.params.get(
+            'ndctl_project_version', default='')
         deps = ['gcc', 'make', 'automake', 'autoconf', 'patch', 'jq']
-        detected_distro = distro.detect()
-        if detected_distro.name in ['SuSE', 'rhel']:
-            if detected_distro.name == 'SuSE':
-                deps.extend(['libkmod-devel', 'libudev-devel',
-                             'keyutils-devel', 'libuuid-devel-static',
-                             'libjson-c-devel', 'systemd-devel',
-                             'kmod-bash-completion', 'bash-completion-devel'])
+        self.detected_distro = distro.detect()
+        if self.detected_distro.name in ['SuSE', 'rhel']:
+            if self.detected_distro.name == 'SuSE':
+                # Cancel this for now, due to non-availibility of
+                # dependent packages for suse versions below sles15sp3.
+                if self.detected_distro.release < 3:
+                    self.cancel("Cancelling the test due to "
+                                "non-availability of dependent packages.")
+                else:
+                    deps.extend(['libkmod-devel', 'libudev-devel',
+                                 'keyutils-devel', 'libuuid-devel-static',
+                                 'libjson-c-devel', 'systemd-devel',
+                                 'kmod-bash-completion',
+                                 'bash-completion-devel'])
             else:
                 deps.extend(['kmod-devel', 'libuuid-devel', 'json-c-devel',
                              'systemd-devel', 'keyutils-libs-devel', 'jq',
-                             'parted', 'libtool'])
+                             'parted', 'libtool', 'iniparser',
+                             'iniparser-devel'])
         else:
             # TODO: Add RHEL when support arrives
-            self.cancel('Unsupported OS %s' % detected_distro.name)
+            self.cancel('Unsupported OS %s' % self.detected_distro.name)
 
         for package in deps:
-            if not smg.check_installed(package) and not smg.install(package):
+            if not self.smg.check_installed(package) \
+                    and not self.smg.install(package):
                 self.cancel(
                     "Fail to install %s required for this test." % (package))
 
         git.get_repo(self.url, branch=self.branch,
                      destination_dir=self.teststmpdir)
-
         self.sourcedir = self.teststmpdir
         os.chdir(self.sourcedir)
-        process.run('./autogen.sh', sudo=True, shell=True)
-        process.run(
-            "./configure CFLAGS='-g -O2' --prefix=/usr "
-            "--disable-docs "
-            "--sysconfdir=/etc --libdir=/usr/lib64 "
-            "--enable-destructive", shell=True, sudo=True)
 
-        build.make(self.sourcedir)
+        if ndctl_project_version:
+            ndctl_tag_name = "v" + ndctl_project_version
+
+            # Checkout the desired tag
+            git_helper = GitRepoHelper(
+                self.url, destination_dir=self.teststmpdir)
+            git_helper.checkout(branch=ndctl_tag_name, commit=None)
+
+            if (float(ndctl_project_version) < 73):
+                self.autotools_build_system()
+            else:
+                self.meson_build_system(deps)
+        else:
+            self.meson_build_system(deps)
 
         bus_ids = self.get_bus_ids()
         os.environ['WITHOUT_NFIT'] = "y"
