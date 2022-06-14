@@ -1,0 +1,68 @@
+A tool to monitor I/O latency in real time. It shows disk latency in the same way as ping shows network latency.
+Homepage: https://github.com/koct9i/ioping/ (migrated from http://code.google.com/p/ioping/)
+Please send your patches, issues and questions to https://github.com/koct9i/ioping/issues/
+
+Inputs Needed in yaml file:
+---------------------------
+count - stop ioping after <count> requests
+deadline - stop ioping after <deadline> requests
+period - print raw statistics for every <period> requests
+interval - interval between requests in seconds
+size - Request size (4k)
+wsize - Working set size (1m for directory, whole size for file or device)
+disk - path for the disk (ex: /dev/mapper/mpathd)
+
+Usage: ioping [-LABCDWRq] [-c count] [-w deadline] [-pP period] [-i interval]
+               [-s size] [-S wsize] [-o offset] directory|file|device
+        ioping -h | -v
+
+      -c <count>      stop after <count> requests
+      -w <deadline>   stop after <deadline>
+      -p <period>     print raw statistics for every <period> requests
+      -P <period>     print raw statistics for every <period> in time
+      -i <interval>   interval between requests (1s)
+      -s <size>       request size (4k)
+      -S <wsize>      working set size (1m)
+      -o <offset>     working set offset (0)
+      -k              keep and reuse temporary working file
+      -L              use sequential operations (includes -s 256k)
+      -A              use asynchronous I/O
+      -C              use cached I/O
+      -D              use direct I/O
+      -W              use write I/O *DANGEROUS*
+      -R              seek rate test (same as -q -i 0 -w 3 -S 64m)
+      -B              print final statistics in raw format
+      -q              suppress human-readable output
+      -h              display this message and exit
+      -v              display version and exit
+
+EXAMPLES
+
+ioping .
+    Show disk I/O latency using the default values and the current directory, until interrupted
+    This command prepares temporary (unlinked/hidden) working file and reads random chunks from it using non-cached read requests 
+ioping -c 10 -s 1M /tmp
+    Measure latency on /tmp using 10 requests of 1 megabyte each 
+ioping -R /dev/sda
+    Measure disk seek rate
+ioping -RL /dev/sda
+    Measure disk sequential speed
+ioping -RLB . | awk '{print $4}'
+    Get disk sequential speed in bytes per second 
+
+
+RAW STATISTICS
+
+       ioping -p 100 -c 200 -i 0 -q .
+       100 26694 3746 15344272 188 267 1923 228
+       100 24165 4138 16950134 190 242 2348 214
+       (1) (2)   (3)  (4)      (5) (6) (7)  (8)
+
+       (1) number of requests
+       (2) serving time         (usec)
+       (3) requests per second  (iops)
+       (4) transfer speed       (bytes/sec)
+       (5) minimal request time (usec)
+       (6) average request time (usec)
+       (7) maximum request time (usec)
+       (8) request time standard deviation (usec)g -p 100 -c 200 -i 0 -q .

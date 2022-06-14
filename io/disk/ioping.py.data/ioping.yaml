@@ -1,26 +1,3 @@
-#Usage: ioping [-LABCDWRq] [-c count] [-w deadline] [-pP period] [-i interval]
-#               [-s size] [-S wsize] [-o offset] directory|file|device
-#        ioping -h | -v
-#
-#      -c <count>      stop after <count> requests
-#      -w <deadline>   stop after <deadline>
-#      -p <period>     print raw statistics for every <period> requests
-#      -P <period>     print raw statistics for every <period> in time
-#      -i <interval>   interval between requests (1s)
-#      -s <size>       request size (4k)
-#      -S <wsize>      working set size (1m)
-#      -o <offset>     working set offset (0)
-#      -k              keep and reuse temporary working file
-#      -L              use sequential operations (includes -s 256k)
-#      -A              use asynchronous I/O
-#      -C              use cached I/O
-#      -D              use direct I/O
-#      -W              use write I/O *DANGEROUS*
-#      -R              seek rate test (same as -q -i 0 -w 3 -S 64m)
-#      -B              print final statistics in raw format
-#      -q              suppress human-readable output
-#      -h              display this message and exit
-#      -v              display version and exit
 io_type: !mux
     cache_io:
         mode: '-C'

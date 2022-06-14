@@ -37,7 +37,7 @@ class Ioping(Test):
         # Check for basic utilities
         smm = SoftwareManager()
 
-        self.count = self.params.get('count', default='2')
+        self.count = self.params.get('count', default='8')
         self.mode = self.params.get('mode', default='-C')
         self.deadline = self.params.get('deadline', default='10')
         self.period = self.params.get('period', default='10')
