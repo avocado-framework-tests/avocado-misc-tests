@@ -59,14 +59,27 @@ class perf_hv_gpci(Test):
                 self.cancel('%s is needed for the test to be run' % package)
 
         # Collect all hv_gpci events
-        self.list_of_hv_gpci_events = []
+        self.list_phys = []
+        self.list_sibling = []
+        self.list_partition = []
+        self.list_hw = []
+        self.list_noid = []
         for line in process.get_command_output_matching('perf list', 'hv_gpci'):
-            line = line.split(',')[0].split('/')[1]
-            self.list_of_hv_gpci_events.append(line)
+            line = "%s/%s" % (line.split('/')[0], line.split('/')[1])
+            if 'phys_processor_idx' in line:
+                self.list_phys.append(line)
+            elif 'sibling_part_id' in line:
+                self.list_sibling.append(line)
+            elif 'partition_id' in line:
+                self.list_partition.append(line)
+            elif 'hw_chip_id' in line:
+                self.list_hw.append(line)
+            else:
+                self.list_noid.append(line)
 
         # Clear the dmesg, by that we can capture the delta at the end of
         # the test.
-        process.run("dmesg -c")
+        process.run("dmesg -C")
 
     def error_check(self):
         if len(self.fail_cmd) > 0:
@@ -80,20 +93,35 @@ class perf_hv_gpci(Test):
         if output.exit_status != 0:
             self.fail_cmd.append(cmd)
 
-    def test_gpci_events(self):
-        perf_stat = "perf stat"
-        perf_flags = '-C 1 -v -e'
+    def gpci_events(self, val):
+        for line in val:
+            if line in self.list_phys:
+                line = "%s,%s/" % (line.split(',')[0], line.split(',')[1].replace(
+                    'phys_processor_idx=?', 'phys_processor_idx=1'))
+            if line in self.list_sibling:
+                line = "%s,%s/" % (line.split(',')[0], line.split(',')[1].replace(
+                    'sibling_part_id=?', 'sibling_part_id=2'))
+            if line in self.list_partition:
+                line = "%s,%s/" % (line.split(',')[0], line.split(',')[1].replace(
+                    'partition_id=?', 'partition_id=1'))
+            if line in self.list_hw:
+                line = "%s,%s/" % (line.split(',')[0], line.split(',')[1].replace(
+                    'hw_chip_id=?', 'hw_chip_id=12'))
+            if line in self.list_noid:
+                line = "%s/" % line
 
-        for line in self.list_of_hv_gpci_events:
-            evt = "hv_gpci/%s,hw_chip_id=12/" % line
-            cmd = "%s %s %s sleep 1" % (perf_stat, perf_flags, evt)
+            cmd = "perf stat -v -e %s sleep 1" % line
             self.run_cmd(cmd)
-            cmd = "%s --per-core -a -e %s sleep 1" % (perf_stat, evt)
+            cmd = "perf stat --per-core -a -e %s sleep 1" % line
             self.run_cmd(cmd)
-            cmd = "%s --per-socket -a -e %s sleep 1" % (perf_stat, evt)
+            cmd = "perf stat --per-socket -a -e %s sleep 1" % line
             self.run_cmd(cmd)
-
         self.error_check()
+
+    def test_gpci_events(self):
+        for event in [self.list_phys, self.list_sibling, self.list_partition,
+                      self.list_hw, self.list_noid]:
+            self.gpci_events(event)
 
     def tearDown(self):
         # Collect the dmesg
