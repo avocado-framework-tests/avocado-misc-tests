@@ -1,0 +1,12 @@
+Ftrace Unit Tests:
+
+This avocado based test invokes ftrace unit tests that are part of Linux kernel
+source. Content of trace.yaml matches the subdirectories under
+tools/testing/selftests/ftrace/test.d/
+
+While running this test on a Linux distribution based kernel make sure to
+enable appropriate sub-tests. Some sub-tests may not be available.
+
+Refer to following document for steps on how to run ftrace kselftests:
+https://www.kernel.org/doc/readme/tools-testing-selftests-ftrace-README
+
