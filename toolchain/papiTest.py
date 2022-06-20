@@ -39,7 +39,7 @@ class papitest(Test):
         test_type = self.params.get('type', default='upstream')
 
         if test_type == 'upstream':
-            git.get_repo('https://github.com/arm-hpc/papi.git',
+            git.get_repo('https://bitbucket.org/icl/papi.git',
                          destination_dir=self.teststmpdir)
             self.path = os.path.join(self.teststmpdir, 'src')
         elif test_type == 'distro':
