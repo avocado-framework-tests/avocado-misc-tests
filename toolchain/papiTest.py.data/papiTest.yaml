@@ -3,3 +3,4 @@ run_type: !mux
         type: "upstream"
     distro:
         type: "distro"
+    url: 'https://bitbucket.org/icl/papi.git'   
