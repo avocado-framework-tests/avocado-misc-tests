@@ -35,6 +35,7 @@ class SELinux(Test):
         smm = SoftwareManager()
         detected_distro = distro.detect()
         deps = ['gcc', 'make']
+        self.sourcedir = None
         if detected_distro.name in ['rhel', 'SuSE', 'fedora', 'centos',
                                     'redhat']:
             deps.extend(["perl-Test", "perl-Test-Harness", "perl-Test-Simple",
@@ -79,4 +80,5 @@ class SELinux(Test):
             self.fail("%s test(s) failed, please refer to the log" % count)
 
     def tearDown(self):
-        build.make(self.sourcedir, extra_args='-C policy unload')
+        if self.sourcedir:
+            build.make(self.sourcedir, extra_args='-C policy unload')
