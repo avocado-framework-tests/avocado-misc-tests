@@ -26,7 +26,7 @@ from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils.ssh import Session
 from avocado.utils import pci
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.process import CmdError
 
 
