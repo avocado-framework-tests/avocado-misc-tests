@@ -8,13 +8,21 @@ config:
     ftest_types: !mux
         basic:
             args: '00basic'
+        direct:
+            args: 'direct'
+        dynevent:
+            args: 'dynevent'
         event:
             args: 'event'
         ftrace:
             args: 'ftrace'
         instances:
             args: 'instances'
-        trigger:
-            args: 'trigger'
         kprobe:
             args: 'kprobe'
+        preemptirq:
+            args: 'preemptirq'
+        tracer:
+            args: 'tracer'
+        trigger:
+            args: 'trigger'
