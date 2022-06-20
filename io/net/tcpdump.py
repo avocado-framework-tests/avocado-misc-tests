@@ -25,7 +25,7 @@ from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils import archive
 from avocado.utils import build
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost, RemoteHost
 from avocado.utils import wait

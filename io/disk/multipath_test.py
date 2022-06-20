@@ -29,7 +29,7 @@ from avocado.utils import distro, process
 from avocado.utils import multipath
 from avocado.utils import service
 from avocado.utils import wait
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class MultipathTest(Test):

@@ -24,7 +24,7 @@ from avocado.utils import process
 from avocado.utils import linux_modules
 from avocado.utils import genio
 from avocado.utils import dmesg
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class Livepatch(Test):

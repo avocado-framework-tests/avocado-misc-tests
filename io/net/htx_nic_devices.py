@@ -25,7 +25,7 @@ except ImportError:
 from avocado import Test
 from avocado.utils import distro
 from avocado.utils import process
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import build
 from avocado.utils import archive
 from avocado.utils.process import CmdError

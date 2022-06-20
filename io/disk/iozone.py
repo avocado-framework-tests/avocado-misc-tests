@@ -37,7 +37,7 @@ from avocado.utils.partition import Partition
 from avocado.utils import data_structures
 from avocado.utils import astring
 from avocado.utils.partition import PartitionError
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 _LABELS = ['file_size', 'record_size', 'write', 'rewrite', 'read', 'reread',

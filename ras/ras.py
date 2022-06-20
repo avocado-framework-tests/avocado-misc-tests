@@ -19,7 +19,7 @@ from shutil import copyfile
 from avocado import Test
 from avocado.utils import process, distro
 from avocado import skipIf, skipUnless
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
