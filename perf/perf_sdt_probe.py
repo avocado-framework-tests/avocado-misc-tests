@@ -51,7 +51,7 @@ class PerfSDT(Test):
         """
         self.libpthread = self.run_cmd_out("ldconfig -p")
         for line in str(self.libpthread).splitlines():
-            if re.search('libpthread', line, re.IGNORECASE):
+            if re.search('libpthread.so', line, re.IGNORECASE):
                 if 'lib64' in line:
                     self.libpthread = line.split(" ")[7]
             if re.search('libc.so', line, re.IGNORECASE):
