@@ -1,7 +1,8 @@
-disk:
-script: 'fsstress'
-dir: '/mnt/nfs'
-fsstress_loop: 1
+disk: ''
+dir: ''
+fsstress_loop:
+nval: '250'
+pval: '250'
 fs: !mux
     ext4:
         fs: 'ext4'

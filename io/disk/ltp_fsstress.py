@@ -13,6 +13,7 @@
 #
 # Copyright: 2016 IBM
 # Author: Vaishnavi Bhat <vaishnavi@linux.vnet.ibm.com>
+#       : Naresh Bannoth <nbannoth@linux.vnet.ibm.com>
 #
 # https://github.com/autotest/autotest-client-tests/tree/master/ltp
 
@@ -20,12 +21,13 @@
 LTP fsstress test
 """
 
-
 import os
+import time
 from avocado import Test
 from avocado.utils import build
 from avocado.utils import disk
 from avocado.utils import lv_utils
+from avocado.utils import wait
 from avocado.utils import softwareraid
 from avocado.utils import distro
 from avocado.utils import process, archive
@@ -40,15 +42,27 @@ class LtpFs(Test):
     Using LTP (Linux Test Project) testsuite to run Filesystem related tests
     '''
 
+    def clear_dmesg(self):
+        """
+        clears the dmesg logs.
+        """
+        process.run("dmesg -C ", sudo=True)
+
     def setUp(self):
         '''
         To check and install dependencies for the test
         '''
+        self.disk = self.params.get('disk', default=None)
+        self.dir = self.params.get('dir', default='')
+        self.fstype = self.params.get('fs', default='')
         self.fs_create = False
         lv_needed = self.params.get('lv', default=False)
         self.lv_create = False
         raid_needed = self.params.get('raid', default=False)
         self.raid_create = False
+        self.fsstress_count = self.params.get('fsstress_loop', default='1')
+        self.nval = self.params.get('nval', default='100')
+        self.pval = self.params.get('pval', default='100')
         smm = SoftwareManager()
         packages = ['gcc', 'make', 'automake', 'autoconf']
         if raid_needed:
@@ -56,13 +70,8 @@ class LtpFs(Test):
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("%s is needed for the test to be run" % package)
-        self.disk = self.params.get('disk', default=None)
-        self.mount_point = self.params.get('dir', default=self.workdir)
-        self.script = self.params.get('script')
-        fstype = self.params.get('fs', default='')
-        self.fsstress_run = self.params.get('fsstress_loop', default='1')
 
-        if fstype == 'btrfs':
+        if self.fstype == 'btrfs':
             ver = int(distro.detect().version)
             rel = int(distro.detect().release)
             if distro.detect().name == 'rhel':
@@ -74,22 +83,37 @@ class LtpFs(Test):
                         smm.install("btrfs-tools"):
                     self.cancel('btrfs-tools is needed for the test to be run')
 
+        self.raid_name = '/dev/md/sraid'
+        self.vgname = 'avocado_vg'
+        self.lvname = 'avocado_lv'
+        self.err_mesg = []
+        self.target = self.disk
+        self.lv_disk = self.disk
+        self.part_obj = Partition(self.disk, mountpoint=self.dir)
+        self.sraid = softwareraid.SoftwareRaid(self.raid_name, '0',
+                                               self.disk.split(), '1.2')
+        self.clear_dmesg()
+
         if self.disk is not None:
+            self.pre_cleanup()
             if self.disk in disk.get_disks():
                 if raid_needed:
-                    raid_name = '/dev/md/mdsraid'
-                    self.create_raid(self.disk, raid_name)
+                    self.create_raid(self.disk, self.raid_name)
                     self.raid_create = True
-                    self.disk = raid_name
-                    self.mount_point = self.disk
+                    self.target = self.raid_name
+
                 if lv_needed:
-                    self.disk = self.create_lv(self.disk)
+                    self.lv_disk = self.target
+                    self.target = self.create_lv(self.target)
                     self.lv_create = True
-                    self.mount_point = self.disk
-                if fstype:
-                    self.mount_point = self.workdir
-                    self.create_fs(self.disk, self.mount_point, fstype)
+
+                if self.fstype:
+                    self.create_fs(self.target, self.dir, self.fstype)
                     self.fs_create = True
+            else:
+                self.cancel("disk not found, please provide right disk")
+        else:
+            self.cancel("please provide the disk")
 
         url = "https://github.com/linux-test-project/ltp/"
         url += "archive/master.zip"
@@ -107,30 +131,40 @@ class LtpFs(Test):
         os.chdir(fsstress_dir)
 
     def create_raid(self, l_disk, l_raid_name):
+        """
+        creates a softwareraid with given raid name on given disk
+        :param l_disk: disk name on which raid will be created
+        :l_raid_name: name of the softwareraid
+        :return: None
+        """
+        self.log.info("creating softwareraid on {}" .format(l_disk))
         self.sraid = softwareraid.SoftwareRaid(l_raid_name, '0',
                                                l_disk.split(), '1.2')
         self.sraid.create()
 
-    def delete_raid(self):
-        self.sraid.stop()
-        self.sraid.clear_superblock()
-
     def create_lv(self, l_disk):
-        vgname = 'avocado_vg'
-        lvname = 'avocado_lv'
+        """
+        creates a volume group then logical volume on it and returns lv.
+        :param l_disk: disk name on which a lv will be created
+        :returns: Returns the lv name
+        :rtype: str
+        """
         lv_size = lv_utils.get_device_total_space(l_disk) / 2330168
-        lv_utils.vg_create(vgname, l_disk)
-        lv_utils.lv_create(vgname, lvname, lv_size)
-        return '/dev/%s/%s' % (vgname, lvname)
-
-    def delete_lv(self):
-        vgname = 'avocado_vg'
-        lvname = 'avocado_lv'
-        lv_utils.lv_remove(vgname, lvname)
-        lv_utils.vg_remove(vgname)
+        lv_utils.vg_create(self.vgname, l_disk)
+        lv_utils.lv_create(self.vgname, self.lvname, lv_size)
+        return '/dev/%s/%s' % (self.vgname, self.lvname)
 
     def create_fs(self, l_disk, mountpoint, fstype):
-        self.part_obj = Partition(l_disk, mountpoint=mountpoint)
+        """
+        umounts the given disk if mounted then creates a filesystem on it
+        and then mounts it on given directory
+        :param l_disk: disk name on which fs will be created
+        :param mountpoint: directory name on which the disk will be mounted
+        :param fstype: filesystem type like ext4,xfs,btrfs etc
+        :returns: None
+        """
+        self.part_obj = Partition(l_disk,
+                                  mountpoint=mountpoint)
         self.part_obj.unmount()
         self.part_obj.mkfs(fstype)
         try:
@@ -139,29 +173,154 @@ class LtpFs(Test):
             self.fail("Mounting disk %s on directory %s failed"
                       % (l_disk, mountpoint))
 
+    def pre_cleanup(self):
+        """
+        cleanup the disk and directory before test starts on it
+        """
+        self.log.info("Pre_cleaning of disk and diretories...")
+        disk_list = ['/dev/mapper/avocado_vg-avocado_lv', self.raid_name,
+                     self.disk]
+        for disk in disk_list:
+            self.delete_fs(disk)
+        self.log.info("checking ...lv/vg existance...")
+        if lv_utils.lv_check(self.vgname, self.lvname):
+            self.log.info("found lv existance... deleting it")
+            self.delete_lv()
+        elif lv_utils.vg_check(self.vgname):
+            self.log.info("found vg existance ... deleting it")
+            lv_utils.vg_remove(self.vgname)
+        self.log.info("checking for sraid existance...")
+        if self.sraid.exists():
+            self.log.info("found sraid existance... deleting it")
+            self.delete_raid()
+        else:
+            self.log.info("No softwareraid detected ")
+        self.log.info("\n End of pre_cleanup")
+
+    def delete_raid(self):
+        """
+        it checks for existing of raid and deletes it if exists
+        """
+        self.log.info("deleting Sraid %s" % self.raid_name)
+
+        def is_raid_deleted():
+            self.sraid.stop()
+            self.sraid.clear_superblock()
+            self.log.info("checking for raid metadata")
+            cmd = "wipefs -af %s" % self.disk
+            process.system(cmd, shell=True, ignore_status=True)
+            if self.sraid.exists():
+                return False
+            return True
+        self.log.info("checking lvm_metadata on %s" % self.raid_name)
+        cmd = 'blkid -o value -s TYPE %s' % self.raid_name
+        out = process.system_output(cmd, shell=True,
+                                    ignore_status=True).decode("utf-8")
+        if out == 'LVM2_member':
+            cmd = "wipefs -af %s" % self.raid_name
+            process.system(cmd, shell=True, ignore_status=True)
+        if wait.wait_for(is_raid_deleted, timeout=10):
+            self.log.info("software raid  %s deleted" % self.raid_name)
+        else:
+            self.err_mesg.append("failed to delete sraid %s" % self.raid_name)
+
+    def delete_lv(self):
+        """
+        checks if lv/vg exists and delete them along with its metadata
+        if exists.
+        """
+        def is_lv_deleted():
+            lv_utils.lv_remove(self.vgname, self.lvname)
+            time.sleep(5)
+            lv_utils.vg_remove(self.vgname)
+            if lv_utils.lv_check(self.vgname, self.lvname):
+                return False
+            return True
+        if wait.wait_for(is_lv_deleted, timeout=10):
+            self.log.info("lv %s deleted", self.lvname)
+        else:
+            self.err_mesg.append("failed to delete lv %s" % self.lvname)
+        # checking and deleteing if lvm_meta_data exists after lv removed
+        cmd = 'blkid -o value -s TYPE %s' % self.lv_disk
+        out = process.system_output(cmd, shell=True,
+                                    ignore_status=True).decode("utf-8")
+        if out == 'LVM2_member':
+            cmd = "wipefs -af %s" % self.lv_disk
+            process.system(cmd, shell=True, ignore_status=True)
+
     def delete_fs(self, l_disk):
-        self.part_obj.unmount()
-        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % l_disk
-        if process.system(delete_fs, shell=True, ignore_status=True):
-            self.fail("Failed to delete filesystem on %s" % l_disk)
+        """
+        checks for disk/dir mount, unmount if mounted and checks for
+        filesystem exitance and wipe it off after dir/disk unmount.
+        :param l_disk: disk name for which you want to check the mount status
+        :return: None
+        """
+        def is_fs_deleted():
+            cmd = "wipefs -af %s" % l_disk
+            process.system(cmd, shell=True, ignore_status=True)
+            if disk.fs_exists(l_disk):
+                return False
+            return True
+
+        def is_disk_unmounted():
+            cmd = "umount %s" % l_disk
+            cmd1 = 'umount /dev/mapper/avocado_vg-avocado_lv'
+            process.system(cmd, shell=True, ignore_status=True)
+            process.system(cmd1, shell=True, ignore_status=True)
+            if disk.is_disk_mounted(l_disk):
+                return False
+            return True
+
+        def is_dir_unmounted():
+            cmd = 'umount %s' % self.dir
+            process.system(cmd, shell=True, ignore_status=True)
+            if disk.is_dir_mounted(self.dir):
+                return False
+            return True
+
+        self.log.info("checking if disk is mounted.")
+        if disk.is_disk_mounted(l_disk):
+            self.log.info("%s is mounted, unmounting it ....", l_disk)
+            if wait.wait_for(is_disk_unmounted, timeout=10):
+                self.log.info("%s unmounted successfully" % l_disk)
+            else:
+                self.err_mesg.append("%s unmount failed", l_disk)
+        else:
+            self.log.info("disk %s not mounted." % l_disk)
+        self.log.info("checking if dir %s is mounted." % self.dir)
+        if disk.is_dir_mounted(self.dir):
+            self.log.info("%s is mounted, unmounting it ....", self.dir)
+            if wait.wait_for(is_dir_unmounted, timeout=10):
+                self.log.info("%s unmounted successfully" % self.dir)
+            else:
+                self.err_mesg.append("failed to unount %s", self.dir)
+        else:
+            self.log.info("dir %s not mounted." % self.dir)
+        self.log.info("checking if fs exists in {}" .format(l_disk))
+        if disk.fs_exists(l_disk):
+            self.log.info("found fs on %s, removing it....", l_disk)
+            if wait.wait_for(is_fs_deleted, timeout=10):
+                self.log.info("fs removed successfully..")
+            else:
+                self.err_mesg.append(f'failed to delete fs on {l_disk}')
+        else:
+            self.log.info(f'No fs detected on {self.disk}')
 
     def test_fsstress_run(self):
         '''
         Downloads LTP, compiles, installs and runs filesystem
         tests on a user specified disk
         '''
-        if self.script == 'fsstress':
-            arg = (" -d %s -n 500 -p 500 -r -l %s"
-                   % (self.mount_point, self.fsstress_run))
-            self.log.info("Args = %s" % arg)
-            cmd = "dmesg -C"
-            process.system(cmd, shell=True, ignore_status=True, sudo=True)
-            cmd = './%s %s' % (self.script, arg)
-            result = process.run(cmd, ignore_status=True)
-            cmd = "dmesg --level=err"
-            if process.system_output(cmd, shell=True,
-                                     ignore_status=True, sudo=False):
-                self.fail("FSSTRESS test failed")
+        arg = (" -d %s -n %s -p %s -r -l %s"
+               % (self.dir, self.nval, self.pval, self.fsstress_count))
+        self.log.info("Args = %s" % arg)
+        self.clear_dmesg()
+        cmd = './fsstress %s' % arg
+        process.run(cmd, ignore_status=True)
+        cmd = "dmesg --level=err"
+        if process.system_output(cmd, shell=True,
+                                 ignore_status=True, sudo=False):
+            self.fail("FSSTRESS test failed")
 
     def tearDown(self):
         '''
@@ -169,8 +328,11 @@ class LtpFs(Test):
         '''
         if self.disk is not None:
             if self.fs_create:
-                self.delete_fs(self.disk)
+                self.delete_fs(self.target)
             if self.lv_create:
                 self.delete_lv()
             if self.raid_create:
                 self.delete_raid()
+        self.clear_dmesg()
+        if self.err_mesg:
+            self.warn("test failed due to following errors %s" % self.err_mesg)
