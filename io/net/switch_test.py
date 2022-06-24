@@ -38,6 +38,9 @@ class SwitchTest(Test):
         '''
         interfaces = netifaces.interfaces()
         interface = self.params.get("interface")
+        self.networkinterface = None
+        if not interface:
+            self.cancel("Please specify interface to be used")
         if interface not in interfaces:
             self.cancel("%s interface is not available" % interface)
         self.iface = interface
@@ -125,8 +128,9 @@ class SwitchTest(Test):
         '''
         unset ip address
         '''
-        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-        try:
-            self.networkinterface.restore_from_backup()
-        except Exception:
-            self.log.info("backup file not availbale, could not restore file.")
+        if self.networkinterface:
+            self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+            try:
+                self.networkinterface.restore_from_backup()
+            except Exception:
+                self.log.info("backup file not availbale, could not restore file.")
