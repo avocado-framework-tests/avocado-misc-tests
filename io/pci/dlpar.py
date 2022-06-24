@@ -43,6 +43,7 @@ class DlparPci(Test):
         Gather necessary test inputs.
         Test all services.
         '''
+        self.session = None
         self.install_packages()
         self.rsct_service_start()
         self.hmc_ip = self.get_mcp_component("HMCIPAddr")
@@ -371,4 +372,5 @@ class DlparPci(Test):
             self.fail("dlpar %s operation failed" % msg)
 
     def tearDown(self):
-        self.session.quit()
+        if self.session:
+            self.session.quit()

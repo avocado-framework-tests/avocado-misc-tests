@@ -51,6 +51,7 @@ class FSMark(Test):
         self.lv_create = False
         raid_needed = self.params.get('raid', default=False)
         self.raid_create = False
+        self.link = None
         smm = SoftwareManager()
         if raid_needed:
             if not smm.check_installed('mdadm') and not smm.install('mdadm'):

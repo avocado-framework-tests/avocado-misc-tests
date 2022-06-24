@@ -59,6 +59,9 @@ class perf_cpu_hotplug(Test):
         processor_type = genio.read_file("/proc/cpuinfo")
 
         detected_distro = distro.detect()
+        # Offline cpu list during the test
+        self.cpu_off = []
+
         if 'ppc64' not in detected_distro.arch:
             self.cancel("Processor is not PowerPC")
         if 'POWER10' not in processor_type:
@@ -92,9 +95,6 @@ class perf_cpu_hotplug(Test):
         # Collect the cpu list
         self.online_cpus = cpu.online_list()
         self.log.info("Online CPU list: %s" % self.online_cpus)
-
-        # Offline cpu list during the test
-        self.cpu_off = []
 
         # Clear the dmesg to capture the delta at the end of the test.
         dmesg.clear_dmesg()

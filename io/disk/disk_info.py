@@ -51,9 +51,9 @@ class DiskInfo(Test):
         """
         smm = SoftwareManager()
         pkg = ""
+        self.disk = self.params.get('disk', default=None)
         if 'ppc' not in platform.processor():
             self.cancel("Processor is not ppc64")
-        self.disk = self.params.get('disk', default=None)
         self.dirs = self.params.get('dir', default=self.workdir)
         self.fstype = self.params.get('fs', default='ext4')
         self.log.info("disk: %s, dir: %s, fstype: %s",
