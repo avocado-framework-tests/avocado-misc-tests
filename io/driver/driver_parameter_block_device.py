@@ -43,6 +43,8 @@ class Moduleparameter(Test):
         self.load_unload_sleep_time = 30
         self.error_modules = []
         self.uname = linux_modules.platform.uname()[2]
+        if not self.module:
+            self.cancel("Please provide the Module name")
         if not self.disk:
             self.cancel("Please provide the Disk name")
         if linux_modules.module_is_loaded(self.module) is False:
@@ -161,10 +163,11 @@ class Moduleparameter(Test):
         if self.mpath_enabled is True:
             if not wait.wait_for(self.is_mpath_flushed, timeout=90):
                 self.fail("multipath is in USE and cannot be flushed")
-        linux_modules.unload_module(self.module)
-        linux_modules.load_module(self.module)
-        time.sleep(self.load_unload_sleep_time)
-        if linux_modules.module_is_loaded(self.module) is False:
-            self.fail("Cannot restore default values for Module : %s"
-                      % self.module)
+        if self.module:
+            linux_modules.unload_module(self.module)
+            linux_modules.load_module(self.module)
+            time.sleep(self.load_unload_sleep_time)
+            if linux_modules.module_is_loaded(self.module) is False:
+                self.fail("Cannot restore default values for Module : %s"
+                          % self.module)
         self.log.info("Restore of default param is success")
