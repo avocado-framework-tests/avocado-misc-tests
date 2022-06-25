@@ -27,7 +27,7 @@ from avocado.utils import wait
 from avocado.utils import genio
 from avocado.utils.process import CmdError
 from avocado.utils.ssh import Session
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from avocado import skipIf, skipUnless
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()

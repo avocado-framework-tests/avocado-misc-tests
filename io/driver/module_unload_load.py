@@ -19,7 +19,7 @@ import time
 import os
 from avocado.utils import process
 from avocado.utils import linux_modules, genio
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import pci
 from avocado import Test
 

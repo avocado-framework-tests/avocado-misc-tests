@@ -29,7 +29,7 @@ from avocado.utils import lv_utils
 from avocado.utils import softwareraid
 from avocado.utils import distro
 from avocado.utils import process, archive
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.partition import Partition
 from avocado.utils.partition import PartitionError
 

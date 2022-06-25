@@ -26,7 +26,7 @@ failure.
 """
 
 from avocado import Test
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import softwareraid
 
 

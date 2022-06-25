@@ -24,7 +24,7 @@ from avocado.utils import process
 from avocado.utils.service import SpecificServiceManager
 from avocado.utils import distro
 from avocado.utils.wait import wait_for
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class service_check(Test):

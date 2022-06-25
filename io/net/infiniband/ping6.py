@@ -23,7 +23,7 @@ import time
 import netifaces
 from netifaces import AF_INET, AF_INET6
 from avocado import Test
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost, RemoteHost
 from avocado.utils import process, distro

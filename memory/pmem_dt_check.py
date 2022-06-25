@@ -30,7 +30,7 @@ from avocado.utils import build
 from avocado.utils import genio
 from avocado.utils import pmem
 from avocado.utils import cpu
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class NdctlDeviceTreeCheck(Test):
