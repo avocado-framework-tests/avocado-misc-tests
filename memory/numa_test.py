@@ -116,11 +116,16 @@ class NumaTest(Test):
         """
         Test PFN's before and after offlining
         """
-        self.nr_pages = self.params.get(
-            'nr_pages', default=100)
-        os.chdir(self.teststmpdir)
-        self.log.info("Starting test...")
-        cmd = './bench_movepages -n %s' % self.nr_pages
-        ret = process.system(cmd, shell=True, sudo=True, ignore_status=True)
-        if ret != 0:
-            self.fail('Please check the logs for failure')
+        thp = "/sys/kernel/mm/transparent_hugepage/enable_thp_migration"
+        if os.path.isfile(thp):
+            self.nr_pages = self.params.get(
+                'nr_pages', default=100)
+            os.chdir(self.teststmpdir)
+            self.log.info("Starting test...")
+            cmd = './bench_movepages -n %s' % self.nr_pages
+            ret = process.system(
+                cmd, shell=True, sudo=True, ignore_status=True)
+            if ret != 0:
+                self.fail('Please check the logs for failure')
+        else:
+            self.cancel("THP migration is not enabled on the system")
