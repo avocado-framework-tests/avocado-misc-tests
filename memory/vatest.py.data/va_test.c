@@ -27,7 +27,7 @@
 /* In a single mmap call we can try to allocate approximately 16Gb
    So chunk size id chosen as 16G */
 
-#define MAP_CHUNK_SIZE	 17179869184UL	 /* 16GB */
+unsigned long MAP_CHUNK_SIZE = 17179869184UL;	 /* 16GB */
 #define MAP_HUGE_2MB    (21 << MAP_HUGE_SHIFT)
 #define MAP_HUGE_16MB    (24 << MAP_HUGE_SHIFT)
 #define MAP_HUGE_1GB    (30 << MAP_HUGE_SHIFT)
@@ -324,6 +324,26 @@ void mixed_position_alterhuge(int chunks1, int chunks2, int chunks3)
 	mmap_chunks_higher(chunks2/2, MAP_HUGETLB);
 }
 
+void mem_checkpoint()
+{
+        /*This function will dynamically adjust the MAP_CHUNK_SIZE value
+        according to the amount of space in the system*/
+        unsigned long total_available_mem, swap_free_space, total_free_space, total_free_mm, map_chunk_size_gb;
+        total_available_mem = local_read_meminfo("MemAvailable: %lu kB");
+        swap_free_space = local_read_meminfo("SwapFree: %lu kB");
+        total_free_space = swap_free_space + total_available_mem;
+        /*Kb to Gb*/
+        total_free_mm = total_free_space/(1024*1024);
+        /*Bytes to Gb*/
+        map_chunk_size_gb = MAP_CHUNK_SIZE / 1024 / 1024 / 1024;
+        if(map_chunk_size_gb > total_free_mm)
+        {
+                /*Gb to Bytes*/
+                MAP_CHUNK_SIZE = (total_free_mm - 2)*1024*1024*1024;
+        }
+}
+
+
 int main(int argc, char *argv[])
 {
 	int option = 0;
@@ -334,6 +354,7 @@ int main(int argc, char *argv[])
 		printf("Usage <execname> -s <scenario_no> -n <nr_chunks> -h <nr_chunks> -d <def_chunks>\n");
 		exit(-1);
 	}
+	mem_checkpoint();
 	while (1) {
 		option = getopt(argc, argv,"s:n:h:d:");
 		if (option != -1){
