@@ -6,7 +6,7 @@ Test: !mux
 bond_interfaces: ""
 host_ips: ""
 netmask: ""
-peer_ip: ""
+peer_ips: ""
 peer_interfaces: ""
 peer_public_ip: ""
 peer_password: "********"
