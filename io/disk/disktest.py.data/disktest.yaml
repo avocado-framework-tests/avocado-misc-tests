@@ -1,5 +1,5 @@
-disk:
-dir:
+disk: ''
+dir: ''
 filesystem: !mux
     ext4:
         fs: 'ext4'
@@ -7,3 +7,10 @@ filesystem: !mux
         fs: 'xfs'
     btrfs:
         fs: 'btrfs'
+    no_fs:
+        fs: ''
+raid: !mux
+    raid:
+        raid: True
+    no_raid:
+        raid: False
