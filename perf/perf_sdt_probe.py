@@ -127,6 +127,9 @@ class PerfSDT(Test):
         Setting up the env for SDT markers
         """
         smg = SoftwareManager()
+        self.libpthread = []
+        self.libc = []
+        self.temp_file = tempfile.NamedTemporaryFile().name
         detected_distro = distro.detect()
         if 'ppc' not in distro.detect().arch:
             self.cancel("Test supportd only on  ppc64 arch")
@@ -142,9 +145,6 @@ class PerfSDT(Test):
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        self.libpthread = []
-        self.libc = []
-        self.temp_file = tempfile.NamedTemporaryFile().name
 
     def test(self):
         self.add_library()

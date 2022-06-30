@@ -310,4 +310,5 @@ class NetworkSriovDevice(Test):
         return False
 
     def tearDown(self):
-        self.session.quit()
+        if hasattr(self, 'session'):
+            self.session.quit()
