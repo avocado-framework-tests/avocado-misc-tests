@@ -20,10 +20,14 @@ import os
 import re
 import time
 import multiprocessing
+import shutil
+import platform
 
 from avocado import Test
 from avocado.utils import process, cpu
 from avocado.utils import linux_modules
+from avocado.utils import distro
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class Rcutorture(Test):
@@ -37,6 +41,28 @@ class Rcutorture(Test):
     """
 
     def setUp(self):
+        smg = SoftwareManager()
+        if 'SuSE' in distro.detect().name:
+            if not smg.check_installed("kernel-source") and not\
+                    smg.install("kernel-source"):
+                self.cancel(
+                    "Failed to install kernel-source for this test.")
+            if not os.path.exists("/usr/src/linux"):
+                self.cancel("kernel source missing after install")
+            self.buldir = "/usr/src/linux"
+            shutil.copy('/boot/config-%s' % platform.uname()
+                        [2], '%s/.config' % self.buldir)
+            os.chdir(self.buldir)
+            process.system("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYS/#&/g'\
+                           .config", shell=True, sudo=True)
+            process.system("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYRING/#&/g' \
+                           .config", shell=True, sudo=True)
+            process.system("sed -i 's/^.*CONFIG_MODULE_SIG_KEY/#&/g' .config",
+                           shell=True, sudo=True)
+            process.system("sed -i 's/^.*CONFIG_DEBUG_INFO_BTF/#&/g' .config",
+                           shell=True, sudo=True)
+            process.system('make')
+            process.system('make modules_install')
         """
         Verifies if CONFIG_RCU_TORTURE_TEST is enabled
         """

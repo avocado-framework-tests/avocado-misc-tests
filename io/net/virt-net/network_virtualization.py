@@ -27,7 +27,7 @@ from avocado import Test
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils import dmesg
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.process import CmdError
 from avocado import skipIf, skipUnless
 from avocado.utils import genio
@@ -440,7 +440,7 @@ class NetworkVirtualization(Test):
 
         self.session = Session(self.vios_ip, user=self.vios_user,
                                password=self.vios_pwd)
-        if not self.session.connect():
+        if not wait.wait_for(self.session.connect, timeout=30):
             self.fail("Failed connecting to VIOS")
 
         cmd = "ioscli lsmap -all -vnic -cpid %s" % self.lpar_id
@@ -465,11 +465,14 @@ class NetworkVirtualization(Test):
             self.validate_vios_command(
                 'rmdev -l %s' % vnic_backing_device, 'Defined')
 
-        after = self.get_active_device_logport(self.slot_num[0])
-        self.log.debug("Active backing device after: %s", after)
+        time.sleep(10)
 
-        if before == after:
-            self.fail("failover not occur")
+        for backing_dev in self.backing_dev_list().splitlines():
+            if backing_dev.startswith('%s,' % self.slot_num[0]):
+                backing_dev = backing_dev.strip('%s,"' % self.slot_num[0])
+                if 'Powered Off' not in backing_dev:
+                    self.fail("Failover did not occur")
+
         time.sleep(60)
 
         if vnic_backing_device:
@@ -520,10 +523,89 @@ class NetworkVirtualization(Test):
                 self.fail("slot not found")
         self.check_dmesg_error()
 
+    def test_vnic_hmc_dlpar(self):
+        """
+        Perform vNIC device hot add and hot remove
+        """
+        for slot_no, device_ip, netmask, mac, peer_ip, sriov_port, adapter_id in zip(self.slot_num,
+                                                                                     self.device_ip,
+                                                                                     self.netmask,
+                                                                                     self.mac_id,
+                                                                                     self.peer_ip,
+                                                                                     self.sriov_port,
+                                                                                     self.backing_adapter_id):
+            self.update_backing_devices(slot_no)
+            device_name = self.find_device(mac)
+            networkinterface = NetworkInterface(device_name, self.local)
+            count = 0
+            self.log.info("Preforming DLPAR on %s" % device_name)
+            for _ in range(self.num_of_dlpar):
+                self.log.info("DLPAR iteration #%d" % count)
+                num_backingdevs = self.backing_dev_count_w_slot_num(slot_no)
+
+                self.device_add_remove(slot_no, '', '', '', 'remove')
+                if networkinterface.is_available():
+                    self.fail("DLPAR remove did not remove interface")
+
+                self.device_add_remove(slot_no, mac, sriov_port, adapter_id, 'add')
+                for c in range(1, num_backingdevs):
+                    self.backing_dev_add_remove('add', c)
+                    self.wait_interface(device_name)
+
+                try:
+                    networkinterface.add_ipaddr(device_ip, netmask)
+                except Exception:
+                    networkinterface.save(device_ip, netmask)
+                    networkinterface.add_ipaddr(device_ip, netmask)
+                networkinterface.bring_up()
+
+                if not wait.wait_for(networkinterface.is_link_up, timeout=120):
+                    self.fail("Unable to bring up the link on the Network virtualized device")
+
+                time.sleep(5)
+
+                if networkinterface.ping_check(peer_ip, count=5) is not None:
+                    self.fail("dlpar has affected Network connectivity")
+                count += 1
+        self.check_dmesg_error()
+
+    def backing_dev_count_w_slot_num(self, slot):
+        """
+        Lists the count of backing devices
+        :param slot: vnic slot
+        :type slot: str
+
+        :returns: backing device count
+        :rtype: int
+        """
+        count = 0
+        output = self.backing_dev_list()
+        for i in output.splitlines():
+            if i.startswith('%s,' % slot):
+                count = len(i.split(',')[1:])
+        return count
+
+    def wait_interface(self, device_name):
+        """
+        Wait till interface comes up
+        :param device_name: vnic device that is tested
+        :type device_name: str
+
+        :returns: if the device is up or down
+        :rtype: bool
+        """
+        for _ in range(0, 120, 10):
+            for interface in netifaces.interfaces():
+                if device_name == interface:
+                    self.log.info("Network virtualized device %s is up", device_name)
+                    return True
+                time.sleep(5)
+        return False
+
     def test_backingdevremove(self):
-        '''
+        """
         Removing Backing device for Network virtualized device
-        '''
+        """
         for slot in self.slot_num:
             if self.check_slot_availability(slot):
                 self.fail("Slot does not exist")

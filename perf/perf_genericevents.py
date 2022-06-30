@@ -40,6 +40,8 @@ class test_generic_events(Test):
             self.generic_events = dict(parser.items('POWER9'))
         elif 'POWER10' in cpu_info:
             self.generic_events = dict(parser.items('POWER10'))
+        else:
+            self.cancel("Processor is not supported: %s" % cpu_info)
 
     def test(self):
         nfail = 0

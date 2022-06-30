@@ -30,7 +30,7 @@ from avocado import Test
 from avocado.utils import process, build, git, distro, partition
 from avocado.utils import disk, data_structures, pmem
 from avocado.utils import genio
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class Xfstests(Test):
@@ -468,8 +468,8 @@ class Xfstests(Test):
 
     def tearDown(self):
         if self.detected_distro.name is not 'SuSE':
-            process.system('userdel 123456-fsgqa', sudo=True)
-            process.system('userdel fsgqa', sudo=True)
+            process.system('userdel -f 123456-fsgqa', sudo=True)
+            process.system('userdel -f fsgqa', sudo=True)
         else:
             process.system('userdel -r -f fsgqa', sudo=True)
             process.system('groupdel fsgqa', sudo=True)

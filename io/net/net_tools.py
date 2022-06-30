@@ -23,7 +23,7 @@ import avocado
 from avocado import Test
 from avocado import skipUnless
 from avocado.utils import process, distro
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 release = "%s%s" % (distro.detect().name, distro.detect().version)
 

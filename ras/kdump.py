@@ -23,7 +23,7 @@ try:
 except ImportError:
     raise ImportError('Could not import virttest')
 from avocado.utils import process
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class KDUMP(Test):

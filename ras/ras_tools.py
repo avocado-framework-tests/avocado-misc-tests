@@ -15,7 +15,7 @@
 
 from avocado import Test
 from avocado.utils import process
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class Ras_tools(Test):
@@ -59,7 +59,7 @@ class Ras_tools(Test):
         value = self.params.get('usysattn_list', default=['-h', '-V', '-P'])
         for list_item in value:
             self.run_cmd('usysattn  %s ' % list_item)
-        loc_code = self.run_cmd_out("usysattn -P| awk '{print $1}'")
+        loc_code = self.run_cmd_out("usysattn -P| awk 'NR==1{print $1}'")
         self.run_cmd("usysattn -l %s -s normal -t" % loc_code)
         if self.fail_cmd:
             self.fail("%s command(s) failed to execute  "
@@ -70,7 +70,7 @@ class Ras_tools(Test):
         value = self.params.get('usysfault_list', default=['-h', '-V', '-P'])
         for list_item in value:
             self.run_cmd('usysfault  %s ' % list_item)
-        loc_code = self.run_cmd_out("usysfault -P | awk '{print $1}'")
+        loc_code = self.run_cmd_out("usysfault -P | awk 'NR==1{print $1}'")
         self.run_cmd("usysfault -l %s -s normal -t" % loc_code)
         if self.fail_cmd:
             self.fail("%s command(s) failed to execute  "

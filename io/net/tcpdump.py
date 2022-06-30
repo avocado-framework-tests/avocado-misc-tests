@@ -25,7 +25,7 @@ from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils import archive
 from avocado.utils import build
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost, RemoteHost
 from avocado.utils import wait
@@ -49,7 +49,10 @@ class TcpdumpTest(Test):
         self.option = self.params.get("option", default='')
         self.hbond = self.params.get("hbond", default=False)
         # Check if interface exists in the system
+        self.networkinterface = None
         interfaces = netifaces.interfaces()
+        if not self.iface:
+            self.cancel("Please specify interface to be used")
         if self.iface not in interfaces:
             self.cancel("%s interface is not available" % self.iface)
         if not self.peer_ip:
@@ -161,19 +164,20 @@ class TcpdumpTest(Test):
         '''
         unset ip for host interface
         '''
-        if self.networkinterface.set_mtu('1500', timeout=self.mtu_timeout) is not None:
-            self.cancel("Failed to set mtu in host")
-        try:
-            self.peer_networkinterface.set_mtu('1500', timeout=self.mtu_timeout)
-        except Exception:
-            self.peer_public_networkinterface.set_mtu('1500', timeout=self.mtu_timeout)
-        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-        try:
-            self.networkinterface.restore_from_backup()
-        except Exception:
-            self.networkinterface.remove_cfg_file()
-            self.log.info("backup file not availbale, could not restore file.")
-        if self.hbond:
-            self.networkinterface.restore_slave_cfg_file()
-        self.remotehost.remote_session.quit()
-        self.remotehost_public.remote_session.quit()
+        if self.networkinterface:
+            if self.networkinterface.set_mtu('1500', timeout=self.mtu_timeout) is not None:
+                self.cancel("Failed to set mtu in host")
+            try:
+                self.peer_networkinterface.set_mtu('1500', timeout=self.mtu_timeout)
+            except Exception:
+                self.peer_public_networkinterface.set_mtu('1500', timeout=self.mtu_timeout)
+            self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+            try:
+                self.networkinterface.restore_from_backup()
+            except Exception:
+                self.networkinterface.remove_cfg_file()
+                self.log.info("backup file not availbale, could not restore file.")
+            if self.hbond:
+                self.networkinterface.restore_slave_cfg_file()
+            self.remotehost.remote_session.quit()
+            self.remotehost_public.remote_session.quit()

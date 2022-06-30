@@ -19,7 +19,7 @@ import os
 from avocado.utils import process
 from avocado import Test
 from avocado.utils import git, build
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class papitest(Test):
@@ -37,10 +37,11 @@ class papitest(Test):
             if not softm.check_installed(package) and not softm.install(package):
                 self.cancel("%s is needed for the test to be run" % package)
         test_type = self.params.get('type', default='upstream')
-
+        
         if test_type == 'upstream':
-            git.get_repo('https://github.com/arm-hpc/papi.git',
-                         destination_dir=self.teststmpdir)
+            papi_url = self.params.get(
+                'url', default="https://bitbucket.org/icl/papi.git")
+            git.get_repo(papi_url, destination_dir=self.teststmpdir)
             self.path = os.path.join(self.teststmpdir, 'src')
         elif test_type == 'distro':
             sourcedir = os.path.join(self.teststmpdir, 'papi-distro')
@@ -55,11 +56,11 @@ class papitest(Test):
 
     def test(self):
 
-        #Runs the tests
+        # Runs the tests
 
         result = process.run('./run_tests.sh', shell=True)
 
-        #Display the failed tests
+        # Display the failed tests
 
         errors = 0
         warns = 0

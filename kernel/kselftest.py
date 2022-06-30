@@ -23,7 +23,7 @@ from avocado import Test
 from avocado.utils import build, process
 from avocado.utils import distro
 from avocado.utils import archive, git
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class kselftest(Test):
@@ -50,13 +50,13 @@ class kselftest(Test):
         Resolve the packages dependencies and download the source.
         """
         smg = SoftwareManager()
-        self.test_type = self.params.get('test_type', default='-H')
-        self.Size_flag = self.params.get('Size', default='-s')
-        self.Dup_MM_Area = self.params.get('Dup_MM_Area', default='100')
         self.comp = self.params.get('comp', default='')
+        self.subtest = self.params.get('subtest', default='')
+        if self.comp == "vm" and self.subtest == "ksm_tests":
+            self.test_type = self.params.get('test_type', default='-H')
+            self.Size_flag = self.params.get('Size', default='-s')
+            self.Dup_MM_Area = self.params.get('Dup_MM_Area', default='100')
         self.run_type = self.params.get('type', default='upstream')
-        if self.comp:
-            self.comp = '-C %s' % self.comp
         detected_distro = distro.detect()
         deps = ['gcc', 'make', 'automake', 'autoconf', 'rsync']
 
@@ -133,10 +133,10 @@ class kselftest(Test):
                 self.buldir = "/usr/src/linux"
 
         self.sourcedir = os.path.join(self.buldir, self.testdir)
-        ksm_test_dir = self.sourcedir + "/vm/ksm_tests"
-        if not os.path.isfile(ksm_test_dir):
-            if build.make(self.sourcedir):
-                self.fail("Compilation failed, Please check the build logs")
+        if self.comp:
+            build_str = '-C %s' % self.comp
+        if build.make(self.sourcedir, extra_args='%s' % build_str):
+            self.fail("Compilation failed, Please check the build logs !!")
 
     def test(self):
         """
@@ -144,8 +144,16 @@ class kselftest(Test):
         """
         self.error = False
         kself_args = self.params.get("kself_args", default='')
-        build.make(self.sourcedir,
-                   extra_args='%s %s run_tests' % (kself_args, self.comp))
+        if self.subtest == "ksm_tests":
+            self.ksmtest()
+        else:
+            if self.subtest:
+                test_comp = self.comp + "/" + self.subtest
+            else:
+                test_comp = self.comp
+            build.make(self.sourcedir,
+                       extra_args='%s -C %s run_tests' %
+                       (kself_args, test_comp))
         for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
             if self.run_type == 'upstream':
                 self.find_match(r'not ok (.*) selftests:(.*)', line)
@@ -169,7 +177,7 @@ class kselftest(Test):
         except process.CmdError as details:
             self.fail("Command %s failed: %s" % (cmd, details))
 
-    def test_kself(self):
+    def ksmtest(self):
         """
         Run the different ksm test types:
         Ex: -M (page merging)

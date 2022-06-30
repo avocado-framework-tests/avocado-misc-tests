@@ -16,7 +16,7 @@
 
 from avocado import Test
 from avocado.utils import distro
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class Package_check(Test):
@@ -27,7 +27,7 @@ class Package_check(Test):
 
         self.sm = SoftwareManager()
         self.packages = self.params.get(
-            'packages', default=['powerpc-utils', 'ppc64-diag', 'lsvpd'])
+            'packages', default=['powerpc-utils', 'ppc64-diag', 'lsvpd', 'powerpc-utils-core'])
         if 'PowerNV' in open('/proc/cpuinfo', 'r').read():
             self.packages.extend(['opal-prd'])
 

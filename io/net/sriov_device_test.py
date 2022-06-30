@@ -24,7 +24,7 @@ from avocado import Test
 from avocado.utils import process
 from avocado.utils.ssh import Session
 from avocado.utils import genio
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
 
@@ -310,4 +310,5 @@ class NetworkSriovDevice(Test):
         return False
 
     def tearDown(self):
-        self.session.quit()
+        if hasattr(self, 'session'):
+            self.session.quit()

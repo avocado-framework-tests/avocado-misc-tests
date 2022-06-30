@@ -22,7 +22,7 @@ import tempfile
 from avocado import Test
 from avocado.utils import distro
 from avocado.utils import process
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class PerfSDT(Test):
@@ -51,11 +51,11 @@ class PerfSDT(Test):
         """
         self.libpthread = self.run_cmd_out("ldconfig -p")
         for line in str(self.libpthread).splitlines():
-            if re.search('libpthread', line, re.IGNORECASE):
-                if '64' in line:
+            if re.search('libpthread.so', line, re.IGNORECASE):
+                if 'lib64' in line:
                     self.libpthread = line.split(" ")[7]
             if re.search('libc.so', line, re.IGNORECASE):
-                if '64' in line:
+                if 'lib64' in line:
                     self.libc = line.split(" ")[7]
         if not self.libpthread:
             self.fail("Library %s not found" % self.libpthread)
@@ -127,6 +127,9 @@ class PerfSDT(Test):
         Setting up the env for SDT markers
         """
         smg = SoftwareManager()
+        self.libpthread = []
+        self.libc = []
+        self.temp_file = tempfile.NamedTemporaryFile().name
         detected_distro = distro.detect()
         if 'ppc' not in distro.detect().arch:
             self.cancel("Test supportd only on  ppc64 arch")
@@ -142,9 +145,6 @@ class PerfSDT(Test):
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        self.libpthread = []
-        self.libc = []
-        self.temp_file = tempfile.NamedTemporaryFile().name
 
     def test(self):
         self.add_library()

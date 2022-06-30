@@ -24,7 +24,7 @@ from avocado.utils import process
 from avocado.utils.service import SpecificServiceManager
 from avocado.utils import distro
 from avocado.utils.wait import wait_for
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class service_check(Test):
@@ -42,13 +42,13 @@ class service_check(Test):
             deps.extend(['libvirt-daemon'])
         if detected_distro.name == 'SuSE':
             deps.extend(['ppc64-diag', 'libvirt-daemon'])
-            if detected_distro.version >= 15:
+            if int(detected_distro.version) >= 15:
                 services_list.append('firewalld')
             else:
                 services_list.append('SuSEfirewall2')
         elif detected_distro.name == 'Ubuntu':
             deps.extend(['opal-prd'])
-            if detected_distro.version >= 17:
+            if int(detected_distro.version) >= 17:
                 services_list.remove('networking')
 
         for package in deps:

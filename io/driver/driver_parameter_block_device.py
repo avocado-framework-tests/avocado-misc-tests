@@ -38,11 +38,14 @@ class Moduleparameter(Test):
         self.module = self.params.get('module', default=None)
         self.param_name = self.params.get('module_param_name', default=None)
         self.param_value = self.params.get('module_param_value', default=None)
-        self.mpath_enabled = self.params.get('multipath_enabled', default=False)
+        self.mpath_enabled = self.params.get('multipath_enabled',
+                                             default=False)
         self.disk = self.params.get('disk', default=None)
         self.load_unload_sleep_time = 30
         self.error_modules = []
         self.uname = linux_modules.platform.uname()[2]
+        if not self.module:
+            self.cancel("Please provide the Module name")
         if not self.disk:
             self.cancel("Please provide the Disk name")
         if linux_modules.module_is_loaded(self.module) is False:
@@ -91,7 +94,7 @@ class Moduleparameter(Test):
         '''
         Runs the dd command on given Disk and returns True or False
         '''
-        cmd = 'dd if=/dev/zero of=%s bs=1M count=10240' % self.disk
+        cmd = 'dd if=/dev/zero of=%s bs=512 count=1024' % self.disk
         result = process.run(cmd, shell=True, ignore_status=True)
         if result.exit_status != 0:
             self.fail("dd run on %s failed" % self.disk)
@@ -104,6 +107,9 @@ class Moduleparameter(Test):
         '''
         process.system("multipath -F", ignore_status=True)
         cmd = "lsmod | grep -i ^%s" % self.module
+        # To-Do: more debug needed as mutlipath is restarting immediately
+        # after flush for qla2xxx only and we can remove the static sleep.
+        time.sleep(10)
         if process.getoutput(cmd).split(" ")[-1] == '0':
             return True
         return False
@@ -113,7 +119,7 @@ class Moduleparameter(Test):
         Unloading and loading the given module
         """
         if self.mpath_enabled is True:
-            if not wait.wait_for(self.is_mpath_flushed, timeout=90):
+            if not wait.wait_for(self.is_mpath_flushed, timeout=150):
                 self.fail("multipath is in USE and cannot be flushed")
         else:
             sub_mod = linux_modules.get_submodules(self.module)
@@ -159,12 +165,13 @@ class Moduleparameter(Test):
         """
         self.log.info("Restoiring Default param")
         if self.mpath_enabled is True:
-            if not wait.wait_for(self.is_mpath_flushed, timeout=90):
+            if not wait.wait_for(self.is_mpath_flushed, timeout=150):
                 self.fail("multipath is in USE and cannot be flushed")
-        linux_modules.unload_module(self.module)
-        linux_modules.load_module(self.module)
-        time.sleep(self.load_unload_sleep_time)
-        if linux_modules.module_is_loaded(self.module) is False:
-            self.fail("Cannot restore default values for Module : %s"
-                      % self.module)
+        if self.module:
+            linux_modules.unload_module(self.module)
+            linux_modules.load_module(self.module)
+            time.sleep(self.load_unload_sleep_time)
+            if linux_modules.module_is_loaded(self.module) is False:
+                self.fail("Cannot restore default values for Module : %s"
+                          % self.module)
         self.log.info("Restore of default param is success")

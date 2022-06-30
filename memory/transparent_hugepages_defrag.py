@@ -55,8 +55,12 @@ class ThpDefrag(Test):
         if os.path.exists(self.mem_path):
             os.makedirs(self.mem_path)
         self.device = Partition(device="none", mountpoint=self.mem_path)
-        self.device.mount(mountpoint=self.mem_path, fstype="tmpfs", mnt_check=False)
+        fstype = "tmpfs"
+        self.device.mount(mountpoint=self.mem_path, fstype, mnt_check=False)
         free_space = (disk.freespace(self.mem_path)) // 1024
+        # Reserving some memory (out of 100% memory reserving 25% memory)
+        res_free_space = int(free_space / 4)
+        free_space = free_space - res_free_space
         # Leaving out some free space in tmpfs
         self.count = (free_space // self.block_size) - 3
 
@@ -92,8 +96,8 @@ class ThpDefrag(Test):
         # Turns Defrag ON
         memory.set_thp_value("khugepaged/defrag", "1")
 
-        self.log.info("Sleeping %d seconds to settle out things", 10)
-        time.sleep(10)
+        self.log.info("Sleeping %d seconds to settle out things", 12)
+        time.sleep(12)
 
         # Sets max hugepages after defrag on
         nr_hp_after = self.set_max_hugepages(nr_full)
@@ -124,6 +128,7 @@ class ThpDefrag(Test):
 
         if self.mem_path:
             self.log.info('Cleaning Up!!!')
+            memory.set_thp_value("khugepaged/defrag", "0")
             memory.set_num_huge_pages(0)
             self.device.unmount()
             process.system('rm -rf %s' % self.mem_path, ignore_status=True)

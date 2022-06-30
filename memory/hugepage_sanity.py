@@ -20,8 +20,8 @@ import os
 import shutil
 from avocado import Test
 from avocado import skipUnless
-from avocado.utils import process, build, memory
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils import process, build, memory, genio
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class HugepageSanity(Test):
@@ -40,7 +40,13 @@ class HugepageSanity(Test):
                 "Hugepagesize not defined in kernel.")
     def setUp(self):
         smm = SoftwareManager()
-        self.hpagesize = int(self.params.get('hpagesize', default=memory.get_huge_page_size()/1024))
+        self.hpagesize = int(self.params.get(
+            'hpagesize', default=memory.get_huge_page_size()/1024))
+        cpu_info = genio.read_file("/proc/cpuinfo")
+        if 'Radix' in cpu_info and self.hpagesize == 16:
+            self.cancel("This hugepage size is not supported.")
+        if 'Hash' in cpu_info and self.hpagesize != 16:
+            self.cancel("This hugepage size is not supported.")
         self.num_huge = int(self.params.get('num_pages', default='1'))
 
         for package in ['gcc', 'make']:

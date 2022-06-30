@@ -2,15 +2,15 @@ bonding_mode: "0"
 host_ips: ""
 netmask: ""
 bond_interfaces: ""
-peer_ip: ""
+peer_ips: ""
 peer_interfaces: ""
 peer_public_ip: ""
 peer_password: "********"
 bond_name: "bondtest"
 user_name: "root"
 peer_bond_needed: False 
-peer_wait_time: "10"
-sleep_time: "5"
+peer_wait_time: "20"
+sleep_time: "10"
 mtu: !mux
     1500:
         mtu: "1500"

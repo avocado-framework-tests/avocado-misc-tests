@@ -38,6 +38,8 @@ class Moduleparameter(Test):
         get parameters
         """
         self.module = self.params.get('module', default=None)
+        if not self.module:
+            self.cancel("Please provide the Module name")
         interfaces = netifaces.interfaces()
         self.ifaces = self.params.get("interface")
         if self.ifaces not in interfaces:
@@ -157,9 +159,10 @@ class Moduleparameter(Test):
         Restore back the default Parameters
         """
         self.log.info("Restoring Default param")
-        linux_modules.unload_module(self.module)
-        linux_modules.load_module(self.module)
-        time.sleep(self.load_unload_sleep_time)
-        if linux_modules.module_is_loaded(self.module) is False:
-            self.fail("Cannot restore default values for Module : %s"
-                      % self.module)
+        if self.module:
+            linux_modules.unload_module(self.module)
+            linux_modules.load_module(self.module)
+            time.sleep(self.load_unload_sleep_time)
+            if linux_modules.module_is_loaded(self.module) is False:
+                self.fail("Cannot restore default values for Module : %s"
+                          % self.module)

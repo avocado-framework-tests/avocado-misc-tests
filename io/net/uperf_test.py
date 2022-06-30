@@ -23,7 +23,7 @@ workload profiles
 import os
 import netifaces
 from avocado import Test
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import distro
 from avocado.utils import build
 from avocado.utils import archive
@@ -51,6 +51,9 @@ class Uperf(Test):
                                              default="None")
         interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface", default="")
+        self.networkinterface = None
+        if not self.iface:
+            self.cancel("Please specify interface to be used")
         if self.iface not in interfaces:
             self.cancel("%s interface is not available" % self.iface)
         self.ipaddr = self.params.get("host_ip", default="")
@@ -192,23 +195,24 @@ class Uperf(Test):
         """
         Killing Uperf process in peer machine
         """
-        self.obj.stop()
-        cmd = "pkill uperf; rm -rf /tmp/uperf-master"
-        output = self.session.cmd(cmd)
-        if not output.exit_status == 0:
-            self.fail("Either the ssh to peer machine machine\
-                       failed or uperf process was not killed")
-        if self.networkinterface.set_mtu('1500') is not None:
-            self.cancel("Failed to set mtu in host")
-        try:
-            self.peer_networkinterface.set_mtu('1500')
-        except Exception:
-            self.peer_public_networkinterface.set_mtu('1500')
-        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-        try:
-            self.networkinterface.restore_from_backup()
-        except Exception:
-            self.log.info("backup file not availbale, could not restore file.")
-        self.remotehost.remote_session.quit()
-        self.remotehost_public.remote_session.quit()
-        self.session.quit()
+        if self.networkinterface:
+            self.obj.stop()
+            cmd = "pkill uperf; rm -rf /tmp/uperf-master"
+            output = self.session.cmd(cmd)
+            if not output.exit_status == 0:
+                self.fail("Either the ssh to peer machine machine\
+                           failed or uperf process was not killed")
+            if self.networkinterface.set_mtu('1500') is not None:
+                self.cancel("Failed to set mtu in host")
+            try:
+                self.peer_networkinterface.set_mtu('1500')
+            except Exception:
+                self.peer_public_networkinterface.set_mtu('1500')
+            self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+            try:
+                self.networkinterface.restore_from_backup()
+            except Exception:
+                self.log.info("backup file not availbale, could not restore file.")
+            self.remotehost.remote_session.quit()
+            self.remotehost_public.remote_session.quit()
+            self.session.quit()

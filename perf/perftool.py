@@ -18,7 +18,7 @@ import os
 import platform
 from avocado import Test
 from avocado.utils import archive, build, distro, process
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class Perftool(Test):
@@ -60,27 +60,30 @@ class Perftool(Test):
         self.sourcedir = os.path.join(self.workdir,
                                       'perftool-testsuite-master')
 
-    def test(self):
+    def test_perf_test(self):
         '''
-        1.perf test :Does sanity tests and
-          execute the tests by calling each module
-        2.Build perftool Test
-          Source:
-          https://github.com/rfmvh/perftool-testsuite
+        perf test: Does sanity tests and
+        execute the tests by calling each module
         '''
         count = 0
-        # Built in perf test
         for string in process.run("perf test", ignore_status=True).stderr.decode("utf-8").splitlines():
             if 'FAILED' in string:
-                self.log.info("Test case failed is %s" % string)
+                count += 1
+                self.log.info(string)
+        if count > 0:
+            self.fail("%s Test failed" % count)
 
-        # perf testsuite
+    def test_perf_testsuite(self):
+        '''
+        Build perftool Test
+        Source: https://github.com/rfmvh/perftool-testsuite
+        '''
+        count = 0
         for line in build.run_make(self.sourcedir, extra_args='check',
                                    process_kwargs={'ignore_status': True}
                                    ).stdout.decode("utf-8").splitlines():
             if '-- [ FAIL ] --' in line:
                 count += 1
                 self.log.info(line)
-
         if count > 0:
             self.fail("%s Test failed" % count)

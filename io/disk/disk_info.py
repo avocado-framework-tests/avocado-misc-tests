@@ -29,7 +29,7 @@ from avocado.utils import genio
 from avocado.utils import distro
 from avocado.utils import multipath
 from avocado.utils.partition import Partition
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.process import CmdError
 from avocado.utils.partition import PartitionError
 
@@ -51,9 +51,9 @@ class DiskInfo(Test):
         """
         smm = SoftwareManager()
         pkg = ""
+        self.disk = self.params.get('disk', default=None)
         if 'ppc' not in platform.processor():
             self.cancel("Processor is not ppc64")
-        self.disk = self.params.get('disk', default=None)
         self.dirs = self.params.get('dir', default=self.workdir)
         self.fstype = self.params.get('fs', default='ext4')
         self.log.info("disk: %s, dir: %s, fstype: %s",

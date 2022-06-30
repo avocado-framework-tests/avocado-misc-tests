@@ -18,7 +18,7 @@ import os
 import shutil
 from avocado import Test, skipUnless
 from avocado.utils import build, process, distro, git, archive, memory
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.partition import Partition
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
