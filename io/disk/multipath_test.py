@@ -258,27 +258,31 @@ class MultipathTest(Test):
         if err_paths:
             self.fail("following paths fails in n-1 paths : %s" % err_paths)
 
-    def test_failing_reinstate_all_paths(self):
-        '''
-        Failing all paths for short time and reinstating back
-        '''
-        err_paths = []
-        self.log.info("Failing and reinstating the n-1 paths")
-        for dic_path in self.mpath_list:
-            for path in dic_path["paths"]:
-                if multipath.fail_path(path) is False:
-                    self.log.info("could not fail under all path %s", path)
-                    err_paths.append(path)
-
-            time.sleep(self.op_long_sleep_time)
-            for path in dic_path["paths"]:
-                if multipath.reinstate_path(path) is False:
-                    self.log.info("couldn't reinstate in all path %s", path)
-                    err_paths.append(path)
-        self.mpath_svc.restart()
-        wait.wait_for(self.mpath_svc.status, timeout=10)
-        if err_paths:
-            self.fail("following paths fails in all paths : %s" % err_paths)
+    #TO DO: Can be enhanced in future.
+    # This test is bringing down the multipath services down. Hence commenting
+    # out this test as of now to avoid the multipath services going down.
+    #
+    # def test_failing_reinstate_all_paths(self):
+    #    '''
+    #    Failing all paths for short time and reinstating back
+    #    '''
+    #    err_paths = []
+    #    self.log.info("Failing and reinstating the n-1 paths")
+    #    for dic_path in self.mpath_list:
+    #        for path in dic_path["paths"]:
+    #            if multipath.fail_path(path) is False:
+    #                self.log.info("could not fail under all path %s", path)
+    #                err_paths.append(path)
+    #
+    #        time.sleep(self.op_long_sleep_time)
+    #        for path in dic_path["paths"]:
+    #            if multipath.reinstate_path(path) is False:
+    #                self.log.info("couldn't reinstate in all path %s", path)
+    #                err_paths.append(path)
+    #    self.mpath_svc.restart()
+    #    wait.wait_for(self.mpath_svc.status, timeout=10)
+    #    if err_paths:
+    #        self.fail("following paths fails in all paths : %s" % err_paths)
 
     def test_removing_all_paths(self):
         '''
