@@ -1,0 +1,10 @@
+component: !mux
+    net:
+        comp: 'net'
+        kself_args: 'summary=1'
+run_type: !mux
+    distro:
+        comp: 'distro'
+    upstream:
+        type: 'upstream'
+        location: 'https://github.com/torvalds/linux/archive/master.zip'
