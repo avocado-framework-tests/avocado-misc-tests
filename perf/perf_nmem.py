@@ -147,8 +147,7 @@ class perfNMEM(Test):
                 rc, op = process.getstatusoutput('perf stat -e %s sleep 1'
                                                  % event, shell=True,
                                                  ignore_status=True,
-                                                 verbose=True,
-                                                 allow_output_check='combined')
+                                                 verbose=True)
                 if rc:
                     failed_event_list.append(event)
         if failed_event_list:
@@ -161,8 +160,7 @@ class perfNMEM(Test):
             rc, op = process.getstatusoutput("perf stat -e '{%s}' sleep 1" %
                                              ','.join(self.all_events[key]),
                                              shell=True, verbose=True,
-                                             ignore_status=True,
-                                             allow_output_check='combined')
+                                             ignore_status=True)
             if rc:
                 failed_events.append(self.all_events[key])
         if failed_events:
@@ -176,11 +174,11 @@ class perfNMEM(Test):
                 mix_events.append(self.all_events[keys][0])
             op = process.system_output("perf stat -e '{%s}' sleep 1"
                                        % (",".join(mix_events)), shell=True,
-                                       ignore_status=True,
-                                       allow_output_check='combined')
+                                       ignore_status=True)
             er_ln = "The events in group usually have to be from the same PMU"
+            output = op.stdout.decode() + op.stderr.decode()
             # Expecting failure with the string in 'er_ln'
-            if er_ln in op.decode():
+            if er_ln in output:
                 self.log.info("Expected failure with mixed events")
             else:
                 self.fail("Expected a failure but test pass.")

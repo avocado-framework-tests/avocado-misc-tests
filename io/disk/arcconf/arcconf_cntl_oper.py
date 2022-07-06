@@ -118,8 +118,7 @@ class Arcconftest(Test):
         """
         Function returns the output of a command
         """
-        val = process.run(cmd, shell=True, ignore_status=True,
-                          allow_output_check='stdout')
+        val = process.run(cmd, shell=True, ignore_status=True)
         if val.exit_status:
             self.fail("cmd %s Failed" % (cmd))
         return val.stdout.rstrip()

@@ -56,7 +56,7 @@ class MemorySyscall(Test):
     def test_memapi(self):
         os.chdir(self.teststmpdir)
         proc = process.SubProcess('./memory_api %s %s' % (self.memsize, self.induce_err),
-                                  shell=True, allow_output_check='both')
+                                  shell=True)
         proc.start()
         while proc.poll() is None:
             pass

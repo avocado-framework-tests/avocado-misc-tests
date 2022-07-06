@@ -60,10 +60,10 @@ class PerfCoreIMCNonZeroEvents(Test):
 
     def parse_op(self, cmd):
         fail_count = 0
-        output = process.system_output(cmd, ignore_status=True,
-                                       allow_output_check='combined',
+        result = process.system_output(cmd, ignore_status=True,
                                        verbose=True, shell=True, sudo=True)
-        for line in output.decode().split('\n'):
+        output = result.stdout.decode() + result.stderr.decode()
+        for line in output.split('\n'):
             if 'time' not in line:
                 if int(line.strip().split()[1].replace(',', '')) == 0:
                     fail_count = fail_count + 1
