@@ -64,8 +64,11 @@ class perf_cpu_hotplug(Test):
 
         if 'ppc64' not in detected_distro.arch:
             self.cancel("Processor is not PowerPC")
-        if 'POWER10' not in processor_type:
-            self.cancel("Test is supported only on Power10")
+        for line in processor_type.splitlines():
+            if 'revision' in line:
+                self.rev = (line.split(':')[1])
+                if '0080' not in self.rev:
+                    self.cancel("Test is supported only on Power10")
 
         deps = ['gcc', 'make']
         if 'Ubuntu' in detected_distro.name:
