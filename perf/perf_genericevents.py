@@ -18,6 +18,7 @@
 import os
 import configparser
 from avocado import Test
+from avocado.utils import genio
 
 
 class test_generic_events(Test):
@@ -33,15 +34,18 @@ class test_generic_events(Test):
         parser = configparser.ConfigParser()
         parser.optionxform = str
         parser.read(self.get_data('raw_code.cfg'))
-        cpu_info = open('/proc/cpuinfo', 'r').read()
-        if 'POWER8' in cpu_info:
-            self.generic_events = dict(parser.items('POWER8'))
-        elif 'POWER9' in cpu_info:
-            self.generic_events = dict(parser.items('POWER9'))
-        elif 'POWER10' in cpu_info:
-            self.generic_events = dict(parser.items('POWER10'))
-        else:
-            self.cancel("Processor is not supported: %s" % cpu_info)
+        cpu_info = genio.read_file("/proc/cpuinfo")
+        for line in cpu_info.splitlines():
+            if 'revision' in line:
+                self.rev = (line.split(':')[1])
+                if '004b' in self.rev:
+                    self.generic_events = dict(parser.items('POWER8'))
+                elif '004e' in self.rev:
+                    self.generic_events = dict(parser.items('POWER9'))
+                elif '0080' in self.rev:
+                    self.generic_events = dict(parser.items('POWER10'))
+                else:
+                    self.cancel("Processor is not supported: %s" % cpu_info)
 
     def test(self):
         nfail = 0
@@ -56,7 +60,7 @@ class test_generic_events(Test):
             self.log.info('FILE in %s is %s' % (dir, file))
             if raw_code != val:
                 nfail += 1
-                self.log.warn('FAIL : Expected value is %s but got '
+                self.log.info('FAIL : Expected value is %s but got '
                               '%s' % (val, raw_code))
             else:
                 self.log.info('PASS : Expected value: %s and got '
