@@ -68,7 +68,9 @@ class kselftest(Test):
         elif 'SuSE' in detected_distro.name:
             deps.extend(['glibc', 'glibc-devel', 'popt-devel', 'sudo',
                          'libcap2', 'libcap-devel', 'libcap-ng-devel',
-                         'fuse', 'fuse-devel', 'glibc-devel-static'])
+                         'fuse', 'fuse-devel', 'glibc-devel-static',
+                         'traceroute', 'iproute2', 'socat', 'clang7',
+                         'libnuma-devel'])
             if detected_distro.version >= 15:
                 deps.extend(['libhugetlbfs-devel'])
             else:
@@ -77,7 +79,8 @@ class kselftest(Test):
             deps.extend(['popt', 'glibc', 'glibc-devel', 'glibc-static',
                          'libcap-ng', 'libcap', 'libcap-devel',
                          'libcap-ng-devel', 'popt-devel',
-                         'libhugetlbfs-devel'])
+                         'libhugetlbfs-devel', 'clang', 'traceroute',
+                         'iproute-tc', 'socat', 'numactl-devel'])
             dis_ver = int(detected_distro.version)
             if detected_distro.name == 'rhel' and dis_ver >= 9:
                 packages_remove = ['libhugetlbfs-devel']
@@ -133,6 +136,14 @@ class kselftest(Test):
                 self.buldir = "/usr/src/linux"
 
         self.sourcedir = os.path.join(self.buldir, self.testdir)
+        # cmsg_* tests from net/ subdirectory takes a lot of time to complete.
+        # Until they have been root caused skip them.
+        if self.comp == 'net':
+            make_path = self.sourcedir + "/net/Makefile"
+            process.system("sed -i 's/^.*cmsg_so_mark.sh/#&/g' %s" % make_path,
+                           shell=True, sudo=True)
+            process.system("sed -i 's/^.*cmsg_time.sh/#&/g' %s" % make_path,
+                           shell=True, sudo=True)
         if self.comp:
             build_str = '-C %s' % self.comp
         if build.make(self.sourcedir, extra_args='%s' % build_str):
