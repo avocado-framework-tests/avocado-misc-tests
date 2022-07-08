@@ -47,7 +47,7 @@ class libkmip(Test):
         Running tests from libkmip
         '''
         count = 0
-        output = process.run("./tests", ignore_status=True, shell=True)
+        output = process.run("./bin/tests", ignore_status=True, shell=True)
         for line in output.stdout.decode().splitlines():
             if 'FAIL - ' in line:
                 count += 1
