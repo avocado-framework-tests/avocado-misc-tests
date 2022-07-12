@@ -230,6 +230,6 @@ class perfNMEM(Test):
         self.log.info("Current CPU: %s" % current_cpu)
         self._check_cpumask()
         # After confirming cpu got disabled, enable back
-        if current_cpu in online_cpus and disable_cpu != current_cpu:
+        if current_cpu not in online_cpus and disable_cpu != current_cpu:
             if cpu.online(disable_cpu):
                 self.fail("Can't online cpu %s" % disable_cpu)
