@@ -249,3 +249,22 @@ class RASTools(Test):
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in lscfg tool verification"
                       % self.is_fail)
+
+    def test_usysident(self):
+        """
+        This tests to turn on device identify indicators and other help
+        options of usysident
+        """
+        if 'not supported' in self.run_cmd_out("usysident"):
+            self.cancel(
+                "The identify indicators are not supported on this system")    
+        value = self.params.get('usysident_list', default=['-h', '-V', '-P'])
+        for list_item in value:
+            self.run_cmd('usysident %s' % usysident_list)
+        loc_code = self.run_cmd_out("usysident -P | awk 'NR==1{print $1}'")
+        self.run_cmd("usysident -l %s -s normal" % loc_code)
+        if 'on' not in self.run_cmd_out("usysident -l %s -s identify" % loc_code):
+            self.is_fail += 1
+        if self.is_fail >= 1:
+            self.fail("%s command(s) failed to execute"
+                      % self.is_fail)
