@@ -50,10 +50,10 @@ class Kernbench(Test):
             build.make(self.sourcedir, extra_args='olddefconfig')
         self.kernel_config_fix()
         if make_opts:
-            build_string = "/usr/bin/time -o %s make %s -j %s vmlinux" % (
+            build_string = "yes \"\"|/usr/bin/time -o %s make %s -j %s vmlinux" % (
                 timefile, make_opts, threads)
         else:
-            build_string = "/usr/bin/time -o %s make -j %s vmlinux" % (
+            build_string = "yes \"\"|/usr/bin/time -o %s make -j %s vmlinux" % (
                 timefile, threads)
         process.system(build_string, ignore_status=True, shell=True)
         if not os.path.isfile('vmlinux'):
@@ -93,6 +93,10 @@ class Kernbench(Test):
                        shell=True, sudo=True)
         process.system("sed -i 's/^.*CONFIG_DEBUG_INFO_BTF/#&/g' .config",
                        shell=True, sudo=True)
+        process.system("scripts/config --disable SYSTEM_REVOCATION_KEYS",
+                       shell=True, sudo=True)
+        process.system("scripts/config --disable SYSTEM_REVOCATION_LIST",
+                       shell=True, sudo=True)
 
     def setUp(self):
         """
@@ -104,7 +108,7 @@ class Kernbench(Test):
         if 'Ubuntu' in self.detected_distro.name:
             deps.extend(['libpopt0', 'libc6', 'libc6-dev', 'libpopt-dev',
                          'libcap-ng0', 'libcap-ng-dev', 'elfutils', 'libelf1',
-                         'libnuma-dev', 'libfuse-dev', 'libssl-dev'])
+                         'libnuma-dev', 'libfuse-dev', 'libssl-dev', 'libelf-dev'])
         elif 'SuSE' in self.detected_distro.name:
             deps.extend(['libpopt0', 'glibc', 'glibc-devel',
                          'popt-devel', 'libcap2', 'libcap-devel',
