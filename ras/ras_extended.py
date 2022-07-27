@@ -268,3 +268,23 @@ class RASTools(Test):
         if self.is_fail >= 1:
             self.fail("%s command(s) failed to execute"
                       % self.is_fail)
+
+    def test_locking_mechanism(self):
+        """
+        This tests database (vpd.db) locking mechanism when multiple 
+        instances of vpdupdate and lsvpd are running simultaneously. 
+        Locking mechanism prevents corruption of database file 
+        when running vpdupdate multiple instances
+        """
+
+        cmd = "for i in $(seq 500) ; do vpdupdate & done ;"
+        ret = process.run(cmd, ignore_bg_processes=True, ignore_status=True,
+                          shell=True)
+        cmd1 = "for in in $(seq 200) ; do lsvpd & done ;"
+        ret1 = process.run(cmd1, ignore_bg_processes=True, ignore_status=True,
+                           shell=True)
+        if 'SQLITE Error' in ret.stderr.decode("utf-8").strip()\
+                or 'corrupt' in ret1.stdout.decode("utf-8").strip():
+            self.fail("Database corruption detected")
+        else:
+            self.log.info("Locking mechanism prevented database corruption")        
