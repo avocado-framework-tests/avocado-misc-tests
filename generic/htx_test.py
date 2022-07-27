@@ -21,6 +21,8 @@ HTX Test
 import os
 import time
 import shutil
+import re
+
 from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import build
@@ -39,6 +41,29 @@ class HtxTest(Test):
     :param mdt_file: mdt file used to trigger HTX
     :params time_limit: how much time(hours) you want to run this stress.
     """
+
+    def install_latest_htx_rpm(self):
+        """
+        Search for the latest htx-version for the intended distro and
+        install the same.
+        """
+        distro_pattern = "%s%s" % (
+            self.dist_name, self.detected_distro.version)
+        temp_string = process.getoutput(
+            "curl --silent %s" % (self.rpm_link),
+            verbose=False, shell=True, ignore_status=True)
+        matching_htx_versions = re.findall(
+            r"(?<=\>)htx\w*[-]\d*[-]\w*[.]\w*[.]\w*", str(temp_string))
+        distro_specific_htx_versions = [
+            htx_rpm for htx_rpm in matching_htx_versions
+            if distro_pattern in htx_rpm]
+        distro_specific_htx_versions.sort(reverse=True)
+        self.latest_htx_rpm = distro_specific_htx_versions[0]
+
+        if process.system('rpm -ivh --nodeps %s%s '
+                          '--force' % (self.rpm_link, self.latest_htx_rpm),
+                          shell=True, ignore_status=True):
+            self.cancel("Installion of rpm failed")
 
     def setUp(self):
         """
@@ -68,17 +93,18 @@ class HtxTest(Test):
         """
         Builds HTX
         """
-        detected_distro = distro.detect()
+        self.detected_distro = distro.detect()
         packages = ['git', 'gcc', 'make']
-        if detected_distro.name in ['centos', 'fedora', 'rhel']:
+        if self.detected_distro.name in ['centos', 'fedora', 'rhel']:
             packages.extend(['gcc-c++', 'ncurses-devel', 'tar'])
-        elif detected_distro.name == "Ubuntu":
+        elif self.detected_distro.name == "Ubuntu":
             packages.extend(['libncurses5', 'g++',
                              'ncurses-dev', 'libncurses-dev'])
-        elif detected_distro.name == 'SuSE':
+        elif self.detected_distro.name == 'SuSE':
             packages.extend(['libncurses5', 'gcc-c++', 'ncurses-devel', 'tar'])
         else:
-            self.cancel("Test not supported in  %s" % detected_distro.name)
+            self.cancel("Test not supported in  %s" %
+                        self.detected_distro.name)
 
         smm = SoftwareManager()
         for pkg in packages:
@@ -104,13 +130,15 @@ class HtxTest(Test):
             if process.system('./installer.sh -f'):
                 self.fail("Installation of htx fails:please refer job.log")
         else:
-            dist_name = detected_distro.name.lower()
-            if dist_name == 'suse':
-                dist_name = 'sles'
-            rpm_check = "htx%s%s" % (dist_name, detected_distro.version)
+            self.dist_name = self.detected_distro.name.lower()
+            if self.dist_name == 'suse':
+                self.dist_name = 'sles'
+            rpm_check = "htx%s%s" % (
+                self.dist_name, self.detected_distro.version)
             skip_install = False
             ins_htx = process.system_output(
                 'rpm -qa | grep htx', shell=True, ignore_status=True).decode()
+
             if ins_htx:
                 if not smm.check_installed(rpm_check):
                     self.log.info("Clearing existing HTX rpm")
@@ -122,12 +150,9 @@ class HtxTest(Test):
                     self.log.info("Using existing HTX")
                     skip_install = True
             if not skip_install:
-                rpm_loc = self.params.get('rpm_link', default=None)
-                if rpm_loc:
-                    if process.system('rpm -ivh --nodeps %s '
-                                      '--force' % rpm_loc,
-                                      shell=True, ignore_status=True):
-                        self.cancel("Installing rpm failed")
+                self.rpm_link = self.params.get('rpm_link', default=None)
+                if self.rpm_link:
+                    self.install_latest_htx_rpm()
                 else:
                     self.cancel("RPM link is required for RPM run type")
         self.log.info("Starting the HTX Deamon")
