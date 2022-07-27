@@ -77,7 +77,7 @@ class NVMeCliSelfTest(Test):
         """
         Runs the selftests on the device.
         """
-        res = process.run("nose2 --verbose %s" %
+        res = process.run("nose2 --verbose --start-dir tests %s" %
                           self.test, shell=True, ignore_status=True)
         res = [res.stdout.decode("utf-8"), res.stderr.decode("utf-8")]
         if any('FAILED' in line for line in res):
