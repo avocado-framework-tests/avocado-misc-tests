@@ -91,7 +91,8 @@ class Netperf(Test):
         self.mtu = self.params.get("mtu", default=1500)
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
                                      password=self.peer_password)
-        self.peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip).name
+        self.peer_interface = self.remotehost.get_interface_by_ipaddr(
+            self.peer_ip).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
                                                       self.remotehost)
         self.remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
@@ -111,13 +112,13 @@ class Netperf(Test):
         archive.extract(tarball, self.netperf)
         self.version = "%s-%s" % ("netperf",
                                   os.path.basename(tarball.split('.zip')[0]))
-        self.neperf = os.path.join(self.netperf, self.version)
         destination = "%s:/tmp" % self.peer_ip
-        output = self.session.copy_files(self.neperf, destination,
+        output = self.session.copy_files(tarball, destination,
                                          recursive=True)
         if not output:
             self.cancel("unable to copy the netperf into peer machine")
-        cmd = "cd /tmp/%s;./configure --build=powerpc64le;make" % self.version
+        cmd = "unzip /tmp/%s -d /tmp;cd /tmp/%s;./configure --build=powerpc64le;make" % (
+            tarball, self.version)
         output = self.session.cmd(cmd)
         if not output.exit_status == 0:
             self.fail("test failed because command failed in peer machine")
