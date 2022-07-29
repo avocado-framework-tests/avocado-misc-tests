@@ -7,8 +7,6 @@ filesystem: !mux
         fs: 'xfs'
     btrfs:
         fs: 'btrfs'
-    no_fs:
-        fs: ''
 raid: !mux
     raid:
         raid: True
