@@ -15,7 +15,6 @@
 
 import os
 import glob
-import re
 from avocado import Test
 from avocado.utils import cpu, dmesg, genio, linux_modules, process
 from avocado import skipIf, skipUnless
@@ -78,20 +77,6 @@ class PerfBasic(Test):
     def _remove_temp_user(self):
         # This function removes the temporary user added for testing
         process.system('userdel -r test_pmu', sudo=True, ignore_status=True)
-
-    def test_PMU_register(self):
-        # This function tests whether performance monitor hardware support
-        # registered or not. If not found any registered messages in dmesg
-        # output this test will fail.
-        output = dmesg.collect_errors_dmesg('performance monitor hardware support registered')
-        if not len(output):
-            self.fail("No registered PMUs found.")
-        else:
-            for line in output:
-                matchFound = re.search(r"\] (.*) performance", line)
-                if matchFound:
-                    self.pmu_list.append(matchFound.group(1))
-            self.log.info("Found PMUs %s" % self.pmu_list)
 
     def _check_kernel_config(self, config_option):
         # This function checks the kernel configuration with the input
