@@ -24,10 +24,13 @@ class vTPM(Test):
     :avocado: tags=privileged,security,tpm
     """
     def setUp(self):
-        device_tree_path = "/proc/device-tree/vdevice/vtpm@30000003"
-        if not os.path.exists(device_tree_path):
+        device_tree_path = "/proc/device-tree/vdevice/"
+        d_list = os.listdir(device_tree_path)
+        vtpm = [i for i, item in enumerate(d_list) if item.startswith('vtpm@')]
+        if not vtpm:
             self.cancel("vTPM not enabled.")
-        compatible_file = "%s/compatible" % device_tree_path
+        vtpm_file = "%s%s" % (device_tree_path, d_list[vtpm[0]])
+        compatible_file = "%s/compatible" % vtpm_file
         if os.path.exists(compatible_file):
             self.cvalue = genio.read_file(compatible_file).rstrip('\t\r\n\0')
             self.cvalue = self.cvalue.split(",")[1]
