@@ -1,0 +1,11 @@
+url: 'https://github.com/linux-test-project/ltp/archive/master.zip'
+skipfileurl: "null"
+runltp: !mux
+    fs:
+        args: '-f fs'
+    fs_perms_simple:
+        args: '-f fs_perms_simple'
+    fsx:
+        args: '-f fsx'
+    fs_bind:
+        args: '-f fs_bind'
