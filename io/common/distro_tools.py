@@ -68,6 +68,8 @@ class DisrtoTool(Test):
         '''
         test all distro tools
         '''
+        if self.option == '-c pci -a':
+            self.cancel("-a option is not supported with lsslot")
         cmd = "%s %s" % (self.tool, self.option)
         result = process.run(cmd, shell=True, ignore_status=True)
 
