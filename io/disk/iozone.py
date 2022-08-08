@@ -473,7 +473,7 @@ class IOZone(Test):
         if self.disk is not None:
             if self.disk in disk.get_disks():
                 if raid_needed:
-                    raid_name = '/dev/md/mdsraid'
+                    raid_name = '/dev/md/sraid'
                     self.create_raid(self.disk, raid_name)
                     self.raid_create = True
                     self.disk = raid_name

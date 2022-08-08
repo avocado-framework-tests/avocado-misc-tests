@@ -58,7 +58,7 @@ class SoftwareRaid(Test):
         spare_disks = self.params.get('spare_disks', default='').strip(" ")
         if spare_disks:
             spare_disks = spare_disks.split()
-        raid = self.params.get('raidname', default='/dev/md/mdsraid')
+        raid = self.params.get('raidname', default='/dev/md/sraid')
         metadata = str(self.params.get('metadata', default='1.2'))
         self.remove_add_disk = ''
         if raidlevel not in ['0', 'linear']:
