@@ -140,7 +140,7 @@ class FSMark(Test):
         :rtype: str
         """
         lv_size = lv_utils.get_device_total_space(l_disk) / 2330168
-        lv_utils.vg_create(self.vgname, l_disk)
+        lv_utils.vg_create(self.vgname, l_disk, force=True)
         lv_utils.lv_create(self.vgname, self.lvname, lv_size)
         return '/dev/%s/%s' % (self.vgname, self.lvname)
 

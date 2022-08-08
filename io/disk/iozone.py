@@ -473,7 +473,7 @@ class IOZone(Test):
         if self.disk is not None:
             if self.disk in disk.get_disks():
                 if raid_needed:
-                    raid_name = '/dev/md/mdsraid'
+                    raid_name = '/dev/md/sraid'
                     self.create_raid(self.disk, raid_name)
                     self.raid_create = True
                     self.disk = raid_name
@@ -500,7 +500,7 @@ class IOZone(Test):
         vgname = 'avocado_vg'
         lvname = 'avocado_lv'
         lv_size = lv_utils.get_device_total_space(l_disk) / 2330168
-        lv_utils.vg_create(vgname, l_disk)
+        lv_utils.vg_create(vgname, l_disk, force=True)
         lv_utils.lv_create(vgname, lvname, lv_size)
         return '/dev/%s/%s' % (vgname, lvname)
 
