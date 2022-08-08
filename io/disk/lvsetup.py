@@ -135,7 +135,7 @@ class Lvsetup(Test):
         A volume group with given name is created in the ramdisk. It then
         creates a logical volume.
         """
-        lv_utils.vg_create(self.vg_name, self.device)
+        lv_utils.vg_create(self.vg_name, self.device, force=True)
         if not lv_utils.vg_check(self.vg_name):
             self.fail('Volume group %s not created' % self.vg_name)
         lv_utils.lv_create(self.vg_name, self.lv_name, self.lv_size)
