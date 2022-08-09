@@ -18,6 +18,7 @@ import os
 import platform
 import re
 import tempfile
+import time
 
 from avocado import Test
 from avocado.utils import distro
@@ -72,6 +73,7 @@ class PerfSDT(Test):
         self.run_cmd(perf_add)
         if self.is_fail:
             self.fail("Unable to add %s to builid-cache" % self.libpthread)
+        time.sleep(10)
         # Add the libc.so.6 to perf
         perf_libc_add = "perf buildid-cache -v --add %s" % self.libc
         self.is_fail = 0
