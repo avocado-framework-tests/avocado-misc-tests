@@ -1,5 +1,5 @@
-device: nvme0
-disk: /dev/nvme0n1
+device: 'nvme0'
+disk: '/dev/nvme0n1'
 test: !mux
     nvme_id_ctrl_test:
         test: nvme_id_ctrl_test
@@ -21,8 +21,6 @@ test: !mux
         test: nvme_flush_test
     nvme_test_io:
         test: nvme_test_io
-    nvme_writeuncor_test:
-        test: nvme_writeuncor_test
     nvme_get_features_test:
         test: nvme_get_features_test
     nvme_writezeros_test:
