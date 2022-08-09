@@ -1,2 +1,2 @@
 filebenchrun:
-  testfile : 'mywebserver.f'
+  testfile : 'webserver.f'
