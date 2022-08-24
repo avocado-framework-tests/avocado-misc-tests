@@ -61,8 +61,10 @@ class DisrtoTool(Test):
                                               device_path_name)
 
         smm = SoftwareManager()
-        if not smm.check_installed("pciutils") and not smm.install("pciutils"):
-            self.cancel("pciutils package is need to test")
+        for pkg in ['pciutils', 'net-tools']:
+            if not smm.check_installed(pkg) and not smm.install(pkg):
+                self.cancel("%s package is need to test" % pkg)
+
 
     def test(self):
         '''
