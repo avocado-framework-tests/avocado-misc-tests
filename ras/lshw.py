@@ -15,7 +15,7 @@
 
 from avocado import Test
 from avocado import skipIf
-from avocado.utils import process
+from avocado.utils import process, cpu
 from avocado.utils import genio
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import distro
@@ -178,8 +178,19 @@ class Lshwrun(Test):
         else:
             product_path = '/proc/device-tree/model'
             serial_path = '/proc/device-tree/system-id'
-        product_name = genio.read_file(product_path).rstrip(' \t\r\n\0')
-        serial_num = genio.read_file(serial_path).rstrip(' \t\r\n\0')
+
+        if 'x86_64' in cpu.get_arch():
+            product_name = ""
+            serial_num = ""
+            dmidecode_op = self.run_cmd_out("dmidecode")
+            for line in dmidecode_op.split("\n"):
+                if 'Product Name' in line and len(product_name) == 0:
+                    product_name = line.split(':')[-1]
+                if 'Serial Number' in line and len(serial_num) == 0:
+                    serial_num = line.split(':')[-1]
+        else:
+            product_name = genio.read_file(product_path).rstrip(' \t\r\n\0')
+            serial_num = genio.read_file(serial_path).rstrip(' \t\r\n\0')
 
         if product_name\
                 not in self.run_cmd_out("lshw | grep product | head -1"):
