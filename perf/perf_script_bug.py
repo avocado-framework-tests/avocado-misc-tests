@@ -15,6 +15,7 @@
 # Author: Shirisha <shiganta@in.ibm.com>
 
 import os
+import platform 
 import tempfile
 import shutil
 import configparser
@@ -38,6 +39,9 @@ class PerfProbe(Test):
         deps = ['gcc', 'make']
         if detected_distro.name in ['rhel', 'SuSE']:
             deps.extend(['perf'])
+        elif detected_distro.name in ['Ubuntu']:
+            deps.extend(['linux-tools-common', 'linux-tools-%s' %
+                         platform.uname()[2]])
         else:
             self.cancel("Install the package perf\
                       for %s" % detected_distro.name)
