@@ -118,7 +118,7 @@ class Netperf(Test):
         if not output:
             self.cancel("unable to copy the netperf into peer machine")
         cmd = "unzip /tmp/%s -d /tmp;cd /tmp/%s;./configure --build=powerpc64le;make" % (
-            tarball, self.version)
+            os.path.basename(tarball), self.version)
         output = self.session.cmd(cmd)
         if not output.exit_status == 0:
             self.fail("test failed because command failed in peer machine")
