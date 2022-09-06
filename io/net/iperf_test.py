@@ -200,10 +200,12 @@ class Iperf(Test):
                 tput = int(line.split()[6])
             elif id in line and 'Gbits/sec' in line:
                 tput = int(float(line.split()[6])) * 1000
+            elif id in line and 'Kbits/sec' in line:
+                tput = int(float(line.split()[6])) / 1000
         if tput < (int(self.expected_tp) * speed) / 100:
             self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%"
                       ", Throughput Actual value - %s "
-                      % ((tput*100)/speed, self.expected_tp,
+                      % (round((tput*100)/speed, 4), self.expected_tp,
                          str(tput)+'Mb/sec'))
         for line in nping_result.stdout.decode("utf-8").splitlines():
             if 'Raw packets' in line:
