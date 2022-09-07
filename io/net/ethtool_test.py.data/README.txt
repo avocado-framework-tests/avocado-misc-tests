@@ -16,3 +16,5 @@ arg            -   Specify the argument that needs to be tested.
 action_elapse  -   Specify action elapse for those arguments that need it.
 host-IP        -   Specify host-IP for ip configuration.
 netmask        -   specify netmask for ip configuration.
+hbond          -   Specify if the test is run on hbond or regular interface
+ping_count     -   Mention the ping count required for ping test

@@ -66,6 +66,7 @@ class Ethtool(Test):
         self.rx = self.params.get("rx_channel", default='')
         self.other = self.params.get("other_channel", default='')
         self.combined = self.params.get("combined_channel", default='')
+        self.count = self.params.get("ping_count", default=500000)
         if not self.peer:
             self.cancel("No peer provided")
         local = LocalHost()
@@ -234,7 +235,7 @@ class Ethtool(Test):
                         priv_pass.append(priv_flag.rstrip())
                     else:
                         priv_fail.append(priv_flag.rstrip())
-            if self.networkinterface.ping_check(self.peer, count=500000,
+            if self.networkinterface.ping_check(self.peer, self.count,
                                                 options='-f') is not None:
                 self.fail("Ping failed oper = %s" % oper)
         if priv_fail:

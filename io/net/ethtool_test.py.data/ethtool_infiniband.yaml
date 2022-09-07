@@ -2,6 +2,7 @@ interface: ib0
 peer_ip:
 host_ip:
 netmask:
+ping_count:
 args: !mux
     PrivateFlag:
         privflag_test: True

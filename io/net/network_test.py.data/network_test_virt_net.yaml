@@ -6,6 +6,7 @@ peer_password: "********"
 host_ip:
 netmask:
 hbond:
+ping_count:
 mtu: !mux
     1500:
         mtu: 1500

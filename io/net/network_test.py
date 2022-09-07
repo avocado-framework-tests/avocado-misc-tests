@@ -107,6 +107,7 @@ class NetworkTest(Test):
         self.peer_public_networkinterface = NetworkInterface(self.peer_interface,
                                                              self.remotehost_public)
         self.mtu = self.params.get("mtu", default=1500)
+        self.count = self.params.get("ping_count", default=500000)
         self.mtu_set()
         if self.networkinterface.ping_check(self.peer, count=5) is not None:
             self.cancel("No connection to peer")
@@ -186,7 +187,7 @@ class NetworkTest(Test):
         '''
         Flood ping to peer machine
         '''
-        if self.networkinterface.ping_check(self.peer, count=500000,
+        if self.networkinterface.ping_check(self.peer, self.count,
                                             options='-f') is not None:
             self.fail("flood ping test failed")
 
@@ -237,7 +238,7 @@ class NetworkTest(Test):
         tx_file = "/sys/class/net/%s/statistics/tx_packets" % self.iface
         rx_before = genio.read_file(rx_file)
         tx_before = genio.read_file(tx_file)
-        self.networkinterface.ping_check(self.peer, count=500000, options='-f')
+        self.networkinterface.ping_check(self.peer, self.count, options='-f')
         rx_after = genio.read_file(rx_file)
         tx_after = genio.read_file(tx_file)
         if (rx_after <= rx_before) or (tx_after <= tx_before):
@@ -264,7 +265,7 @@ class NetworkTest(Test):
             if not self.offload_state_change(ro_type,
                                              ro_type_full, state):
                 self.fail("%s %s failed" % (ro_type, state))
-            if self.networkinterface.ping_check(self.peer, count=500000,
+            if self.networkinterface.ping_check(self.peer, self.count,
                                                 options='-f') is not None:
                 self.fail("ping failed in %s %s" % (ro_type, state))
 
@@ -302,7 +303,7 @@ class NetworkTest(Test):
         cmd = "ip link set %s promisc on" % self.iface
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("failed to enable promisc mode")
-        self.networkinterface.ping_check(self.peer, count=100000, options='-f')
+        self.networkinterface.ping_check(self.peer, self.count, options='-f')
         cmd = "ip link set %s promisc off" % self.iface
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("failed to disable promisc mode")
