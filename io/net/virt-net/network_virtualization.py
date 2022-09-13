@@ -970,6 +970,7 @@ class NetworkVirtualization(Test):
         check for dmesg error
         """
         error = ['uevent: failed to send synthetic uevent',
+                 'Invalid request detected while CRQ is inactive',
                  'failed to send uevent', 'registration failed']
         self.log.info("Gathering kernel errors if any")
         try:
