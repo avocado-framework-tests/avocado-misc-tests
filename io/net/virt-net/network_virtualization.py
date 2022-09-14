@@ -309,6 +309,7 @@ class NetworkVirtualization(Test):
         self.is_disabled_enabled_dev('0')
         device = self.find_device(self.mac_id[0])
         networkinterface = NetworkInterface(device, self.local)
+        networkinterface.bring_up()
         wait.wait_for(networkinterface.is_link_up, timeout=60)
         if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
             self.fail(
@@ -481,6 +482,7 @@ class NetworkVirtualization(Test):
         self.validate_vios_command('mkdev -l %s' % vnic_server, 'Available')
 
         networkinterface = NetworkInterface(device, self.local)
+        networkinterface.bring_up()
         if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
             self.fail("Ping test failed. Network virtualized \
                       vios failover has affected Network connectivity")
@@ -514,6 +516,7 @@ class NetworkVirtualization(Test):
                     networkinterface.add_ipaddr(device_ip, netmask)
                 except Exception:
                     networkinterface.save(device_ip, netmask)
+                networkinterface.bring_up()
                 if not wait.wait_for(networkinterface.is_link_up, timeout=120):
                     self.fail("Unable to bring up the link on the Network \
                               virtualized device")
