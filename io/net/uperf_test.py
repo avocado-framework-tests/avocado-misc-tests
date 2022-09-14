@@ -76,7 +76,7 @@ class Uperf(Test):
         if detected_distro.name == "Ubuntu":
             pkgs.extend(["libsctp1", "libsctp-dev", "lksctp-tools"])
         elif detected_distro.name == "rhel":
-            pkgs.extend(["nmap"])
+            pkgs.extend(["nmap", "lksctp-tools-devel"])
         else:
             pkgs.extend(["lksctp-tools", "lksctp-tools-devel"])
         for pkg in pkgs:
