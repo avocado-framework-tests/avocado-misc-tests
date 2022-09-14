@@ -1,7 +1,8 @@
 interface:
 peer_ip: 
 host_ip: 
-netmask: 
+netmask:
+ping_count: 
 args: !mux
     PrivateFlag:
         privflag_test: True

@@ -7,3 +7,4 @@ host_ip:
 netmask:
 ip_config:
 hbond:
+ping_count:
