@@ -19,6 +19,7 @@ import os
 from avocado import Test
 from avocado.utils import process, genio, distro
 from avocado import skipIf
+from avocado.utils.software_manager.manager import SoftwareManager
 
 IS_POWER_NV = 'PowerNV' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0')
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
@@ -33,9 +34,21 @@ class Cpu_VpaData(Test):
     @skipIf(IS_POWER_NV or IS_KVM_GUEST,
             "This test is supported on PowerVM environment")
     def setUp(self):
+        if "ppc" not in os.uname()[4]:
+            self.cancel("Test case is supported only on IBM Power Servers")
+
         detected_distro = distro.detect()
         if detected_distro.name not in ['rhel', 'SuSE']:
             self.cancel("Test case is supported only on RHEL and SLES")
+
+        sm = SoftwareManager()
+        if 'SuSE' in detected_distro.name:
+            package = "powerpc-utils"
+        else:
+            package = "powerpc-utils-core"
+
+        if not sm.check_installed(package) and not sm.install(package):
+            self.cancel("Failed to install %s" % package)
 
     def test(self):
 
