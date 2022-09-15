@@ -37,15 +37,16 @@ class Cpu_VpaData(Test):
         if "ppc" not in os.uname()[4]:
             self.cancel("Test case is supported only on IBM Power Servers")
 
-        detected_distro = distro.detect()
-        if detected_distro.name not in ['rhel', 'SuSE']:
-            self.cancel("Test case is supported only on RHEL and SLES")
-
         sm = SoftwareManager()
+        detected_distro = distro.detect()
         if 'SuSE' in detected_distro.name:
             package = "powerpc-utils"
-        else:
+        elif 'rhel' in detected_distro.name:
             package = "powerpc-utils-core"
+        elif detected_distro.name in ['Ubuntu', 'debian']:
+            package = "powerpc-ibm-utils"
+        else:
+            self.cancel('Unsupported OS %s' % detected_distro.name)
 
         if not sm.check_installed(package) and not sm.install(package):
             self.cancel("Failed to install %s" % package)
