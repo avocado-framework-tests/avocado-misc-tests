@@ -23,6 +23,7 @@ import platform
 from avocado import Test
 from avocado import skipIf
 from avocado.utils import archive, build, cpu, genio, linux_modules, process
+from avocado.utils import distro
 from avocado.utils.software_manager.manager import SoftwareManager
 
 IS_POWER_NV = 'PowerNV' in genio.read_file('/proc/cpuinfo')
@@ -43,9 +44,13 @@ class DBLIPIStrom(Test):
         if 'power' not in cpu.get_family():
             self.cancel('Test Only supported on Power')
 
-        pkgs = ['gcc', 'make', 'kernel-devel']
-
+        pkgs = ['gcc', 'make']
         smm = SoftwareManager()
+        detected_distro = distro.detect()
+        if detected_distro.name in ['Ubuntu', 'debian']:
+            pkgs.extend(['linux-headers-generic'])
+        else:
+            pkgs.extend(['kernel-devel'])
         for package in pkgs:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
