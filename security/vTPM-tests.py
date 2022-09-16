@@ -29,7 +29,8 @@ class vTPM(Test):
         vtpm = [i for i, item in enumerate(d_list) if item.startswith('vtpm@')]
         if not vtpm:
             self.cancel("vTPM not enabled.")
-        vtpm_file = "%s%s" % (device_tree_path, d_list[vtpm[0]])
+        self.vtpm_dev = d_list[vtpm[0]]
+        vtpm_file = "%s%s" % (device_tree_path, self.vtpm_dev)
         compatible_file = "%s/compatible" % vtpm_file
         if os.path.exists(compatible_file):
             self.cvalue = genio.read_file(compatible_file).rstrip('\t\r\n\0')
@@ -41,7 +42,8 @@ class vTPM(Test):
         self.no_device = []
 
     def test_TPM_register(self):
-        output = dmesg.collect_errors_dmesg('tpm_ibmvtpm 30000003: CRQ initialization completed')
+        message = "tpm_ibmvtpm %s: CRQ initialization completed" % self.vtpm_dev
+        output = dmesg.collect_errors_dmesg(message)
         if not len(output):
             self.skip("TPM initialized message not found, dmesg got cleared(?)")
         else:
