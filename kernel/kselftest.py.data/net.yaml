@@ -4,7 +4,7 @@ component: !mux
         kself_args: 'summary=1'
 run_type: !mux
     distro:
-        comp: 'distro'
+        type: 'distro'
     upstream:
         type: 'upstream'
         location: 'https://github.com/torvalds/linux/archive/master.zip'
