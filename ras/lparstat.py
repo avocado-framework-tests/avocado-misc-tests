@@ -37,6 +37,8 @@ class lparstat(Test):
             package = "powerpc-utils"
         elif 'rhel' in detected_distro.name:
             package = "powerpc-utils-core"
+        elif detected_distro.name in ['Ubuntu', 'debian']:
+            package = "powerpc-ibm-utils"
         else:
             self.cancel('Unsupported OS %s' % detected_distro.name)
 
