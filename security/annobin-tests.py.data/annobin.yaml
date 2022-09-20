@@ -1,0 +1,7 @@
+run_type: !mux
+    upstream:
+        type: 'upstream'
+    distro:
+        type: 'distro'
+prefix: '/usr'
+url: "https://sourceware.org/git/annobin.git"

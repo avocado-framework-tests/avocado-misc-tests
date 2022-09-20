@@ -43,18 +43,29 @@ class annobin(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        url = "https://sourceware.org/git/annobin.git"
-        git.get_repo(url, destination_dir=self.workdir)
-        os.chdir(self.workdir)
-        process.run('autoreconf', ignore_status=True)
-        process.run('./configure', ignore_status=True)
+
+        run_type = self.params.get('type', default='upstream')
+        if run_type == "upstream":
+            default_url = "https://sourceware.org/git/annobin.git"
+            url = self.params.get('url', default=default_url)
+            git.get_repo(url, destination_dir=self.workdir)
+            os.chdir(self.workdir)
+            process.run('autoreconf', ignore_status=True)
+            process.run('./configure', ignore_status=True)
+            self.annobin_dir = self.workdir
+        elif run_type == "distro":
+            self.annobin_dir = os.path.join(self.workdir, "annobin-distro")
+            if not os.path.exists(self.annobin_dir):
+                os.makedirs(self.annobin_dir)
+            self.annobin_dir = smm.get_source("annobin", self.annobin_dir)
+        os.chdir(self.annobin_dir)
 
     def test(self):
         '''
         Running tests from annobin
         '''
         count = 0
-        output = build.run_make(self.workdir, extra_args="check",
+        output = build.run_make(self.annobin_dir, extra_args="check",
                                 process_kwargs={"ignore_status": True})
         for line in output.stdout_text.splitlines():
             if 'FAIL:' in line and 'XFAIL:' not in line and \
