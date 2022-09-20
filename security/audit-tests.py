@@ -16,7 +16,7 @@
 
 import os
 from avocado import Test
-from avocado.utils import archive, build, distro
+from avocado.utils import archive, build, distro, process
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -35,12 +35,13 @@ class Audit(Test):
         # Check for basic utilities
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        deps = ['gcc', 'make']
-        if detected_distro.name in ['rhel', 'SuSE', 'fedora', 'centos',
-                                    'redhat']:
-            deps.extend(["glibc", "glibc-devel", "libgcc", "perl", "perl-Test",
-                         "perl-Test-Harness", "perl-File-Which",
-                         "perl-Time-HiRes", "nmap-ncat"])
+        deps = ["gcc", "make", "glibc", "glibc-devel", "perl",
+                "perl-Test-Harness", "perl-File-Which", "perl-Time-HiRes"]
+        if detected_distro.name in ['rhel', 'fedora', 'centos', 'redhat']:
+            deps.extend(["perl-Test", "nmap-ncat"])
+        elif detected_distro.name in ['SuSE']:
+            deps.extend(["libtool", "tcpd-devel", "swig", "liburing-devel",
+                         "openldap2-devel"])
         else:
             self.cancel("Install the package for audit supported\
                       by %s" % detected_distro.name)
@@ -48,22 +49,40 @@ class Audit(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
-        url = ("https://github.com/linux-audit/audit-testsuite/archive/"
-               "refs/heads/main.zip")
-
-        tarball = self.fetch_asset(url, expire='7d')
-        archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'audit-testsuite-main')
-        os.chdir(self.sourcedir)
-        if build.make(self.sourcedir) > 0:
-            self.cancel("Building audit test suite failed")
+        run_type = self.params.get('type', default='upstream')
+        if run_type == "upstream":
+            default_url = ("https://github.com/linux-audit/audit-userspace/"
+                   "archive/master.zip")
+            url = self.params.get('url', default=default_url)
+            tarball = self.fetch_asset(url, expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.srcdir = os.path.join(self.workdir, 'audit-userspace-master')
+            os.chdir(self.srcdir)
+            output = process.run('./autogen.sh', ignore_status=True)
+            if output.exit_status:
+                self.fail("audit-tests.py: 'autogen.sh' failed.")
+            output = process.run('./configure', ignore_status=True)
+            if output.exit_status:
+                self.fail("audit-tests.py: 'configure' failed.")
+            output = build.run_make(self.srcdir,
+                                    process_kwargs={"ignore_status": True})
+            if output.exit_status:
+                self.fail("audit-tests.py: 'make' failed.")
+        elif run_type == "distro":
+            self.srcdir = os.path.join(self.workdir, "audit-distro")
+            if not os.path.exists(self.srcdir):
+                os.makedirs(self.srcdir)
+            self.srcdir = smm.get_source('audit', self.srcdir)
+        os.chdir(self.srcdir)
 
     def test(self):
         '''
         Running tests from audit-testsuite
         '''
-        output = build.run_make(self.sourcedir, extra_args="test",
+        output = build.run_make(self.srcdir, extra_args="check",
                                 process_kwargs={"ignore_status": True})
+        if output.exit_status:
+            self.fail("audit-tests.py: 'make check' failed.")
         for line in output.stdout_text.splitlines():
             if 'Result: FAIL' in line:
                 self.log.info(line)
