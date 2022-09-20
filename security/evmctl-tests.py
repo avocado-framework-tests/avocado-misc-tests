@@ -35,13 +35,26 @@ class EvmCtl(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        url = "https://sourceforge.net/projects/linux-ima/files/latest/download"
-        tarball = self.fetch_asset(name="download.tar.gz", locations=url, expire='7d')
-        archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, os.listdir(self.workdir)[0])
-        self.log.info("sourcedir - %s" % self.sourcedir)
-        os.chdir(self.sourcedir)
-        process.run('./autogen.sh', ignore_status=True)
+        run_type = self.params.get('type', default='upstream')
+        if run_type == "upstream":
+            default_url = ("https://sourceforge.net/projects/linux-ima/"
+                           "files/latest/download")
+            url = self.params.get('url', default=default_url)
+            tarball = self.fetch_asset(name="download.tar.gz",
+                                       locations=url, expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.srcdir = os.path.join(self.workdir, os.listdir(self.workdir)[0])
+            self.log.info("sourcedir - %s" % self.srcdir)
+            os.chdir(self.srcdir)
+            output = process.run('./autogen.sh', ignore_status=True)
+            if output.exit_status:
+                self.fail("evmctl-tests.py: 'autogen.sh' failed.")
+        elif run_type == "distro":
+            self.srcdir = os.path.join(self.workdir, "evmctl-distro")
+            if not os.path.exists(self.srcdir):
+                os.makedirs(self.srcdir)
+            self.srcdir = smm.get_source("ima-evm-utils", self.srcdir)
+        os.chdir(self.srcdir)
 
     def test(self):
         '''

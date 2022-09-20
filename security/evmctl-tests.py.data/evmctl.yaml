@@ -1,0 +1,6 @@
+run_type: !mux
+    upstream:
+        type: 'upstream'
+    distro:
+        type: 'distro'
+url: "https://sourceforge.net/projects/linux-ima/files/latest/download"
