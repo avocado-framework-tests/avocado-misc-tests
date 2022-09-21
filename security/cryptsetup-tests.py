@@ -34,33 +34,53 @@ class CryptSetup(Test):
         # Check for basic utilities
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        deps = ['gcc', 'make']
-        if detected_distro.name in ['rhel', 'SuSE', 'fedora', 'centos',
-                                    'redhat']:
-            deps.extend(["autoconf", "automake", "gettext", "gettext-devel",
-                         "libtool", "device-mapper", "device-mapper-devel",
-                         "device-mapper-libs", "popt-devel", "json-c",
-                         "json-c-devel", "libblkid-devel", "libssh-devel"])
+        deps = ["gcc", "make", "autoconf", "automake", "gettext",
+                "gettext-devel", "libtool", "device-mapper", "popt-devel",
+                "device-mapper-devel", "libblkid-devel", "libssh-devel"]
+        if detected_distro.name in ['rhel', 'fedora', 'centos', 'redhat']:
+            deps.extend(["device-mapper-libs", "json-c", "json-c-devel"])
+        elif 'SuSE' in detected_distro.name:
+            deps.extend(["libjson-c-devel", "libjson-c3", "libuuid-devel"])
         else:
             self.cancel("Unsupported distro %s for cryptsetup package"
                         % detected_distro.name)
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        url = "https://gitlab.com/cryptsetup/cryptsetup/"
-        git.get_repo(url, destination_dir=self.workdir)
-        os.chdir(self.workdir)
-        process.run("./autogen.sh")
-        process.run("./configure")
-        build.make(self.workdir)
+        run_type = self.params.get('type', default='upstream')
+        if run_type == "upstream":
+            default_url = "https://gitlab.com/cryptsetup/cryptsetup/"
+            url = self.params.get('url', default=default_url)
+            git.get_repo(url, destination_dir=self.workdir)
+            os.chdir(self.workdir)
+            self.srcdir = self.workdir
+            output = process.run("./autogen.sh", ignore_status=True)
+            if output.exit_status:
+                self.fail("cryptsetup-tests.py: 'autogen.sh' failed.")
+            output = process.run("./configure --disable-asciidoc",
+                                 ignore_status=True)
+            if output.exit_status:
+                self.fail("cryptsetup-tests.py: 'configure' failed.")
+            if build.make(self.workdir):
+                self.fail("'make' failed.")
+        elif run_type == "distro":
+            self.srcdir = os.path.join(self.workdir, "cryptsetup-distro")
+            if not os.path.exists(self.srcdir):
+                os.makedirs(self.srcdir)
+            self.srcdir = smm.get_source("cryptsetup", self.srcdir)
+            if not self.srcdir:
+                self.fail("cryptsetup source install failed.")
+        os.chdir(self.srcdir)
 
     def test(self):
         '''
         Running tests from cryptsetup
         '''
         count = 0
-        output = build.run_make(self.workdir, extra_args="check",
+        output = build.run_make(self.srcdir, extra_args="check",
                                 process_kwargs={"ignore_status": True})
+        if output.exit_status:
+            self.fail("'make check' failed.")
         for line in output.stdout_text.splitlines():
             if 'FAIL:' in line:
                 count += 1
