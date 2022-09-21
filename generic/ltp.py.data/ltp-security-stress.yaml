@@ -1,0 +1,12 @@
+runltp: !mux
+    script: 'runltp'
+    net_stress.ipsec_dccp:
+        args: '-f net_stress.ipsec_dccp'
+    net_stress.ipsec_icmp:
+        args: '-f net_stress.ipsec_icmp'
+    net_stress.ipsec_sctp:
+        args: '-f net_stress.ipsec_sctp'
+    net_stress.ipsec_tcp:
+        args: '-f net_stress.ipsec_tcp'
+    net_stress.ipsec_udp:
+        args: '-f net_stress.ipsec_udp'
