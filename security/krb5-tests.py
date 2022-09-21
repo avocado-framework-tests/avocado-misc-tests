@@ -35,22 +35,39 @@ class Krb5(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        url = "https://github.com/krb5/krb5/archive/master.zip"
-        tarball = self.fetch_asset(url, expire='7d')
-        archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'krb5-master/src')
-        os.chdir(self.sourcedir)
-        process.run('autoreconf', ignore_status=True)
-        process.run('./configure', ignore_status=True)
-        build.make(self.sourcedir)
+        run_type = self.params.get('type', default='upstream')
+        if run_type == "upstream":
+            default_url = "https://github.com/krb5/krb5/archive/master.zip"
+            url = self.params.get('url', default=default_url)
+            tarball = self.fetch_asset(url, expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.srcdir = os.path.join(self.workdir, 'krb5-master/src')
+            os.chdir(self.srcdir)
+            output = process.run('autoreconf', ignore_status=True)
+            if output.exit_status:
+                self.fail("krb5-tests.py: 'autoreconf' failed.")
+            output = process.run('./configure', ignore_status=True)
+            if output.exit_status:
+                self.fail("krb5-tests.py: 'configure' failed.")
+            if build.make(self.srcdir):
+                self.fail("krb5-tests.py: 'make' failed.")
+        elif run_type == "distro":
+            self.srcdir = os.path.join(self.workdir, "krb5-distro")
+            if not os.path.exists(self.srcdir):
+                os.makedirs(self.srcdir)
+            self.srcdir = smm.get_source("krb5", self.srcdir)
+            if not self.srcdir:
+                self.fail("krb5-tests.py: krb5 source install failed.")
 
     def test(self):
         '''
         Running tests from krb5
         '''
         count = 0
-        output = build.run_make(self.sourcedir, extra_args="check",
+        output = build.run_make(self.srcdir, extra_args="check",
                                 process_kwargs={"ignore_status": True})
+        if output.exit_status:
+            self.fail("krb5-tests.py: 'make check' failed.")
         for line in output.stdout_text.splitlines():
             if '*** Failure:' in line:
                 count += 1
