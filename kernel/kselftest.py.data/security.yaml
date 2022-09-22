@@ -1,0 +1,22 @@
+component: !mux
+    kexec:
+        comp: 'kexec'
+        kself_args: 'summary=1'
+    tpm2:
+        comp: 'tpm2'
+        kself_args: 'summary=1'
+    safesetid:
+        comp: 'safesetid'
+        kself_args: 'summary=1'
+    seccomp:
+        comp: 'seccomp'
+        kself_args: 'summary=1'
+    security:
+       comp: 'powerpc'
+       subtest: 'security'
+run_type: !mux
+    distro:
+        type: 'distro'
+    upstream:
+        type: 'upstream'
+        location: 'https://github.com/torvalds/linux/archive/master.zip'
