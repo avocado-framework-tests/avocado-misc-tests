@@ -109,7 +109,7 @@ class hv_24x7_all_events(Test):
         for line in self.list_of_hv_24x7_events:
             if line.startswith('HP') or line.startswith('CP'):
                 # Running for domain range from 1-6
-                for domain in range(1, 7):
+                for domain in range(2, 7):
                     for core in range(0, self.cores + 1):
                         events = "hv_24x7/%s,domain=%s,core=%s/" % \
                                  (line, domain, core)
