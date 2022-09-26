@@ -13,3 +13,9 @@ test: !mux
         test_name: 'hasher-test.sh'
     kcapi-fuzz-test.sh:
         test_name: 'kcapi-fuzz-test.sh'
+run_type: !mux
+    upstream:
+        type: 'upstream'
+    distro:
+        type: 'distro'
+url: "https://github.com/smuellerDD/libkcapi/archive/master.zip"
