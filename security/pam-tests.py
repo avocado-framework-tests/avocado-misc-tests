@@ -35,25 +35,42 @@ class PAM(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        url = "https://github.com/linux-pam/linux-pam/archive/master.zip"
-        tarball = self.fetch_asset(url, expire='7d')
-        archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'linux-pam-master')
-        os.chdir(self.sourcedir)
-        process.run('./autogen.sh', ignore_status=True)
-        process.run('./configure', ignore_status=True)
+        run_type = self.params.get('type', default='upstream')
+        if run_type == "upstream":
+            default_url = ("https://github.com/linux-pam/linux-pam/"
+                           "archive/master.zip")
+            url = self.params.get('url', default=default_url)
+            tarball = self.fetch_asset(url, expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.srcdir = os.path.join(self.workdir, 'linux-pam-master')
+            os.chdir(self.srcdir)
+            output = process.run('./autogen.sh', ignore_status=True)
+            if output.exit_status:
+                self.fail("pam-tests.py: 'autogen.sh' failed.")
+            output = process.run('./configure', ignore_status=True)
+            if output.exit_status:
+                self.fail("pam-tests.py: 'configure' failed.")
+        elif run_type == "distro":
+            self.srcdir = os.path.join(self.workdir, "pam-distro")
+            if not os.path.exists(self.srcdir):
+                os.makedirs(self.srcdir)
+            self.srcdir = smm.get_source("pam", self.srcdir)
+            if not self.srcdir:
+                self.fail("pam source install failed.")
 
     def test(self):
         '''
         Running tests from PAM
         '''
         count = 0
-        output = build.run_make(self.sourcedir, extra_args="check",
+        output = build.run_make(self.srcdir, extra_args="check",
                                 process_kwargs={"ignore_status": True})
+        if output.exit_status:
+            self.fail("pam-tests.py: 'make check' failed.")
         for line in output.stdout_text.splitlines():
             if 'FAIL:' in line and 'XFAIL:' not in line and \
                '# FAIL:' not in line:
                 count += 1
                 self.log.info(line)
         if count:
-            self.fail("%s test(s) failed, please refer to the log" % count)
+            self.fail("%s test(s) failed, please refer to the log." % count)
