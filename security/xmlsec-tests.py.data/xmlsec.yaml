@@ -1,0 +1,6 @@
+run_type: !mux
+    upstream:
+        type: 'upstream'
+    distro:
+        type: 'distro'
+url: "https://github.com/lsh123/xmlsec/archive/master.zip"
