@@ -58,7 +58,7 @@ class Connectathon(Test):
         elif detected_distro.name in ["centos", "rhel", "fedora"]:
             packages.extend(['git', 'libtirpc-devel'])
         elif detected_distro.name == "Ubuntu":
-            packages.extend(['libtirpc-dev'])
+            packages.extend(['libtirpc-dev', 'pkg-config'])
 
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
