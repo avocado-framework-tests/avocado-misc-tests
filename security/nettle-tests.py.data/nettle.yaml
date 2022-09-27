@@ -1,0 +1,6 @@
+run_type: !mux
+    upstream:
+        type: 'upstream'
+    distro:
+        type: 'distro'
+url: "https://github.com/gnutls/nettle/archive/refs/heads/master.zip"
