@@ -41,21 +41,38 @@ class SecComp(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        url = "https://github.com/seccomp/libseccomp/archive/refs/heads/main.zip"
-        tarball = self.fetch_asset(url, expire='7d')
-        archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'libseccomp-main')
-        os.chdir(self.sourcedir)
-        process.run("./autogen.sh")
-        process.run("./configure")
+        run_type = self.params.get('type', default='upstream')
+        if run_type == "upstream":
+            def_url = ("https://github.com/seccomp/libseccomp/archive/refs/"
+                       "heads/main.zip")
+            url = self.params.get('url', default=def_url)
+            tarball = self.fetch_asset(url, expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.srcdir = os.path.join(self.workdir, 'libseccomp-main')
+            os.chdir(self.srcdir)
+            output = process.run("./autogen.sh")
+            if output.exit_status:
+                self.fail("seccomp-tests.py: 'autogen.sh' failed.")
+            output = process.run("./configure")
+            if output.exit_status:
+                self.fail("seccomp-tests.py: 'configure' failed.")
+        elif run_type == "distro":
+            self.srcdir = os.path.join(self.workdir, "seccomp-distro")
+            if not os.path.exists(self.srcdir):
+                os.makedirs(self.srcdir)
+            self.srcdir = smm.get_source('libseccomp', self.srcdir)
+            if not self.srcdir:
+                self.fail("libseccomp source install failed.")
 
     def test(self):
         '''
         Running tests from seccomp
         '''
         count = 0
-        output = build.run_make(self.sourcedir, extra_args="check",
+        output = build.run_make(self.srcdir, extra_args="check",
                                 process_kwargs={"ignore_status": True})
+        if output.exit_status:
+            self.fail("seccomp-tests.py: 'make check' failed.")
         for line in output.stdout_text.splitlines():
             if 'FAIL:' in line:
                 count += 1
