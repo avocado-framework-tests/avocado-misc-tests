@@ -105,6 +105,15 @@ class RASTools(Test):
         self.run_cmd("ls-vdev")
         self.run_cmd("ls-vdev -h")
         self.run_cmd("ls-vdev -V")
+        dev_name = self.run_cmd_out("ls-vdev").split()[1]
+        flag = True
+        for line in self.run_cmd_out("lsblk").splitlines():
+            if dev_name in line:
+                if dev_name == line.split()[0]:
+                    flag = False
+                    break;
+        if flag:
+            self.is_fail += 1
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in ls-vdev tool "
                       "verification" % self.is_fail)
