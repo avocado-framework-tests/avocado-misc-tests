@@ -91,7 +91,8 @@ class RASTools(Test):
         self.log.info("===============Executing lsmcode tool test============="
                       "==")
         self.run_cmd("vpdupdate")
-        self.run_cmd("lsmcode")
+        if 'FW' not in self.run_cmd_out("lsmcode"):
+            self.fail("lsmcode command failed in verification")
         self.run_cmd("lsmcode -A")
         self.run_cmd("lsmcode -v")
         self.run_cmd("lsmcode -D")
