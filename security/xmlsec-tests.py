@@ -43,21 +43,34 @@ class XMLSec(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        url = "https://github.com/lsh123/xmlsec/archive/master.zip"
-        tarball = self.fetch_asset(url, expire='7d')
-        archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'xmlsec-master')
-        os.chdir(self.sourcedir)
-        process.run('./autogen.sh', ignore_status=True)
-        build.make(self.sourcedir)
+        run_type = self.params.get('type', default='upstream')
+        if run_type == "upstream":
+            def_url = "https://github.com/lsh123/xmlsec/archive/master.zip"
+            url = self.params.get('url', default=def_url)
+            tarball = self.fetch_asset(url, expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.srcdir = os.path.join(self.workdir, 'xmlsec-master')
+            os.chdir(self.srcdir)
+            process.run('./autogen.sh', ignore_status=True)
+            if build.make(self.srcdir, process_kwargs={"ignore_status": True}):
+                self.fail("'make' command failed.")
+        elif run_type == "distro":
+            self.srcdir = os.path.join(self.workdir, "xmlsec-distro")
+            if not os.path.exists(self.srcdir):
+                os.makedirs(self.srcdir)
+            self.srcdir = smm.get_source('xmlsec1', self.srcdir)
+            if not self.srcdir:
+                self.fail("xmlsec source install failed.")
 
     def test(self):
         '''
         Running tests from xmlsec
         '''
         count = 0
-        output = build.run_make(self.sourcedir, extra_args="check",
+        output = build.run_make(self.srcdir, extra_args="check",
                                 process_kwargs={"ignore_status": True})
+        if output.exit_status:
+            self.fail("xmlsec-tests.py: 'make check' failed.")
         for line in output.stdout_text.splitlines():
             if 'Fail' in line:
                 count += 1
