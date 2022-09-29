@@ -16,7 +16,7 @@
 
 import os
 from avocado import Test
-from avocado.utils import archive, process
+from avocado.utils import archive, build, distro, process
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -31,24 +31,42 @@ class OpenSSL(Test):
         '''
         # Check for basic utilities
         smm = SoftwareManager()
+        detected_distro = distro.detect()
         deps = ['gcc', 'make']
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        url = "https://github.com/openssl/openssl/archive/master.zip"
-        tarball = self.fetch_asset(url, expire='7d')
-        archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'openssl-master')
-        os.chdir(self.sourcedir)
-        process.run('./Configure', ignore_status=True)
+        run_type = self.params.get('type', default='upstream')
+        if run_type == "upstream":
+            def_url = "https://github.com/openssl/openssl/archive/master.zip"
+            url = self.params.get('url', default=def_url)
+            tarball = self.fetch_asset(url, expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.srcdir = os.path.join(self.workdir, 'openssl-master')
+            os.chdir(self.srcdir)
+            process.run('./Configure', ignore_status=True)
+            if build.make(self.srcdir, process_kwargs={"ignore_status": True}):
+                self.fail("openssl-tests.py: 'make' command failed.")
+        elif run_type == "distro":
+            self.srcdir = os.path.join(self.workdir, "openssl-distro")
+            if not os.path.exists(self.srcdir):
+                os.makedirs(self.srcdir)
+            pkg_name = "openssl"
+            if 'SuSE' in detected_distro.name:
+                pkg_name = "openssl-3"
+            self.srcdir = smm.get_source(pkg_name, self.srcdir)
+            if not self.srcdir:
+                self.fail("openssl source install failed.")
 
     def test(self):
         '''
         Running tests from openssl
         '''
         count = 0
-        cmd = "make test"
-        output = process.run(cmd, ignore_status=True)
+        output = build.run_make(self.srcdir, extra_args="test",
+                                process_kwargs={"ignore_status": True})
+        if output.exit_status:
+            self.fail("openssl-tests.py: 'make check' failed.")
         for line in output.stdout_text.splitlines():
             if 'not ok' in line:
                 count += 1
