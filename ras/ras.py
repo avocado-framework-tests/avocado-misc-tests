@@ -13,6 +13,7 @@
 #
 # Copyright: 2016 IBM
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
+# Author: Sachin Sant <sachinp@linux.ibm.com>
 
 import os
 from shutil import copyfile
@@ -48,6 +49,9 @@ class RASTools(Test):
     @skipUnless("ppc" in distro.detect().arch,
                 "supported only on Power platform")
     def setUp(self):
+        """
+        Prepare the system for test run
+        """
         sm = SoftwareManager()
         for package in ("ppc64-diag", "powerpc-utils", "lsvpd", "ipmitool"):
             if not sm.check_installed(package) and not sm.install(package):
@@ -60,7 +64,8 @@ class RASTools(Test):
                                      ignore_status=True,
                                      sudo=True).decode("utf-8").strip()
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
     def test1_set_poweron_time(self):
         """
         set_poweron_time schedules the power on time
@@ -73,7 +78,8 @@ class RASTools(Test):
         self.run_cmd("set_poweron_time -t M6D15h12")
         self.error_check()
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
     def test2_sys_ident_tool(self):
         """
         sys_ident provides unique system identification information
@@ -201,11 +207,13 @@ class RASTools(Test):
                                      "tail -1 | cut -d' ' -f1")
         if disk_name:
             self.run_cmd("ofpathname %s" % disk_name)
-            of_name = self.run_cmd_out("ofpathname %s" % disk_name).split(':')[0]
+            of_name = self.run_cmd_out("ofpathname %s" %
+                                       disk_name).split(':')[0]
             self.run_cmd("ofpathname -l %s" % of_name)
         self.error_check()
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
     def test11_rtas_ibm_get_vpd(self):
         """
         rtas_ibm_get_vpd gives vpd data
@@ -248,7 +256,10 @@ class RASTools(Test):
 
     @skipIf(IS_POWER_NV, "This test is not supported on PowerNV platform")
     def test13_rtas_event_decode(self):
-        self.log.info("===============Executing rtas_event_decode tool test===="
+        """
+        Verify RTAS event data using rtas_event_decode
+        """
+        self.log.info("==============Executing rtas_event_decode tool test===="
                       "===========")
         cmd = "rtas_event_decode -w 500 -dv -n 2302 < %s" % self.get_data(
             'rtas')
