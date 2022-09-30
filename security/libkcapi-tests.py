@@ -36,30 +36,39 @@ class LibKCAPI(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        url = "https://github.com/smuellerDD/libkcapi/archive/master.zip"
-        tarball = self.fetch_asset(url, expire='7d')
-        archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'libkcapi-master')
-        os.chdir(self.sourcedir)
-        process.run("autoreconf -i")
-        process.run("./configure --enable-kcapi-test --enable-kcapi-speed \
-                    --enable-kcapi-hasher --enable-kcapi-rngapp \
-                    --enable-kcapi-encapp --enable-kcapi-dgstapp")
-        build.make(self.sourcedir)
-        self.test_dir = os.path.join(self.sourcedir, 'test')
+        def_url = "https://github.com/smuellerDD/libkcapi/archive/master.zip"
+        run_type = self.params.get('type', default='upstream')
+        if run_type == "upstream":
+            url = self.params.get('url', default=def_url)
+            tarball = self.fetch_asset(url, expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.srcdir = os.path.join(self.workdir, 'libkcapi-master')
+            os.chdir(self.srcdir)
+            process.run("autoreconf -i")
+            process.run("./configure --enable-kcapi-test --enable-kcapi-speed \
+                        --enable-kcapi-hasher --enable-kcapi-rngapp \
+                        --enable-kcapi-encapp --enable-kcapi-dgstapp")
+            if build.make(self.srcdir):
+                self.fail("'make' command failed.")
+        elif run_type == "distro":
+            self.srcdir = os.path.join(self.workdir, "libkcapi-distro")
+            if not os.path.exists(self.srcdir):
+                os.makedirs(self.srcdir)
+            self.srcdir = smm.get_source("libkcapi", self.srcdir)
+            if not self.srcdir:
+                self.fail("libkcapi source install failed.")
+        self.test_dir = os.path.join(self.srcdir, 'test')
         os.chdir(self.test_dir)
         self.test_name = "bash %s" % self.params.get('test_name',
                                                      default='test.sh')
 
-    def run_cmd(self, cmd):
+    def test(self):
         count = 0
-        output = process.system_output(cmd, ignore_status=True).decode()
+        output = process.system_output(self.test_name,
+                                       ignore_status=True).decode()
         for line in output.splitlines():
             if 'FAILED:' in line:
                 count += 1
                 self.log.info(line)
         if count:
             self.fail("%s test(s) failed, please refer to the log" % count)
-
-    def test(self):
-        self.run_cmd(self.test_name)
