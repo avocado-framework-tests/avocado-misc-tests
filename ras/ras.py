@@ -235,13 +235,13 @@ class RASTools(Test):
                       " test===============")
         self.log.info("1 - Injecting event")
         rtas_file = self.get_data('rtas')
-        self.run_cmd("/usr/sbin/rtas_errd -d -f %s" % rtas_file)
+        self.run_cmd("rtas_errd -d -f %s" % rtas_file)
         self.log.info("2 - Checking if the event was dumped to /var/log/"
                       "platform")
         self.run_cmd("cat /var/log/platform")
         myplatform_file = os.path.join(self.outputdir, 'myplatformfile')
         my_log = os.path.join(self.outputdir, 'mylog')
-        self.run_cmd("/usr/sbin/rtas_errd -d -f %s -p %s -l %s" %
+        self.run_cmd("rtas_errd -d -f %s -p %s -l %s" %
                      (rtas_file, myplatform_file, my_log))
         self.run_cmd("cat %s" % myplatform_file)
         self.run_cmd("cat %s" % my_log)
