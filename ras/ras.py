@@ -72,10 +72,10 @@ class RASTools(Test):
         """
         self.log.info("===============Executing set_poweron_time tool test===="
                       "===========")
-        self.run_cmd("set_poweron_time -m")
-        self.run_cmd("set_poweron_time -h")
-        self.run_cmd("set_poweron_time -d m2")
-        self.run_cmd("set_poweron_time -t M6D15h12")
+        cmd_list = ["set_poweron_time -m", "set_poweron_time -h",
+                    "set_poweron_time -d m2", "set_poweron_time -t M6D15h12"]
+        for cmd in cmd_list:
+            self.run_cmd(cmd)
         self.error_check()
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST,
@@ -86,8 +86,9 @@ class RASTools(Test):
         """
         self.log.info("===============Executing sys_ident_tool test==========="
                       "====")
-        self.run_cmd("sys_ident -p")
-        self.run_cmd("sys_ident -s")
+        cmd_list = ["sys_ident -p", "sys_ident -s"]
+        for cmd in cmd_list:
+            self.run_cmd(cmd)
         self.error_check()
 
     def test3_lsmcode(self):
@@ -99,9 +100,9 @@ class RASTools(Test):
         self.run_cmd("vpdupdate")
         if 'FW' not in self.run_cmd_out("lsmcode"):
             self.fail("lsmcode command failed in verification")
-        self.run_cmd("lsmcode -A")
-        self.run_cmd("lsmcode -v")
-        self.run_cmd("lsmcode -D")
+        cmd_list = ["lsmcode -A", "lsmcode -v", "lsmcode -D"]
+        for cmd in cmd_list:
+            self.run_cmd(cmd)
         path_db = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.db"
                                    " | head -1")
         if path_db:
@@ -129,10 +130,10 @@ class RASTools(Test):
         if lcpu_count:
             lcpu_count = int(lcpu_count)
             if lcpu_count >= 2:
-                self.run_cmd("drmgr -c cpu -r 1")
-                self.run_cmd("lparstat")
-                self.run_cmd("drmgr -c cpu -a 1")
-                self.run_cmd("lparstat")
+                cmd_list = ["drmgr -c cpu -r 1", "drmgr -c cpu -a 1"]
+                for cmd in cmd_list:
+                    self.run_cmd(cmd)
+                    self.run_cmd("lparstat")
         self.error_check()
 
     def test5_lsprop(self):
@@ -171,11 +172,10 @@ class RASTools(Test):
         """
         self.log.info("===============Executing lsvio tool test============="
                       "==")
-        self.run_cmd("lsvio -h")
-        self.run_cmd("lsvio -v")
-        self.run_cmd("lsvio -s")
-        self.run_cmd("lsvio -e")
-        self.run_cmd("lsvio -d")
+        cmd_list = [" -h", " -v", " -s", " -e", " -d"]
+        for cmd in cmd_list:
+            cmd_str = "lsvio" + cmd
+            self.run_cmd(cmd_str)
         self.error_check()
 
     def test8_nvram(self):
@@ -184,10 +184,11 @@ class RASTools(Test):
         """
         self.log.info("===============Executing nvram tool test============="
                       "==")
-        self.run_cmd("nvram --help")
-        self.run_cmd("nvram --partitions")
-        self.run_cmd("nvram --print-config -p common")
-        self.run_cmd("nvram --dump common --verbose")
+        cmd_list = [" --help", " --print-config -p common",
+                    " --partitions", " --dump common --verbose"]
+        for cmd in cmd_list:
+            cmd_str = "nvram" + cmd
+            self.run_cmd(cmd_str)
         self.error_check()
 
     @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
