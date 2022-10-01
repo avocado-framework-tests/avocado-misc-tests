@@ -18,7 +18,7 @@
 import os
 from shutil import copyfile
 from avocado import Test
-from avocado.utils import process, distro
+from avocado.utils import process, distro, build, archive
 from avocado import skipIf, skipUnless
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -53,7 +53,34 @@ class RASTools(Test):
         Prepare the system for test run
         """
         sm = SoftwareManager()
-        for package in ("ppc64-diag", "powerpc-utils", "lsvpd", "ipmitool"):
+        self.detected_distro = distro.detect()
+        self.run_type = self.params.get('type', default='upstream')
+        if self.run_type == 'upstream':
+            self.ppcutils_url = self.params.get(
+                'ppcutils_url', default='https://github.com/'
+                'ibm-power-utilities/powerpc-utils/archive/refs/heads/'
+                'master.zip')
+            self.lsvpd_url = self.params.get(
+                'lsvpd_url', default='https://github.com/power-ras/lsvpd/'
+                'archive/refs/heads/master.zip')
+            self.ppcdiag_url = self.params.get(
+                'ppcdiag_url', default='https://github.com/power-ras/'
+                'ppc64-diag/archive/refs/heads/master.zip')
+            deps = ['gcc', 'gcc-c++', 'make', 'automake', 'autoconf',
+                    'bison', 'flex', 'libtool', 'zlib-devel', 'ncurses-devel',
+                    'libservicelog-devel', 'librtas-devel']
+            if 'SuSE' in self.detected_distro.name:
+                deps.extend(['libnuma-devel', 'sqlite3-devel', 'libvpd2-devel',
+                             'libsgutils-devel', 'systemd-devel'])
+            elif self.detected_distro.name in ['centos', 'fedora', 'rhel']:
+                deps.extend(['numactl-devel', 'sqlite-devel', 'libvpd-devel',
+                             'sg3_utils-devel', 'systemd-devel'])
+            else:
+                self.cancel("Unsupported Linux distribution")
+        elif self.run_type == 'distro':
+            deps = ['ppc64-diag', 'powerpc-utils', 'lsvpd', 'ipmitool']
+
+        for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel("Fail to install %s required for this test." %
                             package)
@@ -63,6 +90,52 @@ class RASTools(Test):
         return process.system_output(cmd, shell=True,
                                      ignore_status=True,
                                      sudo=True).decode("utf-8").strip()
+
+    def test(self):
+        """
+        For upstream target download and compile source code of
+        powerpc-utils, ppc64-diag and lsvpd
+        """
+
+        if self.run_type == 'upstream':
+            # Fetch and compile powerpc-utils source code
+            tarball = self.fetch_asset('ppcutil.zip',
+                                       locations=[self.ppcutils_url],
+                                       expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.sourcedir = os.path.join(self.workdir, 'powerpc-utils-master')
+            os.chdir(self.sourcedir)
+            process.run("./autogen.sh", shell=True, verbose=True)
+            process.run("./configure", verbose=True)
+            build.make(self.sourcedir)
+            build.make(self.sourcedir, extra_args='install')
+            # Fetch and compile ppc64-diag source code
+            tarball = self.fetch_asset('ppcdiag.zip',
+                                       locations=[self.ppcdiag_url],
+                                       expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.sourcedir = os.path.join(self.workdir, 'ppc64-diag-master')
+            os.chdir(self.sourcedir)
+            process.run("./autogen.sh", shell=True, verbose=True)
+            process.run("./configure", verbose=True)
+            build.make(self.sourcedir)
+            build.make(self.sourcedir, extra_args='install')
+            # Fetch and compile lsvpd source code
+            tarball = self.fetch_asset('lsvpd.zip',
+                                       locations=[self.lsvpd_url],
+                                       expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.sourcedir = os.path.join(self.workdir, 'lsvpd-master')
+            os.chdir(self.sourcedir)
+            process.run("./bootstrap.sh", shell=True, verbose=True)
+            process.run("./configure", verbose=True, ignore_status=False)
+            build.make(self.sourcedir)
+            build.make(self.sourcedir, extra_args='install')
+            # For SUSE /sbin takes precedence over /usr/local/sbin.
+            # Set the path accordingly to pick up the new binaries
+            if self.detected_distro.name == 'SuSE':
+                process.run("PATH=/usr/local/sbin:/usr/local/bin:$PATH",
+                            ignore_status=True, sudo=True)
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST,
             "This test is not supported on KVM guest or PowerNV platform")

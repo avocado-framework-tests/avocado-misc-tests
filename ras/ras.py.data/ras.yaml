@@ -1,0 +1,8 @@
+run_type: !mux
+    upstream:
+        ppcutils_url: 'https://github.com/ibm-power-utilities/powerpc-utils/archive/refs/heads/master.zip'
+        lsvpd_url: 'https://github.com/power-ras/lsvpd/archive/refs/heads/master.zip'
+        ppcdiag_url: 'https://github.com/power-ras/ppc64-diag/archive/refs/heads/master.zip'
+        type: 'upstream'
+    distro:
+        type: 'distro'
