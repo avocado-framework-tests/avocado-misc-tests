@@ -51,6 +51,8 @@ class MigratePages(Test):
                         'Node list with memory: %s' % nodes)
 
         dist = distro.detect()
+        if (dist.name == 'rhel' and dist.version == '9'):
+            self.cancel("libhugetlbfs is not available RHEL 9.x onwards")
         pkgs = ['gcc', 'make']
         if dist.name in ["Ubuntu", 'debian']:
             pkgs.extend(['libpthread-stubs0-dev',
