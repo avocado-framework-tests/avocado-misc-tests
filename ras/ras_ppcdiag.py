@@ -102,7 +102,7 @@ class RASToolsPpcdiag(Test):
                 "The identify indicators are not supported on this system")
         value = self.params.get('usysident_list', default=['-h', '-V', '-P'])
         for list_item in value:
-            self.run_cmd('usysident %s' % usysident_list)
+            self.run_cmd('usysident %s' % list_item)
         loc_code = self.run_cmd_out("usysident -P | awk 'NR==1{print $1}'")
         cmd = "usysident -l %s -s normal" % loc_code
         self.run_cmd(cmd)

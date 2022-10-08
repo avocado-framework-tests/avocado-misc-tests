@@ -16,7 +16,6 @@
 # Author: Sachin Sant <sachinp@linux.ibm.com>
 
 import os
-from shutil import copyfile
 from avocado import Test
 from avocado.utils import process, distro
 from avocado import skipIf, skipUnless
@@ -75,10 +74,9 @@ class RASToolsPpcutils(Test):
         """
         self.log.info("===============Executing set_poweron_time tool test===="
                       "===========")
-        self.run_cmd("set_poweron_time -m")
-        self.run_cmd("set_poweron_time -h")
-        self.run_cmd("set_poweron_time -d m2")
-        self.run_cmd("set_poweron_time -t M6D15h12")
+        list = ['-m', '-h', '-d m2', '-t M6D15h12']
+        for list_item in list:
+            self.run_cmd('set_poweron_time %s' % list_item)
         self.error_check()
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST,
@@ -149,10 +147,10 @@ class RASToolsPpcutils(Test):
         """
         self.log.info("===============Executing nvram tool test============="
                       "==")
-        self.run_cmd("nvram --help")
-        self.run_cmd("nvram --partitions")
-        self.run_cmd("nvram --print-config -p common")
-        self.run_cmd("nvram --dump common --verbose")
+        list = ['--help', '--partitions', '--print-config -p common',
+                '--dump common --verbose']
+        for list_item in list:
+            self.run_cmd('nvram %s' % list_item)
         self.error_check()
 
     @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
@@ -164,9 +162,6 @@ class RASToolsPpcutils(Test):
         self.log.info("===============Executing ofpathname tool test=========="
                       "=====")
         self.run_cmd("ofpathname -h")
-        self.run_cmd("ofpathname -V")
-        disk_name = self.run_cmd_out("df -h | egrep '(s|v)da[1-8]' |"
-                                     " tail -1 | cut -d' ' -f1")
         self.run_cmd("ofpathname -V")
         disk_name = self.run_cmd_out("df -h | egrep '(s|v)da[1-8]' | "
                                      "tail -1 | cut -d' ' -f1")

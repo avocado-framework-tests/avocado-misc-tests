@@ -17,7 +17,6 @@
 
 import os
 import shutil
-from shutil import copyfile
 from avocado import Test
 from avocado.utils import process, distro
 from avocado import skipIf
@@ -167,14 +166,14 @@ class RASToolsLsvpd(Test):
         self.run_cmd("vpdupdate")
         if 'FW' not in self.run_cmd_out("lsmcode"):
             self.fail("lsmcode command failed in verification")
-        self.run_cmd("lsmcode -A")
-        self.run_cmd("lsmcode -v")
-        self.run_cmd("lsmcode -D")
+        list = ['-A', '-v', '-D']
+        for list_item in list:
+            self.run_cmd('lsmcode %s' % list_item)
         path_db = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.db"
                                    " | head -1")
         if path_db:
             copyfile_path = os.path.join(self.outputdir, 'vpd.db')
-            copyfile(path_db, copyfile_path)
+            shutil.copyfile(path_db, copyfile_path)
             self.run_cmd("lsmcode --path=%s" % copyfile_path)
         path_tar = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.*.gz"
                                     " | head -1")
@@ -191,13 +190,11 @@ class RASToolsLsvpd(Test):
         """
         self.log.info("===============Executing lsvio tool test============="
                       "==")
-        self.run_cmd("lsvio -h")
-        self.run_cmd("lsvio -v")
-        self.run_cmd("lsvio -s")
-        self.run_cmd("lsvio -e")
-        self.run_cmd("lsvio -d")
+        list = ['-h', '-v', '-s', '-e', '-d']
+        for list_item in list:
+            self.run_cmd('lsvio %s' % list_item)
         if self.is_fail >= 1:
-            self.fail("%s command(s) failed in lsmcode tool verification"
+            self.fail("%s command(s) failed in lsvio tool verification"
                       % self.is_fail)
 
     def test_locking_mechanism(self):
