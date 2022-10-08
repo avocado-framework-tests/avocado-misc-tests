@@ -17,6 +17,7 @@
 
 import os
 import shutil
+from shutil import copyfile
 from avocado import Test
 from avocado.utils import process, distro
 from avocado import skipIf
@@ -45,7 +46,7 @@ class RASToolsLsvpd(Test):
         if "ppc" not in distro.detect().arch:
             self.cancel("supported only on Power platform")
         sm = SoftwareManager()
-        for package in ("ppc64-diag", "powerpc-utils", "lsvpd", "sysfsutils"):
+        for package in ("lsvpd", "sysfsutils"):
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel("Fail to install %s required for this"
                             " test." % package)
@@ -56,119 +57,8 @@ class RASToolsLsvpd(Test):
                                      ignore_status=True,
                                      sudo=True).decode("utf-8").strip()
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
-    def test1_uesensor(self):
-        self.log.info("===============Executing uesensor tool test===="
-                      "===========")
-        self.run_cmd("uesensor -l")
-        self.run_cmd("uesensor -a")
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in uesensor tool "
-                      "verification" % self.is_fail)
-
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
-    def test1_serv_config(self):
-        self.log.info("===============Executing serv_config tool test===="
-                      "===========")
-        list = [
-            '-l', '-b', '-s', '-r', '-m', '-d', '--remote-maint', '--surveillance',
-            '--reboot-policy', '--remote-pon', '-d --force']
-        for list_item in list:
-            cmd = "serv_config %s" % list_item
-            self.run_cmd(cmd)
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in serv_config tool "
-                      "verification" % self.is_fail)
-
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
-    def test1_ls_vscsi(self):
-        self.log.info("===============Executing ls-vscsi tool test===="
-                      "===========")
-        self.run_cmd("ls-vscsi")
-        self.run_cmd("ls-vscsi -h")
-        self.run_cmd("ls-vscsi -V")
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in ls-vscsi tool "
-                      "verification" % self.is_fail)
-
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
-    def test1_ls_veth(self):
-        self.log.info("===============Executing ls-veth tool test===="
-                      "===========")
-        self.run_cmd("ls-veth")
-        self.run_cmd("ls-veth -h")
-        self.run_cmd("ls-veth -V")
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in ls-veth tool "
-                      "verification" % self.is_fail)
-
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
-    def test1_ls_vdev(self):
-        self.log.info("===============Executing ls-vdev tool test===="
-                      "===========")
-        self.run_cmd("ls-vdev")
-        self.run_cmd("ls-vdev -h")
-        self.run_cmd("ls-vdev -V")
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in ls-vdev tool "
-                      "verification" % self.is_fail)
-
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
-    def test1_lsdevinfo(self):
-        self.log.info("===============Executing lsdevinfo tool test===="
-                      "===========")
-        self.run_cmd("lsdevinfo")
-        list = ['-h', '-V', '-c', '-R', '-F name,type']
-        for list_item in list:
-            cmd = "lsdevinfo %s" % list_item
-            self.run_cmd(cmd)
-        interface = self.run_cmd_out(
-            "ifconfig | head -1 | cut -d':' -f1")
-        self.run_cmd("lsdevinfo -q name=%s" % interface)
-        disk_name = self.run_cmd_out("df -h | egrep '(s|v)d[a-z][1-8]' | "
-                                     "tail -1 | cut -d' ' -f1").strip("12345")
-        self.run_cmd("lsdevinfo -q name=%s" % disk_name)
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in lsdevinfo tool "
-                      "verification" % self.is_fail)
-
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
-    def test1_hvcsadmin(self):
-        self.log.info("===============Executing hvcsadmin tool test===="
-                      "===========")
-        list = ['--status', '--version', '-all', '-noisy', '-rescan']
-        for list_item in list:
-            cmd = "hvcsadmin %s" % list_item
-            self.run_cmd(cmd)
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in hvcsadmin tool "
-                      "verification" % self.is_fail)
-
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
-    def test1_bootlist(self):
-        self.log.info("===============Executing bootlist tool test===="
-                      "===========")
-        list = ['-m normal -r', '-m normal -o',
-                '-m service -o', '-m both -o']
-        for list_item in list:
-            cmd = "bootlist %s" % list_item
-            self.run_cmd(cmd)
-        interface = self.run_cmd_out(
-            "lsvio -e | cut -d' ' -f2")
-        disk_name = self.run_cmd_out("df -h | egrep '(s|v)d[a-z][1-8]' | "
-                                     "tail -1 | cut -d' ' -f1").strip("12345")
-        file_path = os.path.join(self.workdir, 'file')
-        process.run("echo %s > %s" %
-                    (disk_name, file_path), ignore_status=True, sudo=True, shell=True)
-        process.run("echo %s >> %s" %
-                    (interface, file_path), ignore_status=True, sudo=True, shell=True)
-        self.run_cmd("bootlist -r -m both -f %s" % file_path)
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in bootlist tool "
-                      "verification" % self.is_fail)
-
     @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
-    def test1_vpdupdate(self):
+    def test_vpdupdate(self):
         self.log.info("===============Executing vpdupdate tool test===="
                       "===========")
         self.run_cmd("vpdupdate")
@@ -203,7 +93,7 @@ class RASToolsLsvpd(Test):
                       "verification" % self.is_fail)
 
     @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
-    def test3_lsvpd(self):
+    def test_lsvpd(self):
         self.log.info("===============Executing lsvpd tool test============="
                       "==")
         self.run_cmd("vpdupdate")
@@ -228,7 +118,7 @@ class RASToolsLsvpd(Test):
                       % self.is_fail)
 
     @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
-    def test3_lscfg(self):
+    def test_lscfg(self):
         self.log.info("===============Executing lscfg tool test============="
                       "==")
         self.run_cmd("lscfg")
@@ -254,30 +144,53 @@ class RASToolsLsvpd(Test):
             self.fail("%s command(s) failed in lscfg tool verification"
                       % self.is_fail)
 
-    def test_usysident(self):
+    def test_lsmcode(self):
         """
-        This tests to turn on device identify indicators and other help
-        options of usysident
+        lsmcode provides FW version information
         """
-        if 'not supported' in self.run_cmd_out("usysident"):
-            self.cancel(
-                "The identify indicators are not supported on this system")    
-        value = self.params.get('usysident_list', default=['-h', '-V', '-P'])
-        for list_item in value:
-            self.run_cmd('usysident %s' % usysident_list)
-        loc_code = self.run_cmd_out("usysident -P | awk 'NR==1{print $1}'")
-        self.run_cmd("usysident -l %s -s normal" % loc_code)
-        if 'on' not in self.run_cmd_out("usysident -l %s -s identify" % loc_code):
-            self.is_fail += 1
+        self.log.info("===============Executing lsmcode tool test============="
+                      "==")
+        self.run_cmd("vpdupdate")
+        if 'FW' not in self.run_cmd_out("lsmcode"):
+            self.fail("lsmcode command failed in verification")
+        self.run_cmd("lsmcode -A")
+        self.run_cmd("lsmcode -v")
+        self.run_cmd("lsmcode -D")
+        path_db = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.db"
+                                   " | head -1")
+        if path_db:
+            copyfile_path = os.path.join(self.outputdir, 'vpd.db')
+            copyfile(path_db, copyfile_path)
+            self.run_cmd("lsmcode --path=%s" % copyfile_path)
+        path_tar = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.*.gz"
+                                    " | head -1")
+        if path_tar:
+            self.run_cmd("lsmcode --zip=%s" % path_tar)
         if self.is_fail >= 1:
-            self.fail("%s command(s) failed to execute"
+            self.fail("%s command(s) failed in lsmcode tool verification"
+                      % self.is_fail)
+
+    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
+    def test_lsvio(self):
+        """
+        lsvio lists the virtual I/O adopters and devices
+        """
+        self.log.info("===============Executing lsvio tool test============="
+                      "==")
+        self.run_cmd("lsvio -h")
+        self.run_cmd("lsvio -v")
+        self.run_cmd("lsvio -s")
+        self.run_cmd("lsvio -e")
+        self.run_cmd("lsvio -d")
+        if self.is_fail >= 1:
+            self.fail("%s command(s) failed in lsmcode tool verification"
                       % self.is_fail)
 
     def test_locking_mechanism(self):
         """
-        This tests database (vpd.db) locking mechanism when multiple 
-        instances of vpdupdate and lsvpd are running simultaneously. 
-        Locking mechanism prevents corruption of database file 
+        This tests database (vpd.db) locking mechanism when multiple
+        instances of vpdupdate and lsvpd are running simultaneously.
+        Locking mechanism prevents corruption of database file
         when running vpdupdate multiple instances
         """
 
@@ -291,4 +204,4 @@ class RASToolsLsvpd(Test):
                 or 'corrupt' in ret1.stdout.decode("utf-8").strip():
             self.fail("Database corruption detected")
         else:
-            self.log.info("Locking mechanism prevented database corruption")        
+            self.log.info("Locking mechanism prevented database corruption")
