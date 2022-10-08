@@ -40,6 +40,9 @@ class RASToolsPpcdiag(Test):
                                      sudo=True).decode("utf-8").strip()
 
     def setUp(self):
+        """
+        Ensure corresponding packages are installed
+        """
         sm = SoftwareManager()
         deps = ["ppc64-diag"]
         for pkg in deps:
@@ -48,6 +51,9 @@ class RASToolsPpcdiag(Test):
                             pkg)
 
     def test_nvsetenv(self):
+        """
+        Change/view Open Firmware environment variables
+        """
         self.log.info("===Executing nvsetenv tool====")
         self.run_cmd("nvsetenv")
         value = self.params.get('nvsetenv_list', default=[
@@ -59,6 +65,9 @@ class RASToolsPpcdiag(Test):
                       % self.fail_cmd)
 
     def test_usysattn(self):
+        """
+        View and manipulate the system attention and fault indicators (LEDs)
+        """
         self.log.info("=====Executing usysattn tool test======")
         value = self.params.get('usysattn_list', default=['-h', '-V', '-P'])
         for list_item in value:
@@ -70,6 +79,9 @@ class RASToolsPpcdiag(Test):
                       % self.fail_cmd)
 
     def test_usysfault(self):
+        """
+        View and manipulate the system attention and fault indicators (LEDs)
+        """
         self.log.info("======Executing usysfault tool test======")
         value = self.params.get('usysfault_list', default=['-h', '-V', '-P'])
         for list_item in value:
@@ -94,7 +106,7 @@ class RASToolsPpcdiag(Test):
         loc_code = self.run_cmd_out("usysident -P | awk 'NR==1{print $1}'")
         cmd = "usysident -l %s -s normal" % loc_code
         self.run_cmd(cmd)
-        if 'on' not in self.run_cmd_out("usysident -l %s -s identify" % loc_code):
+        if 'on' not in self.run_cmd_out(cmd):
             self.fail_cmd.append(cmd)
         if self.fail_cmd:
             self.fail("%s command(s) failed to execute  "

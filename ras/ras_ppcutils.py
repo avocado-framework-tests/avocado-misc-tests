@@ -52,6 +52,9 @@ class RASToolsPpcutils(Test):
     @skipUnless("ppc" in distro.detect().arch,
                 "supported only on Power platform")
     def setUp(self):
+        """
+        Ensure packages are installed
+        """
         sm = SoftwareManager()
         for package in ("ppc64-diag", "powerpc-utils"):
             if not sm.check_installed(package) and not sm.install(package):
@@ -64,7 +67,8 @@ class RASToolsPpcutils(Test):
                                      ignore_status=True,
                                      sudo=True).decode("utf-8").strip()
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
     def test_set_poweron_time(self):
         """
         set_poweron_time schedules the power on time
@@ -77,7 +81,8 @@ class RASToolsPpcutils(Test):
         self.run_cmd("set_poweron_time -t M6D15h12")
         self.error_check()
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
     def test_sys_ident_tool(self):
         """
         sys_ident provides unique system identification information
@@ -167,11 +172,13 @@ class RASToolsPpcutils(Test):
                                      "tail -1 | cut -d' ' -f1")
         if disk_name:
             self.run_cmd("ofpathname %s" % disk_name)
-            of_name = self.run_cmd_out("ofpathname %s" % disk_name).split(':')[0]
+            of_name = self.run_cmd_out("ofpathname %s"
+                                       % disk_name).split(':')[0]
             self.run_cmd("ofpathname -l %s" % of_name)
         self.error_check()
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
     def test_rtas_ibm_get_vpd(self):
         """
         rtas_ibm_get_vpd gives vpd data
@@ -214,7 +221,10 @@ class RASToolsPpcutils(Test):
 
     @skipIf(IS_POWER_NV, "This test is not supported on PowerNV platform")
     def test_rtas_event_decode(self):
-        self.log.info("===============Executing rtas_event_decode tool test===="
+        """
+        Decode RTAS events
+        """
+        self.log.info("==============Executing rtas_event_decode tool test===="
                       "===========")
         cmd = "rtas_event_decode -w 500 -dv -n 2302 < %s" % self.get_data(
             'rtas')
@@ -224,28 +234,40 @@ class RASToolsPpcutils(Test):
             self.fail("rtas_event_decode tool: %s command failed in "
                       "verification" % cmd)
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
     def test_uesensor(self):
+        """
+        View the state of system environmental sensors
+        """
         self.log.info("===============Executing uesensor tool test===="
                       "===========")
         self.run_cmd("uesensor -l")
         self.run_cmd("uesensor -a")
         self.error_check()
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
     def test_serv_config(self):
+        """
+        View and configure system service policies and settings
+        """
         self.log.info("===============Executing serv_config tool test===="
                       "===========")
         list = [
-            '-l', '-b', '-s', '-r', '-m', '-d', '--remote-maint', '--surveillance',
-            '--reboot-policy', '--remote-pon', '-d --force']
+            '-l', '-b', '-s', '-r', '-m', '-d', '--remote-maint',
+            '--surveillance', '--reboot-policy', '--remote-pon', '-d --force']
         for list_item in list:
             cmd = "serv_config %s" % list_item
             self.run_cmd(cmd)
         self.error_check()
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
     def test_ls_vscsi(self):
+        """
+        Provide information on Virtual devices
+        """
         self.log.info("===============Executing ls-vscsi tool test===="
                       "===========")
         self.run_cmd("ls-vscsi")
@@ -253,8 +275,12 @@ class RASToolsPpcutils(Test):
         self.run_cmd("ls-vscsi -V")
         self.error_check()
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
     def test_ls_veth(self):
+        """
+        Provide information about Virtual Ethernet devices
+        """
         self.log.info("===============Executing ls-veth tool test===="
                       "===========")
         self.run_cmd("ls-veth")
@@ -262,8 +288,12 @@ class RASToolsPpcutils(Test):
         self.run_cmd("ls-veth -V")
         self.error_check()
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
     def test_ls_vdev(self):
+        """
+        Provide information about Virtual SCSI adapters and devices
+        """
         self.log.info("===============Executing ls-vdev tool test===="
                       "===========")
         self.run_cmd("ls-vdev")
@@ -271,8 +301,12 @@ class RASToolsPpcutils(Test):
         self.run_cmd("ls-vdev -V")
         self.error_check()
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
     def test_lsdevinfo(self):
+        """
+        Provide information on Virtual devices
+        """
         self.log.info("===============Executing lsdevinfo tool test===="
                       "===========")
         self.run_cmd("lsdevinfo")
@@ -288,8 +322,12 @@ class RASToolsPpcutils(Test):
         self.run_cmd("lsdevinfo -q name=%s" % disk_name)
         self.error_check()
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
     def test_hvcsadmin(self):
+        """
+        Hypervisor virtual console server administration utility
+        """
         self.log.info("===============Executing hvcsadmin tool test===="
                       "===========")
         list = ['--status', '--version', '-all', '-noisy', '-rescan']
@@ -298,8 +336,12 @@ class RASToolsPpcutils(Test):
             self.run_cmd(cmd)
         self.error_check()
 
-    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is not supported on KVM guest or PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
     def test_bootlist(self):
+        """
+        Update and view information on bootable devices
+        """
         self.log.info("===============Executing bootlist tool test===="
                       "===========")
         list = ['-m normal -r', '-m normal -o',
@@ -313,8 +355,10 @@ class RASToolsPpcutils(Test):
                                      "tail -1 | cut -d' ' -f1").strip("12345")
         file_path = os.path.join(self.workdir, 'file')
         process.run("echo %s > %s" %
-                    (disk_name, file_path), ignore_status=True, sudo=True, shell=True)
+                    (disk_name, file_path), ignore_status=True,
+                    sudo=True, shell=True)
         process.run("echo %s >> %s" %
-                    (interface, file_path), ignore_status=True, sudo=True, shell=True)
+                    (interface, file_path), ignore_status=True,
+                    sudo=True, shell=True)
         self.run_cmd("bootlist -r -m both -f %s" % file_path)
         self.error_check()

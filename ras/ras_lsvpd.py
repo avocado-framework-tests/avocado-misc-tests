@@ -38,11 +38,15 @@ class RASToolsLsvpd(Test):
     is_fail = 0
 
     def run_cmd(self, cmd):
-        if (process.run(cmd, ignore_status=True, sudo=True, shell=True)).exit_status:
+        if (process.run(cmd, ignore_status=True, sudo=True,
+                        shell=True)).exit_status:
             self.is_fail += 1
         return
 
     def setUp(self):
+        """
+        Ensure corresponding packages are installed
+        """
         if "ppc" not in distro.detect().arch:
             self.cancel("supported only on Power platform")
         sm = SoftwareManager()
@@ -59,6 +63,9 @@ class RASToolsLsvpd(Test):
 
     @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_vpdupdate(self):
+        """
+        Update Vital Product Data (VPD) database
+        """
         self.log.info("===============Executing vpdupdate tool test===="
                       "===========")
         self.run_cmd("vpdupdate")
@@ -84,7 +91,8 @@ class RASToolsLsvpd(Test):
         process.run("rm -f /var/lib/lsvpd/vpd.db; touch /var/lib/lsvpd/vpd.db",
                     shell=True)
         for command in ["lsvpd", "lscfg", "lsmcode"]:
-            if not self.run_cmd_out("%s | grep run | grep vpdupdate" % command):
+            if not self.run_cmd_out("%s | grep run | grep vpdupdate" %
+                                    command):
                 self.fail(
                     "Error message is not displayed when vpd.db is corrupted.")
         self.run_cmd("vpdupdate")
@@ -94,6 +102,9 @@ class RASToolsLsvpd(Test):
 
     @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_lsvpd(self):
+        """
+        List Vital Product Data (VPD)
+        """
         self.log.info("===============Executing lsvpd tool test============="
                       "==")
         self.run_cmd("vpdupdate")
@@ -119,6 +130,9 @@ class RASToolsLsvpd(Test):
 
     @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_lscfg(self):
+        """
+        List hardware configuration information
+        """
         self.log.info("===============Executing lscfg tool test============="
                       "==")
         self.run_cmd("lscfg")
