@@ -13,6 +13,7 @@
 #
 # Copyright: 2017 IBM
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
+# Author: Sachin Sant <sachinp@linux.ibm.com>
 
 import os
 import shutil
@@ -25,10 +26,13 @@ IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
 
 
-class RASTools(Test):
+class RASToolsLsvpd(Test):
 
     """
-    This test checks various RAS tools:
+    This test checks various RAS tools bundled as a part of lsvpd
+    package/repository
+
+    :avocado: tags=ras,ppc64le
     """
     is_fail = 0
 

@@ -12,15 +12,19 @@
 #
 # Copyright: 2021 IBM
 # Author: Shirisha Ganta <shirisha.ganta1@ibm.com>
+# Author: Sachin Sant <sachinp@linux.ibm.com>
 
 from avocado import Test
 from avocado.utils import process
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
-class Ras_tools(Test):
+class RASToolsPpcdiag(Test):
     """
-    :avocado: tags=privileged
+    Test case to validate RAS tools bundled as a part of ppc64-diag
+    package/repository.
+
+    :avocado: tags=privileged,ras,ppc64le
     """
     fail_cmd = list()
 

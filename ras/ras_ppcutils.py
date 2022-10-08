@@ -13,6 +13,7 @@
 #
 # Copyright: 2016 IBM
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
+# Author: Sachin Sant <sachinp@linux.ibm.com>
 
 import os
 from shutil import copyfile
@@ -25,10 +26,13 @@ IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
 
 
-class RASTools(Test):
+class RASToolsPpcutils(Test):
 
     """
-    This test checks various RAS tools:
+    This test checks various RAS tools bundled with powerpc-utils
+    package/repository.
+
+    :avocado: tags=ras,ppc64le
     """
     fail_cmd = list()
 
