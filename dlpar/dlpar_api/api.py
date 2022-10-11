@@ -32,14 +32,11 @@ import re
 import time
 
 # DLPAR API imports
-
-from pexpect import pxssh
+from pexpect.pxssh import pxssh
 from dlpar_api.config import TestConfig
-
 __all__ = ['TestException', 'MyPxssh', 'SshMachine', 'TestLog', 'TestCase']
 
 CONFIG_FILE = TestConfig("config/tests.cfg")
-
 
 class TestException(Exception):
     """Base Class for all test exceptions."""
@@ -66,8 +63,6 @@ class MyPxssh(pxssh):
         You can choose if you want the returned string, the return code
         or both.
         """
-        self.__log("SSH command on %s: '%s'" % (self.server, command))
-
         # In some situations, with asynchronous commands, we might not get
         # an answer right after we try to check the exit code. so in this
         # case, we need to wait and try again.
@@ -128,7 +123,6 @@ class SshMachine:
         self.passwd = CONFIG_FILE.get(machine_type, 'passwd')
         self.machine = CONFIG_FILE.get(machine_type, 'machine')
         self.partition = CONFIG_FILE.get(machine_type, 'partition')
-
         self.log = log
         self.sshcnx = self.__init_ssh(self.user, self.passwd, self.name)
 
@@ -165,8 +159,10 @@ class TestLog(logging.Logger):
 
         # console log output configuration
         console = logging.StreamHandler()
-        console.setLevel(self.__get_log_level(CONFIG_FILE.get('log',
-                                                              'console_level')))
+        console.setLevel(self.__get_log_level(
+            CONFIG_FILE.get
+            ('log',
+             'console_level')))
         formatter = logging.Formatter('%(levelname)-8s: %(message)s')
         console.setFormatter(formatter)
         self.addHandler(console)
@@ -257,7 +253,7 @@ class TestCase:
         o_cmd = 'lshwres -m ' + linux_machine.machine + \
                 ' --level lpar -r proc --filter lpar_names="' + \
                 linux_machine.partition + '" -F ' + option
-        opt_value = self.hmc.sshcnx.run_command(o_cmd)
+        opt_value = self.hmc.sshcnx.run_command(o_cmd).decode()
 
         d_msg = option + ": " + opt_value + " for partition " + \
             linux_machine.partition
@@ -270,7 +266,7 @@ class TestCase:
         o_cmd = 'lshwres -m ' + linux_machine.machine + \
                 ' --level lpar -r mem --filter lpar_names="' + \
                 linux_machine.partition + '" -F ' + option
-        opt_value = self.hmc.sshcnx.run_command(o_cmd)
+        opt_value = self.hmc.sshcnx.run_command(o_cmd).decode()
 
         d_msg = option + ": " + opt_value + " for partition " + \
             linux_machine.partition
@@ -287,8 +283,8 @@ class TestCase:
 
         # Also, verify if /proc/cpuinfo show all processors
         c_cmd = 'cat /proc/cpuinfo'
-        cpuinfo_proc_lines = re.findall('processor.*:.*\n',
-                                        linux_machine.sshcnx.run_command(c_cmd))
+        sdata = linux_machine.sshcnx.run_command(c_cmd).decode()
+        cpuinfo_proc_lines = re.findall('processor.*:.*\n', sdata)
         d_msg = 'Checking if /proc/cpuinfo shows all processors correctly.'
         d_condition = len(cpuinfo_proc_lines) == \
             ((quantity + int(self.get_cpu_option(linux_machine,
@@ -307,8 +303,8 @@ class TestCase:
 
         # Also, verify if /proc/cpuinfo show all processors
         c_cmd = 'cat /proc/cpuinfo'
-        cpuinfo_proc_lines = re.findall('processor.*:.*\n',
-                                        linux_machine.sshcnx.run_command(c_cmd))
+        cmd = linux_machine.sshcnx.run_command(c_cmd).decode()
+        cpuinfo_proc_lines = re.findall('processor.*:.*\n', cmd)
         d_msg = 'Checking if /proc/cpuinfo shows all processors correctly.'
         d_condition = len(cpuinfo_proc_lines) == \
             ((quantity_before - quantity_removed) *
@@ -363,7 +359,7 @@ class TestCase:
             elif curr_procs > ideal_procs:
                 # Get how much we want to remove
                 procs_to_remove = curr_procs - ideal_procs
-                # Get the procs limit to know how much we need to have, at least
+                # Get the procs limit to know how much we need to have,at least
                 procs_limit = int(curr_proc_units) + 1
                 # Set how much we'll remove
                 if (curr_procs - procs_to_remove) < procs_limit:
@@ -415,9 +411,11 @@ class TestCase:
                     self.log.check_log('Adding %s proc units to %s.' %
                                        (proc_units_to_add,
                                         linux_machine.partition),
-                                       float(self.get_cpu_option(linux_machine,
-                                                                 'curr_proc_units') ==
-                                             (curr_proc_units + proc_units_to_add)))
+                                       float(self.get_cpu_option(
+                                           linux_machine,
+                                           'curr_proc_units') ==
+                                           (curr_proc_units +
+                                               proc_units_to_add)))
                     curr_proc_units += proc_units_to_add
 
             # Remove proc units
