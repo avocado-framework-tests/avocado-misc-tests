@@ -1,5 +1,5 @@
 mlx4_core=mlx4_en mlx4_ib
-mlx5_core=mlx5_fpga_tools mlx5_ib
+mlx5_core=mlx5_vdpa mlx5_ib
 xhci_hcd=xhci_pci
 qla2xxx=multipath
 lpfc=multipath
