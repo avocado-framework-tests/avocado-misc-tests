@@ -415,8 +415,6 @@ class IOZone(Test):
     def setUp(self):
         '''
         Build IOZone
-        Source:
-        http://www.iozone.org/src/current/iozone3_434.tar
         '''
         fstype = self.params.get('fs', default='')
         self.fs_create = False
@@ -425,6 +423,7 @@ class IOZone(Test):
         raid_needed = self.params.get('raid', default=False)
         self.raid_create = False
         self.disk = self.params.get('disk', default=None)
+        self.source_url = self.params.get('source', default=None)
 
         self.base_dir = os.path.abspath(self.basedir)
         smm = SoftwareManager()
@@ -447,8 +446,7 @@ class IOZone(Test):
                             smm.install("btrfs-tools"):
                         self.cancel('btrfs-tools is needed for the test to be run')
 
-        tarball = self.fetch_asset(
-            'http://www.iozone.org/src/current/iozone3_434.tar')
+        tarball = self.fetch_asset(self.source_url)
         archive.extract(tarball, self.teststmpdir)
         version = os.path.basename(tarball.split('.tar')[0])
         self.sourcedir = os.path.join(self.teststmpdir, version)

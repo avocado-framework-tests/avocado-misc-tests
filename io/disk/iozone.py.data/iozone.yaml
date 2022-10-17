@@ -1,4 +1,6 @@
 disk:
+#iozone source version can be updated if required
+source: 'https://www.iozone.org/src/current/iozone3_492.tar'
 setup:
     argument: !mux
         default:
