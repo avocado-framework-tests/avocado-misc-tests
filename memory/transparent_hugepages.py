@@ -24,7 +24,7 @@ from avocado.core import data_dir
 from avocado.utils.partition import Partition
 
 
-PAGESIZE = '4096' in str(memory.get_page_size())
+THP_PATH = os.path.exists("/sys/kernel/mm/transparent_hugepage")
 
 
 class Thp(Test):
@@ -36,7 +36,8 @@ class Thp(Test):
     :avocado: tags=memory,privileged,hugepage
     '''
 
-    @skipIf(PAGESIZE, "No THP support for kernel with 4K PAGESIZE")
+    @skipIf(not THP_PATH, "No THP support in the kernel,\
+            make sure that the kernel configured with THP support")
     @skipUnless('Hugepagesize' in dict(memory.meminfo),
                 "Hugepagesize not defined in kernel.")
     def setUp(self):
