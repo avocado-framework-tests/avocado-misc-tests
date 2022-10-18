@@ -1,0 +1,7 @@
+run_type: !mux
+    upstream:
+        type: 'upstream'
+    distro:
+        type: 'distro'
+prefix: '/usr'
+url: "https://github.com/linux-audit/audit-userspace/archive/master.zip"
