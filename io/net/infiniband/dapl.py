@@ -73,10 +73,6 @@ class dapl(Test):
         self.netmask = self.params.get("netmask", default="")
         local = LocalHost()
         self.timeout = "2m"
-        self.session = Session(self.peer_ip, user=self.peer_user,
-                               password=self.peer_password)
-        if not self.session.connect():
-            self.cancel("failed connecting to peer")
         if self.iface[0:2] == 'ib':
             self.networkinterface = NetworkInterface(self.iface, local,
                                                      if_type='Infiniband')
@@ -93,6 +89,10 @@ class dapl(Test):
             except Exception:
                 self.networkinterface.save(self.ipaddr, self.netmask)
         self.networkinterface.bring_up()
+        self.session = Session(self.peer_ip, user=self.peer_user,
+                               password=self.peer_password)
+        if not self.session.connect():
+            self.cancel("failed connecting to peer")
         if self.iface not in interfaces:
             self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
