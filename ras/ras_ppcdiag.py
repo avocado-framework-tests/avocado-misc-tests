@@ -12,15 +12,19 @@
 #
 # Copyright: 2021 IBM
 # Author: Shirisha Ganta <shirisha.ganta1@ibm.com>
+# Author: Sachin Sant <sachinp@linux.ibm.com>
 
 from avocado import Test
 from avocado.utils import process
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
-class Ras_tools(Test):
+class RASToolsPpcdiag(Test):
     """
-    :avocado: tags=privileged
+    Test case to validate RAS tools bundled as a part of ppc64-diag
+    package/repository.
+
+    :avocado: tags=privileged,ras,ppc64le
     """
     fail_cmd = list()
 
@@ -36,14 +40,20 @@ class Ras_tools(Test):
                                      sudo=True).decode("utf-8").strip()
 
     def setUp(self):
+        """
+        Ensure corresponding packages are installed
+        """
         sm = SoftwareManager()
-        deps = ["ppc64-diag", "powerpc-utils"]
+        deps = ["ppc64-diag"]
         for pkg in deps:
             if not sm.check_installed(pkg) and not sm.install(pkg):
                 self.cancel("Fail to install %s required for this test." %
                             pkg)
 
-    def test1_nvsetenv(self):
+    def test_nvsetenv(self):
+        """
+        Change/view Open Firmware environment variables
+        """
         self.log.info("===Executing nvsetenv tool====")
         self.run_cmd("nvsetenv")
         value = self.params.get('nvsetenv_list', default=[
@@ -54,7 +64,10 @@ class Ras_tools(Test):
             self.fail("%s command(s) failed to execute  "
                       % self.fail_cmd)
 
-    def test2_usysattn(self):
+    def test_usysattn(self):
+        """
+        View and manipulate the system attention and fault indicators (LEDs)
+        """
         self.log.info("=====Executing usysattn tool test======")
         value = self.params.get('usysattn_list', default=['-h', '-V', '-P'])
         for list_item in value:
@@ -65,13 +78,36 @@ class Ras_tools(Test):
             self.fail("%s command(s) failed to execute  "
                       % self.fail_cmd)
 
-    def test3_usysfault(self):
+    def test_usysfault(self):
+        """
+        View and manipulate the system attention and fault indicators (LEDs)
+        """
         self.log.info("======Executing usysfault tool test======")
         value = self.params.get('usysfault_list', default=['-h', '-V', '-P'])
         for list_item in value:
             self.run_cmd('usysfault  %s ' % list_item)
         loc_code = self.run_cmd_out("usysfault -P | awk 'NR==1{print $1}'")
         self.run_cmd("usysfault -l %s -s normal -t" % loc_code)
+        if self.fail_cmd:
+            self.fail("%s command(s) failed to execute  "
+                      % self.fail_cmd)
+
+    def test_usysident(self):
+        """
+        This tests to turn on device identify indicators and other help
+        options of usysident  ppc64-diag
+        """
+        if 'not supported' in self.run_cmd_out("usysident"):
+            self.cancel(
+                "The identify indicators are not supported on this system")
+        value = self.params.get('usysident_list', default=['-h', '-V', '-P'])
+        for list_item in value:
+            self.run_cmd('usysident %s' % list_item)
+        loc_code = self.run_cmd_out("usysident -P | awk 'NR==1{print $1}'")
+        cmd = "usysident -l %s -s normal" % loc_code
+        self.run_cmd(cmd)
+        if 'on' not in self.run_cmd_out(cmd):
+            self.fail_cmd.append(cmd)
         if self.fail_cmd:
             self.fail("%s command(s) failed to execute  "
                       % self.fail_cmd)
