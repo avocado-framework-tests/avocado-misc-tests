@@ -42,22 +42,40 @@ class OpenSSH(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        url = "https://github.com/openssh/openssh-portable/archive/master.zip"
-        tarball = self.fetch_asset(url, expire='7d')
-        archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'openssh-portable-master')
-        os.chdir(self.sourcedir)
-        process.run('autoreconf', ignore_status=True)
-        process.run('./configure --with-pam --with-libedit --with-kerberos5 \
-                    --with-selinux --with-md5-passwords', ignore_status=True)
+        run_type = self.params.get('type', default='upstream')
+        if run_type == "upstream":
+            def_url = ("https://github.com/openssh/openssh-portable/"
+                       "archive/master.zip")
+            url = self.params.get('url', default=def_url)
+            tarball = self.fetch_asset(url, expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.srcdir = os.path.join(self.workdir, 'openssh-portable-master')
+            os.chdir(self.srcdir)
+            output = process.run('autoreconf', ignore_status=True)
+            if output.exit_status:
+                self.fail("openssh-tests.py: 'autoreconf' failed.")
+            output = process.run('./configure --with-pam --with-libedit \
+                                  --with-kerberos5 --with-selinux \
+                                  --with-md5-passwords', ignore_status=True)
+            if output.exit_status:
+                self.fail("openssh-tests.py: 'configure' failed.")
+        elif run_type == "distro":
+            self.srcdir = os.path.join(self.workdir, "openssh-distro")
+            if not os.path.exists(self.srcdir):
+                os.makedirs(self.srcdir)
+            self.srcdir = smm.get_source("openssh", self.srcdir)
+            if not self.srcdir:
+                self.fail("openssh source install failed.")
 
     def test(self):
         '''
         Running tests from openssh
         '''
         count = 0
-        output = build.run_make(self.sourcedir, extra_args="tests",
+        output = build.run_make(self.srcdir, extra_args="tests",
                                 process_kwargs={"ignore_status": True})
+        if output.exit_status:
+            self.fail("openssh-tests.py: 'make check' failed.")
         for line in output.stdout_text.splitlines():
             if 'not ok' in line:
                 count += 1
