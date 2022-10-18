@@ -6,7 +6,9 @@
 #include <fcntl.h>
 #include <numa.h>
 #include <numaif.h>
+#ifdef HAVE_HUGETLB_HEADER
 #include <hugetlbfs.h>
+#endif
 
 #define PATTERN		0xff
 #define PAGE_SHIFT 12
@@ -328,17 +330,26 @@ int main(int argc, char *argv[])
 			chunks = strtoul(optarg, NULL, 10);
                         break;
                 case 'o':
+#ifdef HAVE_HUGETLB_HEADER
 			overcommit = 1;
-                        break;
-                case 't':
+#else			
+                        overcommit = 0;
+#endif			
+			break;
+
+		case 't':
 			thp = 1;
                         break;
                 case 'h':
+#ifdef HAVE_HUGETLB_HEADER
 			hugepage = 1;
 			pagesize = gethugepagesize();
 			/* Using 1% of system memory for hugepages*/
         		memory = (total_mem) / 100;
-                        break;
+#else
+			hugepage = 0 ;
+#endif		       	
+			break;
                 default:
                         errmsg("%s [-n <no-of-chunks] [-t fot THP] [-o for hugepage-overcommit] [-h for hugepage]\n", argv[0]);
                         break;
