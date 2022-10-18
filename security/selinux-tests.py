@@ -34,35 +34,43 @@ class SELinux(Test):
         # Check for basic utilities
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        deps = ['gcc', 'make']
-        self.sourcedir = None
-        if detected_distro.name in ['rhel', 'SuSE', 'fedora', 'centos',
-                                    'redhat']:
-            deps.extend(["perl-Test", "perl-Test-Harness", "perl-Test-Simple",
-                         "perl-libs", "selinux-policy-devel",
-                         "net-tools", "netlabel_tools", "iptables", "libbpf",
-                         "lksctp-tools-devel", "attr", "libbpf-devel",
-                         "keyutils-libs-devel", "quota", "xfsprogs-devel",
-                         "libuuid-devel", "nftables", "kernel-devel",
-                         "kernel-modules", "perl-Test-Harness", "coreutils",
-                         "netlabel_tools", "libsepol", "checkpolicy",
-                         "libselinux", "policycoreutils", "libsemanage",
-                         "nfs-utils", "policycoreutils-newrole",
-                         "xfsprogs-devel", "libselinux-devel"])
-        else:
-            self.cancel("Install the package for selinux supported\
-                      by %s" % detected_distro.name)
+        deps = ['gcc', 'make', "perl-Test-Harness", "perl-Test-Simple",
+                "net-tools", "lksctp-tools-devel", "policycoreutils-newrole",
+                "attr", "quota", "iptables", "nfs-utils", "policycoreutils",
+                "xfsprogs-devel", "libuuid-devel", "nftables", "kernel-devel",
+                "coreutils", "checkpolicy"]
+        self.srcdir = None
+        if detected_distro.name in ['rhel', 'fedora', 'centos', 'redhat']:
+            deps.extend(["perl-Test", "perl-libs", "selinux-policy-devel",
+                         "netlabel_tools", "libbpf", "libbpf-devel",
+                         "keyutils-libs-devel", "kernel-modules",
+                         "netlabel_tools", "libsepol", "libselinux",
+                         "libselinux-devel", "libsemanage", "libbpf-devel"])
+        elif detected_distro.name in ['SuSE', 'Ubuntu']:
+            self.cancel("SELinux tests not supported on %s"
+                        % detected_distro.name)
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        url = "https://github.com/SELinuxProject/selinux-testsuite/archive/master.zip"
-        tarball = self.fetch_asset(url, expire='7d')
-        archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'selinux-testsuite-master')
-        os.chdir(self.sourcedir)
+        run_type = self.params.get('type', default='upstream')
+        if run_type == "upstream":
+            default_url = ("https://github.com/SELinuxProject/"
+                           "selinux-testsuite/archive/master.zip")
+            url = self.params.get('url', default=default_url)
+            tarball = self.fetch_asset(url, expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.srcdir = os.path.join(self.workdir, 'selinux-testsuite-master')
+        elif run_type == "distro":
+            self.srcdir = os.path.join(self.workdir, "selinux-distro")
+            if not os.path.exists(self.srcdir):
+                os.makedirs(self.srcdir)
+            self.srcdir = smm.get_source('selinux', self.srcdir)
+            if not self.srcdir:
+                self.fail("selinux source install failed.")
+        os.chdir(self.srcdir)
         if not linux.enable_selinux_enforcing():
             self.fail("Unable to enter in to 'Enforcing' mode")
-        if build.make(self.sourcedir, extra_args="-C policy load") > 0:
+        if build.make(self.srcdir, extra_args="-C policy load") > 0:
             self.cancel("Failed to load the policies")
 
     def test(self):
@@ -70,8 +78,10 @@ class SELinux(Test):
         Running tests from selinux-testsuite
         '''
         count = 0
-        output = build.run_make(self.sourcedir, extra_args="-C tests test",
+        output = build.run_make(self.srcdir, extra_args="-C tests test",
                                 process_kwargs={"ignore_status": True})
+        if output.exit_status:
+            self.fail("selinux-tests.py: 'make check' failed.")
         for line in output.stderr_text.splitlines():
             if 'Failed test at' in line:
                 count += 1
@@ -80,5 +90,5 @@ class SELinux(Test):
             self.fail("%s test(s) failed, please refer to the log" % count)
 
     def tearDown(self):
-        if self.sourcedir:
-            build.make(self.sourcedir, extra_args='-C policy unload')
+        if self.srcdir:
+            build.make(self.srcdir, extra_args='-C policy unload')
