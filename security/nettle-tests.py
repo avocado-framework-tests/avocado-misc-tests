@@ -40,7 +40,7 @@ class Nettle(Test):
             deps.extend(["gmp-devel", "gettext-devel"])
             if det_dist.name == "rhel" and int(det_dist.version) >= 9:
                 # RHEL9 package name is libkcapi-fipscheck, texinfo-tex
-                deps.extend(["libkcapi-fipscheck", "texinfo-tex"])
+                deps.extend(["texinfo-tex"])
             elif det_dist.name == "SuSE":
                 # SLES package name is texinfo
                 deps.extend(["fipscheck", "texinfo"])
@@ -53,23 +53,43 @@ class Nettle(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        url = ("https://github.com/gnutls/nettle/archive/refs/heads/master.zip")
-        tarball = self.fetch_asset(url, expire='7d')
-        archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'nettle-master')
-        os.chdir(self.sourcedir)
-        process.run('autoreconf -ifv', ignore_status=True)
-        process.run('./configure', ignore_status=True)
-        if build.make(self.sourcedir):
-            self.cancel("Building audit test suite failed")
+        run_type = self.params.get('type', default='upstream')
+        if run_type == "upstream":
+            def_url = ("https://github.com/gnutls/nettle/archive/refs/"
+                       "heads/master.zip")
+            url = self.params.get('url', default=def_url)
+            tarball = self.fetch_asset(url, expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.srcdir = os.path.join(self.workdir, 'nettle-master')
+            os.chdir(self.srcdir)
+            output = process.run('autoreconf -ifv', ignore_status=True)
+            if output.exit_status:
+                self.fail("nettle-tests.py: 'autoreconf' failed.")
+            output = process.run('./configure', ignore_status=True)
+            if output.exit_status:
+                self.fail("nettle-tests.py: 'configure' failed.")
+            if build.make(self.srcdir):
+                self.fail("Building Nettle failed")
+        elif run_type == "distro":
+            self.srcdir = os.path.join(self.workdir, "nettle-distro")
+            if not os.path.exists(self.srcdir):
+                os.makedirs(self.srcdir)
+            pkg_name = 'nettle'
+            if det_dist.name == "SuSE":
+                pkg_name = 'libnettle'
+            self.srcdir = smm.get_source(pkg_name, self.srcdir)
+            if not self.srcdir:
+                self.fail("nettle source install failed.")
 
     def test(self):
         '''
-        Running tests from audit-testsuite
+        Running tests from nettle-testsuite
         '''
         count = 0
-        output = build.run_make(self.sourcedir, extra_args="check",
+        output = build.run_make(self.srcdir, extra_args="check",
                                 process_kwargs={"ignore_status": True})
+        if output.exit_status:
+            self.fail("nettle-tests.py: 'make check' failed.")
         for line in output.stdout_text.splitlines():
             if 'FAIL:' in line:
                 count += 1
