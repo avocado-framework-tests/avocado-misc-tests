@@ -1,0 +1,6 @@
+run_type: !mux
+    upstream:
+        type: 'upstream'
+    distro:
+        type: 'distro'
+url: "https://git.kernel.org/pub/scm/linux/kernel/git/dhowells/keyutils.git"
