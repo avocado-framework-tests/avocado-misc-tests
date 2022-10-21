@@ -329,30 +329,31 @@ int main(int argc, char *argv[])
                 case 'n':
 			chunks = strtoul(optarg, NULL, 10);
                         break;
-                case 'o':
-#ifdef HAVE_HUGETLB_HEADER
-			overcommit = 1;
-#else			
-                        overcommit = 0;
-#endif			
-			break;
-
-		case 't':
+                case 't':
 			thp = 1;
                         break;
-                case 'h':
 #ifdef HAVE_HUGETLB_HEADER
+               case 'o':
+
+                         overcommit = 1;
+                         break;
+
+
+		case 'h':
+
 			hugepage = 1;
 			pagesize = gethugepagesize();
 			/* Using 1% of system memory for hugepages*/
         		memory = (total_mem) / 100;
-#else
-			hugepage = 0 ;
-#endif		       	
-			break;
-                default:
-                        errmsg("%s [-n <no-of-chunks] [-t fot THP] [-o for hugepage-overcommit] [-h for hugepage]\n", argv[0]);
                         break;
+#endif
+                default:
+#ifndef HAVE_HUGETLB_HEADER
+			errmsg("%s [-n <no-of-chunks] [-t fot THP] \n", argv[0]);
+#else
+			errmsg("%s [-n <no-of-chunks] [-t fot THP] [-o for hugepage-overcommit] [-h for hugepage]\n", argv[0]);
+#endif                        
+			break;
                 }
         }
 	if ((hugepage && thp) || (thp && overcommit))
