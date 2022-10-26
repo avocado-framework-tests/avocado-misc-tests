@@ -15,6 +15,7 @@
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 
 import os
+import re
 import tempfile
 import shutil
 from avocado import Test
@@ -267,6 +268,24 @@ class Sosreport(Test):
         self.run_cmd("%s --batch --tmp-dir=%s -o "
                      "pci,powerpc,process,processor,kdump" % (self.sos_cmd, directory_name))
         shutil.rmtree(directory_name)
+        if self.is_fail >= 1:
+            self.fail(
+                "%s command(s) failed in sosreport tool verification" % self.is_fail)
+
+    def test_smtchanges(self):
+        """
+        Test the sosreport with different smt levels
+        """
+        self.is_fail = 0
+        directory_name = tempfile.mkdtemp()
+        for i in [2, 4, 8, "off"]:
+            self.run_cmd("ppc64_cpu --smt=%s" % i)
+            smt_initial = re.split(r'=| is ', self.run_cmd_out("ppc64_cpu --smt"))[1]
+            if smt_initial == str(i):
+                self.run_cmd("%s --batch --tmp-dir=%s --all-logs" % 
+                             (self.sos_cmd, directory_name))
+            else:
+                self.is_fail += 1
         if self.is_fail >= 1:
             self.fail(
                 "%s command(s) failed in sosreport tool verification" % self.is_fail)
