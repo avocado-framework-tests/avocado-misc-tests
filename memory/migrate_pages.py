@@ -50,16 +50,23 @@ class MigratePages(Test):
             self.cancel('Test requires two numa nodes to run.'
                         'Node list with memory: %s' % nodes)
 
-        dist = distro.detect()
+        self.dist = distro.detect()
         pkgs = ['gcc', 'make']
-        if dist.name in ["Ubuntu", 'debian']:
+        if self.dist.name in ["Ubuntu", 'debian']:
             pkgs.extend(['libpthread-stubs0-dev',
                          'libnuma-dev', 'libhugetlbfs-dev'])
-        elif dist.name in ["centos", "rhel", "fedora"]:
-            pkgs.extend(['numactl-devel', 'libhugetlbfs-devel'])
-        elif dist.name == "SuSE":
+        elif self.dist.name in ["centos", "rhel", "fedora"]:
+            if (self.dist.name == 'rhel' and self.dist.version == '9'):
+                self.log.info("libhugetlbfs is not available RHEL 9.x onwards,\
+                                so tests related to hugepage will be cancelled")
+                pkgs.extend(['numactl-devel'])
+            else:
+                pkgs.extend(['numactl-devel', 'libhugetlbfs-devel'])
+                exp_cmd = "export HAVE_HUGETLB_HEADER"
+                process.system(exp_cmd, shell=True, sudo=True, ignore_status=True)
+        elif self.dist.name == "SuSE":
             pkgs.extend(['libnuma-devel'])
-            if dist.version >= 15:
+            if self.dist.version >= 15:
                 pkgs.extend(['libhugetlbfs-devel'])
             else:
                 pkgs.extend(['libhugetlbfs-libhugetlb-devel'])
@@ -86,9 +93,14 @@ class MigratePages(Test):
         cmd = './node_move_pages -n %s' % self.nr_chunks
 
         if self.hpage:
-            cmd += ' -h'
-            if self.hpage_commit:
-                cmd += ' -o'
+           if (self.dist.name == 'rhel' and self.dist.version == '9'):
+               if self.hpage_commit:
+                  self.cancel("Hugepage(over commit) tests are cancelled on RHEL-9")
+               self.cancel("Hugepage tests are cancelled on RHEL-9")
+           else:
+              cmd += ' -h'
+              if self.hpage_commit:
+                 cmd += ' -o'
         elif self.thp:
             cmd += ' -t'
 
