@@ -1,0 +1,79 @@
+subsystem: !mux
+    latency:
+        name: latency
+    script:
+        name: script
+    replay:
+        name: replay
+    map:
+        name: map
+        variants: !mux
+            compact:
+                option: --compact
+            cpus:
+                option: --cpus 0
+            color-cpus:
+                option: --color-cpus 0
+            color-pids:
+                option: --color-pids 10
+    timehist:
+        name: timehist
+        variants: !mux
+            call-graph:
+                option: -g
+            call-graph_full:
+                option: --call-graph
+            max-stack:
+                option: --max-stack 2
+            cpu:
+                option: -C 0
+            cpu_full:
+                option: --cpu 0
+            pid:
+                option: -p 10
+            pid_full:
+                option: --pid 10
+            tid:
+                option: -t 10
+            tid_full:
+                option: --tid 10
+            summary:
+                option: -s
+            summary_full:
+                option: --summary
+            with-summary:
+                option: -S
+            with-summary_full:
+                option: --with-summary
+            symfs:
+                option: --symfs=/sys/devices/
+            cpu-visual:
+                option: -V
+            cpu-visual_full:
+                option: --cpu-visual
+            wakeups:
+                option: -w
+            wakeups_full:
+                option: --wakeups
+            migrations:
+                option: -M
+            migrations_full:
+                option: --migrations
+            next:
+                option: -n
+            next_full:
+                option: --next
+            idle-hist:
+                option: -I
+            idle-hist_full:
+                option: --idle-hist
+            time:
+                option: --time 10
+            state:
+                option: --state
+            vmlinux:
+                option: -k
+            vmlinux_full:
+                option: --vmlinux
+            kallsyms:
+                option: --kallsyms
