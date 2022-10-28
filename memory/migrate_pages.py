@@ -57,13 +57,13 @@ class MigratePages(Test):
                          'libnuma-dev', 'libhugetlbfs-dev'])
         elif self.dist.name in ["centos", "rhel", "fedora"]:
             if (self.dist.name == 'rhel' and self.dist.version == '9'):
-                self.log.info("libhugetlbfs is not available RHEL 9.x onwards,\
-                                so tests related to hugepage will be cancelled")
-                pkgs.extend(['numactl-devel'])
+                self.log.info("hugepage tests would be cancelled due to \
+                                non-availability of libhugetlbfs in RHEL-9")
             else:
-                pkgs.extend(['numactl-devel', 'libhugetlbfs-devel'])
                 exp_cmd = "export HAVE_HUGETLB_HEADER"
-                process.system(exp_cmd, shell=True, sudo=True, ignore_status=True)
+                process.system(exp_cmd, shell=True, sudo=True,\
+                        ignore_status=True)
+            pkgs.extend(['numactl-devel'])
         elif self.dist.name == "SuSE":
             pkgs.extend(['libnuma-devel'])
             if self.dist.version >= 15:
@@ -94,9 +94,8 @@ class MigratePages(Test):
 
         if self.hpage:
            if (self.dist.name == 'rhel' and self.dist.version == '9'):
-               if self.hpage_commit:
-                  self.cancel("Hugepage(over commit) tests are cancelled on RHEL-9")
-               self.cancel("Hugepage tests are cancelled on RHEL-9")
+               self.cancel("Hugepage tests are cancelled due to unavailability of \
+                       libhugetlbfs packages on RHEL-9")
            else:
               cmd += ' -h'
               if self.hpage_commit:

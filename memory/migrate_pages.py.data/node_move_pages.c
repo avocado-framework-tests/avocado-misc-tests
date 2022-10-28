@@ -334,13 +334,9 @@ int main(int argc, char *argv[])
                         break;
 #ifdef HAVE_HUGETLB_HEADER
                case 'o':
-
                          overcommit = 1;
                          break;
-
-
 		case 'h':
-
 			hugepage = 1;
 			pagesize = gethugepagesize();
 			/* Using 1% of system memory for hugepages*/
