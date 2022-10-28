@@ -277,6 +277,8 @@ class NetworkVirtualization(Test):
             if not wait.wait_for(networkinterface.is_link_up, timeout=120):
                 self.fail("Unable to bring up the link on the Network \
                        virtualized device")
+            if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
+                self.fail("Ping failed with active vnic device")
         self.check_dmesg_error()
 
     def test_backingdevadd(self):
@@ -296,6 +298,10 @@ class NetworkVirtualization(Test):
             self.log.debug("Expected backing dev count: %d",
                            self.backingdev_count)
             self.fail("Failed to add backing device")
+        device = self.find_device(self.mac_id[0])
+        networkinterface = NetworkInterface(device, self.local)
+        if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
+            self.fail("Backing device add has affected network connectivity")
         self.check_dmesg_error()
 
     def test_disable_enable_dev(self):
