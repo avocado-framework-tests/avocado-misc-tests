@@ -66,13 +66,9 @@ class NetworkVirtualization(Test):
         self.lpar = self.get_partition_name("Partition Name")
         if not self.lpar:
             self.cancel("LPAR Name not got from lparstat command")
-        for root, dirct, files in os.walk("/root/.ssh"):
-            for file in files:
-                if file.startswith("avocado-master-"):
-                    path = os.path.join(root, file)
-                    os.remove(path)
         self.session_hmc = Session(self.hmc_ip, user=self.hmc_username,
                                    password=self.hmc_pwd)
+        self.session_hmc.cleanup_master()
         if not self.session_hmc.connect():
             self.cancel("failed connecting to HMC")
         cmd = 'lssyscfg -r sys  -F name'
@@ -440,6 +436,7 @@ class NetworkVirtualization(Test):
 
         self.session = Session(self.vios_ip, user=self.vios_user,
                                password=self.vios_pwd)
+        self.session.cleanup_master()
         if not wait.wait_for(self.session.connect, timeout=30):
             self.fail("Failed connecting to VIOS")
 
