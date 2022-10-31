@@ -59,11 +59,12 @@ class MigratePages(Test):
             if (self.dist.name == 'rhel' and self.dist.version == '9'):
                 self.log.info("hugepage tests would be cancelled due to \
                                 non-availability of libhugetlbfs in RHEL-9")
+                pkgs.extend(['numactl-devel'])
             else:
                 exp_cmd = "export HAVE_HUGETLB_HEADER"
                 process.system(exp_cmd, shell=True, sudo=True,\
                         ignore_status=True)
-            pkgs.extend(['numactl-devel'])
+                pkgs.extend(['numactl-devel'],['libhugetlbfs-devel'])
         elif self.dist.name == "SuSE":
             pkgs.extend(['libnuma-devel'])
             if self.dist.version >= 15:
