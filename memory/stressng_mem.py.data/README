@@ -1,5 +1,4 @@
-
- Description:
+Description:
 -------------
     - The main purpose of this test aims at stressing the memory component of
       the target system, using the memory stressors through the stress-ng
@@ -8,7 +7,7 @@
     - The script uses a total of 28 stressors out of which we have 22 constant
       runtime stressors and 6 variable runtime stressors.
 
- Input Parameters:
+Input Parameters:
 ------------------
     --base_time    : 
         - Specifies the time (in seconds) to run each stressor
@@ -20,7 +19,7 @@
         - 10 seconds per stressor, a total of 6 stressors hence;
           [10 x 6] = 60s per GiB
 
- How is the estimated execution time calculated?
+How is the estimated execution time calculated?
 -------------------------------------------------
     - Considering the defaults the Calculations are as below : 
 
@@ -29,22 +28,16 @@
 
     B] : For parameter --time-per-gig    :   ([16gb x 60s] / 60)
                                             = 16 minutes
-
-                                            OR
-
+                             OR
                                             ([32gb x 60s] / 60)
                                             = 32 minutes
-
     Total Time taken = [A + B]
                      = [140 + 16]
                      = [156] minutes for a 16gb machine
-
-                     OR
-
+             OR
                      = [140 + 32]
                      = [172] minutes for a 32gb machine
-
- Method descriptions:
+Method descriptions:
 ----------------------
     def execute_stressor():
     - This method runs individual stressors - one at a time.
@@ -56,4 +49,3 @@
       runtime stressors & the variable runtime stressors.
     - The calculations required for these estimates are explained above in
       the "How is the estimated execution time calculated?" section.
-
