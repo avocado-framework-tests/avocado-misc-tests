@@ -4,8 +4,17 @@ config:
             mode: 'dedicated'
         shared:
             mode: 'shared'
+        smt_ded:
+            mode: 'ded_smt_workload'
+        cpu_fold_ded:
+            mode: 'ded_cpu_fold_workload'
+        smt_sha:
+            mode: 'sha_smt_workload'
+        cpu_fold_sha:
+            mode: 'sha_cpu_fold_workload'
     test_type: !mux
          cpu_dlpar:
              test_case: 'cpu'
          mem_dlpar:
              test_case: 'mem'
+         

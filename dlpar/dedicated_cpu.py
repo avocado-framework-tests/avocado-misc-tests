@@ -11,9 +11,10 @@
 #
 # See LICENSE for more details.
 #
-# Copyright: 2021 IBM
+# Copyright: 2022 IBM
 # Author(Original): Ricardo Salveti <rsalveti@linux.vnet.ibm.com>
 # Author(Modified): Kalpana Shetty <kalshett@in.ibm.com>
+# Author(Modified): Samir A Mulani <samir@linux.vnet.ibm.com>
 
 """
 Test to verify dedicated CPU DLPAR. Operations tested:
@@ -24,6 +25,7 @@ Test to verify dedicated CPU DLPAR. Operations tested:
 This test assumes that we have 2 power LPARS properly configured to start.
 """
 import time
+import sys
 from dlpar_api.api import TestCase, TestException
 
 
@@ -54,9 +56,11 @@ class DedicatedCpu(TestCase):
         """
         u_cmd = 'chsyscfg -r prof -m %s -i \
                 "lpar_name=%s,name=default_profile,proc_mode=ded, \
-                min_procs=%s,desired_procs=%s,max_procs=%s,sharing_mode=keep_idle_procs" \
+                min_procs=%s,desired_procs=%s,max_procs=%s, \
+                sharing_mode=keep_idle_procs" \
                 --force' % (linux_machine.machine,
-                            linux_machine.name, self.min_procs, self.desired_procs, self.max_procs)
+                            linux_machine.name, self.min_procs,
+                            self.desired_procs, self.max_procs)
         self.log.info('DEBUG: Dedicated lpar setup %s' % u_cmd)
         self.hmc.sshcnx.run_command(u_cmd, False)
 
@@ -95,8 +99,10 @@ class DedicatedCpu(TestCase):
                            (self.quant_to_test is not None))
         self.log.debug("Testing with %s Dedicated CPU units." %
                        self.quant_to_test)
-
-        # shutdown the paritition, update profile with min,desired,max, activate
+        self.mode = self.config.get('dedicated_cpu',
+                                    'mode')
+        # shutdown the paritition, update profile
+        # with min,desired,max, activate
         self.__prep_ded_cfg(self.linux_1)
         self.__prep_ded_cfg(self.linux_2)
 
@@ -162,26 +168,39 @@ class DedicatedCpu(TestCase):
         self.log.info(o_msg)
 
     def run_test(self):
-        """Run the test.
-
-        1 - Add X dedicated cpus to first partition;
-        2 - Move X dedicated cpus from the first partition to the second one;
-        3 - Remove X dedicated cpus from the second partitions;
-        4 - Add X dedicated cpus to the second partition;
-        5 - Move X dedicated cpus from the second partition to the first one;
-        6 - Remove X dedicated cpus from the first partition;
+        """
+        Run the test.
+        1: add
+        1.1 - Add x dedicated cpus to first partition and second partition.
+        2: add_remove(mix)
+        2.1 - Add and Remove x dedicated cpus to first partition
+        (Add-Remove mix cpu operation)
+        3: add_move_remove
+        3.1 - Add X dedicated cpus to first partition;
+        3.2 - Move X dedicated cpus from the first partition to the second one;
+        3.3 - Remove X dedicated cpus from the second partitions;
+        3.4 - Add X dedicated cpus to the second partition;
+        3.5 - Move X dedicated cpus from the second partition to the first one;
+        3.6 - Remove X dedicated cpus from the first partition;
         """
         self.log.info("Initiating the test.")
         for iteration in range(1, self.iterations + 1):
             self.log.info("Running iteration %d" % iteration)
-            self.__add_dedicated_cpu(self.linux_1, self.quant_to_test)
-            self.__move_dedicated_cpu(self.linux_1, self.linux_2,
-                                      self.quant_to_test)
-            self.__remove_dedicated_cpu(self.linux_2, self.quant_to_test)
-            self.__add_dedicated_cpu(self.linux_2, self.quant_to_test)
-            self.__move_dedicated_cpu(self.linux_2, self.linux_1,
-                                      self.quant_to_test)
-            self.__remove_dedicated_cpu(self.linux_1, self.quant_to_test)
+            if self.mode == "add":
+                self.__add_dedicated_cpu(self.linux_1, self.quant_to_test)
+                self.__add_dedicated_cpu(self.linux_2, self.quant_to_test)
+            elif self.mode == "add_remove":
+                self.__add_dedicated_cpu(self.linux_1, self.quant_to_test)
+                self.__remove_dedicated_cpu(self.linux_1, self.quant_to_test)
+            elif self.mode == "add_move_remove":
+                self.__add_dedicated_cpu(self.linux_1, self.quant_to_test)
+                self.__move_dedicated_cpu(self.linux_1, self.linux_2,
+                                          self.quant_to_test)
+                self.__remove_dedicated_cpu(self.linux_2, self.quant_to_test)
+                self.__add_dedicated_cpu(self.linux_2, self.quant_to_test)
+                self.__move_dedicated_cpu(self.linux_2, self.linux_1,
+                                          self.quant_to_test)
+                self.__remove_dedicated_cpu(self.linux_1, self.quant_to_test)
         self.log.info("Test finished successfully :)")
 
     def __add_dedicated_cpu(self, linux_machine, quantity):
@@ -203,7 +222,8 @@ class DedicatedCpu(TestCase):
         # Check at HMC
         a_msg = 'Adding %d dedicated cpus to partition %s.' % \
                 (quantity, linux_machine.partition)
-        a_condition = int(self.get_cpu_option(linux_machine, 'curr_procs')) == \
+        a_condition = int(self.get_cpu_option(
+            linux_machine, 'curr_procs')) == \
             curr_procs_before + quantity
         if not self.log.check_log(a_msg, a_condition, False):
             e_msg = 'Error adding %d dedicated cpus to partition %s.' % \
@@ -211,9 +231,6 @@ class DedicatedCpu(TestCase):
 
             self.log.error(e_msg)
             raise TestException(cmd_result)
-
-        # Check at Linux Partition
-        self.linux_check_add_cpu(linux_machine, quantity)
 
     def __move_dedicated_cpu(self, linux_machine_1, linux_machine_2, quantity):
         """
@@ -235,7 +252,8 @@ class DedicatedCpu(TestCase):
         time.sleep(self.sleep_time)
         # Check at HMC
         m_msg = 'Moving %s dedicated cpus from %s to %s.' % \
-                (quantity, linux_machine_1.partition, linux_machine_2.partition)
+                (quantity, linux_machine_1.partition,
+                 linux_machine_2.partition)
         m_condition = (int(self.get_cpu_option(linux_machine_1, 'curr_procs'))
                        == curr_procs_before_1 - quantity) \
             and (int(self.get_cpu_option(linux_machine_2,
@@ -265,8 +283,8 @@ class DedicatedCpu(TestCase):
         # Check at HMC
         r_msg = 'Removing %s dedicated cpus from partition %s.' % \
                 (quantity, linux_machine.partition)
-        r_condition = int(self.get_cpu_option(linux_machine, 'curr_procs')) == \
-            (curr_procs_before - quantity)
+        r_condition = int(self.get_cpu_option(linux_machine, 'curr_procs')) \
+            == (curr_procs_before - quantity)
         if not self.log.check_log(r_msg, r_condition, False):
             e_msg = 'Error removing %s dedicated cpus from partition %s.' % \
                     (quantity, linux_machine.partition)
@@ -274,10 +292,13 @@ class DedicatedCpu(TestCase):
             self.log.error(e_msg)
             raise TestException(e_msg)
 
-        # Check at Linux Partition
-        self.linux_check_rm_cpu(linux_machine, curr_procs_before, quantity)
-
 
 if __name__ == "__main__":
-    DEDICATED_CPU = DedicatedCpu()
-    DEDICATED_CPU.run_test()
+    arg_count = len(sys.argv)
+    if (arg_count == 2):
+        log_file_name = sys.argv[1]
+        DEDICATED_CPU = DedicatedCpu(log_file_name)
+        DEDICATED_CPU.run_test()
+    else:
+        DEDICATED_CPU = DedicatedCpu()
+        DEDICATED_CPU.run_test()
