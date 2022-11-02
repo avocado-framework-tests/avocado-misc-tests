@@ -45,7 +45,10 @@ class PerfRawevents(Test):
         smm = SoftwareManager()
         detected_distro = distro.detect()
         self.distro_name = detected_distro.name
-        self.cpu_family = cpu.get_family()[5:]
+        processor = genio.read_file("/proc/cpuinfo")
+        for line in processor.splitlines():
+            if 'revision' in line:
+                self.rev = (line.split(' ')[3].strip())
         if detected_distro.arch != 'ppc64le':
             self.cancel('This test is not supported on %s architecture'
                         % detected_distro.arch)
@@ -64,8 +67,8 @@ class PerfRawevents(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
-        for filename in ['name_events_p8', 'raw_codes_p8', 'name_events_p9',
-                         'raw_codes_p9', 'name_events_p10', 'raw_codes_p10']:
+        for filename in ['name_events_004b', 'raw_codes_004b', 'name_events_004e',
+                         'raw_codes_004e', 'name_events_0080', 'raw_codes_0080']:
             self.copy_files(filename)
 
         os.chdir(self.teststmpdir)
@@ -87,13 +90,13 @@ class PerfRawevents(Test):
             self.fail("perf_raw_events: refer log file for failed events")
 
     def test_raw_code(self):
-        file_name = 'raw_codes_p' + self.cpu_family
+        file_name = 'raw_codes_' + self.rev
         perf_flags = "perf stat -e r"
         self.run_event(file_name, perf_flags)
         self.error_check()
 
     def test_name_event(self):
-        file_name = 'name_events_p' + self.cpu_family
+        file_name = 'name_events_' + self.rev
         perf_flags = "perf stat -e "
         self.run_event(file_name, perf_flags)
         self.error_check()
