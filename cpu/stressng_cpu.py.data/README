@@ -1,0 +1,33 @@
+Description:
+-------------
+    - The main purpose of this script is to run CPU stress tests using the
+      stress-ng program.
+
+Input Parameters:
+-------------------
+    --runtime <time-in-seconds>
+    
+    The total runtime, if not specified, is defaulted to 7200 seconds
+    i.e 2 hours.
+
+Usage:
+--------
+    cpu_stress --runtime <time-in-seconds>
+    
+List of stressors used - 
+--------------------------
+        - af-alg 
+        - bsearch 
+        - context 
+        - cpu
+        - crypt
+        - hsearch
+        - longjmp
+        - lsearch
+        - matrix
+        - qsort
+        - str
+        - stream
+        - tsearch
+        - vecmath
+        - wcs
