@@ -75,7 +75,7 @@ class HtxTest(Test):
         self.mdt_file = self.params.get('mdt_file', default='mdt.mem')
         self.time_limit = int(self.params.get('time_limit', default=2))
         self.time_unit = self.params.get('time_unit', default='m')
-        self.run_type = self.params.get('run_type', default='git')
+        self.run_type = self.params.get('run_type', default='')
         if self.time_unit == 'm':
             self.time_limit = self.time_limit * 60
         elif self.time_unit == 'h':
