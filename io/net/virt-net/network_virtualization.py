@@ -85,8 +85,7 @@ class NetworkVirtualization(Test):
                     break
         if not self.server:
             self.cancel("Managed System not got")
-        self.slot_num = self.params.get("slot_num", '*', default=None)
-        self.slot_num = self.slot_num.split(' ')
+        self.slot_num = str(self.params.get("slot_num", '*', default=None)).split(' ')
         for slot in self.slot_num:
             if int(slot) < 3 or int(slot) > 2999:
                 self.cancel("Slot invalid. Valid range: 3 - 2999")

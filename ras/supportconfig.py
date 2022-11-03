@@ -138,3 +138,20 @@ class Supportconfig(Test):
         # cleanup the plugin dir
         if not plugin_dir_exists:
             process.system("rm -rf %s" % plugin_dir)
+
+    def test_smtchanges(self):
+        """
+        Test the supportconfig with different smt levels
+        """
+        self.is_fail = 0
+        for i in [2, 4, 8, "off"]:
+            process.run("ppc64_cpu --smt=%s" %i)
+            smt_initial = re.split(r'=| is ', process.system_output("ppc64_cpu --smt")
+                                   .decode('utf-8'))[1]
+            if smt_initial == str(i):
+                process.run("supportconfig", sudo=True, ignore_status=True)
+            else:
+                self.is_fail += 1
+        if self.is_fail >= 1:
+            self.fail(
+                "%s command(s) failed in sosreport tool verification" % self.is_fail)

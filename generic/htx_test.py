@@ -75,7 +75,7 @@ class HtxTest(Test):
         self.mdt_file = self.params.get('mdt_file', default='mdt.mem')
         self.time_limit = int(self.params.get('time_limit', default=2))
         self.time_unit = self.params.get('time_unit', default='m')
-        self.run_type = self.params.get('run_type', default='git')
+        self.run_type = self.params.get('run_type', default='')
         if self.time_unit == 'm':
             self.time_limit = self.time_limit * 60
         elif self.time_unit == 'h':
@@ -112,6 +112,11 @@ class HtxTest(Test):
                 self.cancel("Can not install %s" % pkg)
 
         if self.run_type == 'git':
+            if self.detected_distro.name == 'rhel' and \
+                    self.detected_distro.version <= "9":
+                self.cancel("Test not supported in  %s_%s"
+                            % (self.detected_distro.name,
+                               self.detected_distro.version))
             url = "https://github.com/open-power/HTX/archive/master.zip"
             tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')
             archive.extract(tarball, self.teststmpdir)

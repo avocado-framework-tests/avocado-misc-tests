@@ -17,7 +17,7 @@ import os
 import shutil
 
 from avocado import Test
-from avocado.utils import process
+from avocado.utils import process, dmesg
 
 
 class Fsshrink(Test):
@@ -28,22 +28,10 @@ class Fsshrink(Test):
     :avocado: tags=fs
     '''
 
-    def clear_dmesg(self):
-        process.run("dmesg -C ", sudo=True)
-
-    def verify_dmesg(self):
-        self.whiteboard = process.system_output("dmesg").decode()
-        pattern = ['WARNING: CPU:', 'Oops',
-                   'Segfault', 'soft lockup', 'Unable to handle']
-        for fail_pattern in pattern:
-            if fail_pattern in self.whiteboard:
-                self.fail("Test Failed : %s in dmesg" % fail_pattern)
-
     def setUp(self):
         shutil.copy(self.get_data('test-shrink.sh'),
                     self.teststmpdir)
-
-        self.clear_dmesg()
+        dmesg.clear_dmesg()
 
     def test(self):
 
@@ -51,5 +39,5 @@ class Fsshrink(Test):
         if process.system('./test-shrink.sh', sudo=True, ignore_status=True,
                           timeout=900):
             self.fail("unlink/rmdir (shrink) test failed")
-
-        self.verify_dmesg()
+        dmesg.collect_errors_dmesg(['WARNING: CPU:', 'Oops', 'Segfault',
+                                    'soft lockup', 'Unable to handle'])

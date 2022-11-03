@@ -18,7 +18,7 @@
 import os
 import configparser
 from avocado import Test
-from avocado.utils import genio
+from avocado.utils import genio, cpu
 
 
 class test_generic_events(Test):
@@ -46,6 +46,18 @@ class test_generic_events(Test):
                     self.generic_events = dict(parser.items('POWER10'))
                 else:
                     self.cancel("Processor is not supported: %s" % cpu_info)
+        if 'amd' in cpu.get_vendor():
+            for line in cpu_info.splitlines():
+                if 'cpu family' in line:
+                    self.family = int(line.split(':')[1])
+            if self.family == 0x16:
+               self.log.info("AMD Family: 16h")
+               self.generic_events = dict(parser.items('AMD16h'))
+            elif self.family >= 0x17:
+               self.log.info("AMD Family: 17h")
+               self.generic_events = dict(parser.items('AMD17h'))
+            else:
+               self.cancel("Unsupported AMD Family")
 
     def test(self):
         nfail = 0
@@ -56,7 +68,13 @@ class test_generic_events(Test):
             events_file = open(file, "r")
             event_code = events_file.readline()
             val = self.generic_events.get(file, 9)
-            raw_code = event_code.split('=', 2)[1].rstrip()
+            if 'umask' in event_code:
+                self.log.debug("EventCode: %s" % event_code)
+                event = (event_code.split('0x')[1]).rstrip(',umask=')
+                umask = event_code.split('=', 2)[2].rstrip()
+                raw_code = umask + event
+            else:
+                raw_code = event_code.split('=', 2)[1].rstrip()
             self.log.info('FILE in %s is %s' % (dir, file))
             if raw_code != val:
                 nfail += 1
