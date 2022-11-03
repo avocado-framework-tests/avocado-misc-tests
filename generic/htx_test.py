@@ -112,6 +112,11 @@ class HtxTest(Test):
                 self.cancel("Can not install %s" % pkg)
 
         if self.run_type == 'git':
+            if self.detected_distro.name == 'rhel' and \
+                    self.detected_distro.version <= "9":
+                self.cancel("Test not supported in  %s_%s"
+                            % (self.detected_distro.name,
+                               self.detected_distro.version))
             url = "https://github.com/open-power/HTX/archive/master.zip"
             tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')
             archive.extract(tarball, self.teststmpdir)
