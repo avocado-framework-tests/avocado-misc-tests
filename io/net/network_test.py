@@ -191,6 +191,23 @@ class NetworkTest(Test):
                                             options='-f') is not None:
             self.fail("flood ping test failed")
 
+    def test_ipv6_ping(self):
+        '''
+        Ping test with ipv6 addrress
+        '''
+        try:
+            self.networkinterface.get_ipaddrs(version=6)
+        except Exception:
+            self.cancel("IPV6 addrress is not set for host interface")
+        try:
+            peer_ipv6 = self.peer_networkinterface.get_ipaddrs(version=6)
+            if not peer_ipv6[0]:
+                self.cancel("IPV6 addrress is not set for peer interface")
+        except Exception:
+            self.cancel("Test failing while getting IPV6 address for peer interface")
+        if self.networkinterface.ping_check(peer_ipv6[0], count=10) is not None:
+            self.fail("IPV6 ping test failed")
+
     def test_ssh(self):
         '''
         Test ssh
