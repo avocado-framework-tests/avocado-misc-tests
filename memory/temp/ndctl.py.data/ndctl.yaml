@@ -1,0 +1,18 @@
+region: 'region0'
+size: "null"
+map:
+git_branch: 'pending'
+ndctl_project_version: '73'
+preserve_change: True
+mnt_point: '/mnt/pmem'
+fio_job:
+version: !mux
+    upstream:
+        package : 'upstream'
+    distro:
+        package : 'distro'
+mode_types: !mux
+    fsdax:
+        modes: 'fsdax'
+    sector:
+        modes: 'sector'

@@ -1,0 +1,6 @@
+runs: 1
+# NOTE: Specify in MB
+memory: 1024
+# NOTE: Provide page boundary address
+physaddr:
+device:

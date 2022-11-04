@@ -1,0 +1,10 @@
+preserve_dm: False
+mnt_point: '/mnt/pmem'
+fio_job:
+fio_url:
+package:
+split: !mux
+    ns_split:
+        split_ns : True
+    no_split:
+        split_ns : False

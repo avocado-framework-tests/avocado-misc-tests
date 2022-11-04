@@ -1,0 +1,5 @@
+iteration: 1
+stresstime: 10
+vmcount: 4
+iocount: 4
+memratio: 5
