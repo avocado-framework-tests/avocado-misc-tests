@@ -89,6 +89,10 @@ class NetworkVirtualization(Test):
         for slot in self.slot_num:
             if int(slot) < 3 or int(slot) > 2999:
                 self.cancel("Slot invalid. Valid range: 3 - 2999")
+        try:
+            self.original_logport = self.get_active_device_logport(self.slot_num[0])
+        except Exception:
+            self.log.info("Logport available only after interface add")
         self.vios_name = self.params.get("vios_names", '*',
                                          default=None).split(' ')
         self.sriov_port = self.params.get("sriov_ports", '*',
@@ -349,6 +353,16 @@ class NetworkVirtualization(Test):
                 else:
                     self.fail("Could not %s vNIC interface" % operation)
 
+    def change_active_device(self, slot):
+        '''
+        Change active device to original
+        '''
+        current_logport = self.get_active_device_logport(slot)
+        if not self.original_logport == current_logport:
+            self.trigger_failover(current_logport)
+        else:
+            self.log.info("Active device same before and after")
+
     def test_hmcfailover(self):
         '''
         Triggers Failover for the Network virtualized
@@ -412,6 +426,7 @@ class NetworkVirtualization(Test):
                     self.slot_num[0])
                 active_logport = self.get_active_device_logport(
                     self.slot_num[0])
+                backing_dev_priority = self.get_backing_device_priority(self.slot_num[0])
                 if self.enable_auto_failover():
                     if not self.change_failover_priority(backing_logport, '1'):
                         self.fail(
@@ -426,6 +441,15 @@ class NetworkVirtualization(Test):
                     networkinterface = NetworkInterface(device, self.local)
                     if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
                         self.fail("Auto failover has effected connectivity")
+                    # set back the priority
+                    if not self.change_failover_priority(active_logport, self.vnic_priority[0]):
+                        self.fail(
+                            "Auto failover tested successfully but fail to set back\
+                             original priority")
+                    if not self.change_failover_priority(backing_logport, backing_dev_priority):
+                        self.fail(
+                            "Auto failover tested successfully but fail to set back\
+                             original priority")
                 else:
                     self.fail("Could not enable auto failover")
         else:
@@ -555,7 +579,6 @@ class NetworkVirtualization(Test):
                     networkinterface.add_ipaddr(device_ip, netmask)
                 except Exception:
                     networkinterface.save(device_ip, netmask)
-                    networkinterface.add_ipaddr(device_ip, netmask)
                 networkinterface.bring_up()
 
                 if not wait.wait_for(networkinterface.is_link_up, timeout=120):
@@ -751,10 +774,11 @@ class NetworkVirtualization(Test):
         '''
         logport = self.get_active_device_logport(slot)
         adapter_id = ''
-        for entry in self.get_backing_devices()[-1].split(','):
+        for entry in self.get_backing_devices().split(','):
             if logport in entry:
                 adapter_id = entry.split('/')[3]
                 port = entry.split('/')[4]
+                self.vnic_priority[0] = entry.split('/')[8]
         if not adapter_id:
             return
         for i in range(0, len(self.backing_adapter_id)):
@@ -927,6 +951,17 @@ class NetworkVirtualization(Test):
                         break
         return logport
 
+    def get_backing_device_priority(self, slot):
+        '''
+        Get the backing device proiority of the vnic interface
+        '''
+        for entry in self.get_backing_devices().split(','):
+            logport = self.get_backing_device_logport(slot)
+            if logport in entry:
+                backing_dev_prio = entry.split('/')[8]
+                break
+        return backing_dev_prio
+
     def is_backing_device_active(self, slot):
         '''
         TO check the status of the backing device
@@ -979,9 +1014,13 @@ class NetworkVirtualization(Test):
             self.fail("test failed,check dmesg log in debug log")
 
     def tearDown(self):
-        self.session_hmc.quit()
         if 'vios' in str(self.name.name):
             self.session.quit()
+        try:
+            self.change_active_device(self.slot_num[0])
+        except Exception:
+            self.log.debug("Unable to set back the original active device")
+        self.session_hmc.quit()
         cmd = "echo 'module ibmvnic -pt; func send_subcrq -pt' > /sys/kernel/debug/dynamic_debug/control"
         result = process.run(cmd, shell=True, ignore_status=True)
         if result.exit_status:
