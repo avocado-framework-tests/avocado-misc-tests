@@ -46,9 +46,9 @@ report: !mux
         input_full:
                 report_method: --input
         vmlinux:
-                report_method: -k /boot/vmlinux
+                report_method: -k
         vmlinux_full:
-                report_method: --vmlinux /boot/vmlinux
+                report_method: --vmlinux
         node-info:
                 report_method: -N
         node-info_full:

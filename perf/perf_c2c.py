@@ -16,7 +16,6 @@
 
 import os
 import platform
-import tempfile
 from avocado import Test
 from avocado.utils import distro, process
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -63,9 +62,6 @@ class perf_c2c(Test):
         else:
             self.cancel('perf c2c is not available')
 
-        # Creating temporary file to collect the perf.data
-        self.temp_file = tempfile.NamedTemporaryFile().name
-
         # Getting the parameters from yaml file
         self.record = self.params.get('record_method', default='')
         self.report = self.params.get('report_method', default='')
@@ -92,15 +88,19 @@ class perf_c2c(Test):
         # When input is used for report, then need to pass the file argument
         # to the same file, record should log the data. So altering record,
         # report options to have the proper arguments.
+        output_file = "perf.data"
         if self.report == "-i":
-            self.report = "-i %s" % self.temp_file
-            self.record = self.record + " -o %s" % self.temp_file
+            self.report = "-i %s" % output_file
         elif self.report == "--input":
-            self.report = "--input=%s" % self.temp_file
-            self.record = self.record + " -o %s" % self.temp_file
+            self.report = "--input=%s" % output_file
+        elif self.report in ['-k', '--vmlinux']:
+            if self.distro_name in ['rhel', 'fedora', 'centos']:
+                self.report = self.report + " /boot/vmlinuz-" + platform.uname()[2]
+            elif self.distro_name in ['SuSE', 'Ubuntu']:
+                self.report = self.report + " /boot/vmlinux-" + platform.uname()[2]
 
         # Record command
-        record_cmd = "perf c2c record %s -- ls" % self.record
+        record_cmd = "perf c2c record -o %s %s -- ls" % (output_file, self.record)
         self.run_cmd(record_cmd)
         # Report command
         report_cmd = "perf c2c report %s" % self.report
@@ -110,5 +110,7 @@ class perf_c2c(Test):
 
     def tearDown(self):
         # Delete the temporary file
-        if os.path.isfile(self.temp_file):
-            process.run('rm -f %s' % self.temp_file)
+        if os.path.isfile("perf.data"):
+            process.run('rm -f perf.data')
+        if os.path.isfile("perf.data.old"):
+            process.run('rm -f perf.data.old')
