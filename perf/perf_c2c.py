@@ -17,7 +17,7 @@
 import os
 import platform
 from avocado import Test
-from avocado.utils import distro, process
+from avocado.utils import distro, process, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -68,15 +68,7 @@ class perf_c2c(Test):
 
         # Clear the dmesg, by that we can capture the delta at the end of the
         # test.
-        process.run("dmesg -C", sudo=True)
-
-    def verify_dmesg(self):
-        self.whiteboard = process.system_output("dmesg").decode("utf-8")
-        pattern = ['WARNING: CPU:', 'Oops',
-                   'Segfault', 'soft lockup', 'Unable to handle']
-        for fail_pattern in pattern:
-            if 'fail_pattern' in self.whiteboard:
-                self.fail("Test Failed : %s in dmesg" % fail_pattern)
+        dmesg.clear_dmesg()
 
     def run_cmd(self, cmd):
         try:
@@ -106,7 +98,8 @@ class perf_c2c(Test):
         report_cmd = "perf c2c report %s" % self.report
         self.run_cmd(report_cmd)
         # Verify dmesg
-        self.verify_dmesg()
+        dmesg.collect_errors_dmesg(['WARNING: CPU:', 'Oops', 'Segfault',
+                                    'soft lockup', 'Unable to handle'])
 
     def tearDown(self):
         # Delete the temporary file
