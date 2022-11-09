@@ -65,11 +65,6 @@ class NetworkTest(Test):
         self.netmask = self.params.get("netmask", default="")
         self.ip_config = self.params.get("ip_config", default=True)
         self.hbond = self.params.get("hbond", default=False)
-        for root, dirct, files in os.walk("/root/.ssh"):
-            for file in files:
-                if file.startswith("avocado-master-root"):
-                    path = os.path.join(root, file)
-                    os.remove(path)
         local = LocalHost()
         if self.hbond:
             self.networkinterface = NetworkInterface(self.iface, local, if_type='Bond')
@@ -95,6 +90,7 @@ class NetworkTest(Test):
         if 'scp' or 'ssh' in str(self.name.name):
             self.session = Session(self.peer, user=self.peer_user,
                                    password=self.peer_password)
+            self.session.cleanup_master()
             if not self.session.connect():
                 self.cancel("failed connecting to peer")
         self.remotehost = RemoteHost(self.peer, self.peer_user,

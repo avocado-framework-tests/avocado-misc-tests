@@ -132,11 +132,6 @@ class Bonding(Test):
         self.peer_wait_time = self.params.get("peer_wait_time", default=5)
         self.sleep_time = int(self.params.get("sleep_time", default=5))
         self.mtu = self.params.get("mtu", default=1500)
-        for root, dirct, files in os.walk("/root/.ssh"):
-            for file in files:
-                if file.startswith("avocado-master-"):
-                    path = os.path.join(root, file)
-                    os.remove(path)
         self.ib = False
         if self.host_interface[0:2] == 'ib':
             self.ib = True
@@ -154,6 +149,7 @@ class Bonding(Test):
             self.session = Session(self.peer_first_ipinterface[0], user=self.user,
                                    password=self.password)
 
+        self.session.cleanup_master()
         if not self.session.connect():
             '''
             LACP bond interface takes some time to get it to ping peer after it
