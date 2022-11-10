@@ -283,7 +283,7 @@ class VirtualFC(Test):
                                    " % (operation, vfc_client, status))
                     return True
                 else:
-                    self.log.info("opertion:%s host:%s status=%s return:False \
+                    self.log.info("operation:%s host:%s status=%s return:False \
                                    " % (operation, vfc_client, status))
                     return False
 
@@ -298,7 +298,8 @@ class VirtualFC(Test):
         '''
         verify the vfc slot/rdc_name exists in HMC
         '''
-        self.log.info("verifying % status after its %s" % (vfchost, operation))
+        self.log.info("verifying %s status after its %s" %
+                      (vfchost, operation))
 
         def status_check():
             vfchost_status = self.get_vfchost_status(vfchost, vios_name)
@@ -351,7 +352,7 @@ class VirtualFC(Test):
                                    " % (operation, self.path, path_stat))
                     return True
             else:
-                self.log.info("Operation unknown, provide correct opertion")
+                self.log.info("Operation unknown, provide correct operation")
 
         for path in paths:
             self.path = path

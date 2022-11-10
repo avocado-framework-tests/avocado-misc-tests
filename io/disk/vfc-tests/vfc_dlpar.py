@@ -222,7 +222,7 @@ class VirtualFC(Test):
                       vfc_dic["r_lpar"], vfc_dic["r_slot"], vfc_dic["wwpn"])
         else:
             cmd = 'chhwres -r virtualio -m %s -o r -p %s  -s %s' \
-                   % (self.server, self.lpar, vfc_dic["c_slot"])
+                % (self.server, self.lpar, vfc_dic["c_slot"])
 
         output = self.session.cmd(cmd)
         if output.exit_status != 0:
@@ -249,9 +249,11 @@ class VirtualFC(Test):
                 err_slot.append(c_slot)
 
         if err_slot:
-            self.fail("HMC verifction fail for %s: %s" % (drc_name, operation))
+            self.fail("HMC verification fail for %s: %s" %
+                      (drc_name, operation))
         else:
-            self.log.info("HMC verfction succes %s:%s" % (drc_name, operation))
+            self.log.info("HMC verification success %s:%s" %
+                          (drc_name, operation))
 
     def linux_name_verification_host(self, operation, drc_name):
         '''
@@ -267,9 +269,11 @@ class VirtualFC(Test):
                 err_slot.append(drc_name)
 
         if err_slot:
-            self.fail("Host verifction fail for %s:%s" % (drc_name, operation))
+            self.fail("Host verification fail for %s:%s" %
+                      (drc_name, operation))
         else:
-            self.log.info("Host verfction suces %s:%s" % (drc_name, operation))
+            self.log.info("Host verification success %s:%s" %
+                          (drc_name, operation))
 
     def mpath_verification(self, operation, paths, drc):
         '''
@@ -289,9 +293,10 @@ class VirtualFC(Test):
                     err_paths.append(path)
 
         if err_paths:
-            self.fail("path verfction failed for drc %s:%s" % (drc, err_paths))
+            self.fail("path verification failed for drc %s:%s" %
+                      (drc, err_paths))
         else:
-            self.log.info("path verfction success for drc :%s" % drc)
+            self.log.info("path verification success for drc :%s" % drc)
 
     def tearDown(self):
         '''
