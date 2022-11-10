@@ -165,3 +165,34 @@ class CpupowerMonitor(Test):
         self.test_disable_idlestate()
         process.run('ppc64_cpu --cores-on=all', shell=True)
         process.run('ppc64_cpu --smt=on', shell=True)
+
+    def test_idle_info(self):
+
+        """
+        This test verifies cpupower idle-info with different smt states.
+        Prints the duration for which CPU is in snooze and CEDE state.
+        """
+
+        process.run('cpupower -c all idle-info', shell=True)
+        for i in [1,2,4]:
+            process.run('ppc64_cpu --smt=%s' % i, shell=True)
+            process.run('ppc64_cpu --smt', shell=True)
+            output = process.system_output('cpupower -c %s idle-info | grep offline' % i, shell=True).split()
+            if "offline" not in str(output[1]):
+                self.fail("cpupower tool verification with smt=%s failed" % i)
+        process.run('ppc64_cpu --smt=on', shell=True)
+        process.run('ppc64_cpu --cores-on=1', shell=True)
+        process.run('cpupower -c all idle-info', shell=True)
+        process.run('ppc64_cpu --cores-on=all', shell=True)
+        process.run('cpupower -c all idle-info', shell=True)
+        self.nr_cpus = process.system_output("lscpu | grep ^'CPU(s):'", shell=True).split()
+        for i in range(int(self.nr_cpus[1])):
+            duration_init = process.system_output('cpupower -c %s idle-info | grep Duration' % i, shell=True).split()
+            time.sleep(5)
+            duration_final = process.system_output('cpupower -c %s idle-info | grep Duration' % i, shell=True).split()
+            duration_snooze = int(duration_final[1]) - int(duration_init[1])
+            self.log.info("CPU%s has entered snooze state for %s microseconds in 2 seconds" % (i, duration_snooze))
+            duration_CEDE = int(duration_final[3]) - int(duration_init[3])
+            self.log.info("CPU%s has entered CEDE state for %s microseconds in 2 seconds" % (i, duration_CEDE))
+            if (duration_snooze == 0) and (duration_CEDE == 0):
+                self.fail("CPU%s has not entered snooze or CEDE state even in idle state" % i)
