@@ -20,6 +20,9 @@ HTX Test
 
 import os
 import time
+import shutil
+import re
+
 from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import build
@@ -52,7 +55,11 @@ class HtxTest(Test):
         self.time_limit = int(self.params.get('time_limit', default=1)) * 60
         self.block_devices = self.params.get('htx_disks', default=None)
         self.all = self.params.get('all', default=False)
+        self.run_type = self.params.get('run_type', default='')
 
+        self.detected_distro = distro.detect()
+        self.dist_name = self.detected_distro.name
+        self.dist_version = self.detected_distro.version
         if not self.all and self.block_devices is None:
             self.cancel("Needs the block devices to run the HTX")
         if self.all:
@@ -68,38 +75,82 @@ class HtxTest(Test):
         Builds HTX
         """
         packages = ['git', 'gcc', 'make']
-        detected_distro = distro.detect().name
-        if detected_distro in ['centos', 'fedora', 'rhel', 'redhat']:
+        if self.dist_name in ['centos', 'fedora', 'rhel', 'redhat']:
             packages.extend(['gcc-c++', 'ncurses-devel', 'tar'])
-        elif detected_distro == "Ubuntu":
+        elif self.dist_name == "Ubuntu":
             packages.extend(['libncurses5', 'g++', 'ncurses-dev',
                              'libncurses-dev', 'tar'])
-        elif detected_distro == 'SuSE':
+        elif self.dist_name == 'SuSE':
             packages.extend(['libncurses5', 'gcc-c++', 'ncurses-devel', 'tar'])
         else:
-            self.cancel("Test not supported in  %s" % detected_distro)
+            self.cancel("Test not supported in  %s" % self.detected_distro)
 
         smm = SoftwareManager()
         for pkg in packages:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("Can not install %s" % pkg)
 
-        url = "https://github.com/open-power/HTX/archive/master.zip"
-        tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')
-        archive.extract(tarball, self.teststmpdir)
-        htx_path = os.path.join(self.teststmpdir, "HTX-master")
-        os.chdir(htx_path)
+        if self.run_type == 'git':
+            url = "https://github.com/open-power/HTX/archive/master.zip"
+            tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')
+            archive.extract(tarball, self.teststmpdir)
+            htx_path = os.path.join(self.teststmpdir, "HTX-master")
+            os.chdir(htx_path)
 
-        exercisers = ["hxecapi_afu_dir", "hxedapl", "hxecapi", "hxeocapi"]
-        for exerciser in exercisers:
-            process.run("sed -i 's/%s//g' %s/bin/Makefile" % (exerciser,
-                                                              htx_path))
-        build.make(htx_path, extra_args='all')
-        build.make(htx_path, extra_args='tar')
-        process.run('tar --touch -xvzf htx_package.tar.gz')
-        os.chdir('htx_package')
-        if process.system('./installer.sh -f'):
-            self.fail("Installation of htx fails:please refer job.log")
+            exercisers = ["hxecapi_afu_dir", "hxedapl", "hxecapi", "hxeocapi"]
+            for exerciser in exercisers:
+                process.run("sed -i 's/%s//g' %s/bin/Makefile" % (exerciser,
+                                                                  htx_path))
+            build.make(htx_path, extra_args='all')
+            build.make(htx_path, extra_args='tar')
+            process.run('tar --touch -xvzf htx_package.tar.gz')
+            os.chdir('htx_package')
+            if process.system('./installer.sh -f'):
+                self.fail("Installation of htx fails:please refer job.log")
+        else:
+            if self.dist_name.lower() == 'suse':
+                self.dist_name = 'sles'
+            rpm_check = "htx%s%s" % (self.dist_name, self.dist_version)
+            skip_install = False
+            ins_htx = process.system_output(
+                'rpm -qa | grep htx', shell=True, ignore_status=True).decode()
+
+            if ins_htx:
+                if not smm.check_installed(rpm_check):
+                    self.log.info("Clearing existing HTX rpm")
+                    process.system('rpm -e %s' %
+                                   ins_htx, shell=True, ignore_status=True)
+                    if os.path.exists('/usr/lpp/htx'):
+                        shutil.rmtree('/usr/lpp/htx')
+                else:
+                    self.log.info("Using existing HTX")
+                    skip_install = True
+            if not skip_install:
+                self.rpm_link = self.params.get('rpm_link', default=None)
+                if self.rpm_link:
+                    self.install_htx_rpm()
+
+    def install_htx_rpm(self):
+        """
+        Search for the latest htx-version for the intended distro and
+        install the same.
+        """
+        distro_pattern = "%s%s" % (self.dist_name, self.dist_version)
+        temp_string = process.getoutput(
+            "curl --silent %s" % (self.rpm_link),
+            verbose=False, shell=True, ignore_status=True)
+        matching_htx_versions = re.findall(
+            r"(?<=\>)htx\w*[-]\d*[-]\w*[.]\w*[.]\w*", str(temp_string))
+        distro_specific_htx_versions = [
+            htx_rpm for htx_rpm in matching_htx_versions
+            if distro_pattern in htx_rpm]
+        distro_specific_htx_versions.sort(reverse=True)
+        self.latest_htx_rpm = distro_specific_htx_versions[0]
+
+        if process.system('rpm -ivh --nodeps %s%s '
+                          '--force' % (self.rpm_link, self.latest_htx_rpm),
+                          shell=True, ignore_status=True):
+            self.cancel("Installion of rpm failed")
 
     def test_start(self):
         """
@@ -217,6 +268,7 @@ class HtxTest(Test):
             cmd = "htxcmdline -shutdown -mdt %s" % self.mdt_file
             process.system(cmd, timeout=120, ignore_status=True)
 
-        daemon_state = process.system_output('/etc/init.d/htx.d status')
+        cmd = '/usr/lpp/htx/etc/scripts/htx.d status'
+        daemon_state = process.system_output(cmd)
         if daemon_state.decode("utf-8").split(" ")[-1] == 'running':
             process.system('/usr/lpp/htx/etc/scripts/htxd_shutdown')
