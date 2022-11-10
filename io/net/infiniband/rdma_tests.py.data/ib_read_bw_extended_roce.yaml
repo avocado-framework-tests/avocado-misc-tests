@@ -28,8 +28,8 @@ test_opt: !mux
         test_opt: -l 4
     -c_RC:
         test_opt: -c RC
-    --burst_size=2G_--rate_limit=10:
-        test_opt: --burst_size=2G --rate_limit=10
+    --burst_size=2147483647_--rate_limit=10:
+        test_opt: --burst_size=2147483647 --rate_limit=10
     -R:
         test_opt: -R
     -R_-a:
