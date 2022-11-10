@@ -159,6 +159,8 @@ class NetworkSriovDevice(Test):
             if not self.list_device(mac):
                 self.fail("failed to list logical device after add operation")
             device = self.find_device(mac)
+            if not device:
+                self.fail("MAC address differs in linux")
             networkinterface = NetworkInterface(device, self.local)
             networkinterface.add_ipaddr(ipaddr, netmask)
             networkinterface.bring_up()
