@@ -19,22 +19,24 @@ Test the different tools
 """
 
 from avocado import Test
-from avocado.utils import process
+from avocado.utils import process, distro
 from avocado.utils import pci
 from avocado.utils.software_manager.manager import SoftwareManager
 
+release = "%s%s" % (distro.detect().name, distro.detect().version)
 
 class DisrtoTool(Test):
     '''
     to test different type of tool
     '''
-
     def setUp(self):
         '''
         get all parameters
         '''
         self.option = self.params.get("test_opt", default='')
         self.tool = self.params.get("tool", default='')
+        if 'netstat' in self.tool and "SuSE15" in release:
+            self.cancel("netstat tool is deprecated now on SLES15")
         self.warn_msg = self.params.get("warn_msg", default='')
         self.pci_device = self.params.get("pci_device", default=None)
 
