@@ -16,7 +16,10 @@
 
 from avocado import Test
 from avocado.utils import process
+from avocado import skipIf
 from avocado.utils.software_manager.manager import SoftwareManager
+
+IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
 
 
 class RASToolsPpcdiag(Test):
@@ -64,6 +67,7 @@ class RASToolsPpcdiag(Test):
             self.fail("%s command(s) failed to execute  "
                       % self.fail_cmd)
 
+    @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_usysattn(self):
         """
         View and manipulate the system attention and fault indicators (LEDs)
@@ -78,6 +82,7 @@ class RASToolsPpcdiag(Test):
             self.fail("%s command(s) failed to execute  "
                       % self.fail_cmd)
 
+    @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_usysfault(self):
         """
         View and manipulate the system attention and fault indicators (LEDs)
@@ -92,6 +97,7 @@ class RASToolsPpcdiag(Test):
             self.fail("%s command(s) failed to execute  "
                       % self.fail_cmd)
 
+    @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_usysident(self):
         """
         This tests to turn on device identify indicators and other help
