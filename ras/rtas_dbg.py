@@ -34,7 +34,8 @@ class rtas_dbg(Test):
             self.cancel("Fail to install required 'powerpc-utils' package")
 
     def test_rtas_dbg(self):
-        lists = self.params.get('list', default=['-l', '-l 14', '-l get-power-level'])
+        lists = self.params.get('list', default=['-l', '-l 14',
+                                                 '-l get-power-level'])
         for list_item in lists:
             cmd = "rtas_dbg %s" % list_item
             if process.system(cmd, ignore_status=True, sudo=True):
