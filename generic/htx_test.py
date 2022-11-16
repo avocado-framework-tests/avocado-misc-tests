@@ -216,6 +216,7 @@ class HtxTest(Test):
                 '/usr/lpp/htx/etc/scripts/htxd_shutdown', ignore_status=True)
             process.system('umount /htx_pmem*', shell=True, ignore_status=True)
         else:
-            daemon_state = process.system_output('/etc/init.d/htx.d status')
+            cmd = '/usr/lpp/htx/etc/scripts/htx.d status'
+            daemon_state = process.system_output(cmd)
             if daemon_state.decode().split(" ")[-1] == 'running':
                 process.system('/usr/lpp/htx/etc/scripts/htxd_shutdown')
