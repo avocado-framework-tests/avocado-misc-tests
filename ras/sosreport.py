@@ -24,6 +24,8 @@ from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils.software_manager.manager import SoftwareManager
 
+IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
+
 
 class Sosreport(Test):
 
@@ -286,6 +288,60 @@ class Sosreport(Test):
                              (self.sos_cmd, directory_name))
             else:
                 self.is_fail += 1
+        if self.is_fail >= 1:
+            self.fail(
+                "%s command(s) failed in sosreport tool verification" % self.is_fail)
+
+    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
+    def test_dlpar_cpu_hotplug(self):
+        """
+        Test the sos report after cpu hotplug
+        """
+        directory_name = tempfile.mkdtemp()
+        self.is_fail = 0
+        self.run_cmd("ppc64_cpu --smt=on")
+        if "cpu_dlpar=yes" in process.system_output("drmgr -C",
+                                                    ignore_status=True,
+                                                    shell=True).decode("utf-8"):
+            lcpu_count = self.run_cmd_out("lparstat -i | "
+                                          "grep \"Online Virtual CPUs\" | "
+                                          "cut -d':' -f2")
+            if lcpu_count:
+                lcpu_count = int(lcpu_count)
+                if lcpu_count >= 2:
+                    self.run_cmd("drmgr -c cpu -r 1")
+                    self.run_cmd("drmgr -c cpu -a 1")
+                    self.run_cmd("%s --batch --tmp-dir=%s --all-logs" %
+                                 (self.sos_cmd, directory_name))
+                else:
+                    self.is_fail += 1
+        if self.is_fail >= 1:
+            self.fail(
+                "%s command(s) failed in sosreport tool verification" % self.is_fail)
+
+    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
+    def test_dlpar_mem_hotplug(self):
+        """
+        Test the sos report after mem hotplug
+        """
+        directory_name = tempfile.mkdtemp()
+        self.is_fail = 0
+        if "mem_dlpar=yes" in process.system_output("drmgr -C",
+                                                    ignore_status=True,
+                                                    shell=True).decode("utf-8"):
+            mem_value = self.run_cmd_out("lparstat -i | "
+                                       "grep \"Online Memory\" | "
+                                       "cut -d':' -f2")
+            mem_count = re.split(r'\s', mem_value)[1]
+            if mem_count:
+                mem_count = int(mem_count)
+                if mem_count > 512000:
+                    self.run_cmd("drmgr -c mem -r 2")
+                    self.run_cmd("drmgr -c mem -a 2")
+                    self.run_cmd("%s --batch --tmp-dir=%s --all-logs" %
+                                 (self.sos_cmd, directory_name))
+                else:
+                    self.is_fail += 1
         if self.is_fail >= 1:
             self.fail(
                 "%s command(s) failed in sosreport tool verification" % self.is_fail)
