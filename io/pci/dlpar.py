@@ -19,8 +19,6 @@
 DLPAR operations
 """
 
-import os
-import shutil
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import distro
@@ -49,7 +47,7 @@ class DlparPci(Test):
         self.hmc_ip = self.get_mcp_component("HMCIPAddr")
         if not self.hmc_ip:
             self.cancel("HMC IP not got")
-        self.hmc_user = self.params.get("hmc_username", default='hscroot')
+        self.hmc_user = self.params.get("hmc_username", default='*******')
         self.hmc_pwd = self.params.get("hmc_pwd", '*', default='********')
         self.sriov = self.params.get("sriov", default="no")
         self.lpar_1 = self.get_partition_name("Partition Name")
@@ -154,15 +152,6 @@ class DlparPci(Test):
         for pkg in packages:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel('%s is needed for the test to be run' % pkg)
-        if detected_distro.name == "Ubuntu":
-            ubuntu_url = self.params.get('ubuntu_url', default=None)
-            debs = self.params.get('debs', default=None)
-            for deb in debs:
-                deb_url = os.path.join(ubuntu_url, deb)
-                deb_install = self.fetch_asset(deb_url, expire='7d')
-                shutil.copy(deb_install, self.workdir)
-                process.system("dpkg -i %s/%s" % (self.workdir, deb),
-                               ignore_status=True, sudo=True)
 
     def rsct_service_start(self):
         '''
