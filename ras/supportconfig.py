@@ -18,9 +18,12 @@ import os
 import re
 import shutil
 from avocado import Test
+from avocado import skipIf
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils.software_manager.manager import SoftwareManager
+
+IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 
 
 class Supportconfig(Test):
@@ -152,6 +155,60 @@ class Supportconfig(Test):
                 process.run("supportconfig", sudo=True, ignore_status=True)
             else:
                 self.is_fail += 1
+        if self.is_fail >= 1:
+            self.fail(
+                "%s command(s) failed in sosreport tool verification" % self.is_fail)
+
+    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
+    def test_dlpar_cpu_hotplug(self):
+        """
+        Test the supportconfig after cpu hotplug
+        """
+        self.is_fail = 0
+        process.run("ppc64_cpu --smt=on")
+        if "cpu_dlpar=yes" in process.system_output("drmgr -C",
+                                                    ignore_status=True,
+                                                    shell=True).decode("utf-8"):
+            lcpu_count = process.system_output("lparstat -i | "
+                                               "grep \"Online Virtual CPUs\" | "
+                                               "cut -d':' -f2", 
+                                               ignore_status=True,
+                                               shell=True).decode("utf-8")
+            if lcpu_count:
+                lcpu_count = int(lcpu_count)
+                if lcpu_count >= 2:
+                    process.run("drmgr -c cpu -r 1")
+                    process.run("drmgr -c cpu -a 1")
+                    process.run("supportconfig", sudo=True, ignore_status=True)
+                else:
+                    self.is_fail += 1
+        if self.is_fail >= 1:
+            self.fail(
+                "%s command(s) failed in sosreport tool verification" % self.is_fail)
+
+    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
+    def test_dlpar_mem_hotplug(self):
+        """
+        Test the supportconfig after mem hotplug
+        """
+        self.is_fail = 0
+        if "mem_dlpar=yes" in process.system_output("drmgr -C",
+                                                    ignore_status=True,
+                                                    shell=True).decode("utf-8"):
+            mem_value = process.system_output("lparstat -i | "
+                                              "grep \"Online Memory\" | "
+                                              "cut -d':' -f2",
+                                              ignore_status=True,
+                                              shell=True).decode("utf-8")
+            mem_count = re.split(r'\s', mem_value)[1]
+            if mem_count:
+                mem_count = int(mem_count)
+                if mem_count > 512000:
+                    process.run("drmgr -c mem -r 2")
+                    process.run("drmgr -c mem -a 2")
+                    process.run("supportconfig", sudo=True, ignore_status=True)
+                else:
+                    self.is_fail += 1
         if self.is_fail >= 1:
             self.fail(
                 "%s command(s) failed in sosreport tool verification" % self.is_fail)
