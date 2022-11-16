@@ -2,5 +2,5 @@ interface:
 host_ip: 
 netmask: 
 peer_ip: 
-pci_device: 
-
+pci_device:  
+ping_count: 
