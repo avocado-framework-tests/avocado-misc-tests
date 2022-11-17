@@ -20,13 +20,14 @@ This scripts basic EEH tests on all PCI device
 """
 
 import time
+import re
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import pci
 from avocado.utils import genio
 from avocado.utils import distro
 from avocado.utils import dmesg
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils.software_manager.manager import SoftwareManager
 
 EEH_HIT = 0
 EEH_MISS = 1
@@ -63,7 +64,22 @@ class EEH(Test):
         eeh_enable_file = "/sys/kernel/debug/powerpc/eeh_enable"
         if '0x1' not in genio.read_file(eeh_enable_file).strip():
             self.cancel("EEH is not enabled, please enable via FSP")
-        self.max_freeze = self.params.get('max_freeze', default=1)
+        self.max_freeze = self.params.get('max_freeze')
+        self.log.info('Reading max supported freeze from file eeh_max_freezes')
+        self.max_supported_freeze = int(process.system_output(
+            'cat /sys/kernel/debug/powerpc/eeh_max_freezes'))
+        if self.max_freeze is None:
+            self.max_freeze = self.max_supported_freeze
+            dmesg_op = process.system_output('dmesg',
+                                             ignore_status=True,
+                                             shell=True).decode("utf-8")
+            if 'times in the last hour' in dmesg_op:
+                eeh_already_hit = re.findall(r"This PCI device has failed "
+                                             "([0-9]+) times in the last hour and will be "
+                                             "permanently disabled after ([0-9]+) failures", dmesg_op)
+                self.log.info('max_freeze value is adjusted as %s eeh hits'
+                              ' already observed', eeh_already_hit[-1][0])
+                self.max_freeze -= int(eeh_already_hit[-1][0])
         self.pci_device = self.params.get('pci_device', default="")
         self.add_cmd = self.params.get('additional_command', default='')
         if not self.pci_device:
@@ -110,6 +126,14 @@ class EEH(Test):
                 self.log.info("Running error inject on pe %s function %s",
                               self.pci_device, func)
                 if num_of_miss < 5:
+                    if self.pci_class_name == 'scsi_host':
+                        paths_before_eeh = self.get_paths(self.pci_device)
+                        host_state_before_eeh = pci.get_port_state(
+                            self.pci_device)
+                        self.log.info("Paths before EEH: %s",
+                                      paths_before_eeh)
+                        self.log.info("hosts state before EEH: %s",
+                                      host_state_before_eeh)
                     if self.is_baremetal():
                         return_code = self.basic_eeh(func, '', '', '', '', '')
                     else:
@@ -134,6 +158,22 @@ class EEH(Test):
                                 break
                             else:
                                 self.log.info("PE recovered successfully")
+                    time.sleep(10)
+                    if (self.pci_class_name == 'scsi_host' and
+                            self.max_freeze >= num_of_hit):
+                        paths_after_eeh = self.get_paths(self.pci_device)
+                        host_state_after_eeh = pci.get_port_state(
+                            self.pci_device)
+                        self.log.info("Paths after EEH: %s",
+                                      paths_after_eeh)
+                        self.log.info("hosts state after EEH: %s",
+                                      host_state_after_eeh)
+                        if paths_before_eeh != paths_after_eeh:
+                            self.fail("All Paths are failed to recover"
+                                      " after EEH")
+                        if host_state_before_eeh != host_state_after_eeh:
+                            self.fail("Hosts state differ after EEH")
+
                 else:
                     self.log.warning("EEH inject failed for 5 times with\
                                function %s" % func)
@@ -261,3 +301,11 @@ class EEH(Test):
         if 'PowerNV' in genio.read_file("/proc/cpuinfo").strip():
             return True
         return False
+
+    def get_paths(self, fc_host):
+        '''
+        returns the list of paths coressponding to the given fc_host
+        '''
+        fc_host = fc_host.split('.')[0]
+        paths = pci.get_disks_in_pci_address(fc_host)
+        return paths

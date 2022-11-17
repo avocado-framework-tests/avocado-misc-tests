@@ -1,3 +1,4 @@
+#max_freeze parameter can be left empty to test complete scenario
 max_freeze: 1 
 function: 4
 err: 
