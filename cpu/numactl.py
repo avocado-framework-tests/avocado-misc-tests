@@ -18,11 +18,8 @@
 
 from email.policy import default
 import os
-import glob
-import re
 import netifaces
 from random import choice
-
 from avocado import Test
 from avocado.utils import archive, build, process, distro, memory, cpu, wait
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -211,7 +208,7 @@ class Numactl(Test):
                                   for i
                                   in nodes if i not in [pci_node_number]]))
             genio.write_file(node_path, str(alter_node))
-            self.log.info(f"NUMA node changed to{alter_node}")
+            self.log.info(f"PCI NUMA node changed to{alter_node}")
 
     def tearDown(self):
         '''
