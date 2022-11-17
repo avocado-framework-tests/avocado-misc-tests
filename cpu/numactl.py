@@ -24,7 +24,7 @@ import netifaces
 from random import choice
 
 from avocado import Test
-from avocado.utils import archive, build, process, distro, memory, cpu
+from avocado.utils import archive, build, process, distro, memory, cpu, wait
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
@@ -75,19 +75,28 @@ class Numactl(Test):
 
         build.make(self.sourcedir)
 
-        interfaces = netifaces.interfaces()
         self.iface = self.params.get("interface", default="")
+        self.ping_count = self.params.get("ping_count", default=100)
+        self.peer = self.params.get("peer_ip", default="")
+        interfaces = netifaces.interfaces()
+        if not self.iface:
+            self.cancel("Please specify interface to be used")
         if self.iface not in interfaces:
             self.cancel("%s interface is not available" % self.iface)
-        local = LocalHost()
-        self.networkinterface = NetworkInterface(self.iface, local)
+        if not self.peer:
+            self.cancel("peer ip should specify in input file")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        self.peer = self.params.get("peer_ip", default="")
-        if not self.peer:
-            self.cancel("No peer provided")
-        if self.networkinterface.is_link_up() is not True:
-            self.cancel("Interface is not up")
+        self.localhost = LocalHost()
+        self.networkinterface = NetworkInterface(self.iface, self.localhost)
+        try:
+            self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        except Exception:
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        self.networkinterface.bring_up()
+        if not wait.wait_for(self.networkinterface.is_link_up, timeout=60):
+            self.cancel("Link up of interface taking longer than 60 seconds")
         if self.networkinterface.ping_check(self.peer, count=5) is not None:
             self.cancel("No connection to peer")
         self.device = self.params.get('pci_device', default="")
@@ -95,7 +104,6 @@ class Numactl(Test):
             self.cancel("PCI_address not given")
         if not os.path.isdir('/sys/bus/pci/devices/%s' % self.device):
             self.cancel("%s not present in device path" % self.device)
-        self.ping_count = self.params.get("ping_count", default=10)
         self.cpu_path = "/sys/devices/system/node/has_cpu"
         if not os.path.exists(self.cpu_path):
             self.cancel("No NUMA nodes have CPU")
@@ -132,7 +140,7 @@ class Numactl(Test):
         To check memory interleave on NUMA nodes.
         '''
         cmd = "numactl --interleave=all ping -I %s %s -c %s -f"\
-              % (self.iface, self.ipaddr, self.ping_count)
+              % (self.iface, self.peer, self.ping_count)
         self.numa_ping(cmd)
 
     def test_localalloc(self):
@@ -140,7 +148,7 @@ class Numactl(Test):
         Test memory allocation on the current node
         '''
         cmd = "numactl --localalloc ping -I %s %s -c %s -f"\
-              % (self.iface, self.ipaddr, self.ping_count)
+              % (self.iface, self.peer, self.ping_count)
         self.numa_ping(cmd)
 
     def test_preferred_node(self):
@@ -150,7 +158,7 @@ class Numactl(Test):
         if self.check_numa_nodes():
             self.node_number = [key for key in self.numa_dict.keys()][1]
             cmd = "numactl --preferred=%s  ping -I %s %s -c %s -f" \
-                % (self.node_number, self.iface, self.ipaddr, self.ping_count)
+                % (self.node_number, self.iface, self.peer, self.ping_count)
             self.numa_ping(cmd)
 
     def test_cpunode_with_membind(self):
@@ -173,7 +181,7 @@ class Numactl(Test):
                       "ping -I %s %s -c %s -f" % (cpu,
                                                   self.membind_node_number,
                                                   self.iface,
-                                                  self.ipaddr,
+                                                  self.peer,
                                                   self.ping_count)
                 self.numa_ping(cmd)
 
@@ -195,17 +203,25 @@ class Numactl(Test):
         '''
         if self.check_numa_nodes():
             nodes = [node for node in self.numa_dict.keys()]
-            pci_node_number = process.system_output(
-                'cat /sys/bus/pci/devices/%s/numa_node' % self.device)
-            node_path = ('/sys/bus/pci/devices/%s/numa_node' % self.device)
+            pci_node_number = genio.read_file(
+                                              "/sys/bus/pci/devices/%s/"
+                                              "numa_node" % self.device)
+            node_path = '/sys/bus/pci/devices/%s/numa_node' % self.device
             alter_node = (choice([i
                                   for i
                                   in nodes if i not in [pci_node_number]]))
-            output = process.run('echo %s > %s' % (alter_node, node_path),
-                                 shell=True, ignore_status=True)
-            if output.exit_status != 0:
-                self.fail("Failed to assign the NUMA nodes to PCI,"
-                          "please check the logs")
-            else:
-                self.log.info(f"Assigned PCI from numa node {pci_node_number} \
-                    to {alter_node} sucessfully")
+            genio.write_file(node_path, str(alter_node))
+            self.log.info(f"NUMA node changed to{alter_node}")
+
+    def tearDown(self):
+        '''
+        Cleaning up Host IP address
+        '''
+        if self.networkinterface:
+            self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+            try:
+                self.networkinterface.restore_from_backup()
+            except Exception:
+                self.networkinterface.remove_cfg_file()
+                self.log.info("backup file not availbale,"
+                              "could not restore file.")
