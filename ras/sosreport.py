@@ -18,9 +18,11 @@ import os
 import re
 import tempfile
 import shutil
+from threading import Thread
+
 from avocado import Test
 from avocado import skipIf
-from avocado.utils import process
+from avocado.utils import process, cpu, genio
 from avocado.utils import distro
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -345,3 +347,18 @@ class Sosreport(Test):
         if self.is_fail >= 1:
             self.fail(
                 "%s command(s) failed in sosreport tool verification" % self.is_fail)
+
+    def test(self):
+        workload_thread = Thread(target=self.run_workload)
+        workload_thread.start()
+        sos_thread = Thread(target=self.test_user)
+        sos_thread.start()
+        workload_thread.join()
+        sos_thread.join()
+
+    def run_workload(self):
+        online_cpus = cpu.online_list()[1:]
+        for i in online_cpus:
+            cpu_file = "/sys/bus/cpu/devices/cpu%s/online" % i
+            genio.write_one_line(cpu_file, "0")
+            genio.write_one_line(cpu_file, "1")
