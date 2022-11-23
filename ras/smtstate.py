@@ -27,6 +27,7 @@ class smtstate_tool(Test):
     def setUp(self):
 
         sm = SoftwareManager()
+        self.time_in_minutes = self.params.get('time_in_minutes', default=5)
         self.detected_distro = distro.detect()
         if not sm.check_installed("powerpc-utils") and \
                 not sm.install("powerpc-utils"):
@@ -67,3 +68,30 @@ class smtstate_tool(Test):
                     self.log.info("SMT load is successful for SMT=%s" % j)
                 else:
                     self.fail("smt load failed")
+
+    def test_smt_state_switching(self):
+        """
+        Test to check the time taken for switching between different
+        SMT levels. The time taken in general cases should not exceed
+        beyond 5 minutes.
+        """
+        process.system("ppc64_cpu --smt=on")
+
+        for i in [0, 1, 2, 4]:
+            if i == 0:
+                cmd_output = process.run(
+                    "/usr/bin/time -p ppc64_cpu --smt off", shell=True,
+                    sudo=True)
+            elif i == 1:
+                cmd_output = process.run(
+                    "/usr/bin/time -p ppc64_cpu --smt on", shell=True,
+                    sudo=True)
+            else:
+                cmd_output = process.run(
+                    "/usr/bin/time -p ppc64_cpu --smt %s", i,
+                    shell=True, sudo=True)
+
+            if (int(cmd_output.duration) > self.time_in_minutes):
+                self.fail("FAIL: SMT has taken longer than expected")
+            else:
+                self.log.info("Test Passed")
