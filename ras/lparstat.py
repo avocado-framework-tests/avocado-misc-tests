@@ -17,7 +17,10 @@
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import distro
+from avocado import skipIf
 from avocado.utils.software_manager.manager import SoftwareManager
+
+IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
 
 
 class lparstat(Test):
@@ -30,6 +33,7 @@ class lparstat(Test):
     :avocado: tags=ras,ppc64le
     """
 
+    @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def setUp(self):
         sm = SoftwareManager()
         detected_distro = distro.detect()

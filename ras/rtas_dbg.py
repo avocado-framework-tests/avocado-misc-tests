@@ -20,11 +20,13 @@ from avocado.utils.software_manager.manager import SoftwareManager
 from avocado import skipIf
 
 IS_POWER_NV = 'PowerNV' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0')
+IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
 
 
 class rtas_dbg(Test):
 
-    @skipIf(IS_POWER_NV, "This test is supported on PowerVM environment")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is supported only on PowerVM environment")
     def setUp(self):
         sm = SoftwareManager()
         if not sm.check_installed("powerpc-utils") and \
@@ -32,7 +34,8 @@ class rtas_dbg(Test):
             self.cancel("Fail to install required 'powerpc-utils' package")
 
     def test_rtas_dbg(self):
-        lists = self.params.get('list', default=['-l', '-l 14', '-l get-power-level'])
+        lists = self.params.get('list', default=['-l', '-l 14',
+                                                 '-l get-power-level'])
         for list_item in lists:
             cmd = "rtas_dbg %s" % list_item
             if process.system(cmd, ignore_status=True, sudo=True):

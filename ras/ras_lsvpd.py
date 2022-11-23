@@ -157,6 +157,7 @@ class RASToolsLsvpd(Test):
             self.fail("%s command(s) failed in lscfg tool verification"
                       % self.is_fail)
 
+    @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_lsmcode(self):
         """
         lsmcode provides FW version information
@@ -183,7 +184,7 @@ class RASToolsLsvpd(Test):
             self.fail("%s command(s) failed in lsmcode tool verification"
                       % self.is_fail)
 
-    @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST, "Not supported in PowerNV/KVM guest ")
     def test_lsvio(self):
         """
         lsvio lists the virtual I/O adopters and devices
@@ -197,6 +198,7 @@ class RASToolsLsvpd(Test):
             self.fail("%s command(s) failed in lsvio tool verification"
                       % self.is_fail)
 
+    @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_locking_mechanism(self):
         """
         This tests database (vpd.db) locking mechanism when multiple
