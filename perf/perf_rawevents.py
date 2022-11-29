@@ -18,7 +18,7 @@ import os
 import platform
 import shutil
 from avocado import Test
-from avocado.utils import cpu, distro, process, genio
+from avocado.utils import distro, process, genio
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
