@@ -700,7 +700,7 @@ class HtxNicTest(Test):
             self.suspend_all_net_devices_in_peer()
             self.log.info("Shutting down the %s in peer", self.mdt_file)
             try:
-                self.session.cmd(cmd)
+                output = self.session.cmd(cmd)
             except Exception:
                 self.log.info("Unable to shutdown the mdt")
             if not output.exit_status == 0:
