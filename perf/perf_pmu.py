@@ -55,7 +55,8 @@ class PerfBasic(Test):
                 if 'node' in nodefile:
                     filename = os.path.join(nodesysfs, nodefile, 'cpulist')
                     self.node_cpu_dict[nodefile] = genio.read_file(filename)
-                    self.log.info("Nodes and CPU list: %s" % self.node_cpu_dict)
+                    self.log.info("Nodes and CPU list: %s" %
+                                  self.node_cpu_dict)
 
     def setUp(self):
         self.pmu_list = []
@@ -110,7 +111,8 @@ class PerfBasic(Test):
                       "power10": ['mmcr0', 'mmcr1', 'mmcr3', 'mmcra']}
 
         # Check for any missing files according to the model
-        self._check_file_existence(sysfs_dict[self.model], os.listdir(sysfs_file))
+        self._check_file_existence(
+            sysfs_dict[self.model], os.listdir(sysfs_file))
 
         try:
             for filename in glob.glob("%smmcr*" % sysfs_file):
@@ -155,7 +157,8 @@ class PerfBasic(Test):
 
         self._verify_lscpu_sysfs('%ssockets' % sysfs_file, self.psockets)
         self._verify_lscpu_sysfs('%schipspersocket' % sysfs_file, self.pchips)
-        self._verify_lscpu_sysfs('%scoresperchip' % sysfs_file, self.pcorechips)
+        self._verify_lscpu_sysfs('%scoresperchip' %
+                                 sysfs_file, self.pcorechips)
 
         self._create_temp_user()
         user_cmd = "su - test_pmu -c"
@@ -168,7 +171,8 @@ class PerfBasic(Test):
         self._remove_temp_user()
 
         if self.pchips == "1" and self.psockets == "1" and self.pcorechips == "1":
-            output = dmesg.collect_errors_dmesg('rtas error: Error calling get-system-parameter')
+            output = dmesg.collect_errors_dmesg(
+                'rtas error: Error calling get-system-parameter')
             if len(output):
                 self.fail("RTAS error occured")
 
@@ -180,11 +184,13 @@ class PerfBasic(Test):
         if not os.path.isdir(base_dir + event_type):
             self.cancel("sysfs %s folder not found" % event_type)
 
-        sys_fs_events = os.listdir(os.path.join(base_dir, event_type, 'events'))
+        sys_fs_events = os.listdir(
+            os.path.join(base_dir, event_type, 'events'))
         if len(sys_fs_events) < 21:
             self.fail("%s events folder contains less than 21 entries"
                       % event_type)
-        self.log.info("%s events count = %s" % (event_type, len(sys_fs_events)))
+        self.log.info("%s events count = %s" %
+                      (event_type, len(sys_fs_events)))
 
     def test_cpu_event_count(self):
         # This test checks for the sysfs event_source directory and checks for

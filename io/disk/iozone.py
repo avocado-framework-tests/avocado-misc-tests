@@ -444,7 +444,8 @@ class IOZone(Test):
                 if distro.detect().name == 'Ubuntu':
                     if not smm.check_installed("btrfs-tools") and not \
                             smm.install("btrfs-tools"):
-                        self.cancel('btrfs-tools is needed for the test to be run')
+                        self.cancel(
+                            'btrfs-tools is needed for the test to be run')
 
         tarball = self.fetch_asset(self.source_url)
         archive.extract(tarball, self.teststmpdir)

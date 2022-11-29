@@ -22,6 +22,7 @@ class KerelHardConfig(Test):
     Kernel Hardening config options for Linux
     :avocado: tags=privileged,security,hardening
     """
+
     def _check_kernel_config(self, config_option):
         ret = linux_modules.check_kernel_config(config_option)
         if ret == linux_modules.ModuleConfig.NOT_SET:

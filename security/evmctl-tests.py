@@ -25,6 +25,7 @@ class EvmCtl(Test):
     evmctl-testsuite
     :avocado: tags=security,testsuite
     """
+
     def setUp(self):
         '''
         Install the basic packages to support evmctl
@@ -43,7 +44,8 @@ class EvmCtl(Test):
             tarball = self.fetch_asset(name="download.tar.gz",
                                        locations=url, expire='7d')
             archive.extract(tarball, self.workdir)
-            self.srcdir = os.path.join(self.workdir, os.listdir(self.workdir)[0])
+            self.srcdir = os.path.join(
+                self.workdir, os.listdir(self.workdir)[0])
             self.log.info("sourcedir - %s" % self.srcdir)
             os.chdir(self.srcdir)
             output = process.run('./autogen.sh', ignore_status=True)
@@ -61,7 +63,8 @@ class EvmCtl(Test):
         Running tests from evmctl
         '''
         count = 0
-        output = process.system_output('./build.sh', ignore_status=True).decode()
+        output = process.system_output(
+            './build.sh', ignore_status=True).decode()
         for line in reversed(output.splitlines()):
             if '# FAIL' in line:
                 count = int(line.split(":")[1].strip())

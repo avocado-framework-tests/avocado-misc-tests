@@ -99,13 +99,14 @@ class perfNMEM(Test):
         # This function tests whether performance monitor hardware support
         # registered or not. If not found any registered messages in dmesg
         # output this test will fail.
-        output = dmesg.collect_errors_dmesg('NVDIMM performance monitor support registered')
+        output = dmesg.collect_errors_dmesg(
+            'NVDIMM performance monitor support registered')
         if not output:
             self.fail("NVDIMM PMUs not found in dmesg.")
         else:
             for line in output:
                 # Looking for
-                #nvdimm_pmu: nmem0 NVDIMM performance monitor support registered
+                # nvdimm_pmu: nmem0 NVDIMM performance monitor support registered
                 matchFound = re.search(r"nvdimm_pmu: (.*) NVDIMM", line)
                 if matchFound:
                     pmu = matchFound.group(1)

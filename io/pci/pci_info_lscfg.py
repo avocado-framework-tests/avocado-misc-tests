@@ -52,46 +52,46 @@ class PciLscfgInfo(Test):
             self.log.info(cfg_output)
             if cfg_output and pci_info_dict:
                 if 'YL' in cfg_output and 'PhySlot' in pci_info_dict:
-                # Physical Slot Match
+                    # Physical Slot Match
                     self.log.info("Physical Slot from lscfg is %s"
                                   " and lspci is %s",
-                            cfg_output['YL'], pci_info_dict['PhySlot'])
+                                  cfg_output['YL'], pci_info_dict['PhySlot'])
                     cfg_output['YL'] = \
-                            cfg_output['YL'][:cfg_output['YL'].rfind('-')]
+                        cfg_output['YL'][:cfg_output['YL'].rfind('-')]
                     if(cfg_output['YL'] == pci_info_dict['PhySlot']):
                         self.log.info("Physical Slot matched")
                     else:
                         error.append("Physical slot info didn't match")
                 # Sub Device ID match
-                if ('subvendor_device' in cfg_output and 
-                'SDevice' in pci_info_dict):
+                if ('subvendor_device' in cfg_output and
+                        'SDevice' in pci_info_dict):
                     self.log.info("Device iD from lscfg is %s"
                                   " and lspci is %s",
-                            cfg_output['subvendor_device'][4:],
-                            pci_info_dict['SDevice'])
+                                  cfg_output['subvendor_device'][4:],
+                                  pci_info_dict['SDevice'])
                     if(cfg_output['subvendor_device'][4:]
-                                           == pci_info_dict['SDevice']):
+                       == pci_info_dict['SDevice']):
                         self.log.info("Sub Device ID matched")
                     else:
                         error.append("Device ID info didn't match")
                 # Subvendor ID Match
-                if ('subvendor_device' in cfg_output and 
-                'SVendor' in pci_info_dict):
+                if ('subvendor_device' in cfg_output and
+                        'SVendor' in pci_info_dict):
                     self.log.info("Subvendor ID from lscfg is %s"
                                   "and lspci is %s",
-                            cfg_output['subvendor_device'],
-                            pci_info_dict['SVendor'])
+                                  cfg_output['subvendor_device'],
+                                  pci_info_dict['SVendor'])
                     if(cfg_output['subvendor_device'][0:4] ==
-                        pci_info_dict['SVendor']):
+                            pci_info_dict['SVendor']):
                         self.log.info("Sub vendor ID matched")
                     else:
                         error.append("Sub vendor ID didn't match")
                 # PCI Slot ID Match
                 if 'pci_id' in cfg_output and 'Slot' in pci_info_dict:
                     self.log.info("PCI ID from lscfg is %s and lspci is %s",
-                            cfg_output['pci_id'], pci_info_dict['Slot'])
+                                  cfg_output['pci_id'], pci_info_dict['Slot'])
                     if(cfg_output['pci_id'] ==
-                                           pci_info_dict['Slot']):
+                       pci_info_dict['Slot']):
                         self.log.info("PCI Slot ID matched")
                     else:
                         error.append("PCI slot ID didn't match")
@@ -101,4 +101,3 @@ class PciLscfgInfo(Test):
                     error.append(pci_addr + " : pci_config_space")
         if error:
             self.fail(f"Errors for above pci addresses: {error}")
-

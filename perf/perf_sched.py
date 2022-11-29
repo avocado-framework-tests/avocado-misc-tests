@@ -75,9 +75,11 @@ class perf_sched(Test):
         if self.optname == "timehist":
             if self.option in ["-k", "--vmlinux", "--kallsyms"]:
                 if 'rhel' in self.distro_name:
-                    self.option = self.option + " /boot/vmlinuz-" + platform.uname()[2]
+                    self.option = self.option + \
+                        " /boot/vmlinuz-" + platform.uname()[2]
                 elif 'SuSE' in self.distro_name:
-                    self.option = self.option + " /boot/vmlinux-" + platform.uname()[2]
+                    self.option = self.option + \
+                        " /boot/vmlinux-" + platform.uname()[2]
 
         record_cmd = "perf sched record -o %s ls" % self.temp_file
         self.run_cmd(record_cmd)

@@ -25,6 +25,7 @@ class PAM(Test):
     PAM-testsuite
     :avocado: tags=security,testsuite
     """
+
     def setUp(self):
         '''
         Install the basic packages to support PAM

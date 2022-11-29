@@ -15,7 +15,7 @@
 # Author: Shirisha <shiganta@in.ibm.com>
 
 import os
-import platform 
+import platform
 import tempfile
 import shutil
 import configparser
@@ -63,7 +63,8 @@ class PerfProbe(Test):
         process.run(probe, sudo=True, shell=True)
         record = "perf record -e \'{cpu/cpu-cycles,period=10000/,probe_perf_test:main}:S\' -o %s ./perf_test" % self.temp_file
         process.run(record, sudo=True, shell=True)
-        output = process.run("perf script -i %s" % self.temp_file, ignore_status=True, sudo=True, shell=True)
+        output = process.run("perf script -i %s" % self.temp_file,
+                             ignore_status=True, sudo=True, shell=True)
         probe_del = "perf probe -d probe_perf_test:main"
         process.run(probe_del)
         if output.exit_status == -11:

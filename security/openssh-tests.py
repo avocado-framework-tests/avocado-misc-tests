@@ -25,6 +25,7 @@ class OpenSSH(Test):
     openssh-testsuite
     :avocado: tags=security,testsuite
     """
+
     def setUp(self):
         '''
         Install the basic packages to support openssh

@@ -37,7 +37,8 @@ class EatMemory(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel(package + ' is needed for the test to be run')
         url = 'https://github.com/julman99/eatmemory/archive/master.zip'
-        tarball = self.fetch_asset("eatmemory.zip", locations=[url], expire='7d')
+        tarball = self.fetch_asset(
+            "eatmemory.zip", locations=[url], expire='7d')
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(self.workdir, "eatmemory-master")
         # patch for getch remove
@@ -45,7 +46,8 @@ class EatMemory(Test):
         os.chdir(self.sourcedir)
         process.run(getch_patch, shell=True)
         build.make(self.sourcedir)
-        mem = self.params.get('memory_to_test', default=int(0.95 * memory.meminfo.MemFree.k))
+        mem = self.params.get('memory_to_test', default=int(
+            0.95 * memory.meminfo.MemFree.k))
         self.mem_to_eat = self._mem_to_mbytes(mem)
         if self.mem_to_eat is None:
             self.cancel("Memory '%s' not valid." % mem)

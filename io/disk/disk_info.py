@@ -127,11 +127,13 @@ class DiskInfo(Test):
         msg = []
         if process.system("ls /dev/disk/by-id -l| grep -i %s" % self.disk_abs,
                           ignore_status=True, shell=True, sudo=True) != 0:
-            msg.append("Given disk %s is not in /dev/disk/by-id" % self.disk_abs)
+            msg.append("Given disk %s is not in /dev/disk/by-id" %
+                       self.disk_abs)
         for disk_node in self.disk_nodes:
             if process.system("ls /dev/disk/by-path -l| grep -i %s" % disk_node,
                               ignore_status=True, shell=True, sudo=True) != 0:
-                msg.append("Given disk %s is not in /dev/disk/by-path" % disk_node)
+                msg.append(
+                    "Given disk %s is not in /dev/disk/by-path" % disk_node)
 
         # Verify disk listed in all tools
         if self.mpath:
@@ -145,12 +147,14 @@ class DiskInfo(Test):
             cmd = cmd + " | grep -i %s" % self.disk_base
             if process.system(cmd, ignore_status=True,
                               shell=True, sudo=True) != 0:
-                msg.append("Given disk %s is not present in %s" % (self.disk_base, cmd))
+                msg.append("Given disk %s is not present in %s" %
+                           (self.disk_base, cmd))
         if self.mpath:
             for disk_node in self.disk_nodes:
                 if process.system("lshw -c disk | grep -i %s" % disk_node,
                                   ignore_status=True, shell=True, sudo=True) != 0:
-                    msg.append("Given disk %s is not in lshw -c disk" % disk_node)
+                    msg.append("Given disk %s is not in lshw -c disk" %
+                               disk_node)
 
         # Get the size and UUID of the disk
         cmd = "lsblk -l %s --output SIZE -b |sed -n 2p" % self.disk
@@ -251,7 +255,8 @@ class DiskInfo(Test):
                           self.disk, self.fstype, self.uuid)
 
         if process.system("grub2-probe %s" % self.dirs, ignore_status=True):
-            msg.append("Given disk %s's fs not detected by grub2" % self.disk_base)
+            msg.append("Given disk %s's fs not detected by grub2" %
+                       self.disk_base)
 
         # Un-mount the directory
         self.log.info("Unmounting directory %s", self.dirs)

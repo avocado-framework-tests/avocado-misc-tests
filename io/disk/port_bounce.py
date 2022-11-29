@@ -35,6 +35,7 @@ class CommandFailed(Exception):
     '''
     exception class
     '''
+
     def __init__(self, command, output, exitcode):
         self.command = command
         self.output = output

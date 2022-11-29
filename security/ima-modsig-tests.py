@@ -23,6 +23,7 @@ class IMAmodsig(Test):
     ima-modsig tests for Linux
     :avocado: tags=privileged,security,ima
     """
+
     def _check_kernel_config(self, config_option):
         ret = linux_modules.check_kernel_config(config_option)
         if ret == linux_modules.ModuleConfig.NOT_SET:

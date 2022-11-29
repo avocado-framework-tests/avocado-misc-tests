@@ -284,9 +284,10 @@ class Sosreport(Test):
         directory_name = tempfile.mkdtemp()
         for i in [2, 4, 8, "off"]:
             self.run_cmd("ppc64_cpu --smt=%s" % i)
-            smt_initial = re.split(r'=| is ', self.run_cmd_out("ppc64_cpu --smt"))[1]
+            smt_initial = re.split(
+                r'=| is ', self.run_cmd_out("ppc64_cpu --smt"))[1]
             if smt_initial == str(i):
-                self.run_cmd("%s --batch --tmp-dir=%s --all-logs" % 
+                self.run_cmd("%s --batch --tmp-dir=%s --all-logs" %
                              (self.sos_cmd, directory_name))
             else:
                 self.is_fail += 1
@@ -332,8 +333,8 @@ class Sosreport(Test):
                                                     ignore_status=True,
                                                     shell=True).decode("utf-8"):
             mem_value = self.run_cmd_out("lparstat -i | "
-                                       "grep \"Online Memory\" | "
-                                       "cut -d':' -f2")
+                                         "grep \"Online Memory\" | "
+                                         "cut -d':' -f2")
             mem_count = re.split(r'\s', mem_value)[1]
             if mem_count:
                 mem_count = int(mem_count)

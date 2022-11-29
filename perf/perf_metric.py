@@ -84,7 +84,7 @@ class perf_metric(Test):
         for line in self.list_of_metric_events:
             cmd = "perf stat %s %s sleep 1" % (option, line)
             rc, op = process.getstatusoutput(cmd, ignore_status=True,
-                                                 shell=True, verbose=True)
+                                             shell=True, verbose=True)
             # When the command failed, checking for expected failure or not.
             if rc:
                 output = op.stdout.decode() + op.stderr.decode()

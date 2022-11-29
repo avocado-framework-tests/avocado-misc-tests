@@ -74,7 +74,8 @@ class Binutils(Test):
         elif run_type == "distro":
             self.sourcedir = os.path.join(self.workdir, "binutils-distro")
             if not os.path.exists(self.sourcedir):
-                self.sourcedir = self._sm.get_source("binutils", self.sourcedir)
+                self.sourcedir = self._sm.get_source(
+                    "binutils", self.sourcedir)
 
         # Compile the binutils
         os.chdir(self.sourcedir)
@@ -85,7 +86,8 @@ class Binutils(Test):
         """
         Runs the binutils `make check`
         """
-        ret = build.make(self.sourcedir, extra_args='check', ignore_status=True)
+        ret = build.make(self.sourcedir, extra_args='check',
+                         ignore_status=True)
 
         errors = 0
         for root, _, filenames in os.walk(self.sourcedir):

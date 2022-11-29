@@ -81,7 +81,8 @@ class Perf_subsystem(Test):
                 self.is_fail += 1
 
         if self.is_fail:
-            self.fail("There are %d test(s) failure, please check the job.log" % self.is_fail)
+            self.fail(
+                "There are %d test(s) failure, please check the job.log" % self.is_fail)
 
     def execute_perf_test(self):
         os.chdir(self.sourcedir)

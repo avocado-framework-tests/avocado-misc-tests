@@ -147,7 +147,7 @@ class DlparTests(Test):
                 'sha_cpu_fold_workload'):
             dlpar_type_flag = "cpu_fold"
             self.log.info(
-                    "CPU folding Workload: Calling ./dlpar_workload_setup.py")
+                "CPU folding Workload: Calling ./dlpar_workload_setup.py")
             test_cmd = './dlpar_workload_setup.py'
             self.run_cmd(test_cmd, "cpu_fold")
         self.dlpar_engine()

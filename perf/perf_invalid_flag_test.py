@@ -46,6 +46,7 @@ class PerfInvalid(Test):
 
     def test_perf_invalid_flag(self):
         cmd = "perf --version -test"
-        output = process.run(cmd, ignore_status="True", sudo="True", shell="True")
+        output = process.run(cmd, ignore_status="True",
+                             sudo="True", shell="True")
         if output.exit_status == -11:
             self.fail("perf: failed to execute command %s" % cmd)

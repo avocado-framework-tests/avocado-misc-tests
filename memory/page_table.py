@@ -11,7 +11,7 @@
 #
 # See LICENSE for more details.
 #
-# Copyright: 2022 AMD 
+# Copyright: 2022 AMD
 # Author: Kalpana Shetty <kalpana.shetty@amd.com>
 #
 
@@ -28,7 +28,7 @@ class PageTable(Test):
           * Test will detect CPU feature, 5 Level page table.
           * Check for kernel support
           * Run series of 5-level page tests from "pg-table_tests.git" that covers
-	        - heap, mmap, shmat tests.
+                - heap, mmap, shmat tests.
     :avocado: tags=memory
     """
 
@@ -38,7 +38,7 @@ class PageTable(Test):
         this condition can be removed")
     def setUp(self):
         '''
-        Install pre-requisites packages. 
+        Install pre-requisites packages.
         Setup pa-table_tests.git
         '''
         smm = SoftwareManager()
@@ -57,9 +57,9 @@ class PageTable(Test):
         '''
         cpu_info = genio.read_file("/proc/cpuinfo")
         if 'la57' in cpu_info:
-           self.log.info("Detected 5-Level page table cpu support")
+            self.log.info("Detected 5-Level page table cpu support")
         else:
-           self.fail("5-Level page table - Unsupported platform")
+            self.fail("5-Level page table - Unsupported platform")
 
     def test_kernel(self):
         '''
@@ -68,9 +68,10 @@ class PageTable(Test):
         cfg_param = "CONFIG_X86_5LEVEL"
         result = linux_modules.check_kernel_config(cfg_param)
         if result == linux_modules.ModuleConfig.NOT_SET:
-           self.fail("%s is not set in the kernel." % cfg_param)
+            self.fail("%s is not set in the kernel." % cfg_param)
         else:
-           self.log.info("Detected 5-Level page table config - CONFIG_X86_5LEVEL set in the kernel")
+            self.log.info(
+                "Detected 5-Level page table config - CONFIG_X86_5LEVEL set in the kernel")
 
     def test_pg_table_tests(self):
         '''

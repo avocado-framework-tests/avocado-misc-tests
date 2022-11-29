@@ -77,7 +77,8 @@ class Producer_Consumer(Test):
 
         cache_size = self.params.get('cache_size')
         if not cache_size:
-            iteration_length = self.params.get('iteration_length', default=1024)
+            iteration_length = self.params.get(
+                'iteration_length', default=1024)
             args = '-p %s -c %s -r %s -l %s -t %s' % (pcpu, ccpu, random_seed,
                                                       iteration_length, runtime)
         else:

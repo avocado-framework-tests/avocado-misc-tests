@@ -97,7 +97,8 @@ class VirtualizationDriverBindTest(Test):
         if self.device_type in ["l-lan", "vnic"]:
             if self.networkinterface.ping_check(self.peer_ip,
                                                 count=5) is not None:
-                self.cancel("Please make sure the network peer is configured ?")
+                self.cancel(
+                    "Please make sure the network peer is configured ?")
         else:
             if self.is_exists_device(self.virtual_device) is False:
                 self.cancel("failed to detect the test disk")

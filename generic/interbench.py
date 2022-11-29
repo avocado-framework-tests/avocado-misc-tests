@@ -52,14 +52,16 @@ class Interbench(Test):
         if memory.meminfo.MemTotal.b > disk_free_b:
             self.cancel('Disk space is less than total memory. Skipping test')
 
-        tarball = self.fetch_asset('http://ck.kolivas.org/apps/interbench/interbench-0.31.tar.bz2')
+        tarball = self.fetch_asset(
+            'http://ck.kolivas.org/apps/interbench/interbench-0.31.tar.bz2')
         archive.extract(tarball, self.workdir)
         version = os.path.basename(tarball.split('.tar.')[0])
         self.sourcedir = os.path.join(self.workdir, version)
 
         # Patch for make file
         os.chdir(self.sourcedir)
-        makefile_patch = 'patch -p1 < %s ' % self.get_data('makefile_fix.patch')
+        makefile_patch = 'patch -p1 < %s ' % self.get_data(
+            'makefile_fix.patch')
         process.run(makefile_patch, shell=True)
 
         build.make(self.sourcedir)

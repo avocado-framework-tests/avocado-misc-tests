@@ -51,7 +51,8 @@ class Supportconfig(Test):
 
         for pkg in pkgs:
             if not sm.check_installed(pkg) and not sm.install(pkg):
-                self.cancel("Package %s is missing/could not be installed" % pkg)
+                self.cancel(
+                    "Package %s is missing/could not be installed" % pkg)
 
     def test_supportconfig_options(self):
         """
@@ -65,7 +66,8 @@ class Supportconfig(Test):
         ret = process.run("supportconfig",
                           sudo=True,
                           ignore_status=True)
-        logfile = re.search(r"Log file tar ball: (\S+)\n", ret.stdout.decode("utf-8")).group(1)
+        logfile = re.search(r"Log file tar ball: (\S+)\n",
+                            ret.stdout.decode("utf-8")).group(1)
         if not os.path.exists(logfile) or ret.exit_status:
             self.fail("supportconfig failed to create log file")
 
@@ -121,7 +123,8 @@ class Supportconfig(Test):
         ret = process.run("supportconfig",
                           sudo=True,
                           ignore_status=True)
-        logfile = re.search(r"Log file tar ball: (\S+)\n", ret.stdout.decode("utf-8")).group(1)
+        logfile = re.search(r"Log file tar ball: (\S+)\n",
+                            ret.stdout.decode("utf-8")).group(1)
         res = process.system("tar -tvf %s | grep 'plugin-pstree.txt'"
                              % logfile,
                              ignore_status=True,
@@ -132,7 +135,8 @@ class Supportconfig(Test):
         ret = process.run("supportconfig -p",
                           sudo=True,
                           ignore_status=True)
-        logfile = re.search(r"Log file tar ball: (\S+)\n", ret.stdout.decode("utf-8")).group(1)
+        logfile = re.search(r"Log file tar ball: (\S+)\n",
+                            ret.stdout.decode("utf-8")).group(1)
         res = process.system("tar -tvf %s | grep 'plugin-pstree.txt'"
                              % logfile,
                              ignore_status=True,
@@ -150,7 +154,7 @@ class Supportconfig(Test):
         """
         self.is_fail = 0
         for i in [2, 4, 8, "off"]:
-            process.run("ppc64_cpu --smt=%s" %i)
+            process.run("ppc64_cpu --smt=%s" % i)
             smt_initial = re.split(r'=| is ', process.system_output("ppc64_cpu --smt")
                                    .decode('utf-8'))[1]
             if smt_initial == str(i):
@@ -173,7 +177,7 @@ class Supportconfig(Test):
                                                     shell=True).decode("utf-8"):
             lcpu_count = process.system_output("lparstat -i | "
                                                "grep \"Online Virtual CPUs\" | "
-                                               "cut -d':' -f2", 
+                                               "cut -d':' -f2",
                                                ignore_status=True,
                                                shell=True).decode("utf-8")
             if lcpu_count:

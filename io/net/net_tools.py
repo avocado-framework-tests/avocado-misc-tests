@@ -53,7 +53,8 @@ class Hostname(Test):
         install_dependencies()
         self.restore_hostname = False
         # Get Hostname
-        hostname = process.system_output("hostname").decode("utf-8").strip("\n")
+        hostname = process.system_output(
+            "hostname").decode("utf-8").strip("\n")
         if not hostname:
             # set hostname if not set
             process.system("hostname localhost.localdomain", sudo=True)
@@ -317,7 +318,8 @@ class Iptunnel(Test):
     @skipUnless("SuSE15" not in release, "iptunnel is deprecated")
     def setUp(self):
         self.tunnel = None
-        ret = process.system_output("ps -aef", env={"LANG": "C"}).decode("utf-8")
+        ret = process.system_output(
+            "ps -aef", env={"LANG": "C"}).decode("utf-8")
         if 'dhclient' in ret:
             self.cancel("Test not supported on systems running dhclient")
         install_dependencies()

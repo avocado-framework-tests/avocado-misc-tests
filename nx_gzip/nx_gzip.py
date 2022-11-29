@@ -64,12 +64,12 @@ class NXGZipTests(Test):
             test_dir = os.path.join(self.teststmpdir, testdir_name)
         os.chdir(test_dir)
         testdir_dict = {
-          "": "check",
-          "selftest": "run_tests",
-          "test": "unsafe-check",
-          "samples": "bench",
-          "oct": "-j16",
-          "tools/testing/selftests/powerpc/nx-gzip": "run_tests"
+            "": "check",
+            "selftest": "run_tests",
+            "test": "unsafe-check",
+            "samples": "bench",
+            "oct": "-j16",
+            "tools/testing/selftests/powerpc/nx-gzip": "run_tests"
         }
 
         failed_tests = []
@@ -311,7 +311,7 @@ class NXGZipTests(Test):
         linux_src = 'https://github.com/torvalds/linux/archive/master.zip'
         self.output = "linux-master"
         match = next(
-                (ext for ext in [".zip", ".tar"] if ext in linux_src), None)
+            (ext for ext in [".zip", ".tar"] if ext in linux_src), None)
         if match:
             tarball = self.fetch_asset("kselftest%s" % match,
                                        locations=[linux_src], expire='1d')

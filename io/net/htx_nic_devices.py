@@ -107,7 +107,8 @@ class HtxNicTest(Test):
             packages.extend(['libncurses5', 'g++', 'ncurses-dev',
                              'libncurses-dev', 'tar', 'wget'])
         elif detected_distro.name == 'SuSE':
-            packages.extend(['libncurses5', 'gcc-c++', 'ncurses-devel', 'tar', 'wget'])
+            packages.extend(['libncurses5', 'gcc-c++',
+                            'ncurses-devel', 'tar', 'wget'])
         else:
             self.cancel("Test not supported in  %s" % detected_distro.name)
 
@@ -118,13 +119,15 @@ class HtxNicTest(Test):
             cmd = "%s install %s" % (smm.backend.base_command, pkg)
             output = self.session.cmd(cmd)
             if not output.exit_status == 0:
-                self.cancel("Unable to install the package %s on peer machine" % pkg)
+                self.cancel(
+                    "Unable to install the package %s on peer machine" % pkg)
 
         if self.htx_url:
             htx = self.htx_url.split("/")[-1]
             htx_rpm = self.fetch_asset(self.htx_url)
             process.system("rpm -ivh --force %s" % htx_rpm)
-            cmd = "wget %s -O /tmp/%s ; cd /tmp ; rpm -ivh --force %s" % (self.htx_url, htx, htx)
+            cmd = "wget %s -O /tmp/%s ; cd /tmp ; rpm -ivh --force %s" % (
+                self.htx_url, htx, htx)
             self.session.cmd(cmd)
         else:
             url = "https://github.com/open-power/HTX/archive/master.zip"
@@ -264,11 +267,13 @@ class HtxNicTest(Test):
         self.log.info("Generating bpt file in both Host & Peer")
         cmd = "/usr/bin/build_net help n"
         self.session.cmd(cmd)
-        exit_code = process.run(cmd, shell=True, sudo=True, ignore_status=True).exit_status
+        exit_code = process.run(
+            cmd, shell=True, sudo=True, ignore_status=True).exit_status
         if exit_code == 0 or exit_code == 43:
             return True
         else:
-            self.fail("Command %s failed with exit status %s " % (cmd, exit_code))
+            self.fail("Command %s failed with exit status %s " %
+                      (cmd, exit_code))
 
     def check_bpt_file_existence(self):
         """
@@ -375,7 +380,8 @@ class HtxNicTest(Test):
 
         for (peer_intf, net_id) in zip(self.peer_intfs, self.net_ids):
             ip_addr = "%s.1.1.%s" % (net_id, self.peer_ip.split('.')[-1])
-            peer_networkinterface = NetworkInterface(peer_intf, self.remotehost)
+            peer_networkinterface = NetworkInterface(
+                peer_intf, self.remotehost)
             peer_networkinterface.add_ipaddr(ip_addr, self.netmask)
             peer_networkinterface.bring_up()
 
@@ -396,7 +402,7 @@ class HtxNicTest(Test):
                     peer_obj = re.search("All networks ping Ok", peer_output)
                 except Exception:
                     self.log.info("build_net command failed in peer")
-            if host_obj != None:
+            if host_obj is not None:
                 if self.peer_distro == "rhel":
                     self.session.cmd("systemctl start NetworkManager")
                 else:
@@ -418,7 +424,7 @@ class HtxNicTest(Test):
 
         self.log.info("Starting the N/W ping test for HTX in Peer")
         for count in range(11):
-            if peer_obj != None:
+            if peer_obj is not None:
                 try:
                     self.session.cmd("pingum")
                 except Exception:
@@ -576,7 +582,8 @@ class HtxNicTest(Test):
     def shutdown_active_mdt(self):
         self.log.info("Shutdown active mdt in host")
         cmd = "htxcmdline -shutdown"
-        process.run(cmd, timeout=120, ignore_status=True, shell=True, sudo=True)
+        process.run(cmd, timeout=120, ignore_status=True,
+                    shell=True, sudo=True)
         self.log.info("Shutdown active mdt in peer")
         output = self.session.cmd(cmd)
         if not output.exit_status == 0:
@@ -675,11 +682,13 @@ class HtxNicTest(Test):
         self.log.info("Resetting bpt file in both Host & Peer")
         cmd = "/usr/bin/build_net help n"
         self.session.cmd(cmd)
-        exit_code = process.run(cmd, shell=True, sudo=True, ignore_status=True).exit_status
+        exit_code = process.run(
+            cmd, shell=True, sudo=True, ignore_status=True).exit_status
         if exit_code == 0 or exit_code == 43:
             return True
         else:
-            self.fail("Command %s failed with exit status %s " % (cmd, exit_code))
+            self.fail("Command %s failed with exit status %s " %
+                      (cmd, exit_code))
 
         if self.is_net_device_active_in_host():
             self.suspend_all_net_devices_in_host()
@@ -691,7 +700,7 @@ class HtxNicTest(Test):
             self.suspend_all_net_devices_in_peer()
             self.log.info("Shutting down the %s in peer", self.mdt_file)
             try:
-                self.session.cmd(cmd)
+                output = self.session.cmd(cmd)
             except Exception:
                 self.log.info("Unable to shutdown the mdt")
             if not output.exit_status == 0:
@@ -716,7 +725,8 @@ class HtxNicTest(Test):
         config ip for peer
         '''
         for ip, interface in zip(self.peer_ips, self.peer_intfs):
-            peer_networkinterface = NetworkInterface(interface, self.remotehost)
+            peer_networkinterface = NetworkInterface(
+                interface, self.remotehost)
             try:
                 cmd = "ip addr flush %s" % interface
                 self.session.cmd(cmd)

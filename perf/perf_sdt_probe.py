@@ -116,7 +116,8 @@ class PerfSDT(Test):
                       % self.sdt_marker)
 
     def record_sdt_marker_probe(self):
-        record_sdt_probe = "perf record -o %s -e %s -aR sleep 1" % (self.temp_file, self.sdt_marker)
+        record_sdt_probe = "perf record -o %s -e %s -aR sleep 1" % (
+            self.temp_file, self.sdt_marker)
         self.is_fail = 0
         self.run_cmd(record_sdt_probe)
         if self.is_fail or not os.path.exists(self.temp_file):

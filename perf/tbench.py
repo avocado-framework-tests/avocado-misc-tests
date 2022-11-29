@@ -46,8 +46,8 @@ class tbench(Test):
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
         tarball = self.fetch_asset(
-                  "https://www.samba.org/ftp/tridge/dbench/dbench-3.04.tar.gz",
-                  expire='7d')
+            "https://www.samba.org/ftp/tridge/dbench/dbench-3.04.tar.gz",
+            expire='7d')
         archive.extract(tarball, self.workdir)
         version = os.path.basename(tarball.split('.tar.')[0])
         self.sourcedir = os.path.join(self.workdir, version)

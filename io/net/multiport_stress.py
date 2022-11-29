@@ -72,13 +72,15 @@ class MultiportStress(Test):
                                             self.peer_user,
                                             password=self.peer_password)
         for peer_ip in self.peer_ips:
-            peer_interface = self.remotehost.get_interface_by_ipaddr(peer_ip).name
+            peer_interface = self.remotehost.get_interface_by_ipaddr(
+                peer_ip).name
             peer_networkinterface = NetworkInterface(peer_interface,
                                                      self.remotehost)
             if peer_networkinterface.set_mtu(self.mtu) is not None:
                 self.cancel("Failed to set mtu in peer")
         for host_interface in self.host_interfaces:
-            self.networkinterface = NetworkInterface(host_interface, self.local)
+            self.networkinterface = NetworkInterface(
+                host_interface, self.local)
             if self.networkinterface.set_mtu(self.mtu) is not None:
                 self.cancel("Failed to set mtu in host")
 
@@ -124,7 +126,8 @@ class MultiportStress(Test):
             if networkinterface.set_mtu("1500") is not None:
                 self.cancel("Failed to set mtu in host")
         for peer_ip in self.peer_ips:
-            peer_interface = self.remotehost.get_interface_by_ipaddr(peer_ip).name
+            peer_interface = self.remotehost.get_interface_by_ipaddr(
+                peer_ip).name
             try:
                 peer_networkinterface = NetworkInterface(peer_interface,
                                                          self.remotehost)
@@ -139,6 +142,7 @@ class MultiportStress(Test):
             try:
                 networkinterface.restore_from_backup()
             except Exception:
-                self.log.info("backup file not availbale, could not restore file.")
+                self.log.info(
+                    "backup file not availbale, could not restore file.")
             self.remotehost.remote_session.quit()
             self.remotehost_public.remote_session.quit()
