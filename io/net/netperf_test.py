@@ -70,7 +70,7 @@ class Netperf(Test):
             self.cancel("failed connecting to peer")
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        pkgs = ['gcc']
+        pkgs = ['gcc', 'unzip']
         if detected_distro.name == "Ubuntu":
             pkgs.append('openssh-client')
         elif detected_distro.name == "SuSE":
