@@ -38,6 +38,7 @@ __all__ = ['TestException', 'MyPxssh', 'SshMachine', 'TestLog', 'TestCase']
 
 CONFIG_FILE = TestConfig("config/tests.cfg")
 
+
 class TestException(Exception):
     """Base Class for all test exceptions."""
 
