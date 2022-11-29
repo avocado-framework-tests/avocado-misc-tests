@@ -19,6 +19,7 @@ import re
 
 from avocado import Test
 from avocado.utils import genio
+from avocado.utils import linux_modules
 
 
 class XIVE(Test):
@@ -48,6 +49,8 @@ class XIVE(Test):
             self.intr = 'XICS'
         else:
             self.fail("Unsupported Interrupt Mode")
+
+        self.no_config_parameter = []
 
     def test_intr_mode(self):
         if self.intr == 'XIVE':
@@ -90,3 +93,25 @@ class XIVE(Test):
                         (self.hw, self.intr))
         else:
             self.fail("storeEOI tests failed")
+
+    def test_verify_xive_cmdline(self):
+        pattern = "xive=on"
+        retval = genio.is_pattern_in_file("/proc/cmdline", pattern)
+        if retval:
+            self.log.info("XIVE is enabled.")
+        else:
+            self.log.info("XIVE is not enabled.")
+
+    def _check_kernel_config(self, config_parameter):
+        ret = linux_modules.check_kernel_config(config_parameter)
+        if ret == linux_modules.ModuleConfig.NOT_SET:
+            self.no_config_parameter.append(config_parameter)
+
+    def test_verify_xive_config(self):
+        self._check_kernel_config('CONFIG_PPC_XIVE')
+        self._check_kernel_config('CONFIG_PPC_XIVE_NATIVE')
+        self._check_kernel_config('CONFIG_PPC_XIVE_SPAPR')
+
+        if self.no_config_parameter:
+            self.fail("XIVE Config parameters not enabled are : %s" %
+                      self.no_config_parameter)
