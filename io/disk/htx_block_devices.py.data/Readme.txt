@@ -13,8 +13,11 @@ user in yaml file.
 
 Inputs:
 ------
-htx_disk: '/dev/sdb /dev/sdc'
+htx_disk: '/dev/sdb /dev/sdc' or if want to pass mpath disk, then it will be /dev/mapper/mpathX
+        : for nvme drives, we need to pass namespaces like /dev/nvme0nX
 all: True or False (True if all disks in selected mdt needs to be run.
-Overrides disks selected)
+     Overrides disks selected)
 time_limit: 1 (In minutes)
-mdt_file: 'mdt.io'
+mdt_file: Pass the require mdt file, eg: 'mdt.io', mdt.hd
+run_type: this is to how do we want to install the htx tool eg: 'git' or 'rpm' based
+rpm_link: if you want to install htx through RPM then Pass the rpm link here.

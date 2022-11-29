@@ -2,3 +2,5 @@ htx_disks: ''
 all: False
 time_limit: 1
 mdt_file: 'mdt.hd'
+run_type: ''
+rpm_link: ''
