@@ -49,7 +49,8 @@ class Linsched(Test):
               "archive/refs/heads/master.zip"
         tarball = self.fetch_asset("linsched.zip", locations=url, expire='7d')
         archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'linux-scheduler-testing-master')
+        self.sourcedir = os.path.join(
+            self.workdir, 'linux-scheduler-testing-master')
 
         os.chdir(self.sourcedir)
         fix_patch = 'patch -p1 < %s' % self.get_data('fix.patch')

@@ -32,6 +32,7 @@ class ModuleLoadUnload(Test):
     :param iteration: Number of time to unload and load the module
     :only_io True for single provide module and False for All pci modules
     """
+
     def setUp(self):
         """
         get parameters.

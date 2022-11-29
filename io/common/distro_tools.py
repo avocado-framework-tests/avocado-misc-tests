@@ -25,10 +25,12 @@ from avocado.utils.software_manager.manager import SoftwareManager
 
 release = "%s%s" % (distro.detect().name, distro.detect().version)
 
+
 class DisrtoTool(Test):
     '''
     to test different type of tool
     '''
+
     def setUp(self):
         '''
         get all parameters
@@ -66,7 +68,6 @@ class DisrtoTool(Test):
         for pkg in ['pciutils', 'net-tools']:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
-
 
     def test(self):
         '''

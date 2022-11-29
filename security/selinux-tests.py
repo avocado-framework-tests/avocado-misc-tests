@@ -59,7 +59,8 @@ class SELinux(Test):
             url = self.params.get('url', default=default_url)
             tarball = self.fetch_asset(url, expire='7d')
             archive.extract(tarball, self.workdir)
-            self.srcdir = os.path.join(self.workdir, 'selinux-testsuite-master')
+            self.srcdir = os.path.join(
+                self.workdir, 'selinux-testsuite-master')
         elif run_type == "distro":
             self.srcdir = os.path.join(self.workdir, "selinux-distro")
             if not os.path.exists(self.srcdir):

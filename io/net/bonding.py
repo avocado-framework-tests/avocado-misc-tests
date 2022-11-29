@@ -82,7 +82,8 @@ class Bonding(Test):
         for self.host_interface in self.host_interfaces:
             if self.host_interface not in interfaces:
                 self.cancel("interface is not available")
-        self.peer_first_ipinterface = self.params.get("peer_ips", default="").split(" ")
+        self.peer_first_ipinterface = self.params.get(
+            "peer_ips", default="").split(" ")
         if not self.peer_interfaces or self.peer_first_ipinterface == "":
             self.cancel("peer machine should available")
         self.ipaddr = self.params.get("host_ips", default="").split(" ")
@@ -104,8 +105,8 @@ class Bonding(Test):
                                          self.peer_interfaces):
                 if self.peer_bond_needed:
                     self.remotehost = RemoteHost(
-                                    self.peer_public_ip,
-                                    self.user, password=self.password)
+                        self.peer_public_ip,
+                        self.user, password=self.password)
                     peer_networkinterface = NetworkInterface(interface,
                                                              self.remotehost)
                     try:
@@ -179,11 +180,13 @@ class Bonding(Test):
 
         if 'setup' in str(self.name.name):
             for interface in self.peer_interfaces:
-                peer_networkinterface = NetworkInterface(interface, self.remotehost)
+                peer_networkinterface = NetworkInterface(
+                    interface, self.remotehost)
                 if peer_networkinterface.set_mtu(self.mtu) is not None:
                     self.cancel("Failed to set mtu in peer")
             for host_interface in self.host_interfaces:
-                self.networkinterface = NetworkInterface(host_interface, self.localhost)
+                self.networkinterface = NetworkInterface(
+                    host_interface, self.localhost)
                 if self.networkinterface.set_mtu(self.mtu) is not None:
                     self.cancel("Failed to set mtu in host")
 
@@ -361,9 +364,11 @@ class Bonding(Test):
                 if peer_networkinterface.set_mtu(mtu) is not None:
                     self.cancel("Failed to set mtu in peer")
             if not self.ping_check():
-                self.fail("Ping fail in mode %s after MTU change to %s" % (self.mode, mtu))
+                self.fail("Ping fail in mode %s after MTU change to %s" %
+                          (self.mode, mtu))
             else:
-                self.log.info("Ping success for mode %s bond with  MTU %s" % (self.mode, mtu))
+                self.log.info(
+                    "Ping success for mode %s bond with  MTU %s" % (self.mode, mtu))
             if self.bond_networkinterface.set_mtu('1500'):
                 self.cancel("Failed to set mtu back to 1500 in host")
             for interface in self.peer_interfaces:
@@ -522,15 +527,16 @@ class Bonding(Test):
             try:
                 networkinterface.restore_from_backup()
             except Exception:
-                self.log.info("backup file not availbale, could not restore file.")
+                self.log.info(
+                    "backup file not availbale, could not restore file.")
 
         if self.peer_bond_needed:
             self.bond_remove("peer")
             for ipaddr, interface in zip(self.peer_first_ipinterface,
                                          self.peer_interfaces):
                 self.remotehost = RemoteHost(
-                                self.peer_public_ip, self.user,
-                                password=self.password)
+                    self.peer_public_ip, self.user,
+                    password=self.password)
                 peer_networkinterface = NetworkInterface(interface,
                                                          self.remotehost)
                 try:
@@ -541,7 +547,7 @@ class Bonding(Test):
                     peer_networkinterface.save(ipaddr, self.netmask)
                 time.sleep(self.sleep_time)
         self.error_check()
-        
+
         detected_distro = distro.detect()
         if detected_distro.name == "rhel":
             cmd = "systemctl restart NetworkManager.service"
@@ -554,7 +560,8 @@ class Bonding(Test):
 
         try:
             for interface in self.peer_interfaces:
-                peer_networkinterface = NetworkInterface(interface, self.remotehost)
+                peer_networkinterface = NetworkInterface(
+                    interface, self.remotehost)
                 peer_networkinterface.set_mtu("1500")
             self.remotehost.remote_session.quit()
         except Exception:

@@ -67,7 +67,8 @@ class NetworkTest(Test):
         self.hbond = self.params.get("hbond", default=False)
         local = LocalHost()
         if self.hbond:
-            self.networkinterface = NetworkInterface(self.iface, local, if_type='Bond')
+            self.networkinterface = NetworkInterface(
+                self.iface, local, if_type='Bond')
         else:
             self.networkinterface = NetworkInterface(self.iface, local)
         if self.ip_config:
@@ -95,7 +96,8 @@ class NetworkTest(Test):
                 self.cancel("failed connecting to peer")
         self.remotehost = RemoteHost(self.peer, self.peer_user,
                                      password=self.peer_password)
-        self.peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer).name
+        self.peer_interface = self.remotehost.get_interface_by_ipaddr(
+            self.peer).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
                                                       self.remotehost)
         self.remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
@@ -200,7 +202,8 @@ class NetworkTest(Test):
             if not peer_ipv6[0]:
                 self.cancel("IPV6 addrress is not set for peer interface")
         except Exception:
-            self.cancel("Test failing while getting IPV6 address for peer interface")
+            self.cancel(
+                "Test failing while getting IPV6 address for peer interface")
         if self.networkinterface.ping_check(peer_ipv6[0], count=10) is not None:
             self.fail("IPV6 ping test failed")
 
@@ -337,7 +340,8 @@ class NetworkTest(Test):
                 self.networkinterface.restore_from_backup()
             except Exception:
                 self.networkinterface.remove_cfg_file()
-                self.log.info("backup file not availbale, could not restore file.")
+                self.log.info(
+                    "backup file not availbale, could not restore file.")
             if self.hbond:
                 self.networkinterface.restore_slave_cfg_file()
         self.remotehost.remote_session.quit()

@@ -23,6 +23,7 @@ class vTPM(Test):
     vTPM tests for Linux
     :avocado: tags=privileged,security,tpm
     """
+
     def setUp(self):
         device_tree_path = "/proc/device-tree/vdevice/"
         d_list = os.listdir(device_tree_path)

@@ -160,8 +160,8 @@ class Ethtool(Test):
                             for j in range(5):
                                 if value[i] != '':
                                     cmd = "ethtool %s %s %s %s" % (
-                                            self.args, self.iface,
-                                            self.param[i], default[i][j])
+                                        self.args, self.iface,
+                                        self.param[i], default[i][j])
                                     result = process.run(cmd, shell=True,
                                                          verbose=True,
                                                          ignore_status=True)
@@ -170,21 +170,21 @@ class Ethtool(Test):
                                            self.peer, count=5) is not None:
                                             self.cancel("ping fail value %s \
                                                     to %s parameter" % (
-                                                    default[i][j],
-                                                    self.param[i]))
+                                                default[i][j],
+                                                self.param[i]))
                                     err_channel = "no RX or TX channel"
                                     err_count = "count exceeds maximum"
                                     if result.exit_status != 0:
                                         if err_channel in result.stderr_text:
                                             self.log.info("Cannot set %s \
                                                     value on %s parameter" % (
-                                                    default[i][j],
-                                                    self.param[i]))
+                                                default[i][j],
+                                                self.param[i]))
                                         elif err_count in result.stderr_text:
                                             self.log.info("Cannot set %s \
                                                     value on %s parameter" % (
-                                                    default[i][j],
-                                                    self.param[i]))
+                                                default[i][j],
+                                                self.param[i]))
                                         else:
                                             self.fail("%s %s" % (
                                                 self.args, result.stderr_text))
@@ -206,7 +206,7 @@ class Ethtool(Test):
                     else:
                         self.fail("%s failed" % self.args)
         if not wait.wait_for(lambda: self.networkinterface.are_packets_lost(
-                        self.peer, options=['-c 10000', '-f']), timeout=30):
+                self.peer, options=['-c 10000', '-f']), timeout=30):
             self.cancel("Packet recieved in Ping flood is not 100 percent \
                          after waiting for 30sec")
         if self.priv_test:

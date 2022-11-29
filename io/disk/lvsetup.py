@@ -44,6 +44,7 @@ class Lvsetup(Test):
     """
     Test class for creating logical volumes.
     """
+
     def setUp(self):
         """
         Check existence of input PV,VG, LV and snapshots prior to Test.

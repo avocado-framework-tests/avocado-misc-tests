@@ -25,6 +25,7 @@ class Krb5(Test):
     krb5-testsuite
     :avocado: tags=security,testsuite
     """
+
     def setUp(self):
         '''
         Install the basic packages to support krb5

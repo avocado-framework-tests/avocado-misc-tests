@@ -72,7 +72,8 @@ class TcpdumpTest(Test):
             self.networkinterface.save(self.ipaddr, self.netmask)
         self.networkinterface.bring_up()
         if not wait.wait_for(self.networkinterface.is_link_up, timeout=120):
-            self.cancel("Link up of interface is taking longer than 120 seconds")
+            self.cancel(
+                "Link up of interface is taking longer than 120 seconds")
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
@@ -81,7 +82,8 @@ class TcpdumpTest(Test):
         self.mtu_timeout = self.params.get("mtu_timeout", default=30)
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
                                      password=self.peer_password)
-        self.peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip).name
+        self.peer_interface = self.remotehost.get_interface_by_ipaddr(
+            self.peer_ip).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
                                                       self.remotehost)
         self.remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
@@ -126,7 +128,8 @@ class TcpdumpTest(Test):
         else:
             obj = process.SubProcess(cmd, verbose=False, shell=True)
             obj.start()
-        cmd = "timeout %s tcpdump -i %s -n -c %s" % (self.timeout, self.iface, self.count)
+        cmd = "timeout %s tcpdump -i %s -n -c %s" % (
+            self.timeout, self.iface, self.count)
         if self.option in ('host', 'src'):
             cmd = "%s %s %s" % (cmd, self.option, self.host_ip)
         elif self.option == "dst":
@@ -168,15 +171,18 @@ class TcpdumpTest(Test):
             if self.networkinterface.set_mtu('1500', timeout=self.mtu_timeout) is not None:
                 self.cancel("Failed to set mtu in host")
             try:
-                self.peer_networkinterface.set_mtu('1500', timeout=self.mtu_timeout)
+                self.peer_networkinterface.set_mtu(
+                    '1500', timeout=self.mtu_timeout)
             except Exception:
-                self.peer_public_networkinterface.set_mtu('1500', timeout=self.mtu_timeout)
+                self.peer_public_networkinterface.set_mtu(
+                    '1500', timeout=self.mtu_timeout)
             self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
             try:
                 self.networkinterface.restore_from_backup()
             except Exception:
                 self.networkinterface.remove_cfg_file()
-                self.log.info("backup file not availbale, could not restore file.")
+                self.log.info(
+                    "backup file not availbale, could not restore file.")
             if self.hbond:
                 self.networkinterface.restore_slave_cfg_file()
             self.remotehost.remote_session.quit()

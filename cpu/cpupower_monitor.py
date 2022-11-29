@@ -47,7 +47,7 @@ class CpupowerMonitor(Test):
         for line in output.splitlines():
             if 'Available idle states: ' in line:
                 self.states_list = (line.split('Available idle states: ')[-1])\
-                                   .split()
+                    .split()
                 break
         self.log.info("Idle states on the system are: %s" % self.states_list)
 
@@ -79,7 +79,6 @@ class CpupowerMonitor(Test):
         return 0
 
     def test_workload(self):
-
         """
         This test covers:
         1. Collect cpupower monitor output.
@@ -113,11 +112,10 @@ class CpupowerMonitor(Test):
             zero_nonzero = zero_nonzero + self.check_zero_nonzero(i + 1)
         if not zero_nonzero:
             self.log.info("cpus have not entered idle states after killing"
-                      " ebizzy workload")
+                          " ebizzy workload")
         self.log.info("cpus have entered idle states after killing work load")
 
     def test_disable_idlestate(self):
-
         """
         1. Collect list of supported idle states.
         2. Disable first idle statei, check cpus have not entered this state.
@@ -137,7 +135,6 @@ class CpupowerMonitor(Test):
 
     @skipIf("powerpc" not in cpu.get_arch(), "Skip, SMT specific tests")
     def test_idlestate_smt(self):
-
         """
         1. Set smt mode to off.
         2. Run test_workload.
@@ -152,7 +149,6 @@ class CpupowerMonitor(Test):
         process.run('ppc64_cpu --smt=on', shell=True)
 
     def test_idlestate_single_core(self):
-
         """
         1. Set single core online.
         2. Run test_workload.
@@ -167,17 +163,17 @@ class CpupowerMonitor(Test):
         process.run('ppc64_cpu --smt=on', shell=True)
 
     def test_idle_info(self):
-
         """
         This test verifies cpupower idle-info with different smt states.
         Prints the duration for which CPU is in snooze and CEDE state.
         """
 
         process.run('cpupower -c all idle-info', shell=True)
-        for i in [1,2,4]:
+        for i in [1, 2, 4]:
             process.run('ppc64_cpu --smt=%s' % i, shell=True)
             process.run('ppc64_cpu --smt', shell=True)
-            output = process.system_output('cpupower -c %s idle-info | grep offline' % i, shell=True).split()
+            output = process.system_output(
+                'cpupower -c %s idle-info | grep offline' % i, shell=True).split()
             if "offline" not in str(output[1]):
                 self.fail("cpupower tool verification with smt=%s failed" % i)
         process.run('ppc64_cpu --smt=on', shell=True)
@@ -185,14 +181,20 @@ class CpupowerMonitor(Test):
         process.run('cpupower -c all idle-info', shell=True)
         process.run('ppc64_cpu --cores-on=all', shell=True)
         process.run('cpupower -c all idle-info', shell=True)
-        self.nr_cpus = process.system_output("lscpu | grep ^'CPU(s):'", shell=True).split()
+        self.nr_cpus = process.system_output(
+            "lscpu | grep ^'CPU(s):'", shell=True).split()
         for i in range(int(self.nr_cpus[1])):
-            duration_init = process.system_output('cpupower -c %s idle-info | grep Duration' % i, shell=True).split()
+            duration_init = process.system_output(
+                'cpupower -c %s idle-info | grep Duration' % i, shell=True).split()
             time.sleep(5)
-            duration_final = process.system_output('cpupower -c %s idle-info | grep Duration' % i, shell=True).split()
+            duration_final = process.system_output(
+                'cpupower -c %s idle-info | grep Duration' % i, shell=True).split()
             duration_snooze = int(duration_final[1]) - int(duration_init[1])
-            self.log.info("CPU%s has entered snooze state for %s microseconds in 2 seconds" % (i, duration_snooze))
+            self.log.info("CPU%s has entered snooze state for %s microseconds in 2 seconds" % (
+                i, duration_snooze))
             duration_CEDE = int(duration_final[3]) - int(duration_init[3])
-            self.log.info("CPU%s has entered CEDE state for %s microseconds in 2 seconds" % (i, duration_CEDE))
+            self.log.info("CPU%s has entered CEDE state for %s microseconds in 2 seconds" % (
+                i, duration_CEDE))
             if (duration_snooze == 0) and (duration_CEDE == 0):
-                self.fail("CPU%s has not entered snooze or CEDE state even in idle state" % i)
+                self.fail(
+                    "CPU%s has not entered snooze or CEDE state even in idle state" % i)

@@ -87,12 +87,15 @@ class perf_c2c(Test):
             self.report = "--input=%s" % output_file
         elif self.report in ['-k', '--vmlinux']:
             if self.distro_name in ['rhel', 'fedora', 'centos']:
-                self.report = self.report + " /boot/vmlinuz-" + platform.uname()[2]
+                self.report = self.report + \
+                    " /boot/vmlinuz-" + platform.uname()[2]
             elif self.distro_name in ['SuSE', 'Ubuntu']:
-                self.report = self.report + " /boot/vmlinux-" + platform.uname()[2]
+                self.report = self.report + \
+                    " /boot/vmlinux-" + platform.uname()[2]
 
         # Record command
-        record_cmd = "perf c2c record -o %s %s -- ls" % (output_file, self.record)
+        record_cmd = "perf c2c record -o %s %s -- ls" % (
+            output_file, self.record)
         self.run_cmd(record_cmd)
         # Report command
         report_cmd = "perf c2c report %s" % self.report

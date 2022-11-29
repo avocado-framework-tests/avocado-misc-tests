@@ -177,7 +177,7 @@ class MultipathTest(Test):
                 self.log.info("recovery of %s success" % path_dic["wwid"])
             else:
                 msg += "Recovery of %s fails after blocklist\n" \
-                        % path_dic["wwid"]
+                    % path_dic["wwid"]
 
             def is_path_available():
                 if operation == 'block':
@@ -210,7 +210,7 @@ class MultipathTest(Test):
                     self.log.info("recovery of %s success" % disk)
                 else:
                     msg += "Recovery of %s fails after blacklist %s\n" \
-                            % (disk, path_dic["wwid"])
+                        % (disk, path_dic["wwid"])
 
             multipath.form_conf_mpath_file(defaults_extra=plcy)
         if msg:

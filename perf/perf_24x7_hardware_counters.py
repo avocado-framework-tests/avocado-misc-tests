@@ -46,7 +46,8 @@ class EliminateDomainSuffix(Test):
         """
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        processor = process.system_output("uname -m", ignore_status=True).decode("utf-8")
+        processor = process.system_output(
+            "uname -m", ignore_status=True).decode("utf-8")
         if 'ppc' not in processor:
             if 'unknown' in processor and 'ppc' not in os.uname():
                 self.cancel("Processor is not ppc64")
@@ -153,9 +154,11 @@ class EliminateDomainSuffix(Test):
 
     def test_event_w_chip_param(self):
         if self.cpu_family in ['power8', 'power9']:
-            event_out = genio.read_file("%s/events/PM_PB_CYC" % self.event_sysfs).rstrip('\t\r\n\0')
+            event_out = genio.read_file(
+                "%s/events/PM_PB_CYC" % self.event_sysfs).rstrip('\t\r\n\0')
         if self.cpu_family == 'power10':
-            event_out = genio.read_file("%s/events/PM_PHB0_0_CYC" % self.event_sysfs).rstrip('\t\r\n\0')
+            event_out = genio.read_file(
+                "%s/events/PM_PHB0_0_CYC" % self.event_sysfs).rstrip('\t\r\n\0')
         if "chip=?" in event_out:
             self.log.info('sysfs entry has chip entry')
         else:

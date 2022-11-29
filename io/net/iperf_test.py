@@ -125,14 +125,14 @@ class Iperf(Test):
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
                                      password=self.peer_password)
         self.peer_interface = self.remotehost.get_interface_by_ipaddr(
-                                               self.peer_ip).name
+            self.peer_ip).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
                                                       self.remotehost)
         self.remotehost_public = RemoteHost(
-                self.peer_public_ip, self.peer_user,
-                password=self.peer_password)
+            self.peer_public_ip, self.peer_user,
+            password=self.peer_password)
         self.peer_public_networkinterface = NetworkInterface(
-                           self.peer_interface, self.remotehost_public)
+            self.peer_interface, self.remotehost_public)
         if self.peer_networkinterface.set_mtu(self.mtu) is not None:
             self.cancel("Failed to set mtu in peer")
         if self.networkinterface.set_mtu(self.mtu) is not None:

@@ -51,13 +51,13 @@ class test_generic_events(Test):
                 if 'cpu family' in line:
                     self.family = int(line.split(':')[1])
             if self.family == 0x16:
-               self.log.info("AMD Family: 16h")
-               self.generic_events = dict(parser.items('AMD16h'))
+                self.log.info("AMD Family: 16h")
+                self.generic_events = dict(parser.items('AMD16h'))
             elif self.family >= 0x17:
-               self.log.info("AMD Family: 17h")
-               self.generic_events = dict(parser.items('AMD17h'))
+                self.log.info("AMD Family: 17h")
+                self.generic_events = dict(parser.items('AMD17h'))
             else:
-               self.cancel("Unsupported AMD Family")
+                self.cancel("Unsupported AMD Family")
 
     def test(self):
         nfail = 0

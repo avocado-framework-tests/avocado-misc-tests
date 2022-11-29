@@ -72,7 +72,8 @@ class Uperf(Test):
             self.cancel("failed connecting to peer")
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        pkgs = ["gcc", "gcc-c++", "autoconf", "perl", "m4", "git-core", "automake"]
+        pkgs = ["gcc", "gcc-c++", "autoconf",
+                "perl", "m4", "git-core", "automake"]
         if detected_distro.name == "Ubuntu":
             pkgs.extend(["libsctp1", "libsctp-dev", "lksctp-tools"])
         elif detected_distro.name == "rhel":
@@ -106,7 +107,8 @@ class Uperf(Test):
         self.mtu = self.params.get("mtu", default=1500)
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
                                      password=self.peer_password)
-        self.peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip).name
+        self.peer_interface = self.remotehost.get_interface_by_ipaddr(
+            self.peer_ip).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
                                                       self.remotehost)
         self.remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
@@ -212,7 +214,8 @@ class Uperf(Test):
             try:
                 self.networkinterface.restore_from_backup()
             except Exception:
-                self.log.info("backup file not availbale, could not restore file.")
+                self.log.info(
+                    "backup file not availbale, could not restore file.")
             self.remotehost.remote_session.quit()
             self.remotehost_public.remote_session.quit()
             self.session.quit()

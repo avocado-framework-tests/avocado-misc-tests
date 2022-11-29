@@ -52,7 +52,7 @@ class Audit(Test):
         run_type = self.params.get('type', default='upstream')
         if run_type == "upstream":
             default_url = ("https://github.com/linux-audit/audit-userspace/"
-                   "archive/master.zip")
+                           "archive/master.zip")
             url = self.params.get('url', default=default_url)
             tarball = self.fetch_asset(url, expire='7d')
             archive.extract(tarball, self.workdir)

@@ -37,7 +37,7 @@ class papitest(Test):
             if not softm.check_installed(package) and not softm.install(package):
                 self.cancel("%s is needed for the test to be run" % package)
         test_type = self.params.get('type', default='upstream')
-        
+
         if test_type == 'upstream':
             papi_url = self.params.get(
                 'url', default="https://bitbucket.org/icl/papi.git")

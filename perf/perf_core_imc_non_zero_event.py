@@ -74,7 +74,8 @@ class PerfCoreIMCNonZeroEvents(Test):
         self.parse_op('perf stat -e core_imc/CPM_CCYC/ -C 0 -I 1000 sleep 5')
 
     def test_perf_cpm_32mhz_cyc(self):
-        self.parse_op('perf stat -e core_imc/CPM_32MHZ_CYC/ -C 0 -I 1000 sleep 5')
+        self.parse_op(
+            'perf stat -e core_imc/CPM_32MHZ_CYC/ -C 0 -I 1000 sleep 5')
 
     def tearDown(self):
         process.system('pkill ppc64_cpu', ignore_status=True)

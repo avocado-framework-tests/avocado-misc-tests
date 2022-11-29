@@ -25,6 +25,7 @@ class IMAEVMUtils(Test):
     ima-evm-utils testsuite
     :avocado: tags=security,testsuite
     """
+
     def setUp(self):
         '''
         Install the basic packages to support ima-evm-utils
@@ -41,7 +42,8 @@ class IMAEVMUtils(Test):
                          'libattr-devel', 'libxslt-tools', 'openssl-devel',
                          'tpm2-0-tss-devel'])
         else:
-            self.cancel("%s not supported for this test" % detected_distro.name)
+            self.cancel("%s not supported for this test" %
+                        detected_distro.name)
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)

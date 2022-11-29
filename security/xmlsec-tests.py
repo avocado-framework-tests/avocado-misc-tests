@@ -25,6 +25,7 @@ class XMLSec(Test):
     xmlsec-testsuite
     :avocado: tags=security,testsuite
     """
+
     def setUp(self):
         '''
         Install the basic packages to support xmlsec

@@ -40,13 +40,14 @@ class Compilebench(Test):
         Source:
          https://oss.oracle.com/~mason/compilebench/compilebench-0.6.tar.bz2
         """
-        tarball = self.fetch_asset('https://oss.oracle.com/~mason/compilebench/compilebench-0.6.tar.bz2')
+        tarball = self.fetch_asset(
+            'https://oss.oracle.com/~mason/compilebench/compilebench-0.6.tar.bz2')
         archive.extract(tarball, self.workdir)
         cb_version = os.path.basename(tarball.split('.tar.')[0])
         self.sourcedir = os.path.join(self.workdir, cb_version)
         os.chdir(self.sourcedir)
         compilebench_fix_patch = 'patch -p1 < %s' % self.get_data(
-                'fix_compilebench')
+            'fix_compilebench')
         process.run(compilebench_fix_patch, shell=True)
 
     def test(self):

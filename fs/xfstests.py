@@ -141,7 +141,8 @@ class Xfstests(Test):
                 self.log_scratch = None
             self.plib.create_namespace(region=self.region, size=dev_size)
             self.plib.create_namespace(region=self.region, size=dev_size)
-            namespaces = self.plib.run_ndctl_list('-N -r %s -m fsdax' % self.region)
+            namespaces = self.plib.run_ndctl_list(
+                '-N -r %s -m fsdax' % self.region)
             pmem_dev = self.plib.run_ndctl_list_val(namespaces[0], 'blockdev')
             self.test_dev = "/dev/%s" % pmem_dev
             pmem_dev = self.plib.run_ndctl_list_val(namespaces[1], 'blockdev')

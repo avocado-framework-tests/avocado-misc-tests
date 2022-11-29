@@ -38,9 +38,11 @@ class Blktests(Test):
         smm = SoftwareManager()
         dist = distro.detect()
         if dist.name in ['Ubuntu', 'debian']:
-            packages = ['gcc', 'make', 'util-linux', 'fio', 'libdevmapper-dev', 'g++']
+            packages = ['gcc', 'make', 'util-linux',
+                        'fio', 'libdevmapper-dev', 'g++']
         else:
-            packages = ['gcc', 'make', 'util-linux', 'fio', 'device-mapper', 'gcc-c++']
+            packages = ['gcc', 'make', 'util-linux',
+                        'fio', 'device-mapper', 'gcc-c++']
 
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):

@@ -113,7 +113,8 @@ class LibHugetlbfs(Test):
                     {hp_size: tempfile.mkdtemp(dir=self.teststmpdir,
                                                prefix='avocado_' + __name__)})
                 if process.system('mount -t hugetlbfs -o pagesize=%sM none %s' %
-                                  (hp_size, self.hugetlbfs_dir[hp_size]), sudo=True,
+                                  (hp_size,
+                                   self.hugetlbfs_dir[hp_size]), sudo=True,
                                   ignore_status=True):
                     self.cancel("hugetlbfs mount failed")
                 self.configured_page_sizes.append(hp_size)
