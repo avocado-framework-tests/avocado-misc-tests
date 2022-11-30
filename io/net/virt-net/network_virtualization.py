@@ -755,14 +755,14 @@ class NetworkVirtualization(Test):
             self.fail("lshwres operation failed ")
         return output.stdout_text
 
-    def get_backing_devices(self):
+    def get_backing_devices(self, slot):
         '''
         Lists the Backing devices for a Network virtualized
         device
         '''
         cmd = 'lshwres -r virtualio -m %s --rsubtype vnic --level lpar \
-               --filter lpar_names=%s -F backing_devices' \
-               % (self.server, self.lpar)
+               --filter lpar_names=%s,slots=%s -F backing_devices' \
+               % (self.server, self.lpar, slot)
         try:
             output = self.session_hmc.cmd(cmd)
         except CmdError as details:
@@ -777,7 +777,7 @@ class NetworkVirtualization(Test):
         '''
         logport = self.get_active_device_logport(slot)
         adapter_id = ''
-        for entry in self.get_backing_devices().split(','):
+        for entry in self.get_backing_devices(slot).split(','):
             if logport in entry:
                 adapter_id = entry.split('/')[3]
                 port = entry.split('/')[4]
@@ -958,7 +958,7 @@ class NetworkVirtualization(Test):
         '''
         Get the backing device proiority of the vnic interface
         '''
-        for entry in self.get_backing_devices().split(','):
+        for entry in self.get_backing_devices(slot).split(','):
             logport = self.get_backing_device_logport(slot)
             if logport in entry:
                 backing_dev_prio = entry.split('/')[8]
