@@ -14,8 +14,9 @@
 # Author: Shirisha Ganta <shirisha.ganta1@ibm.com>
 # Author: Sachin Sant <sachinp@linux.ibm.com>
 
+import os
 from avocado import Test
-from avocado.utils import process
+from avocado.utils import process, distro, build, archive
 from avocado import skipIf
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -46,12 +47,58 @@ class RASToolsPpcdiag(Test):
         """
         Ensure corresponding packages are installed
         """
-        sm = SoftwareManager()
+        self.run_type = self.params.get('type', default='distro')
+        self.sm = SoftwareManager()
         deps = ["ppc64-diag"]
         for pkg in deps:
-            if not sm.check_installed(pkg) and not sm.install(pkg):
+            if not self.sm.check_installed(pkg) and not \
+                    self.sm.install(pkg):
                 self.cancel("Fail to install %s required for this test." %
                             pkg)
+
+    def test_build_upstream(self):
+        """
+        For upstream target download and compile source code
+        Caution : This function will overwrite system installed
+        ppc64-diag package binaries with upstream code.
+        """
+        if self.run_type == 'upstream':
+            self.detected_distro = distro.detect()
+            deps = ['gcc', 'make', 'automake', 'autoconf', 'bison', 'flex',
+                    'libtool', 'zlib-devel', 'ncurses-devel', 'librtas-devel',
+                    'libservicelog-devel']
+            if 'SuSE' in self.detected_distro.name:
+                deps.extend(['libvpd2-devel'])
+            elif self.detected_distro.name in ['centos', 'fedora', 'rhel']:
+                deps.extend(['libvpd-devel'])
+            else:
+                self.cancel("Unsupported Linux distribution")
+            for package in deps:
+                if not self.sm.check_installed(package) and not \
+                        self.sm.install(package):
+                    self.cancel("Fail to install %s required for this test." %
+                                package)
+            url = self.params.get(
+                    'ppcdiag_url', default='https://github.com/power-ras/'
+                    'ppc64-diag/archive/refs/heads/master.zip')
+            tarball = self.fetch_asset('ppcdiag.zip', locations=[url],
+                                       expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.sourcedir = os.path.join(self.workdir, 'ppc64-diag-master')
+            os.chdir(self.sourcedir)
+            self.run_cmd('./autogen.sh')
+            # TODO : For now only this test is marked as failed.
+            # Additional logic should be added to skip all the remaining
+            # test_() functions for upstream target if source code
+            # compilation fails. This will require a way to share
+            # variable/data across test_() functions.
+            self.run_cmd('./configure --prefix=/usr')
+            if self.fail_cmd:
+                self.fail("Source code compilation error")
+            build.make(self.sourcedir)
+            build.make(self.sourcedir, extra_args='install')
+        else:
+            self.cancel("This test is supported with upstream as a target")
 
     def test_nvsetenv(self):
         """

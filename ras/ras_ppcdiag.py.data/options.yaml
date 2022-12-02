@@ -2,3 +2,9 @@ nvsetenv_list: ['load-base', 'load-base 7000']
 usysattn_list: ['-h', '-V', '-P']
 usysfault_list: ['-h', '-V', '-P']
 usysident_list: ['-h', '-V', '-P']
+run_type: !mux
+    upstream:
+        ppcdiag_url: ''
+        type: 'upstream'
+    distro:
+        type: 'distro'
