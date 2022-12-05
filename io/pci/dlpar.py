@@ -67,10 +67,17 @@ class DlparPci(Test):
         if not self.server:
             self.cancel("Managed System not got")
         self.lpar_2 = self.params.get("lpar_2", '*', default=None)
+        # lshwres command can return message No results were found
+        # in case hardware discovery is not done yet or needs to be refreshed.
+        # Handle such condition in the scipt and skip the test in such case.
+        no_result = 'No results were found'
         if self.lpar_2 is not None:
             cmd = 'lshwres -r io -m %s --rsubtype slot --filter \
                    lpar_names=%s -F lpar_id' % (self.server, self.lpar_2)
             output = self.session.cmd(cmd)
+            if no_result in output.stdout_text:
+                self.log.warn("Incomplete hardware discovery!!. Refresh it")
+                self.cancel("Incomplete hardware discovery, skipping tests")
             self.lpar2_id = output.stdout_text[0]
         self.pci_device = self.params.get("pci_device", '*', default=None)
         self.loc_code = pci.get_slot_from_sysfs(self.pci_device)
@@ -84,6 +91,9 @@ class DlparPci(Test):
             'adapter_id,logical_port_id,phys_port_id,lpar_id,location_code,drc_name'" \
                    % (self.server, self.lpar_1)
             output = self.session.cmd(cmd)
+            if no_result in output.stdout_text:
+                self.log.warn("Incomplete hardware discovery!!. Refresh it")
+                self.cancel("Incomplete hardware discovery, skipping tests")
             for line in output.stdout_text.splitlines():
                 if self.loc_code in line:
                     self.adapter_id = line.split(',')[0]
@@ -100,6 +110,9 @@ class DlparPci(Test):
                    --filter lpar_names=%s -F drc_index,lpar_id,drc_name,bus_id' \
                    % (self.server, self.lpar_1)
             output = self.session.cmd(cmd)
+            if no_result in output.stdout_text:
+                self.log.warn("Incomplete hardware discovery!!. Refresh it")
+                self.cancel("Incomplete hardware discovery, skipping tests")
             for line in output.stdout_text.splitlines():
                 if self.loc_code in line:
                     self.drc_index = line.split(',')[0]
