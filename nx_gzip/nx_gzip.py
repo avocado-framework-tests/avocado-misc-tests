@@ -94,7 +94,11 @@ class NXGZipTests(Test):
         if self.dist.name not in ['rhel', 'SuSE']:
             self.cancel('Unsupported OS %s' % self.dist.name)
 
-        deps = ['gcc', 'make', 'glibc-static', 'zlib', 'zlib-devel']
+        deps = ['gcc', 'make', 'zlib-devel']
+        if self.dist.name == 'rhel':
+            deps.extend(['glibc-static', 'zlib'])
+        if self.dist.name == 'SuSE':
+            deps.extend(['glibc-devel-static', 'libz1'])
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
                 self.cancel(
