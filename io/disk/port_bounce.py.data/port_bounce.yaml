@@ -1,7 +1,9 @@
-switch_name: ""
-userid: ""
+switch_name:
+userid:
 password: "********"
-wwids: ''
+wwids:
+adapter_type:
+pci_devices:
 sbt: 60
 lbt: 120
 count: 1

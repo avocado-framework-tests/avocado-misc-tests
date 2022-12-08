@@ -11,4 +11,9 @@ password : FC switch password to login
 sbt: short bounce time in seconds
 lbt: long bounce time in seconds
 count : Number of times test to run
-pci_device: pci_bus_adress of adapter, space separated
+wwids : wwids of corresponding fc/vfc adapter's multipath
+	you can get it from output of "multipath -ll" for fc/vfc adapter type.
+	for nvmf adapter, you can leave this as blank.
+pci_devices: pci_bus_adress of adapter, space separated. in case of virtual fc/vfc,
+	     leave it as blank and make sure you have passed wwids
+adapter_type: type of adapter, like fc or nvmf
