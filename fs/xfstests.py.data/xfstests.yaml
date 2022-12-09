@@ -4,7 +4,6 @@ test_mnt: '/mnt/test'
 disk_mnt: '/mnt/loop-device'
 # Uncomment and edit test_range for running specific tests
 test_range: "null"
-# Run with either loop_type (or) disk_type
 loop_type: !mux
     type: 'loop'
     loop_size: '7GiB'
@@ -12,18 +11,29 @@ loop_type: !mux
     # Uses '/' by default for file creation
     disk: "null"
 fs_type: !mux
-    fs_ext4:
+    fs_ext4_4k:
         fs: 'ext4'
-        exclude: "null"
+        mkfs_opt: '-b 4096'
+        mount_opt: '-o block_validity'
+        exclude: "048"
         gen_exclude: "null"
         share_exclude: "null"
-    fs_xfs:
+    fs_ext4_64k:
+        fs: 'ext4'
+        mkfs_opt: '-b 65536'
+        mount_opt: '-o block_validity'
+        exclude: "048"
+        gen_exclude: "null"
+        share_exclude: "null"
+    fs_xfs_4k:
         fs: 'xfs'
-        # Exclude only if test_range not provided
+        mkfs_opt: '-f -b size=4096'
         exclude: "null"
         gen_exclude: "null"
         share_exclude: "null"
-disk_type: !mux
-    type: 'disk'
-    disk_test: "null"
-    disk_scratch: "null"
+    fs_xfs_64k:
+        fs: 'xfs'
+        mkfs_opt: '-f -b size=65536'
+        exclude: "null"
+        gen_exclude: "null"
+        share_exclude: "null"
