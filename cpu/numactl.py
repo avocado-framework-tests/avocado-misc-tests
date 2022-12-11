@@ -12,15 +12,19 @@
 # See LICENSE for more details.
 #
 # Copyright: 2017 IBM
+# Copyright: 2022 IBM
 # Author:Praveen K Pandey <praveen@linux.vnet.ibm.com>
-#
-
+#        :Shaik Abdulla <shaik.abdulla1@ibm.com>
 
 import os
-
+import netifaces
+from random import choice
 from avocado import Test
-from avocado.utils import archive, build, process, distro, memory
+from avocado.utils import archive, build, process, distro, memory, cpu, wait
 from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.network.hosts import LocalHost
+from avocado.utils import genio, process
 
 
 class Numactl(Test):
@@ -67,6 +71,97 @@ class Numactl(Test):
 
         build.make(self.sourcedir)
 
+        self.iface = self.params.get("interface", default="")
+        self.disk = self.params.get("disk", default="")
+
+        if self.iface:
+            self.ping_count = self.params.get("ping_count", default=100)
+            self.peer = self.params.get("peer_ip", default="")
+            interfaces = netifaces.interfaces()
+            if not self.iface:
+                self.cancel("Please specify interface to be used")
+            if self.iface not in interfaces:
+                self.cancel("%s interface is not available" % self.iface)
+            if not self.peer:
+                self.cancel("peer ip need to specify in YAML")
+            self.ipaddr = self.params.get("host_ip", default="")
+            self.localhost = LocalHost()
+            self.networkinterface = NetworkInterface(self.iface,
+                                                     self.localhost)
+            if not self.networkinterface.validate_ipv4_format(self.ipaddr):
+                self.cancel("Host IP formatt in YAML is incorrect,"
+                            "Please specify it correctly")
+            if not self.networkinterface.validate_ipv4_format(self.peer):
+                self.cancel("Peer IP formatt in YAML is incorrect,"
+                            "Please specify it correctly")
+            self.netmask = self.params.get("netmask", default="")
+            if not (self.networkinterface.validate_ipv4_netmask_format
+                    (self.netmask)):
+                self.cancel("Netmask formatt in YAML is incorrect,"
+                            "please specify it correctly")
+            try:
+                self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+                self.networkinterface.save(self.ipaddr, self.netmask)
+            except Exception:
+                self.networkinterface.save(self.ipaddr, self.netmask)
+            self.networkinterface.bring_up()
+            if not wait.wait_for(self.networkinterface.is_link_up, timeout=60):
+                self.cancel("Link up of interface taking more than"
+                            "60 seconds")
+            if self.networkinterface.ping_check(self.peer,
+                                                count=5) is not None:
+                self.cancel("No connection to peer")
+
+        elif self.disk:
+            if not self.disk:
+                self.cancel("Disk name has not given")
+            self.seek = self.params.get("seek", default="1024")
+            self.count = self.params.get("count", default="1024")
+            self.bytes = self.params.get("bytes", default="1M")
+            self.input_file = self.params.get("input_file",
+                                              default="/dev/zero")
+        self.device = self.params.get('pci_device', default="")
+        if not self.device:
+            self.cancel("PCI_address not given")
+        if not os.path.isdir('/sys/bus/pci/devices/%s' % self.device):
+            self.cancel("%s not present in device path" % self.device)
+        self.cpu_path = "/sys/devices/system/node/has_cpu"
+        if not os.path.exists(self.cpu_path):
+            self.cancel("No NUMA nodes have CPU")
+        self.numa_dict = cpu.numa_nodes_with_assigned_cpus()
+
+    def check_numa_nodes(self):
+        '''
+        :return: True when atleast two NUMA nodes with assigned CPU's
+                 are available on system
+        :return: False if the above condition has not met.
+        :rtype: bool
+        '''
+        if len(cpu.get_numa_node_has_cpus()) < 2:
+            self.cancel("Required atleast two NUMA nodes with CPU"
+                        " assigned for this test case!")
+        else:
+            return True
+
+    def dd_run(self, cmd):
+        '''
+        Runs the dd command on given Disk and returns True or False
+        '''
+        result = process.run(cmd, shell=True, ignore_status=True)
+        if result.exit_status != 0:
+            self.fail("dd run on %s failed" % self.disk)
+
+    def numa_ping(self, cmd):
+        '''
+        Ping Test using numactl command to remote Peer
+        with -f and count options.
+        '''
+        output = process.run(cmd, shell=True,
+                             ignore_status=True
+                             ).stdout.decode("utf-8").split(",")
+        if " 0% packet loss" not in output:
+            self.cancel("failed due to packet loss")
+
     def test(self):
 
         if build.make(self.sourcedir, extra_args='-k -j 1'
@@ -75,3 +170,153 @@ class Numactl(Test):
                 self.log.warn('Few tests failed due to less NUMA mem-nodes')
             else:
                 self.fail('test failed, Please check debug log')
+
+    def test_interleave(self):
+        '''
+        To check memory interleave on NUMA nodes.
+        '''
+        if self.iface:
+            cmd = "numactl --interleave=all ping -I %s %s -c %s -f"\
+                % (self.iface, self.peer, self.ping_count)
+            self.numa_ping(cmd)
+
+        if self.disk:
+            cmd = "numactl --interleave=all dd if=%s of=%s \
+              seek=%s bs=%s count=%s" % (self.input_file,
+                                         self.disk,
+                                         self.seek,
+                                         self.bytes,
+                                         self.count)
+            self.dd_run(cmd)
+
+    def test_localalloc(self):
+        '''
+        Test memory allocation on the current node
+        '''
+        if self.iface:
+            cmd = "numactl --localalloc ping -I %s %s -c %s -f"\
+                % (self.iface, self.peer, self.ping_count)
+            self.numa_ping(cmd)
+
+        if self.disk:
+            cmd = "numactl --localalloc  dd if=%s of=%s \
+                  seek=%s bs=%s count=%s" % (self.input_file,
+                                             self.disk,
+                                             self.seek,
+                                             self.bytes,
+                                             self.count)
+        self.dd_run(cmd)
+
+    def test_preferred_node(self):
+        '''
+        Test Preferably allocate memory on node
+        '''
+        if self.check_numa_nodes():
+
+            self.node_number = [key for key in self.numa_dict.keys()][1]
+
+            if self.iface:
+                cmd = "numactl --preferred=%s  ping -I %s %s -c %s -f" \
+                        % (self.node_number,
+                           self.iface,
+                           self.peer,
+                           self.ping_count)
+                self.numa_ping(cmd)
+
+            if self.disk:
+                cmd = "numactl --preferred=%s dd if=%s of=%s \
+                     seek=%s bs=%s count=%s" % (self.node_number,
+                                                self.input_file,
+                                                self.disk,
+                                                self.seek,
+                                                self.bytes,
+                                                self.count)
+                self.dd_run(cmd)
+
+    def test_cpunode_with_membind(self):
+        '''
+        Test CPU and memory bind
+        '''
+        if self.check_numa_nodes():
+            self.first_cpu_node_number = [key
+                                          for key
+                                          in self.numa_dict.keys()][0]
+            self.second_cpu_node_number = [key
+                                           for key
+                                           in self.numa_dict.keys()][1]
+            self.membind_node_number = [key
+                                        for key
+                                        in self.numa_dict.keys()][1]
+            if self.iface:
+                for cpu in [self.first_cpu_node_number,
+                            self.second_cpu_node_number]:
+                    cmd = "numactl --cpunodebind=%s --membind=%s ping -I %s \
+                           %s -c %s -f" % (cpu,
+                                           self.membind_node_number,
+                                           self.iface,
+                                           self.peer,
+                                           self.ping_count)
+                    self.numa_ping(cmd)
+
+            if self.disk:
+                for cpu in [self.first_cpu_node_number,
+                            self.second_cpu_node_number]:
+                    cmd = "numactl --cpunodebind=%s --membind=%s \
+                           dd if=%s of=%s seek=%s bs=%s count=%s" \
+                        % (cpu,
+                           self.membind_node_number,
+                           self.input_file, self.disk,
+                           self.seek, self.bytes,
+                           self.count)
+                    self.dd_run(cmd)
+
+    def test_physical_cpu_bind(self):
+        '''
+        Test physcial  CPU binds
+        '''
+        if self.check_numa_nodes():
+            self.cpu_number = [value
+                               for value
+                               in self.numa_dict.values()][0][1]
+            if self.iface:
+
+                cmd = "numactl --physcpubind=%s ping -I %s %s -c %s -f"\
+                    % (self.cpu_number, self.iface, self.peer, self.ping_count)
+                self.numa_ping(cmd)
+
+            if self.disk:
+                cmd = "numactl --physcpubind=%s dd if=%s of=%s \
+                   seek=%s bs=%s count=%s" % (self.cpu_number,
+                                              self.input_file,
+                                              self.disk,
+                                              self.seek,
+                                              self.bytes, self.count)
+                self.dd_run(cmd)
+
+    def test_numa_pci_bind(self):
+        '''
+        Test PCI binding to diferrent NUMA nodes
+        '''
+        if self.check_numa_nodes():
+            nodes = [node for node in self.numa_dict.keys()]
+            node_path = '/sys/bus/pci/devices/%s/numa_node' % self.device
+            pci_node_number = genio.read_file(node_path)
+            alter_node = (choice([i
+                                  for i
+                                  in nodes if i not in [pci_node_number]]))
+            genio.write_file(node_path, str(alter_node))
+            self.log.info(f"PCI NUMA node changed to {alter_node}")
+
+    def tearDown(self):
+        '''
+        Cleaning up Host IP address
+        '''
+        if self.iface:
+            if self.networkinterface:
+                self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+                try:
+                    self.networkinterface.restore_from_backup()
+                except Exception:
+                    self.networkinterface.remove_cfg_file()
+                    self.log.info("backup file not availbale,"
+                                  "could not restore file.")
