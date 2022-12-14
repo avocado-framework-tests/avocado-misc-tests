@@ -1,0 +1,6 @@
+run_type: !mux
+    upstream:
+        lsvpd_url: ''
+        type: 'upstream'
+    distro:
+        type: 'distro'
