@@ -403,3 +403,28 @@ class RASToolsPpcutils(Test):
                     sudo=True, shell=True)
         self.run_cmd("bootlist -r -m both -f %s" % file_path)
         self.error_check()
+
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
+    def test_lparstat(self):
+        """
+        Test case to validate lparstat functionality. lparstat is a tool
+        to display logical partition related information and statistics.
+        """
+        self.log.info("===============Executing lparstat tool test===="
+                      "===========")
+        lists = self.params.get('lparstat_list',
+                                default=['-i', '-x', '-E', '-l', '1 2'])
+        for list_item in lists:
+            cmd = "lparstat %s" % list_item
+            self.run_cmd(cmd)
+        self.error_check()
+
+        lists = self.params.get('lparstat_nlist',
+                                default=['--nonexistingoption'])
+        for list_item in lists:
+            cmd = "lparstat %s" % list_item
+            if not process.system(cmd, ignore_status=True, sudo=True):
+                self.log.info("%s command passed" % cmd)
+                self.fail("lparstat: Expected failure, %s command exeucted \
+                          successfully." % cmd)
