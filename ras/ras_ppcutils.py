@@ -428,3 +428,22 @@ class RASToolsPpcutils(Test):
                 self.log.info("%s command passed" % cmd)
                 self.fail("lparstat: Expected failure, %s command exeucted \
                           successfully." % cmd)
+
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
+    def test_lparnumascore(self):
+        """
+        lparnumascore displays the NUMA affinity score for the running LPAR.
+        The score is a number between 0 and 100. A score of 100 means that
+        all the resources are seen correctly, while a score of 0 means that
+        all the resources have been moved to different nodes. There is a
+        dedicated score for each resource type
+        """
+        self.log.info("===============Executing lparnumascore tool test===="
+                      "===========")
+        self.run_cmd('lparnumascore')
+        lists = self.params.get('lparnumascore_list',
+                                default=['-c cpu', '-c mem'])
+        for list_item in lists:
+            self.run_cmd('lparnumascore %s' % list_item)
+        self.error_check()
