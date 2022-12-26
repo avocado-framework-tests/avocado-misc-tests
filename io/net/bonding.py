@@ -138,6 +138,13 @@ class Bonding(Test):
             self.ib = True
         self.log.info("Bond Test on IB Interface? = %s", self.ib)
 
+        dir = os.listdir('/sys/class/net')
+        if "test_cleanup" in str(self.name.name) and self.bond_name in dir:
+            cmd = 'ip addr add %s/%s dev %s;sleep 5;'\
+                  % (self.ipaddr[0], self.netmask,
+                    self.bond_name)
+            process.system(cmd, shell=True, ignore_status=True)
+
         '''
         An individual interface, that has a LACP PF, cannot communicate without
         being bonded. So the test uses the public ip address to create an SSH
