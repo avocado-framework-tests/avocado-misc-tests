@@ -31,13 +31,20 @@ class OpenSSL(Test):
         Install the basic packages to support openssl
         '''
         # Check for basic utilities
+        run_type = self.params.get('type', default='upstream')
         smm = SoftwareManager()
         detected_distro = distro.detect()
         deps = ['gcc', 'make']
+        if detected_distro.name in ['rhel', 'redhat'] and\
+                run_type == "upstream":
+            deps.extend(['perl-IPC-Cmd', 'perl-Test-Harness',
+                         'perl-Test-Simple'])
+            if detected_distro.name == 'rhel' and\
+                    detected_distro.version.startswith('9'):
+                deps.extend(['perl-FindBin'])
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        run_type = self.params.get('type', default='upstream')
         if run_type == "upstream":
             def_url = "https://github.com/openssl/openssl/archive/master.zip"
             url = self.params.get('url', default=def_url)
