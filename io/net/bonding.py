@@ -142,7 +142,7 @@ class Bonding(Test):
         if "test_cleanup" in str(self.name.name) and self.bond_name in dir:
             cmd = 'ip addr add %s/%s dev %s;sleep 5;'\
                   % (self.ipaddr[0], self.netmask,
-                    self.bond_name)
+                     self.bond_name)
             process.system(cmd, shell=True, ignore_status=True)
 
         '''
