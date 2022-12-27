@@ -51,15 +51,6 @@ class libgcrypt(Test):
             git.get_repo(url, destination_dir=self.workdir)
             os.chdir(self.workdir)
             self.srcdir = self.workdir
-            process.run("./autogen.sh")
-            process.run("./configure --enable-maintainer-mode --disable-doc")
-            if build.make(self.workdir):
-                # If the make fails then need to run make with -lpthread
-                output = build.run_make(self.workdir,
-                                        extra_args="CFLAGS+=-lpthread",
-                                        process_kwargs={"ignore_status": True})
-                if output.exit_status:
-                    self.fail("'make' failed.")
         elif run_type == "distro":
             self.srcdir = os.path.join(self.workdir, "libgcrypt-distro")
             if not os.path.exists(self.srcdir):
@@ -67,6 +58,16 @@ class libgcrypt(Test):
             self.srcdir = smm.get_source("libgcrypt", self.srcdir)
             if not self.srcdir:
                 self.fail("libgcrypt source install failed.")
+            os.chdir(self.srcdir)
+        process.run("./autogen.sh")
+        process.run("./configure --enable-maintainer-mode --disable-doc")
+        if build.make(self.srcdir):
+            # If the make fails then need to run make with -lpthread
+            output = build.run_make(self.srcdir,
+                                    extra_args="CFLAGS+=-lpthread",
+                                    process_kwargs={"ignore_status": True})
+            if output.exit_status:
+                self.fail("'make' failed.")
 
     def test(self):
         '''
