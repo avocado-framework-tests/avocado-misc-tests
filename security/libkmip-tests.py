@@ -44,8 +44,6 @@ class libkmip(Test):
             tarball = self.fetch_asset(url, expire='7d')
             archive.extract(tarball, self.workdir)
             self.srcdir = os.path.join(self.workdir, 'libkmip-master')
-            if build.make(self.srcdir):
-                self.fail("Failed to compile libkmip")
         elif run_type == "distro":
             if detected_distro.name in ['rhel', 'fedora', 'centos']:
                 self.cancel("For %s 'libkmip' package not available" %
@@ -57,13 +55,27 @@ class libkmip(Test):
             if not self.srcdir:
                 self.fail("libkmip source install failed.")
         os.chdir(self.srcdir)
+        if build.make(self.srcdir):
+            self.fail("Failed to compile libkmip")
 
     def test(self):
         '''
         Running tests from libkmip
         '''
         count = 0
-        output = process.run("./bin/tests", ignore_status=True, shell=True)
+        # Older version of KMIP source has tests under parent directory
+        # while newer versions have it under $root/bin/ sub directory.
+        # Add a check for tests and accordingly call them
+        test_binary = self.srcdir + "/bin/tests"
+        if os.path.exists(test_binary):
+            output = process.run("./bin/tests", ignore_status=True, shell=True)
+        else:
+            test_binary = self.srcdir + "/tests"
+            if os.path.exists(test_binary):
+                output = process.run("./tests",
+                                     ignore_status=True, shell=True)
+            else:
+                self.fail("Unable to find tests binary, bailing out")
         for line in output.stdout.decode().splitlines():
             if 'FAIL - ' in line:
                 count += 1
