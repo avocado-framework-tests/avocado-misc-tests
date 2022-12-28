@@ -68,6 +68,8 @@ class annobin(Test):
         count = 0
         output = build.run_make(self.annobin_dir, extra_args="check",
                                 process_kwargs={"ignore_status": True})
+        if output.exit_status:
+            self.fail("annobin-tests.py: make check failed")
         for line in output.stdout_text.splitlines():
             if 'FAIL:' in line and 'XFAIL:' not in line and \
                '# FAIL:' not in line:
