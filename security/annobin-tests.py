@@ -38,7 +38,7 @@ class annobin(Test):
         # gcc versions like 5,6,7,8 skipping Ubuntu for this test.
         # In SLES 'gcc-plugin-devel' package not available, skipping.
         if self.distro_name in ['rhel', 'fedora', 'centos']:
-            deps.extend(['gcc-plugin-devel', 'rpm-devel'])
+            deps.extend(['gcc-plugin-devel', 'rpm-devel', 'binutils-devel'])
         else:
             self.cancel("%s not supported for this test" % self.distro_name)
         for package in deps:
