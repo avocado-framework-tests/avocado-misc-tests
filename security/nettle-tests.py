@@ -61,15 +61,6 @@ class Nettle(Test):
             tarball = self.fetch_asset(url, expire='7d')
             archive.extract(tarball, self.workdir)
             self.srcdir = os.path.join(self.workdir, 'nettle-master')
-            os.chdir(self.srcdir)
-            output = process.run('autoreconf -ifv', ignore_status=True)
-            if output.exit_status:
-                self.fail("nettle-tests.py: 'autoreconf' failed.")
-            output = process.run('./configure', ignore_status=True)
-            if output.exit_status:
-                self.fail("nettle-tests.py: 'configure' failed.")
-            if build.make(self.srcdir):
-                self.fail("Building Nettle failed")
         elif run_type == "distro":
             self.srcdir = os.path.join(self.workdir, "nettle-distro")
             if not os.path.exists(self.srcdir):
@@ -80,6 +71,15 @@ class Nettle(Test):
             self.srcdir = smm.get_source(pkg_name, self.srcdir)
             if not self.srcdir:
                 self.fail("nettle source install failed.")
+        os.chdir(self.srcdir)
+        output = process.run('autoreconf -ifv', ignore_status=True)
+        if output.exit_status:
+            self.fail("nettle-tests.py: 'autoreconf' failed.")
+        output = process.run('./configure', ignore_status=True)
+        if output.exit_status:
+            self.fail("nettle-tests.py: 'configure' failed.")
+        if build.make(self.srcdir):
+            self.fail("Building Nettle failed")
 
     def test(self):
         '''
