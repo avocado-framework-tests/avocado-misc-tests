@@ -44,13 +44,6 @@ class PAM(Test):
             tarball = self.fetch_asset(url, expire='7d')
             archive.extract(tarball, self.workdir)
             self.srcdir = os.path.join(self.workdir, 'linux-pam-master')
-            os.chdir(self.srcdir)
-            output = process.run('./autogen.sh', ignore_status=True)
-            if output.exit_status:
-                self.fail("pam-tests.py: 'autogen.sh' failed.")
-            output = process.run('./configure', ignore_status=True)
-            if output.exit_status:
-                self.fail("pam-tests.py: 'configure' failed.")
         elif run_type == "distro":
             self.srcdir = os.path.join(self.workdir, "pam-distro")
             if not os.path.exists(self.srcdir):
@@ -58,6 +51,20 @@ class PAM(Test):
             self.srcdir = smm.get_source("pam", self.srcdir)
             if not self.srcdir:
                 self.fail("pam source install failed.")
+        os.chdir(self.srcdir)
+        # Depending on version of source code autogen.sh may not be
+        # present. Add a check for the same.
+        f_autogen = self.srcdir + "/autogen.sh"
+        if os.path.isfile(f_autogen):
+            output = process.run('./autogen.sh', ignore_status=True)
+            if output.exit_status:
+                self.fail("pam-tests.py: 'autogen.sh' failed.")
+        # Disable documentation build
+        output = process.run('./configure --disable-doc', ignore_status=True)
+        if output.exit_status:
+            self.fail("pam-tests.py: 'configure' failed.")
+        if build.make(self.srcdir):
+            self.fail("Building pam failed")
 
     def test(self):
         '''
