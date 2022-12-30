@@ -76,7 +76,8 @@ class RASToolsLsvpd(Test):
                 deps.extend(['libsgutils-devel', 'sqlite3-devel',
                              'libvpd2-devel'])
             elif self.detected_distro.name in ['centos', 'fedora', 'rhel']:
-                deps.extend(['sqlite-devel', 'libvpd-devel'])
+                deps.extend(['sqlite-devel', 'libvpd-devel',
+                             'sg3_utils-devel'])
             else:
                 self.cancel("Unsupported Linux distribution")
             for package in deps:
