@@ -66,7 +66,8 @@ class Perftool(Test):
         execute the tests by calling each module
         '''
         count = 0
-        for string in process.run("perf test", ignore_status=True).stderr.decode("utf-8").splitlines():
+        for string in process.run("perf test", ignore_status=True).\
+                stderr.decode("utf-8", "ignore").splitlines():
             if 'FAILED' in string:
                 count += 1
                 self.log.info(string)
@@ -81,7 +82,8 @@ class Perftool(Test):
         count = 0
         for line in build.run_make(self.sourcedir, extra_args='check',
                                    process_kwargs={'ignore_status': True}
-                                   ).stdout.decode("utf-8").splitlines():
+                                   ).stdout.decode("utf-8", "ignore").\
+                splitlines():
             if '-- [ FAIL ] --' in line:
                 count += 1
                 self.log.info(line)
