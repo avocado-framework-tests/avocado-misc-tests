@@ -51,17 +51,28 @@ Tags by access privileges:
   unrestricted privileges.  For Linux systems, this usually means the
   root account
 Note*
-* --test-runner runner  need to passed as avocado `run` command line as it default lagacy runner as most of the test in avocado misc test wrote in way to execute sequential manner so newer avocado (aka avocado 91 onwards we need to pass this option explicitly as implicit it uses nrunner)  
-exmaple can be like ::
+* Most of these tests in the repository still support serial run (test scenarios) Please use --max-parallel-tasks=1 command line param which restricts nrunner to execute tests in serial flow
 
-  # avocado run --test-runner runner avocado-misc-tests/generic/stress.py
-  JOB ID     : 0018adbc07c5d90d242dd6b341c87972b8f77a0b
-  JOB LOG    : $HOME/avocado/job-results/job-2021-11-12T10.32-001adw/job.log
-  TESTS      : 1
-  (1/1) avocado-misc-tests/generic/stress.py:Stress.test: PASS (62.67 s)
-  RESULTS    : PASS 1 | ERROR 0 | FAIL 0 | SKIP 0 | WARN 0 | INTERRUPT 0
-  JOB HTML   : $HOME/avocado/job-results/job--2021-11-12T10.32-001adw//html/results.html
-  TIME       : 69.67 s
+Examples can be like::
+
+ #avocado run --max-parallel-tasks=1 ras_lsvpd.py 
+  JOB ID     : 6d7ad4e91fb1fbedf7959dd15ce2ff1181872245
+  JOB LOG    : /root/avocado-fvt-wrapper/results/job-2023-01-02T22.51-6d7ad4e/job.log
+  (1/6) ras_lsvpd.py:RASToolsLsvpd.test_vpdupdate: STARTED
+  (1/6) ras_lsvpd.py:RASToolsLsvpd.test_vpdupdate: PASS (5.93 s)
+  (2/6) ras_lsvpd.py:RASToolsLsvpd.test_lsvpd: STARTED
+  (2/6) ras_lsvpd.py:RASToolsLsvpd.test_lsvpd: PASS (94.53 s)
+  (3/6) ras_lsvpd.py:RASToolsLsvpd.test_lscfg: STARTED
+  (3/6) ras_lsvpd.py:RASToolsLsvpd.test_lscfg: PASS (0.63 s)
+  (4/6) ras_lsvpd.py:RASToolsLsvpd.test_lsmcode: STARTED
+  (4/6) ras_lsvpd.py:RASToolsLsvpd.test_lsmcode: PASS (0.72 s)
+  (5/6) ras_lsvpd.py:RASToolsLsvpd.test_lsvio: STARTED
+  (5/6) ras_lsvpd.py:RASToolsLsvpd.test_lsvio: PASS (0.41 s)
+  (6/6) ras_lsvpd.py:RASToolsLsvpd.test_locking_mechanism: STARTED
+  (6/6) ras_lsvpd.py:RASToolsLsvpd.test_locking_mechanism: PASS (2.40 s)
+  RESULTS    : PASS 6 | ERROR 0 | FAIL 0 | SKIP 0 | WARN 0 | INTERRUPT 0 | CANCEL 0
+  JOB HTML   : /root/avocado-fvt-wrapper/results/job-2023-01-02T22.51-6d7ad4e/results.html
+  JOB TIME   : 233.35 s  
 
 * For more details please refer 3rd point in References section.
 
