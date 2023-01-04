@@ -22,7 +22,7 @@ from avocado import Test
 from avocado.utils import distro
 from avocado.utils import process
 from avocado.utils.network.interfaces import NetworkInterface
-from avocado.utils.network.hosts import LocalHost
+from avocado.utils.network.hosts import LocalHost, RemoteHost
 
 
 class Bridging(Test):
@@ -53,6 +53,11 @@ class Bridging(Test):
             self.cancel("User should specify peer IP")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
+        self.peer_interface = self.params.get("peer_interface", default="")
+        self.peer_public_ip = self.params.get("peer_public_ip", default="")
+        self.user = self.params.get("user_name", default="root")
+        self.password = self.params.get("peer_password", '*',
+                                        default="None")
         self.bridge_interface = self.params.get("bridge_interface",
                                                 default="br0")
         local = LocalHost()
@@ -96,9 +101,20 @@ class Bridging(Test):
         except Exception:
             self.networkinterface.save(self.ipaddr, self.netmask)
         self.networkinterface.bring_up()
+        self.remotehost = RemoteHost(self.peer_public_ip, self.user,
+                                     password=self.password)
+        peer_networkinterface = NetworkInterface(self.peer_interface,
+                                                 self.remotehost)
+        try:
+            peer_networkinterface.add_ipaddr(self.peer_ip, self.netmask)
+            peer_networkinterface.save(self.peer_ip, self.netmask)
+        except Exception:
+            peer_networkinterface.save(self.peer_ip, self.netmask)
+        peer_networkinterface.bring_up()
         if self.networkinterface.ping_check(self.peer_ip, count=5) is not None:
             self.fail('Ping using bridge failed')
         self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+        peer_networkinterface.remove_ipaddr(self.peer_ip, self.netmask)
 
     def test_bridge_delete(self):
         '''
