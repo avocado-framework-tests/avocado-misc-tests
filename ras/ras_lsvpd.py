@@ -17,6 +17,7 @@
 
 import os
 import shutil
+from avocado.utils import pci
 from avocado import Test
 from avocado.utils import process, distro, build, archive
 from avocado import skipIf
@@ -264,3 +265,146 @@ class RASToolsLsvpd(Test):
             self.fail("Database corruption detected")
         else:
             self.log.info("Locking mechanism prevented database corruption")
+
+    @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
+    def test_pci_lsvpd(self):
+        '''
+        Verify data from sysfs and lsvpd tool output match correctly.
+        '''
+        if process.system("vpdupdate", ignore_status=True, shell=True):
+            self.fail("VPD Update fails")
+
+        error = []
+        for pci_addr in pci.get_pci_addresses():
+            self.log.info("Checking for PCI Address: %s\n\n", pci_addr)
+            vpd_output = pci.get_vpd(pci_addr)
+            if vpd_output:
+
+                # Slot Match
+                if 'slot' in vpd_output:
+                    sys_slot = pci.get_slot_from_sysfs(pci_addr)
+                    if sys_slot:
+                        sys_slot = sys_slot.strip('\0')
+                    vpd_slot = vpd_output['slot']
+                    self.log.info("Slot from sysfs: %s", sys_slot)
+                    self.log.info("Slot from lsvpd: %s", vpd_slot)
+                    if sys_slot in [sys_slot, vpd_slot[:vpd_slot.rfind('-')]]:
+                        self.log.info("=======>>> slot matches perfectly\n\n")
+                    else:
+                        error.append(pci_addr + "-> slot")
+                        self.log.info("--->>Slot Numbers not Matched\n\n")
+                else:
+                    self.log.error("Slot info not available in vpd output\n")
+
+                # Device ID match
+                sys_pci_id_output = pci.get_pci_id_from_sysfs(pci_addr)
+                vpd_dev_id = vpd_output['pci_id'][4:]
+                sysfs_dev_id = sys_pci_id_output[5:-10]
+                sysfs_sdev_id = sys_pci_id_output[15:]
+                self.log.info("Device ID from sysfs: %s", sysfs_dev_id)
+                self.log.info("Sub Device ID from sysfs: %s", sysfs_sdev_id)
+                self.log.info("Device ID from vpd: %s", vpd_dev_id)
+                if vpd_dev_id == sysfs_sdev_id or vpd_dev_id == sysfs_dev_id:
+                    self.log.info("=======>>Device ID Match Success\n\n")
+                else:
+                    self.log.error("----->>Device ID did not Match\n\n")
+                    error.append(pci_addr + "-> Device_id")
+
+                # Subvendor ID Match
+                sysfs_subvendor_id = sys_pci_id_output[10:-5]
+                vpd_subvendor_id = vpd_output['pci_id'][:4]
+                self.log.info("Subvendor ID frm sysfs: %s", sysfs_subvendor_id)
+                self.log.info("Subvendor ID from vpd : %s", vpd_subvendor_id)
+                if sysfs_subvendor_id == vpd_subvendor_id:
+                    self.log.info("======>>>Subvendor ID Match Success\n\n")
+                else:
+                    self.log.error("---->>Subvendor_id Not Matched\n\n")
+                    error.append(pci_addr + "-> Subvendor_id")
+
+                # PCI ID Match
+                lspci_pci_id = pci.get_pci_id(pci_addr)
+                self.log.info(" PCI ID from Sysfs: %s", sys_pci_id_output)
+                self.log.info("PCI ID from Vpd : %s", lspci_pci_id)
+
+                if sys_pci_id_output == lspci_pci_id:
+                    self.log.info("======>>>> All PCI ID match Success\n\n")
+                else:
+                    self.log.error("---->>>PCI info Did not Matches\n\n")
+                    error.append(pci_addr + "-> pci_id")
+
+                # PCI Config Space Check
+                if process.system("lspci -xxxx -s %s" % pci_addr,
+                                  ignore_status=True, sudo=True):
+                    error.append(pci_addr + "->pci_config_space")
+
+        if error:
+            self.fail("Errors for above pci addresses: %s" % error)
+
+    @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
+    def test_pci_lscfg(self):
+        '''
+        Capture data from lscfg and lspci then compare data
+        '''
+        # get_pci_info() routine is available with avocado v99.0
+        # Add a check for the same to cancel the test.
+        avocado_ver = os.environ['AVOCADO_VERSION']
+        if avocado_ver < '99.0':
+            self.cancel("Test requires Avocado v99.0+ test runner")
+        error = []
+        for pci_addr in pci.get_pci_addresses():
+            self.log.info("Checking for PCI Address: %s\n\n", pci_addr)
+            pci_info_dict = pci.get_pci_info(pci_addr)
+            self.log.info(pci_info_dict)
+            cfg_output = pci.get_cfg(pci_addr)
+            self.log.info(cfg_output)
+            if cfg_output and pci_info_dict:
+                if 'YL' in cfg_output and 'PhySlot' in pci_info_dict:
+                    # Physical Slot Match
+                    self.log.info("Physical Slot from lscfg is %s"
+                                  " and lspci is %s",
+                                  cfg_output['YL'], pci_info_dict['PhySlot'])
+                    cfg_output['YL'] = \
+                        cfg_output['YL'][:cfg_output['YL'].rfind('-')]
+                    if (cfg_output['YL'] == pci_info_dict['PhySlot']):
+                        self.log.info("Physical Slot matched")
+                    else:
+                        error.append("Physical slot info didn't match")
+                # Sub Device ID match
+                if ('subvendor_device' in cfg_output and
+                        'SDevice' in pci_info_dict):
+                    self.log.info("Device iD from lscfg is %s"
+                                  " and lspci is %s",
+                                  cfg_output['subvendor_device'][4:],
+                                  pci_info_dict['SDevice'])
+                    if (cfg_output['subvendor_device'][4:]
+                       == pci_info_dict['SDevice']):
+                        self.log.info("Sub Device ID matched")
+                    else:
+                        error.append("Device ID info didn't match")
+                # Subvendor ID Match
+                if ('subvendor_device' in cfg_output and
+                        'SVendor' in pci_info_dict):
+                    self.log.info("Subvendor ID from lscfg is %s"
+                                  "and lspci is %s",
+                                  cfg_output['subvendor_device'],
+                                  pci_info_dict['SVendor'])
+                    if (cfg_output['subvendor_device'][0:4] ==
+                            pci_info_dict['SVendor']):
+                        self.log.info("Sub vendor ID matched")
+                    else:
+                        error.append("Sub vendor ID didn't match")
+                # PCI Slot ID Match
+                if 'pci_id' in cfg_output and 'Slot' in pci_info_dict:
+                    self.log.info("PCI ID from lscfg is %s and lspci is %s",
+                                  cfg_output['pci_id'], pci_info_dict['Slot'])
+                    if (cfg_output['pci_id'] ==
+                       pci_info_dict['Slot']):
+                        self.log.info("PCI Slot ID matched")
+                    else:
+                        error.append("PCI slot ID didn't match")
+                # PCI Config Space Check
+                if process.system(f"lspci -xxxx -s {pci_addr}",
+                                  sudo=True):
+                    error.append(pci_addr + " : pci_config_space")
+        if error:
+            self.fail(f"Errors for above pci addresses: {error}")
