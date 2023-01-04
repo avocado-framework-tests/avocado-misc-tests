@@ -19,7 +19,7 @@ import os
 import shutil
 import pexpect
 from avocado import Test
-from avocado.utils import build, distro
+from avocado.utils import build, distro, cpu
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -27,12 +27,16 @@ class Dawr(Test):
     """
     Reading single Dawr register and multiple Dawr registers
     with gdb interface
+
+    :avocado: tags=trace,ppc64le
     """
 
     def setUp(self):
         '''
         Install the basic packages to support gdb
         '''
+        if "power10" not in cpu.get_family():
+            self.cancel("Test is supported only on IBM POWER10 platform")
         # Check for basic utilities
         smm = SoftwareManager()
         self.detected_distro = distro.detect()
