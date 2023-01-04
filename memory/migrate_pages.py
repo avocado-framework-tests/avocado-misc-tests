@@ -50,16 +50,23 @@ class MigratePages(Test):
             self.cancel('Test requires two numa nodes to run.'
                         'Node list with memory: %s' % nodes)
 
-        dist = distro.detect()
+        self.dist = distro.detect()
         pkgs = ['gcc', 'make']
-        if dist.name in ["Ubuntu", 'debian']:
+        if self.dist.name in ["Ubuntu", 'debian']:
             pkgs.extend(['libpthread-stubs0-dev',
                          'libnuma-dev', 'libhugetlbfs-dev'])
-        elif dist.name in ["centos", "rhel", "fedora"]:
-            pkgs.extend(['numactl-devel', 'libhugetlbfs-devel'])
-        elif dist.name == "SuSE":
+        elif self.dist.name in ["centos", "rhel", "fedora"]:
+            pkgs.extend(['numactl-devel'])
+            if (self.dist.name == 'rhel' and self.dist.version >= '9'):
+                self.log.info("hugepage tests will not be run, due to\
+                               unavailability of libhugetlbfs packages in\
+                               RHEL-9 or later.")
+            else:
+                os.environ['HAVE_HUGETLB_HEADER'] = '1'
+                pkgs.extend(['libhugetlbfs-devel'])
+        elif self.dist.name == "SuSE":
             pkgs.extend(['libnuma-devel'])
-            if dist.version >= 15:
+            if self.dist.version >= 15:
                 pkgs.extend(['libhugetlbfs-devel'])
             else:
                 pkgs.extend(['libhugetlbfs-libhugetlb-devel'])
@@ -86,6 +93,8 @@ class MigratePages(Test):
         cmd = './node_move_pages -n %s' % self.nr_chunks
 
         if self.hpage:
+            if (self.dist.name == 'rhel' and self.dist.version >= '9'):
+                self.cancel("Hugepage tests are cancelled on RHEL-9 and later.")
             cmd += ' -h'
             if self.hpage_commit:
                 cmd += ' -o'
