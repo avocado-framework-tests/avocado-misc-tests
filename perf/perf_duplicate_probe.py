@@ -64,5 +64,7 @@ class PerfProbe(Test):
             self.fail("perf is placing multiple probes at the same location ")
 
     def tearDown(self):
-        # Deleting all the probed events
-        process.run('perf probe -d \\*')
+        # Check for active probes
+        if process.run("perf probe --list", sudo=True).stdout:
+            # Deleting all the probed events
+            process.run('perf probe -d \\*')
