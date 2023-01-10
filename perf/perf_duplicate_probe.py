@@ -30,13 +30,18 @@ class PerfProbe(Test):
         smm = SoftwareManager()
         distro_name = distro.detect().name
         deps = []
+        run_type = self.params.get('type', default='distro')
         if 'Ubuntu' in distro_name:
             deps.extend(['linux-tools-common', 'linux-tools-%s' %
                          platform.uname()[2]])
         elif 'rhel' in distro_name:
-            deps.extend(['perf', 'kernel-debuginfo'])
+            deps.extend(['perf'])
+            if run_type == 'distro':
+                deps.extend(['kernel-debuginfo'])
         elif 'SuSE' in distro_name:
-            deps.extend(['perf', 'kernel-default-debuginfo'])
+            deps.extend(['perf'])
+            if run_type == 'distro':
+                deps.extend(['kernel-default-debuginfo'])
         else:
             self.cancel("Install the package for perf supported\
                       by %s" % distro_name)
@@ -59,5 +64,7 @@ class PerfProbe(Test):
             self.fail("perf is placing multiple probes at the same location ")
 
     def tearDown(self):
-        # Deleting all the probed events
-        process.run('perf probe -d \\*')
+        # Check for active probes
+        if process.run("perf probe --list", sudo=True).stdout:
+            # Deleting all the probed events
+            process.run('perf probe -d \\*')
