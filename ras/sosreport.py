@@ -363,3 +363,27 @@ class Sosreport(Test):
             cpu_file = "/sys/bus/cpu/devices/cpu%s/online" % i
             genio.write_one_line(cpu_file, "0")
             genio.write_one_line(cpu_file, "1")
+
+    def test_fs(self):
+        is_fail = 0
+        loop_dev = "/dev/loop0"
+        fstype = self.params.get('fs', default='ext4')
+        mnt = self.params.get('dir', default='/mnt')
+        if 'blockfile' not in self.run_cmd_out("ls /tmp"):
+            blk_dev = process.run("dd if=/dev/zero of=/tmp/blockfile bs=1M count=5120")
+            process.run("losetup %s /tmp/blockfile" % loop_dev)
+        if fstype == "ext4":
+            cmd = "mkfs.%s %s" % (fstype, loop_dev)
+        else:
+            cmd = "mkfs.%s -f %s" % (fstype, loop_dev)
+        process.run(cmd)
+        process.run("mount %s %s" % (loop_dev, mnt))
+        self.run_cmd("%s --batch --tmp-dir=%s --all-logs" %
+                     (self.sos_cmd, mnt))
+        process.run("umount %s" % loop_dev)
+        if 'blockfile' in self.run_cmd_out("ls /tmp"):
+            process.run("losetup -d %s" % loop_dev)
+            process.run("rm -rf /tmp/blockfile")
+        if is_fail:
+            self.fail(
+                "%s command(s) failed in sosreport tool verification" % is_fail)

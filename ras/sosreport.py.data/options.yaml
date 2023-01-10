@@ -5,3 +5,10 @@ list     : ['-o dlm -k dlm.lockdump', '-k filesys.dumpe2fs=on',
 case_id  : "test123"
 file_list: ['proc/device-tree/', 'hostname', 'mount', 'netstat', 
             'ps', 'sos_commands', 'sos_logs', 'sos_reports']
+
+dir: '/mnt'
+filesystem: !mux
+    ext4:
+        fs: 'ext4'
+    xfs:
+        fs: 'xfs'
