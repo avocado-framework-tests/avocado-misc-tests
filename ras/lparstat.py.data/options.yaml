@@ -1,2 +1,0 @@
-list: ['-h', '-V', '--version', '-i', '-x', '-E', '-l', '--legacy', "1 10"]
-nlist: ['--nonexistingoption', '-1000']

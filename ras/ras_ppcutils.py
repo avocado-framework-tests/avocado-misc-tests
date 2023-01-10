@@ -17,7 +17,7 @@
 
 import os
 from avocado import Test
-from avocado.utils import process, distro
+from avocado.utils import process, distro, build, archive
 from avocado import skipIf, skipUnless
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -54,9 +54,11 @@ class RASToolsPpcutils(Test):
         """
         Ensure packages are installed
         """
-        sm = SoftwareManager()
-        for package in ("ppc64-diag", "powerpc-utils"):
-            if not sm.check_installed(package) and not sm.install(package):
+        self.sm = SoftwareManager()
+        self.run_type = self.params.get('type', default='distro')
+        for package in ['ppc64-diag', 'powerpc-utils']:
+            if not self.sm.check_installed(package) and not \
+                    self.sm.install(package):
                 self.cancel("Fail to install %s required for this test." %
                             package)
 
@@ -65,6 +67,50 @@ class RASToolsPpcutils(Test):
         return process.system_output(cmd, shell=True,
                                      ignore_status=True,
                                      sudo=True).decode("utf-8").strip()
+
+    def test_build_upstream(self):
+        """
+        For upstream target download and compile source code
+        Caution : This function will overwrite system installed
+        lsvpd Tool binaries with upstream code.
+        """
+        if self.run_type == 'upstream':
+            self.detected_distro = distro.detect()
+            deps = ['gcc', 'make', 'automake', 'autoconf', 'bison', 'flex',
+                    'libtool', 'zlib-devel', 'ncurses-devel', 'librtas-devel']
+            if 'SuSE' in self.detected_distro.name:
+                deps.extend(['libnuma-devel'])
+            elif self.detected_distro.name in ['centos', 'fedora', 'rhel']:
+                deps.extend(['numactl-devel'])
+            else:
+                self.cancel("Unsupported Linux distribution")
+            for package in deps:
+                if not self.sm.check_installed(package) and not \
+                        self.sm.install(package):
+                    self.cancel("Fail to install %s required for this test." %
+                                package)
+            url = self.params.get(
+                'ppcutils_url', default='https://github.com/'
+                'ibm-power-utilities/powerpc-utils/archive/refs/heads/'
+                'master.zip')
+            tarball = self.fetch_asset('ppcutils.zip', locations=[url],
+                                       expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.sourcedir = os.path.join(self.workdir, 'powerpc-utils-master')
+            os.chdir(self.sourcedir)
+            # TODO : For now only this test is marked as failed.
+            # Additional logic should be added to skip all the remaining
+            # test_() functions for upstream target if source code
+            # compilation fails. This will require a way to share
+            # variable/data across test_() functions.
+            self.run_cmd('./autogen.sh')
+            self.error_check()
+            self.run_cmd('./configure --prefix=/usr')
+            self.error_check()
+            build.make(self.sourcedir)
+            build.make(self.sourcedir, extra_args='install')
+        else:
+            self.cancel("This test is supported with upstream as target")
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST,
             "This test is not supported on KVM guest or PowerNV platform")
@@ -356,4 +402,48 @@ class RASToolsPpcutils(Test):
                     (interface, file_path), ignore_status=True,
                     sudo=True, shell=True)
         self.run_cmd("bootlist -r -m both -f %s" % file_path)
+        self.error_check()
+
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
+    def test_lparstat(self):
+        """
+        Test case to validate lparstat functionality. lparstat is a tool
+        to display logical partition related information and statistics.
+        """
+        self.log.info("===============Executing lparstat tool test===="
+                      "===========")
+        lists = self.params.get('lparstat_list',
+                                default=['-i', '-x', '-E', '-l', '1 2'])
+        for list_item in lists:
+            cmd = "lparstat %s" % list_item
+            self.run_cmd(cmd)
+        self.error_check()
+
+        lists = self.params.get('lparstat_nlist',
+                                default=['--nonexistingoption'])
+        for list_item in lists:
+            cmd = "lparstat %s" % list_item
+            if not process.system(cmd, ignore_status=True, sudo=True):
+                self.log.info("%s command passed" % cmd)
+                self.fail("lparstat: Expected failure, %s command exeucted \
+                          successfully." % cmd)
+
+    @skipIf(IS_POWER_NV or IS_KVM_GUEST,
+            "This test is not supported on KVM guest or PowerNV platform")
+    def test_lparnumascore(self):
+        """
+        lparnumascore displays the NUMA affinity score for the running LPAR.
+        The score is a number between 0 and 100. A score of 100 means that
+        all the resources are seen correctly, while a score of 0 means that
+        all the resources have been moved to different nodes. There is a
+        dedicated score for each resource type
+        """
+        self.log.info("===============Executing lparnumascore tool test===="
+                      "===========")
+        self.run_cmd('lparnumascore')
+        lists = self.params.get('lparnumascore_list',
+                                default=['-c cpu', '-c mem'])
+        for list_item in lists:
+            self.run_cmd('lparnumascore %s' % list_item)
         self.error_check()
