@@ -67,6 +67,7 @@ class Ethtool(Test):
         self.other = self.params.get("other_channel", default='')
         self.combined = self.params.get("combined_channel", default='')
         self.count = self.params.get("ping_count", default=500000)
+        self.args = self.params.get("arg", default='')
         if not self.peer:
             self.cancel("No peer provided")
         local = LocalHost()
@@ -88,7 +89,6 @@ class Ethtool(Test):
             self.cancel("Link up of interface is taking longer than 120s")
         if self.networkinterface.ping_check(self.peer, count=5) is not None:
             self.cancel("No connection to peer")
-        self.args = self.params.get("arg", default='')
         self.elapse = self.params.get("action_elapse", default='')
         self.priv_test = self.params.get("privflag_test", default=False)
         if self.priv_test:
