@@ -123,8 +123,7 @@ class ParallelDd(Test):
                 cmd += " %s=%s" % (option.split(":")[0],
                                    option.split(":")[1])
             # Wait for everyone to complete
-            proc = process.get_sub_process_klass(cmd)(cmd + ' > /dev/null',
-                                                      shell=True)
+            proc = process.SubProcess(cmd + ' > /dev/null', shell=True)
             proc.start()
             proc.poll()
             proc.wait()
@@ -146,8 +145,7 @@ class ParallelDd(Test):
                 process.run(cmd + ' > /dev/null', shell=True)
             else:
                 # Wait for everyone to complete
-                proc = process.get_sub_process_klass(cmd)(cmd + ' > /dev/null',
-                                                          shell=True)
+                proc = process.SubProcess(cmd + ' > /dev/null', shell=True)
                 proc.start()
                 proc.poll()
                 proc.wait()

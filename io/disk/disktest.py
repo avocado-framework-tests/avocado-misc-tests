@@ -212,8 +212,7 @@ class Disktest(Test):
         """
         cmd = ("%s/disktest -m %d -f %s/testfile.%d -i -S >> \"%s\" 2>&1" %
                (self.teststmpdir, self.chunk_mb, disk, chunk, self.disk_log))
-        proc = process.get_sub_process_klass(cmd)(cmd, shell=True,
-                                                  verbose=False)
+        proc = process.SubProcess(cmd, shell=True, verbose=False)
         pid = proc.start()
         return pid, proc
 
