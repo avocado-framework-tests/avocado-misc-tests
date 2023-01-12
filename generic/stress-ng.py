@@ -115,6 +115,27 @@ class Stressng(Test):
                 args.append(cmdline)
         if self.class_type in ['memory', 'vm', 'all']:
             args.append('--vm-bytes 80% ')
+        if 'filesystem' in self.class_type:
+            self.loop_dev = "/dev/loop0"
+            fstype = self.params.get('fs', default='ext4')
+            mnt = self.params.get('dir', default='/mnt')
+            self.tmpout = process.system_output("ls /tmp", shell=True,
+                                                ignore_status=True,
+                                                sudo=True).decode("utf-8")
+            if 'blockfile' not in self.tmpout:
+                blk_dev = process.run("dd if=/dev/zero of=/tmp/blockfile \
+                                      bs=1M count=5120")
+                create_dev = process.run("losetup %s /tmp/blockfile"
+                                         % self.loop_dev)
+            if fstype == 'btrfs':
+                if distro.detect().name == 'rhel':
+                    self.cancel("btrfs is not supported on rhel")
+            if fstype == "ext4":
+                cmd = "mkfs.%s %s" % (fstype, self.loop_dev)
+            else:
+                cmd = "mkfs.%s -f %s" % (fstype, self.loop_dev)
+            process.run(cmd)
+            process.run("mount %s %s" % (self.loop_dev, mnt))
         if self.aggressive and self.maximize:
             args.append('--aggressive --maximize --oomable ')
         if self.exclude:
@@ -160,3 +181,8 @@ class Stressng(Test):
         if ERROR:
             self.fail("Test failed with following errors in dmesg :  %s " %
                       "\n".join(ERROR))
+
+    def tearDown(self):
+        process.run("umount %s" % self.loop_dev)
+        process.run("losetup -d %s" % self.loop_dev)
+        process.run("rm -rf /tmp/blockfile")

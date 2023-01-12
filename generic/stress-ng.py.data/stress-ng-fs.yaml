@@ -1,0 +1,19 @@
+workers:
+ttimeout: '60'
+verify: True
+syslog: True
+metrics: True
+maximize: True
+times: True
+aggressive: True
+class: 'filesystem'
+dir: '/mnt'
+fs_type: !mux
+    ext4:
+        fs: 'ext4'
+    xfs:
+        fs: 'xfs'
+    btrfs:
+        fs: 'btrfs'
+stressors: null
+exclude: null
