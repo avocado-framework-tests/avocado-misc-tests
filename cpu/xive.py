@@ -72,15 +72,24 @@ class XIVE(Test):
                           "missing %s / %s" % (self.hw, self.intr))
             if is_dir:
                 # If xive is a directory then read from store-eoi file
-                xive_path = "/sys/kernel/debug/powerpc/xive/store-eoi"
+                xive_file = os.path.join(xive_path, "store-eoi")
+                if os.path.exists(xive_file):
+                    flags = genio.read_file(xive_file)
 
-            flags = genio.read_file(xive_path)
-            if is_dir:
-                # store-eoi value can be enabled or disable via kernel command
-                # line or using sysfs debug directory.
-                match = re.search("Y", flags) or re.search("N", flags)
+                    # store-eoi value can be enabled or disable via kernel
+                    # command line or using sysfs debug directory.
+                    match = re.search("Y", flags) or re.search("N", flags)
+                else:
+                    xive_file = os.path.join(xive_path, "interrupts")
+                    if os.path.exists(xive_file):
+                        flags = genio.read_file(xive_file)
+                    else:
+                        self.fail("Expected files not found.")
+                    match = re.search("flags=S", flags)
             else:
+                flags = genio.read_file(xive_path)
                 match = re.search("flags=S", flags)
+
             self.log.info("MATCH = %s" % match)
             if match:
                 self.log.info("storeEOI feature is available and 'S' flag "
