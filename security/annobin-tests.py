@@ -38,7 +38,7 @@ class annobin(Test):
         # gcc versions like 5,6,7,8 skipping Ubuntu for this test.
         # In SLES 'gcc-plugin-devel' package not available, skipping.
         if self.distro_name in ['rhel', 'fedora', 'centos']:
-            deps.extend(['gcc-plugin-devel', 'rpm-devel'])
+            deps.extend(['gcc-plugin-devel', 'rpm-devel', 'binutils-devel'])
         else:
             self.cancel("%s not supported for this test" % self.distro_name)
         for package in deps:
@@ -68,6 +68,8 @@ class annobin(Test):
         count = 0
         output = build.run_make(self.annobin_dir, extra_args="check",
                                 process_kwargs={"ignore_status": True})
+        if output.exit_status:
+            self.fail("annobin-tests.py: make check failed")
         for line in output.stdout_text.splitlines():
             if 'FAIL:' in line and 'XFAIL:' not in line and \
                '# FAIL:' not in line:
