@@ -1,0 +1,4 @@
+runltp:
+    script: 'runltp'
+    tracing:
+        args: '-f tracing'
