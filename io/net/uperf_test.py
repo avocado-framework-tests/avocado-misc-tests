@@ -73,7 +73,7 @@ class Uperf(Test):
         smm = SoftwareManager()
         detected_distro = distro.detect()
         pkgs = ["gcc", "gcc-c++", "autoconf",
-                "perl", "m4", "git-core", "automake"]
+                "perl", "m4", "git-core", "automake", "flex", "bison"]
         if detected_distro.name == "Ubuntu":
             pkgs.extend(["libsctp1", "libsctp-dev", "lksctp-tools"])
         elif detected_distro.name == "rhel":
