@@ -41,9 +41,9 @@ class Rawread(Test):
         smm = SoftwareManager()
         deps = ['gcc', 'make']
         if distro.detect().name == 'Ubuntu':
-            deps.extend(['g++','libaio-dev'])
+            deps.extend(['g++', 'libaio-dev'])
         else:
-            deps.extend(['gcc-c++','libaio-devel'])
+            deps.extend(['gcc-c++', 'libaio-devel'])
 
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
