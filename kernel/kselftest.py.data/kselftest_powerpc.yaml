@@ -1,0 +1,7 @@
+component: !mux
+    power:
+        comp: "powerpc"
+        kself_args: "summary=1"
+run_type: !mux
+    distro:
+        type: 'distro'
