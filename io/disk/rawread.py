@@ -39,11 +39,11 @@ class Rawread(Test):
         compile of rawread suit.
         """
         smm = SoftwareManager()
-        deps = ['gcc', 'make', 'libaio-devel']
+        deps = ['gcc', 'make']
         if distro.detect().name == 'Ubuntu':
-            deps.extend(['g++'])
+            deps.extend(['g++', 'libaio-dev'])
         else:
-            deps.extend(['gcc-c++'])
+            deps.extend(['gcc-c++', 'libaio-devel'])
 
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
@@ -55,6 +55,7 @@ class Rawread(Test):
                                    os.path.basename(
                                        tarball.split('.tar')[0]))
         os.chdir(self.source)
+        build.make(self.source, extra_args="clean")
         build.make(self.source)
 
         self.disk = self.params.get('disk', default=None)
