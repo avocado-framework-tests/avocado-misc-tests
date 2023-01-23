@@ -19,6 +19,7 @@
 #include <sys/mman.h>
 #include <errno.h>
 #include <stdio.h>
+#include <string.h>
 
 main(int argc,char *argv[])
 {
@@ -45,7 +46,7 @@ main(int argc,char *argv[])
         do{
                 pid = fork();
                 if (pid == -1) {
-                        printf("fork failure\n");
+                        printf("fork failure error %d: %s\n", errno, strerror(errno));
                         exit(-1);
                 } else if (!pid) {
 			printf("PID %d touching %d pages\n", getpid(), size/psize);
