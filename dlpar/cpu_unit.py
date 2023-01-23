@@ -42,41 +42,9 @@ class CpuUnit(TestCase):
     linux partitions.
     """
 
-    def __prep_shr_cfg(self, linux_machine):
-        """
-         Activate shared partition with the user defined min/desired/max
-
-         Check:
-          1 - Shutdown the partition (shared);
-          2 - Define dedicated partition with min, desired, max from config
-        """
-        u_cmd = 'chsyscfg -r prof -m %s -i \
-                "lpar_name=%s,name=default_profile,proc_mode=shared, \
-                min_proc_units=%s,desired_proc_units=%s,max_proc_units=%s, \
-                min_procs=%s,desired_procs=%s,max_procs=%s,sharing_mode=%s" --force' % \
-                (linux_machine.machine,
-                 linux_machine.name, self.min_proc_units, self.desired_proc_units,
-                 self.max_proc_units, self.min_procs, self.desired_procs,
-                 self.max_procs, self.sharing_mode)
-        self.log.info('DEBUG: Shared lpar setup %s' % u_cmd)
-        self.hmc.sshcnx.run_command(u_cmd, False)
-
-        d_cmd = 'chsysstate -m %s -o shutdown -r lpar -n %s --immed' % \
-                (linux_machine.machine, linux_machine.name)
-        self.log.info('DEBUG: Shared lpar setup %s' % d_cmd)
-        self.hmc.sshcnx.run_command(d_cmd, False)
-        time.sleep(20)
-
-        a_cmd = 'chsysstate -m %s -r lpar -o on -n %s -f default_profile \
-                --force' % (linux_machine.machine, linux_machine.name)
-        self.log.info('DEBUG: Shared lpar setup %s' % a_cmd)
-        self.hmc.sshcnx.run_command(a_cmd, False)
-        time.sleep(120)
-
     def __init__(self, log='cpu_unit.log'):
         """Initialize the test case."""
         TestCase.__init__(self, log, "CPU Unit")
-        self.get_connections()
 
         # Get test configuration
         self.quant_to_test = float(self.config.get('cpu_unit',
@@ -101,10 +69,6 @@ class CpuUnit(TestCase):
         self.log.check_log('Getting Test configuration.',
                            self.quant_to_test is not None)
         self.log.debug("Testing with %s CPU Units." % self.quant_to_test)
-
-        # shutdown the paritition, update profile with min,desired,max, activate
-        self.__prep_shr_cfg(self.linux_1)
-        self.__prep_shr_cfg(self.linux_2)
 
         self.get_connections()
 
@@ -210,7 +174,8 @@ class CpuUnit(TestCase):
         a_cmd = 'chhwres -m ' + linux_machine.machine + \
                 ' -r proc -o a --procunits ' + str(quantity) + \
                 ' -p "' + linux_machine.partition + '"' + ' -w 0 '
-        self.hmc.sshcnx.run_command(a_cmd)
+        cmd_output = self.hmc.sshcnx.cmd(a_cmd)
+        self.log.debug(cmd_output)
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
         time.sleep(self.sleep_time)
@@ -232,10 +197,10 @@ class CpuUnit(TestCase):
         Move 'quantity' proc units from linux_machine_1 to linux_machine_2.
         """
         # Get all values from both machines before moving
-        curr_proc_units_before_1 = float(self.get_cpu_option(linux_machine_1,
-                                                             'curr_proc_units'))
-        curr_proc_units_before_2 = float(self.get_cpu_option(linux_machine_2,
-                                                             'curr_proc_units'))
+        curr_proc_units_before_1 = float(self.get_cpu_option
+                                         (linux_machine_1, 'curr_proc_units'))
+        curr_proc_units_before_2 = float(self.get_cpu_option
+                                         (linux_machine_2, 'curr_proc_units'))
 
         # Move the proc units
         m_cmd = 'chhwres -m ' + linux_machine_1.machine + \
@@ -243,14 +208,16 @@ class CpuUnit(TestCase):
                 ' -p "' + linux_machine_1.partition + '"' + \
                 ' -t "' + linux_machine_2.partition + '"' + ' -w 0 '
 
-        self.hmc.sshcnx.run_command(m_cmd)
+        cmd_output = self.hmc.sshcnx.cmd(m_cmd)
+        self.log.debug(cmd_output)
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
         time.sleep(self.sleep_time)
 
         # Check at HMC
         m_msg = 'Moving %s proc units from %s to %s.' % \
-                (quantity, linux_machine_1.partition, linux_machine_2.partition)
+                (quantity, linux_machine_1.partition,
+                 linux_machine_2.partition)
         m_condition = ((self.get_cpu_option(linux_machine_1,
                                             'curr_proc_units')) ==
                        str(curr_proc_units_before_1 - quantity)) and \
@@ -275,14 +242,16 @@ class CpuUnit(TestCase):
         r_cmd = 'chhwres -m ' + linux_machine.machine + \
                 ' -r proc -o r --procunits ' + str(quantity) + \
                 ' -p "' + linux_machine.partition + '"' + ' -w 0 '
-        self.hmc.sshcnx.run_command(r_cmd)
+        cmd_output = self.hmc.sshcnx.cmd(r_cmd)
+        self.log.debug(cmd_output)
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
         time.sleep(self.sleep_time)
         # Check at HMC
         r_msg = 'Removing %s proc units from partition %s.' % \
                 (quantity, linux_machine.partition)
-        r_condition = self.get_cpu_option(linux_machine, 'curr_proc_units') == \
+        r_condition = self.get_cpu_option(linux_machine,
+                                          'curr_proc_units') == \
             str(curr_proc_units_before - quantity)
 
         if not self.log.check_log(r_msg, r_condition, False):

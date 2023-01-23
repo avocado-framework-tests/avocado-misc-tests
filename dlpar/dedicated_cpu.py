@@ -25,7 +25,6 @@ Test to verify dedicated CPU DLPAR. Operations tested:
 This test assumes that we have 2 power LPARS properly configured to start.
 """
 import time
-import sys
 from dlpar_api.api import TestCase, TestException
 
 
@@ -45,42 +44,9 @@ class DedicatedCpu(TestCase):
     partitions are recognizing all added/removed cpus
     (using dmesg and /var/log/messages).
     """
-
-    def __prep_ded_cfg(self, linux_machine):
-        """
-         Activate dedicated partition with the user defined min/desired/max
-
-         Check:
-          1 - Shutdown the partition (dedicated);
-          2 - Define dedicated partition with min, desired, max from config
-        """
-        u_cmd = 'chsyscfg -r prof -m %s -i \
-                "lpar_name=%s,name=default_profile,proc_mode=ded, \
-                min_procs=%s,desired_procs=%s,max_procs=%s, \
-                sharing_mode=keep_idle_procs" \
-                --force' % (linux_machine.machine,
-                            linux_machine.name, self.min_procs,
-                            self.desired_procs, self.max_procs)
-        self.log.info('DEBUG: Dedicated lpar setup %s' % u_cmd)
-        self.hmc.sshcnx.run_command(u_cmd, False)
-
-        d_cmd = 'chsysstate -m %s -o shutdown -r lpar -n %s --immed' % \
-                (linux_machine.machine, linux_machine.name)
-        self.log.info('DEBUG: Dedicated lpar setup %s' % d_cmd)
-        self.hmc.sshcnx.run_command(d_cmd, False)
-        time.sleep(20)
-
-        a_cmd = 'chsysstate -m %s -r lpar -o on -n %s -f default_profile \
-                --force' % (linux_machine.machine, linux_machine.name)
-        self.log.info('DEBUG: Dedicated lpar setup %s' % a_cmd)
-        self.hmc.sshcnx.run_command(a_cmd, False)
-        time.sleep(120)
-
     def __init__(self, log='dedicated_cpu.log'):
 
         TestCase.__init__(self, log, 'Dedicated CPU')
-
-        self.get_connections()
 
         # Get test configuration
         self.quant_to_test = int(self.config.get('dedicated_cpu',
@@ -101,13 +67,7 @@ class DedicatedCpu(TestCase):
                        self.quant_to_test)
         self.mode = self.config.get('dedicated_cpu',
                                     'mode')
-        # shutdown the paritition, update profile
-        # with min,desired,max, activate
-        self.__prep_ded_cfg(self.linux_1)
-        self.__prep_ded_cfg(self.linux_2)
-
         self.get_connections()
-
         # Check linux partitions configuration
         self.__check_set_cfg(self.linux_1)
         self.__check_set_cfg(self.linux_2)
@@ -150,7 +110,7 @@ class DedicatedCpu(TestCase):
                     ' -r proc -o r --procs ' + \
                     str(curr_procs - curr_min_procs) + \
                     ' -p "' + linux_machine.partition + '"' + ' -w 0 '
-            self.hmc.sshcnx.run_command(m_cmd, False)
+            self.hmc.sshcnx.cmd(m_cmd, False)
 
             self.log.debug('Sleeping for %s seconds before proceeding' %
                            self.sleep_time)
@@ -192,6 +152,9 @@ class DedicatedCpu(TestCase):
             elif self.mode == "add_remove":
                 self.__add_dedicated_cpu(self.linux_1, self.quant_to_test)
                 self.__remove_dedicated_cpu(self.linux_1, self.quant_to_test)
+            elif self.mode == "rem":
+                self.__remove_dedicated_cpu(self.linux_1, self.quant_to_test)
+                # self.__remove_dedicated_cpu(self.linux_2, self.quant_to_test)
             elif self.mode == "add_move_remove":
                 self.__add_dedicated_cpu(self.linux_1, self.quant_to_test)
                 self.__move_dedicated_cpu(self.linux_1, self.linux_2,
@@ -214,7 +177,7 @@ class DedicatedCpu(TestCase):
         a_cmd = 'chhwres -m ' + linux_machine.machine + \
                 ' -r proc -o a --procs ' + str(quantity) + \
                 ' -p "' + linux_machine.partition + '"' + ' -w 0 '
-        cmd_result = self.hmc.sshcnx.run_command(a_cmd)
+        cmd_result = self.hmc.sshcnx.cmd(a_cmd)
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
         time.sleep(self.sleep_time)
@@ -246,7 +209,7 @@ class DedicatedCpu(TestCase):
                 ' -r proc -o m --procs ' + str(quantity) + \
                 ' -p "' + linux_machine_1.partition + '"' + \
                 ' -t "' + linux_machine_2.partition + '"' + ' -w 0 '
-        cmd_result = self.hmc.sshcnx.run_command(m_cmd)
+        cmd_result = self.hmc.sshcnx.cmd(m_cmd)
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
         time.sleep(self.sleep_time)
@@ -276,7 +239,7 @@ class DedicatedCpu(TestCase):
         r_cmd = 'chhwres -m ' + linux_machine.machine + \
                 ' -r proc -o r --procs ' + str(quantity) + \
                 ' -p "' + linux_machine.partition + '"' + ' -w 0 '
-        self.hmc.sshcnx.run_command(r_cmd)
+        self.hmc.sshcnx.cmd(r_cmd)
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
         time.sleep(self.sleep_time)
@@ -294,11 +257,5 @@ class DedicatedCpu(TestCase):
 
 
 if __name__ == "__main__":
-    arg_count = len(sys.argv)
-    if (arg_count == 2):
-        log_file_name = sys.argv[1]
-        DEDICATED_CPU = DedicatedCpu(log_file_name)
-        DEDICATED_CPU.run_test()
-    else:
-        DEDICATED_CPU = DedicatedCpu()
-        DEDICATED_CPU.run_test()
+    DEDICATED_CPU = DedicatedCpu()
+    DEDICATED_CPU.run_test()

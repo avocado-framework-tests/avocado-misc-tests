@@ -24,6 +24,7 @@ Test to verify memory DLPAR. Operations tested:
 This test assumes that we have 2 power LPARS properly configured to start.
 """
 import time
+from avocado.utils import process
 from dlpar_api.api import TestCase, TestException
 
 __all__ = ['Memory']
@@ -41,36 +42,6 @@ class Memory(TestCase):
     partitions are recognizing all added memory (using /proc/meminfo).
     """
 
-    def __prep_mem_cfg(self, linux_machine):
-        """
-         Activate shared partition with the user defined min/desired/max
-
-         Check:
-          1 - Shutdown the partition (shared);
-          2 - Define memory profile with min, desired, max from config
-        """
-        u_cmd = 'chsyscfg -r prof -m %s -i "lpar_name=%s,name=default_profile, \
-                min_mem=%d,desired_mem=%d,max_mem=%d, \
-                min_num_huge_pages=0,desired_num_huge_pages=0, \
-                max_num_huge_pages=0" --force' % \
-                (linux_machine.machine, linux_machine.name,
-                 self.min_mem, self.desired_mem, self.max_mem)
-
-        self.log.info('DEBUG: Memory lpar setup %s' % u_cmd)
-        self.hmc.sshcnx.run_command(u_cmd, False)
-
-        d_cmd = 'chsysstate -m %s -o shutdown -r lpar -n %s --immed' % \
-                (linux_machine.machine, linux_machine.name)
-        self.log.info('DEBUG: Memory lpar setup %s' % d_cmd)
-        self.hmc.sshcnx.run_command(d_cmd, False)
-        time.sleep(20)
-
-        a_cmd = 'chsysstate -m %s -r lpar -o on -n %s -f default_profile \
-                --force' % (linux_machine.machine, linux_machine.name)
-        self.log.info('DEBUG: Memory lpar setup %s' % a_cmd)
-        self.hmc.sshcnx.run_command(a_cmd, False)
-        time.sleep(120)
-
     def __init__(self, log='memory.log'):
         TestCase.__init__(self, log, 'Memory')
 
@@ -84,10 +55,6 @@ class Memory(TestCase):
         self.desired_mem = int(self.config.get('memory', 'desired_mem'))
         self.max_mem = int(self.config.get('memory', 'max_mem'))
 
-        # shutdown the paritition, update profile with min,desired,max, activate
-        self.get_connections()
-        self.__prep_mem_cfg(self.linux_1)
-        self.__prep_mem_cfg(self.linux_2)
         self.get_connections()
 
         self.mode = self.config.get('memory', 'mode')
@@ -145,7 +112,9 @@ class Memory(TestCase):
         # Getting memory configuration
         m_cmd = 'lshwres -m ' + linux_machine.machine + \
                 ' --level sys -r mem -F curr_avail_sys_mem'
-        curr_avail_sys_mem = int(self.hmc.sshcnx.run_command(m_cmd))
+        # curr_avail_sys_mem = int(self.hmc.sshcnx.cmd(m_cmd))
+        curr_avail_sys_mem = int(
+            self.hmc.sshcnx.cmd(m_cmd).stdout_text.strip())
         curr_max_mem = int(self.get_mem_option(linux_machine, 'curr_max_mem'))
         curr_mem = int(self.get_mem_option(linux_machine, 'curr_mem'))
 
@@ -177,8 +146,12 @@ class Memory(TestCase):
             if self.mode == 'add':
                 self.__add_memory(self.linux, self.quant_to_test)
             elif self.mode == 'add_remove':
-                self.__add_memory(self.linux, self.quant_to_test)
-                self.__remove_memory(self.linux, self.quant_to_test)
+                self.__move_memory(self.linux_1, self.linux_2,
+                                   self.quant_to_test)
+                self.__move_memory(self.linux_2, self.linux_1,
+                                   self.quant_to_test)
+                # self.__add_memory(self.linux, self.quant_to_test)
+                # self.__remove_memory(self.linux, self.quant_to_test)
             elif self.mode == 'add_move_remove':
                 self.__add_memory(self.linux_1, self.quant_to_test)
                 self.__move_memory(self.linux_1, self.linux_2,
@@ -196,11 +169,19 @@ class Memory(TestCase):
         """
         Check on a linux client how much physical memory we have.
         """
+        memory = 0
         p_cmd = "cat /proc/meminfo | grep MemTotal | awk -F' ' '{ print $2 }'"
         self.log.info('Checking memory under linux on %s' % machine.partition)
         self.log.debug('Checking memory under linux on %s' % machine.partition)
-        memory = int(machine.sshcnx.run_command(p_cmd))
-        return memory
+        try:
+            p_cmd = 'cat /proc/meminfo | grep MemTotal'
+            memory = machine.sshcnx.cmd(p_cmd).stdout_text
+        except Exception:
+            cmd = []
+            cmd.append(p_cmd)
+            memory = process.run(cmd, shell=True).stdout.decode()
+        memory = memory.strip().split(":")[-1].strip().split(" ")[0]
+        return int(memory)
 
     def __add_memory(self, linux_machine, quantity):
         """
@@ -214,7 +195,7 @@ class Memory(TestCase):
         a_cmd = 'chhwres -m ' + linux_machine.machine + ' -r mem -o a -q ' + \
                 str(quantity) + ' -p "' + linux_machine.partition + '"' + \
                 ' -w 0 '
-        self.hmc.sshcnx.run_command(a_cmd)
+        self.hmc.sshcnx.cmd(a_cmd)
 
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
@@ -248,7 +229,7 @@ class Memory(TestCase):
         r_cmd = 'chhwres -m ' + linux_machine.machine + ' -r mem -o r -q ' + \
                 str(quantity) + ' -p "' + linux_machine.partition + '"' + \
                 ' -w 0 '
-        self.hmc.sshcnx.run_command(r_cmd)
+        self.hmc.sshcnx.cmd(r_cmd)
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
         time.sleep(self.sleep_time)
@@ -256,8 +237,8 @@ class Memory(TestCase):
         # Check at HMC
         r_msg = 'Removing %d megabytes of memory from partition %s.' % \
                 (quantity, linux_machine.partition)
-        r_condition = (int(self.get_mem_option(linux_machine, 'curr_mem')) ==
-                       (curr_mem_before - quantity))
+        curr_mem = int(self.get_mem_option(linux_machine, 'curr_mem'))
+        r_condition = ((curr_mem) == (curr_mem_before - quantity))
         if not self.log.check_log(r_msg, r_condition, False):
             e_msg = 'Error happened when removing memory from %s' % \
                     linux_machine.partition
@@ -285,16 +266,18 @@ class Memory(TestCase):
         curr_mem_proc_before_2 = self.__check_memory_proc(linux_machine_2)
 
         # Move the memory
-        m_cmd = 'chhwres -m ' + linux_machine_1.machine + ' -r mem -o m -q ' + \
-                str(quantity) + ' -p "' + linux_machine_1.partition + \
-                ' -t "' + linux_machine_2.partition + '"' + ' -w 0 '
-        self.hmc.sshcnx.run_command(m_cmd)
+        m_cmd = 'chhwres -m ' + linux_machine_1.machine + \
+            ' -r mem -o m -q ' + \
+            str(quantity) + ' -p "' + linux_machine_1.partition + \
+            '" -t "' + linux_machine_2.partition + '"' + ' -w 0 '
+        a = self.hmc.sshcnx.cmd(m_cmd).stdout_text
         self.log.debug('Going to sleep for %s s' % self.sleep_time)
         time.sleep(self.sleep_time)
 
         # Check at HMC
         m_msg = 'Moving %d megabytes of memory from %s to %s.' % \
-                (quantity, linux_machine_1.partition, linux_machine_2.partition)
+                (quantity, linux_machine_1.partition,
+                 linux_machine_2.partition)
         if not self.log.check_log(m_msg,
                                   (int(self.get_mem_option(linux_machine_1,
                                                            'curr_mem')) ==
@@ -312,13 +295,15 @@ class Memory(TestCase):
         curr_mem_proc_after_2 = self.__check_memory_proc(linux_machine_2)
         c_msg_1 = 'Checking if /proc/meminfo shows removed memory on %s.' % \
                   linux_machine_1.partition
-        self.log.check_log(c_msg_1, ((curr_mem_proc_after_1 -
-                                      curr_mem_proc_before_1)/1024 == quantity))
+        self.log.check_log(c_msg_1, (round(abs((curr_mem_proc_before_1 -
+                                                curr_mem_proc_after_1))/1024)
+                                     == quantity))
 
         c_msg_2 = 'Checking if /proc/meminfo shows removed memory on %s.' % \
                   linux_machine_2.partition
-        self.log.check_log(c_msg_2, ((curr_mem_proc_before_2 -
-                                      curr_mem_proc_after_2)/1024 == quantity))
+        self.log.check_log(c_msg_2, (round(abs((curr_mem_proc_after_2 -
+                                                curr_mem_proc_before_2)))/1024
+                                     == quantity))
 
 
 if __name__ == "__main__":

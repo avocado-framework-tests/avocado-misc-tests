@@ -30,11 +30,11 @@ useful methods to let you test DLPAR.
 import logging
 import re
 import time
-
-# DLPAR API imports
-from pexpect.pxssh import pxssh
+from avocado import *
+from avocado.utils import process
+from avocado.utils.ssh import Session
 from dlpar_api.config import TestConfig
-__all__ = ['TestException', 'MyPxssh', 'SshMachine', 'TestLog', 'TestCase']
+__all__ = ['TestException', 'SshMachine', 'TestLog', 'TestCase']
 
 CONFIG_FILE = TestConfig("config/tests.cfg")
 
@@ -50,67 +50,7 @@ class TestException(Exception):
         return str(self.value)
 
 
-class MyPxssh(pxssh):
-    """My pxssh class, with more methods."""
-
-    def __init__(self, log=None):
-        pxssh.__init__(self)
-        # Set the log file if we have one
-        self.log = log
-
-    def run_command(self, command, string=True, code=False):
-        """Execute a command at the ssh conection.
-
-        You can choose if you want the returned string, the return code
-        or both.
-        """
-        # In some situations, with asynchronous commands, we might not get
-        # an answer right after we try to check the exit code. so in this
-        # case, we need to wait and try again.
-        self.sendline("bind 'set enable-bracketed-paste off'")
-        self.expect('\r\n')
-        self.prompt()
-        self.sendline(command)
-        self.expect('\r\n')
-        self.prompt()
-        result = self.before.strip()
-        self.sendline('echo $?')
-        self.expect('\r\n')
-        self.prompt()
-        return_code = self.before.strip()
-        try:
-            int(return_code)
-        except ValueError:
-            self.__log('Got invalid return code. Trying again after 240s.')
-            time.sleep(240)
-            self.expect('\r\n')
-            self.prompt()
-            return_code = self.before.strip()
-            # If something goes wrong after 240 seconds, then it's better to
-            # throw an exception...
-            try:
-                int(return_code)
-            except ValueError:
-                e_msg = 'Got invalid return code again. Aborting.'
-                raise ValueError(e_msg)
-
-        self.__log("Command output: '%s'" % result)
-        self.__log("Return code: '%s'" % return_code)
-
-        if string and code:
-            return result, return_code
-        elif string:
-            return result
-        elif code:
-            return return_code
-
-    def __log(self, message):
-        """Just to use the log if we have one."""
-        if self.log:
-            self.log.debug(message)
-
-
-class SshMachine:
+class SshMachine():
     """The machine that we reach using the ssh protocol.
 
     This class take every important information about the machine
@@ -119,21 +59,31 @@ class SshMachine:
 
     def __init__(self, machine_type, log=None):
         """Get every machine information."""
-        self.name = CONFIG_FILE.get(machine_type, 'name')
-        self.user = CONFIG_FILE.get(machine_type, 'user')
-        self.passwd = CONFIG_FILE.get(machine_type, 'passwd')
-        self.machine = CONFIG_FILE.get(machine_type, 'machine')
-        self.partition = CONFIG_FILE.get(machine_type, 'partition')
+        if machine_type == "linux_primary":
+            self.name = CONFIG_FILE.get(machine_type, 'name')
+            self.machine = CONFIG_FILE.get(machine_type, 'machine')
+            self.partition = CONFIG_FILE.get(machine_type, 'partition')
+        else:
+            self.name = CONFIG_FILE.get(machine_type, 'name')
+            self.user = CONFIG_FILE.get(machine_type, 'user')
+            self.passwd = CONFIG_FILE.get(machine_type, 'passwd')
+            self.machine = CONFIG_FILE.get(machine_type, 'machine')
+            self.partition = CONFIG_FILE.get(machine_type, 'partition')
         self.log = log
-        self.sshcnx = self.__init_ssh(self.user, self.passwd, self.name)
+        if machine_type == "hmc" or machine_type == "linux_secondary":
+            self.sshcnx = self.__init_ssh(self.user, self.passwd, self.name)
 
-    def __init_ssh(self, user, passwd, server):
+    def __init_ssh(self, hmc_username, hmc_pwd,  hmc_ip):
         """Return the SSH connection"""
-        self.log.debug('Initializing connection for %s' % server)
-        ssh_cnx = MyPxssh(self.log)
-        if not ssh_cnx.login(server, user, passwd):
-            raise TestException('Failed to login at machine %s.' % server)
-        return ssh_cnx
+        self.hmcip = hmc_ip
+        self.un = hmc_username
+        self.pw = hmc_pwd
+        self.session_hmc = Session(self.hmcip, user=self.un,
+                                   password=self.pw)
+        self.session_hmc.cleanup_master()
+        if not self.session_hmc.connect():
+            print("failed connecting to HMC")
+        return self.session_hmc
 
 
 class TestLog(logging.Logger):
@@ -177,8 +127,8 @@ class TestLog(logging.Logger):
         return getattr(logging, log_level)
 
     def check_log(self, message, code, die=True):
-        """Catch the code and print the message accordantly
-
+        """
+        Catch the code and print the message accordantly
         'code' can be both integer or boolean.
         """
         if type(code) is int:
@@ -206,8 +156,7 @@ class TestCase:
 
     def __init__(self, log_file, test_name):
         """Initialize the test case.
-
-        Set the log file, get all machines connection and the config file
+        Set the log file, get all machines connection and the config file.
         """
         # Set the log
         self.log = TestLog(log_file)
@@ -217,12 +166,11 @@ class TestCase:
         self.config = CONFIG_FILE
         # Get common values for any test case
         self.cpu_per_processor = int(self.config.get('machine_cfg',
-                                                     'cpu_per_processor'))
+                                                     'cfg_per_proc'))
 
     def get_connections(self, clients='both'):
         """
         Get connections for the HMC and the linux clients.
-
         @param clients: The clients we are going to connect to. It can be
                         one of 'primary', 'secondary' or 'both'.
         """
@@ -254,8 +202,7 @@ class TestCase:
         o_cmd = 'lshwres -m ' + linux_machine.machine + \
                 ' --level lpar -r proc --filter lpar_names="' + \
                 linux_machine.partition + '" -F ' + option
-        opt_value = self.hmc.sshcnx.run_command(o_cmd).decode()
-
+        opt_value = self.hmc.sshcnx.cmd(o_cmd).stdout_text.strip()
         d_msg = option + ": " + opt_value + " for partition " + \
             linux_machine.partition
         self.log.debug(d_msg)
@@ -267,7 +214,7 @@ class TestCase:
         o_cmd = 'lshwres -m ' + linux_machine.machine + \
                 ' --level lpar -r mem --filter lpar_names="' + \
                 linux_machine.partition + '" -F ' + option
-        opt_value = self.hmc.sshcnx.run_command(o_cmd).decode()
+        opt_value = self.hmc.sshcnx.cmd(o_cmd).stdout_text.strip()
 
         d_msg = option + ": " + opt_value + " for partition " + \
             linux_machine.partition
@@ -284,7 +231,7 @@ class TestCase:
 
         # Also, verify if /proc/cpuinfo show all processors
         c_cmd = 'cat /proc/cpuinfo'
-        sdata = linux_machine.sshcnx.run_command(c_cmd).decode()
+        sdata = linux_machine.sshcnx.cmd(c_cmd).decode()
         cpuinfo_proc_lines = re.findall('processor.*:.*\n', sdata)
         d_msg = 'Checking if /proc/cpuinfo shows all processors correctly.'
         d_condition = len(cpuinfo_proc_lines) == \
@@ -304,7 +251,9 @@ class TestCase:
 
         # Also, verify if /proc/cpuinfo show all processors
         c_cmd = 'cat /proc/cpuinfo'
-        cmd = linux_machine.sshcnx.run_command(c_cmd).decode()
+        cmd = process.run(c_cmd).stdout()
+        self.log.debug(cmd)
+        # cmd = linux_machine.sshcnx.cmd(c_cmd).decode()
         cpuinfo_proc_lines = re.findall('processor.*:.*\n', cmd)
         d_msg = 'Checking if /proc/cpuinfo shows all processors correctly.'
         d_condition = len(cpuinfo_proc_lines) == \
@@ -323,7 +272,6 @@ class TestCase:
         curr_procs = int(self.get_cpu_option(linux_machine, 'curr_procs'))
         curr_proc_units = float(self.get_cpu_option(linux_machine,
                                                     'curr_proc_units'))
-
         # Just to set everything at the correct values
         while curr_procs != ideal_procs or curr_proc_units != ideal_proc_units:
             # Add procs
@@ -340,13 +288,11 @@ class TestCase:
                     a_cmd = 'chhwres -m ' + linux_machine.machine + \
                             ' -r proc -o a --procs ' + str(procs_to_add) + \
                             ' -p "' + linux_machine.partition + '"'
-                    cmd_out, cmd_retcode = self.hmc.sshcnx.run_command(a_cmd,
-                                                                       True,
-                                                                       True)
-                    if cmd_retcode != "0":
-                        self.log.error(cmd_out)
+                    cmd_retcode = self.hmc.sshcnx.cmd(a_cmd)
+                    if cmd_retcode.stdout_text != "":
+                        self.log.error(cmd_retcode)
                         e_msg = 'Command ended with return code %s' % \
-                                (cmd_retcode)
+                                (cmd_retcode.stdout_text)
                         raise TestException(e_msg)
                     time.sleep(sleep_time)
                     a_msg = 'Adding %s virtual cpus to partition %s.' % \
@@ -370,11 +316,11 @@ class TestCase:
                 r_cmd = 'chhwres -m ' + linux_machine.machine + \
                         ' -r proc -o r --procs ' + str(procs_to_remove) + \
                         ' -p "' + linux_machine.partition + '"'
-                cmd_out, cmd_retcode = self.hmc.sshcnx.run_command(r_cmd, True,
-                                                                   True)
-                if cmd_retcode != "0":
-                    self.log.error(cmd_out)
-                    e_msg = 'Command ended with return code %s' % (cmd_retcode)
+                cmd_retcode = self.hmc.sshcnx.cmd(r_cmd)
+                if cmd_retcode.stdout_text != "":
+                    self.log.error(cmd_retcode)
+                    e_msg = 'Command failed with %s' % (
+                        cmd_retcode.stdout_text)
                     raise TestException(e_msg)
                 time.sleep(sleep_time)
                 r_msg = 'Removing %s virtual cpus form partition %s.' % \
@@ -400,13 +346,11 @@ class TestCase:
                             ' -r proc -o a --procunits ' + \
                             str(proc_units_to_add) + ' -p "' + \
                             linux_machine.partition + '"'
-                    cmd_out, cmd_retcode = self.hmc.sshcnx.run_command(a_cmd,
-                                                                       True,
-                                                                       True)
-                    if cmd_retcode != "0":
-                        self.log.error(cmd_out)
-                        e_msg = 'Command ended with return code %s' % \
-                                (cmd_retcode)
+                    cmd_retcode = self.hmc.sshcnx.cmd(a_cmd)
+                    if cmd_retcode.stdout_text != "":
+                        self.log.error(cmd_retcode.stdout_text)
+                        e_msg = 'Command failed with %s' % \
+                                (cmd_retcode.stdout_text)
                         raise TestException(e_msg)
                     time.sleep(sleep_time)
                     self.log.check_log('Adding %s proc units to %s.' %
@@ -437,11 +381,11 @@ class TestCase:
                         ' -r proc -o r --procunits ' + \
                         str(proc_units_to_remove) + ' -p "' + \
                         linux_machine.partition + '"'
-                cmd_out, cmd_retcode = self.hmc.sshcnx.run_command(r_cmd, True,
-                                                                   True)
-                if cmd_retcode != "0":
-                    self.log.error(cmd_out)
-                    e_msg = 'Command ended with return code %s' % (cmd_retcode)
+                cmd_retcode = self.hmc.sshcnx.cmd(r_cmd)
+                if cmd_retcode.stdout_text != "":
+                    self.log.error(cmd_retcode.stdout_text)
+                    e_msg = 'Command failed with %s' % (
+                        cmd_retcode.stdout_text)
                     raise TestException(e_msg)
                 time.sleep(sleep_time)
                 r_msg = 'Removing %s proc units form partition %s.' % \

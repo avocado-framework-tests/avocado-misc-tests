@@ -1,17 +1,52 @@
+pri_machine:
+cfg_cpu_per_proc:
+log_file_level: DEBUG
+log_console_level: INFO
+hmc_name: 
+hmc_machine:
+hmc_partition:
+hmc_user:
+hmc_passwd:
+sec_name:
+sec_machine:
+sec_partition:
+sec_user:
+sec_passwd:
+ded_quantity_to_test: 2
+ded_sleep_time: 60
+ded_iterations: 1
+ded_min_procs: 1
+ded_desired_procs: 2
+ded_max_procs: 40
+ded_mode: add
+vir_quantity_to_test: 1
+vir_sleep_time: 60
+vir_iterations: 1
+cpu_quantity_to_test: 0.60
+cpu_sleep_time: 60
+cpu_iterations: 1
+cpu_min_procs: 1
+cpu_desired_procs: 2
+cpu_max_procs: 40
+cpu_min_proc_units: 2
+cpu_desired_proc_units: 2
+cpu_max_proc_units: 10
+cpu_sharing_mode: cap
+mem_quantity_to_test: 1024
+mem_sleep_time: 60
+mem_iterations: 1
+mem_mode: add
+mem_linux_machine: primary
+mem_min_mem: 8192
+mem_desired_mem: 8192
+mem_max_mem: 204800
+
 config:
     lpar_mode: !mux
         dedicated:
-            mode: 'dedicated'
+            lp_mode: 'dedicated'
         shared:
-            mode: 'shared'
-        smt_ded:
-            mode: 'ded_smt_workload'
-        cpu_fold_ded:
-            mode: 'ded_cpu_fold_workload'
-        smt_sha:
-            mode: 'sha_smt_workload'
-        cpu_fold_sha:
-            mode: 'sha_cpu_fold_workload'
+            lp_mode: 'shared'
     test_type: !mux
          cpu_dlpar:
              test_case: 'cpu'
