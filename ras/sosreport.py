@@ -207,12 +207,13 @@ class Sosreport(Test):
         if os.listdir(dir_name) == []:
             self.is_fail += 1
             self.log.info("--no-report option failed")
-        file_list = self.params.get('file_list', default=['proc/device-tree/'])
-        for files in file_list:
-            file_path = os.path.join(dir_name, files)
-            if not os.path.exists(file_path):
-                self.is_fail += 1
-                self.log.info("%s file/directory not created" % file_path)
+        if 'powerpc' in cpu.get_arch():
+            file_list = self.params.get('file_list', default=['proc/device-tree/'])
+            for files in file_list:
+                file_path = os.path.join(dir_name, files)
+                if not os.path.exists(file_path):
+                    self.is_fail += 1
+                    self.log.info("%s file/directory not created" % file_path)
 
         self.run_cmd("%s --batch --tmp-dir=%s -s /" %
                      (self.sos_cmd, directory_name))
@@ -276,6 +277,7 @@ class Sosreport(Test):
             self.fail(
                 "%s command(s) failed in sosreport tool verification" % self.is_fail)
 
+    @skipIf("ppc" not in os.uname()[4], "Skip, Powerpc specific tests")
     def test_smtchanges(self):
         """
         Test the sosreport with different smt levels
@@ -295,6 +297,7 @@ class Sosreport(Test):
             self.fail(
                 "%s command(s) failed in sosreport tool verification" % self.is_fail)
 
+    @skipIf("ppc" not in os.uname()[4], "Skip, Powerpc specific tests")
     @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
     def test_dlpar_cpu_hotplug(self):
         """
@@ -322,6 +325,7 @@ class Sosreport(Test):
             self.fail(
                 "%s command(s) failed in sosreport tool verification" % self.is_fail)
 
+    @skipIf("ppc" not in os.uname()[4], "Skip, Powerpc specific tests")
     @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
     def test_dlpar_mem_hotplug(self):
         """
