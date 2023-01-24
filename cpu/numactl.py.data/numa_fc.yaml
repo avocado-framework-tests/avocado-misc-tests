@@ -2,5 +2,5 @@ disk:
 seek:
 count:
 bytes:
-input_device:
+input_file:
 pci_device: 
