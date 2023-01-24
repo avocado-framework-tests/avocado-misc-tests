@@ -139,7 +139,7 @@ void unlock_mem(void *mmap_pointer, unsigned long memory)
 }
 
 /* Read and verify the pattern from given address for given size */
-void read_memory(char *addr, int pattern, unsigned long size, unsigned long pagesize)
+void read_memory(char *addr, char pattern, unsigned long size, unsigned long pagesize)
 {
 	unsigned long iterator;
 	unsigned long read = 0;
