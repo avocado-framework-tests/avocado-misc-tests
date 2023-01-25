@@ -62,6 +62,7 @@ class Disktest(Test):
         :param chunk_mb: Size of the portion of the disk used to run the test.
                          Cannot be smaller than the total amount of RAM.
         """
+        self.err_mesg = []
         smm = SoftwareManager()
         if not smm.check_installed("gcc") and not smm.install("gcc"):
             self.cancel('Gcc is needed for the test to be run')
@@ -75,7 +76,6 @@ class Disktest(Test):
         self.dir = self.params.get('dir', default=None)
         self.fstype = self.params.get('fs', default='ext4')
         self.raid_name = '/dev/md/sraid'
-        self.err_mesg = []
 
         if self.fstype == 'btrfs':
             ver = int(distro.detect().version)
