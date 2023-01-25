@@ -67,6 +67,8 @@ class NumaTest(Test):
             pkgs.extend(['libpthread-stubs0-dev',
                          'libnuma-dev', 'libhugetlbfs-dev'])
         elif dist.name in ["centos", "rhel", "fedora"]:
+            if (dist.name == 'rhel' and dist.version >= '9'):
+                self.cancel("libhugetlbfs packages are not available on RHEL 9.x onwards.")
             pkgs.extend(['numactl-devel', 'libhugetlbfs-devel'])
         elif dist.name == "SuSE":
             pkgs.extend(['libnuma-devel'])
