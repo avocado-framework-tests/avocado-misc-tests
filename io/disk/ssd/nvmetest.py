@@ -193,12 +193,12 @@ class NVMeTest(Test):
         """
         Returns the nvme controller id
         """
-        cmd = "%s list-ctrl %s" % (self.binary, self.device)
+        cmd = "%s id-ctrl %s" % (self.binary, self.device)
         output = process.system_output(cmd, shell=True,
                                        ignore_status=True).decode("utf-8")
         for line in output.splitlines():
-            if '0]' in line:
-                return line.split(':')[-1]
+            if 'cntlid' in line:
+                return line.split(':')[-1].strip()
         return ""
 
     def get_lba(self):
