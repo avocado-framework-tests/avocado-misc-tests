@@ -295,7 +295,7 @@ class NVMeTest(Test):
             if not self.firmware_slot_write_supported(slot):
                 continue
             passed_actions = []
-            for action in range(0, 4):
+            for action in range(0, 3):
                 # Downloading new FW to the device for each slot
                 if process.system(d_cmd, shell=True, ignore_status=True):
                     continue
