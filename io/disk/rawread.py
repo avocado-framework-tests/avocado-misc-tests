@@ -38,6 +38,11 @@ class Rawread(Test):
         checking install of required packages and extract and
         compile of rawread suit.
         """
+        self.disk = self.params.get("disk", default=None)
+
+        if not self.disk:
+            self.cancel("Please provide disk to run the test")
+
         smm = SoftwareManager()
         deps = ['gcc', 'make']
         if distro.detect().name == 'Ubuntu':
@@ -57,8 +62,6 @@ class Rawread(Test):
         os.chdir(self.source)
         build.make(self.source, extra_args="clean")
         build.make(self.source)
-
-        self.disk = self.params.get('disk', default=None)
 
     def test(self):
         """
