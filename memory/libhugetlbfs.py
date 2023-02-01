@@ -47,7 +47,9 @@ class LibHugetlbfs(Test):
         # Check for basic utilities
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        if (detected_distro.name == 'rhel' and detected_distro.version == '9'):
+        self.no_rhel = 0
+        if (detected_distro.name == 'rhel' and detected_distro.version >= '9'):
+            self.no_rhel = 1
             self.cancel("libhugetlbfs is not available RHEL 9.x onwards")
         deps = ['gcc', 'make', 'patch']
         if detected_distro.name in ["Ubuntu", 'debian']:
@@ -214,7 +216,8 @@ class LibHugetlbfs(Test):
             self.fail(error)
 
     def tearDown(self):
-        for hp_size in self.configured_page_sizes:
-            if process.system('umount %s' %
+        if (self.no_rhel == 0):
+            for hp_size in self.configured_page_sizes:
+                if process.system('umount %s' %
                               self.hugetlbfs_dir[hp_size], ignore_status=True):
-                self.log.warn("umount of hugetlbfs dir failed")
+                    self.log.warn("umount of hugetlbfs dir failed")
