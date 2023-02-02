@@ -67,7 +67,7 @@ class FioTest(Test):
         lv_needed = self.params.get('lv', default=False)
         raid_needed = self.params.get('raid', default=False)
         self.fio_file = 'fiotest-image'
-
+        self.err_mesg = []
         self.fs_create = False
         self.lv_create = False
         self.raid_create = False
@@ -114,7 +114,6 @@ class FioTest(Test):
         self.raid_name = '/dev/md/sraid'
         self.vgname = 'avocado_vg'
         self.lvname = 'avocado_lv'
-        self.err_mesg = []
 
         if self.disk_type == 'nvdimm':
             self.setup_pmem_disk(mnt_args)

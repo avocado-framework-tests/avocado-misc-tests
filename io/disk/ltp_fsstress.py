@@ -58,6 +58,7 @@ class LtpFs(Test):
         self.fsstress_count = self.params.get('fsstress_loop', default='1')
         self.n_val = self.params.get('n_val', default='100')
         self.p_val = self.params.get('p_val', default='100')
+        self.err_mesg = []
 
         smm = SoftwareManager()
         packages = ['gcc', 'make', 'automake', 'autoconf']
@@ -82,7 +83,6 @@ class LtpFs(Test):
         self.raid_name = '/dev/md/sraid'
         self.vgname = 'avocado_vg'
         self.lvname = 'avocado_lv'
-        self.err_mesg = []
         self.target = self.disk
         self.lv_disk = self.disk
         self.part_obj = Partition(self.disk, mountpoint=self.dir)
@@ -221,7 +221,7 @@ class LtpFs(Test):
         if wait.wait_for(is_raid_deleted, timeout=10):
             self.log.info("software raid  %s deleted" % self.raid_name)
         else:
-            self.err_mesg.append("failed to delete sraid %s" % self.raid_name)
+            self.err_mesg.extend(['failed to delete sraid %s' % self.raid_name])
 
     def delete_lv(self):
         """
@@ -238,7 +238,7 @@ class LtpFs(Test):
         if wait.wait_for(is_lv_deleted, timeout=10):
             self.log.info("lv %s deleted", self.lvname)
         else:
-            self.err_mesg.append("failed to delete lv %s" % self.lvname)
+            self.err_mesg.extend(['failed to delete lv %s' % self.lvname])
         # checking and deleteing if lvm_meta_data exists after lv removed
         cmd = 'blkid -o value -s TYPE %s' % self.lv_disk
         out = process.system_output(cmd, shell=True,
@@ -284,7 +284,7 @@ class LtpFs(Test):
             if wait.wait_for(is_disk_unmounted, timeout=10):
                 self.log.info("%s unmounted successfully" % l_disk)
             else:
-                self.err_mesg.append("%s unmount failed", l_disk)
+                self.err_mesg.extend(['%s unmount failed', l_disk])
         else:
             self.log.info("disk %s not mounted." % l_disk)
         self.log.info("checking if dir %s is mounted." % self.dir)
@@ -293,7 +293,7 @@ class LtpFs(Test):
             if wait.wait_for(is_dir_unmounted, timeout=10):
                 self.log.info("%s unmounted successfully" % self.dir)
             else:
-                self.err_mesg.append("failed to unount %s", self.dir)
+                self.err_mesg.extend(['failed to unount %s', self.dir])
         else:
             self.log.info("dir %s not mounted." % self.dir)
         self.log.info("checking if fs exists in {}" .format(l_disk))
@@ -302,7 +302,7 @@ class LtpFs(Test):
             if wait.wait_for(is_fs_deleted, timeout=10):
                 self.log.info("fs removed successfully..")
             else:
-                self.err_mesg.append(f'failed to delete fs on {l_disk}')
+                self.err_mesg.extend([f'failed to delete fs on {l_disk}'])
         else:
             self.log.info(f'No fs detected on {self.disk}')
 
@@ -335,4 +335,4 @@ class LtpFs(Test):
                 self.delete_raid()
         dmesg.clear_dmesg()
         if self.err_mesg:
-            self.warn("test failed due to following errors %s" % self.err_mesg)
+            self.log.warning("test failed due to following errors %s" % self.err_mesg)

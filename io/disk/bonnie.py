@@ -66,7 +66,7 @@ class Bonnie(Test):
                                           default=getpass.getuser())
         self.number_to_stat = self.params.get('number-to-stat', default=2048)
         self.data_size = self.params.get('data_size_to_pass', default=0)
-
+        self.err_mesg = []
         smm = SoftwareManager()
         # Install the package from web
         deps = ['gcc', 'make']
@@ -106,7 +106,6 @@ class Bonnie(Test):
         self.raid_name = '/dev/md/sraid'
         self.vgname = 'avocado_vg'
         self.lvname = 'avocado_lv'
-        self.err_mesg = []
         self.target = self.disk
         self.lv_disk = self.disk
         self.part_obj = Partition(self.disk, mountpoint=self.dir)
