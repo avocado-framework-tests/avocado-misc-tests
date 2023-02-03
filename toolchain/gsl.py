@@ -44,8 +44,7 @@ class GSL(Test):
         build.make(self.sourcedir)
 
     def test(self):
-        process.run("make -k check", ignore_status=True, sudo=True)
-        logfile = os.path.join(self.logdir, "stdout")
-        match = re.search(r'FAIL:\s+[1-9]', logfile, re.M | re.I)
+        ret = process.run("make -k check", ignore_status=True, sudo=True)
+        match = re.search(r'FAIL:\s+[1-9]',  ret.stdout.decode("utf-8"), re.M | re.I)
         if match:
             self.fail("test failed, Please check debug log for failed test cases")
