@@ -67,7 +67,8 @@ class GDB(Test):
 
     def test(self):
         ret = process.run("make check-gdb", ignore_status=True, sudo=True)
-        match = re.search(r'of unexpected failures[\t]*[1-9]',  ret.stdout.decode("utf-8"), re.M | re.I)
+        match = re.search(
+            r'of unexpected failures[\t]*[1-9]',  ret.stdout.decode("utf-8"), re.M | re.I)
         if match:
-            self.fail("test failed, Please check the debug log for failed test cases")
-
+            self.fail(
+                "test failed, Please check the debug log for failed test cases")
