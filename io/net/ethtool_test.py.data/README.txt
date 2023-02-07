@@ -11,7 +11,7 @@ to be updated, so that setting 'up / down <interface>' configures the interface.
 
 Input Needed (in multiplexer file):
 -----------------------------------
-Interfaces     -   Specify the interface for which the test needs to be run.
+interface      -   Specify the interface name 'eth1' or mac addr '34:80:0d:9b:dc:30' of device under test
 arg            -   Specify the argument that needs to be tested.
 action_elapse  -   Specify action elapse for those arguments that need it.
 host-IP        -   Specify host-IP for ip configuration.

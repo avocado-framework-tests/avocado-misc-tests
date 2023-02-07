@@ -22,7 +22,7 @@ Interfaces are specified in Interfaces section of multiplexer file.
 This test needs to be run as root.
 """
 
-import netifaces
+import os
 from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import process
@@ -53,11 +53,16 @@ class Ethtool(Test):
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
-        interfaces = netifaces.interfaces()
-        interface = self.params.get("interface")
-        if interface not in interfaces:
-            self.cancel("%s interface is not available" % interface)
-        self.iface = interface
+        interfaces = os.listdir('/sys/class/net')
+        local = LocalHost()
+        device = self.params.get("interface")
+        if device in interfaces:
+            self.interface = device
+        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
+            self.interface = local.get_interface_by_hwaddr(device).name
+        else:
+            self.interface = None
+            self.cancel("Please check the network device")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         self.hbond = self.params.get("hbond", default=False)
@@ -70,15 +75,14 @@ class Ethtool(Test):
         self.args = self.params.get("arg", default='')
         if not self.peer:
             self.cancel("No peer provided")
-        local = LocalHost()
-        if self.iface[0:2] == 'ib':
-            self.networkinterface = NetworkInterface(self.iface, local,
+        if self.interface[0:2] == 'ib':
+            self.networkinterface = NetworkInterface(self.interface, local,
                                                      if_type='Infiniband')
         elif self.hbond:
-            self.networkinterface = NetworkInterface(self.iface, local,
+            self.networkinterface = NetworkInterface(self.interface, local,
                                                      if_type='Bond')
         else:
-            self.networkinterface = NetworkInterface(self.iface, local)
+            self.networkinterface = NetworkInterface(self.interface, local)
         try:
             self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
             self.networkinterface.save(self.ipaddr, self.netmask)
@@ -92,7 +96,7 @@ class Ethtool(Test):
         self.elapse = self.params.get("action_elapse", default='')
         self.priv_test = self.params.get("privflag_test", default=False)
         if self.priv_test:
-            cmd = "ethtool --show-priv-flags %s" % (self.iface)
+            cmd = "ethtool --show-priv-flags %s" % (self.interface)
             self.ret_val = process.run(cmd, shell=True, verbose=True,
                                        ignore_status=True)
             if self.ret_val.exit_status:
@@ -134,13 +138,14 @@ class Ethtool(Test):
         Test the ethtool args provided
         '''
         for state, status in zip(["down", "up"], ["no", "yes"]):
-            if not self.interface_state_change(self.iface, state, status):
+            if not self.interface_state_change(self.interface, state, status):
                 self.fail("interface %s failed" % state)
             if self.args == "-L":
                 value = [self.tx, self.rx, self.other, self.combined]
                 self.param = ['tx', 'rx', 'other', 'combined']
                 default = []
-                cmd_l = "ethtool %s %s %s" % ("-l", self.iface, self.elapse)
+                cmd_l = "ethtool %s %s %s" % (
+                    "-l", self.interface, self.elapse)
                 output = process.run(cmd_l, shell=True, verbose=True,
                                      ignore_status=True).stdout_text \
                                                         .splitlines()[2:6]
@@ -160,7 +165,7 @@ class Ethtool(Test):
                             for j in range(5):
                                 if value[i] != '':
                                     cmd = "ethtool %s %s %s %s" % (
-                                        self.args, self.iface,
+                                        self.args, self.interface,
                                         self.param[i], default[i][j])
                                     result = process.run(cmd, shell=True,
                                                          verbose=True,
@@ -189,7 +194,7 @@ class Ethtool(Test):
                                             self.fail("%s %s" % (
                                                 self.args, result.stderr_text))
                     cmd = "ethtool %s %s %s %s %s %s %s %s %s %s" % (
-                        self.args, self.iface, self.param[0], value[0],
+                        self.args, self.interface, self.param[0], value[0],
                         self.param[1], value[1], self.param[2], value[2],
                         self.param[3], value[3])
                     ret = process.run(cmd, shell=True, verbose=True,
@@ -197,7 +202,8 @@ class Ethtool(Test):
                     if ret.exit_status != 0:
                         self.fail("%s %s" % (self.args, ret.stderr_text))
             else:
-                cmd = "ethtool %s %s %s" % (self.args, self.iface, self.elapse)
+                cmd = "ethtool %s %s %s" % (
+                    self.args, self.interface, self.elapse)
                 ret = process.run(cmd, shell=True, verbose=True,
                                   ignore_status=True)
                 if ret.exit_status != 0:
@@ -227,7 +233,7 @@ class Ethtool(Test):
                 if "flags" not in line:
                     priv_flag = line.split(':')[0]
                     cmd = "ethtool --set-priv-flags %s \"%s\" %s" % \
-                          (self.iface, priv_flag.rstrip(), val)
+                          (self.interface, priv_flag.rstrip(), val)
                     ret1 = process.run(cmd, shell=True, verbose=True,
                                        ignore_status=True)
                     if ret1.exit_status == 0 or 'supported' in \
@@ -246,21 +252,22 @@ class Ethtool(Test):
         '''
         Set the interface up at the end of test.
         '''
-        if self.args == "-L":
-            cmd = "ethtool %s %s %s %s %s %s %s %s %s %s" % (
-                self.args, self.iface, self.param[0], self.default_set[0],
-                self.param[1], self.default_set[1], self.param[2],
-                self.default_set[2], self.param[3], self.default_set[3])
-            ret = process.run(cmd, shell=True, verbose=True,
-                              ignore_status=True)
-            if ret.exit_status != 0:
-                self.fail("%s %s" % (self.args, ret.stderr_text))
-        self.interface_state_change(self.iface, "up", "yes")
-        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-        try:
-            self.networkinterface.restore_from_backup()
-        except Exception:
-            self.networkinterface.remove_cfg_file()
-            self.log.info("backup file not availbale, could not restore file.")
-        if self.hbond:
-            self.networkinterface.restore_slave_cfg_file()
+        if self.interface:
+            if self.args == "-L":
+                cmd = "ethtool %s %s %s %s %s %s %s %s %s %s" % (
+                    self.args, self.interface, self.param[0], self.default_set[0],
+                    self.param[1], self.default_set[1], self.param[2],
+                    self.default_set[2], self.param[3], self.default_set[3])
+                ret = process.run(cmd, shell=True, verbose=True,
+                                  ignore_status=True)
+                if ret.exit_status != 0:
+                    self.fail("%s %s" % (self.args, ret.stderr_text))
+            self.interface_state_change(self.interface, "up", "yes")
+            self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+            try:
+                self.networkinterface.restore_from_backup()
+            except Exception:
+                self.networkinterface.remove_cfg_file()
+                self.log.info("backup file not availbale, could not restore file.")
+            if self.hbond:
+                self.networkinterface.restore_slave_cfg_file()
