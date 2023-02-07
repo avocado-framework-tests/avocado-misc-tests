@@ -2,6 +2,9 @@ skip_dangerous: True
 scratch_mnt: '/mnt/scratch'
 test_mnt: '/mnt/test'
 disk_mnt: '/mnt/loop-device'
+# edit group for running specific group tests
+# don't give test range while specifying group
+group: 'auto'
 # Uncomment and edit test_range for running specific tests
 test_range: "null"
 loop_type: !mux

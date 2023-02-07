@@ -221,6 +221,7 @@ class Xfstests(Test):
                 self.cancel("Fail to install %s required for this test." %
                             package)
         self.skip_dangerous = self.params.get('skip_dangerous', default=True)
+        self.group = self.params.get('group', default=None)
         self.test_range = self.params.get('test_range', default=None)
         self.scratch_mnt = self.params.get(
             'scratch_mnt', default='/mnt/scratch')
@@ -443,7 +444,7 @@ class Xfstests(Test):
             args = ''
             if self.exclude or self.gen_exclude:
                 args = ' -E %s' % self.exclude_file
-            cmd = './check %s -g auto' % args
+            cmd = './check %s -g %s' % (args, self.group)
             result = process.run(cmd, ignore_status=True, verbose=True)
             if result.exit_status == 0:
                 self.log.info('OK: All Tests passed.')
@@ -453,6 +454,8 @@ class Xfstests(Test):
                 failures = True
 
         else:
+            if self.group:
+                self.error("change group param to null in yaml to run test range")
             self.log.info('Running only specified tests')
             for test in self.test_list:
                 test = '%s/%s' % (self.fs_to_test, test)
