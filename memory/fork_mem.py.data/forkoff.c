@@ -26,7 +26,8 @@ main(int argc,char *argv[])
         unsigned long size, psize, procs, itterations;
         char    *ptr;
         char    *i;
-        int     pid, j, k, status;
+        int     pid, j, k, status, maxpid=0;
+        char    buf[32]={0x0};
 
         if ((argc <= 1)||(argc >4)) {
                 printf("bad args, usage: forkoff <memsize MB> #children #itterations\n");
@@ -36,6 +37,16 @@ main(int argc,char *argv[])
         psize = getpagesize();
         procs = atol(argv[2]);
         itterations = atol(argv[3]);
+        FILE *fd=fopen("/proc/sys/kernel/pid_max","r");
+        fgets(buf,32,fd);
+        maxpid=atol(buf);
+        if ( procs > maxpid){
+             printf("\nNumber of Children %d provided is higher than maxpid supported on this system %d.. Exiting!!\n",procs,maxpid);
+             exit(-1);
+        }else{
+             printf("\nMaxpid / Children supported on the system %d\n",maxpid);
+        }
+        fclose(fd);
         printf("mmaping %ld anonymous bytes\n", size);
         ptr = (char *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
         if ( ptr == (char *) -1 ) {
