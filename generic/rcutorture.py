@@ -80,9 +80,9 @@ class Rcutorture(Test):
         Toggle CPUS online and offline
         """
         totalcpus = multiprocessing.cpu_count()
-        full_count = int(totalcpus) - 1
-        half_count = int(totalcpus) / 2 - 1
-        shalf_count = int(totalcpus) / 2
+        full_count = totalcpus - 1
+        half_count = totalcpus // 2 - 1
+        shalf_count = totalcpus // 2
         fcpu = "0 - "  "%s" % half_count
         scpu = "%s - %s" % (shalf_count, full_count)
 
