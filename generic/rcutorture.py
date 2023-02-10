@@ -67,14 +67,13 @@ class Rcutorture(Test):
         Verifies if CONFIG_RCU_TORTURE_TEST is enabled
         """
         self.results = []
-        self.log.info("Check if CONFIG_RCU_TORTURE_TEST is enabled\n")
-        ret = linux_modules.check_kernel_config('CONFIG_RCU_TORTURE_TEST')
-        if ret == linux_modules.ModuleConfig.NOT_SET:
-            self.cancel("CONFIG_RCU_TORTURE_TEST is not set in .config !!\n")
-
-        self.log.info("Check rcutorture module is already  loaded\n")
-        if linux_modules.module_is_loaded('rcutorture'):
-            linux_modules.unload_module('rcutorture')
+        self.log.info("Check if rcutorture can be loaded or not\n")
+        if(linux_modules.load_module('rcutorture')):
+            if linux_modules.module_is_loaded('rcutorture'):
+                self.log.info("rcutorture loaded successfully\n")
+                linux_modules.unload_module('rcutorture')
+        else:
+            self.cancel(f"rcutorture module can't be loaded")
 
     def cpus_toggle(self):
         """
