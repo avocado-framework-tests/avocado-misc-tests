@@ -32,8 +32,11 @@ class Cpufreq(Test):
     @skipIf(not IS_POWER_NV, "This test is not supported on PowerVM platform")
     def setUp(self):
         smm = SoftwareManager()
-        detected_distro = distro.detect()
-        if 'Ubuntu' in detected_distro.name:
+        self.detected_distro = distro.detect()
+        self.distro_name = self.detected_distro.name
+        self.distro_ver = self.detected_distro.version
+        self.distro_rel = self.detected_distro.release
+        if 'Ubuntu' in self.distro_name:
             deps = ['linux-tools-common', 'linux-tools-%s'
                     % platform.uname()[2]]
         else:
@@ -63,9 +66,22 @@ class Cpufreq(Test):
             process.run("cpupower frequency-set -f %s"
                         % self.get_random_freq())
             freq_set = self.cpu_freq_path("cpuinfo_cur_freq")
-            freq_read = process.system_output("ppc64_cpu --frequency -t 5"
-                                              "| grep 'avg:' | awk "
-                                              "'{print $2}'", shell=True)
+            new_format = False
+            if self.distro_name == "rhel":
+                if (self.distro_ver == "9" and self.distro_rel > "1") or \
+                   (self.distro_ver == "8" and self.distro_rel > "7"):
+                    new_format = True
+            if self.distro_name == "SuSE":
+                if self.distro_ver == "15" and self.distro_rel > "4":
+                    new_format = True
+            if new_format:
+                freq_read = process.system_output("ppc64_cpu --frequency -t 5"
+                                                  "| grep 'avg' | awk "
+                                                  "'{print $3}'", shell=True)
+            else:
+                freq_read = process.system_output("ppc64_cpu --frequency -t 5"
+                                                  "| grep 'avg:' | awk "
+                                                  "'{print $2}'", shell=True)
             freq_read = float(freq_read) * (10 ** 6)
             diff = float(freq_read) - float(freq_set)
             self.log.info(" Difference is %s" % diff)
