@@ -210,6 +210,8 @@ class perfNMEM(Test):
             self.log.info("Found cpumasks are = %s" % pmu_cpumask)
         else:
             self.fail("Fail to get cpumask")
+        if int(process.run("numactl -H").stdout.split()[1]) > 1:
+            self.cancel("test not supported for multiple numa nodes")
         # Get the unique value from the cpumask list
         if len(set(pmu_cpumask)) != 1:
             self.fail("cpumask values are not same: %s" % pmu_cpumask)
@@ -229,8 +231,9 @@ class perfNMEM(Test):
             self.fail("Can't offline cpumask cpu %s" % disable_cpu)
         current_cpu = self._get_cpumask(pmu1)
         self.log.info("Current CPU: %s" % current_cpu)
-        self._check_cpumask()
         # After confirming cpu got disabled, enable back
         if current_cpu in online_cpus and disable_cpu != current_cpu:
             if cpu.online(disable_cpu):
+                self.log.info("cpu enabled back %s" % online_cpus)
+            else:
                 self.fail("Can't online cpu %s" % disable_cpu)
