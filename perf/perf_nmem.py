@@ -173,10 +173,10 @@ class perfNMEM(Test):
             mix_events = []
             for keys in self.all_events.keys():
                 mix_events.append(self.all_events[keys][0])
-            op = process.system_output("perf stat -e '{%s}' sleep 1"
-                                       % (",".join(mix_events)), shell=True,
-                                       ignore_status=True)
-            er_ln = "The events in group usually have to be from the same PMU"
+            op = process.run("perf stat -e '{%s}' sleep 1"
+                             % (",".join(mix_events)), shell=True,
+                             ignore_status=True)
+            er_ln = "WARNING: grouped events cpus do not match, disabling group:"
             output = op.stdout.decode() + op.stderr.decode()
             # Expecting failure with the string in 'er_ln'
             if er_ln in output:
