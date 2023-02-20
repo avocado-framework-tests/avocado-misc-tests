@@ -71,7 +71,7 @@ class PerfUprobe(Test):
         self.report = "perf report --input=%s" % self.temp_file
 
     def cmd_verify(self, cmd):
-        return process.run(cmd, shell=True)
+        return process.run(cmd, shell=True, ignore_status=True)
 
     def test_uprobe(self):
         output = self.cmd_verify('%s /usr/bin/perf main' % self.cmdProbe)
