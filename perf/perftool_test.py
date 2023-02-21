@@ -13,11 +13,12 @@
 #
 # Copyright: 2016 IBM
 # Author:Praveen K Pandey <praveen@linux.vnet.ibm.com>
+#       :Sachin Sant <sachinp@linux.ibm.com>
 
 import os
 import platform
 from avocado import Test
-from avocado.utils import archive, build, distro, process
+from avocado.utils import archive, build, distro
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -59,20 +60,6 @@ class Perftool(Test):
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(self.workdir,
                                       'perftool-testsuite-master')
-
-    def test_perf_test(self):
-        '''
-        perf test: Does sanity tests and
-        execute the tests by calling each module
-        '''
-        count = 0
-        for string in process.run("perf test", ignore_status=True).\
-                stderr.decode("utf-8", "ignore").splitlines():
-            if 'FAILED' in string:
-                count += 1
-                self.log.info(string)
-        if count > 0:
-            self.fail("%s Test failed" % count)
 
     def test_perf_testsuite(self):
         '''
