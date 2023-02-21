@@ -468,11 +468,14 @@ class Xfstests(Test):
             self.fail('One or more tests failed. Please check the logs.')
 
     def tearDown(self):
-        if self.detected_distro.name is not 'SuSE':
-            process.system('userdel -f 123456-fsgqa', sudo=True)
-            process.system('userdel -f fsgqa', sudo=True)
-        else:
+        user_exits = 0
+        if not (process.system('id fsgqa', sudo=True, ignore_status=True)):
             process.system('userdel -r -f fsgqa', sudo=True)
+            user_exits = 1
+        if self.detected_distro.name is not 'SuSE':
+            if not (process.system('id 123456-fsgqa', sudo=True, ignore_status=True)):
+                process.system('userdel -f 123456-fsgqa', sudo=True)
+        if user_exits and self.detected_distro.name is 'SuSE':
             process.system('groupdel fsgqa', sudo=True)
             process.system('groupdel sys', sudo=True)
         # In case if any test has been interrupted
