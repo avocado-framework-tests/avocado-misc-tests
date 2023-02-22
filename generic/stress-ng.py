@@ -183,6 +183,9 @@ class Stressng(Test):
                       "\n".join(ERROR))
 
     def tearDown(self):
-        process.run("umount %s" % self.loop_dev)
-        process.run("losetup -d %s" % self.loop_dev)
-        process.run("rm -rf /tmp/blockfile")
+        if 'filesystem' in self.class_type:
+            process.run("umount %s" % self.loop_dev, ignore_status=True,
+                        sudo=True)
+            process.run("losetup -d %s" % self.loop_dev, ignore_status=True,
+                        sudo=True)
+            process.run("rm -rf /tmp/blockfile", ignore_status=True, sudo=True)
