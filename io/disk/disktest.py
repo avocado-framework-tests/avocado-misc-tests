@@ -80,7 +80,12 @@ class Disktest(Test):
         self.dir = self.params.get('dir', default=None)
         self.fstype = self.params.get('fs', default='ext4')
         self.raid_name = '/dev/md/sraid'
-
+        #if self.dir is None using using self.workdir as self.dir
+        if self.disk:
+            if not self.dir:
+                self.dir = self.workdir
+        else:
+            self.dir = self.workdir
         if self.fstype == 'btrfs':
             ver = int(distro.detect().version)
             rel = int(distro.detect().release)

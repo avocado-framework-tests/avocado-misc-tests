@@ -61,6 +61,13 @@ class LtpFs(Test):
         self.err_mesg = []
 
         smm = SoftwareManager()
+
+        #if self.dir is None using using self.workdir as self.dir
+        if self.disk:
+            if not self.dir:
+                self.dir = self.workdir
+        else:
+            self.dir = self.workdir
         packages = ['gcc', 'make', 'automake', 'autoconf']
         if raid_needed:
             packages.append('mdadm')

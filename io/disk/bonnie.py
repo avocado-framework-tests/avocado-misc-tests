@@ -61,7 +61,7 @@ class Bonnie(Test):
         self.raid_create = False
 
         self.disk = self.params.get('disk', default=None)
-        self.dir = self.params.get('dir', default='/mnt')
+        self.dir = self.params.get('dir', default=None)
         self.uid_to_use = self.params.get('uid-to-use',
                                           default=getpass.getuser())
         self.number_to_stat = self.params.get('number-to-stat', default=2048)
@@ -101,6 +101,12 @@ class Bonnie(Test):
             build.make(self.source)
             build.make(self.source, extra_args='install')
 
+        #if self.dir is None using using self.workdir as self.dir
+        if self.disk:
+            if not self.dir:
+                self.dir = self.workdir
+        else:
+            self.dir = self.workdir
         if not os.path.exists(self.dir):
             os.mkdir(self.dir)
         self.raid_name = '/dev/md/sraid'

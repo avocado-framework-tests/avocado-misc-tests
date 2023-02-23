@@ -59,7 +59,7 @@ class FioTest(Test):
         default_url = "https://brick.kernel.dk/snaps/fio-git-latest.tar.gz"
         url = self.params.get('fio_tool_url', default=default_url)
         self.disk = self.params.get('disk', default=None)
-        self.dir = self.params.get('dir', default='/mnt')
+        self.dir = self.params.get('dir', default=None)
         self.disk_type = self.params.get('disk_type', default='')
         fstype = self.params.get('fs', default='')
         fs_args = self.params.get('fs_args', default='')
@@ -72,6 +72,12 @@ class FioTest(Test):
         self.lv_create = False
         self.raid_create = False
         self.devdax_file = None
+        #if self.dir is None using using self.workdir as self.dir
+        if self.disk:
+            if not self.dir:
+                self.dir = self.workdir
+        else:
+            self.dir = self.workdir
 
         if fstype == 'btrfs':
             ver = int(distro.detect().version)
@@ -137,9 +143,6 @@ class FioTest(Test):
                 for line in out.decode().splitlines():
                     if line.startswith(eng) and 'no' in line:
                         self.cancel("PMEM engines not built with fio")
-
-        if not self.disk:
-            self.dir = self.workdir
 
         self.target = self.disk
         self.lv_disk = self.disk

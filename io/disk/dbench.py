@@ -61,7 +61,14 @@ class Dbench(Test):
         if not self.disk:
             self.cancel("Provide the test disks to proceed !")
         self.md_name = self.params.get('raid_name', default='md127')
-        self.mountpoint = self.params.get('dir', default='/mnt')
+        self.dir = self.params.get('dir', default=None)
+        #if self.dir is None using using self.workdir as self.dir
+        if self.disk:
+            if not self.dir:
+                self.dir = self.workdir
+        else:
+            self.dir = self.workdir
+        self.mountpoint = self.dir
         self.disk_obj = Partition(self.disk, mountpoint=self.mountpoint)
         self.pre_cleanup()
         self.clear_disk(self.disk_obj, self.disk)

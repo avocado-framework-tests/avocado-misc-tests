@@ -77,6 +77,14 @@ class LtpFs(Test):
         self.raid_name = '/dev/md/sraid'
         self.vgname = 'avocado_vg'
         self.lvname = 'avocado_lv'
+
+        #if self.dir is None using using self.workdir as self.dir
+        if self.disk:
+            if not self.dir:
+                self.dir = self.workdir
+        else:
+            self.dir = self.workdir
+
         self.target = self.disk
         self.lv_disk = self.disk
         self.part_obj = Partition(self.disk, mountpoint=self.dir)

@@ -58,12 +58,19 @@ class Tiobench(Test):
         raid_needed = self.params.get('raid', default=False)
         self.raid_create = False
         self.disk = self.params.get('disk', default=None)
-        self.dir = self.params.get('dir', default="/mnt")
+        self.dir = self.params.get('dir', default=None)
         self.raid_name = '/dev/md/sraid'
         self.vgname = 'avocado_vg'
         self.lvname = 'avocado_lv'
         self.err_mesg = []
         smm = SoftwareManager()
+        #if self.dir is None using using self.workdir as self.dir
+        if self.disk:
+            if not self.dir:
+                self.dir = self.workdir
+        else:
+            self.dir = self.workdir
+
         packages = ['gcc', 'mdadm']
         if self.fstype == 'btrfs':
             ver = int(distro.detect().version)
