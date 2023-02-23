@@ -116,7 +116,7 @@ class Stressng(Test):
         if self.class_type in ['memory', 'vm', 'all']:
             args.append('--vm-bytes 80% ')
         if 'filesystem' in self.class_type:
-            self.loop_dev = "/dev/loop0"
+            self.loop_dev = process.system_output('losetup -f').decode("utf-8").strip()
             fstype = self.params.get('fs', default='ext4')
             mnt = self.params.get('dir', default='/mnt')
             self.tmpout = process.system_output("ls /tmp", shell=True,
