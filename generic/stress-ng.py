@@ -116,7 +116,7 @@ class Stressng(Test):
         if self.class_type in ['memory', 'vm', 'all']:
             args.append('--vm-bytes 80% ')
         if 'filesystem' in self.class_type:
-            self.loop_dev = "/dev/loop0"
+            self.loop_dev = process.system_output('losetup -f').decode("utf-8").strip()
             fstype = self.params.get('fs', default='ext4')
             mnt = self.params.get('dir', default='/mnt')
             self.tmpout = process.system_output("ls /tmp", shell=True,
@@ -183,6 +183,9 @@ class Stressng(Test):
                       "\n".join(ERROR))
 
     def tearDown(self):
-        process.run("umount %s" % self.loop_dev)
-        process.run("losetup -d %s" % self.loop_dev)
-        process.run("rm -rf /tmp/blockfile")
+        if 'filesystem' in self.class_type:
+            process.run("umount %s" % self.loop_dev, ignore_status=True,
+                        sudo=True)
+            process.run("losetup -d %s" % self.loop_dev, ignore_status=True,
+                        sudo=True)
+            process.run("rm -rf /tmp/blockfile", ignore_status=True, sudo=True)

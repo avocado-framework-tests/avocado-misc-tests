@@ -70,12 +70,11 @@ class PerfBasic(Test):
         else:
             self.cancel("perf is not supported on %s" % dist.name)
 
+        self.temp_file = tempfile.NamedTemporaryFile().name
         for pkg in pkgs:
             if not smg.check_installed(pkg) and not smg.install(pkg):
                 self.cancel(
                     "Package %s is missing/could not be installed" % pkg)
-
-        self.temp_file = tempfile.NamedTemporaryFile().name
 
     def test_perf_help(self):
         self.run_cmd("perf --help", False)

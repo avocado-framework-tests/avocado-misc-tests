@@ -51,7 +51,7 @@ class RASToolsLsvpd(Test):
             self.cancel("supported only on Power platform")
         self.run_type = self.params.get('type', default='distro')
         self.sm = SoftwareManager()
-        for package in ("lsvpd", "sysfsutils"):
+        for package in ("lsvpd", "sysfsutils", "pciutils"):
             if not self.sm.check_installed(package) and not \
                     self.sm.install(package):
                 self.cancel("Fail to install %s required for this"

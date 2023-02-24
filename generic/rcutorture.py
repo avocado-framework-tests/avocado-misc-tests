@@ -42,77 +42,100 @@ class Rcutorture(Test):
 
     def setUp(self):
         smg = SoftwareManager()
-        if 'SuSE' in distro.detect().name:
-            if not smg.check_installed("kernel-source") and not\
-                    smg.install("kernel-source"):
-                self.cancel(
-                    "Failed to install kernel-source for this test.")
+        if "SuSE" in distro.detect().name:
+            if not smg.check_installed("kernel-source") and not smg.install(
+                "kernel-source"
+            ):
+                self.cancel("Failed to install kernel-source for this test.")
             if not os.path.exists("/usr/src/linux"):
                 self.cancel("kernel source missing after install")
             self.buldir = "/usr/src/linux"
-            shutil.copy('/boot/config-%s' % platform.uname()
-                        [2], '%s/.config' % self.buldir)
+            shutil.copy(
+                "/boot/config-%s" % platform.uname()[2], "%s/.config" % self.buldir
+            )
             os.chdir(self.buldir)
-            process.system("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYS/#&/g'\
-                           .config", shell=True, sudo=True)
-            process.system("sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYRING/#&/g' \
-                           .config", shell=True, sudo=True)
-            process.system("sed -i 's/^.*CONFIG_MODULE_SIG_KEY/#&/g' .config",
-                           shell=True, sudo=True)
-            process.system("sed -i 's/^.*CONFIG_DEBUG_INFO_BTF/#&/g' .config",
-                           shell=True, sudo=True)
-            process.system('make')
-            process.system('make modules_install')
+            process.system(
+                "sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYS/#&/g'\
+                           .config",
+                shell=True,
+                sudo=True,
+            )
+            process.system(
+                "sed -i 's/^.*CONFIG_SYSTEM_TRUSTED_KEYRING/#&/g' \
+                           .config",
+                shell=True,
+                sudo=True,
+            )
+            process.system(
+                "sed -i 's/^.*CONFIG_MODULE_SIG_KEY/#&/g' .config",
+                shell=True,
+                sudo=True,
+            )
+            process.system(
+                "sed -i 's/^.*CONFIG_DEBUG_INFO_BTF/#&/g' .config",
+                shell=True,
+                sudo=True,
+            )
+            process.system("make")
+            process.system("make modules_install")
         """
         Verifies if CONFIG_RCU_TORTURE_TEST is enabled
         """
         self.results = []
-        self.log.info("Check if CONFIG_RCU_TORTURE_TEST is enabled\n")
-        ret = linux_modules.check_kernel_config('CONFIG_RCU_TORTURE_TEST')
-        if ret == linux_modules.ModuleConfig.NOT_SET:
-            self.cancel("CONFIG_RCU_TORTURE_TEST is not set in .config !!\n")
+        self.log.info("Check if rcutorture can be loaded or not\n")
+        if linux_modules.load_module("rcutorture"):
+            if linux_modules.module_is_loaded("rcutorture"):
+                self.log.info("rcutorture loaded successfully\n")
+                linux_modules.unload_module("rcutorture")
+        else:
+            self.cancel(f"rcutorture module can't be loaded")
 
-        self.log.info("Check rcutorture module is already  loaded\n")
-        if linux_modules.module_is_loaded('rcutorture'):
-            linux_modules.unload_module('rcutorture')
+    def online_cpu(self, cpus):
+        if cpu.is_hotpluggable(cpus):
+            if cpu.online(cpus) is False:
+                raise TypeError(f"CPU{cpus} status still offline after toggling")
+
+    def offline_cpu(self, cpus):
+        if cpu.is_hotpluggable(cpus):
+            if cpu.offline(cpus):
+                raise TypeError(f"CPU{cpus} status still online after toggling")
 
     def cpus_toggle(self):
         """
         Toggle CPUS online and offline
         """
         totalcpus = multiprocessing.cpu_count()
-        full_count = int(totalcpus) - 1
-        half_count = int(totalcpus) / 2 - 1
-        shalf_count = int(totalcpus) / 2
-        fcpu = "0 - "  "%s" % half_count
+        full_count = totalcpus - 1
+        half_count = totalcpus // 2 - 1
+        shalf_count = totalcpus // 2
+        fcpu = "0 - " "%s" % half_count
         scpu = "%s - %s" % (shalf_count, full_count)
 
-        self.log.info("Online all cpus %s", totalcpus)
+        self.log.info("Online all cpus 0 - %s (if they support)\n", totalcpus)
         for cpus in range(0, full_count):
-            cpu.online(cpus)
+            self.online_cpu(cpus)
         time.sleep(10)
 
-        self.log.info("Offline all cpus 0 - %s\n", full_count)
+        self.log.info("Offline all cpus 0 - %s(if they support)\n", full_count)
         for cpus in range(0, full_count):
-            cpu.offline(cpus)
+            self.offline_cpu(cpus)
         time.sleep(10)
 
-        self.log.info("Online all cpus 0 - %s\n", full_count)
+        self.log.info("Online all cpus 0 - %s(if they support)\n", full_count)
         for cpus in range(0, full_count):
-            cpu.online(cpus)
+            self.online_cpu(cpus)
 
-        self.log.info(
-            "Offline and online first half cpus %s\n", fcpu)
+        self.log.info("Offline and online first half cpus %s(if they support)\n", fcpu)
         for cpus in range(0, half_count):
-            cpu.offline(cpus)
+            self.offline_cpu(cpus)
             time.sleep(10)
-            cpu.online(cpus)
+            self.online_cpu(cpus)
 
-        self.log.info("Offline and online second half cpus %s\n", scpu)
+        self.log.info("Offline and online second half cpus %s(if they support)\n", scpu)
         for cpus in range(shalf_count, full_count):
-            cpu.offline(cpus)
+            self.offline_cpu(cpus)
             time.sleep(10)
-            cpu.online(cpus)
+            self.online_cpu(cpus)
 
     def test(self):
         """
@@ -120,15 +143,15 @@ class Rcutorture(Test):
         """
         seconds = 15
         os.chdir(self.logdir)
-        if linux_modules.load_module('rcutorture'):
+        if linux_modules.load_module("rcutorture"):
             self.cpus_toggle()
             time.sleep(seconds)
             self.cpus_toggle()
-        linux_modules.unload_module('rcutorture')
+        linux_modules.unload_module("rcutorture")
 
-        dmesg = process.system_output('dmesg').decode("utf-8")
+        dmesg = process.system_output("dmesg").decode("utf-8")
 
-        res = re.search(r'rcu-torture: Reader', dmesg, re.M | re.I)
+        res = re.search(r"rcu-torture: Reader", dmesg, re.M | re.I)
 
         self.results = str(res).splitlines()
 
@@ -138,13 +161,13 @@ class Rcutorture(Test):
         """
         pipe1 = [r for r in self.results if "!!! Reader Pipe:" in r]
         if len(pipe1) != 0:
-            self.error('\nBUG: grace-period failure !')
+            self.error("\nBUG: grace-period failure !")
 
         pipe2 = [r for r in self.results if "Reader Pipe" in r]
         for p in pipe2:
             nmiss = p.split(" ")[7]
             if int(nmiss):
-                self.error('\nBUG: rcutorture tests failed !')
+                self.error("\nBUG: rcutorture tests failed !")
 
         batch = [s for s in self.results if "Reader Batch" in s]
         for b in batch:
@@ -153,5 +176,5 @@ class Rcutorture(Test):
                 self.log.info("\nWarning: near mis failure !!")
 
     def tearDown(self):
-        if linux_modules.module_is_loaded('rcutorture'):
-            linux_modules.unload_module('rcutorture')
+        if linux_modules.module_is_loaded("rcutorture"):
+            linux_modules.unload_module("rcutorture")
