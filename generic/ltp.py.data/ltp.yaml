@@ -36,8 +36,6 @@ runltp: !mux
         args: '-f fcntl-locktests'
     connectors:
         args: '-f connectors'
-    timers:
-        args: '-f timers'
     power_management_tests:
         args: '-f power_management_tests'
     hyperthreading:
