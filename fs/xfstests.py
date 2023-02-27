@@ -231,6 +231,12 @@ class Xfstests(Test):
         self.fs_to_test = self.params.get('fs', default='ext4')
         self.run_type = self.params.get('run_type', default='distro')
 
+        self.devices = []
+        self.part = None
+        if (self.group and self.test_range) or (self.group==None and self.test_range==None):
+            self.cancel("incorrect yaml parameter, group and test range can \
+                         not be run/none at same time")
+
         if self.run_type == 'upstream':
             prefix = "/usr/local"
             bin_prefix = "/usr/local/bin"
@@ -453,8 +459,6 @@ class Xfstests(Test):
                 failures = True
 
         else:
-            if self.group:
-                self.error("change group param to null in yaml to run test range")
             self.log.info('Running only specified tests')
             for test in self.test_list:
                 test = '%s/%s' % (self.fs_to_test, test)
