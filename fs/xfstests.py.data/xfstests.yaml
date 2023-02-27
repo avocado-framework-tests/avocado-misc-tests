@@ -6,7 +6,7 @@ disk_mnt: '/mnt/loop-device'
 # don't give test range while specifying group
 group: 'auto'
 # Uncomment and edit test_range for running specific tests
-test_range: "null"
+test_range: null
 loop_type: !mux
     type: 'loop'
     loop_size: '7GiB'
