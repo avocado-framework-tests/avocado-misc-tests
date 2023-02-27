@@ -66,10 +66,14 @@ class perf_bench(Test):
                 self.fail("Test Failed : %s in dmesg" % fail_pattern)
 
     def run_cmd(self, cmd):
+        err_ln = "Assertion `!(ret)' failed"
         try:
-            process.run(cmd, ignore_status=False, sudo=True)
+            op = process.run(cmd, ignore_status=False, sudo=True)
         except process.CmdError as details:
             self.fail("Command %s failed: %s" % (cmd, details))
+        output = op.stdout.decode() + op.stderr.decode()
+        if err_ln in output:
+            self.fail("command %s failed with assertion code" % cmd)
 
     def test_bench(self):
         # perf bench command
