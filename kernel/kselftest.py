@@ -121,7 +121,7 @@ class kselftest(Test):
                     if platform.uname()[2].split(".")[-2].endswith('a'):
                         self.log.info('Using ALT as kernel source')
                         src_name = 'kernel-alt'
-                self.buldir = smg.get_source(src_name, self.workdir)
+                self.buldir = smg.get_source(src_name, self.workdir, "-bp")
                 self.buldir = os.path.join(
                     self.buldir, os.listdir(self.buldir)[0])
             elif detected_distro.name in ['Ubuntu', 'debian']:
