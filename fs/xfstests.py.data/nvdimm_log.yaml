@@ -2,6 +2,8 @@ skip_dangerous: True
 scratch_mnt: '/mnt/scratch_pmem'
 test_mnt: '/mnt/test_pmem'
 logdev: true
+group:
+test_range:
 fs_type: !mux
     fs_ext4:
         fs: 'ext4'
