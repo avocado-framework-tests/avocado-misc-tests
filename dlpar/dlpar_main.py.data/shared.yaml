@@ -1,0 +1,20 @@
+cfg_cpu_per_proc: 8
+hmc_manageSystem:
+hmc_user:
+hmc_passwd:
+target_lpar_hostname:
+target_partition:
+target_user:
+target_passwd:
+ded_quantity_to_test: 2
+sleep_time: 60
+iterations: 1
+vir_quantity_to_test: 1
+cpu_quantity_to_test: 0.60
+mem_quantity_to_test: 1024
+mem_linux_machine: primary
+
+config:
+    lpar_mode: !mux
+        shared:
+            lp_mode: 'shared'
