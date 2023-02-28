@@ -82,7 +82,7 @@ class Xfstests(Test):
                     mount = False
                 else:
                     self.cancel('Need %s GB to create loop devices' % check)
-                self._create_loop_device(None, '2038M', mount)
+                self._create_loop_device('2038M', mount)
                 self.log_test = self.devices.pop()
                 self.log_scratch = self.devices.pop()
             namespaces = self.plib.run_ndctl_list('-N -r %s' % self.region)
@@ -221,6 +221,7 @@ class Xfstests(Test):
                 self.cancel("Fail to install %s required for this test." %
                             package)
         self.skip_dangerous = self.params.get('skip_dangerous', default=True)
+        self.group = self.params.get('group', default='auto')
         self.test_range = self.params.get('test_range', default=None)
         self.scratch_mnt = self.params.get(
             'scratch_mnt', default='/mnt/scratch')
@@ -228,6 +229,12 @@ class Xfstests(Test):
         self.disk_mnt = self.params.get('disk_mnt', default='/mnt/loop_device')
         self.fs_to_test = self.params.get('fs', default='ext4')
         self.run_type = self.params.get('run_type', default='distro')
+
+        self.devices = []
+        self.part = None
+        if self.group and self.test_range:
+            self.cancel("incorrect yaml parameter, group and test range can"
+                        "not be run at same time")
 
         if self.run_type == 'upstream':
             prefix = "/usr/local"
@@ -443,7 +450,7 @@ class Xfstests(Test):
             args = ''
             if self.exclude or self.gen_exclude:
                 args = ' -E %s' % self.exclude_file
-            cmd = './check %s -g auto' % args
+            cmd = './check %s -g %s' % (args, self.group)
             result = process.run(cmd, ignore_status=True, verbose=True)
             if result.exit_status == 0:
                 self.log.info('OK: All Tests passed.')
