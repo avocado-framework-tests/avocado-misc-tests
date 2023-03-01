@@ -153,6 +153,11 @@ class LTP(Test):
         if self.failed_tests:
             self.fail("LTP tests failed: %s" % self.failed_tests)
 
+        error = dmesg.collect_errors_dmesg(['WARNING: CPU:', 'Oops', 'Segfault',
+                                            'soft lockup', 'Unable to handle'])
+        if len(error):
+            self.fail("Issue %s listed in dmesg please check" % error)
+
     def tearDown(self):
         if self.mount_dir:
             self.device.unmount()
