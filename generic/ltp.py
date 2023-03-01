@@ -22,19 +22,11 @@
 import os
 import re
 from avocado import Test
-from avocado.utils import build, distro, genio
+from avocado.utils import build, distro, genio, dmesg
 from avocado.utils import process, archive
 from avocado.utils.partition import Partition
 
 from avocado.utils.software_manager.manager import SoftwareManager
-
-
-def clear_dmesg():
-    process.run("dmesg -c ", sudo=True)
-
-
-def collect_dmesg(obj):
-    obj.whiteboard = process.system_output("dmesg").decode()
 
 
 class LTP(Test):
@@ -108,7 +100,8 @@ class LTP(Test):
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        clear_dmesg()
+
+        dmesg.clear_dmesg()
         url = self.params.get(
             'url', default='https://github.com/linux-test-project/ltp/archive/master.zip')
         match = next((ext for ext in [".zip", ".tar"] if ext in url), None)
@@ -157,7 +150,6 @@ class LTP(Test):
                     value = re.split(r'\s+', line)
                     self.failed_tests.append(value[0])
 
-        collect_dmesg(self)
         if self.failed_tests:
             self.fail("LTP tests failed: %s" % self.failed_tests)
 
