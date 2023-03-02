@@ -10,4 +10,8 @@ remote_sriov_adapters:
 remote_sriov_ports:
 bandwidth:
 net_device_type: "vnic"
-options: "--vniccfg 2"
+vnic_options: !mux
+    all-mig-vnic:
+        options: "--vniccfg 1"
+    available-mig-vnic:
+        options: "--vniccfg 2"
