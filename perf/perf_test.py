@@ -16,8 +16,9 @@
 #       :Sachin Sant <sachinp@linux.ibm.com>
 
 import platform
+import os
 from avocado import Test
-from avocado.utils import distro, process
+from avocado.utils import distro, process, archive, build
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -28,6 +29,22 @@ class Perftest(Test):
     :avocado: tags=perf,testsuite
     """
 
+    def buildPerf(self):
+        """Build perf binary using upstream source code."""
+
+        self.location = self.params.get('location', default='https://github.c'
+                                        'om/torvalds/linux/archive/master.zip')
+        self.tarball = self.fetch_asset("perfcode.zip",
+                                        locations=[self.location], expire='1d')
+        archive.extract(self.tarball, self.workdir)
+        self.sourcedir = os.path.join(self.workdir, 'linux-master')
+        self.sourcedir = self.sourcedir + f"/tools/perf/"
+        os.chdir(self.sourcedir)
+        if build.make(self.sourcedir, extra_args='DESTDIR=/usr'):
+            self.fail("Failed to build perf from source")
+        if build.make(self.sourcedir, extra_args='DESTDIR=/usr install'):
+            self.fail("make install from source failed")
+
     def setUp(self):
         '''
         Install the basic packages to support perf
@@ -35,22 +52,30 @@ class Perftest(Test):
 
         # Check for basic utilities
         smm = SoftwareManager()
+        run_type = self.params.get('type', default='distro')
         detected_distro = distro.detect()
         deps = ['gcc', 'make']
-        if 'Ubuntu' in detected_distro.name:
-            deps.extend(['linux-tools-common', 'linux-tools-%s' %
-                         platform.uname()[2]])
-        elif 'debian' in detected_distro.name:
-            deps.extend(['linux-tools-%s' % platform.uname()[2][3]])
-        elif detected_distro.name in ['rhel', 'SuSE', 'fedora',
-                                      'centos']:
-            deps.extend(['perf', 'gcc-c++'])
-        else:
-            self.cancel("Install the package for perf supported\
-                      by %s" % detected_distro.name)
+        if run_type == 'distro':
+            if 'Ubuntu' in detected_distro.name:
+                deps.extend(['linux-tools-common', 'linux-tools-%s' %
+                             platform.uname()[2]])
+            elif 'debian' in detected_distro.name:
+                deps.extend(['linux-tools-%s' % platform.uname()[2][3]])
+            elif detected_distro.name in ['rhel', 'SuSE', 'fedora', 'centos']:
+                deps.extend(['perf', 'gcc-c++'])
+                if 'SuSE' in detected_distro.name:
+                    deps.extend(['kernel-default-debuginfo'])
+                else:
+                    deps.extend(['clang', 'kernel-debuginfo',
+                                 'perf-debuginfo'])
+            else:
+                self.cancel("Install the package for perf supported\
+                          by %s" % detected_distro.name)
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
+        if run_type == 'upstream':
+            self.buildPerf()
 
     def test_perf_test(self):
         '''
