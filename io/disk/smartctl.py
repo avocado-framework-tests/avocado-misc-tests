@@ -22,16 +22,18 @@ Technology (SMART) system built into most ATA/SATA and SCSI/SAS
 hard drives and solid-state drives
 """
 
+import os
+
 from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
-from avocado.utils import process
+from avocado.utils import process, multipath
 
 
 class SmartctlTest(Test):
 
     """
     This scripts performs S.M.A.R.T relavent tests using smartctl tool
-    on one or more disks
+    on different scsi disk types
     """
 
     def setUp(self):
@@ -45,12 +47,16 @@ class SmartctlTest(Test):
             self.log.info("smartctl should be installed prior to the test")
             if smm.install("smartmontools") is False:
                 self.cancel("Unable to install smartctl")
-        self.option = self.params.get('option')
-        self.disks = self.params.get('disk')
-        if self.disks is '' or self.option is '':
+        self.option = self.params.get('option', default=None)
+        self.disk = self.params.get('disk', default=None)
+        if not(self.disk or self.option):
             self.cancel(" Test skipped!!, please ensure Block device and \
             options are specified in yaml file")
-        cmd = "df -h /boot | grep %s" % (self.disks)
+        if multipath.is_mpath_dev(os.path.basename(self.disk)):
+            self.cancel("Test unsupported on logical device")
+        else:
+            self.disk = os.path.realpath(self.disk)
+        cmd = "df -h /boot | grep %s" % (self.disk)
         if process.system(cmd, timeout=300, ignore_status=True,
                           shell=True) == 0:
             self.cancel(" Skipping it's OS disk")
@@ -59,11 +65,11 @@ class SmartctlTest(Test):
         """
         executes S.M.A.R.T options using smartctl tool
         """
-        self.log.info("option %s on %s Disks" % (self.option, self.disks))
-        cmd = "smartctl %s %s" % (self.option, self.disks)
+        self.log.info("option %s on %s Disks" % (self.option, self.disk))
+        cmd = "smartctl %s %s" % (self.option, self.disk)
         if self.option == "--test=long":
             cmd += " && sleep 120 && smartctl -X %s && smartctl -A %s" \
-                % (self.disks, self.disks)
+                % (self.disk, self.disk)
         if process.system(cmd, timeout=1200, ignore_status=True,
                           shell=True):
             self.fail("Smartctl option %s FAILS" % self.option)
