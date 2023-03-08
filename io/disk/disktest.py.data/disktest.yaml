@@ -1,5 +1,5 @@
-disk: ''
-dir: ''
+disk:
+dir:
 filesystem: !mux
     ext4:
         fs: 'ext4'
