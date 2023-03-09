@@ -3,7 +3,7 @@ Example : ./bonnie++ -u root -d /mnt -s0 -b -n 10:100:10:1000
 
 so one has to pass following parameter in the yaml file
 
-disk: disk name on which test will run
+disk: disk name on which test will run, sdx or mpatha or by-id scsi-xxxx etc
 dir: /mnt (disk mounted on some dir. say /mnt here)
 uid-to-use: root (user name or it UUID, here it is name i,e root)
 number-to-stat: 10:0:0:2:8192 (Number of files to create file test)
