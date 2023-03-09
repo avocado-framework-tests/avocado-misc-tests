@@ -47,7 +47,8 @@ class LtpFs(Test):
         '''
         To check and install dependencies for the test
         '''
-        self.disk = self.params.get('disk', default=None)
+        device = self.params.get('disk', default=None)
+        self.disk = disk.get_absolute_disk_path(device)
         self.dir = self.params.get('dir', default='')
         self.fstype = self.params.get('fs', default='')
         self.fs_create = False
@@ -92,7 +93,7 @@ class LtpFs(Test):
 
         if self.disk is not None:
             self.pre_cleanup()
-            if self.disk in disk.get_disks():
+            if self.disk in disk.get_all_disk_paths():
                 if raid_needed:
                     self.create_raid(self.disk, self.raid_name)
                     self.raid_create = True
