@@ -4,6 +4,7 @@ runs under many operating systems.
 
 Inputs Needed in yaml file:
 ---------------------------
+disk - provide disk device name or by-id or by-path name
 args - Arguements with which iozone command is to be run.
 previous_results - Absolute path of raw_output file of any previously ran
                    iozone test for comparison with new test results.
