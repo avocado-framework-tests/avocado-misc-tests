@@ -22,6 +22,7 @@ import os
 import pkgutil
 from avocado import Test
 from avocado.utils import process
+from avocado.utils import disk
 from avocado.utils import archive
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -40,9 +41,10 @@ class NVMeCliSelfTest(Test):
         """
         Download 'nvme-cli'.
         """
-        self.device = self.params.get('device', default='nvme0')
-        self.device = "/dev/%s" % self.device
-        self.disk = self.params.get('disk', default='/dev/nvme0n1')
+        nvme_node = self.params.get('device', default='nvme0')
+        self.device = disk.get_absolute_disk_path(nvme_node)
+        device = self.params.get('disk', default='/dev/nvme0n1')
+        self.disk = disk.get_absolute_disk_path(device)
         self.test = self.params.get('test', default='')
         if not self.test:
             self.cancel('no test specified in yaml')
