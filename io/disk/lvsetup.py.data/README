@@ -6,7 +6,8 @@ volume and merges snapshot with the logical volume.
 Inputs Needed in yaml file:
 ---------------------------
 lv_disks: Name of the disks on which volume groups, logical volumes,
-      snapshots are created. Created on loop device if not specified
+      snapshots are created like /dev/sda or mpathb or scsi id from /dev/disk/by-id/. 
+      Created on loop device if not specified
 lv_size: Size of the logical volume as string in the form "#G"
          (for example 30G).
 lv_snapshot_name: Name of the snapshot with origin the logical
