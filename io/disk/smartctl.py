@@ -26,14 +26,14 @@ import os
 
 from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
-from avocado.utils import process, multipath
+from avocado.utils import process, multipath, disk
 
 
 class SmartctlTest(Test):
 
     """
     This scripts performs S.M.A.R.T relavent tests using smartctl tool
-    on different scsi disk types
+    on different disk types
     """
 
     def setUp(self):
@@ -47,13 +47,14 @@ class SmartctlTest(Test):
             self.log.info("smartctl should be installed prior to the test")
             if smm.install("smartmontools") is False:
                 self.cancel("Unable to install smartctl")
-        self.option = self.params.get('option', default=None)
-        self.disk = self.params.get('disk', default=None)
-        if not(self.disk or self.option):
-            self.cancel(" Test skipped!!, please ensure Block device and \
-            options are specified in yaml file")
+            self.option = self.params.get('option', default=None)
+            device = self.params.get('disk', default=None)
+            self.disk = disk.get_absolute_disk_path(device)
+            if not(self.disk or self.option):
+                self.cancel(" Test skipped!!, please ensure Block device and \
+                options are specified in yaml file")
         if multipath.is_mpath_dev(os.path.basename(self.disk)):
-            self.cancel("Test unsupported on logical device")
+            self.cancel("unsupported on logical device")
         else:
             self.disk = os.path.realpath(self.disk)
         cmd = "df -h /boot | grep %s" % (self.disk)
