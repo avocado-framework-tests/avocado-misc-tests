@@ -26,6 +26,8 @@ import re
 from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import build
+from avocado.utils import disk
+from avocado.utils import multipath
 from avocado.utils import process, archive
 from avocado.utils import distro
 
@@ -66,8 +68,12 @@ class HtxTest(Test):
             self.block_device = ""
         else:
             self.block_device = []
-            for disk in self.block_devices.split():
-                self.block_device.append(disk.rsplit("/")[-1])
+            for dev in self.block_devices.split():
+                dev_path = disk.get_absolute_disk_path(dev)
+                dev_base = os.path.basename(os.path.realpath(dev_path))
+                if 'dm' in dev_base:
+                    dev_base = multipath.get_mapper_name(dev_base)
+                self.block_device.append(dev_base)
             self.block_device = " ".join(self.block_device)
 
     def setup_htx(self):
@@ -213,9 +219,9 @@ class HtxTest(Test):
         cmd = "htxcmdline -query -mdt %s" % self.mdt_file
         output = process.system_output(cmd).decode("utf-8")
         device = []
-        for disk in self.block_device.split(" "):
-            if disk not in output:
-                device.append(disk)
+        for dev in self.block_device.split(" "):
+            if dev not in output:
+                device.append(dev)
         if device:
             self.log.info("block_devices %s are not avalable in %s ",
                           device, self.mdt_file)
@@ -242,9 +248,9 @@ class HtxTest(Test):
         device_list = self.block_device.split(" ")
         active_devices = []
         for line in output:
-            for disk in device_list:
-                if disk in line and 'ACTIVE' in line:
-                    active_devices.append(disk)
+            for dev in device_list:
+                if dev in line and 'ACTIVE' in line:
+                    active_devices.append(dev)
         non_active_device = list(set(device_list) - set(active_devices))
         if non_active_device:
             return False
