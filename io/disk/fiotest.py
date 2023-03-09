@@ -58,7 +58,8 @@ class FioTest(Test):
         """
         default_url = "https://brick.kernel.dk/snaps/fio-git-latest.tar.gz"
         url = self.params.get('fio_tool_url', default=default_url)
-        self.disk = self.params.get('disk', default=None)
+        device = self.params.get('disk', default=None)
+        self.disk = disk.get_absolute_disk_path(device)
         self.dir = self.params.get('dir', default='/mnt')
         self.disk_type = self.params.get('disk_type', default='')
         fstype = self.params.get('fs', default='')
@@ -147,7 +148,7 @@ class FioTest(Test):
         self.sraid = softwareraid.SoftwareRaid(self.raid_name, '0',
                                                self.disk.split(), '1.2')
         dmesg.clear_dmesg()
-        if self.disk in disk.get_disks():
+        if self.disk in disk.get_all_disk_paths():
             self.pre_cleanup()
             if raid_needed:
                 self.create_raid(self.target, self.raid_name)
