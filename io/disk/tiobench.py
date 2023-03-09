@@ -57,7 +57,8 @@ class Tiobench(Test):
         self.lv_create = False
         raid_needed = self.params.get('raid', default=False)
         self.raid_create = False
-        self.disk = self.params.get('disk', default=None)
+        device = self.params.get('disk', default=None)
+        self.disk = disk.get_absolute_disk_path(device)
         self.dir = self.params.get('dir', default="/mnt")
         self.raid_name = '/dev/md/sraid'
         self.vgname = 'avocado_vg'
