@@ -9,5 +9,5 @@ The disk and the mount point has to be provided by the user. Do not pass the roo
 The user can also give a filesystem of choice to be created and to start the test.
 
 Example for the inputs needed to run the program:
-disk: '/dev/sda'
+disk: '/dev/sda' or provide any name of device by-id or by-path etc
 mount_point: '/mnt'
