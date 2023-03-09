@@ -21,7 +21,7 @@ Rawread test
 import os
 from avocado import Test
 from avocado.utils import archive
-from avocado.utils import build
+from avocado.utils import build, disk
 from avocado.utils import process, distro
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -38,11 +38,10 @@ class Rawread(Test):
         checking install of required packages and extract and
         compile of rawread suit.
         """
-        self.disk = self.params.get("disk", default=None)
-
-        if not self.disk:
+        device = self.params.get("disk", default=None)
+        if not device:
             self.cancel("Please provide disk to run the test")
-
+        self.disk = disk.get_absolute_disk_path(device)
         smm = SoftwareManager()
         deps = ['gcc', 'make']
         if distro.detect().name == 'Ubuntu':
