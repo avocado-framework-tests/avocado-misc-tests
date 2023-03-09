@@ -57,7 +57,8 @@ class FSMark(Test):
         self.raid_create = False
         self.fstype = self.params.get('fs', default='')
         self.fs_create = False
-        self.disk = self.params.get('disk', default=None)
+        device = self.params.get('disk', default=None)
+        self.disk = disk.get_absolute_disk_path(device)
         self.dir = self.params.get('dir', default=None)
         self.num = self.params.get('num_files', default='1024')
         self.size = self.params.get('size', default='1000')
