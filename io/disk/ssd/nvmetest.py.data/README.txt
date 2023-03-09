@@ -21,4 +21,4 @@ This test needs to be run as root.
 The suite selects first namespace on the device and runs tests on it.
 Inputs Needed (in multiplexer file):
 ------------------------------------
-Device      -       NVMe device / interface (Eg: nvme0)
+Device      -       NVMe device / interface (Eg: nvme0 or device by id)

@@ -25,6 +25,7 @@ from avocado import Test
 from avocado.utils import process
 from avocado.utils import archive
 from avocado.utils import build
+from avocado.utils import disk
 from avocado.utils import download
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -42,8 +43,8 @@ class NVMeTest(Test):
         """
         Build 'nvme-cli' and setup the device.
         """
-        self.device = self.params.get('device', default='nvme0')
-        self.device = "/dev/%s" % self.device
+        nvme_node = self.params.get('device', default='nvme0')
+        self.device = disk.get_absolute_disk_path(nvme_node)
         cmd = 'ls %s' % self.device
         if process.system(cmd, ignore_status=True):
             self.cancel("%s does not exist" % self.device)
