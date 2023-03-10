@@ -1,5 +1,5 @@
-disk: ''
-dir: ''
+disk:
+dir:
 args: !mux
     fs_di:
         args: '-s fs_di'

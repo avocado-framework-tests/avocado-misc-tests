@@ -1,5 +1,5 @@
-disk: ''
-dir: ''
+disk:
+dir:
 n_val: '250'
 p_val: '250'
 fsstress_loop: 1

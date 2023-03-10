@@ -30,7 +30,7 @@ from avocado.utils.network.hosts import LocalHost, RemoteHost
 from avocado.utils.ssh import Session
 
 
-class Udady(Test):
+class Udaddy(Test):
     """
     Udaddy Test.
     """

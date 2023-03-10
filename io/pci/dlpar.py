@@ -48,7 +48,7 @@ class DlparPci(Test):
         if not self.hmc_ip:
             self.cancel("HMC IP not got")
         self.hmc_user = self.params.get("hmc_username", default='*******')
-        self.hmc_pwd = self.params.get("hmc_pwd", '*', default='********')
+        self.hmc_pwd = self.params.get("hmc_pwd", default='********')
         self.sriov = self.params.get("sriov", default="no")
         self.lpar_1 = self.get_partition_name("Partition Name")
         if not self.lpar_1:
@@ -57,16 +57,10 @@ class DlparPci(Test):
                                password=self.hmc_pwd)
         if not self.session.connect():
             self.cancel("failed connecting to HMC")
-        cmd = 'lssyscfg -r sys  -F name'
-        output = self.session.cmd(cmd)
-        self.server = ''
-        for line in output.stdout_text.splitlines():
-            if line in self.lpar_1:
-                self.server = line
-                break
+        self.server = self.params.get("manageSystem", default=None)
         if not self.server:
             self.cancel("Managed System not got")
-        self.lpar_2 = self.params.get("lpar_2", '*', default=None)
+        self.lpar_2 = self.params.get("lpar_2", default=None)
         # lshwres command can return message No results were found
         # in case hardware discovery is not done yet or needs to be refreshed.
         # Handle such condition in the scipt and skip the test in such case.
@@ -79,7 +73,7 @@ class DlparPci(Test):
                 self.log.warn("Incomplete hardware discovery!!. Refresh it")
                 self.cancel("Incomplete hardware discovery, skipping tests")
             self.lpar2_id = output.stdout_text[0]
-        self.pci_device = self.params.get("pci_device", '*', default=None)
+        self.pci_device = self.params.get("pci_device", default=None)
         self.loc_code = pci.get_slot_from_sysfs(self.pci_device)
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         if self.loc_code is None:

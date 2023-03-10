@@ -159,6 +159,7 @@ class RASToolsPpcdiag(Test):
         loc_code = self.run_cmd_out("usysident -P | awk 'NR==1{print $1}'")
         cmd = "usysident -l %s -s normal" % loc_code
         self.run_cmd(cmd)
+        cmd = "usysident -l %s -s identify" % loc_code
         if 'on' not in self.run_cmd_out(cmd):
             self.fail_cmd.append(cmd)
         if self.fail_cmd:

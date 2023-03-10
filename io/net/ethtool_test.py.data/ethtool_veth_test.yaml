@@ -16,3 +16,11 @@ args: !mux
         arg: -P
     Show-time-stamping:
         arg: -T
+    Show-channels:
+        arg: -l
+    Set-channels:
+        arg: -L
+        tx_channel:
+        rx_channel:
+        other_channel:
+        combined_channel:
