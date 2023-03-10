@@ -219,5 +219,5 @@ class LibHugetlbfs(Test):
         if (self.no_rhel == 0):
             for hp_size in self.configured_page_sizes:
                 if process.system('umount %s' %
-                              self.hugetlbfs_dir[hp_size], ignore_status=True):
+                                  self.hugetlbfs_dir[hp_size], ignore_status=True):
                     self.log.warn("umount of hugetlbfs dir failed")
