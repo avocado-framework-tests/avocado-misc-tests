@@ -13,68 +13,31 @@ OR
 # avocado run --test-runner runner dlpar_main.py -m <path for lpar.yaml>
 #
 # This test require 2 LPARs to run dlpar cpu, memory operations namely add/remove/move.
-# All the test configuration needs to be filled in test.cfg file which exists under config/test.cfg
+# All the test configuration needs to be filled in dlpar_main.py.data/dlpar.yaml
 #
-# Sample test.cfg is provided as below:
-#cat config/test.cfg
-[log]
-file_level = DEBUG
-console_level = INFO
+# Sample dlpar.yaml is provided as below:
+#cat dlpar_main.py.data/dlpar.yaml
 
-[hmc]
-name = <fully qualified hmc hostname>
-machine = <managed system name> 
-partition = <partition name, for hmc it is same as managed system name> 
-user = <hmc default user, ex: hscroot>
-passwd = <hscroot password>
+cfg_cpu_per_proc: 8
+hmc_manageSystem:   <partition name, It is managed system name>
+hmc_user:        <hmc default user, ex: hscroot>
+hmc_passwd:      <hscroot password>
+target_lpar_hostname: <fully qualified  lpar name(Secondary lpar)>
+target_partition: <target partition name(Secondary lpar name)>
+target_user: <user, ex: root>
+target_passwd: <root password>
+ded_quantity_to_test: 2
+sleep_time: 60
+iterations: 1
+vir_quantity_to_test: 1
+cpu_quantity_to_test: 0.60
+mem_quantity_to_test: 1024
+mem_linux_machine: primary
 
-[linux_primary]
-name = <lpar name> 
-machine = <managed system name> 
-partition = <partition name, should be same as lpar name>
-user = <user, ex: root> 
-passwd = <root password> 
+config:
+    lpar_mode: !mux
+        dedicated:
+            lp_mode:
 
-[linux_secondary]
-name = <lpar name> 
-machine = <managed system name> 
-partition = <partition name, should be same as lpar name>
-user = <user, ex: root> 
-passwd = <root password> 
-
-[dedicated_cpu]
-quantity_to_test = 1
-sleep_time = 60
-iterations = 1
-min_procs = 2
-desired_procs = 2
-max_procs = 10
-
-[virtual_cpu]
-quantity_to_test = 1
-sleep_time = 60
-iterations = 1
-
-[cpu_unit]
-quantity_to_test = 0.5
-sleep_time = 60
-iterations = 1
-min_procs = 2
-desired_procs = 2
-max_procs = 10
-min_proc_units = 2
-desired_proc_units = 2
-max_proc_units = 10
-sharing_mode = cap
-
-[memory]
-quantity_to_test = 1024
-sleep_time = 40
-iterations = 1
-mode = add_remove
-linux_machine = primary
-min_mem = 8192
-desired_mem = 8192
-max_mem = 204800
-
-#end - config/test.cfg
+Note: lp_mode -> 1. dedicated
+		 2. shared

@@ -19,9 +19,15 @@ import os
 
 from avocado import Test
 from avocado.utils import process
-from avocado import skipUnless
-from avocado.utils import process, distro
-from avocado.utils.software_manager import SoftwareManager
+from avocado.utils import wait
+from dlpar_api.api import DedicatedCpu, CpuUnit, Memory
+list_payload = ["cfg_cpu_per_proc", "hmc_manageSystem", "hmc_user",
+                "hmc_passwd", "target_lpar_hostname", "target_partition",
+                "target_user", "target_passwd", "ded_quantity_to_test",
+                "sleep_time", "iterations", "vir_quantity_to_test",
+                "cpu_quantity_to_test", "mem_quantity_to_test",
+                "mem_linux_machine"]
+
 
 IS_POWER_VM = 'pSeries' in open('/proc/cpuinfo', 'r').read()
 dlpar_type_flag = ""
@@ -55,105 +61,77 @@ class DlparTests(Test):
             self.log.warn('number of warnings is %s', warns)
             self.fail("number of errors is %s" % errors)
 
-    @skipUnless(IS_POWER_VM,
-                "DLPAR test is supported only on PowerVM platform")
+    @staticmethod
+    def get_mcp_component(component):
+        '''
+        probes IBM.MCP class for mentioned component and returns it.
+        '''
+        for line in process.system_output('lsrsrc IBM.MCP %s' % component,
+                                          ignore_status=True, shell=True,
+                                          sudo=True).decode("utf-8") \
+                                                    .splitlines():
+            if component in line:
+                return line.split()[-1].strip('{}\"')
+        return ''
+
+    @staticmethod
+    def get_partition_name(component):
+        '''
+        get partition name from lparstat -i
+        '''
+        for line in process.system_output('lparstat -i', ignore_status=True,
+                                          shell=True,
+                                          sudo=True).decode("utf-8") \
+                                                    .splitlines():
+            if component in line:
+                a = line.split(':')[-1].strip()
+                print(a)
+                return a
+        return ''
+
     def setUp(self):
-        self.lpar_mode = self.params.get('mode', default='dedicated')
-        distro_name = distro.detect().name.lower()
-        deps = ['sshpass']
-        smm = SoftwareManager()
-        if distro_name != 'rhel':
-            self.cancel(
-                "To run the test, the sshpass package needs to be \
-                installed on the current platform..!!")
+        self.list_data = []
+        self.lpar_mode = self.params.get('lp_mode', default='dedicated')
+        for i in list_payload:
+            self.data = self.params.get(i, default='')
+            self.list_data.append(self.data)
 
-        for package in deps:
-            if not smm.check_installed(package) and not smm.install(package):
-                self.cancel("Failed to install %s, which is needed for"
-                            "the test to be run" % package)
+        # Get HMC IP
+        self.hmc_ip = wait.wait_for(
+            lambda: self.get_mcp_component("HMCIPAddr"), timeout=30)
 
-    def dlpar_engine(self):
-        '''
-        Call and create the log file as per dlpar test case
-        Ex: With and without workload(smt, cpu_fold etc)
-        '''
-        test_cmd = ""
-        dlpar_type_flag = ""
-        if self.lpar_mode == 'dedicated' or self.lpar_mode \
-                == 'ded_smt_workload' or self.lpar_mode \
-                == 'ded_cpu_fold_workload':
-            self.log.info("Dedicated Lpar....")
-            self.test_case = self.params.get('test_case', default='cpu')
-            self.log.info("TestCase: %s" % self.test_case)
-            if self.test_case == 'cpu':
-                test_mode = "DED {}: Calling dedicated_cpu.py".format(
-                    self.lpar_mode)
-                if self.lpar_mode != 'dedicated':
-                    self.log.info(test_mode)
-                else:
-                    self.log.info("DED : Calling dedicated_cpu.py")
-                if (self.lpar_mode == 'ded_smt_workload' or self.lpar_mode
-                        == 'ded_cpu_fold_workload'):
-                    logfile_name = self.lpar_mode + ".log"
-                    dlpar_type_flag = logfile_name
-                    # test_cmd = './dedicated_cpu.py ' + logfile_name
-                    test_cmd = './dedicated_cpu.py'
-                else:
-                    test_cmd = './dedicated_cpu.py'
-            elif self.test_case == 'mem':
-                test_mode = "DED {}: Calling memory.py".format(self.lpar_mode)
-                if self.lpar_mode != 'dedicated':
-                    self.log.info(test_mode)
-                else:
-                    self.log.info("DED: Calling memory.py")
-                if (self.lpar_mode == 'ded_smt_workload' or self.lpar_mode
-                        == 'ded_cpu_fold_workload'):
-                    logfile_name = self.lpar_mode + ".log"
-                    dlpar_type_flag = logfile_name
-                    # test_cmd = './memory.py ' + logfile_name
-                    test_cmd = './memory.py'
-                else:
-                    test_cmd = './memory.py'
+        # Primary lpar details
+        self.pri_partition = self.get_partition_name("Partition Name")
+        self.pri_name = self.get_partition_name("Node Name")
+        pri_data = {"src_partition": self.pri_partition,
+                    "src_name": self.pri_name,
+                    "hmc_name": self.hmc_ip}
+        self.res = {list_payload[i]: self.list_data[i]
+                    for i in range(len(list_payload))}
+        self.res = dict(list(pri_data.items()) + list(self.res.items()))
+        self.log.info("Calling Config file creation method--!!")
+        self.sorted_payload = dict(sorted(self.res.items()))
+        self.iterations = self.sorted_payload.get('iterations')
 
-        elif self.lpar_mode == 'shared' or self.lpar_mode == \
-                'sha_smt_workload' or self.lpar_mode == \
-                'sha_cpu_fold_workload':
-            self.log.info("Shared Lpar.....")
-            self.test_case = self.params.get('test_case', default='cpu')
-            self.log.info("TestCase: %s" % self.test_case)
-            if self.test_case == 'cpu':
-                self.log.info("SHR: Calling cpu_unit.py")
-                test_cmd = './cpu_unit.py'
-            elif self.test_case == 'mem':
-                self.log.info("SHR: Calling memory.py")
-                test_cmd = './memory.py'
+    def test_cpu_dlpar(self):
 
-        if test_cmd != "":
-            self.run_cmd(test_cmd, dlpar_type_flag)
+        if self.lpar_mode == 'dedicated':
+            Ded_obj = DedicatedCpu(self.sorted_payload,
+                                   log='dedicated_cpu.log')
+            for i in range(self.iterations):
+                Ded_obj.add_ded_cpu()
+                Ded_obj.move_ded_cpu()
+                Ded_obj.add_ded_cpu()
+                Ded_obj.rem_ded_cpu()
+        elif self.lpar_mode == 'shared':
+            Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
+            for i in range(self.iterations):
+                Sha_obj.mix_proc_ope()
 
-    def test_dlpar(self):
-        '''
-        Execute dlpar dedicated/shared and memory tests
-        '''
-        dlpar_type_flag = ""
-        if (self.lpar_mode == 'ded_smt_workload' or self.lpar_mode ==
-                'sha_smt_workload'):
-            dlpar_type_flag = "smt"
-            self.log.info(
-                "SMT Workload: Calling ./dlpar_workload_setup.py ")
-            test_cmd = './dlpar_workload_setup.py'
-            self.run_cmd(test_cmd, "smt")
-        if (self.lpar_mode == 'ded_cpu_fold_workload' or self.lpar_mode ==
-                'sha_cpu_fold_workload'):
-            dlpar_type_flag = "cpu_fold"
-            self.log.info(
-                "CPU folding Workload: Calling ./dlpar_workload_setup.py")
-            test_cmd = './dlpar_workload_setup.py'
-            self.run_cmd(test_cmd, "cpu_fold")
-        self.dlpar_engine()
-        if dlpar_type_flag != "":
-            test_cmd = './dlpar_workload_setup.py'
-            if dlpar_type_flag == "smt":
-                self.run_cmd(test_cmd, "smt:kill_process")
-            elif dlpar_type_flag == "cpu_fold":
-                self.run_cmd(test_cmd, "cpu_fold:kill_process")
+    def test_mem_dlpar(self):
+        Mem_obj = Memory(self.sorted_payload, log='memory.log')
+        for i in range(self.iterations):
+            Mem_obj.mem_add()
+            Mem_obj.mem_rem()
+            Mem_obj.mem_move()
+            # Mem_obj.mem_mix_ope()
