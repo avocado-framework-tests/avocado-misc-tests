@@ -121,9 +121,8 @@ class PerfBasic(Test):
             self.fail("Unable to read mmcr* files as super user.")
 
         self._create_temp_user()
-        result = process.system_output("su - test_pmu -c 'cat %smmcr*'"
-                                       % sysfs_file, shell=True,
-                                       ignore_status=True)
+        result = process.run("su - test_pmu -c 'cat %smmcr*'" % sysfs_file,
+                             shell=True, ignore_status=True)
         output = result.stdout.decode() + result.stderr.decode()
         self._remove_temp_user()
         if 'Permission denied' not in output:
