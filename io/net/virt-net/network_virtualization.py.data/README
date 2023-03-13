@@ -19,6 +19,7 @@ Links :
 Explanation of the input parameters for single vnic:
 hmc_pwd ---> HMC password
 hmc_username ---> HMC user name
+managedSys --> Provide the HMC managed CEC name
 vios_ip ---> ip of vios for vios failover
 vios_username ---> vios user name
 vios_pwd---> vios password
