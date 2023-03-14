@@ -22,7 +22,7 @@ from avocado import Test
 import paramiko
 from avocado.utils import process
 from avocado.utils import genio
-from avocado.utils import multipath
+from avocado.utils import multipath, pci
 from avocado.utils import wait
 # import shutil
 # try:
@@ -35,7 +35,6 @@ class CommandFailed(Exception):
     '''
     exception class
     '''
-
     def __init__(self, command, output, exitcode):
         self.command = command
         self.output = output
@@ -70,20 +69,30 @@ class PortBounceTest(Test):
         self.sbt = int(self.params.get("sbt", '*', default=10))
         self.lbt = int(self.params.get("lbt", '*', default=250))
         self.count = int(self.params.get("count", '*', default="2"))
+        self.adapter_type = self.params.get("adapter_type", default='fc')
+        self.pci_address = self.params.get("pci_devices", default=None)
         self.prompt = ">"
         self.verify_sleep_time = 20
         self.port_ids = []
         self.host = []
         self.dic = {}
-        system_wwids = multipath.get_multipath_wwids()
-        for wwid in self.wwids:
-            paths = []
-            if wwid not in system_wwids:
-                self.wwids.remove(wwid)
-                continue
-            paths = multipath.get_paths(wwid)
-            for path in paths:
-                self.host.append(self.get_fc_host(path))
+        if self.pci_address:
+            for adr in self.pci_address.split(' '):
+                host = str(pci.get_interfaces_in_pci_address(adr, "fc_host")[0])
+                self.host.append(host)
+                self.log.info("hostlist: %s" % self.host)
+        elif self.wwids:
+            system_wwids = multipath.get_multipath_wwids()
+            for wwid in self.wwids:
+                paths = []
+                if wwid not in system_wwids:
+                    self.wwids.remove(wwid)
+                    continue
+                paths = multipath.get_paths(wwid)
+                for path in paths:
+                    self.host.append(self.get_fc_host(path))
+        else:
+            self.cancel("provide wwids or pci_address of the adapter")
         self.host = list(dict.fromkeys(self.host))
         self.log.info("AllHostValues: %s" % self.host)
 
@@ -171,7 +180,8 @@ class PortBounceTest(Test):
         time.sleep(self.verify_sleep_time)
         self.verify_switch_port_state(test_ports, 'Disabled')
         self.verify_port_host_state(test_ports, "Linkdown")
-        self.mpath_state_check(test_ports, "failed", "faulty")
+        if self.adapter_type != 'nvmf':
+            self.mpath_state_check(test_ports, "failed", "faulty")
         time.sleep(sleep_time)
 
         # Port Enable and verification both in switch and OS
@@ -180,7 +190,8 @@ class PortBounceTest(Test):
         self.verify_switch_port_state(test_ports, 'Online')
         self.verify_port_host_state(test_ports, "Online")
         time.sleep(self.verify_sleep_time)
-        self.mpath_state_check(test_ports, 'active', 'ready')
+        if self.adapter_type != 'nvmf':
+            self.mpath_state_check(test_ports, 'active', 'ready')
 
     def port_enable_disable(self, test_ports, typ):
         '''
