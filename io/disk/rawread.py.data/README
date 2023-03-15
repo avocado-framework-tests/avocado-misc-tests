@@ -4,3 +4,44 @@ option t which is a sequential write() test and then reads the same.
 
 Parameter:
 disk : any disk from /dev/ dir like USB/scsi/SAN etc
+
+
+Last update to rawread binaries by:
+Author: Abdul Haleem <abdhalee@linux.vnet.ibm.com>
+Date: 15 Mar 2023
+
+The curent rawread.c code allows short disk device names and
+test fails for long device path names, so increased buffer size
+of 'devices' to higher value 255 
+
+--- rawread.c.old	2023-03-17 18:14:35.665493834 +0530
++++ rawread.c	2023-03-17 17:57:49.575463403 +0530
+@@ -468,7 +468,7 @@
+ 			}
+ 		}
+ 		if (count) {
+-			char device_name[30];
++			char device_name[100];
+ 			total_count += count;
+ 			micro /= count;
+ 			total_micro += micro;
+@@ -539,7 +539,7 @@
+ 	int id=(int)idp;
+ 	int rc, i, bytes_read=0;
+ 	char *p;
+-	char device_name[40];
++	char device_name[100];
+ 	int _nreads;
+ 	int total_reads;
+ 	off64_t _offset;
+@@ -941,8 +941,8 @@
+ 	}
+ 	devices = (char**)malloc(numdevices * sizeof(char*));
+ 	for (i=optind, j=0; i<argc; i++, j++) {
+-		devices[j] = (char*)malloc(32 * sizeof(char));
+-		snprintf(devices[j], 32, argv[i]);
++		devices[j] = (char*)malloc(100 * sizeof(char));
++		snprintf(devices[j], 100, argv[i]);
+ 	}
+ 
+ 	/* user buffer must be 512 byte aligned */
