@@ -20,7 +20,9 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/wait.h>
 
+int
 main(int argc,char *argv[])
 {
         unsigned long size, psize, procs, itterations;
@@ -53,6 +55,7 @@ main(int argc,char *argv[])
                 printf("address = %lx\n", ptr);
                 perror("");
         }
+		fflush(stdout);
         k = procs;
         do{
                 pid = fork();
@@ -71,4 +74,5 @@ main(int argc,char *argv[])
 		}
 	} while(--k);
 	while (procs-- && wait(&status));
+	return 0;
 }
