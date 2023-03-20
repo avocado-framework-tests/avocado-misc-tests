@@ -101,6 +101,11 @@ class IommuTest(Test):
             driver = pci.get_driver(pci_addr)
             if driver is None:
                 self.cancel("Device passed is not bound to any driver")
+
+            if not os.path.exists(f'/sys/bus/pci/drivers/{driver}/{pci_addr}/'
+                                  'iommu_group/devices/'):
+                self.cancel("System does not have iommu enabled")
+
             lst = os.listdir(f'/sys/bus/pci/drivers/{driver}/{pci_addr}/'
                              'iommu_group/devices/')
             if len(lst) != 1:
