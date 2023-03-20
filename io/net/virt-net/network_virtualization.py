@@ -58,11 +58,12 @@ class NetworkVirtualization(Test):
         set up required packages and gather necessary test inputs
         '''
         self.install_packages()
-        self.hmc_ip = wait.wait_for(lambda: self.get_mcp_component("HMCIPAddr"), timeout=30)
+        self.hmc_ip = wait.wait_for(
+            lambda: self.get_mcp_component("HMCIPAddr"), timeout=30)
         if not self.hmc_ip:
             self.cancel("HMC IP not got")
-        self.hmc_pwd = self.params.get("hmc_pwd", '*', default=None)
-        self.hmc_username = self.params.get("hmc_username", '*', default=None)
+        self.hmc_pwd = self.params.get("hmc_pwd", default=None)
+        self.hmc_username = self.params.get("hmc_username", default=None)
         self.lpar = self.get_partition_name("Partition Name")
         if not self.lpar:
             self.cancel("LPAR Name not got from lparstat command")
@@ -73,58 +74,50 @@ class NetworkVirtualization(Test):
             self.cancel("failed connecting to HMC")
         cmd = 'lssyscfg -r sys  -F name'
         output = self.session_hmc.cmd(cmd)
-        self.server = self.params.get("server", "*", default=None)
-        if not self.server:
-            for line in output.stdout_text.splitlines():
-                if line in self.lpar:
-                    self.server = line
-                    break
+        self.server = self.params.get("manageSystem", default=None)
         if not self.server:
             self.cancel("Managed System not got")
-        self.slot_num = str(self.params.get("slot_num", '*', default=None)).split(' ')
+        self.slot_num = str(self.params.get(
+            "slot_num", default=None)).split(' ')
         for slot in self.slot_num:
             if int(slot) < 3 or int(slot) > 2999:
                 self.cancel("Slot invalid. Valid range: 3 - 2999")
         try:
-            self.original_logport = self.get_active_device_logport(self.slot_num[0])
+            self.original_logport = self.get_active_device_logport(
+                self.slot_num[0])
         except Exception:
             self.log.info("Logport available only after interface add")
-        self.vios_name = self.params.get("vios_names", '*',
-                                         default=None).split(' ')
-        self.sriov_port = self.params.get("sriov_ports", '*',
-                                          default=None).split(' ')
-        self.backing_adapter = self.params.get("sriov_adapters", '*',
-                                               default=None).split(' ')
+        self.vios_name = self.params.get("vios_names", default=None).split(' ')
+        self.sriov_port = self.params.get(
+            "sriov_ports", default=None).split(' ')
+        self.backing_adapter = self.params.get(
+            "sriov_adapters", default=None).split(' ')
         if len(self.sriov_port) != len(self.backing_adapter):
             self.cancel('Backing Device counts and port counts differ')
         if len(self.vios_name) != len(self.backing_adapter):
             self.cancel('Backing Device counts and vios name counts differ')
         self.backingdev_count = len(self.backing_adapter)
-        self.bandwidth = self.params.get("bandwidth", '*', default=None)
-        self.vnic_priority = self.params.get(
-            "priority", '*', default=None)
+        self.bandwidth = self.params.get("bandwidth", default=None)
+        self.vnic_priority = self.params.get("priority", default=None)
         if not self.vnic_priority:
             self.vnic_priority = [50] * len(self.backing_adapter)
         else:
             self.vnic_priority = self.vnic_priority.split(' ')
         if len(self.vnic_priority) != len(self.backing_adapter):
             self.cancel('Backing Device counts and priority counts differ')
-        self.auto_failover = self.params.get(
-            "auto_failover", '*', default=None)
+        self.auto_failover = self.params.get("auto_failover", default=None)
         if self.auto_failover not in ['0', '1']:
             self.auto_failover = '1'
-        self.vios_ip = self.params.get('vios_ip', '*', default=None)
-        self.vios_user = self.params.get('vios_username', '*', default=None)
-        self.vios_pwd = self.params.get('vios_pwd', '*', default=None)
+        self.vios_ip = self.params.get('vios_ip', default=None)
+        self.vios_user = self.params.get('vios_username', default=None)
+        self.vios_pwd = self.params.get('vios_pwd', default=None)
         self.count = int(self.params.get('vnic_test_count', default="1"))
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
-        self.device_ip = self.params.get('device_ip', '*',
-                                         default=None).split(' ')
+        self.device_ip = self.params.get('device_ip', default=None).split(' ')
         self.mac_id = self.params.get('mac_id',
                                       default="02:03:03:03:03:01").split(' ')
         self.mac_id = [mac.replace(':', '') for mac in self.mac_id]
-        self.netmask = self.params.get(
-            'netmasks', '*', default=None).split(' ')
+        self.netmask = self.params.get('netmasks', default=None).split(' ')
         self.peer_ip = self.params.get('peer_ip', default=None).split(' ')
         dmesg.clear_dmesg()
         self.session_hmc.cmd("uname -a")
@@ -432,7 +425,8 @@ class NetworkVirtualization(Test):
                     self.slot_num[0])
                 active_logport = self.get_active_device_logport(
                     self.slot_num[0])
-                backing_dev_priority = self.get_backing_device_priority(self.slot_num[0])
+                backing_dev_priority = self.get_backing_device_priority(
+                    self.slot_num[0])
                 if self.enable_auto_failover():
                     if not self.change_failover_priority(backing_logport, '1'):
                         self.fail(
@@ -577,7 +571,8 @@ class NetworkVirtualization(Test):
                 if networkinterface.is_available():
                     self.fail("DLPAR remove did not remove interface")
 
-                self.device_add_remove(slot_no, mac, sriov_port, adapter_id, 'add')
+                self.device_add_remove(
+                    slot_no, mac, sriov_port, adapter_id, 'add')
                 for c in range(1, num_backingdevs):
                     self.backing_dev_add_remove('add', c)
                     self.wait_interface(device_name)
@@ -589,7 +584,8 @@ class NetworkVirtualization(Test):
                 networkinterface.bring_up()
 
                 if not wait.wait_for(networkinterface.is_link_up, timeout=120):
-                    self.fail("Unable to bring up the link on the Network virtualized device")
+                    self.fail(
+                        "Unable to bring up the link on the Network virtualized device")
 
                 time.sleep(5)
 
@@ -626,7 +622,8 @@ class NetworkVirtualization(Test):
         for _ in range(0, 120, 10):
             for interface in netifaces.interfaces():
                 if device_name == interface:
-                    self.log.info("Network virtualized device %s is up", device_name)
+                    self.log.info(
+                        "Network virtualized device %s is up", device_name)
                     return True
                 time.sleep(5)
         return False
