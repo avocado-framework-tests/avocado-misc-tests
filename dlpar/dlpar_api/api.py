@@ -666,6 +666,10 @@ class DedicatedCpu(TestCase):
                                   self.quant_to_test)
         self.log.info("Test finished successfully :)")
 
+    def rem_sec_cpu(self):
+        self.__remove_dedicated_cpu(self.linux_2, self.quant_to_test)
+        self.log.info("Test finished successfully :)")
+
     def mix_ded_ope(self):
         self.__add_dedicated_cpu(self.linux_1, self.quant_to_test)
         self.__move_dedicated_cpu(self.linux_1, self.linux_2,
@@ -706,29 +710,8 @@ class DedicatedCpu(TestCase):
         curr_procs = int(self.get_cpu_option(linux_machine, 'curr_procs'))
 
         # Check dedicated cpu quantity
-
-        # Set the curr_procs to curr_min_procs if we need it
-        if curr_min_procs != curr_procs:
-            s_msg = 'Setting the curr_procs to curr_min_procs at %s' \
-                    % linux_machine.partition
-            self.log.debug(s_msg)
-            m_cmd = 'chhwres -m ' + linux_machine.machine + \
-                    ' -r proc -o r --procs ' + \
-                    str(curr_procs - curr_min_procs) + \
-                    ' -p "' + linux_machine.partition + '"' + ' -w 0 '
-            self.hmc.sshcnx.cmd(m_cmd, False)
-
-            self.log.debug('Sleeping for %s seconds before proceeding' %
-                           self.sleep_time)
-            time.sleep(self.sleep_time)
-
-            m_msg = 'Removing %s dedicated cpus form partition %s.' % \
-                    (curr_procs - curr_min_procs, linux_machine.partition)
-            m_condition = int(self.get_cpu_option(linux_machine,
-                                                  'curr_procs')) == \
-                curr_min_procs
-            self.log.check_log(m_msg, m_condition)
-
+        self.log.debug("curr_min_procs: %s" % curr_min_procs)
+        self.log.debug("curr_procs: %s" % curr_procs)
         o_msg = 'Configuration settings for partition %s all correct.' % \
                 linux_machine.partition
         self.log.info(o_msg)
@@ -883,8 +866,8 @@ class CpuUnit(TestCase):
                        (linux_machine.partition, ideal_proc_units))
 
         # Add and Remove all needed virtual cpus and proc units
-        self.set_virtual_proc_and_proc_units(linux_machine, ideal_procs,
-                                             ideal_proc_units, self.sleep_time)
+        #self.set_virtual_proc_and_proc_units(linux_machine, ideal_procs,
+        #                                     ideal_proc_units, self.sleep_time)
 
         i_msg = 'Configuration settings for partition %s correct.' % \
                 linux_machine.partition
@@ -901,6 +884,10 @@ class CpuUnit(TestCase):
     def move_proc(self):
         self.__move_cpu_units(self.linux_1, self.linux_2,
                               self.quant_to_test)
+        self.log.info("Test finished successfully.")
+
+    def remove_sec_proc(self):
+        self.__remove_cpu_units(self.linux_2, self.quant_to_test)
         self.log.info("Test finished successfully.")
 
     def mix_proc_ope(self):
