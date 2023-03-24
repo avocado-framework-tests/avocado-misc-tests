@@ -113,20 +113,60 @@ class DlparTests(Test):
         self.sorted_payload = dict(sorted(self.res.items()))
         self.iterations = self.sorted_payload.get('iterations')
 
-    def test_cpu_dlpar(self):
-
+    def test_cpu_add(self):
         if self.lpar_mode == 'dedicated':
             Ded_obj = DedicatedCpu(self.sorted_payload,
                                    log='dedicated_cpu.log')
             for i in range(self.iterations):
                 Ded_obj.add_ded_cpu()
+        elif self.lpar_mode == 'shared':
+            Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
+            for i in range(self.iterations):
+                Sha_obj.add_proc()
+
+    def test_cpu_move(self):
+        if self.lpar_mode == 'dedicated':
+            Ded_obj = DedicatedCpu(self.sorted_payload,
+                                   log='dedicated_cpu.log')
+            for i in range(self.iterations):
                 Ded_obj.move_ded_cpu()
+        elif self.lpar_mode == 'shared':
+            Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
+            for i in range(self.iterations):
+                Sha_obj.move_proc()
+
+    def test_cpu_sec_rem(self):
+        if self.lpar_mode == 'dedicated':
+            Ded_obj = DedicatedCpu(self.sorted_payload,
+                                   log='dedicated_cpu.log')
+            for i in range(self.iterations):
+                Ded_obj.rem_sec_cpu()
+        elif self.lpar_mode == 'shared':
+            Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
+            for i in range(self.iterations):
+                Sha_obj.remove_sec_proc()
+
+    def test_cpu_pri_add(self):
+        if self.lpar_mode == 'dedicated':
+            Ded_obj = DedicatedCpu(self.sorted_payload,
+                                   log='dedicated_cpu.log')
+            for i in range(self.iterations):
                 Ded_obj.add_ded_cpu()
+        elif self.lpar_mode == 'shared':
+            Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
+            for i in range(self.iterations):
+                Sha_obj.add_proc()
+
+    def test_cpu_rm(self):
+        if self.lpar_mode == 'dedicated':
+            Ded_obj = DedicatedCpu(self.sorted_payload,
+                                   log='dedicated_cpu.log')
+            for i in range(self.iterations):
                 Ded_obj.rem_ded_cpu()
         elif self.lpar_mode == 'shared':
             Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
             for i in range(self.iterations):
-                Sha_obj.mix_proc_ope()
+                Sha_obj.remove_proc()
 
     def test_mem_dlpar(self):
         Mem_obj = Memory(self.sorted_payload, log='memory.log')
