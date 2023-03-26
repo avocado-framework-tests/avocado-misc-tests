@@ -92,7 +92,7 @@ class Uperf(Test):
             self.nmap = os.path.join(self.teststmpdir, 'nmap')
             nmap_download = self.params.get("nmap_download", default="https:"
                                             "//nmap.org/dist/"
-                                            "nmap-7.80.tar.bz2")
+                                            "nmap-7.93.tar.bz2")
             tarball = self.fetch_asset(nmap_download)
             self.version = os.path.basename(tarball.split('.tar')[0])
             self.n_map = os.path.join(self.nmap, self.version)
