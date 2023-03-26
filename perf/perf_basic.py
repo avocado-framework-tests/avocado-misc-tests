@@ -89,6 +89,12 @@ class PerfBasic(Test):
         if not re.search(r'\d', output.stdout.decode()):
             self.fail("perf: failed to execute command perf --version")
 
+    def test_perf_version_test(self):
+        output = process.run("perf --version -test", ignore_status=True,
+                             sudo=True, shell=True)
+        if output.exit_status == -11:
+            self.fail("perf --version -test command segfaulted")
+
     def test_perf_list(self):
         self.run_cmd("perf list", False)
 
