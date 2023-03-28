@@ -29,7 +29,7 @@ Test: !mux
         tool: lsprop
         test_opt: !mux
             lsprop_R:
-                test_opt: -R
+                test_opt: -R /proc/device-tree/
             lsprop_r:
                 test_opt: -r
     lsdevinfo:
