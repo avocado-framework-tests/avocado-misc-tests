@@ -15,10 +15,10 @@
 # Author: Nageswara R Sastry <rnsastry@linux.vnet.ibm.com>
 
 import os
+import re
 import tempfile
 from avocado import Test
-from avocado.utils import process
-from avocado.utils import distro
+from avocado.utils import process, distro, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -54,6 +54,9 @@ class PerfBasic(Test):
         if process.system(cmd, verbose=verbose, ignore_status=True,
                           sudo=True, shell=True):
             self.fail("perf: failed to execute command %s" % cmd)
+        dmesg.collect_errors_dmesg(['WARNING: CPU:', 'Oops', 'segfault',
+                                    'soft lockup', 'SIGSEGV', 'core', 'dumped',
+                                    'Segmentation fault'])
 
     def setUp(self):
         smg = SoftwareManager()
@@ -71,6 +74,8 @@ class PerfBasic(Test):
             self.cancel("perf is not supported on %s" % dist.name)
 
         self.temp_file = tempfile.NamedTemporaryFile().name
+        dmesg.clear_dmesg()
+
         for pkg in pkgs:
             if not smg.check_installed(pkg) and not smg.install(pkg):
                 self.cancel(
@@ -80,7 +85,15 @@ class PerfBasic(Test):
         self.run_cmd("perf --help", False)
 
     def test_perf_version(self):
-        self.run_cmd("perf --version", False)
+        output = process.run("perf --version", sudo=True, shell=True)
+        if not re.search(r'\d', output.stdout.decode()):
+            self.fail("perf: failed to execute command perf --version")
+
+    def test_perf_version_test(self):
+        output = process.run("perf --version -test", ignore_status=True,
+                             sudo=True, shell=True)
+        if output.exit_status == -11:
+            self.fail("perf --version -test command segfaulted")
 
     def test_perf_list(self):
         self.run_cmd("perf list", False)
@@ -112,7 +125,7 @@ class PerfBasic(Test):
         self.run_cmd("perf stat -a sleep 5")
 
     def test_perf_bench(self):
-        self.run_cmd("perf bench sched")
+        self.run_cmd("perf bench sched all")
 
     def tearDown(self):
         if os.path.isfile(self.temp_file):
