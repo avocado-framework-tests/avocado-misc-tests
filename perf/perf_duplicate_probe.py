@@ -20,7 +20,7 @@ from avocado.utils import distro, genio, process
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
-class PerfProbe(Test):
+class PerfDuplicateProbe(Test):
 
     def setUp(self):
         '''
@@ -54,7 +54,7 @@ class PerfProbe(Test):
         if 'select_task_rq_fair' in outpt and 'select_task_rq_fair_' in outpt:
             self.fail_flag = True
 
-    def test_probe(self):
+    def test_duplicate_probe(self):
         outpt = process.run("perf probe select_task_rq_fair:0", sudo=True)
         outpt = outpt.stderr.decode("utf-8")
         self._check_duplicate_probe(outpt)

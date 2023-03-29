@@ -22,7 +22,7 @@ from avocado.utils import distro, process
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
-class PerfProbe(Test):
+class TraceUDT(Test):
 
     def setUp(self):
         '''
@@ -54,7 +54,7 @@ class PerfProbe(Test):
         process.run("gcc -c tick-main.c")
         process.run("gcc -o tick tick-main.o tick-dtrace.o")
 
-    def test_probe(self):
+    def test_trace_udt(self):
         res = process.run("readelf -n tick")
         if 'NT_STAPSDT' not in res.stdout_text:
             self.fail("NT_STAPSDT not found in binary")
