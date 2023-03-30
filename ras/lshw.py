@@ -210,14 +210,14 @@ class Lshwrun(Test):
         """
         self.log.info("===============Verifying -disable, -enable, -quiet,"
                       " and -numeric options ==============")
-        if "interface" in self.run_cmd_out("lshw -disable network| "
-                                           "grep -i interface"):
+        cmd = "lshw -disable network"
+        if "Ethernet interface" in self.run_cmd_out(cmd):
             self.is_fail += 1
-            self.fail_cmd.append("lshw -disable network|grep -i interface")
-        if "interface" not in self.run_cmd_out("lshw -enable network| "
-                                               "grep -i interface"):
+            self.fail_cmd.append(cmd)
+        cmd = "lshw -enable network"
+        if "Ethernet interface" not in self.run_cmd_out(cmd):
             self.is_fail += 1
-            self.fail_cmd.append("lshw -enable network|grep -i interface")
+            self.fail_cmd.append(cmd)
 
         self.run_cmd("lshw -class -quiet")
         if 'PowerVM'\
