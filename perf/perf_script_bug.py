@@ -24,7 +24,7 @@ from avocado.utils import build, distro, process
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
-class PerfProbe(Test):
+class PerfScript(Test):
 
     def setUp(self):
         '''
@@ -56,7 +56,7 @@ class PerfProbe(Test):
         build.make(self.teststmpdir)
         os.chdir(self.teststmpdir)
 
-    def test_probe(self):
+    def test_script_probe(self):
         # Creating temporary file to collect the perf.data
         self.temp_file = tempfile.NamedTemporaryFile().name
         probe = "perf probe -x perf_test 'perf_test.c:%s'" % self.perf_probe
