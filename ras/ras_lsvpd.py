@@ -213,7 +213,10 @@ class RASToolsLsvpd(Test):
         self.log.info("===============Executing lsmcode tool test============="
                       "==")
         self.run_cmd("vpdupdate")
-        if 'FW' not in self.run_cmd_out("lsmcode"):
+        if IS_POWER_NV:
+            if 'bmc-firmware-version' not in self.run_cmd_out("lsmcode"):
+                self.fail("lsmcode command failed in verification")
+        elif 'FW' not in self.run_cmd_out("lsmcode"):
             self.fail("lsmcode command failed in verification")
         list = ['-A', '-v', '-D']
         for list_item in list:
