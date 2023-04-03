@@ -90,7 +90,7 @@ class Iperf(Test):
             self.nmap = os.path.join(self.teststmpdir, 'nmap')
             nmap_download = self.params.get("nmap_download", default="https:"
                                             "//nmap.org/dist/"
-                                            "nmap-7.80.tar.bz2")
+                                            "nmap-7.93.tar.bz2")
             tarball = self.fetch_asset(nmap_download)
             self.version = os.path.basename(tarball.split('.tar')[0])
             self.n_map = os.path.join(self.nmap, self.version)
@@ -140,7 +140,7 @@ class Iperf(Test):
         self.iperf = os.path.join(self.teststmpdir, 'iperf')
         iperf_download = self.params.get("iperf_download", default="https:"
                                          "//sourceforge.net/projects/iperf2/"
-                                         "files/iperf-2.0.13.tar.gz")
+                                         "files/iperf-2.1.9.tar.gz")
         tarball = self.fetch_asset(iperf_download, expire='7d')
         archive.extract(tarball, self.iperf)
         self.version = os.path.basename(tarball.split('.tar')[0])
