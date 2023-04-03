@@ -59,7 +59,7 @@ class FioTest(Test):
         default_url = "https://brick.kernel.dk/snaps/fio-git-latest.tar.gz"
         url = self.params.get('fio_tool_url', default=default_url)
         self.disk = self.params.get('disk', default=None)
-        self.dir = self.params.get('dir', default='/mnt')
+        self.dir = self.params.get('dir', default=None)
         self.disk_type = self.params.get('disk_type', default='')
         fstype = self.params.get('fs', default='')
         fs_args = self.params.get('fs_args', default='')
@@ -138,7 +138,13 @@ class FioTest(Test):
                     if line.startswith(eng) and 'no' in line:
                         self.cancel("PMEM engines not built with fio")
 
-        if not self.disk:
+        if self.disk:
+            if self.disk not in disk.get_disks():
+                self.cancel("Missing disk %s in OS" % self.disk)
+        else:
+            self.cancel("Please Provide valid disk name")
+
+        if not self.dir:
             self.dir = self.workdir
 
         self.target = self.disk
@@ -147,24 +153,21 @@ class FioTest(Test):
         self.sraid = softwareraid.SoftwareRaid(self.raid_name, '0',
                                                self.disk.split(), '1.2')
         dmesg.clear_dmesg()
-        if self.disk in disk.get_disks():
-            self.pre_cleanup()
-            if raid_needed:
-                self.create_raid(self.target, self.raid_name)
-                self.raid_create = True
-                self.target = self.raid_name
 
-            if lv_needed:
-                self.lv_disk = self.target
-                self.target = self.create_lv(self.target)
-                self.lv_create = True
+        self.pre_cleanup()
+        if raid_needed:
+            self.create_raid(self.target, self.raid_name)
+            self.raid_create = True
+            self.target = self.raid_name
 
-            if fstype:
-                self.create_fs(self.target, self.dir, fstype,
-                               fs_args, mnt_args)
-                self.fs_create = True
-        else:
-            self.cancel("Missing disk %s in OS" % self.disk)
+        if lv_needed:
+            self.lv_disk = self.target
+            self.target = self.create_lv(self.target)
+            self.lv_create = True
+
+        if fstype:
+            self.create_fs(self.target, self.dir, fstype, fs_args, mnt_args)
+            self.fs_create = True
 
         build.make(self.sourcedir, extra_args=fio_flags)
 
