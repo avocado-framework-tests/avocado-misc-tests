@@ -58,6 +58,10 @@ class perf_hv_gpci(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
+        # create temporary user
+        if process.system('useradd test', sudo=True, ignore_status=True):
+            self.log.warn('test useradd failed')
+
         # Collect all hv_gpci events
         self.list_phys = []
         self.list_sibling = []
@@ -85,13 +89,23 @@ class perf_hv_gpci(Test):
         if len(self.fail_cmd) > 0:
             for cmd in range(len(self.fail_cmd)):
                 self.log.info("Failed command: %s" % self.fail_cmd[cmd])
-            self.fail("perf_raw_events: some of the events failed,"
+            self.fail("perf hv_gpci: some of the events failed,"
                       "refer to log")
 
     def run_cmd(self, cmd):
-        output = process.run(cmd, shell=True, ignore_status=True)
-        if output.exit_status != 0:
+        result = process.run(cmd, shell=True, ignore_status=True)
+        output = result.stdout.decode() + result.stderr.decode()
+        if (result.exit_status != 0) or ("not supported" in output):
             self.fail_cmd.append(cmd)
+
+        # test hv_gpci events with normal user
+        if not process.system('id test', sudo=True):
+            result = process.run("su - test -c '%s'" % cmd, shell=True,
+                                 ignore_status=True)
+            err_ln = "kernel.perf_event_paranoid=2, trying to fall back to "
+            "excluding kernel and hypervisor  samples"
+            if err_ln not in result.stderr.decode():
+                self.fail("able to read hv_gpci counter data as normal user")
 
     def gpci_events(self, val):
         for line in val:
@@ -102,8 +116,12 @@ class perf_hv_gpci(Test):
                 line = "%s,%s/" % (line.split(',')[0], line.split(',')[1].replace(
                     'sibling_part_id=?', 'sibling_part_id=2'))
             if line in self.list_partition:
-                line = "%s,%s/" % (line.split(',')[0], line.split(',')[1].replace(
-                    'partition_id=?', 'partition_id=1'))
+                lparcfg = genio.read_file('/proc/powerpc/lparcfg')
+                for newline in lparcfg.split('\n'):
+                    if "partition_id" in newline:
+                        part_id = newline.strip().split('=')[1]
+                line = "%s,%s/" % (line.split(',')[0], line.split(',')
+                                   [1].replace('?', part_id))
             if line in self.list_hw:
                 line = "%s,%s/" % (line.split(',')[0], line.split(',')[1].replace(
                     'hw_chip_id=?', 'hw_chip_id=12'))
@@ -111,10 +129,6 @@ class perf_hv_gpci(Test):
                 line = "%s/" % line
 
             cmd = "perf stat -v -e %s sleep 1" % line
-            self.run_cmd(cmd)
-            cmd = "perf stat --per-core -a -e %s sleep 1" % line
-            self.run_cmd(cmd)
-            cmd = "perf stat --per-socket -a -e %s sleep 1" % line
             self.run_cmd(cmd)
         self.error_check()
 
@@ -124,5 +138,7 @@ class perf_hv_gpci(Test):
             self.gpci_events(event)
 
     def tearDown(self):
+        if not (process.system('id test', sudo=True, ignore_status=True)):
+            process.system('userdel -f test', sudo=True)
         # Collect the dmesg
         process.run("dmesg -T")
