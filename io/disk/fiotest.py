@@ -139,7 +139,13 @@ class FioTest(Test):
                     if line.startswith(eng) and 'no' in line:
                         self.cancel("PMEM engines not built with fio")
 
-        if not self.disk:
+        if self.disk:
+            if self.disk not in disk.get_disks():
+                self.cancel("Missing disk %s in OS" % self.disk)
+        else:
+            self.cancel("Please Provide valid disk name")
+
+        if not self.dir:
             self.dir = self.workdir
 
         self.target = self.disk

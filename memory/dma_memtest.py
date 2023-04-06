@@ -179,5 +179,6 @@ class DmaMemtest(Test):
         self.log.info('Cleaning up')
         for j in range(self.sim_cps):
             tmp_dir = 'linux.%s' % j
-            shutil.rmtree(tmp_dir)
+            if os.path.exists(tmp_dir):
+                shutil.rmtree(tmp_dir)
         shutil.rmtree(self.base_dir)

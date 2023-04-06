@@ -14,6 +14,7 @@
 # Copyright: 2021 IBM
 # Author: Ricardo Salveti <rsalveti@linux.vnet.ibm.com>
 # Modified Author: Kalpana Shetty <kalshett@in.ibm.com>
+# Modified Author: Samir A Mulani <samir@linux.vnet.ibm.com>
 
 """
 This is the DLPAR test suite API.
@@ -57,6 +58,7 @@ class SshMachine():
 
     def __init__(self, config_payload, machine_type, log=None):
         """Get every machine information."""
+        self.mac_con = 0
         if machine_type == "linux_primary":
             self.name = config_payload.get('src_name')
             self.machine = config_payload.get('hmc_manageSystem')
@@ -87,6 +89,7 @@ class SshMachine():
                                    password=self.pw)
         self.session_hmc.cleanup_master()
         if not self.session_hmc.connect():
+            self.mac_con = 1
             print("failed connecting to HMC")
         return self.session_hmc
 
@@ -187,6 +190,7 @@ class TestCase:
                 self.log.debug('Login to 2nd linux LPAR successful.')
 
             self.log.check_log('Getting Machine connections.', True)
+            return self.linux_2.mac_con
         except Exception:
             self.log.check_log('Getting Machine connections.', False, False)
             raise
@@ -213,7 +217,6 @@ class TestCase:
         else:
             self.log.error("Invalid DLPAR flag")
         self.cmd_result = self.hmc.sshcnx.cmd(cmd)
-
         return self.cmd_result
 
     def Dlpar_cpu_validation(self, flag, linux_machine, quantity,
@@ -233,7 +236,7 @@ class TestCase:
                 e_msg = 'Error adding %d dedicated cpus to partition %s.' % \
                         (quantity, linux_machine.partition)
                 self.log.error(e_msg)
-                raise TestException(cmd_result)
+                raise TestException(e_msg)
 
         elif flag == "r":
             curr_procs_before = curr_procs_info
@@ -261,8 +264,9 @@ class TestCase:
                                              'curr_procs'))
                      == curr_procs_info[1] + quantity)
             if not self.log.check_log(m_msg, m_condition, False):
-                self.log.error(cmd_result)
-                raise TestException(cmd_result)
+                e_msg = 'Error happened when moving cpu'
+                self.log.error(e_msg)
+                raise TestException()
             # Check at both linux partitions
             self.linux_check_rm_cpu(
                 linux_machine[0], curr_procs_info[0], quantity)
@@ -432,6 +436,9 @@ class TestCase:
             cmd.append(p_cmd)
             memory = process.run(cmd, shell=True).stdout.decode()
         memory = memory.strip().split(":")[-1].strip().split(" ")[0]
+        if memory == "":
+            error = "There is something wrong with setup..!!"
+            raise TestException(error)
         return int(memory)
 
     def get_mem_option(self, linux_machine, option):
@@ -648,27 +655,43 @@ class DedicatedCpu(TestCase):
                            (self.quant_to_test is not None))
         self.log.debug("Testing with %s Dedicated CPU units." %
                        self.quant_to_test)
-        self.get_connections(config_payload, clients='both')
+        self.value = self.get_connections(config_payload, clients='both')
         # Check linux partitions configuration
         self.__check_set_cfg(self.linux_1)
         self.__check_set_cfg(self.linux_2)
 
     def add_ded_cpu(self):
-        self.__add_dedicated_cpu(self.linux_1, self.quant_to_test)
-        self.log.info("Test finished successfully :)")
+        rvalue = self.__add_dedicated_cpu(self.linux_1, self.quant_to_test)
+        if rvalue == 1:
+            return rvalue
+        else:
+            self.log.info("Test finished successfully.")
+            return 0
 
     def rem_ded_cpu(self):
-        self.__remove_dedicated_cpu(self.linux_1, self.quant_to_test)
-        self.log.info("Test finished successfully :)")
+        rvalue = self.__remove_dedicated_cpu(self.linux_1, self.quant_to_test)
+        if rvalue == 1:
+            return rvalue
+        else:
+            self.log.info("Test finished successfully.")
+            return 0
 
     def move_ded_cpu(self):
-        self.__move_dedicated_cpu(self.linux_1, self.linux_2,
-                                  self.quant_to_test)
-        self.log.info("Test finished successfully :)")
+        rvalue = self.__move_dedicated_cpu(self.linux_1, self.linux_2,
+                                           self.quant_to_test)
+        if rvalue == 1:
+            return rvalue
+        else:
+            self.log.info("Test finished successfully.")
+            return 0
 
     def rem_sec_cpu(self):
-        self.__remove_dedicated_cpu(self.linux_2, self.quant_to_test)
-        self.log.info("Test finished successfully :)")
+        rvalue = self.__remove_dedicated_cpu(self.linux_2, self.quant_to_test)
+        if rvalue == 1:
+            return rvalue
+        else:
+            self.log.info("Test finished successfully.")
+            return 0
 
     def mix_ded_ope(self):
         self.__add_dedicated_cpu(self.linux_1, self.quant_to_test)
@@ -729,6 +752,8 @@ class DedicatedCpu(TestCase):
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
         time.sleep(self.sleep_time)
+        if self.cmd_result.stdout_text != "":
+            return 1
 
         # Check at HMC
         self.Dlpar_cpu_validation("a", linux_machine, quantity,
@@ -753,6 +778,9 @@ class DedicatedCpu(TestCase):
 
         flag = ['proc', 'm', '--procs']
         self.cmd_result = self.Dlpar_engine(flag, linux_machine, quantity)
+        if self.cmd_result.stdout_text != "":
+            return 1
+
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
         time.sleep(self.sleep_time)
@@ -769,6 +797,8 @@ class DedicatedCpu(TestCase):
         # Remove the cpus
         flag = ['proc', 'r', '--procs']
         self.cmd_result = self.Dlpar_engine(flag, linux_machine, quantity)
+        if self.cmd_result.stdout_text != "":
+            return 1
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
         time.sleep(self.sleep_time)
@@ -802,7 +832,7 @@ class CpuUnit(TestCase):
                            self.quant_to_test is not None)
         self.log.debug("Testing with %s CPU Units." % self.quant_to_test)
 
-        self.get_connections(config_payload, clients='both')
+        self.value = self.get_connections(config_payload, clients='both')
         # self.get_connections()
 
         # Check linux partitions configuration
@@ -866,29 +896,45 @@ class CpuUnit(TestCase):
                        (linux_machine.partition, ideal_proc_units))
 
         # Add and Remove all needed virtual cpus and proc units
-        #self.set_virtual_proc_and_proc_units(linux_machine, ideal_procs,
-        #                                     ideal_proc_units, self.sleep_time)
+        # self.set_virtual_proc_and_proc_units(linux_machine, ideal_procs,
+        #                       ideal_proc_units, self.sleep_time)
 
         i_msg = 'Configuration settings for partition %s correct.' % \
                 linux_machine.partition
         self.log.info(i_msg)
 
     def add_proc(self):
-        self.__add_cpu_units(self.linux_1, self.quant_to_test)
-        self.log.info("Test finished successfully.")
+        rvalue = self.__add_cpu_units(self.linux_1, self.quant_to_test)
+        if rvalue == 1:
+            return rvalue
+        else:
+            self.log.info("Test finished successfully.")
+            return 0
 
     def remove_proc(self):
-        self.__remove_cpu_units(self.linux_1, self.quant_to_test)
-        self.log.info("Test finished successfully.")
+        rvalue = self.__remove_cpu_units(self.linux_1, self.quant_to_test)
+        if rvalue == 1:
+            return rvalue
+        else:
+            self.log.info("Test finished successfully.")
+            return 0
 
     def move_proc(self):
-        self.__move_cpu_units(self.linux_1, self.linux_2,
-                              self.quant_to_test)
-        self.log.info("Test finished successfully.")
+        rvalue = self.__move_cpu_units(self.linux_1, self.linux_2,
+                                       self.quant_to_test)
+        if rvalue == 1:
+            return rvalue
+        else:
+            self.log.info("Test finished successfully.")
+            return 0
 
     def remove_sec_proc(self):
-        self.__remove_cpu_units(self.linux_2, self.quant_to_test)
-        self.log.info("Test finished successfully.")
+        rvalue = self.__remove_cpu_units(self.linux_2, self.quant_to_test)
+        if rvalue == 1:
+            return rvalue
+        else:
+            self.log.info("Test finished successfully.")
+            return 0
 
     def mix_proc_ope(self):
         self.__add_cpu_units(self.linux_1, self.quant_to_test)
@@ -910,6 +956,8 @@ class CpuUnit(TestCase):
         # Add the cpus
         flag = ['proc', 'a', '--procunits']
         self.cmd_result = self.Dlpar_engine(flag, linux_machine, quantity)
+        if self.cmd_result.stdout_text != "":
+            return 1
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
         time.sleep(self.sleep_time)
@@ -938,7 +986,8 @@ class CpuUnit(TestCase):
 
         flag = ['proc', 'm', '--procunits']
         self.cmd_output = self.Dlpar_engine(flag, linux_machine, quantity)
-
+        if self.cmd_result.stdout_text != "":
+            return 1
         self.log.debug(self.cmd_output)
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
@@ -956,7 +1005,8 @@ class CpuUnit(TestCase):
         # Remove the cpus
         flag = ['proc', 'r', '--procunits']
         self.cmd_output = self.Dlpar_engine(flag, linux_machine, quantity)
-
+        if self.cmd_result.stdout_text != "":
+            return 1
         self.log.debug(self.cmd_output)
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
@@ -989,7 +1039,7 @@ class Memory(TestCase):
         self.sleep_time = 60
         self.sleep_time = config_payload.get('sleep_time')
 
-        self.get_connections(config_payload, clients='both')
+        self.value = self.get_connections(config_payload, clients='both')
 
         self.linux_machine = config_payload.get('mem_linux_machine')
         # self.linux_machine = self.config.get('memory', 'linux_machine')
@@ -1059,16 +1109,29 @@ class Memory(TestCase):
                       linux_machine.partition)
 
     def mem_add(self):
-        self.__add_memory(self.linux, self.quant_to_test)
-        self.log.info("Test finished successfully.")
+        rvalue = self.__add_memory(self.linux, self.quant_to_test)
+        if rvalue == 1:
+            return rvalue
+        else:
+            self.log.info("Test finished successfully.")
+            return 0
 
     def mem_rem(self):
-        self.__remove_memory(self.linux, self.quant_to_test)
-        self.log.info("Test finished successfully.")
+        rvalue = self.__remove_memory(self.linux, self.quant_to_test)
+        if rvalue == 1:
+            return rvalue
+        else:
+            self.log.info("Test finished successfully.")
+            return 0
 
     def mem_move(self):
-        self.__move_memory(self.linux_1, self.linux_2, self.quant_to_test)
-        self.log.info("Test finished successfully.")
+        rvalue = self.__move_memory(self.linux_1, self.linux_2,
+                                    self.quant_to_test)
+        if rvalue == 1:
+            return rvalue
+        else:
+            self.log.info("Test finished successfully.")
+            return 0
 
     def mem_mix_ope(self):
         self.__add_memory(self.linux_1, self.quant_to_test)
@@ -1090,7 +1153,8 @@ class Memory(TestCase):
         # Add the memory
         flag = ['mem', 'a', '-q']
         self.cmd_result = self.Dlpar_engine(flag, linux_machine, quantity)
-
+        if self.cmd_result.stdout_text != "":
+            return 1
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
         time.sleep(self.sleep_time)
@@ -1111,7 +1175,8 @@ class Memory(TestCase):
         # Remove the memory
         flag = ['mem', 'r', '-q']
         self.cmd_result = self.Dlpar_engine(flag, linux_machine, quantity)
-
+        if self.cmd_result.stdout_text != "":
+            return 1
         self.log.debug('Sleeping for %s seconds before proceeding' %
                        self.sleep_time)
         time.sleep(self.sleep_time)
@@ -1147,7 +1212,8 @@ class Memory(TestCase):
         linux_machine.append(linux_machine_2)
         flag = ['mem', 'm', '-q']
         self.cmd_result = self.Dlpar_engine(flag, linux_machine, quantity)
-
+        if self.cmd_result.stdout_text != "":
+            return 1
         self.log.debug('Going to sleep for %s s' % self.sleep_time)
         time.sleep(self.sleep_time)
 

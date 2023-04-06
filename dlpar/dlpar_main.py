@@ -118,60 +118,111 @@ class DlparTests(Test):
             Ded_obj = DedicatedCpu(self.sorted_payload,
                                    log='dedicated_cpu.log')
             for i in range(self.iterations):
-                Ded_obj.add_ded_cpu()
+                rvalue = Ded_obj.add_ded_cpu()
+                if rvalue == 1:
+                    self.fail("CPU add Command failed please check the logs")
         elif self.lpar_mode == 'shared':
             Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
             for i in range(self.iterations):
-                Sha_obj.add_proc()
+                rvalue = Sha_obj.add_proc()
+                if rvalue == 1:
+                    self.fail("Proc add Command failed please check the logs")
 
     def test_cpu_move(self):
         if self.lpar_mode == 'dedicated':
             Ded_obj = DedicatedCpu(self.sorted_payload,
                                    log='dedicated_cpu.log')
+            if Ded_obj.value:
+                self.cancel("Failed to connect secondary machine canceling \
+                        the move operation")
             for i in range(self.iterations):
-                Ded_obj.move_ded_cpu()
+                rvalue = Ded_obj.move_ded_cpu()
+                if rvalue == 1:
+                    self.fail("CPU move Command failed please check the logs")
         elif self.lpar_mode == 'shared':
             Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
+            if Sha_obj.value == 1:
+                self.cancel("Failed to connect secondary machine \
+                        canceling the move operation")
             for i in range(self.iterations):
-                Sha_obj.move_proc()
+                rvalue = Sha_obj.move_proc()
+                if rvalue == 1:
+                    self.fail("Proc move Command failed please check the logs")
 
     def test_cpu_sec_rem(self):
         if self.lpar_mode == 'dedicated':
             Ded_obj = DedicatedCpu(self.sorted_payload,
                                    log='dedicated_cpu.log')
+            if Ded_obj.value == 1:
+                self.cancel("Failed to connect secondary machine canceling \
+                        the remove operation")
             for i in range(self.iterations):
-                Ded_obj.rem_sec_cpu()
+                rvalue = Ded_obj.rem_sec_cpu()
+                if rvalue == 1:
+                    self.fail("CPU remove Command on secondary lpar \
+                            failed please check the logs")
         elif self.lpar_mode == 'shared':
             Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
+            if Sha_obj.value == 1:
+                self.cancel("Failed to connect secondary machine canceling \
+                        the remove operation")
             for i in range(self.iterations):
-                Sha_obj.remove_sec_proc()
+                rvalue = Sha_obj.remove_sec_proc()
+                if rvalue == 1:
+                    self.fail("Proc remove Command on secondary failed \
+                            please check the logs")
 
     def test_cpu_pri_add(self):
         if self.lpar_mode == 'dedicated':
             Ded_obj = DedicatedCpu(self.sorted_payload,
                                    log='dedicated_cpu.log')
             for i in range(self.iterations):
-                Ded_obj.add_ded_cpu()
+                rvalue = Ded_obj.add_ded_cpu()
+                if rvalue == 1:
+                    self.fail("CPU add Command failed please check the logs")
         elif self.lpar_mode == 'shared':
             Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
             for i in range(self.iterations):
-                Sha_obj.add_proc()
+                rvalue = Sha_obj.add_proc()
+                if rvalue == 1:
+                    self.fail("CPU add Command failed please check the logs")
 
     def test_cpu_rm(self):
         if self.lpar_mode == 'dedicated':
             Ded_obj = DedicatedCpu(self.sorted_payload,
                                    log='dedicated_cpu.log')
             for i in range(self.iterations):
-                Ded_obj.rem_ded_cpu()
+                rvalue = Ded_obj.rem_ded_cpu()
+                if rvalue == 1:
+                    self.fail("CPU remove Command failed please check \
+                            the logs")
+
         elif self.lpar_mode == 'shared':
             Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
             for i in range(self.iterations):
-                Sha_obj.remove_proc()
+                rvalue = Sha_obj.remove_proc()
+                if rvalue == 1:
+                    self.fail("Proc remove Command failed please \
+                            check the logs")
 
-    def test_mem_dlpar(self):
+    def test_mem_add(self):
         Mem_obj = Memory(self.sorted_payload, log='memory.log')
         for i in range(self.iterations):
-            Mem_obj.mem_add()
-            Mem_obj.mem_rem()
-            Mem_obj.mem_move()
-            # Mem_obj.mem_mix_ope()
+            rvalue_add = Mem_obj.mem_add()
+            if rvalue_add == 1:
+                self.fail("Memory add Command failed please check the logs")
+
+    def test_mem_rem(self):
+        Mem_obj = Memory(self.sorted_payload, log='memory.log')
+        rvalue_rem = Mem_obj.mem_rem()
+        if rvalue_rem == 1:
+            self.fail("Memory remove Command failed please check the logs")
+
+    def test_mem_mov(self):
+        Mem_obj = Memory(self.sorted_payload, log='memory.log')
+        if Mem_obj.value == 1:
+            self.cancel("Failed to connect secondary machine canceling \
+                    the move operation")
+        rvalue_move = Mem_obj.mem_move()
+        if rvalue_move == 1:
+            self.fail("Memory move Command failed please check the logs")
