@@ -120,7 +120,7 @@ class RASToolsPpcdiag(Test):
         View and manipulate the system attention and fault indicators (LEDs)
         """
         self.log.info("=====Executing usysattn tool test======")
-        if 'not supported' in self.run_cmd_out("usysident"):
+        if 'not supported' in self.run_cmd_out("usysattn"):
             self.cancel(
                 "The identify indicators are not supported on this system")
         value = self.params.get('usysattn_list', default=['-h', '-V', '-P'])
@@ -138,6 +138,9 @@ class RASToolsPpcdiag(Test):
         View and manipulate the system attention and fault indicators (LEDs)
         """
         self.log.info("======Executing usysfault tool test======")
+        if 'not supported' in self.run_cmd_out("usysfault"):
+            self.cancel(
+                "The identify indicators are not supported on this system")
         value = self.params.get('usysfault_list', default=['-h', '-V', '-P'])
         for list_item in value:
             self.run_cmd('usysfault  %s ' % list_item)
