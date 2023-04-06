@@ -82,7 +82,7 @@ class Xfstests(Test):
                     mount = False
                 else:
                     self.cancel('Need %s GB to create loop devices' % check)
-                self._create_loop_device(None, '2038M', mount)
+                self._create_loop_device('2038M', mount)
                 self.log_test = self.devices.pop()
                 self.log_scratch = self.devices.pop()
             namespaces = self.plib.run_ndctl_list('-N -r %s' % self.region)
@@ -221,13 +221,21 @@ class Xfstests(Test):
                 self.cancel("Fail to install %s required for this test." %
                             package)
         self.skip_dangerous = self.params.get('skip_dangerous', default=True)
+        self.group = self.params.get('group', default='auto')
         self.test_range = self.params.get('test_range', default=None)
+        self.base_disk = self.params.get('disk', default=None)
         self.scratch_mnt = self.params.get(
             'scratch_mnt', default='/mnt/scratch')
         self.test_mnt = self.params.get('test_mnt', default='/mnt/test')
         self.disk_mnt = self.params.get('disk_mnt', default='/mnt/loop_device')
         self.fs_to_test = self.params.get('fs', default='ext4')
         self.run_type = self.params.get('run_type', default='distro')
+
+        self.devices = []
+        self.part = None
+        if self.group and self.test_range:
+            self.cancel("incorrect yaml parameter, group and test range can"
+                        "not be run at same time")
 
         if self.run_type == 'upstream':
             prefix = "/usr/local"
@@ -314,7 +322,6 @@ class Xfstests(Test):
                           ignore_status=True):
             self.cancel('Unknown filesystem %s' % self.fs_to_test)
         mount = True
-        self.devices = []
         self.log_devices = []
         shutil.copyfile(self.get_data('local.config'),
                         os.path.join(self.teststmpdir, 'local.config'))
@@ -325,9 +332,8 @@ class Xfstests(Test):
         self.log_scratch = self.params.get('log_scratch', default='')
 
         if self.dev_type == 'loop':
-            base_disk = self.params.get('disk', default=None)
             loop_size = self.params.get('loop_size', default='7GiB')
-            if not base_disk:
+            if not self.base_disk:
                 # Using root for file creation by default
                 check = (int(loop_size.split('GiB')[0]) * 2) + 1
                 if disk.freespace('/') / 1073741824 > check:
@@ -335,7 +341,7 @@ class Xfstests(Test):
                     mount = False
                 else:
                     self.cancel('Need %s GB to create loop devices' % check)
-            self._create_loop_device(base_disk, loop_size, mount)
+            self._create_loop_device(loop_size, mount)
         elif self.dev_type == 'nvdimm':
             self.setup_nvdimm()
         else:
@@ -443,7 +449,7 @@ class Xfstests(Test):
             args = ''
             if self.exclude or self.gen_exclude:
                 args = ' -E %s' % self.exclude_file
-            cmd = './check %s -g auto' % args
+            cmd = './check %s -g %s' % (args, self.group)
             result = process.run(cmd, ignore_status=True, verbose=True)
             if result.exit_status == 0:
                 self.log.info('OK: All Tests passed.')
@@ -491,7 +497,7 @@ class Xfstests(Test):
             for dev in self.devices:
                 process.system('losetup -d %s' % dev, shell=True,
                                sudo=True, ignore_status=True)
-            if self.disk_mnt:
+            if self.part:
                 self.part.unmount()
         elif self.dev_type == 'nvdimm':
             if hasattr(self, 'region'):
@@ -506,10 +512,10 @@ class Xfstests(Test):
                             process.system('losetup -d %s' % dev, shell=True,
                                            sudo=True, ignore_status=True)
 
-    def _create_loop_device(self, base_disk, loop_size, mount=True):
+    def _create_loop_device(self, loop_size, mount=True):
         if mount:
             self.part = partition.Partition(
-                base_disk, mountpoint=self.disk_mnt)
+                self.base_disk, mountpoint=self.disk_mnt)
             self.part.mount()
         # Creating two loop devices
         for i in range(2):

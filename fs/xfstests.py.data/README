@@ -15,9 +15,18 @@ started are really simple:
 1.2) In yaml file set test_number which test need to run  and skip_dangerous
      (it will check with group ) and    will skip all the test .
 
-1.3) In Yaml file test range also can be set like test_range='4,12-89'
-Note that range is optional. If not provided, complete generic and specified
-file systems tests would execute
+1.3) group and test_range options can not be run at the same time.
+In yaml you can edit and give group name you want to run, test_range
+should be empty in this case. Refer below example:
+group: 'quick'
+test_range:
+
+1.4) In Yaml file test range also can be set to run specific set of tests.
+We need to pass group as null in this case. Note that range is optional.
+If not provided, complete generic and specified file systems tests would execute.
+Refer below example:
+group: ''
+test_range: '4,12-89'
 
 General notes
 -------------
