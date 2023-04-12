@@ -1,5 +1,5 @@
 setup:
-    pmdk_url: 'https://github.com/pmem/pmdk/releases/download/1.8/pmdk-1.8.tar.gz'
+    pmdk_url: 'https://github.com/pmem/pmdk/releases/download/1.12.1/pmdk-1.12.1.tar.gz'
     disk:
     disk_type: 'nvdimm'
     run_type: !mux
