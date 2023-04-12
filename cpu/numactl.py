@@ -121,13 +121,18 @@ class Numactl(Test):
             self.input_file = self.params.get("input_file",
                                               default="/dev/zero")
         self.device = self.params.get('pci_device', default="")
-        if self.device:
-            if not os.path.isdir('/sys/bus/pci/devices/%s' % self.device):
-                self.cancel("%s not present in device path" % self.device)
-            self.cpu_path = "/sys/devices/system/node/has_cpu"
-            if not os.path.exists(self.cpu_path):
-                self.cancel("No NUMA nodes have CPU")
-            self.numa_dict = cpu.numa_nodes_with_assigned_cpus()
+
+        for subtest in ["preferred_node", "cpunode_with_membind", "physical_cpu_bind", "numa_pci_bind"]:
+            if subtest in str(self.name):
+                if self.device:
+                    if not os.path.isdir('/sys/bus/pci/devices/%s' % self.device):
+                        self.cancel("%s not present in device path" % self.device)
+                    self.cpu_path = "/sys/devices/system/node/has_cpu"
+                    if not os.path.exists(self.cpu_path):
+                        self.cancel("No NUMA nodes have CPU")
+                    self.numa_dict = cpu.numa_nodes_with_assigned_cpus()
+                else:
+                    self.cancel("Device input missing, skipping the test")
 
     def check_numa_nodes(self):
         '''
@@ -307,7 +312,7 @@ class Numactl(Test):
         '''
         Test PCI binding to diferrent NUMA nodes
         '''
-        if self.device and self.check_numa_nodes():
+        if self.check_numa_nodes():
             nodes = [node for node in self.numa_dict.keys()]
             node_path = '/sys/bus/pci/devices/%s/numa_node' % self.device
             pci_node_number = genio.read_file(node_path)
@@ -316,8 +321,6 @@ class Numactl(Test):
                                   in nodes if i not in [pci_node_number]]))
             genio.write_file(node_path, str(alter_node))
             self.log.info(f"PCI NUMA node changed to {alter_node}")
-        else:
-            self.cancel("Device input missing, skipping the test")
 
     def tearDown(self):
         '''
