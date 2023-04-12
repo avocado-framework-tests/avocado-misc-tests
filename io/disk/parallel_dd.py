@@ -29,7 +29,7 @@ import time
 import sys
 import json
 from avocado import Test
-from avocado.utils import process, distro
+from avocado.utils import process, distro, disk
 from avocado.utils import partition as partition_lib
 
 
@@ -54,9 +54,10 @@ class ParallelDd(Test):
         :params fs_dd_roptions: dd read in streams.
         """
 
-        self.disk = self.params.get('disk')
-        if not self.disk:
+        device = self.params.get('disk', default=None)
+        if not device:
             self.cancel('Test requires disk parameter,Please check README')
+        self.disk = disk.get_absolute_disk_path(device)
         self.fsys = partition_lib.Partition(self.disk, mountpoint=self.workdir)
         self.megabytes = self.params.get('megabytes', default=100)
         self.blocks = self.params.get('blocks', default=None)

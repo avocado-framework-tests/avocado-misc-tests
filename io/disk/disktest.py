@@ -72,11 +72,8 @@ class Disktest(Test):
         self.fs_create = False
         self.raid_needed = self.params.get('raid', default=False)
         self.raid_create = False
-        self.disk = self.params.get('disk', default=None)
-        self.sysdisks = disk.get_disks()
-        if 'scsi-' in self.disk or 'nvme-' in self.disk:
-            self.disk = '/dev/disk/by-id/%s' % self.disk
-            self.sysdisks = disk.get_disks_by_id()
+        device = self.params.get('disk', default=None)
+        self.disk = disk.get_absolute_disk_path(device)
         self.dir = self.params.get('dir', default=None)
         self.fstype = self.params.get('fs', default='ext4')
         self.raid_name = '/dev/md/sraid'
@@ -126,7 +123,7 @@ class Disktest(Test):
         dmesg.clear_dmesg()
         self.pre_cleanup()
         if self.disk is not None:
-            if self.disk in self.sysdisks:
+            if self.disk in disk.get_all_disk_paths():
                 if self.raid_needed:
                     self.create_raid(self.target, self.raid_name)
                     self.raid_create = True

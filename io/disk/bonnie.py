@@ -60,7 +60,8 @@ class Bonnie(Test):
         raid_needed = self.params.get('raid', default=False)
         self.raid_create = False
 
-        self.disk = self.params.get('disk', default=None)
+        device = self.params.get('disk', default=None)
+        self.disk = disk.get_absolute_disk_path(device)
         self.dir = self.params.get('dir', default='/mnt')
         self.uid_to_use = self.params.get('uid-to-use',
                                           default=getpass.getuser())
@@ -115,7 +116,7 @@ class Bonnie(Test):
 
         if self.disk is not None:
             self.pre_cleanup()
-            if self.disk in disk.get_disks():
+            if self.disk in disk.get_all_disk_paths():
                 if raid_needed:
                     self.create_raid(self.disk, self.raid_name)
                     self.raid_create = True

@@ -57,9 +57,10 @@ class Dbench(Test):
         self.lv_create = False
         raid_needed = self.params.get('raid', default=False)
         self.raid_create = False
-        self.disk = self.params.get('disk', default=None)
-        if not self.disk:
+        device = self.params.get('disk', default=None)
+        if not device:
             self.cancel("Provide the test disks to proceed !")
+        self.disk = disk.get_absolute_disk_path(device)
         self.md_name = self.params.get('raid_name', default='md127')
         self.mountpoint = self.params.get('dir', default='/mnt')
         self.disk_obj = Partition(self.disk, mountpoint=self.mountpoint)
@@ -99,7 +100,7 @@ class Dbench(Test):
         process.run('./configure')
         build.make(self.sourcedir)
         if self.disk is not None:
-            if self.disk in disk.get_disks():
+            if self.disk in disk.get_all_disk_paths():
                 if raid_needed:
                     raid_name = '/dev/%s' % self.md_name
                     self.create_raid(self.disk, raid_name)

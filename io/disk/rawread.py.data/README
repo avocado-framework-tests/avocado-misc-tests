@@ -3,7 +3,7 @@ basic functionality or disk capability using different values of
 option t which is a sequential write() test and then reads the same.
 
 Parameter:
-disk : any disk from /dev/ dir like USB/scsi/SAN etc
+disk : any disk from /dev/ dir like USB/scsi/SAN the device name can be by-id/by-path etc
 
 
 Last update to rawread binaries by:

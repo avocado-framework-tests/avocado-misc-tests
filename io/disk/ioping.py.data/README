@@ -10,7 +10,7 @@ period - print raw statistics for every <period> requests
 interval - interval between requests in seconds
 size - Request size (4k)
 wsize - Working set size (1m for directory, whole size for file or device)
-disk - path for the disk (ex: /dev/mapper/mpathd)
+disk - path for the disk (ex: /dev/mapper/mpathd or sda, or /dev/disk/by-id/scs-xx or by-path etc)
 
 Usage: ioping [-LABCDWRq] [-c count] [-w deadline] [-pP period] [-i interval]
                [-s size] [-S wsize] [-o offset] directory|file|device
