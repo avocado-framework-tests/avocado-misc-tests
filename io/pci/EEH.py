@@ -27,7 +27,7 @@ from avocado.utils import genio
 from avocado.utils import distro
 from avocado.utils import dmesg
 from avocado.utils import multipath
-from avocado.utils import genericutility
+from avocado.utils import data_structures
 from avocado.utils.software_manager.manager import SoftwareManager
 
 EEH_HIT = 0
@@ -144,8 +144,10 @@ class EEH(Test):
                         time.sleep(10)
                         if pci.get_pci_class_name(self.pci_device) == "fc_host":
                             after_eeh_path_status = multipath.get_multipath_details()
-                            get_diff_bef_aft = genericutility.recursive_compare_dict(
-                                    before_eeh_path_status, after_eeh_path_status
+                            get_diff_bef_aft = data_structures.recursive_compare_dict(
+                                    before_eeh_path_status,
+                                    after_eeh_path_status,
+                                    diff_btw_dict=[]
                                 )
                             if len(get_diff_bef_aft) != 0:
                                 for value in get_diff_bef_aft[:]:
