@@ -20,6 +20,6 @@ test this carefully as it may override the data in sdb, sdc ...sdn
 
 Inputs:
 ------
-disk: '/dev/sdb'
+disk: '/dev/sdb' or mpathx or /dev/disk/by-path/dm-uuid-mpathb-xxxxx, /dev/dm-0
 fs: 'ext4'
 dir: '/mnt'

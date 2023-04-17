@@ -28,6 +28,7 @@ from avocado.utils import process
 from avocado.utils import genio
 from avocado.utils import distro
 from avocado.utils import multipath
+from avocado.utils import disk
 from avocado.utils.partition import Partition
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.process import CmdError
@@ -51,7 +52,8 @@ class DiskInfo(Test):
         """
         smm = SoftwareManager()
         pkg = ""
-        self.disk = self.params.get('disk', default=None)
+        device = self.params.get('disk', default=None)
+        self.disk = disk.get_absolute_disk_path(device)
         if 'ppc' not in platform.processor():
             self.cancel("Processor is not ppc64")
         self.dirs = self.params.get('dir', default=self.workdir)
@@ -88,14 +90,16 @@ class DiskInfo(Test):
                             % pkg)
         self.disk_nodes = []
         self.disk_base = os.path.basename(self.disk)
+        self.disk_abs = os.path.basename(os.path.realpath(self.disk))
+        if 'dm' in self.disk_abs:
+            self.disk_base = multipath.get_mpath_from_dm(self.disk_abs)
         if multipath.is_mpath_dev(self.disk_base):
             self.mpath = True
-            self.disk_abs = os.path.basename(os.readlink(self.disk))
             mwwid = multipath.get_multipath_wwid(self.disk_base)
             self.disk_nodes = multipath.get_paths(mwwid)
         else:
             self.mpath = False
-            self.disk_abs = self.disk_base
+            self.disk_base = self.disk_abs
             self.disk_nodes.append(self.disk_base)
 
     def run_command(self, cmd):
@@ -125,10 +129,10 @@ class DiskInfo(Test):
         size, UUID and IO sizes etc
         """
         msg = []
-        if process.system("ls /dev/disk/by-id -l| grep -i %s" % self.disk_abs,
+        if process.system("ls /dev/disk/by-id -l| grep -i %s" % self.disk_base,
                           ignore_status=True, shell=True, sudo=True) != 0:
             msg.append("Given disk %s is not in /dev/disk/by-id" %
-                       self.disk_abs)
+                       self.disk_base)
         for disk_node in self.disk_nodes:
             if process.system("ls /dev/disk/by-path -l| grep -i %s" % disk_node,
                               ignore_status=True, shell=True, sudo=True) != 0:
