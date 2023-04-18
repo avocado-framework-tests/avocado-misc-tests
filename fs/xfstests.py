@@ -516,6 +516,11 @@ class Xfstests(Test):
             self.part = partition.Partition(
                 self.base_disk, mountpoint=self.disk_mnt)
             self.part.mount()
+
+        # remove any previous losetup images & mounts
+        process.system('umount %s %s' % (self.scratch_mnt, self.test_mnt),
+                       sudo=True, ignore_status=True)
+        process.run('losetup -D')
         # Creating two loop devices
         for i in range(2):
             if self.use_dd:
