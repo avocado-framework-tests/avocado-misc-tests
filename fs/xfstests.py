@@ -149,18 +149,7 @@ class Xfstests(Test):
             self.scratch_dev = "/dev/%s" % pmem_dev
             self.devices.extend([self.test_dev, self.scratch_dev])
 
-    def setUp(self):
-        """
-        Build xfstest
-        Source: git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git
-        """
-        self.use_dd = False
-        root_fs = process.system_output(
-            "df -T / | awk 'END {print $2}'", shell=True).decode("utf-8")
-        if root_fs in ['ext3', 'ext4']:
-            self.use_dd = True
-        self.dev_type = self.params.get('type', default='loop')
-
+    def __setUp_packages(self):
         sm = SoftwareManager()
 
         self.detected_distro = distro.detect()
@@ -219,6 +208,23 @@ class Xfstests(Test):
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel("Fail to install %s required for this test." %
                             package)
+
+    def setUp(self):
+        """
+        Build xfstest
+        Source: git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git
+        """
+        self.use_dd = False
+        root_fs = process.system_output(
+            "df -T / | awk 'END {print $2}'", shell=True).decode("utf-8")
+
+        if root_fs in ['ext3', 'ext4']:
+            self.use_dd = True
+
+        self.dev_type = self.params.get('type', default='loop')
+
+        self.__setUp_packages()
+
         self.skip_dangerous = self.params.get('skip_dangerous', default=True)
         self.group = self.params.get('group', default='auto')
         self.test_range = self.params.get('test_range', default=None)
