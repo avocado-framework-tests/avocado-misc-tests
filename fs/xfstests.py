@@ -218,7 +218,7 @@ class Xfstests(Test):
         root_fs = process.system_output(
             "df -T / | awk 'END {print $2}'", shell=True).decode("utf-8")
 
-        if root_fs in ['ext3', 'ext4']:
+        if root_fs in ['ext2', 'ext3']:
             self.use_dd = True
 
         self.dev_type = self.params.get('type', default='loop')
