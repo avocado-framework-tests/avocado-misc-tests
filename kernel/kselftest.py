@@ -56,6 +56,7 @@ class kselftest(Test):
             self.test_type = self.params.get('test_type', default='-H')
             self.Size_flag = self.params.get('Size', default='-s')
             self.Dup_MM_Area = self.params.get('Dup_MM_Area', default='100')
+        self.build_option = self.params.get('build_option', default='-bp')
         self.run_type = self.params.get('type', default='upstream')
         detected_distro = distro.detect()
         deps = ['gcc', 'make', 'automake', 'autoconf', 'rsync']
@@ -121,7 +122,8 @@ class kselftest(Test):
                     if platform.uname()[2].split(".")[-2].endswith('a'):
                         self.log.info('Using ALT as kernel source')
                         src_name = 'kernel-alt'
-                self.buldir = smg.get_source(src_name, self.workdir, "-bp")
+                self.buldir = smg.get_source(
+                    src_name, self.workdir, self.build_option)
                 self.buldir = os.path.join(
                     self.buldir, os.listdir(self.buldir)[0])
             elif detected_distro.name in ['Ubuntu', 'debian']:
@@ -155,16 +157,19 @@ class kselftest(Test):
         """
         self.error = False
         kself_args = self.params.get("kself_args", default='')
-        if self.subtest == "ksm_tests":
-            self.ksmtest()
+        if self.comp == "bpf":
+            self.bpf()
         else:
-            if self.subtest:
-                test_comp = self.comp + "/" + self.subtest
+            if self.subtest == "ksm_tests":
+                self.ksmtest()
             else:
-                test_comp = self.comp
-            build.make(self.sourcedir,
-                       extra_args='%s -C %s run_tests' %
-                       (kself_args, test_comp))
+                if self.subtest:
+                    test_comp = self.comp + "/" + self.subtest
+                else:
+                    test_comp = self.comp
+                build.make(self.sourcedir,
+                           extra_args='%s -C %s run_tests' %
+                           (kself_args, test_comp))
         for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
             if self.run_type == 'upstream':
                 self.find_match(r'not ok (.*) selftests:(.*)', line)
@@ -211,6 +216,13 @@ class kselftest(Test):
         else:
             self.cancel("Invalid ksm_tests build path:- {}"
                         .format(ksm_test_dir))
+
+    def bpf(self):
+        bpf_test_dir = self.sourcedir + "/bpf/"
+        os.chdir(bpf_test_dir)
+        build.make(bpf_test_dir)
+        self.run_cmd("./test_verifier")
+        build.make(bpf_test_dir, extra_args='run_tests')
 
     def tearDown(self):
         self.log.info('Cleaning up')
