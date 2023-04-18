@@ -422,7 +422,8 @@ class IOZone(Test):
         self.lv_create = False
         raid_needed = self.params.get('raid', default=False)
         self.raid_create = False
-        self.disk = self.params.get('disk', default=None)
+        device = self.params.get('disk', default=None)
+        self.disk = disk.get_absolute_disk_path(device)
         self.source_url = self.params.get('source', default=None)
 
         self.base_dir = os.path.abspath(self.basedir)
@@ -470,7 +471,7 @@ class IOZone(Test):
             build.make(make_dir, extra_args='linux')
         self.dirs = self.disk
         if self.disk is not None:
-            if self.disk in disk.get_disks():
+            if self.disk in disk.get_all_disk_paths():
                 if raid_needed:
                     raid_name = '/dev/md/sraid'
                     self.create_raid(self.disk, raid_name)

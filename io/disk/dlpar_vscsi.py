@@ -19,6 +19,7 @@ DLPAR operations
 
 from avocado import Test
 from avocado.utils import process
+from avocado.utils import disk
 from avocado.utils.ssh import Session
 
 
@@ -32,7 +33,8 @@ class DlparTest(Test):
         '''
         Gather necessary test inputs.
         '''
-        self.disk = self.params.get('disk', default=None)
+        device = self.params.get('disk', default=None)
+        self.disk = disk.get_absolute_disk_path(device)
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         self.vios_ip = self.params.get('vios_ip', '*', default=None)
         self.vios_user = self.params.get('vios_username', '*', default=None)

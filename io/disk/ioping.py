@@ -19,7 +19,7 @@
 import os
 
 from avocado import Test
-from avocado.utils import process, archive, build
+from avocado.utils import process, archive, build, disk
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -44,7 +44,8 @@ class Ioping(Test):
         self.interval = self.params.get('interval', default='1s')
         self.size = self.params.get('size', default='4k')
         self.wsize = self.params.get('wsize', default='10m')
-        self.disk = self.params.get('disk', default='/home')
+        device = self.params.get('disk', default='/home')
+        self.disk = disk.get_absolute_disk_path(device)
 
         for package in ['gcc', 'make']:
             if not smm.check_installed(package) and not smm.install(package):

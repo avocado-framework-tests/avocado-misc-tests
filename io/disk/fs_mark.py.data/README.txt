@@ -19,6 +19,6 @@ SAMPLE RUN
 Multiplexer Input Parameters
 ----------------------------
 
-disk		- disk on which the test is to be run
+disk		- disk on which the test is to be run i.e /dev/sdX, mpathX or /dev/disk/by-id/scsi-x
 num_files	- number of files allocated per directory
 size		- size of each file
