@@ -58,11 +58,20 @@ class Dbench(Test):
         raid_needed = self.params.get('raid', default=False)
         self.raid_create = False
         device = self.params.get('disk', default=None)
-        if not device:
-            self.cancel("Provide the test disks to proceed !")
-        self.disk = disk.get_absolute_disk_path(device)
         self.md_name = self.params.get('raid_name', default='md127')
-        self.mountpoint = self.params.get('dir', default='/mnt')
+        self.dir = self.params.get('dir', default=None)
+
+        if device is not None:
+            self.disk = disk.get_absolute_disk_path(device)
+            if self.disk not in disk.get_all_disk_paths():
+                self.cancel("Missing disk %s in OS" % self.disk)
+        else:
+            self.cancel("Please Provide valid device name")
+
+        if not self.dir:
+            self.dir = self.workdir
+
+        self.mountpoint = self.dir
         self.disk_obj = Partition(self.disk, mountpoint=self.mountpoint)
         self.pre_cleanup()
         self.clear_disk(self.disk_obj, self.disk)
@@ -187,10 +196,9 @@ class Dbench(Test):
         '''
         Cleanup of disk used to perform this test
         '''
-        if self.disk is not None:
-            if self.fs_create:
-                self.clear_disk(self.part_obj, self.disk)
-            if self.lv_create:
-                self.delete_lv()
-            if self.raid_create:
-                self.delete_raid()
+        if self.fs_create:
+            self.clear_disk(self.part_obj, self.disk)
+        if self.lv_create:
+            self.delete_lv()
+        if self.raid_create:
+            self.delete_raid()

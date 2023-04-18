@@ -51,6 +51,7 @@ class Tiobench(Test):
         Source:
         https://github.com/mkuoppal/tiobench.git
         """
+        self.err_mesg = []
         self.fstype = self.params.get('fs', default='')
         self.fs_create = False
         lv_needed = self.params.get('lv', default=False)
@@ -58,12 +59,22 @@ class Tiobench(Test):
         raid_needed = self.params.get('raid', default=False)
         self.raid_create = False
         device = self.params.get('disk', default=None)
-        self.disk = disk.get_absolute_disk_path(device)
-        self.dir = self.params.get('dir', default="/mnt")
+        self.dir = self.params.get('dir', default=None)
+
+        if device is not None:
+            self.disk = disk.get_absolute_disk_path(device)
+            if self.disk not in disk.get_all_disk_paths():
+                self.cancel("Missing disk %s in OS" % self.disk)
+        else:
+            self.cancel("Please Provide valid device name")
+
+        if not self.dir:
+            self.dir = self.workdir
+
         self.raid_name = '/dev/md/sraid'
         self.vgname = 'avocado_vg'
         self.lvname = 'avocado_lv'
-        self.err_mesg = []
+
         smm = SoftwareManager()
         packages = ['gcc', 'mdadm']
         if self.fstype == 'btrfs':
@@ -88,26 +99,21 @@ class Tiobench(Test):
         self.sw_raid = softwareraid.SoftwareRaid(self.raid_name, '0',
                                                  self.disk.split(), '1.2')
         dmesg.clear_dmesg()
-        if self.disk is not None:
-            if self.disk:
-                self.pre_cleanup()
-                if raid_needed:
-                    self.create_raid(self.disk, self.raid_name)
-                    self.raid_create = True
-                    self.target = self.raid_name
 
-                if lv_needed:
-                    self.lv_disk = self.target
-                    self.target = self.create_lv(self.target)
-                    self.lv_create = True
+        self.pre_cleanup()
+        if raid_needed:
+            self.create_raid(self.disk, self.raid_name)
+            self.raid_create = True
+            self.target = self.raid_name
 
-                if self.fstype:
-                    self.create_fs(self.target, self.dir, self.fstype)
-                    self.fs_create = True
-            else:
-                self.cancel("Missing disk %s in OS" % self.disk)
-        else:
-            self.cancel("Please provide a valid disk name")
+        if lv_needed:
+            self.lv_disk = self.target
+            self.target = self.create_lv(self.target)
+            self.lv_create = True
+
+        if self.fstype:
+            self.create_fs(self.target, self.dir, self.fstype)
+            self.fs_create = True
 
     def create_raid(self, l_disk, l_raid_name):
         """
@@ -317,13 +323,12 @@ class Tiobench(Test):
         """
         Cleanup of disk used to perform this test
         """
-        if self.disk is not None:
-            if self.fs_create:
-                self.delete_fs(self.target)
-            if self.lv_create:
-                self.delete_lv()
-            if self.raid_create:
-                self.delete_raid()
+        if self.fs_create:
+            self.delete_fs(self.target)
+        if self.lv_create:
+            self.delete_lv()
+        if self.raid_create:
+            self.delete_raid()
         dmesg.clear_dmesg()
         if self.err_mesg:
             self.warn("test failed due to following errors %s" % self.err_mesg)

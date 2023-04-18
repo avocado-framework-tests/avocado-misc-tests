@@ -51,6 +51,7 @@ class FSMark(Test):
         """
         fs_mark
         """
+        self.err_mesg = []
         lv_needed = self.params.get('lv', default=False)
         self.lv_create = False
         raid_needed = self.params.get('raid', default=False)
@@ -58,14 +59,23 @@ class FSMark(Test):
         self.fstype = self.params.get('fs', default='')
         self.fs_create = False
         device = self.params.get('disk', default=None)
-        self.disk = disk.get_absolute_disk_path(device)
         self.dir = self.params.get('dir', default=None)
+
+        if device is not None:
+            self.disk = disk.get_absolute_disk_path(device)
+            if self.disk not in disk.get_all_disk_paths():
+                self.cancel("Missing disk %s in OS" % self.disk)
+        else:
+            self.cancel("Please Provide valid device name")
+
+        if not self.dir:
+            self.dir = self.workdir
+
         self.num = self.params.get('num_files', default='1024')
         self.size = self.params.get('size', default='1000')
         self.raid_name = '/dev/md/sraid'
         self.vgname = 'avocado_vg'
         self.lvname = 'avocado_lv'
-        self.err_mesg = []
         smm = SoftwareManager()
 
         if self.fstype == 'btrfs':
@@ -98,26 +108,20 @@ class FSMark(Test):
         self.sw_raid = softwareraid.SoftwareRaid(self.raid_name, '0',
                                                  self.disk.split(), '1.2')
         dmesg.clear_dmesg()
-        if self.disk is not None:
-            if self.disk:
-                self.pre_cleanup()
-                if raid_needed:
-                    self.create_raid(self.disk, self.raid_name)
-                    self.raid_create = True
-                    self.target = self.raid_name
+        self.pre_cleanup()
+        if raid_needed:
+            self.create_raid(self.disk, self.raid_name)
+            self.raid_create = True
+            self.target = self.raid_name
 
-                if lv_needed:
-                    self.lv_disk = self.target
-                    self.target = self.create_lv(self.target)
-                    self.lv_create = True
+        if lv_needed:
+            self.lv_disk = self.target
+            self.target = self.create_lv(self.target)
+            self.lv_create = True
 
-                if self.fstype:
-                    self.create_fs(self.target, self.dir, self.fstype)
-                    self.fs_create = True
-            else:
-                self.cancel("Missing disk %s in OS" % self.disk)
-        else:
-            self.cancel("Please provide a valid disk name")
+        if self.fstype:
+            self.create_fs(self.target, self.dir, self.fstype)
+            self.fs_create = True
 
     def create_raid(self, l_disk, l_raid_name):
         """
@@ -314,13 +318,12 @@ class FSMark(Test):
         '''
         # if self.link:
         #    os.unlink(self.link)
-        if self.disk is not None:
-            if self.fs_create:
-                self.delete_fs(self.target)
-            if self.lv_create:
-                self.delete_lv()
-            if self.raid_create:
-                self.delete_raid()
+        if self.fs_create:
+            self.delete_fs(self.target)
+        if self.lv_create:
+            self.delete_lv()
+        if self.raid_create:
+            self.delete_raid()
         dmesg.clear_dmesg()
         if self.err_mesg:
             self.warn("test failed due to following errors %s" % self.err_mesg)

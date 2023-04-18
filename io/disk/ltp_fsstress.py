@@ -47,9 +47,9 @@ class LtpFs(Test):
         '''
         To check and install dependencies for the test
         '''
+        self.err_mesg = []
         device = self.params.get('disk', default=None)
-        self.disk = disk.get_absolute_disk_path(device)
-        self.dir = self.params.get('dir', default='')
+        self.dir = self.params.get('dir', default=None)
         self.fstype = self.params.get('fs', default='')
         self.fs_create = False
         lv_needed = self.params.get('lv', default=False)
@@ -59,7 +59,16 @@ class LtpFs(Test):
         self.fsstress_count = self.params.get('fsstress_loop', default='1')
         self.n_val = self.params.get('n_val', default='100')
         self.p_val = self.params.get('p_val', default='100')
-        self.err_mesg = []
+
+        if device is not None:
+            self.disk = disk.get_absolute_disk_path(device)
+            if self.disk not in disk.get_all_disk_paths():
+                self.cancel("Missing disk %s in OS" % self.disk)
+        else:
+            self.cancel("Please Provide valid device name")
+
+        if not self.dir:
+            self.dir = self.workdir
 
         smm = SoftwareManager()
         packages = ['gcc', 'make', 'automake', 'autoconf']
@@ -91,26 +100,20 @@ class LtpFs(Test):
                                                  self.disk.split(), '1.2')
         dmesg.clear_dmesg()
 
-        if self.disk is not None:
-            self.pre_cleanup()
-            if self.disk in disk.get_all_disk_paths():
-                if raid_needed:
-                    self.create_raid(self.disk, self.raid_name)
-                    self.raid_create = True
-                    self.target = self.raid_name
+        self.pre_cleanup()
+        if raid_needed:
+            self.create_raid(self.disk, self.raid_name)
+            self.raid_create = True
+            self.target = self.raid_name
 
-                if lv_needed:
-                    self.lv_disk = self.target
-                    self.target = self.create_lv(self.target)
-                    self.lv_create = True
+        if lv_needed:
+            self.lv_disk = self.target
+            self.target = self.create_lv(self.target)
+            self.lv_create = True
 
-                if self.fstype:
-                    self.create_fs(self.target, self.dir, self.fstype)
-                    self.fs_create = True
-            else:
-                self.cancel("Missing disk %s in OS" % self.disk)
-        else:
-            self.cancel("please provide valid disk")
+        if self.fstype:
+            self.create_fs(self.target, self.dir, self.fstype)
+            self.fs_create = True
 
         url = "https://github.com/linux-test-project/ltp/"
         url += "archive/master.zip"
@@ -327,13 +330,12 @@ class LtpFs(Test):
         '''
         Cleanup of disk used to perform this test
         '''
-        if self.disk is not None:
-            if self.fs_create:
-                self.delete_fs(self.target)
-            if self.lv_create:
-                self.delete_lv()
-            if self.raid_create:
-                self.delete_raid()
+        if self.fs_create:
+            self.delete_fs(self.target)
+        if self.lv_create:
+            self.delete_lv()
+        if self.raid_create:
+            self.delete_raid()
         dmesg.clear_dmesg()
         if self.err_mesg:
             self.log.warning("test failed due to following errors %s" % self.err_mesg)
