@@ -410,7 +410,8 @@ class Xfstests(Test):
         git.get_repo('git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
                      destination_dir=self.teststmpdir)
 
-        build.make(self.teststmpdir)
+        extra_args = f"-j{os.cpu_count()}"
+        build.make(self.teststmpdir, extra_args=extra_args)
         self.available_tests = self._get_available_tests()
 
         self.test_list = self._create_test_list(self.test_range)
