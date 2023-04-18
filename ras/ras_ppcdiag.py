@@ -115,6 +115,20 @@ class RASToolsPpcdiag(Test):
                       % self.fail_cmd)
 
     @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
+    def test_extract_opal_dump(self):
+        """
+        extract_opal_dump test
+        """
+        self.log.info("======Executing extract_opal_dump tool test======")
+        ln = "not supported"
+        if ln in process.run("extract_opal_dump -h").stderr.decode("utf-8"):
+            self.cancel(
+                "extract_opal_dump is not supported on this system")
+        else:
+            self.log.info(
+                "extract_opal_dump is supported on the PowerNV Platform")
+
+    @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_usysattn(self):
         """
         View and manipulate the system attention and fault indicators (LEDs)
