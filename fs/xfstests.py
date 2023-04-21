@@ -230,6 +230,10 @@ class Xfstests(Test):
         self.args = self.params.get('args', default='-g quick')
         self.log.debug(f"FS: {self.fs_to_test}, args: {self.args}")
 
+        # If there is an existing results directory then just clean that up before running the test
+        if os.path.exists(f"{self.teststmpdir}/results"):
+            shutil.rmtree(f"{self.teststmpdir}/results")
+
         self.skip_dangerous = self.params.get('skip_dangerous', default=True)
         self.group = self.params.get('group', default='auto')
         self.test_range = self.params.get('test_range', default=None)
