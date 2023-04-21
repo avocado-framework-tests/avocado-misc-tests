@@ -496,6 +496,18 @@ class Xfstests(Test):
             self.fail('One or more tests failed. Please check the logs.')
 
     def tearDown(self):
+
+        srcdir = f"{self.teststmpdir}/results"
+        if (os.path.exists(srcdir) and os.path.exists(self.outputdir)):
+            new_outputdir = os.path.join(self.outputdir,
+                                         os.path.basename(srcdir))
+            shutil.copytree(srcdir, new_outputdir)
+
+        job_dir = os.path.dirname(os.path.dirname(self.logdir))
+        self.job_id = os.path.basename(job_dir)
+        self.log.debug(" Job ID: %s, logdir: %s, srcdir: %s, outputdir: %s: " %
+                       (self.job_id, self.logdir, srcdir, self.outputdir))
+
         user_exits = 0
         if not (process.system('id fsgqa', sudo=True, ignore_status=True)):
             process.system('userdel -r -f fsgqa', sudo=True)
