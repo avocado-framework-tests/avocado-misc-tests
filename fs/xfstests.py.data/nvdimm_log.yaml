@@ -1,25 +1,18 @@
-skip_dangerous: True
 scratch_mnt: '/mnt/scratch_pmem'
 test_mnt: '/mnt/test_pmem'
 logdev: true
-group:
-test_range:
 fs_type: !mux
     fs_ext4:
         fs: 'ext4'
+        args: '-R xunit -e ext4/048 -g quick'
         mkfs_opt: '-b 65536'
         mount_opt: '-o block_validity,dax'
-        exclude: "048"
-        gen_exclude: "null"
-        share_exclude: "null"
     fs_xfs:
         fs: 'xfs'
+        args: '-R xunit -g quick'
         mkfs_opt: '-b size=65536 -s size=512 -m reflink=0'
         logdev_opt: '-l logdev'
         mount_opt: '-o dax'
-        exclude: "null"
-        gen_exclude: "null"
-        share_exclude: "null"
 disk_type:
     type: 'nvdimm'
     disk_test: "null"
