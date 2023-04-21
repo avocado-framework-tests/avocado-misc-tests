@@ -1,18 +1,16 @@
-skip_dangerous: True
 scratch_mnt: '/mnt/scratch'
 test_mnt: '/mnt/test'
-group:
-# edit test_range for running specific tests
-test_range:
 fs_type: !mux
     fs_ext4:
         fs: 'ext4'
+        args: '-e ext4/048 -R xunit generic/001'
+        mkfs_opt: '-b 65536'
+        mount_opt: '-o block_validity'
     fs_xfs:
         fs: 'xfs'
-        # Exclude only if test_range not provided
-        exclude: "null"
-        gen_exclude: "null"
-        share_exclude: "null"
+        args: '-e ext4/048 -R xunit generic/001'
+        mkfs_opt: '-f -b size=4096'
+        mount_opt: ''
 disk_type: !mux
     type: 'disk'
     disk_test: /dev/loop0

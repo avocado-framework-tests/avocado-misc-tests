@@ -1,11 +1,7 @@
-skip_dangerous: True
 scratch_mnt: '/mnt/scratch'
 test_mnt: '/mnt/test'
 disk_mnt: '/mnt/loop-device'
-# edit group for running specific group like 'quick'
-group:
-# edit test_range for running specific tests like '4,15-20'
-test_range:
+
 loop_type: !mux
     type: 'loop'
     loop_size: '7GiB'
@@ -15,27 +11,21 @@ loop_type: !mux
 fs_type: !mux
     fs_ext4_4k:
         fs: 'ext4'
+        args: '-e ext4/048 -R xunit generic/001'
         mkfs_opt: '-b 4096'
         mount_opt: '-o block_validity'
-        exclude: "048"
-        gen_exclude: "null"
-        share_exclude: "null"
     fs_ext4_64k:
         fs: 'ext4'
+        args: '-e ext4/048 -R xunit generic/001'
         mkfs_opt: '-b 65536'
         mount_opt: '-o block_validity'
-        exclude: "048"
-        gen_exclude: "null"
-        share_exclude: "null"
     fs_xfs_4k:
         fs: 'xfs'
+        args: '-R xunit generic/001'
         mkfs_opt: '-f -b size=4096'
-        exclude: "null"
-        gen_exclude: "null"
-        share_exclude: "null"
+        mount_opt: ''
     fs_xfs_64k:
         fs: 'xfs'
+        args: '-R xunit generic/001'
         mkfs_opt: '-f -b size=65536'
-        exclude: "null"
-        gen_exclude: "null"
-        share_exclude: "null"
+        mount_opt: ''
