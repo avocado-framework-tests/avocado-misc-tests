@@ -48,14 +48,14 @@ class HtxTest(Test):
         """
         Setup
         """
-        if 'ppc64' not in distro.detect().arch:
+        if "ppc64" not in distro.detect().arch:
             self.cancel("Platform does not supports")
 
-        self.mdt_file = self.params.get('mdt_file', default='mdt.hd')
-        self.time_limit = int(self.params.get('time_limit', default=1)) * 60
-        self.block_devices = self.params.get('htx_disks', default=None)
-        self.all = self.params.get('all', default=False)
-        self.run_type = self.params.get('run_type', default='')
+        self.mdt_file = self.params.get("mdt_file", default="mdt.hd")
+        self.time_limit = int(self.params.get("time_limit", default=1)) * 60
+        self.block_devices = self.params.get("htx_disks", default=None)
+        self.all = self.params.get("all", default=False)
+        self.run_type = self.params.get("run_type", default="")
 
         self.detected_distro = distro.detect()
         self.dist_name = self.detected_distro.name
@@ -74,59 +74,59 @@ class HtxTest(Test):
         """
         Builds HTX
         """
-        packages = ['git', 'gcc', 'make']
-        if self.dist_name in ['centos', 'fedora', 'rhel', 'redhat']:
-            packages.extend(['gcc-c++', 'ncurses-devel', 'tar'])
+        packages = ["git", "gcc", "make"]
+        if self.dist_name in ["centos", "fedora", "rhel", "redhat"]:
+            packages.extend(["gcc-c++", "ncurses-devel", "tar"])
         elif self.dist_name == "Ubuntu":
-            packages.extend(['libncurses5', 'g++', 'ncurses-dev',
-                             'libncurses-dev', 'tar'])
-        elif self.dist_name == 'SuSE':
-            packages.extend(['libncurses5', 'gcc-c++', 'ncurses-devel', 'tar'])
+            packages.extend(["libncurses5", "g++", "ncurses-dev",
+                             "libncurses-dev", "tar"])
+        elif self.dist_name == "SuSE":
+            packages.extend(["libncurses5", "gcc-c++", "ncurses-devel", "tar"])
         else:
-            self.cancel("Test not supported in  %s" % self.detected_distro)
+            self.cancel(f"Test not supported in {self.detected_distro}")
 
         smm = SoftwareManager()
         for pkg in packages:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.cancel("Can not install %s" % pkg)
+                self.cancel(f"Can not install {pkg}")
 
-        if self.run_type == 'git':
+        if self.run_type == "git":
             url = "https://github.com/open-power/HTX/archive/master.zip"
-            tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')
+            tarball = self.fetch_asset("htx.zip", locations=[url], expire="7d")
             archive.extract(tarball, self.teststmpdir)
             htx_path = os.path.join(self.teststmpdir, "HTX-master")
             os.chdir(htx_path)
 
             exercisers = ["hxecapi_afu_dir", "hxedapl", "hxecapi", "hxeocapi"]
             for exerciser in exercisers:
-                process.run("sed -i 's/%s//g' %s/bin/Makefile" % (exerciser,
-                                                                  htx_path))
-            build.make(htx_path, extra_args='all')
-            build.make(htx_path, extra_args='tar')
-            process.run('tar --touch -xvzf htx_package.tar.gz')
-            os.chdir('htx_package')
-            if process.system('./installer.sh -f'):
+                process.run(
+                    f"sed -i 's/{exerciser,}//g' {htx_path}/bin/Makefile")
+            build.make(htx_path, extra_args="all")
+            build.make(htx_path, extra_args="tar")
+            process.run("tar --touch -xvzf htx_package.tar.gz")
+            os.chdir("htx_package")
+            if process.system("./installer.sh -f"):
                 self.fail("Installation of htx fails:please refer job.log")
         else:
-            if self.dist_name.lower() == 'suse':
-                self.dist_name = 'sles'
-            rpm_check = "htx%s%s" % (self.dist_name, self.dist_version)
+            if self.dist_name.lower() == "suse":
+                self.dist_name = "sles"
+            rpm_check = f"htx{self.dist_name}{self.dist_version}"
             skip_install = False
             ins_htx = process.system_output(
-                'rpm -qa | grep htx', shell=True, ignore_status=True).decode()
+                "rpm -qa | grep htx", shell=True, ignore_status=True).decode()
 
             if ins_htx:
                 if not smm.check_installed(rpm_check):
                     self.log.info("Clearing existing HTX rpm")
-                    process.system('rpm -e %s' %
-                                   ins_htx, shell=True, ignore_status=True)
-                    if os.path.exists('/usr/lpp/htx'):
-                        shutil.rmtree('/usr/lpp/htx')
+                    process.system(f"rpm -e {ins_htx}",
+                                   shell=True, ignore_status=True)
+                    if os.path.exists("/usr/lpp/htx"):
+                        shutil.rmtree("/usr/lpp/htx")
                 else:
                     self.log.info("Using existing HTX")
                     skip_install = True
             if not skip_install:
-                self.rpm_link = self.params.get('rpm_link', default=None)
+                self.rpm_link = self.params.get("rpm_link", default=None)
                 if self.rpm_link:
                     self.install_htx_rpm()
 
@@ -135,9 +135,9 @@ class HtxTest(Test):
         Search for the latest htx-version for the intended distro and
         install the same.
         """
-        distro_pattern = "%s%s" % (self.dist_name, self.dist_version)
+        distro_pattern = f"{self.dist_name}{self.dist_version}"
         temp_string = process.getoutput(
-            "curl --silent %s" % (self.rpm_link),
+            f"curl --silent {self.rpm_link}",
             verbose=False, shell=True, ignore_status=True)
         matching_htx_versions = re.findall(
             r"(?<=\>)htx\w*[-]\d*[-]\w*[.]\w*[.]\w*", str(temp_string))
@@ -147,10 +147,9 @@ class HtxTest(Test):
         distro_specific_htx_versions.sort(reverse=True)
         self.latest_htx_rpm = distro_specific_htx_versions[0]
 
-        if process.system('rpm -ivh --nodeps %s%s '
-                          '--force' % (self.rpm_link, self.latest_htx_rpm),
+        if process.system(f"rpm -ivh --nodeps {self.rpm_link}{self.latest_htx_rpm} --force",
                           shell=True, ignore_status=True):
-            self.cancel("Installion of rpm failed")
+            self.cancel("Installation of htx rpm failed")
 
     def test_start(self):
         """
@@ -158,35 +157,34 @@ class HtxTest(Test):
         """
         self.setup_htx()
         self.log.info("Starting the HTX Deamon")
-        process.run('/usr/lpp/htx/etc/scripts/htxd_run')
+        process.run("/usr/lpp/htx/etc/scripts/htxd_run")
 
         self.log.info("Creating the HTX mdt files")
-        process.run('htxcmdline -createmdt')
+        process.run("htxcmdline -createmdt")
 
-        if not os.path.exists("/usr/lpp/htx/mdt/%s" % self.mdt_file):
-            self.fail("MDT file %s not found" % self.mdt_file)
+        if not os.path.exists(f"/usr/lpp/htx/mdt/{self.mdt_file}"):
+            self.fail(f"MDT file {self.mdt_file} not found")
 
         self.log.info("selecting the mdt file ")
-        cmd = "htxcmdline -select -mdt %s" % self.mdt_file
+        cmd = f"htxcmdline -select -mdt {self.mdt_file}"
         process.system(cmd, ignore_status=True)
 
         if not self.all:
             if self.is_block_device_in_mdt() is False:
-                self.fail("Block devices %s are not available in %s",
-                          self.block_device, self.mdt_file)
+                self.fail(f"Block devices {self.block_device} are not available"
+                          f"in {self.mdt_file}")
 
         self.suspend_all_block_device()
 
-        self.log.info("Activating the %s", self.block_device)
-        cmd = "htxcmdline -activate %s -mdt %s" % (self.block_device,
-                                                   self.mdt_file)
+        self.log.info(f"Activating the {self.block_device}")
+        cmd = f"htxcmdline -activate {self.block_device} -mdt {self.mdt_file}"
         process.system(cmd, ignore_status=True)
         if not self.all:
             if self.is_block_device_active() is False:
                 self.fail("Block devices failed to activate")
 
-        self.log.info("Running the HTX on %s", self.block_device)
-        cmd = "htxcmdline -run -mdt %s" % self.mdt_file
+        self.log.info(f"Running the HTX on {self.block_device}")
+        cmd = f"htxcmdline -run -mdt {self.mdt_file}"
         process.system(cmd, ignore_status=True)
 
     def test_check(self):
@@ -195,66 +193,64 @@ class HtxTest(Test):
         """
         for _ in range(0, self.time_limit, 60):
             self.log.info("HTX Error logs")
-            process.run('htxcmdline -geterrlog')
-            if os.stat('/tmp/htxerr').st_size != 0:
+            process.run("htxcmdline -geterrlog")
+            if os.stat("/tmp/htxerr").st_size != 0:
                 self.fail("check errorlogs for exact error and failure")
             self.log.info("status of block devices after every 60 sec")
-            cmd = 'htxcmdline -query %s -mdt %s' % (self.block_device,
-                                                    self.mdt_file)
+            cmd = f"htxcmdline -query {self.block_device} -mdt {self.mdt_file}"
             process.system(cmd, ignore_status=True)
             time.sleep(60)
 
     def is_block_device_in_mdt(self):
-        '''
+        """
         verifies the presence of given block devices in selected mdt file
-        '''
-        self.log.info("checking if the given block_devices are present in %s",
-                      self.mdt_file)
-        cmd = "htxcmdline -query -mdt %s" % self.mdt_file
+        """
+        self.log.info(
+            f"checking if the given block_devices are present in {self.mdt_file}")
+        cmd = f"htxcmdline -query -mdt {self.mdt_file}"
         output = process.system_output(cmd).decode("utf-8")
         device = []
         for disk in self.block_device.split(" "):
             if disk not in output:
                 device.append(disk)
         if device:
-            self.log.info("block_devices %s are not avalable in %s ",
-                          device, self.mdt_file)
-        self.log.info("BLOCK DEVICES %s ARE AVAILABLE %s",
-                      self.block_device, self.mdt_file)
+            self.log.info(
+                f"block_devices {device} are not avalable in {self.mdt_file} ")
+        self.log.info(
+            f"BLOCK DEVICES {self.block_device} ARE AVAILABLE {self.mdt_file}")
         return True
 
     def suspend_all_block_device(self):
-        '''
+        """
         Suspend the Block devices, if active.
-        '''
+        """
         self.log.info("suspending block_devices if any running")
-        cmd = "htxcmdline -suspend all  -mdt %s" % self.mdt_file
+        cmd = f"htxcmdline -suspend all  -mdt {self.mdt_file}"
         process.system(cmd, ignore_status=True)
 
     def is_block_device_active(self):
-        '''
+        """
         Verifies whether the block devices are active or not
-        '''
+        """
         self.log.info("checking whether all block_devices are active ot not")
-        cmd = 'htxcmdline -query %s -mdt %s' % (self.block_device,
-                                                self.mdt_file)
-        output = process.system_output(cmd).decode("utf-8").split('\n')
+        cmd = f"htxcmdline -query {self.block_device} -mdt {self.mdt_file}"
+        output = process.system_output(cmd).decode("utf-8").split("\n")
         device_list = self.block_device.split(" ")
         active_devices = []
         for line in output:
             for disk in device_list:
-                if disk in line and 'ACTIVE' in line:
+                if disk in line and "ACTIVE" in line:
                     active_devices.append(disk)
         non_active_device = list(set(device_list) - set(active_devices))
         if non_active_device:
             return False
-        self.log.info("BLOCK DEVICES %s ARE ACTIVE", self.block_device)
+        self.log.info(f"BLOCK DEVICES {self.block_device} ARE ACTIVE")
         return True
 
     def test_stop(self):
-        '''
+        """
         Shutdown the mdt file and the htx daemon and set SMT to original value
-        '''
+        """
         self.stop_htx()
 
     def stop_htx(self):
@@ -264,11 +260,11 @@ class HtxTest(Test):
         if self.is_block_device_active() is True:
             self.log.info("suspending active block_devices")
             self.suspend_all_block_device()
-            self.log.info("shutting down the %s ", self.mdt_file)
-            cmd = "htxcmdline -shutdown -mdt %s" % self.mdt_file
+            self.log.info(f"shutting down the {self.mdt_file} ")
+            cmd = f"htxcmdline -shutdown -mdt {self.mdt_file}"
             process.system(cmd, timeout=120, ignore_status=True)
 
-        cmd = '/usr/lpp/htx/etc/scripts/htx.d status'
+        cmd = "/usr/lpp/htx/etc/scripts/htx.d status"
         daemon_state = process.system_output(cmd)
-        if daemon_state.decode("utf-8").split(" ")[-1] == 'running':
-            process.system('/usr/lpp/htx/etc/scripts/htxd_shutdown')
+        if daemon_state.decode("utf-8").split(" ")[-1] == "running":
+            process.system("/usr/lpp/htx/etc/scripts/htxd_shutdown")
