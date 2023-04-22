@@ -76,10 +76,9 @@ class Stressng(Test):
                 self.cancel("%s is needed, get the source and build" %
                             package)
 
-        tarball = self.fetch_asset('stressng.zip',
-                                   locations=['https://github.com/Colin'
-                                              'IanKing/stress-ng/archive'
-                                              '/master.zip'], expire='7d')
+        asset_url = 'https://github.com/ColinIanKing/stress-ng/archive/master.zip'
+        tarball = self.fetch_asset('stressng.zip', locations=[asset_url],
+                                   expire='7d')
         archive.extract(tarball, self.workdir)
         sourcedir = os.path.join(self.workdir, 'stress-ng-master')
         os.chdir(sourcedir)
@@ -120,6 +119,9 @@ class Stressng(Test):
             self.loop_dev = process.system_output('losetup -f').decode("utf-8").strip()
             fstype = self.params.get('fs', default='ext4')
             mnt = self.params.get('dir', default='/mnt')
+            self.stressmnt = os.path.join(mnt, "stressng")
+            if (not os.path.exists(self.stressmnt)):
+                os.mkdir(self.stressmnt)
             self.tmpout = process.system_output("ls /tmp", shell=True,
                                                 ignore_status=True,
                                                 sudo=True).decode("utf-8")
@@ -136,7 +138,7 @@ class Stressng(Test):
             else:
                 cmd = "mkfs.%s -f %s" % (fstype, self.loop_dev)
             process.run(cmd)
-            process.run("mount %s %s" % (self.loop_dev, mnt))
+            process.run("mount %s %s" % (self.loop_dev, self.stressmnt))
         if self.aggressive and self.maximize:
             args.append('--aggressive --maximize --oomable ')
         if self.exclude:
@@ -194,3 +196,5 @@ class Stressng(Test):
             process.run("losetup -d %s" % self.loop_dev, ignore_status=True,
                         sudo=True)
             process.run("rm -rf /tmp/blockfile", ignore_status=True, sudo=True)
+            if (os.path.exists(self.stressmnt)):
+                process.run(f"rm -rf {self.stressmnt}")
