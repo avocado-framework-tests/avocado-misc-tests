@@ -35,24 +35,34 @@ main(int argc,char *argv[])
                 printf("bad args, usage: forkoff <memsize MB> #children #itterations\n");
                 exit(-1);
         }
+	/* size of memory for each process */
         size = ((long)atol(argv[1])*1024*1024);
-        psize = getpagesize();
+        
+	/* default page size */
+	psize = getpagesize();
+	
+	/* number of processes to be created */
         procs = atol(argv[2]);
+
+	/* number of pages inside the mmap-ed memory to be touched */
         itterations = atol(argv[3]);
+
+	/* check if the processes to be created don't exceed the max possible pid  */
         FILE *fd=fopen("/proc/sys/kernel/pid_max","r");
         fgets(buf,32,fd);
         maxpid=atol(buf);
         if ( procs > maxpid){
-             printf("\nNumber of Children %d provided is higher than maxpid supported on this system %d.. Exiting!!\n",procs,maxpid);
+             printf("\nNumber of Children %lu provided is higher than maxpid supported on this system %d.. Exiting!!\n",procs,maxpid);
              exit(-1);
         }else{
              printf("\nMaxpid / Children supported on the system %d\n",maxpid);
         }
         fclose(fd);
+
         printf("mmaping %ld anonymous bytes\n", size);
         ptr = (char *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
         if ( ptr == (char *) -1 ) {
-                printf("address = %lx\n", ptr);
+                printf("address = %sx\n", ptr);
                 perror("");
         }
 		fflush(stdout);
@@ -63,7 +73,7 @@ main(int argc,char *argv[])
                         printf("fork failure error %d: %s\n", errno, strerror(errno));
                         exit(-1);
                 } else if (!pid) {
-			printf("PID %d touching %d pages\n", getpid(), size/psize);
+			printf("PID %d touching %lu pages\n", getpid(), itterations);
 
                         for (j=0; j<itterations; j++) {
                                 for (i = ptr; i < ptr + size - 1; i += psize) {
