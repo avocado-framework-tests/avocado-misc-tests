@@ -37,7 +37,8 @@ class Aiostress(Test):
         """
         Build 'aiostress'.
         Source:
-         https://oss.oracle.com/~mason/aio-stress/aio-stress.c
+         https://github.com/linux-test-project/ltp/blob/master/
+         testcases/kernel/io/ltp-aiodio/aio-stress.c
         """
         smm = SoftwareManager()
         packages = []
@@ -52,9 +53,10 @@ class Aiostress(Test):
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-
-        aiostress = self.fetch_asset(
-            'https://oss.oracle.com/~mason/aio-stress/aio-stress.c')
+        url = self.params.get('url', default='https//github.com/linux-test-project/'
+                                             'ltp/blob/master/testcases/kernel/io/'
+                                             'ltp-aiodio/aio-stress.c')
+        aiostress = self.fetch_asset(url, expire='10d')
         os.chdir(self.workdir)
         # This requires libaio.h in order to build
         # -laio -lpthread is provided at end as a workaround for Ubuntu
