@@ -187,7 +187,7 @@ class Xfstests(Test):
                 packages.extend(['ndctl', 'parted'])
                 if self.detected_distro.name == 'rhel':
                     packages.extend(['daxctl'])
-            packages.extend(['acl', 'bc', 'dump', 'indent', 'libtool', 'lvm2',
+            packages.extend(['acl', 'bc', 'indent', 'libtool', 'lvm2',
                              'xfsdump', 'psmisc', 'sed', 'libacl-devel',
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
                              'openssl-devel', 'xfsprogs-devel', 'gettext',
@@ -208,7 +208,6 @@ class Xfstests(Test):
                 packages = list(set(packages)-set(packages_remove))
             elif self.detected_distro.name == 'rhel' and\
                     self.detected_distro.version.startswith('9'):
-                packages_remove.extend(['dump'])
                 packages = list(set(packages)-set(packages_remove))
 
             if self.detected_distro.name in ['centos', 'fedora']:
