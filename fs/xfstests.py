@@ -578,8 +578,6 @@ class Xfstests(Test):
         os.chdir(self.teststmpdir)
         tests_set = []
         tests = glob.glob(self.teststmpdir + '/tests/*/???.out')
-        tests += glob.glob(self.teststmpdir + '/tests/*/???.out.linux')
-        tests = [t.replace('.linux', '') for t in tests]
 
         tests_set = sorted([t[-7:-4] for t in tests if os.path.exists(t[:-4])])
         tests_set = set(tests_set)
