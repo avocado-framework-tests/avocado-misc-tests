@@ -216,16 +216,16 @@ class HtxNicTest(Test):
                                           shell=True, sudo=True).decode("utf-8")
         cmd = "hostname"
         output = self.session.cmd(cmd)
-        peer_name = output.stdout.decode("utf-8")[-1]
+        peer_name = output.stdout.decode("utf-8")
         hosts_file = '/etc/hosts'
         self.log.info("Updating hostname of both Host & Peer in \
                       %s file", hosts_file)
         with open(hosts_file, 'r') as file:
             filedata = file.read().splitlines()
-        search_str1 = "'\n'%s %s.*" % (self.host_ip, host_name)
-        search_str2 = "'\n'%s %s.*" % (self.peer_ip, peer_name)
-        add_str1 = "\n %s %s\n" % (self.host_ip, host_name)
-        add_str2 = "\n%s %s\n" % (self.peer_ip, peer_name)
+        search_str1 = "%s %s.*" % (self.host_ip, host_name)
+        search_str2 = "%s %s.*" % (self.peer_ip, peer_name)
+        add_str1 = "%s %s" % (self.host_ip, host_name)
+        add_str2 = "%s %s" % (self.peer_ip, peer_name)
 
         for index, line in enumerate(filedata):
             filedata[index] = line.replace('\t', ' ')
@@ -233,32 +233,20 @@ class HtxNicTest(Test):
         filedata = "\n".join(filedata)
         obj = re.search(search_str1, filedata)
         if not obj:
-            filedata = "%s\n%s" % (add_str1, filedata)
+            filedata = "%s\n%s" % (filedata, add_str1)
 
         obj = re.search(search_str2, filedata)
         if not obj:
-            filedata = "%s\n%s" % (add_str2, filedata)
+            filedata = "%s\n%s" % (filedata, add_str2)
 
         with open(hosts_file, 'w') as file:
             for line in filedata:
                 file.write(line)
 
-        result = self.session.cmd("cat %s" % hosts_file)
-        filedata = result.stdout.decode("utf-8")
-        filedata = filedata.splitlines()
-
-        for index, line in enumerate(filedata):
-            filedata[index] = line.replace('\t', ' ')
-
-        for line in filedata:
-            obj = re.search(search_str2, line)
-            if obj:
-                break
-        else:
-            filedata.append(add_str2)
-
-        filedata = "\n".join(filedata)
-        self.session.cmd("echo -e \'%s\' > %s" % (filedata, hosts_file))
+        destination = "%s:/etc" % self.peer_ip
+        output = self.session.copy_files(hosts_file, destination)
+        if not output:
+            self.fail("unable to copy the file into peer machine")
 
     def generate_bpt_file(self):
         """
