@@ -14,8 +14,10 @@
 # Copyright: 2016 IBM
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 # Author: Sachin Sant <sachinp@linux.ibm.com>
+# Author: Shirisha Ganta <shirisha.ganta1@ibm.com>
 
 import os
+import re
 from avocado import Test
 from avocado.utils import process, distro, build, archive
 from avocado import skipIf, skipUnless
@@ -410,6 +412,9 @@ class RASToolsPpcutils(Test):
         """
         Test case to validate lparstat functionality. lparstat is a tool
         to display logical partition related information and statistics.
+        And also validates laprstat -E output %busy and %idle
+        should not be < 0 or > 100
+        Normalized %busy + %idle should be equal to percentage under frequency
         """
         self.log.info("===============Executing lparstat tool test===="
                       "===========")
@@ -428,6 +433,31 @@ class RASToolsPpcutils(Test):
                 self.log.info("%s command passed" % cmd)
                 self.fail("lparstat: Expected failure, %s command exeucted \
                           successfully." % cmd)
+        output = process.system_output("lparstat -E 1 1").decode("utf-8")
+        for line in output.splitlines():
+            if 'GHz' in line:
+                # Define the regular expression pattern
+                pattern = (r'(\d+\.\d+)\s+(\d+\.\d+)\s+\d+\.\d+GHz\[\s*(\d+)%\]\s+'
+                           r'(\d+\.\d+)\s+(\d+\.\d+)')
+                # Find all matches in the input string
+                matches = re.findall(pattern, line)
+                for data in matches:
+                    actual_busy = float(data[0])
+                    actual_idle = float(data[1])
+                    normal_idle = float(data[3])
+                    normal_busy = float(data[4])
+                    normal = normal_idle + normal_busy
+                    freq_percentile = float(data[2])
+        if (actual_busy > 0) and (actual_idle < 100):
+            self.log.info("Busy and idle actual values are correct")
+        else:
+            self.fail("Busy and idle actual values are incorrect")
+        if normal == freq_percentile:
+            self.log.info("Normalised busy plus idle value match with \
+                          Frequency percentage")
+        else:
+            self.fail("Normalised busy plus idle value does not match \
+                        with Frequency percentage")
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST,
             "This test is not supported on KVM guest or PowerNV platform")
