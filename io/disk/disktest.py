@@ -73,8 +73,9 @@ class Disktest(Test):
         self.raid_needed = self.params.get('raid', default=False)
         self.raid_create = False
         device = self.params.get('disk', default=None)
-        self.disk = disk.get_absolute_disk_path(device)
         self.dir = self.params.get('dir', default=None)
+        if not self.dir:
+            self.dir = self.workdir
         self.fstype = self.params.get('fs', default='ext4')
         self.raid_name = '/dev/md/sraid'
 
@@ -85,6 +86,14 @@ class Disktest(Test):
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
+
+        if device is not None:
+            self.disk = disk.get_absolute_disk_path(device)
+            if self.disk not in disk.get_all_disk_paths():
+                self.cancel("Missing disk %s in OS" % self.disk)
+        else:
+            self.cancel("Please Provide valid device name")
+
         if self.raid_needed:
             if not smm.check_installed("mdadm") \
                and not smm.install("mdadm"):
@@ -122,20 +131,14 @@ class Disktest(Test):
 
         dmesg.clear_dmesg()
         self.pre_cleanup()
-        if self.disk is not None:
-            if self.disk in disk.get_all_disk_paths():
-                if self.raid_needed:
-                    self.create_raid(self.target, self.raid_name)
-                    self.raid_create = True
-                    self.target = self.raid_name
+        if self.raid_needed:
+            self.create_raid(self.target, self.raid_name)
+            self.raid_create = True
+            self.target = self.raid_name
 
-                if self.fstype:
-                    self.create_fs(self.target, self.dir, self.fstype)
-                    self.fs_create = True
-            else:
-                self.cancel("Missing disk %s in OS" % self.disk)
-        else:
-            self.cancel("please provide a valid disk")
+        if self.fstype:
+            self.create_fs(self.target, self.dir, self.fstype)
+            self.fs_create = True
 
     def create_raid(self, l_disk, l_raid_name):
         """
@@ -350,11 +353,10 @@ class Disktest(Test):
         for disk1 in getattr(self, "dir", []):
             for filename in glob.glob("%s/testfile.*" % disk1):
                 os.remove(filename)
-        if self.disk is not None:
-            if self.fs_create:
-                self.delete_fs(self.target)
-            if self.raid_create:
-                self.delete_raid()
+        if self.fs_create:
+            self.delete_fs(self.target)
+        if self.raid_create:
+            self.delete_raid()
         dmesg.clear_dmesg()
         if self.err_mesg:
             self.warn("test failed due to following errors %s" % self.err_mesg)

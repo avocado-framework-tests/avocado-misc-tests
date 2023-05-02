@@ -53,6 +53,7 @@ class Bonnie(Test):
         Source:
         http://www.coker.com.au/bonnie++/experimental/bonnie++-1.03e.tgz
         """
+        self.err_mesg = []
         self.fstype = self.params.get('fs', default='')
         self.fs_create = False
         lv_needed = self.params.get('lv', default=False)
@@ -61,13 +62,22 @@ class Bonnie(Test):
         self.raid_create = False
 
         device = self.params.get('disk', default=None)
-        self.disk = disk.get_absolute_disk_path(device)
-        self.dir = self.params.get('dir', default='/mnt')
+        self.dir = self.params.get('dir', default=None)
+
+        if device is not None:
+            self.disk = disk.get_absolute_disk_path(device)
+            if self.disk not in disk.get_all_disk_paths():
+                self.cancel("Missing disk %s in OS" % self.disk)
+        else:
+            self.cancel("Please Provide valid device name")
+
+        if not self.dir:
+            self.dir = self.workdir
+
         self.uid_to_use = self.params.get('uid-to-use',
                                           default=getpass.getuser())
         self.number_to_stat = self.params.get('number-to-stat', default=2048)
         self.data_size = self.params.get('data_size_to_pass', default=0)
-        self.err_mesg = []
         smm = SoftwareManager()
         # Install the package from web
         deps = ['gcc', 'make']
@@ -114,26 +124,21 @@ class Bonnie(Test):
                                                  self.disk.split(), '1.2')
         dmesg.clear_dmesg()
 
-        if self.disk is not None:
-            self.pre_cleanup()
-            if self.disk in disk.get_all_disk_paths():
-                if raid_needed:
-                    self.create_raid(self.disk, self.raid_name)
-                    self.raid_create = True
-                    self.target = self.raid_name
+        self.pre_cleanup()
 
-                if lv_needed:
-                    self.lv_disk = self.target
-                    self.target = self.create_lv(self.target)
-                    self.lv_create = True
+        if raid_needed:
+            self.create_raid(self.disk, self.raid_name)
+            self.raid_create = True
+            self.target = self.raid_name
 
-                if self.fstype:
-                    self.create_fs(self.target, self.dir, self.fstype)
-                    self.fs_create = True
-            else:
-                self.cancel("Missing disk %s in OS" % self.disk)
-        else:
-            self.cancel("please provide valid disk")
+        if lv_needed:
+            self.lv_disk = self.target
+            self.target = self.create_lv(self.target)
+            self.lv_create = True
+
+        if self.fstype:
+            self.create_fs(self.target, self.dir, self.fstype)
+            self.fs_create = True
 
     def create_raid(self, l_disk, l_raid_name):
         """
@@ -334,13 +339,12 @@ class Bonnie(Test):
         '''
         Cleanup of disk used to perform this test
         '''
-        if self.disk is not None:
-            if self.fs_create:
-                self.delete_fs(self.target)
-            if self.lv_create:
-                self.delete_lv()
-            if self.raid_create:
-                self.delete_raid()
+        if self.fs_create:
+            self.delete_fs(self.target)
+        if self.lv_create:
+            self.delete_lv()
+        if self.raid_create:
+            self.delete_raid()
         dmesg.clear_dmesg()
         if self.err_mesg:
             self.warn("test failed due to following errors %s" % self.err_mesg)
