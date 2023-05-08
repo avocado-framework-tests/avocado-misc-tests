@@ -1,0 +1,11 @@
+page_type: !mux
+    normal_page:
+        nr_pages: 1024
+    hugepage:
+        h_page: True
+        nr_pages: 2
+maptype: !mux
+    shared:
+	maptype: shared
+    private:
+	maptype: private
