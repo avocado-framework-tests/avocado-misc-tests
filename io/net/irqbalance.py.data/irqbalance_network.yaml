@@ -1,0 +1,5 @@
+host_ip: " "
+peer_ip: " "
+netmask: " "
+interface: " "
+ping_count: "10000"
