@@ -6,6 +6,11 @@ page_type: !mux
         nr_pages: 2
 maptype: !mux
     shared:
-	maptype: shared
+        maptype: shared
     private:
-	maptype: private
+        maptype: private
+policy_type: !mux
+    mpol_bind:
+        pol_type: 'MPOL_BIND'
+    mpol_preferred_many:
+        pol_type: 'MPOL_PREFERRED_MANY'
