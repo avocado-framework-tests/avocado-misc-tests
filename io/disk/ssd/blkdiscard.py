@@ -23,15 +23,8 @@ solid-state drivers (SSDs) and thinly-provisioned storage.
 import avocado
 from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils import disk
 from avocado.utils import process, lv_utils
-
-# this block need to removed when test moved to python3
-try:
-    # Python 2
-    xrange
-except NameError:
-    # Python 3, xrange is now named range
-    xrange = range
 
 
 class Blkdiscard(Test):
@@ -48,7 +41,10 @@ class Blkdiscard(Test):
         smm = SoftwareManager()
         if not smm.check_installed("util-linux"):
             self.cancel("blkdiscard is needed for the test to be run")
-        self.disk = self.params.get('disk', default='/dev/nvme0n1')
+        device = self.params.get('disk', default=None)
+        if not device:
+            self.cancel("Provide valid disk name and rerun")
+        self.disk = disk.get_absolute_disk_path(device)
         cmd = 'ls %s' % self.disk
         if process.system(cmd, ignore_status=True) is not 0:
             self.cancel("%s does not exist" % self.disk)
@@ -68,8 +64,8 @@ class Blkdiscard(Test):
         process.run(cmd, shell=True)
         cmd = "blkdiscard %s -o %d -v -l 0" % (self.disk, size)
         process.run(cmd, shell=True)
-        for i in xrange(2, 10, 2):
-            for j in xrange(2, 10, 2):
+        for i in range(2, 10, 2):
+            for j in range(2, 10, 2):
                 if (size / i) % 4096 == 0 and (size / j) % 4096 == 0:
                     cmd = "blkdiscard %s -o %d -l %d -v" \
                         % (self.disk, size / i, size / j)
