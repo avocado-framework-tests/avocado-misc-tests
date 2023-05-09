@@ -27,6 +27,7 @@ failure.
 
 from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils import disk
 from avocado.utils import softwareraid
 
 
@@ -41,30 +42,35 @@ class SoftwareRaid(Test):
         Checking if the required packages are installed,
         if not found packages will be installed.
         """
+        self.disks = []
+        self.spare_disks = []
         smm = SoftwareManager()
         if not smm.check_installed("mdadm"):
             self.log.info("Mdadm must be installed before continuing the test")
             if SoftwareManager().install("mdadm") is False:
                 self.cancel("Unable to install mdadm")
-        disks = self.params.get('disks', default='').strip(" ")
+        disks = (self.params.get('disks', default='').strip()).split()
         if not disks:
             self.cancel('No disks given')
+        for dev in disks:
+            self.disks.append(disk.get_absolute_disk_path(dev))
         required_disks = self.params.get('required_disks', default=1)
-        disks = disks.split()
         raidlevel = str(self.params.get('raid', default='0'))
-        if len(disks) < required_disks:
+        if len(self.disks) < required_disks:
             self.cancel("Minimum %d disks required for %s" % (required_disks,
                                                               raidlevel))
-        spare_disks = self.params.get('spare_disks', default='').strip(" ")
+        spare_disks = self.params.get('spare_disks', default='')
         if spare_disks:
             spare_disks = spare_disks.split()
+            for dev in spare_disks:
+                self.spare_disks.append(disk.get_absolute_disk_path(dev))
         raid = self.params.get('raidname', default='/dev/md/sraid')
         metadata = str(self.params.get('metadata', default='1.2'))
         self.remove_add_disk = ''
         if raidlevel not in ['0', 'linear']:
-            self.remove_add_disk = disks[-1]
-        self.sraid = softwareraid.SoftwareRaid(raid, raidlevel, disks,
-                                               metadata, spare_disks)
+            self.remove_add_disk = self.disks[-1]
+        self.sraid = softwareraid.SoftwareRaid(raid, raidlevel, self.disks,
+                                               metadata, self.spare_disks)
 
     def test(self):
         """
