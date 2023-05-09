@@ -15,6 +15,7 @@ Inputs:
 ------
 htx_disk: '/dev/sdb /dev/sdc' or if want to pass mpath disk, then it will be /dev/mapper/mpathX
         : for nvme drives, we need to pass namespaces like /dev/nvme0nX
+        : Also it can take any of the device name like device by-id, by-path or by uuid
 all: True or False (True if all disks in selected mdt needs to be run.
      Overrides disks selected)
 time_limit: 1 (In minutes)
