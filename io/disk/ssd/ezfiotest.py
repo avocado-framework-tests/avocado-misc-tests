@@ -23,6 +23,7 @@ SSD performance.
 import os
 from avocado import Test
 from avocado.utils import build
+from avocado.utils import disk
 from avocado.utils import process
 from avocado.utils import genio
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -43,7 +44,10 @@ class EzfioTest(Test):
         """
         Build 'fio and ezfio'.
         """
-        self.disk = self.params.get('disk', default='/dev/nvme0n1')
+        device = self.params.get('disk', default=None)
+        if not device:
+            self.cancel("Please provide valid disk name")
+        self.disk = disk.get_absolute_disk_path(device)
         cmd = 'ls %s' % self.disk
         if process.system(cmd, ignore_status=True) is not 0:
             self.cancel("%s does not exist" % self.disk)

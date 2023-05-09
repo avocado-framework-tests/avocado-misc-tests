@@ -5,5 +5,5 @@ This test needs to be run as root.
 
 Inputs Needed (in multiplexer file):
 ------------------------------------
-Devices -       SSD Block devices
-Utilization -   Amount of drive to test (in percent)
+disk -          SSD Block device like /dev/nvme0n1 or device name by-id or by-path
+utilization -   Amount of drive to test (in percent)
