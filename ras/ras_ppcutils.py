@@ -415,6 +415,8 @@ class RASToolsPpcutils(Test):
         And also validates laprstat -E output %busy and %idle
         should not be < 0 or > 100
         Normalized %busy + %idle should be equal to percentage under frequency
+        And also checks for number of physical processors consumed
+        on different smt levels
         """
         self.log.info("===============Executing lparstat tool test===="
                       "===========")
@@ -458,6 +460,26 @@ class RASToolsPpcutils(Test):
         else:
             self.fail("Normalised busy plus idle value does not match \
                         with Frequency percentage")
+        list_physc = []
+        for i in [2, 4, 8, "off"]:
+            self.run_cmd("ppc64_cpu --smt=%s" % i)
+            smt_initial = re.split(
+                    r'=| is ', self.run_cmd_out("ppc64_cpu --smt"))[1]
+            if smt_initial == str(i):
+                output = process.system_output("lparstat 1 1").decode("utf-8")
+                if output.strip() != "" and "\n" in output:
+                    lines = output.splitlines()
+                    last_line = lines[-1]
+                    pattern = r'\b\d+\.\d+\b'
+                    matches = re.findall(pattern, last_line)
+                    physc_val = float(matches[4])
+                    list_physc.append(physc_val)
+        if len(set(list_physc)) == 1:
+            self.log.info("Correctly displaying the number of physical \
+                          processors consumed")
+        else:
+            self.fail("number of physical processors consumed are not \
+                      displaying correct")
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST,
             "This test is not supported on KVM guest or PowerNV platform")
