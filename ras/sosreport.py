@@ -370,9 +370,11 @@ class Sosreport(Test):
 
     def test_fs(self):
         is_fail = 0
-        loop_dev = "/dev/loop0"
+        loop_dev = process.system_output('losetup -f').decode("utf-8").strip()
         fstype = self.params.get('fs', default='ext4')
-        mnt = self.params.get('dir', default='/mnt')
+        mnt = self.params.get('dir', default=None)
+        if not mnt:
+            mnt = self.workdir
         if 'blockfile' not in self.run_cmd_out("ls /tmp"):
             blk_dev = process.run("dd if=/dev/zero of=/tmp/blockfile bs=1M count=5120")
             process.run("losetup %s /tmp/blockfile" % loop_dev)
