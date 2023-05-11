@@ -21,7 +21,7 @@ for ((i=1; i<$total_cores; i++)); do
         sleep 2
     fi
 done
-for ((i=1; i<$numbers; i++)); do
+for ((i=1; i<$total_cores; i++)); do
     if ((i % 2 == 0)); then
         ppc64_cpu --online-cores=$i
         ppc64_cpu --cores-on
