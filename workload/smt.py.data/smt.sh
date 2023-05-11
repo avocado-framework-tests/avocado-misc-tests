@@ -19,10 +19,6 @@ do
 	sleep 2
 	ppc64_cpu --smt
 	time ppc64_cpu --smt=8
-	ppc64_cpu --info
-	sleep 2
-	ppc64_cpu --smt
-        time ppc64_cpu --smt=on
         ppc64_cpu --info
 	sleep 2
 	ppc64_cpu --smt
@@ -30,8 +26,11 @@ do
 	ppc64_cpu --info
 	sleep 2
 	ppc64_cpu --smt
-	time ppc64_cpu --smt=8
+	time ppc64_cpu --smt=on
 	ppc64_cpu --info
 	sleep 2
 	ppc64_cpu --smt
+	time ppc64_cpu --smt=off
+	ppc64_cpu --info
+	sleep 2
 done
