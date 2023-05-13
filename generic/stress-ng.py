@@ -60,6 +60,7 @@ class Stressng(Test):
         self.exclude = self.params.get('exclude', default=None)
         self.v_stressors = self.params.get('v_stressors', default=None)
         self.parallel = self.params.get('parallel', default=True)
+        self.common_args = self.params.get('common_args', default='')
 
         deps = ['gcc', 'make']
         if detected_distro.name in ['Ubuntu', 'debian']:
@@ -148,6 +149,8 @@ class Stressng(Test):
             args.append('--metrics ')
         if self.times:
             args.append('--times ')
+        if self.common_args:
+            args.append('%s ' % self.common_args)
         cmd = 'stress-ng %s' % " ".join(args)
         if self.parallel:
             if self.ttimeout:
@@ -158,8 +161,9 @@ class Stressng(Test):
                 timeout = ' --timeout %s ' % self.ttimeout
             if self.stressors:
                 for stressor in self.stressors.split(' '):
-                    stress_cmd = ' --%s %s %s' % (stressor,
-                                                  self.workers, timeout)
+                    stressor_params = self.params.get(stressor, default='')
+                    stress_cmd = ' --%s %s %s %s ' % (stressor, self.workers, timeout,
+                                                      stressor_params)
                     process.run("%s %s" % (cmd, stress_cmd),
                                 ignore_status=True, sudo=True)
             if self.ttimeout and self.v_stressors:
@@ -167,8 +171,9 @@ class Stressng(Test):
                     int(self.ttimeout) + int(memory.meminfo.MemTotal.g))
             if self.v_stressors:
                 for stressor in self.v_stressors.split(' '):
-                    stress_cmd = ' --%s %s %s' % (stressor,
-                                                  self.workers, timeout)
+                    stressor_params = self.params.get(stressor, default='')
+                    stress_cmd = ' --%s %s %s %s ' % (stressor, self.workers, timeout,
+                                                      stressor_params)
                     process.run("%s %s" % (cmd, stress_cmd),
                                 ignore_status=True, sudo=True)
         ERROR = []
