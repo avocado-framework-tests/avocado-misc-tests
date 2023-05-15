@@ -16,17 +16,16 @@
 
 import os
 import time
-
 from avocado import Test
 from avocado import skipIf
 from avocado.utils import archive
 from avocado.utils import build, distro
 from avocado.utils import process, cpu
 from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils import dmesg
 
 
 class CpupowerMonitor(Test):
-
     """
     Test to validate idle states using cpupower monitor tool.
     """
@@ -34,6 +33,7 @@ class CpupowerMonitor(Test):
     def setUp(self):
         sm = SoftwareManager()
         distro_name = distro.detect().name
+        self.runtime = self.params.get("runtime", default=0)
         deps = ['gcc', 'make']
         if distro_name in ['rhel', 'fedora', 'centos']:
             deps.extend(['kernel-tools'])
@@ -87,7 +87,6 @@ class CpupowerMonitor(Test):
         4. Wait till ebizzy stops.
         5. Check if cpus enters idle states.
         """
-
         tarball = self.fetch_asset('http://sourceforge.net/projects/ebizzy/'
                                    'files/ebizzy/0.3/ebizzy-0.3.tar.gz')
         archive.extract(tarball, self.workdir)
@@ -115,7 +114,35 @@ class CpupowerMonitor(Test):
                           " ebizzy workload")
         self.log.info("cpus have entered idle states after killing work load")
 
-    def test_disable_idlestate(self):
+    def read_line_with_matching_pattern(self, filename, pattern):
+        matching_pattern = []
+        with open(filename, 'r') as file_obj:
+            for line in file_obj.readlines():
+                if pattern in line:
+                    matching_pattern.append(line.rstrip("\n"))
+        return matching_pattern
+
+    def dmesg_validation(self):
+        errors_in_dmesg = []
+        pattern = ['WARNING: CPU:', 'Oops', 'Segfault', 'soft lockup',
+                   'Unable to handle', 'ard LOCKUP']
+
+        filename = dmesg.collect_dmesg()
+
+        for failed_pattern in pattern:
+            contents = self.read_line_with_matching_pattern(
+                filename, failed_pattern)
+            if contents:
+                loop_count = 0
+                while loop_count < len(contents):
+                    errors_in_dmesg.append(contents[loop_count])
+                    loop_count = loop_count + 1
+
+        if errors_in_dmesg:
+            self.fail("Failed : Errors in dmesg : %s" %
+                      "\n".join(errors_in_dmesg))
+
+    def test_idlestate_mode(self):
         """
         1. Collect list of supported idle states.
         2. Disable first idle statei, check cpus have not entered this state.
@@ -123,15 +150,34 @@ class CpupowerMonitor(Test):
         4. Disable second idle state, check cpus have not entered this state.
         5. Repeat test for all states.
         """
-
-        for i in range(self.states_tot - 1):
-            process.run('cpupower -c all idle-set -d %s' % i, shell=True)
-            time.sleep(5)
-            zero_nonzero = self.check_zero_nonzero(i + 1)
-            if zero_nonzero:
-                self.fail("cpus have entered the disabled idle states.")
-            self.log.info("cpus have not entered disabled idle states")
-            process.run('cpupower -c all idle-set -E', shell=True)
+        dmesg.clear_dmesg()
+        if self.runtime != 0:
+            start_time = time.time()
+            dtime_check = self.runtime / 4
+            while time.time() - start_time < self.runtime:
+                for i in range(self.states_tot - 1):
+                    process.run('cpupower -c all idle-set -d %s' %
+                                i, shell=True)
+                    time.sleep(5)
+                    zero_nonzero = self.check_zero_nonzero(i + 1)
+                    if zero_nonzero:
+                        self.fail(
+                            "cpus have entered the disabled idle states.")
+                    self.log.info("cpus have not entered disabled idle states")
+                    process.run('cpupower -c all idle-set -E', shell=True)
+                if ((time.time() - start_time) >= dtime_check):
+                    dtime_check += dtime_check
+                    # Checking dmesg for errors every 1/4 of the time.
+                    self.dmesg_validation()
+        else:
+            for i in range(self.states_tot - 1):
+                process.run('cpupower -c all idle-set -d %s' % i, shell=True)
+                time.sleep(5)
+                zero_nonzero = self.check_zero_nonzero(i + 1)
+                if zero_nonzero:
+                    self.fail("cpus have entered the disabled idle states.")
+                self.log.info("cpus have not entered disabled idle states")
+                process.run('cpupower -c all idle-set -E', shell=True)
 
     @skipIf("powerpc" not in cpu.get_arch(), "Skip, SMT specific tests")
     def test_idlestate_smt(self):
@@ -188,7 +234,8 @@ class CpupowerMonitor(Test):
                 'cpupower -c %s idle-info | grep Duration' % i, shell=True).split()
             time.sleep(5)
             duration_final = process.system_output(
-                'cpupower -c %s idle-info | grep Duration' % i, shell=True).split()
+                'cpupower -c %s idle-info | grep Duration' % i,
+                shell=True).split()
             duration_snooze = int(duration_final[1]) - int(duration_init[1])
             self.log.info("CPU%s has entered snooze state for %s microseconds in 2 seconds" % (
                 i, duration_snooze))
