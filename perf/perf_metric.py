@@ -84,7 +84,7 @@ class perf_metric(Test):
         for line in self.list_of_metric_events:
             cmd = "perf stat %s %s -C 0 sleep 1" % (option, line)
             op = process.run(cmd, ignore_status=True, shell=True, verbose=True)
-            output = op.stdout.decode() + op.stderr.decode()
+            output = (op.stdout + op.stderr).decode()
             # When the command failed, checking for expected failure or not.
             if op.exit_status:
                 found_imc = False

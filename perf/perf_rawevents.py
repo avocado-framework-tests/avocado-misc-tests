@@ -78,9 +78,10 @@ class PerfRawevents(Test):
     def run_event(self, filename, perf_flags):
         for line in genio.read_all_lines(filename):
             cmd = "%s%s sleep 1" % (perf_flags, line)
-            output = process.run(cmd, shell=True,
-                                 ignore_status=True)
-            if output.exit_status != 0:
+            result = process.run(cmd, shell=True, ignore_status=True)
+            output = (result.stdout + result.stderr).decode()
+            if result.exit_status != 0 or ("not counted" in output) or\
+                    ("not supported" in output):
                 self.fail_cmd.append(cmd)
 
     def error_check(self):
