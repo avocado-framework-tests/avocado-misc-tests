@@ -49,9 +49,13 @@ class Lvsetup(Test):
         """
         Check existence of input PV,VG, LV and snapshots prior to Test.
         """
-        pkgs = [""]
+        pkgs = []
+        self.disks = []
         smm = SoftwareManager()
-        self.disk = self.params.get('lv_disks', default=None)
+        devices = self.params.get('lv_disks', default=None).split()
+        if devices:
+            for dev in devices:
+                self.disks.append(disk.get_absolute_disk_path(dev))
         self.vg_name = self.params.get('vg_name', default='avocado_vg')
         self.lv_name = self.params.get('lv_name', default='avocado_lv')
         self.fs_name = self.params.get('fs', default='ext4').lower()
@@ -98,8 +102,8 @@ class Lvsetup(Test):
             else:
                 self.lv_size = int(self.lv_size) / 1024 / 1024
 
-        if self.disk:
-            disk_size = lv_utils.get_devices_total_space(self.disk.split())
+        if self.disks:
+            disk_size = lv_utils.get_devices_total_space(self.disks)
             # converting bytes to megabytes
             disk_size = disk_size / (1024 * 1024)
 
@@ -109,7 +113,7 @@ class Lvsetup(Test):
             else:
                 self.lv_size = disk_size
 
-            self.device = self.disk
+            self.device = ' '.join(self.disks)
         else:
             if not self.lv_size:
                 self.lv_size = 1024 * 1024 * 1024
@@ -206,5 +210,5 @@ class Lvsetup(Test):
         Cleans up loop device.
         """
         self.delete_lv()
-        if not self.disk:
+        if not self.disks:
             disk.delete_loop_device(self.device)
