@@ -58,7 +58,8 @@ class FioTest(Test):
         """
         default_url = "https://brick.kernel.dk/snaps/fio-git-latest.tar.gz"
         url = self.params.get('fio_tool_url', default=default_url)
-        self.disk = self.params.get('disk', default=None)
+        device = self.params.get('disk', default=None)
+        self.disk = disk.get_absolute_disk_path(device)
         self.dir = self.params.get('dir', default=None)
         self.disk_type = self.params.get('disk_type', default='')
         fstype = self.params.get('fs', default='')
@@ -139,7 +140,7 @@ class FioTest(Test):
                         self.cancel("PMEM engines not built with fio")
 
         if self.disk:
-            if self.disk not in disk.get_disks():
+            if self.disk not in disk.get_all_disk_paths():
                 self.cancel("Missing disk %s in OS" % self.disk)
         else:
             self.cancel("Please Provide valid disk name")

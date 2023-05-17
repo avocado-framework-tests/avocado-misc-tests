@@ -1,0 +1,6 @@
+fio is an I/O tool meant to be used both for benchmark and stress/hardware verification.
+
+parameters
+disk: '/dev/sdb' or mpathx or /dev/disk/by-path/dm-uuid-mpathb-xxxxx, /dev/dm-0
+fs: file system type to be created on test disk, it can be any of ext4, ext3, xfs, btrfs etc
+dir: Mount point directory if disk is given, else default workdir will be used
