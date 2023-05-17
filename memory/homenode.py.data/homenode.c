@@ -31,11 +31,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-
 #define errmsg(x, ...) fprintf(stderr, x, ##__VA_ARGS__),exit(1)
 #define __NR_HOME_NODE 450
 
-
+#ifndef MPOL_PREFERRED_MANY
+#define MPOL_PREFERRED_MANY	5
+#endif
 
 int sys_set_mempolicy_home_node(unsigned long start, unsigned long len,
 				unsigned long home_node, unsigned long flags)
@@ -56,6 +57,7 @@ int main(int argc, char *argv[])
 	int i, nr_pages = 3;
 	int page_size = getpagesize();
 	int mapflag = MAP_ANONYMOUS;
+	int polflag = MPOL_BIND;
 	int protflag = PROT_READ|PROT_WRITE;
  	unsigned long nr_nodes = numa_max_node() + 1;
 	struct bitmask *all_nodes, *old_nodes, *new_nodes;
@@ -65,7 +67,7 @@ int main(int argc, char *argv[])
 
 	int home_node;
 
-	while ((c = getopt(argc, argv, "m:n:hH")) != -1) {
+	while ((c = getopt(argc, argv, "m:f:n:hH")) != -1) {
 
 		switch(c) {
 
@@ -76,6 +78,15 @@ int main(int argc, char *argv[])
 				mapflag |= MAP_SHARED;
 			else
 				errmsg("invalid optarg for -m\n");
+			break;
+
+		case 'f':
+			if (!strcmp(optarg, "MPOL_BIND"))
+				polflag = MPOL_BIND;
+			else if (!strcmp(optarg, "MPOL_PREFERRED_MANY"))
+				polflag = MPOL_PREFERRED_MANY;
+			else
+				errmsg("invalid optarg for -f\n");
 			break;
 
 		case 'n':
@@ -134,7 +145,7 @@ int main(int argc, char *argv[])
 
 	if (p == MAP_FAILED)
 		errmsg("Failed mmap\n");
-	ret = mbind(p, nr_pages * page_size, MPOL_BIND, new_nodes->maskp,
+	ret = mbind(p, nr_pages * page_size, polflag, new_nodes->maskp,
 		    new_nodes->size + 1, MPOL_MF_MOVE|MPOL_MF_STRICT);
 
 	printf("dest node %ld->%ld\n", dest_node, home_node);
