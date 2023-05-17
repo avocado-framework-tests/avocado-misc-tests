@@ -1,0 +1,16 @@
+run_type: !mux
+    distro:
+        type: 'distro'
+    upstream:
+        type: 'upstream'
+        location: "https://github.com/torvalds/linux/archive/master.zip"
+component: !mux
+    pmu/ebb:
+       comp: 'powerpc'
+       subtest: 'pmu/ebb'
+    pmu/event_code:
+       comp: 'powerpc'
+       subtest: 'pmu/event_code_tests'
+    pmu/sampling_tests:
+       comp: 'powerpc'
+       subtest: 'pmu/sampling_tests'
