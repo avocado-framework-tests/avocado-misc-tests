@@ -1,0 +1,16 @@
+component: !mux
+    ftrace:
+        comp: 'ftrace'
+    ptrace:
+        comp: 'powerpc'
+        subtest: 'ptrace'
+    mm:
+        comp: 'powerpc'
+        subtest: 'mm'
+    bpf:
+        comp: 'bpf'
+        build_option: '-bc'
+
+run_type: !mux
+    distro:
+        type: 'distro'

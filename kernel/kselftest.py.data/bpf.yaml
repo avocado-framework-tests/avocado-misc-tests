@@ -1,8 +1,0 @@
-component: !mux
-    bpf:
-        comp: 'bpf'
-        build_option: '-bc'
-
-run_type: !mux
-    distro:
-        type: 'distro'
