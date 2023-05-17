@@ -114,6 +114,8 @@ class kselftest(Test):
                     self.buldir = os.path.join(self.workdir, l_dir)
                     break
         else:
+            if self.subtest == 'pmu/event_code_tests':
+                self.cancel("selftest not supported on distro")
             # Make sure kernel source repo is configured
             if detected_distro.name in ['centos', 'fedora', 'rhel']:
                 src_name = 'kernel'
