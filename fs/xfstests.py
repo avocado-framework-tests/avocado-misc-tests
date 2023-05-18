@@ -20,15 +20,13 @@
 #   copyright: 2011 Redhat
 #   https://github.com/autotest/autotest-client-tests/tree/master/xfstests
 
-
 import os
-import glob
 import re
 import shutil
 
 from avocado import Test
 from avocado.utils import process, build, git, distro, partition
-from avocado.utils import disk, data_structures, pmem
+from avocado.utils import disk, pmem
 from avocado.utils import genio
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -234,10 +232,6 @@ class Xfstests(Test):
         if os.path.exists(f"{self.teststmpdir}/results"):
             shutil.rmtree(f"{self.teststmpdir}/results")
 
-        self.skip_dangerous = self.params.get('skip_dangerous', default=True)
-        self.group = self.params.get('group', default='auto')
-        self.test_range = self.params.get('test_range', default=None)
-
         self.base_disk = self.params.get('disk', default=None)
         self.scratch_mnt = self.params.get(
             'scratch_mnt', default='/mnt/scratch')
@@ -247,9 +241,6 @@ class Xfstests(Test):
 
         self.devices = []
         self.part = None
-        if self.group and self.test_range:
-            self.cancel("incorrect yaml parameter, group and test range can"
-                        "not be run at same time")
 
         if self.run_type == 'upstream':
             prefix = "/usr/local"
@@ -421,29 +412,7 @@ class Xfstests(Test):
 
         extra_args = f"-j{os.cpu_count()}"
         build.make(self.teststmpdir, extra_args=extra_args)
-        self.available_tests = self._get_available_tests()
 
-        self.test_list = self._create_test_list(self.test_range)
-        self.log.info("Tests available in srcdir: %s",
-                      ", ".join(self.available_tests))
-
-        # self.args is sufficient for passing everything to xfstests check.
-        # Hence ignore any other option if args is passed
-        if not self.args and not self.test_range:
-            self.exclude = self.params.get('exclude', default=None)
-            self.gen_exclude = self.params.get('gen_exclude', default=None)
-            self.share_exclude = self.params.get('share_exclude', default=None)
-            if self.exclude or self.gen_exclude or self.share_exclude:
-                self.exclude_file = os.path.join(self.teststmpdir, 'exclude')
-                if self.exclude:
-                    self._create_test_list(self.exclude, self.fs_to_test,
-                                           dangerous=False)
-                if self.gen_exclude:
-                    self._create_test_list(self.gen_exclude, "generic",
-                                           dangerous=False)
-                if self.share_exclude:
-                    self._create_test_list(self.share_exclude, "shared",
-                                           dangerous=False)
         if self.detected_distro.name is not 'SuSE':
             if process.system('useradd 123456-fsgqa', sudo=True, ignore_status=True):
                 self.log.warn('useradd 123456-fsgqa failed')
@@ -470,35 +439,7 @@ class Xfstests(Test):
             else:
                 msg = self._parse_error_message(result.stdout)
                 self.log.info("FAIL: Test(s) failed %s" % msg)
-                failures = True
-        elif not self.test_list:
-            self.log.info('Running all tests')
-            args = ''
-            if self.exclude or self.gen_exclude:
-                args = ' -E %s' % self.exclude_file
-            cmd = './check %s -g %s' % (args, self.group)
-            result = process.run(cmd, ignore_status=True, verbose=True)
-            if result.exit_status == 0:
-                self.log.info('OK: All Tests passed.')
-            else:
-                msg = self._parse_error_message(result.stdout)
-                self.log.info('ERR: Test(s) failed. Message: %s', msg)
-                failures = True
-
-        else:
-            self.log.info('Running only specified tests')
-            for test in self.test_list:
-                test = '%s/%s' % (self.fs_to_test, test)
-                cmd = './check %s' % test
-                result = process.run(cmd, ignore_status=True, verbose=True)
-                if result.exit_status == 0:
-                    self.log.info('OK: Test %s passed.', test)
-                else:
-                    msg = self._parse_error_message(result.stdout)
-                    self.log.info('ERR: %s failed. Message: %s', test, msg)
-                    failures = True
-        if failures:
-            self.fail('One or more tests failed. Please check the logs.')
+                self.fail('One or more tests failed. Please check the logs.')
 
     def tearDown(self):
 
@@ -580,66 +521,6 @@ class Xfstests(Test):
             self.devices.append(dev)
             process.run('losetup %s %s/file-%s.img' %
                         (dev, self.disk_mnt, i), shell=True, sudo=True)
-
-    def _create_test_list(self, test_range, test_type=None, dangerous=True):
-        test_list = []
-        dangerous_tests = []
-        if self.skip_dangerous:
-            dangerous_tests = self._get_tests_for_group('dangerous')
-        if test_range:
-            for test in data_structures.comma_separated_ranges_to_list(test_range):
-                test = "%03d" % test
-                if dangerous:
-                    if test in dangerous_tests:
-                        self.log.debug('Test %s is dangerous. Skipping.', test)
-                        continue
-                if not self._is_test_valid(test):
-                    self.log.debug('Test %s invalid. Skipping.', test)
-                    continue
-                test_list.append(test)
-
-        if test_type:
-            with open(self.exclude_file, 'a') as fp:
-                for test in test_list:
-                    fp.write('%s/%s\n' % (test_type, test))
-        return test_list
-
-    def _get_tests_for_group(self, group):
-        """
-        Returns the list of tests that belong to a certain test group
-        """
-        group_test_line_re = re.compile(r'(\d{3})\s(.*)')
-        group_path = os.path.join(self.teststmpdir, 'group')
-        with open(group_path, 'r') as group_file:
-            content = group_file.readlines()
-
-        tests = []
-        for g_test in content:
-            match = group_test_line_re.match(g_test)
-            if match is not None:
-                test = match.groups()[0]
-                groups = match.groups()[1]
-                if group in groups.split():
-                    tests.append(test)
-        return tests
-
-    def _get_available_tests(self):
-        os.chdir(self.teststmpdir)
-        tests_set = []
-        tests = glob.glob(self.teststmpdir + '/tests/*/???.out')
-
-        tests_set = sorted([t[-7:-4] for t in tests if os.path.exists(t[:-4])])
-        tests_set = set(tests_set)
-
-        return tests_set
-
-    def _is_test_valid(self, test_number):
-        os.chdir(self.teststmpdir)
-        if test_number == '000':
-            return False
-        if test_number not in self.available_tests:
-            return False
-        return True
 
     @staticmethod
     def _parse_error_message(output):
