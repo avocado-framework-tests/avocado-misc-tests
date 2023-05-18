@@ -11,6 +11,11 @@ fs_type: !mux
         args: '-e ext4/048 -R xunit generic/001'
         mkfs_opt: '-f -b size=4096'
         mount_opt: ''
+    fs_btrfs:
+        fs: 'btrfs'
+        args: '-R xunit generic/001'
+        mkfs_opt: '-f -s 4096 -n 4096'
+        mount_opt: ''
 disk_type: !mux
     type: 'disk'
     disk_test: /dev/loop0

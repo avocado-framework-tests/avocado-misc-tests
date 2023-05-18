@@ -327,6 +327,12 @@ class Xfstests(Test):
             self.cancel('Unknown filesystem %s' % self.fs_to_test)
         mount = True
         self.log_devices = []
+
+        # For btrfs we need minimum of 5 loop devices for SCRATCH_DEV_POOL
+        self.num_loop_dev = 2
+        if self.fs_to_test == "btrfs":
+            self.num_loop_dev = 5
+
         shutil.copyfile(self.get_data('local.config'),
                         os.path.join(self.teststmpdir, 'local.config'))
         self.log_test = self.params.get('log_test', default='')
@@ -336,7 +342,7 @@ class Xfstests(Test):
             loop_size = self.params.get('loop_size', default='7GiB')
             if not self.base_disk:
                 # Using root for file creation by default
-                check = (int(loop_size.split('GiB')[0]) * 2) + 1
+                check = (int(loop_size.split('GiB')[0]) * self.num_loop_dev) + 1
                 if disk.freespace('/') / 1073741824 > check:
                     self.disk_mnt = ''
                     mount = False
@@ -367,9 +373,16 @@ class Xfstests(Test):
                             re.sub(r'export TEST_DIR=.*', 'export TEST_DIR=%s'
                                    % self.test_mnt, line))
                     elif line.startswith('export SCRATCH_DEV'):
-                        sources.write(re.sub(
-                            r'export SCRATCH_DEV=.*', 'export SCRATCH_DEV=%s'
-                                                      % self.devices[1], line))
+                        if self.fs_to_test == "btrfs":
+                            scratch_dev_pool = ' '.join(
+                                [(self.devices[i]) for i in range(1, self.num_loop_dev)])
+                            sources.write(re.sub(r'export SCRATCH_DEV=.*',
+                                                 'export SCRATCH_DEV_POOL="%s"'
+                                                 % scratch_dev_pool, line))
+                        else:
+                            sources.write(re.sub(
+                                r'export SCRATCH_DEV=.*', 'export SCRATCH_DEV=%s'
+                                % self.devices[1], line))
                     elif line.startswith('export SCRATCH_MNT'):
                         sources.write(
                             re.sub(
@@ -504,8 +517,9 @@ class Xfstests(Test):
             self.part = partition.Partition(
                 self.base_disk, mountpoint=self.disk_mnt)
             self.part.mount()
-        # Creating two loop devices
-        for i in range(2):
+
+        # Creating [0 - num_loop_dev) loop devices
+        for i in range(self.num_loop_dev):
             self._create_fsimages(loop_size, i)
             dev = process.system_output('losetup -f').decode("utf-8").strip()
             self.devices.append(dev)

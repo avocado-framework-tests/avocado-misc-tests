@@ -4,7 +4,7 @@ disk_mnt: '/mnt/loop-device'
 
 loop_type: !mux
     type: 'loop'
-    loop_size: '7GiB'
+    loop_size: '5GiB'
     # Option to provide disk for loop device creation,
     # Uses '/' by default for file creation
     disk: "null"
