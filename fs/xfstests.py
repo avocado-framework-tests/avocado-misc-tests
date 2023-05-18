@@ -330,9 +330,6 @@ class Xfstests(Test):
         self.log_devices = []
         shutil.copyfile(self.get_data('local.config'),
                         os.path.join(self.teststmpdir, 'local.config'))
-        shutil.copyfile(self.get_data('group'),
-                        os.path.join(self.teststmpdir, 'group'))
-
         self.log_test = self.params.get('log_test', default='')
         self.log_scratch = self.params.get('log_scratch', default='')
 
