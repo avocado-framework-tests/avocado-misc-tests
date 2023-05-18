@@ -412,6 +412,8 @@ class RASToolsPpcutils(Test):
         """
         Test case to validate lparstat functionality. lparstat is a tool
         to display logical partition related information and statistics.
+        And also validating lparstat -x output should match with the lpar
+        security flavor
         And also validates laprstat -E output %busy and %idle
         should not be < 0 or > 100
         Normalized %busy + %idle should be equal to percentage under frequency
@@ -426,7 +428,15 @@ class RASToolsPpcutils(Test):
             cmd = "lparstat %s" % list_item
             self.run_cmd(cmd)
         self.error_check()
-
+        output = process.system_output("lparstat -x").decode("utf-8")
+        value = re.search(r"\d+", output).group()
+        output = process.system_output("grep security /proc/powerpc/lparcfg"
+                                       ).decode("utf-8")
+        security_flavor = output.split("=")[1]
+        if value == security_flavor:
+            self.log.info("Lpar security flavor is correct")
+        else:
+            self.fail("Lpar security flavor is incorrect")
         lists = self.params.get('lparstat_nlist',
                                 default=['--nonexistingoption'])
         for list_item in lists:
