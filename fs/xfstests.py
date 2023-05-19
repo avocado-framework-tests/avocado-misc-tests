@@ -166,7 +166,7 @@ class Xfstests(Test):
         self.detected_distro = distro.detect()
 
         packages = ['e2fsprogs', 'automake', 'gcc', 'quota', 'attr',
-                    'make', 'xfsprogs', 'gawk']
+                    'make', 'xfsprogs', 'gawk', 'git']
         if self.detected_distro.name in ['Ubuntu', 'debian']:
             packages.extend(
                 ['xfslibs-dev', 'uuid-dev', 'libuuid1',
@@ -174,7 +174,8 @@ class Xfstests(Test):
                  'uuid-runtime', 'libaio-dev', 'fio', 'dbench',
                  'gettext', 'libinih-dev', 'liburcu-dev', 'libblkid-dev',
                  'liblzo2-dev', 'zlib1g-dev', 'e2fslibs-dev', 'asciidoc',
-                 'xmlto', 'libzstd-dev', 'libudev-dev'])
+                 'xmlto', 'libzstd-dev', 'libudev-dev', 'bc', 'dump', 'acl',
+                 'lvm2', 'sed'])
             if self.detected_distro.version in ['14']:
                 packages.extend(['libtool'])
             elif self.detected_distro.version in ['18', '20']:
@@ -187,7 +188,7 @@ class Xfstests(Test):
                 packages.extend(['ndctl', 'parted'])
                 if self.detected_distro.name == 'rhel':
                     packages.extend(['daxctl'])
-            packages.extend(['acl', 'bc', 'dump', 'indent', 'libtool', 'lvm2',
+            packages.extend(['acl', 'bc', 'indent', 'libtool', 'lvm2',
                              'xfsdump', 'psmisc', 'sed', 'libacl-devel',
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
                              'openssl-devel', 'xfsprogs-devel', 'gettext',
@@ -203,12 +204,9 @@ class Xfstests(Test):
                 packages.extend(['btrfs-progs-devel', 'userspace-rcu-devel'])
 
             packages_remove = ['indent', 'btrfs-progs-devel']
-            if self.detected_distro.name == 'rhel' and\
-                    self.detected_distro.version.startswith('8'):
-                packages = list(set(packages)-set(packages_remove))
-            elif self.detected_distro.name == 'rhel' and\
-                    self.detected_distro.version.startswith('9'):
-                packages_remove.extend(['dump'])
+            if self.detected_distro.name == 'rhel' and (
+                    self.detected_distro.version.startswith('8') or
+                    self.detected_distro.version.startswith('9')):
                 packages = list(set(packages)-set(packages_remove))
 
             if self.detected_distro.name in ['centos', 'fedora']:
