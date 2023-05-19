@@ -94,6 +94,6 @@ class SoftwareRaid(Test):
         """
         Stop/Remove the raid device.
         """
-        if self.sraid:
+        if hasattr(self, "sraid"):
             self.sraid.stop()
             self.sraid.clear_superblock()
