@@ -1,0 +1,85 @@
+name: xfstests
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'fs/xfstests.py'
+      - 'fs/xfstests.py.data/*/ci.yaml'
+      - '.github/workflows/xfstests.yaml'
+  pull_request:
+    branches:
+      - '**'
+    paths:
+      - 'fs/xfstests.py'
+      - 'fs/xfstests.py.data/*/ci.yaml'
+      - '.github/workflows/xfstests.yaml'
+  workflow_dispatch: # manual trigger
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Run all fs ci.yaml config
+        config:
+          - fs/xfstests.py.data/ext2/ci.yaml
+          - fs/xfstests.py.data/ext4/ci.yaml
+          - fs/xfstests.py.data/xfs/ci.yaml
+          - fs/xfstests.py.data/btrfs/ci.yaml
+        container:
+          - ubuntu:latest
+          - fedora:latest
+          - opensuse/leap:latest # Added openSUSE Leap
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+
+      - name: Create directories for the results
+        run: mkdir -p avocado-results
+
+        # We need docker to run in privileged with bind mounted volumes
+      - name: Docker Run
+        run: |
+            docker run --privileged -d --name avocado_test_container \
+                        -v ${{ github.workspace }}:/workspace \
+                        -v $PWD/avocado-results:/root/avocado/job-results \
+                        ${{ matrix.container }} sleep infinity
+
+        # Install dependencies inside the container
+      - name: Install dependencies
+        run: |
+          docker exec avocado_test_container bash -c "\
+          if [[ '${{ matrix.container }}' == 'ubuntu:latest' ]]; then \
+            apt-get update && apt-get -y upgrade && apt-get install -y build-essential python3 python3-pip && \
+            pip3 install avocado-framework && pip3 install avocado-framework-plugin-varianter-yaml-to-mux; \
+          elif [[ '${{ matrix.container }}' == 'fedora:latest' ]]; then \
+            dnf -y update && dnf -y groupinstall 'Development Tools' && dnf -y install python3 python3-pip hostname which && \
+            pip3 install avocado-framework && pip3 install avocado-framework-plugin-varianter-yaml-to-mux; \
+          elif [[ '${{ matrix.container }}' == 'opensuse/leap:latest' ]]; then \
+            zypper -n update && zypper -n install -t pattern devel_basis && zypper -n install python3 python3-pip hostname which && \
+            pip3 install avocado-framework==100 && pip3 install avocado-framework-plugin-varianter-yaml-to-mux==100; \
+          fi \
+          "
+
+      - name: Run xfstests.py with Avocado
+        run: |
+          docker exec avocado_test_container bash -c "cd /workspace && avocado --show test run fs/xfstests.py --max-parallel-tasks 1 -m ${{ matrix.config }}"
+
+        # It seems upload name cannot have '/'
+      - name: Prepare artifact name
+        id: prepare
+        run: |
+          ARTIFACT_NAME_CONFIG=$(echo "${{ matrix.config }}" | tr '/' '-' | tr ':' '-')
+          ARTIFACT_NAME_CONTAINER=$(echo "${{ matrix.container }}" | tr '/' '-' | tr ':' '-')
+          echo "ARTIFACT_NAME_CONFIG=$ARTIFACT_NAME_CONFIG" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME_CONTAINER=$ARTIFACT_NAME_CONTAINER" >> $GITHUB_ENV
+
+      - name: Upload results
+        uses: actions/upload-artifact@v3
+        with:
+          name: "xfstests_${{ env.ARTIFACT_NAME_CONFIG }}_${{ env.ARTIFACT_NAME_CONTAINER }}"
+          path: ./avocado-results/
