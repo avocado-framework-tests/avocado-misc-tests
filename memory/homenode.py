@@ -40,6 +40,7 @@ class HomeNodeTest(Test):
         self.map_type = self.params.get('map_type', default='private')
         self.hpage = self.params.get('h_page', default=False)
         self.pol_type = self.params.get('pol_type', default='MPOL_BIND')
+        self.home_node = self.params.get('home_node', default=3)
 
         pkgs = ['gcc', 'make']
 
@@ -78,7 +79,8 @@ class HomeNodeTest(Test):
 
     def test(self):
         os.chdir(self.teststmpdir)
-        cmd = './homenode -m %s' % self.map_type + ' -f %s' % self.pol_type
+        cmd = './homenode -m %s' % self.map_type + \
+            ' -f %s' % self.pol_type + ' -p%s' % self.home_node
 
         if self.hpage:
             if (self.dist.name == 'rhel' and self.dist.version >= '9'):

@@ -1,3 +1,5 @@
+home_node : 3
+# NOTE: Make sure node with this id exists on the test system
 page_type: !mux
     normal_page:
         nr_pages: 1024
