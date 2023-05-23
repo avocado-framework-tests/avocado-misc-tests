@@ -24,6 +24,7 @@ import os
 import time
 import platform
 from avocado import Test
+from avocado.utils import nvme
 from avocado.utils import wait, multipath
 from avocado.utils import linux_modules, genio, pci
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -74,6 +75,10 @@ class PCIHotPlugTest(Test):
             if not slot:
                 self.cancel("slot number not available for: %s" % pci_addr)
             self.dic[pci_addr] = slot
+        self.adapter_type = pci.get_pci_class_name(self.device[0])
+        if self.adapter_type == 'nvme':
+            self.contr_name = nvme.get_controller_name(self.device[0])
+            self.ns_list = nvme.get_current_ns_ids(self.contr_name)
 
     def test(self):
         """
@@ -126,7 +131,7 @@ class PCIHotPlugTest(Test):
                 return False
             return True
 
-        def is_recovered():
+        def fc_recovery_check():
             """
             Checks if the block device adapter is recovers all its disks/paths
             properly after hotplug of adapter.
@@ -141,14 +146,13 @@ class PCIHotPlugTest(Test):
 
             curr_path = ''
             err_disks = []
-            if pci.get_pci_class_name(pci_addr) == 'fc_host':
-                disks = pci.get_disks_in_pci_address(pci_addr)
-                for disk in disks:
-                    curr_path = disk.split("/")[-1]
-                    self.log.info("curr_path=%s" % curr_path)
-                    if not wait.wait_for(is_path_online, timeout=10):
-                        self.log.info("%s failed to recover after add" % disk)
-                        err_disks.append(disk)
+            disks = pci.get_disks_in_pci_address(pci_addr)
+            for disk in disks:
+                curr_path = disk.split("/")[-1]
+                self.log.info("curr_path=%s" % curr_path)
+                if not wait.wait_for(is_path_online, timeout=10):
+                    self.log.info("%s failed to recover after add" % disk)
+                    err_disks.append(disk)
 
             if err_disks:
                 self.log.info("few paths failed to recover : %s" % err_disks)
@@ -171,13 +175,41 @@ class PCIHotPlugTest(Test):
                     return True
             return False
 
+        def nvme_recovery_check():
+            '''
+            Checks if the nvme adapter functionality like all namespaces are
+            up and running or not after adapter is recovered
+            '''
+            err_ns = []
+            current_namespaces = nvme.get_current_ns_ids(self.contr_name)
+            if current_namespaces == self.ns_list:
+                for ns_id in current_namespaces:
+                    status = nvme.get_ns_status(self.contr_name, ns_id)
+                    if not status[0] == 'live' and status[1] == 'optimized':
+                        err_ns.append(ns_id)
+            else:
+                self.log.info("following ns not back listing after hot_plug" %
+                              (self.ns_list - current_namespaces))
+                return False
+
+            if err_ns:
+                self.log.info(f"following namespaces not recovered ={err_ns}")
+                return False
+            return True
+
         if wait.wait_for(is_added, timeout=30):
             time.sleep(45)
-            if pci.get_pci_class_name(pci_addr) == 'net':
+            if self.adapter_type == 'net':
                 if wait.wait_for(net_recovery_check, timeout=30):
                     return True
                 return False
-            else:
-                if wait.wait_for(is_recovered, timeout=30):
+            elif self.adapter_type == 'nvme':
+                if wait.wait_for(nvme_recovery_check, timeout=30):
                     return True
+                return False
+            elif self.adapter_type == 'fc_host':
+                if wait.wait_for(fc_recovery_check, timeout=30):
+                    return True
+                return False
+            return True
         return False
