@@ -19,11 +19,17 @@
 DLPAR operations
 """
 
+import time
+
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import distro
 from avocado.utils.ssh import Session
 from avocado.utils import pci
+from avocado.utils import wait, multipath
+from avocado.utils import nvme
+from avocado.utils.network.hosts import LocalHost
+from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.process import CmdError
 
@@ -50,6 +56,7 @@ class DlparPci(Test):
         self.hmc_user = self.params.get("hmc_username", default='*******')
         self.hmc_pwd = self.params.get("hmc_pwd", default='********')
         self.sriov = self.params.get("sriov", default="no")
+        self.peer_ip = self.params.get("peer_ip", default=None)
         self.lpar_1 = self.get_partition_name("Partition Name")
         if not self.lpar_1:
             self.cancel("LPAR Name not got from lparstat command")
@@ -58,6 +65,13 @@ class DlparPci(Test):
         if not self.session.connect():
             self.cancel("failed connecting to HMC")
         self.server = self.params.get("manageSystem", default=None)
+        cmd = 'lssyscfg -r sys  -F name'
+        output = self.session.cmd(cmd)
+        self.server = ''
+        for line in output.stdout_text.splitlines():
+            if line in self.lpar_1:
+                self.server = line
+                break
         if not self.server:
             self.cancel("Managed System not got")
         self.lpar_2 = self.params.get("lpar_2", default=None)
@@ -78,6 +92,11 @@ class DlparPci(Test):
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         if self.loc_code is None:
             self.cancel("Failed to get the location code for the pci device")
+        self.adapter_type = pci.get_pci_class_name(self.pci_device)
+        if self.adapter_type == 'nvme':
+            self.contr_name = nvme.get_controller_name(self.pci_device)
+            self.ns_list = nvme.get_current_ns_ids(self.contr_name)
+
         self.session.cmd("uname -a")
         if self.sriov == "yes":
             cmd = "lshwres -r sriov --rsubtype logport -m %s \
@@ -189,6 +208,7 @@ class DlparPci(Test):
         for _ in range(self.num_of_dlpar):
             self.dlpar_remove()
             self.dlpar_add()
+            self.validation_in_os()
             self.dlpar_move()
 
     def test_drmgr_pci(self):
@@ -198,8 +218,10 @@ class DlparPci(Test):
         for _ in range(self.num_of_dlpar):
             self.do_drmgr_pci('r')
             self.do_drmgr_pci('a')
+            self.validation_in_os()
         for _ in range(self.num_of_dlpar):
             self.do_drmgr_pci('R')
+            self.validation_in_os()
 
     def test_drmgr_phb(self):
         '''
@@ -208,6 +230,7 @@ class DlparPci(Test):
         for _ in range(self.num_of_dlpar):
             self.do_drmgr_phb('r')
             self.do_drmgr_phb('a')
+            self.validation_in_os()
 
     def do_drmgr_pci(self, operation):
         '''
@@ -366,6 +389,101 @@ class DlparPci(Test):
         if cmd.exit_status != 0:
             self.log.debug(cmd.stderr)
             self.fail("dlpar %s operation failed" % msg)
+
+    def validation_in_os(self):
+        '''
+        validating the adapter functionality after from OS adapter added
+        '''
+        def is_added():
+            """
+            Returns True if pci device is added, False otherwise.
+            """
+            if self.pci_device not in pci.get_pci_addresses():
+                return False
+            return True
+
+        def fc_recovery_check():
+            """
+            Checks if the block device adapter is recovers all its disks/paths
+            properly after hotplug of adapter.
+            Returns True if all disks/paths back online after adapter added
+            Back, else False.
+            """
+            def is_path_online():
+                path_stat = list(multipath.get_path_status(curr_path))
+                if path_stat[0] != 'active' or path_stat[2] != 'ready':
+                    return False
+                return True
+
+            curr_path = ''
+            err_disks = []
+            disks = pci.get_disks_in_pci_address(self.pci_device)
+            for disk in disks:
+                curr_path = disk.split("/")[-1]
+                self.log.info("curr_path=%s" % curr_path)
+                if not wait.wait_for(is_path_online, timeout=10):
+                    self.log.info("%s failed to recover after add" % disk)
+                    err_disks.append(disk)
+
+            if err_disks:
+                self.log.info("few paths failed to recover : %s" % err_disks)
+                return False
+            return True
+
+        def net_recovery_check():
+            """
+            Checks if the network adapter fuctionality like ping/link_state,
+            after adapter added back.
+            Returns True on propper Recovery, False if not.
+            """
+            self.log.info("entering the net recovery check")
+            local = LocalHost()
+            iface = pci.get_interfaces_in_pci_address(self.pci_device, 'net')
+            networkinterface = NetworkInterface(iface[0], local)
+            if wait.wait_for(networkinterface.is_link_up, timeout=120):
+                if networkinterface.ping_check(self.peer_ip, count=5) is None:
+                    self.log.info("inteface is up and pinging")
+                    return True
+            return False
+
+        def nvme_recovery_check():
+            '''
+            Checks if the nvme adapter functionality like all namespaces are
+            up and running or not after adapter is recovered
+            '''
+            err_ns = []
+            current_namespaces = nvme.get_current_ns_ids(self.contr_name)
+            if current_namespaces == self.ns_list:
+                for ns_id in current_namespaces:
+                    status = nvme.get_ns_status(self.contr_name, ns_id)
+                    if not status[0] == 'live' and status[1] == 'optimized':
+                        err_ns.append(ns_id)
+            else:
+                self.log.info("following ns not back listing after hot_plug" %
+                              (self.ns_list - current_namespaces))
+                return False
+
+            if err_ns:
+                self.log.info(f"following namespaces not recovered ={err_ns}")
+                return False
+            return True
+
+        if wait.wait_for(is_added, timeout=30):
+            time.sleep(45)
+            if self.adapter_type == 'net':
+                if not wait.wait_for(net_recovery_check, timeout=30):
+                    self.fail("Network adapter failed to ping after dlapr")
+            elif self.adapter_type == 'nvme':
+                if not wait.wait_for(nvme_recovery_check, timeout=30):
+                    self.fail("nvme adapter failed to recover")
+            elif self.adapter_type == 'fc_host':
+                if not wait.wait_for(fc_recovery_check, timeout=30):
+                    self.fail("FC_adapter failed to recover")
+            else:
+                self.log.warn("OS validation for this adapter not available \
+                              please check manually")
+        else:
+            self.fail("pci_address not showing up in OS after dlpar")
 
     def tearDown(self):
         if self.session:
