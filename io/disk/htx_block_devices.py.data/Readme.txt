@@ -21,4 +21,4 @@ all: True or False (True if all disks in selected mdt needs to be run.
 time_limit: 1 (In minutes)
 mdt_file: Pass the require mdt file, eg: 'mdt.io', mdt.hd
 run_type: this is to how do we want to install the htx tool eg: 'git' or 'rpm' based
-rpm_link: if you want to install htx through RPM then Pass the rpm link here.
+htx_rpm_link: if you want to install htx through RPM then Pass the rpm link here.

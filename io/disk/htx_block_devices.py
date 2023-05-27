@@ -132,7 +132,7 @@ class HtxTest(Test):
                     self.log.info("Using existing HTX")
                     skip_install = True
             if not skip_install:
-                self.rpm_link = self.params.get("rpm_link", default=None)
+                self.rpm_link = self.params.get("htx_rpm_link", default=None)
                 if self.rpm_link:
                     self.install_htx_rpm()
 

@@ -1,5 +1,5 @@
 run_type: 'rpm'
-rpm_link: "null"
+htx_rpm_link: "null"
 time_limit: 60 # in minutes
 mdt: !mux
     bu:
