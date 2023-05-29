@@ -65,9 +65,9 @@ int main(int argc, char *argv[])
 
  	long freemem_before[4] = {0}, freemem_after[4] = {0};
 
-	int home_node;
+	unsigned long home_node, preferred_home_node;
 
-	while ((c = getopt(argc, argv, "m:f:n:hH")) != -1) {
+	while ((c = getopt(argc, argv, "m:f:p:n:hH")) != -1) {
 
 		switch(c) {
 
@@ -87,6 +87,10 @@ int main(int argc, char *argv[])
 				polflag = MPOL_PREFERRED_MANY;
 			else
 				errmsg("invalid optarg for -f\n");
+			break;
+
+		case 'p':
+			preferred_home_node = strtoul(optarg, NULL, 10);
 			break;
 
 		case 'n':
@@ -123,7 +127,7 @@ int main(int argc, char *argv[])
 
 	src_node = 0;
 	dest_node = 1;
-	home_node = 3;
+	home_node = preferred_home_node;
 
 	printf("nr pages=%d page_size=%d\n", nr_pages, page_size);
 	printf("src node = %ld and dest node = %ld home node=%d\n", src_node, dest_node, home_node);
@@ -153,7 +157,7 @@ int main(int argc, char *argv[])
 					  home_node, 0);
 
 	if (ret == -1)
-		errmsg("Failed home node");
+		errmsg("Failed to set home node");
 
 
 	for(int nid=0;nid <4; ++nid)
