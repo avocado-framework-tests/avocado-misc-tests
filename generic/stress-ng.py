@@ -109,10 +109,14 @@ class Stressng(Test):
             if self.parallel:
                 if self.stressors:
                     for stressor in self.stressors.split(' '):
-                        cmdline += '--%s %s ' % (stressor, self.workers)
+                        stressor_params = self.params.get(stressor, default='')
+                        cmdline += '--%s %s %s ' % (stressor, self.workers,
+                                                    stressor_params)
                 if self.v_stressors:
                     for v_stressor in self.v_stressors.split(' '):
-                        cmdline += '--%s %s ' % (v_stressor, self.workers)
+                        stressor_params = self.params.get(v_stressor, default='')
+                        cmdline += '--%s %s %s ' % (v_stressor, self.workers,
+                                                    stressor_params)
                 args.append(cmdline)
         if self.class_type in ['memory', 'vm', 'all']:
             args.append('--vm-bytes 80% ')
