@@ -1,0 +1,15 @@
+workers:
+ttimeout: '60'
+verify: True
+syslog: True
+metrics: True
+maximize: True
+times: True
+aggressive: True
+parallel: True
+iteration: 2
+class: 'io'
+stressors: 'readahead hdd'
+readahead: '--readahead-bytes 16M'
+hdd: '--hdd-opts dsync'
+common_args: '-k'
