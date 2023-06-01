@@ -20,15 +20,13 @@
 #   copyright: 2011 Redhat
 #   https://github.com/autotest/autotest-client-tests/tree/master/xfstests
 
-
 import os
-import glob
 import re
 import shutil
 
 from avocado import Test
 from avocado.utils import process, build, git, distro, partition
-from avocado.utils import disk, data_structures, pmem
+from avocado.utils import disk, pmem
 from avocado.utils import genio
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -149,24 +147,13 @@ class Xfstests(Test):
             self.scratch_dev = "/dev/%s" % pmem_dev
             self.devices.extend([self.test_dev, self.scratch_dev])
 
-    def setUp(self):
-        """
-        Build xfstest
-        Source: git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git
-        """
-        self.use_dd = False
-        root_fs = process.system_output(
-            "df -T / | awk 'END {print $2}'", shell=True).decode("utf-8")
-        if root_fs in ['ext3', 'ext4']:
-            self.use_dd = True
-        self.dev_type = self.params.get('type', default='loop')
-
+    def __setUp_packages(self):
         sm = SoftwareManager()
 
         self.detected_distro = distro.detect()
 
         packages = ['e2fsprogs', 'automake', 'gcc', 'quota', 'attr',
-                    'make', 'xfsprogs', 'gawk']
+                    'make', 'xfsprogs', 'gawk', 'git']
         if self.detected_distro.name in ['Ubuntu', 'debian']:
             packages.extend(
                 ['xfslibs-dev', 'uuid-dev', 'libuuid1',
@@ -174,7 +161,8 @@ class Xfstests(Test):
                  'uuid-runtime', 'libaio-dev', 'fio', 'dbench',
                  'gettext', 'libinih-dev', 'liburcu-dev', 'libblkid-dev',
                  'liblzo2-dev', 'zlib1g-dev', 'e2fslibs-dev', 'asciidoc',
-                 'xmlto', 'libzstd-dev', 'libudev-dev'])
+                 'xmlto', 'libzstd-dev', 'libudev-dev', 'bc', 'dump', 'acl',
+                 'lvm2', 'sed'])
             if self.detected_distro.version in ['14']:
                 packages.extend(['libtool'])
             elif self.detected_distro.version in ['18', '20']:
@@ -187,7 +175,7 @@ class Xfstests(Test):
                 packages.extend(['ndctl', 'parted'])
                 if self.detected_distro.name == 'rhel':
                     packages.extend(['daxctl'])
-            packages.extend(['acl', 'bc', 'dump', 'indent', 'libtool', 'lvm2',
+            packages.extend(['acl', 'bc', 'indent', 'libtool', 'lvm2',
                              'xfsdump', 'psmisc', 'sed', 'libacl-devel',
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
                              'openssl-devel', 'xfsprogs-devel', 'gettext',
@@ -203,12 +191,9 @@ class Xfstests(Test):
                 packages.extend(['btrfs-progs-devel', 'userspace-rcu-devel'])
 
             packages_remove = ['indent', 'btrfs-progs-devel']
-            if self.detected_distro.name == 'rhel' and\
-                    self.detected_distro.version.startswith('8'):
-                packages = list(set(packages)-set(packages_remove))
-            elif self.detected_distro.name == 'rhel' and\
-                    self.detected_distro.version.startswith('9'):
-                packages_remove.extend(['dump'])
+            if self.detected_distro.name == 'rhel' and (
+                    self.detected_distro.version.startswith('8') or
+                    self.detected_distro.version.startswith('9')):
                 packages = list(set(packages)-set(packages_remove))
 
             if self.detected_distro.name in ['centos', 'fedora']:
@@ -220,22 +205,41 @@ class Xfstests(Test):
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel("Fail to install %s required for this test." %
                             package)
-        self.skip_dangerous = self.params.get('skip_dangerous', default=True)
-        self.group = self.params.get('group', default='auto')
-        self.test_range = self.params.get('test_range', default=None)
+
+    def setUp(self):
+        """
+        Build xfstest
+        Source: git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git
+        """
+        self.use_dd = False
+        root_fs = process.system_output(
+            "df -T / | awk 'END {print $2}'", shell=True).decode("utf-8")
+
+        if root_fs in ['ext2', 'ext3']:
+            self.use_dd = True
+
+        self.dev_type = self.params.get('type', default='loop')
+
+        self.__setUp_packages()
+
+        self.fs_to_test = self.params.get('fs', default='ext4')
+
+        self.args = self.params.get('args', default='-g quick')
+        self.log.debug(f"FS: {self.fs_to_test}, args: {self.args}")
+
+        # If there is an existing results directory then just clean that up before running the test
+        if os.path.exists(f"{self.teststmpdir}/results"):
+            shutil.rmtree(f"{self.teststmpdir}/results")
+
         self.base_disk = self.params.get('disk', default=None)
         self.scratch_mnt = self.params.get(
             'scratch_mnt', default='/mnt/scratch')
         self.test_mnt = self.params.get('test_mnt', default='/mnt/test')
         self.disk_mnt = self.params.get('disk_mnt', default='/mnt/loop_device')
-        self.fs_to_test = self.params.get('fs', default='ext4')
         self.run_type = self.params.get('run_type', default='distro')
 
         self.devices = []
         self.part = None
-        if self.group and self.test_range:
-            self.cancel("incorrect yaml parameter, group and test range can"
-                        "not be run at same time")
 
         if self.run_type == 'upstream':
             prefix = "/usr/local"
@@ -323,11 +327,14 @@ class Xfstests(Test):
             self.cancel('Unknown filesystem %s' % self.fs_to_test)
         mount = True
         self.log_devices = []
+
+        # For btrfs we need minimum of 5 loop devices for SCRATCH_DEV_POOL
+        self.num_loop_dev = 2
+        if self.fs_to_test == "btrfs":
+            self.num_loop_dev = 5
+
         shutil.copyfile(self.get_data('local.config'),
                         os.path.join(self.teststmpdir, 'local.config'))
-        shutil.copyfile(self.get_data('group'),
-                        os.path.join(self.teststmpdir, 'group'))
-
         self.log_test = self.params.get('log_test', default='')
         self.log_scratch = self.params.get('log_scratch', default='')
 
@@ -335,7 +342,7 @@ class Xfstests(Test):
             loop_size = self.params.get('loop_size', default='7GiB')
             if not self.base_disk:
                 # Using root for file creation by default
-                check = (int(loop_size.split('GiB')[0]) * 2) + 1
+                check = (int(loop_size.split('GiB')[0]) * self.num_loop_dev) + 1
                 if disk.freespace('/') / 1073741824 > check:
                     self.disk_mnt = ''
                     mount = False
@@ -366,9 +373,16 @@ class Xfstests(Test):
                             re.sub(r'export TEST_DIR=.*', 'export TEST_DIR=%s'
                                    % self.test_mnt, line))
                     elif line.startswith('export SCRATCH_DEV'):
-                        sources.write(re.sub(
-                            r'export SCRATCH_DEV=.*', 'export SCRATCH_DEV=%s'
-                                                      % self.devices[1], line))
+                        if self.fs_to_test == "btrfs":
+                            scratch_dev_pool = ' '.join(
+                                [(self.devices[i]) for i in range(1, self.num_loop_dev)])
+                            sources.write(re.sub(r'export SCRATCH_DEV=.*',
+                                                 'export SCRATCH_DEV_POOL="%s"'
+                                                 % scratch_dev_pool, line))
+                        else:
+                            sources.write(re.sub(
+                                r'export SCRATCH_DEV=.*', 'export SCRATCH_DEV=%s'
+                                % self.devices[1], line))
                     elif line.startswith('export SCRATCH_MNT'):
                         sources.write(
                             re.sub(
@@ -405,27 +419,9 @@ class Xfstests(Test):
         git.get_repo('git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
                      destination_dir=self.teststmpdir)
 
-        build.make(self.teststmpdir)
-        self.available_tests = self._get_available_tests()
+        extra_args = f"-j{os.cpu_count()}"
+        build.make(self.teststmpdir, extra_args=extra_args)
 
-        self.test_list = self._create_test_list(self.test_range)
-        self.log.info("Tests available in srcdir: %s",
-                      ", ".join(self.available_tests))
-        if not self.test_range:
-            self.exclude = self.params.get('exclude', default=None)
-            self.gen_exclude = self.params.get('gen_exclude', default=None)
-            self.share_exclude = self.params.get('share_exclude', default=None)
-            if self.exclude or self.gen_exclude or self.share_exclude:
-                self.exclude_file = os.path.join(self.teststmpdir, 'exclude')
-                if self.exclude:
-                    self._create_test_list(self.exclude, self.fs_to_test,
-                                           dangerous=False)
-                if self.gen_exclude:
-                    self._create_test_list(self.gen_exclude, "generic",
-                                           dangerous=False)
-                if self.share_exclude:
-                    self._create_test_list(self.share_exclude, "shared",
-                                           dangerous=False)
         if self.detected_distro.name is not 'SuSE':
             if process.system('useradd 123456-fsgqa', sudo=True, ignore_status=True):
                 self.log.warn('useradd 123456-fsgqa failed')
@@ -444,36 +440,29 @@ class Xfstests(Test):
     def test(self):
         failures = False
         os.chdir(self.teststmpdir)
-        if not self.test_list:
-            self.log.info('Running all tests')
-            args = ''
-            if self.exclude or self.gen_exclude:
-                args = ' -E %s' % self.exclude_file
-            cmd = './check %s -g %s' % (args, self.group)
+        if self.args:
+            cmd = f"./check {self.args}"
             result = process.run(cmd, ignore_status=True, verbose=True)
             if result.exit_status == 0:
-                self.log.info('OK: All Tests passed.')
+                self.log.info("OK: All tests passed")
             else:
                 msg = self._parse_error_message(result.stdout)
-                self.log.info('ERR: Test(s) failed. Message: %s', msg)
-                failures = True
-
-        else:
-            self.log.info('Running only specified tests')
-            for test in self.test_list:
-                test = '%s/%s' % (self.fs_to_test, test)
-                cmd = './check %s' % test
-                result = process.run(cmd, ignore_status=True, verbose=True)
-                if result.exit_status == 0:
-                    self.log.info('OK: Test %s passed.', test)
-                else:
-                    msg = self._parse_error_message(result.stdout)
-                    self.log.info('ERR: %s failed. Message: %s', test, msg)
-                    failures = True
-        if failures:
-            self.fail('One or more tests failed. Please check the logs.')
+                self.log.info("FAIL: Test(s) failed %s" % msg)
+                self.fail('One or more tests failed. Please check the logs.')
 
     def tearDown(self):
+
+        srcdir = f"{self.teststmpdir}/results"
+        if (os.path.exists(srcdir) and os.path.exists(self.outputdir)):
+            new_outputdir = os.path.join(self.outputdir,
+                                         os.path.basename(srcdir))
+            shutil.copytree(srcdir, new_outputdir)
+
+        job_dir = os.path.dirname(os.path.dirname(self.logdir))
+        self.job_id = os.path.basename(job_dir)
+        self.log.debug(" Job ID: %s, logdir: %s, srcdir: %s, outputdir: %s: " %
+                       (self.job_id, self.logdir, srcdir, self.outputdir))
+
         user_exits = 0
         if not (process.system('id fsgqa', sudo=True, ignore_status=True)):
             process.system('userdel -r -f fsgqa', sudo=True)
@@ -512,88 +501,30 @@ class Xfstests(Test):
                             process.system('losetup -d %s' % dev, shell=True,
                                            sudo=True, ignore_status=True)
 
+    def _create_fsimages(self, loop_size, i):
+        dd_count = int(loop_size.split('GiB')[0])
+        if self.use_dd:
+            process.run('dd if=/dev/zero of=%s/file-%s.img bs=1G count=%s'
+                        % (self.disk_mnt, i, dd_count), shell=True,
+                        sudo=True)
+        else:
+            process.run('fallocate -o 0 -l %s %s/file-%s.img' %
+                        (loop_size, self.disk_mnt, i), shell=True,
+                        sudo=True)
+
     def _create_loop_device(self, loop_size, mount=True):
         if mount:
             self.part = partition.Partition(
                 self.base_disk, mountpoint=self.disk_mnt)
             self.part.mount()
-        # Creating two loop devices
-        for i in range(2):
-            if self.use_dd:
-                dd_count = int(loop_size.split('GiB')[0])
-                process.run('dd if=/dev/zero of=%s/file-%s.img bs=1G count=%s'
-                            % (self.disk_mnt, i, dd_count), shell=True,
-                            sudo=True)
-            else:
-                process.run('fallocate -o 0 -l %s %s/file-%s.img' %
-                            (loop_size, self.disk_mnt, i), shell=True,
-                            sudo=True)
+
+        # Creating [0 - num_loop_dev) loop devices
+        for i in range(self.num_loop_dev):
+            self._create_fsimages(loop_size, i)
             dev = process.system_output('losetup -f').decode("utf-8").strip()
             self.devices.append(dev)
             process.run('losetup %s %s/file-%s.img' %
                         (dev, self.disk_mnt, i), shell=True, sudo=True)
-
-    def _create_test_list(self, test_range, test_type=None, dangerous=True):
-        test_list = []
-        dangerous_tests = []
-        if self.skip_dangerous:
-            dangerous_tests = self._get_tests_for_group('dangerous')
-        if test_range:
-            for test in data_structures.comma_separated_ranges_to_list(test_range):
-                test = "%03d" % test
-                if dangerous:
-                    if test in dangerous_tests:
-                        self.log.debug('Test %s is dangerous. Skipping.', test)
-                        continue
-                if not self._is_test_valid(test):
-                    self.log.debug('Test %s invalid. Skipping.', test)
-                    continue
-                test_list.append(test)
-
-        if test_type:
-            with open(self.exclude_file, 'a') as fp:
-                for test in test_list:
-                    fp.write('%s/%s\n' % (test_type, test))
-        return test_list
-
-    def _get_tests_for_group(self, group):
-        """
-        Returns the list of tests that belong to a certain test group
-        """
-        group_test_line_re = re.compile(r'(\d{3})\s(.*)')
-        group_path = os.path.join(self.teststmpdir, 'group')
-        with open(group_path, 'r') as group_file:
-            content = group_file.readlines()
-
-        tests = []
-        for g_test in content:
-            match = group_test_line_re.match(g_test)
-            if match is not None:
-                test = match.groups()[0]
-                groups = match.groups()[1]
-                if group in groups.split():
-                    tests.append(test)
-        return tests
-
-    def _get_available_tests(self):
-        os.chdir(self.teststmpdir)
-        tests_set = []
-        tests = glob.glob(self.teststmpdir + '/tests/*/???.out')
-        tests += glob.glob(self.teststmpdir + '/tests/*/???.out.linux')
-        tests = [t.replace('.linux', '') for t in tests]
-
-        tests_set = sorted([t[-7:-4] for t in tests if os.path.exists(t[:-4])])
-        tests_set = set(tests_set)
-
-        return tests_set
-
-    def _is_test_valid(self, test_number):
-        os.chdir(self.teststmpdir)
-        if test_number == '000':
-            return False
-        if test_number not in self.available_tests:
-            return False
-        return True
 
     @staticmethod
     def _parse_error_message(output):
