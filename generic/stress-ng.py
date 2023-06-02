@@ -61,6 +61,7 @@ class Stressng(Test):
         self.v_stressors = self.params.get('v_stressors', default=None)
         self.parallel = self.params.get('parallel', default=True)
         self.common_args = self.params.get('common_args', default='')
+        self.iteration = self.params.get('iteration', default=1)
 
         deps = ['gcc', 'make']
         if detected_distro.name in ['Ubuntu', 'debian']:
@@ -108,10 +109,14 @@ class Stressng(Test):
             if self.parallel:
                 if self.stressors:
                     for stressor in self.stressors.split(' '):
-                        cmdline += '--%s %s ' % (stressor, self.workers)
+                        stressor_params = self.params.get(stressor, default='')
+                        cmdline += '--%s %s %s ' % (stressor, self.workers,
+                                                    stressor_params)
                 if self.v_stressors:
                     for v_stressor in self.v_stressors.split(' '):
-                        cmdline += '--%s %s ' % (v_stressor, self.workers)
+                        stressor_params = self.params.get(v_stressor, default='')
+                        cmdline += '--%s %s %s ' % (v_stressor, self.workers,
+                                                    stressor_params)
                 args.append(cmdline)
         if self.class_type in ['memory', 'vm', 'all']:
             args.append('--vm-bytes 80% ')
@@ -157,7 +162,8 @@ class Stressng(Test):
         if self.parallel:
             if self.ttimeout:
                 cmd += ' --timeout %s ' % self.ttimeout
-            process.run(cmd, ignore_status=True, sudo=True)
+            for _ in range(self.iteration):
+                process.run(cmd, ignore_status=True, sudo=True)
         else:
             if self.ttimeout:
                 timeout = ' --timeout %s ' % self.ttimeout
@@ -166,8 +172,9 @@ class Stressng(Test):
                     stressor_params = self.params.get(stressor, default='')
                     stress_cmd = ' --%s %s %s %s ' % (stressor, self.workers, timeout,
                                                       stressor_params)
-                    process.run("%s %s" % (cmd, stress_cmd),
-                                ignore_status=True, sudo=True)
+                    for _ in range(self.iteration):
+                        process.run("%s %s" % (cmd, stress_cmd),
+                                    ignore_status=True, sudo=True)
             if self.ttimeout and self.v_stressors:
                 timeout = ' --timeout %s ' % str(
                     int(self.ttimeout) + int(memory.meminfo.MemTotal.g))
@@ -176,8 +183,9 @@ class Stressng(Test):
                     stressor_params = self.params.get(stressor, default='')
                     stress_cmd = ' --%s %s %s %s ' % (stressor, self.workers, timeout,
                                                       stressor_params)
-                    process.run("%s %s" % (cmd, stress_cmd),
-                                ignore_status=True, sudo=True)
+                    for _ in range(self.iteration):
+                        process.run("%s %s" % (cmd, stress_cmd),
+                                    ignore_status=True, sudo=True)
         ERROR = []
         pattern = ['WARNING: CPU:', 'Oops', 'Segfault', 'soft lockup',
                    'Unable to handle', 'ard LOCKUP']
