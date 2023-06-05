@@ -100,14 +100,22 @@ class MemStress(Test):
         if not memory.check_hotplug():
             self.cancel("UnSupported : memory hotplug not enabled\n")
         smm = SoftwareManager()
+        for package in ['automake', 'make', 'autoconf']:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel('%s is needed for the test to be run' % package)
+        default_url = 'https://fossies.org/linux/privat/old/stress-1.0.5.tar.gz'
+        stress_tar_url = self.params.get('stress_tar_url', default=default_url)
         if not smm.check_installed('stress') and not smm.install('stress'):
-            tarball = self.fetch_asset(
-                'https://fossies.org/linux/privat/old/stress-1.0.4.tar.gz')
+            tarball = self.fetch_asset(stress_tar_url)
             archive.extract(tarball, self.teststmpdir)
             self.sourcedir = os.path.join(
                 self.teststmpdir, os.path.basename(tarball.split('.tar.')[0]))
 
             os.chdir(self.sourcedir)
+            for package in ['automake', 'make', 'autoconf']:
+                if not smm.check_installed(package) and not smm.install(package):
+                    self.cancel('%s is needed for the test to be run' % package)
+            process.run('./autogen.sh', shell=True)
             process.run('[ -x configure ] && ./configure', shell=True)
             build.make(self.sourcedir)
             build.make(self.sourcedir, extra_args='install')
