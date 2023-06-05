@@ -244,6 +244,7 @@ class IommuTest(Test):
             self.unbind(driver, pci_addr)
             # binding the driver
             self.bind(driver, pci_addr)
+        self.check_dmesg()
 
     def test_unbind_changedomain_bind(self):
         """
@@ -276,6 +277,7 @@ class IommuTest(Test):
                     i = i + 1
             # check the device for default state
             self.check(def_dom, pci_addr, driver)
+        self.check_dmesg()
 
     def test_unbind_changedomain_ntimes_bind(self):
         """
@@ -309,6 +311,7 @@ class IommuTest(Test):
                         i = i + 1
             # check the device for default state
             self.check(def_dom, pci_addr, driver)
+        self.check_dmesg()
 
     def test_unbind_bind_rescan(self):
         """
@@ -325,6 +328,7 @@ class IommuTest(Test):
             self.rescan(pci_addr)
             # check the device for default state
             self.check(def_dom, pci_addr, driver)
+        self.check_dmesg()
 
     def test_unbind_changedomain_bind_rescan(self):
         """
@@ -359,6 +363,7 @@ class IommuTest(Test):
                     i = i + 1
             # check the device for default state
             self.check(def_dom, pci_addr, driver)
+        self.check_dmesg()
 
     def test_reset_rescan(self):
         """
@@ -372,8 +377,9 @@ class IommuTest(Test):
             self.rescan(pci_addr)
             # check the device for default state
             self.check(def_dom, pci_addr, driver)
+        self.check_dmesg()
 
-    def tearDown(self):
+    def check_dmesg(self):
         """
         Checks for any error or failure messages in dmesg after test
         """
