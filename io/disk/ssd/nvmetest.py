@@ -26,6 +26,7 @@ from avocado.utils import process
 from avocado.utils import archive
 from avocado.utils import build
 from avocado.utils import download
+from avocado.utils import nvme
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -44,6 +45,7 @@ class NVMeTest(Test):
         """
         self.device = self.params.get('device', default='nvme0')
         self.device = "/dev/%s" % self.device
+        self.ns_count = self.params.get('namespace_count', default=1)
         cmd = 'ls %s' % self.device
         if process.system(cmd, ignore_status=True):
             self.cancel("%s does not exist" % self.device)
@@ -431,3 +433,10 @@ class NVMeTest(Test):
         cmd = '%s subsystem-reset %s' % (self.binary, self.device)
         if process.system(cmd, ignore_status=True, shell=True):
             self.fail("Subsystem reset failed")
+
+    def test_create_namespaces(self):
+        """
+        creates the specified number of namespaces on nvme drive
+        """
+        device = self.device.split("/")[-1]
+        nvme.create_namespaces(device, self.ns_count)
