@@ -68,7 +68,8 @@ class NumaTest(Test):
                          'libnuma-dev', 'libhugetlbfs-dev'])
         elif dist.name in ["centos", "rhel", "fedora"]:
             if (dist.name == 'rhel' and dist.version >= '9'):
-                self.cancel("libhugetlbfs packages are not available on RHEL 9.x onwards.")
+                self.cancel(
+                    "libhugetlbfs packages are not available on RHEL 9.x onwards.")
             pkgs.extend(['numactl-devel', 'libhugetlbfs-devel'])
         elif dist.name == "SuSE":
             pkgs.extend(['libnuma-devel'])
@@ -118,16 +119,19 @@ class NumaTest(Test):
         """
         Test PFN's before and after offlining
         """
-        thp = "/sys/kernel/mm/transparent_hugepage/enable_thp_migration"
+        thp = "/sys/kernel/mm/transparent_hugepage/enabled"
         if os.path.isfile(thp):
-            self.nr_pages = self.params.get(
-                'nr_pages', default=100)
-            os.chdir(self.teststmpdir)
-            self.log.info("Starting test...")
-            cmd = './bench_movepages -n %s' % self.nr_pages
-            ret = process.system(
-                cmd, shell=True, sudo=True, ignore_status=True)
-            if ret != 0:
-                self.fail('Please check the logs for failure')
+            thp_file = genio.read_file(thp)
+            if "[always] madvise" in thp_file or "always [madvise] never" in thp_file:
+                self.nr_pages = self.params.get('nr_pages', default=100)
+                os.chdir(self.teststmpdir)
+                self.log.info("Starting test...")
+                cmd = './bench_movepages -n %s' % self.nr_pages
+                ret = process.system(
+                    cmd, shell=True, sudo=True, ignore_status=True)
+                if ret != 0:
+                    self.fail('Please check the logs for failure')
+            else:
+                self.cancel("THP migration is not enabled on the system")
         else:
             self.cancel("THP migration is not enabled on the system")
