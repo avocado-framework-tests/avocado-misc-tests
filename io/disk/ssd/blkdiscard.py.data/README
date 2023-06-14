@@ -3,4 +3,4 @@ solid-state drivers (SSDs) and thinly-provisioned storage.
 
 Values to be passed in yaml file:
 
-disk - Name of the device on which this script should run.
+disk - any disk name /dev/ or /dev/disk/by-id or /dev/disk/by-path dir USB/scsi/SAN etc
