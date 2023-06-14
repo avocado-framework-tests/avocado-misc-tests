@@ -82,27 +82,31 @@ class NetworkSriovDevice(Test):
             'backup_veth_vnetwork', '*', default="")
         self.vnic_sriov_adapter = self.params.get(
             'vnic_sriov_adapter', '*', default="")
-        self.backup_device_type = "veth"
-        if not self.backup_veth_vnetwork:
-            self.backup_device_type = "vnic"
-            if not self.vnic_sriov_adapter:
-                self.cancel("Please provide veth or vnic inputs")
-        if 'vnic' in self.backup_device_type:
-            self.vnic_port_id = self.params.get(
-                'vnic_port_id', '*', default=None)
-            self.vnic_adapter_id = self.get_adapter_id(self.vnic_sriov_adapter)
-            self.priority = self.params.get(
-                'failover_priority', '*', default='50')
-            self.max_capacity = self.params.get(
-                'max_capacity', '*', default='10')
-            self.capacity = self.params.get('capacity', '*', default='2')
-            self.vios_name = self.params.get('vios_name', '*', default=None)
-            cmd = 'lssyscfg -m %s -r lpar --filter lpar_names=%s -F lpar_id' % (
-                self.server, self.vios_name)
-            self.vios_id = self.session.cmd(cmd).stdout_text.split()[0]
-            self.backup_vnic_backing_device = 'sriov/%s/%s/%s/%s/%s/%s/%s' % \
-                (self.vios_name, self.vios_id, self.vnic_adapter_id, self.vnic_port_id,
-                 self.capacity, self.priority, self.max_capacity)
+
+        if not self.backup_veth_vnetwork and not self.vnic_sriov_adapter and self.sriov_adapter:
+            self.local = LocalHost()
+        else:
+            self.backup_device_type = "veth"
+            if not self.backup_veth_vnetwork:
+                self.backup_device_type = "vnic"
+                if not self.vnic_sriov_adapter:
+                    self.cancel("Please provide veth or vnic inputs")
+            if 'vnic' in self.backup_device_type:
+                self.vnic_port_id = self.params.get(
+                    'vnic_port_id', '*', default=None)
+                self.vnic_adapter_id = self.get_adapter_id(self.vnic_sriov_adapter)
+                self.priority = self.params.get(
+                    'failover_priority', '*', default='50')
+                self.max_capacity = self.params.get(
+                    'max_capacity', '*', default='10')
+                self.capacity = self.params.get('capacity', '*', default='2')
+                self.vios_name = self.params.get('vios_name', '*', default=None)
+                cmd = 'lssyscfg -m %s -r lpar --filter lpar_names=%s -F lpar_id' % (
+                    self.server, self.vios_name)
+                self.vios_id = self.session.cmd(cmd).stdout_text.split()[0]
+                self.backup_vnic_backing_device = 'sriov/%s/%s/%s/%s/%s/%s/%s' % \
+                    (self.vios_name, self.vios_id, self.vnic_adapter_id, self.vnic_port_id,
+                     self.capacity, self.priority, self.max_capacity)
         self.local = LocalHost()
 
     @staticmethod
@@ -243,24 +247,37 @@ class NetworkSriovDevice(Test):
         """
         adapter_id = self.get_adapter_id(slot)
         backup_device = ''
-        if self.backup_device_type:
-            if 'veth' in self.backup_device_type:
-                backup_device = ',backup_device_type=%s,backup_veth_vnetwork=%s' % (
-                    self.backup_device_type, self.backup_veth_vnetwork)
-            else:
-                backup_device = ',backup_device_type=%s,backup_vnic_backing_device=%s' % (
-                    self.backup_device_type, self.backup_vnic_backing_device)
 
-        if operation == 'add':
-            cmd = 'chhwres -r sriov -m %s --rsubtype logport \
-                  -o a -p %s -a \"adapter_id=%s,phys_port_id=%s, \
-                  logical_port_type=eth,mac_addr=%s,migratable=%s%s\" ' \
-                  % (self.server, self.lpar, adapter_id,
-                     port, mac, self.migratable, backup_device)
+        if not self.backup_veth_vnetwork and not self.vnic_sriov_adapter and self.sriov_adapter:
+            if operation == 'add':
+                cmd = 'chhwres -r sriov -m %s --rsubtype logport \
+                      -o a -p %s -a \"adapter_id=%s,phys_port_id=%s, \
+                      logical_port_type=eth,mac_addr=%s,migratable=%s%s\" ' \
+                      % (self.server, self.lpar, adapter_id,
+                         port, mac, self.migratable, backup_device)
+            else:
+                cmd = 'chhwres -r sriov -m %s --rsubtype logport \
+                      -o r -p %s -a \"adapter_id=%s,logical_port_id=%s\" ' \
+                      % (self.server, self.lpar, adapter_id, logical_id)
         else:
-            cmd = 'chhwres -r sriov -m %s --rsubtype logport \
-                  -o r -p %s -a \"adapter_id=%s,logical_port_id=%s\" ' \
-                  % (self.server, self.lpar, adapter_id, logical_id)
+            if self.backup_device_type:
+                if 'veth' in self.backup_device_type:
+                    backup_device = ',backup_device_type=%s,backup_veth_vnetwork=%s' % (
+                        self.backup_device_type, self.backup_veth_vnetwork)
+                else:
+                    backup_device = ',backup_device_type=%s,backup_vnic_backing_device=%s' % (
+                        self.backup_device_type, self.backup_vnic_backing_device)
+
+            if operation == 'add':
+                cmd = 'chhwres -r sriov -m %s --rsubtype logport \
+                      -o a -p %s -a \"adapter_id=%s,phys_port_id=%s, \
+                      logical_port_type=eth,mac_addr=%s,migratable=%s%s\" ' \
+                      % (self.server, self.lpar, adapter_id,
+                         port, mac, self.migratable, backup_device)
+            else:
+                cmd = 'chhwres -r sriov -m %s --rsubtype logport \
+                      -o r -p %s -a \"adapter_id=%s,logical_port_id=%s\" ' \
+                      % (self.server, self.lpar, adapter_id, logical_id)
         cmd = self.session.cmd(cmd)
         if cmd.exit_status != 0:
             self.log.debug(cmd.stderr)
