@@ -128,7 +128,7 @@ class PortBounceTest(Test):
             self.fail("telnet connection to the fc/nic switch not yet done")
         self.remote_conn.send(command + '\n')
         time.sleep(self.verify_sleep_time)
-        response = self.remote_conn.recv(4000)
+        response = self.remote_conn.recv(8192)
         self.log.info("response before sendonly_output: %s", response)
         return self._send_only_result(command, response)
 
