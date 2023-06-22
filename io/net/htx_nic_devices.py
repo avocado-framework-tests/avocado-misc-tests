@@ -71,6 +71,8 @@ class HtxNicTest(Test):
                     networkinterface.save(ipaddr, self.netmask)
                 networkinterface.bring_up()
         self.host_distro = distro.detect()
+        self.host_distro_name = self.host_distro.name
+        self.host_distro_version = self.host_distro.version
         self.session = Session(self.peer_ip, user=self.peer_user,
                                password=self.peer_password)
         if not self.session.connect():
@@ -79,12 +81,21 @@ class HtxNicTest(Test):
                                      password=self.peer_password)
 
         self.get_peer_distro()
+        self.get_peer_distro_version()
+        self.htx_rpm_link = self.params.get('htx_rpm_link', default=None)
+
+    def get_peer_distro_version(self):
+        """
+        Get the distro version installed on peer lpar
+        """
+        detected_distro = distro.detect(session=self.session)
+        self.peer_distro_version = detected_distro.version
 
     def get_peer_distro(self):
         """
         Get the distro installed on peer lpar
         """
-        detected_distro = distro.detect()
+        detected_distro = distro.detect(session=self.session)
         if detected_distro.name == "Ubuntu":
             self.peer_distro = "Ubuntu"
         elif detected_distro.name == "rhel":
@@ -101,7 +112,7 @@ class HtxNicTest(Test):
         """
         packages = ['git', 'gcc', 'make', 'wget']
         detected_distro = distro.detect()
-        if detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat', 'wget']:
+        if detected_distro.name in ['centos', 'fedora', 'rhel', 'redhat']:
             packages.extend(['gcc-c++', 'ncurses-devel', 'tar'])
         elif detected_distro.name == "Ubuntu":
             packages.extend(['libncurses5', 'g++', 'ncurses-dev',
@@ -122,13 +133,43 @@ class HtxNicTest(Test):
                 self.cancel(
                     "Unable to install the package %s on peer machine" % pkg)
 
-        if self.htx_url:
-            htx = self.htx_url.split("/")[-1]
-            htx_rpm = self.fetch_asset(self.htx_url)
-            process.system("rpm -ivh --force %s" % htx_rpm)
-            cmd = "wget %s -O /tmp/%s ; cd /tmp ; rpm -ivh --force %s" % (
-                self.htx_url, htx, htx)
-            self.session.cmd(cmd)
+        if self.htx_rpm_link:
+            host_distro_pattern = "%s%s" % (
+                                            self.host_distro_name,
+                                            self.host_distro_version)
+            peer_distro_pattern = "%s%s" % (
+                                            self.peer_distro,
+                                            self.peer_distro_version)
+            patterns = [host_distro_pattern, peer_distro_pattern]
+            for pattern in patterns:
+                temp_string = process.getoutput(
+                              "curl --silent %s" % (self.htx_rpm_link),
+                              verbose=False, shell=True, ignore_status=True)
+                matching_htx_versions = re.findall(
+                    r"(?<=\>)htx\w*[-]\d*[-]\w*[.]\w*[.]\w*", str(temp_string))
+                distro_specific_htx_versions = [htx_rpm
+                                                for htx_rpm
+                                                in matching_htx_versions
+                                                if pattern in htx_rpm]
+                distro_specific_htx_versions.sort(reverse=True)
+                self.latest_htx_rpm = distro_specific_htx_versions[0]
+
+                if pattern == host_distro_pattern:
+                    if process.system('rpm -ivh --nodeps %s%s '
+                                      '--force' % (
+                                       self.htx_rpm_link, self.latest_htx_rpm
+                                       ), shell=True, ignore_status=True):
+                        self.cancel("Installion of rpm failed")
+
+                if pattern == peer_distro_pattern:
+                    cmd = ('rpm -ivh --nodeps %s%s '
+                           '--force' % (self.htx_rpm_link,
+                                        self.latest_htx_rpm))
+                    output = self.session.cmd(cmd)
+                    if not output.exit_status == 0:
+                        self.cancel("Unable to install the package %s %s"
+                                    " on peer machine" % (self.htx_rpm_link,
+                                                          self.latest_htx_rpm))
         else:
             url = "https://github.com/open-power/HTX/archive/master.zip"
             tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')
@@ -212,8 +253,10 @@ class HtxNicTest(Test):
         Update hostname & ip of both Host & Peer in /etc/hosts file of both
         Host & Peer
         """
-        host_name = process.system_output("hostname", ignore_status=True,
-                                          shell=True, sudo=True).decode("utf-8")
+        host_name = process.system_output("hostname",
+                                          ignore_status=True,
+                                          shell=True,
+                                          sudo=True).decode("utf-8")
         cmd = "hostname"
         output = self.session.cmd(cmd)
         peer_name = output.stdout.decode("utf-8")
@@ -396,7 +439,8 @@ class HtxNicTest(Test):
                 else:
                     self.session.cmd("systemctl restart network")
                 if self.host_distro == "rhel":
-                    process.system("systemctl start NetworkManager", shell=True,
+                    process.system("systemctl start NetworkManager",
+                                   shell=True,
                                    ignore_status=True)
                 else:
                     process.system("systemctl restart network", shell=True,
