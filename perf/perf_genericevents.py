@@ -67,7 +67,9 @@ class test_generic_events(Test):
         for file in os.listdir(dir):
             events_file = open(file, "r")
             event_code = events_file.readline()
-            val = self.generic_events.get(file, 9)
+            val = self.generic_events.get(file)
+            if val is None:
+                continue
             if 'umask' in event_code:
                 self.log.debug("EventCode: %s" % event_code)
                 event = (event_code.split('0x')[1]).rstrip(',umask=')
