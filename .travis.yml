@@ -16,10 +16,6 @@ cache:
     directories:
         - $HOME/.cache/pip
 
-ignore:
-  directories:
-      - /home/travis/build/avocado-framework-tests/avocado-misc-tests/dlpar/
-
 sudo: false
 
 install:
