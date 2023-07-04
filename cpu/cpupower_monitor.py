@@ -184,27 +184,27 @@ class CpupowerMonitor(Test):
         """
         1. Set smt mode to off.
         2. Run test_workload.
-        3. Run test_disable_idlestate.
+        3. Run test_idlestate_mode.
         4. Repeat test for smt=2. 4.
         """
 
         for i in ['off', '2', '4', 'on']:
             process.run('ppc64_cpu --smt=%s' % i, shell=True)
             self.test_workload()
-            self.test_disable_idlestate()
+            self.test_idlestate_mode()
         process.run('ppc64_cpu --smt=on', shell=True)
 
     def test_idlestate_single_core(self):
         """
         1. Set single core online.
         2. Run test_workload.
-        3. Run test_disable_idlestate.
+        3. Run test_idlestate_mode.
         4. Repeat test with smt=off, single core
         """
 
         process.run('ppc64_cpu --cores-on=1', shell=True)
         self.test_workload()
-        self.test_disable_idlestate()
+        self.test_idlestate_mode()
         process.run('ppc64_cpu --cores-on=all', shell=True)
         process.run('ppc64_cpu --smt=on', shell=True)
 
