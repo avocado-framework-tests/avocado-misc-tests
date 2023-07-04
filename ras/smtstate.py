@@ -95,7 +95,7 @@ class smtstate_tool(Test):
                     "/usr/bin/time -p ppc64_cpu --smt=%s" % i,
                     shell=True, sudo=True)
 
-            if (int(cmd_output.duration) > self.time_in_seconds):
+            if (int(cmd_output.duration) > time_in_seconds):
                 self.fail("FAIL: SMT has taken longer than expected")
             else:
                 self.log.info("Test Passed")
