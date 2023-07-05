@@ -58,10 +58,7 @@ class FioTest(Test):
         """
         default_url = "https://brick.kernel.dk/snaps/fio-git-latest.tar.gz"
         url = self.params.get('fio_tool_url', default=default_url)
-        device = self.params.get('disk', default=None)
-        self.disk = disk.get_absolute_disk_path(device)
         self.dir = self.params.get('dir', default=None)
-        self.disk_type = self.params.get('disk_type', default='')
         fstype = self.params.get('fs', default='')
         fs_args = self.params.get('fs_args', default='')
         mnt_args = self.params.get('mnt_args', default='')
@@ -73,6 +70,16 @@ class FioTest(Test):
         self.lv_create = False
         self.raid_create = False
         self.devdax_file = None
+        self.disk_type = self.params.get('disk_type', default='')
+        device = self.params.get('disk', default=None)
+        if device and not self.disk_type:
+            self.disk = disk.get_absolute_disk_path(device)
+            if self.disk not in disk.get_all_disk_paths():
+                self.cancel("Missing disk %s in OS" % self.disk)
+        elif self.disk_type == 'nvdimm':
+            self.disk = None
+        else:
+            self.cancel("Please Provide valid disk")
 
         if fstype == 'btrfs':
             ver = int(distro.detect().version)
@@ -139,23 +146,17 @@ class FioTest(Test):
                     if line.startswith(eng) and 'no' in line:
                         self.cancel("PMEM engines not built with fio")
 
-        if self.disk:
-            if self.disk not in disk.get_all_disk_paths():
-                self.cancel("Missing disk %s in OS" % self.disk)
-        else:
-            self.cancel("Please Provide valid disk name")
-
         if not self.dir:
             self.dir = self.workdir
-
-        self.target = self.disk
-        self.lv_disk = self.disk
-        self.part_obj = Partition(self.disk, mountpoint=self.dir)
-        self.sraid = softwareraid.SoftwareRaid(self.raid_name, '0',
-                                               self.disk.split(), '1.2')
+        if self.disk:
+            self.target = self.disk
+            self.lv_disk = self.disk
+            self.part_obj = Partition(self.disk, mountpoint=self.dir)
+            self.sraid = softwareraid.SoftwareRaid(self.raid_name, '0',
+                                                   self.disk.split(), '1.2')
+            self.pre_cleanup()
         dmesg.clear_dmesg()
 
-        self.pre_cleanup()
         if raid_needed:
             self.create_raid(self.target, self.raid_name)
             self.raid_create = True
@@ -182,6 +183,8 @@ class FioTest(Test):
                 self.plib.enable_region()
                 regions = sorted(self.plib.run_ndctl_list(
                     '-R'), key=lambda i: i['size'], reverse=True)
+                if not regions:
+                    self.cancel("There are no pmem devices to test")
             region = self.plib.run_ndctl_list_val(regions[0], 'dev')
             if self.plib.run_ndctl_list("-N -r %s" % region):
                 self.plib.destroy_namespace(region=region, force=True)
