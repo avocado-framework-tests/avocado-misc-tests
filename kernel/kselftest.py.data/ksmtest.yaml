@@ -1,7 +1,7 @@
 component: !mux
-    vm:
-        comp: "vm"
+    mm:
+        comp: "mm"
         subtest: "ksm_tests"
-        test_type: ""
-        Size: ""
-        Dup_MM_Area: ""
+        test_type:
+        Size:
+        Dup_MM_Area:

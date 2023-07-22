@@ -52,7 +52,7 @@ class kselftest(Test):
         smg = SoftwareManager()
         self.comp = self.params.get('comp', default='')
         self.subtest = self.params.get('subtest', default='')
-        if self.comp == "vm" and self.subtest == "ksm_tests":
+        if self.comp == "mm" and self.subtest == "ksm_tests":
             self.test_type = self.params.get('test_type', default='-H')
             self.Size_flag = self.params.get('Size', default='-s')
             self.Dup_MM_Area = self.params.get('Dup_MM_Area', default='100')
@@ -200,7 +200,7 @@ class kselftest(Test):
         Run the different ksm test types:
         Ex: -M (page merging)
         """
-        ksm_test_dir = self.sourcedir + "/vm/"
+        ksm_test_dir = self.sourcedir + "/mm"
         ksm_test_bin = ksm_test_dir+"/ksm_tests"
         self.test_list = ["-M", "-Z", "-N", "-U", "-C"]
         if os.path.exists(ksm_test_bin):
