@@ -60,7 +60,9 @@ class kselftest(Test):
         self.run_type = self.params.get('type', default='upstream')
         detected_distro = distro.detect()
         deps = ['gcc', 'make', 'automake', 'autoconf', 'rsync']
-
+        if (self.comp == "powerpc"):
+            if (detected_distro.arch != 'ppc64' or detected_distro.arch != 'ppc64le'):
+                self.cancel("Testing on a non powerpc platform")
         if detected_distro.name in ['Ubuntu', 'debian']:
             deps.extend(['libpopt0', 'libc6', 'libc6-dev', 'libcap-dev',
                          'libpopt-dev', 'libcap-ng0', 'libcap-ng-dev',
@@ -113,6 +115,9 @@ class kselftest(Test):
                 if os.path.isdir(l_dir) and 'Makefile' in os.listdir(l_dir):
                     self.buldir = os.path.join(self.workdir, l_dir)
                     break
+            process.system("make headers -C %s" % self.buldir, shell=True, sudo=True)
+            self.sourcedir = os.path.join(self.buldir, self.testdir)
+            process.system("make install -C %s" % self.sourcedir, shell=True, sudo=True)
         else:
             if self.subtest == 'pmu/event_code_tests':
                 self.cancel("selftest not supported on distro")
