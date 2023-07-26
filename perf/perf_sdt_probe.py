@@ -80,6 +80,7 @@ class PerfSDT(Test):
         self.run_cmd(perf_libc_add)
         if self.is_fail:
             self.fail("Unable to add %s to builid-cache" % self.libc)
+        time.sleep(10)
         # Check if libpthread has valid SDT markers
         new_val = 0
         result = self.run_cmd_out("perf list")
