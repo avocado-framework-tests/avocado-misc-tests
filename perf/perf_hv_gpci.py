@@ -99,13 +99,15 @@ class perf_hv_gpci(Test):
             self.fail_cmd.append(cmd)
 
         # test hv_gpci events with normal user
-        if not process.system('id test', sudo=True):
+        if not process.system('id test', sudo=True, ignore_status=True):
             result = process.run("su - test -c '%s'" % cmd, shell=True,
                                  ignore_status=True)
             err_ln = "kernel.perf_event_paranoid=2, trying to fall back to "
             "excluding kernel and hypervisor  samples"
             if err_ln not in result.stderr.decode():
                 self.fail("able to read hv_gpci counter data as normal user")
+        else:
+            self.log.warn('User test does not exist, skipping test')
 
     def gpci_events(self, val):
         for line in val:
