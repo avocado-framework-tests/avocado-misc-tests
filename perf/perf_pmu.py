@@ -72,12 +72,16 @@ class PerfBasic(Test):
             process.run('groupadd test_pmu', sudo=True)
         if process.system('getent passwd test_pmu', ignore_status=True):
             process.run(
-                'useradd -g test_pmu -m -d /home/test_pmu test_pmu', sudo=True)
-        process.run('usermod -a -G test_pmu test_pmu', sudo=True)
+                'useradd -g test_pmu -m -d /home/test_pmu test_pmu',
+                sudo=True, ignore_status=True)
+        if not process.system('id test_pmu', sudo=True, ignore_status=True):
+            process.run('usermod -a -G test_pmu test_pmu', sudo=True)
 
     def _remove_temp_user(self):
-        # This function removes the temporary user added for testing
-        process.system('userdel -r test_pmu', sudo=True, ignore_status=True)
+        # Remove the temporary user added for testing
+        if not process.system('id test_pmu', sudo=True, ignore_status=True):
+            process.system('userdel -r test_pmu', sudo=True,
+                           ignore_status=True)
 
     def _check_kernel_config(self, config_option):
         # This function checks the kernel configuration with the input
@@ -121,12 +125,15 @@ class PerfBasic(Test):
             self.fail("Unable to read mmcr* files as super user.")
 
         self._create_temp_user()
-        result = process.run("su - test_pmu -c 'cat %smmcr*'" % sysfs_file,
-                             shell=True, ignore_status=True)
-        output = result.stdout.decode() + result.stderr.decode()
-        self._remove_temp_user()
-        if 'Permission denied' not in output:
-            self.fail("Able to read mmcr* files as normal user.")
+        if not process.system('id test_pmu', sudo=True, ignore_status=True):
+            result = process.run("su - test_pmu -c 'cat %smmcr*'" % sysfs_file,
+                                 shell=True, ignore_status=True)
+            output = result.stdout.decode() + result.stderr.decode()
+            self._remove_temp_user()
+            if 'Permission denied' not in output:
+                self.fail("Able to read mmcr* files as normal user.")
+        else:
+            self.log.warn('User test_pmu does not exist, skipping test')
 
     def _verify_lscpu_sysfs(self, filename, value_to_verify):
         output = int(genio.read_file(filename))
@@ -160,14 +167,20 @@ class PerfBasic(Test):
                                  sysfs_file, self.pcorechips)
 
         self._create_temp_user()
-        user_cmd = "su - test_pmu -c"
-        self._verify_lscpu_sysfs_test("%s 'cat %ssockets'"
-                                      % (user_cmd, sysfs_file), self.psockets)
-        self._verify_lscpu_sysfs_test("%s 'cat %schipspersocket'"
-                                      % (user_cmd, sysfs_file), self.pchips)
-        self._verify_lscpu_sysfs_test("%s 'cat %scoresperchip'"
-                                      % (user_cmd, sysfs_file), self.pcorechips)
-        self._remove_temp_user()
+        if not process.system('id test_pmu', sudo=True, ignore_status=True):
+            user_cmd = "su - test_pmu -c"
+            self._verify_lscpu_sysfs_test("%s 'cat %ssockets'"
+                                          % (user_cmd, sysfs_file),
+                                          self.psockets)
+            self._verify_lscpu_sysfs_test("%s 'cat %schipspersocket'"
+                                          % (user_cmd, sysfs_file),
+                                          self.pchips)
+            self._verify_lscpu_sysfs_test("%s 'cat %scoresperchip'"
+                                          % (user_cmd, sysfs_file),
+                                          self.pcorechips)
+            self._remove_temp_user()
+        else:
+            self.log.warn('User test_pmu does not exist, skipping test')
 
         if self.pchips == "1" and self.psockets == "1" and self.pcorechips == "1":
             output = dmesg.collect_errors_dmesg(
