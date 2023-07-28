@@ -1,0 +1,7 @@
+run_type: !mux
+# value is either distro or upstream
+    coverage:
+        type: 'upstream'
+cpu_load: "10 50 80"
+timeout: 240
+profile_duration: 10
