@@ -191,19 +191,31 @@ class NXGZipTests(Test):
             self.device.unmount()
             shutil.rmtree('%s' % mnt_path)
 
-    def test_numamany(self):
+    def test_runmany(self):
         '''
-        Running NX-GZIP: Run compress/decompress on multiple numa nodes
+        Running NX-GZIP: Run decompress on given file
         '''
-        self.log.info("NX-GZIP: test_numamany:\
-                      Run compress/decompress on multiple numa nodes")
+        self.log.info("NX-GZIP: runmany:\
+                      Run decompress on given file")
         self.build_tests("samples")
-        self.create_ddfile()
+        os.chmod('runmany.sh', 0o777)
 
-        file_size = self.params.get('file_size', default='5')
-        numamany_cmd = './runnumamany.sh %sgb-file' % file_size
-        if process.system(numamany_cmd, shell=True, ignore_status=True):
-            self.fail("NX-GZIP: test_numamany: numa node tests failed")
+        runmany_cmd = './runmany.sh %s/linux-src.tar 4' % self.workdir
+        if process.system(runmany_cmd, shell=True, ignore_status=True):
+            self.fail("NX-GZIP: test_runmany: runmany tests failed")
+
+    def test_runnuma(self):
+        '''
+        Running NX-GZIP: Run decompress on multiple numa nodes
+        '''
+        self.log.info("NX-GZIP: runnuma:\
+                      Run decompress on multiple numa nodes")
+        self.build_tests("samples")
+        os.chmod('runnuma.sh', 0o777)
+
+        runnuma_cmd = './runnuma.sh %s/linux-src.tar 4' % self.workdir
+        if process.system(runnuma_cmd, shell=True, ignore_status=True):
+            self.fail("NX-GZIP: test_runnuma: runmany tests failed")
 
     def test_simple_decomp(self):
         '''
@@ -264,24 +276,6 @@ class NXGZipTests(Test):
             self.fail("NX-GZIP: test_compdecomp_threads:\
                       compress/decompress with parallel threads failed")
 
-    def test_dictionary(self):
-        '''
-        Running NX-GZIP: Test deflate/inflate with dictionary file
-        '''
-        self.log.info("NX-GZIP: test_dictionary:\
-                      Run deflate/inflate with dictionary file")
-        self.download_tarball()
-        self.build_tests("samples")
-        make_cmd = 'make zpipe_dict'
-        if process.system(make_cmd, shell=True, ignore_status=True):
-            self.fail("NX-GZIP: test_dictionary: make failed")
-
-        dict_cmd = './dict-test.sh alice29.txt %s/linux-src.tar'\
-                   % self.workdir
-        if process.system(dict_cmd, shell=True, ignore_status=True):
-            self.fail("NX-GZIP: test_test_dictionary:\
-                      deflate/inflate with dictionary tests failed")
-
     def test_nxdht(self):
         '''
         Running NX-GZIP: Run nxdht tests
@@ -289,8 +283,11 @@ class NXGZipTests(Test):
         self.log.info("NX-GZIP: test_nxdht: Run nxdht tests")
         self.download_tarball()
         self.build_tests("samples")
+        self.create_ddfile()
 
-        nxdht_cmd = './gzip_nxdht_test %s/linux-src.tar' % self.workdir
+        file_size = self.params.get('file_size', default='5')
+        process.system("gzip %sgb-file" % file_size, shell=True, ignore_status=True)
+        nxdht_cmd = './gunzip_nx_test %sgb-file.gz' % file_size
         if process.system(nxdht_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_nxdht: nxdht tests failed")
 
@@ -311,19 +308,7 @@ class NXGZipTests(Test):
         '''
         nx-gzip tests from kself tests
         '''
-        self.testdir = "tools/testing/selftests/powerpc/nx-gzip"
-        linux_src = 'https://github.com/torvalds/linux/archive/master.zip'
-        self.output = "linux-master"
-        match = next(
-            (ext for ext in [".zip", ".tar"] if ext in linux_src), None)
-        if match:
-            tarball = self.fetch_asset("kselftest%s" % match,
-                                       locations=[linux_src], expire='1d')
-            archive.extract(tarball, self.teststmpdir)
-        else:
-            git.get_repo(linux_src, destination_dir=self.teststmpdir)
-        self.buldir = os.path.join(self.teststmpdir, self.output)
-        self.build_tests(self.testdir)
+        self.build_tests("selftest")
 
     def test_bench_initend(self):
         '''
@@ -362,6 +347,6 @@ class NXGZipTests(Test):
         self.create_ddfile()
 
         file_size = self.params.get('file_size', default='5')
-        zlib_cmd = './zlib-run-series.sh %sgb-file' % file_size
+        zlib_cmd = './zlib-run-series.sh %s/linux-src.tar' % self.workdir
         if process.system(zlib_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_zlib_series: zlib test series failed")
