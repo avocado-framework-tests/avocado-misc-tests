@@ -52,7 +52,7 @@ class kselftest(Test):
         smg = SoftwareManager()
         self.comp = self.params.get('comp', default='')
         self.subtest = self.params.get('subtest', default='')
-        if self.comp == "vm" and self.subtest == "ksm_tests":
+        if self.comp == "mm" and self.subtest == "ksm_tests":
             self.test_type = self.params.get('test_type', default='-H')
             self.Size_flag = self.params.get('Size', default='-s')
             self.Dup_MM_Area = self.params.get('Dup_MM_Area', default='100')
@@ -60,7 +60,9 @@ class kselftest(Test):
         self.run_type = self.params.get('type', default='upstream')
         detected_distro = distro.detect()
         deps = ['gcc', 'make', 'automake', 'autoconf', 'rsync']
-
+        if (self.comp == "powerpc"):
+            if (detected_distro.arch != 'ppc64' or detected_distro.arch != 'ppc64le'):
+                self.cancel("Testing on a non powerpc platform")
         if detected_distro.name in ['Ubuntu', 'debian']:
             deps.extend(['libpopt0', 'libc6', 'libc6-dev', 'libcap-dev',
                          'libpopt-dev', 'libcap-ng0', 'libcap-ng-dev',
@@ -113,6 +115,9 @@ class kselftest(Test):
                 if os.path.isdir(l_dir) and 'Makefile' in os.listdir(l_dir):
                     self.buldir = os.path.join(self.workdir, l_dir)
                     break
+            process.system("make headers -C %s" % self.buldir, shell=True, sudo=True)
+            self.sourcedir = os.path.join(self.buldir, self.testdir)
+            process.system("make install -C %s" % self.sourcedir, shell=True, sudo=True)
         else:
             if self.subtest == 'pmu/event_code_tests':
                 self.cancel("selftest not supported on distro")
@@ -200,7 +205,7 @@ class kselftest(Test):
         Run the different ksm test types:
         Ex: -M (page merging)
         """
-        ksm_test_dir = self.sourcedir + "/vm/"
+        ksm_test_dir = self.sourcedir + "/mm"
         ksm_test_bin = ksm_test_dir+"/ksm_tests"
         self.test_list = ["-M", "-Z", "-N", "-U", "-C"]
         if os.path.exists(ksm_test_bin):

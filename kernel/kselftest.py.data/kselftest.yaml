@@ -1,6 +1,6 @@
 component: !mux
-    vm:
-        comp: "vm"
+    mm:
+        comp: "mm"
     power:
         comp: "powerpc"
         kself_args: "summary=1"

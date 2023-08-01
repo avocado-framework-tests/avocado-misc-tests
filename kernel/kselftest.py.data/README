@@ -18,7 +18,7 @@ KSM Test Documentation :-
 
 kernel/kselftest.py.data/ksmtest.yaml contains YAML parameters that can
 be used to control ksm_tests behaviour. The following parameters are to
-be added under vm component. 
+be added under mm component. 
 1. subtest     -> To specify ksm_tests
 2. test_type   -> Kself supported test types.
 3. Size        -> Size of duplicated memory area(in MiB) must be provided using -s option.
@@ -26,8 +26,8 @@ be added under vm component.
 
 To run ksm_tests with -P and -H test types, following section can be added to
 the YAML file
-    vm:
-        comp: "vm"
+    mm:
+        comp: "mm"
         subtest: "ksm_tests"
         test_type: "-H"
         Size: "-s"
@@ -37,8 +37,8 @@ Note: The value of Dup_MM_Area depends on the use case.
 To run with  -M, -Z, -N, -U and -C test types, there is no need to pass the
 "Size" and "Dup_MM_Area" parameters.
 Eample YAML section:
-    vm:
-        comp: "vm"
+    mm:
+        comp: "mm"
         subtest: "ksm_tests"
         test_type: "-M"
         Size: ""
@@ -50,8 +50,8 @@ other kselftests
 To run only ksm_tests with upstream code:
 
 component: !mux
-    vm:
-        comp: "vm"
+    mm:
+        comp: "mm"
         subtest: "ksm_tests"
         test_type: "-H"
         Size: "-s"
@@ -80,8 +80,8 @@ component: !mux
         comp: "powerpc"
         subtest: "alignment"
         kself_args: "summary=1"
-    vm:
-        comp: "vm"
+    mm:
+        comp: "mm"
         subtest: "ksm_tests"
         test_type: "-H"
         Size: "-s"
@@ -97,8 +97,8 @@ component: !mux
     power:
         comp: "powerpc"
         kself_args: "summary=1"
-    vm:
-        comp: "vm"
+    mm:
+        comp: "mm"
         subtest: "ksm_tests"
         test_type: "-H"
         Size: "-s"
