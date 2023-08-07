@@ -71,6 +71,22 @@ class Perftest(Test):
             else:
                 self.cancel("Install the package for perf supported\
                           by %s" % detected_distro.name)
+        if run_type == 'upstream':
+            if 'rhel' in detected_distro.name:
+                deps.extend(['systemtap-sdt-devel', 'slang-devel',
+                             'perl-ExtUtils-Embed', 'libcap-devel',
+                             'numactl-devel', 'libbabeltrace-devel',
+                             'libpfm-devel', 'java-1.8.0-openjdk-devel',
+                             'libtraceevent-devel'])
+                if int(detected_distro.version) >= 9:
+                    deps.extend(['libunwind-devel'])
+            # TODO I could only locate systemtap-sdt-devel, libunwind-devel,
+            # slang-devel, and libcap-devel packages. Missing list includes
+            # elfutils-devel, libbabeltrace-devel, java-1.8.0-openjdk-devel
+            # and libpfm4-devel. For now cancel the test due to missing
+            # dependent packages
+            if 'SuSE' in detected_distro.name:
+                self.cancel("Install the required dependent packages")
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
