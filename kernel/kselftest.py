@@ -100,6 +100,7 @@ class kselftest(Test):
         if self.run_type == 'upstream':
             location = self.params.get('location', default='https://github.c'
                                        'om/torvalds/linux/archive/master.zip')
+            git_branch = self.params.get('branch', default='master')
             path = ''
             match = next(
                 (ext for ext in [".zip", ".tar"] if ext in location), None)
@@ -109,7 +110,7 @@ class kselftest(Test):
                 archive.extract(tarball, self.workdir)
                 path = glob.glob(os.path.join(self.workdir, "linux*"))
             else:
-                git.get_repo(location, destination_dir=self.workdir)
+                git.get_repo(location, branch=git_branch, destination_dir=self.workdir)
                 path = glob.glob(self.workdir)
             for l_dir in path:
                 if os.path.isdir(l_dir) and 'Makefile' in os.listdir(l_dir):

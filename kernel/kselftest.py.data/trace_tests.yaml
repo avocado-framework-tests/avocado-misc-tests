@@ -14,3 +14,6 @@ component: !mux
 run_type: !mux
     distro:
         type: 'distro'
+    upstream:
+        type: 'upstream'
+        location: 'https://github.com/torvalds/linux/archive/master.zip'
