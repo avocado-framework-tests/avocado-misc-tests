@@ -38,7 +38,7 @@ class perf_metric(Test):
             ln = ln.strip()
             # Skipping empty line, header and comment
             if not ln or "List of pre-defined events" in ln or "[" in ln or\
-               "Metrics:" in ln or "Metric Groups:" in ln:
+               "Metrics:" in ln or "Metric Groups:" in ln or not ln.isupper():
                 continue
             else:
                 self.list_of_metric_events.append(ln)
