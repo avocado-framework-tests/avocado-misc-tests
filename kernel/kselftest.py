@@ -61,7 +61,7 @@ class kselftest(Test):
         detected_distro = distro.detect()
         deps = ['gcc', 'make', 'automake', 'autoconf', 'rsync']
         if (self.comp == "powerpc"):
-            if (detected_distro.arch != 'ppc64' or detected_distro.arch != 'ppc64le'):
+            if 'ppc' not in detected_distro.arch:
                 self.cancel("Testing on a non powerpc platform")
         if detected_distro.name in ['Ubuntu', 'debian']:
             deps.extend(['libpopt0', 'libc6', 'libc6-dev', 'libcap-dev',
