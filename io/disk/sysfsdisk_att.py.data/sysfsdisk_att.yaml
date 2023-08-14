@@ -1,0 +1,8 @@
+disk:
+queue_attributes: !mux
+    io_poll_delay:
+        attribute_name: "io_poll_delay"
+        values: "-1"
+    iostats:
+        attribute_name: "iostats"
+        values: "0 1"
