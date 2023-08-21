@@ -131,7 +131,8 @@ class Stressng(Test):
         smt = int(re.split(r'=| is ', process.system_output("ppc64_cpu --smt")
                            .decode('utf-8'))[1])
         no_of_cores = int(self.tcpus // smt)
-        clock_freq = int(subprocess.check_output("cat /proc/cpuinfo | grep -m1 clock |sed 's/.*://' | cut -f1 -d'.'", shell=True))
+        cmd = "cat /proc/cpuinfo | grep -m1 clock |sed 's/.*://' | cut -f1 -d'.'"
+        clock_freq = int(subprocess.check_output(cmd, shell=True)
         cpu_freq = int(clock_freq // 100)
         perf_iterations = {}
         vmstat_iterations = {}
