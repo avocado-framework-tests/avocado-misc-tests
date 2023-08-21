@@ -73,10 +73,14 @@ class servicelog(Test):
                 "4 - Checking if the event was dumped to /var/log/platform")
             self.run_cmd("cat /var/log/platform")
         service_log_cmds = ["--help", "--version", "--query='id=1'", "--id=1",
-                            "--query='severity>=$WARNING AND closed=0'", "--serviceable=yes",
-                            "--serviceable=no", "--serviceable=all", "--query='serviceable=1 AND closed=0'",
-                            "--repair_action=yes", "--repair_action=no", "--repair_action=all",
-                            "--verbose --repair_action=no", "--event_repaired=no", "--severity=4"]
+                            "--query='severity>=$WARNING AND closed=0'",
+                            "--serviceable=yes", "--serviceable=no",
+                            "--serviceable=all",
+                            "--query='serviceable=1 AND closed=0'",
+                            "--repair_action=yes", "--repair_action=no",
+                            "--repair_action=all",
+                            "--verbose --repair_action=no",
+                            "--event_repaired=no", "--severity=4"]
         for cmd in service_log_cmds:
             self.run_cmd("servicelog %s" % cmd)
         self.run_cmd("servicelog_manage --truncate notify --force")
@@ -112,8 +116,8 @@ class servicelog(Test):
                       "successfully  =======")
         self.run_cmd("servicelog_notify --list | grep notify_script")
         ids = self.run_cmd_out("servicelog_notify --list --command=%s | "
-                               "grep \"Servicelog ID:\" | cut -d\":\" -f2 | sed 's/^ *//'" %
-                               notify_script)
+                               "grep \"Servicelog ID:\" | cut -d\":\" -f2 "
+                               "| sed 's/^ *//'" % notify_script)
         ids = ids.split()
         self.log.info("=====6 - Checking if servicelog_notify --list, "
                       "lists the command just added  =======")
@@ -165,7 +169,8 @@ class servicelog(Test):
         self.log.info("===========2 - Checking if the event shows up"
                       " on servicelog_manage =========")
         self.run_cmd("servicelog --dump")
-        cmd_num_records = "servicelog --dump | grep \"Power Platform (RTAS) Event\" | wc -l"
+        cmd_num_records = \
+            "servicelog --dump | grep \"Power Platform (RTAS) Event\" | wc -l"
         NoofRecords = self.run_cmd_out(cmd_num_records)
         if int(NoofRecords) == 0:
             self.is_fail += 1
@@ -220,18 +225,25 @@ class servicelog(Test):
         """
         self.log.info("===========3 - Introducing the repair action "
                       "=========")
-        self.run_cmd("log_repair_action -q -t ppc64_rtas -l %s" % location)
+        cmd = "servicelog --version | grep Version |  awk '{print $NF}'"
+        if "0.2.9" in process.run(cmd).stdout.decode("utf-8"):
+            self.run_cmd("log_repair_action -q -t ppc64_ras -l %s" % location)
+        else:
+            self.run_cmd("log_repair_action -q -l %s" % location)
         self.log.info("===========4 - Checking servicelog after the "
                       "repair action =========")
         self.run_cmd("servicelog --type=ppc64_rtas -v")
         # Checking if the event was repaired indeed
         repaired = self.run_cmd_out("servicelog "
-                                    "--type=ppc64_rtas | grep \"Event Repaired\" | cat -b "
-                                    "| grep 2 | cut -d\":\" -f2 | sed 's/^ *//'")
+                                    "--type=ppc64_rtas | "
+                                    "grep \"Event Repaired\" | cat -b "
+                                    "| grep 2 | cut -d\":\" -f2 | "
+                                    "sed 's/^ *//'")
         if repaired == "Yes":
             # Checking if we have a repair action on servicelog
             repair_event = self.run_cmd_out("servicelog "
-                                            "--type=ppc64_rtas | grep \"Repair Action\" | "
+                                            "--type=ppc64_rtas | "
+                                            "grep \"Repair Action\" | "
                                             "cut -d\":\" -f1")
             if repair_event != "Repair Action":
                 self.is_fail += 1

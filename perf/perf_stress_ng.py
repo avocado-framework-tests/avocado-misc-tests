@@ -95,7 +95,7 @@ class Stressng(Test):
         sum = 0
         result = 0
         cmd = "awk '!/procs|swpd/ && NF > 0 { print $15 }' %s > /tmp/data1.txt" % filename
-        perf_data = process.system_output(
+        vmstat_data = process.system_output(
                 cmd, ignore_status=True, sudo=True, shell=True)
 
         f = open("/tmp/data1.txt", "r")
@@ -135,6 +135,8 @@ class Stressng(Test):
         cpu_freq = int(clock_freq // 100)
         perf_iterations = {}
         vmstat_iterations = {}
+        final_results = {}
+        failed = 0
 
         self.log.info("=====================================================")
 
@@ -222,7 +224,9 @@ class Stressng(Test):
                 change_percent = abs(perf_average - vmstat_average)
 
                 if change_percent > 3.5:
-                    self.fail(
+                    final_results[load] = change_percent
+                    failed = 1
+                    self.log.info(
                            " CPU load %s Failed with percentage %s difference" %
                            (load, change_percent))
             else:
@@ -230,6 +234,8 @@ class Stressng(Test):
                        "stress-ng is ether not running or all the process are now killed ")
 
         self.log.info("=====================================================")
+        if failed == 1:
+            self.fail(" CPU load %s combination's failed with percentage difference %s" % (self.cpu_per, final_results))
 
     def tearDown(self):
         """
