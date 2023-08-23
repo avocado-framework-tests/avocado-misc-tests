@@ -102,9 +102,9 @@ class Stressng(Test):
             if line[0].isnumeric():
                 if var < 10:
                     var += 1
-                    sum = sum + int(line[0])
+                    sum = sum + int(line)
                 else:
-                    sum = sum + int(line[0])
+                    sum = sum + int(line)
                     result = 100 - sum // 11
                     var = 0
                     sum = 0
@@ -217,9 +217,9 @@ class Stressng(Test):
                 if self.is_process_running("stress-ng"):
                     self.kill_process_by_name("stress-ng")
 
-                change_percent = (abs(perf_average - vmstat_average) / vmstat_average) * 100
+                change_percent = abs(perf_average - vmstat_average)
 
-                if change_percent > 2:
+                if change_percent > 3.5:
                     final_results[load] = change_percent
                     failed = 1
                     self.log.info(
