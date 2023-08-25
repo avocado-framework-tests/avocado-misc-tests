@@ -1,0 +1,81 @@
+variants: !mux
+    all_cpus:
+        option: -a
+    all_cpus_full:
+        option: --all-cpus
+    cpu:
+        option: -C 0
+    cpu_full:
+        option: --cpu 0
+    delay:
+        option: -D 5
+    delay_full:
+        option: --delay 5
+    event:
+        option: -e L1-dcache-load-misses
+    event_full:
+        option: --event L1-dcache-load-misses
+    force:
+        option: -f
+    force_full:
+        option: --force
+    pagefault:
+        option: -F
+    pagefault_full:
+        option: --pf
+    cgroup:
+        option: -G A
+    cgroup_full:
+        option: --cgroup A
+    input:
+        option: --input
+    mmap_pages:
+        option: -m 1
+    mmap_pages_full:
+        option: --mmap-pages 1
+    output:
+        option: -o perf.data.trace
+    output_full:
+        option: --output perf.data.trace
+    pid:
+        option: -p 10
+    pid_full:
+        option: --pid 10
+    summary:
+        option: -s
+    summary_full:
+        option: --summary
+    with-summary:
+        option: -S
+    with-summary_full:
+        option: --with-summary
+    tid:
+        option: -t 10
+    tid_full:
+        option: --tid 10
+    time:
+        option: -T
+    time_full:
+        option: --time
+    uid:
+        option: -u 1
+    uid_full:
+        option: --uid 1
+    verbose:
+        option: -v
+    verbose_full:
+        option: --verbose
+    call-graph:
+        option: --call-graph dwarf
+    comm:
+        option: --comm
+    duration:
+        option: --duration 10
+    errno-summary:
+        option: --errno-summary
+    expr:
+        option: --expr L1-dcache-load-misses
+    failure:
+        option: --failure
+    no-inherit:
+        option: --no-inherit
