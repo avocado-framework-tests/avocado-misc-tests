@@ -20,6 +20,9 @@ import os
 from avocado import Test
 from avocado.utils import process
 from avocado import skipUnless
+from avocado.utils import disk
+from avocado.utils import multipath
+from avocado.utils.network.hosts import LocalHost
 
 IS_POWER_VM = 'pSeries' in open('/proc/cpuinfo', 'r').read()
 
@@ -35,21 +38,31 @@ class BootlisTest(Test):
         '''
         To check and interfaces
         '''
-        self.host_interfaces = self.params.get("host_interfaces",
-                                               default=None)
-        self.disk_names = self.params.get("disks", default=None)
-        if self.host_interfaces is not None:
-            if not self.host_interfaces:
-                self.cancel("user should specify host interfaces")
-            self.names = self.host_interfaces
-            interfaces = os.listdir('/sys/class/net')
-            for host_interface in self.host_interfaces.split(" "):
-                if host_interface not in interfaces:
-                    self.cancel("interface is not available")
-        elif self.disk_names is not None:
-            if not self.disk_names:
-                self.cancel("user should specify disk name")
-            self.names = self.disk_names
+        self.disk_names = []
+        self.host_interfaces = []
+        local = LocalHost()
+        interfaces = os.listdir('/sys/class/net')
+        disks = self.params.get("disks", default=None)
+        ifaces = self.params.get("host_interfaces", default=None)
+        if ifaces:
+            for device in ifaces.split(" "):
+                if device in interfaces:
+                    self.host_interfaces.append(device)
+                elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
+                    self.host_interfaces.append(local.get_interface_by_hwaddr(device).name)
+                else:
+                    self.cancel("Please check the network device")
+            self.names = ' '.join(self.host_interfaces)
+        elif disks:
+            for dev in disks.split():
+                dev_path = disk.get_absolute_disk_path(dev)
+                dev_base = os.path.basename(os.path.realpath(dev_path))
+                if 'dm' in dev_base:
+                    dev_base = multipath.get_mpath_from_dm(dev_base)
+                self.disk_names.append(dev_base)
+            self.names = ' '.join(self.disk_names)
+        else:
+            self.cancel("user should specify a boot device name")
 
     def bootlist_mode(self, param):
         '''
