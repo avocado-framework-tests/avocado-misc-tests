@@ -17,7 +17,6 @@
 
 
 import os
-import netifaces
 from avocado import Test
 from avocado.utils import distro
 from avocado.utils import process
@@ -35,18 +34,19 @@ class Bridging(Test):
             self.fail("Command %s failed" % cmd)
 
     def setUp(self):
-        self.host_interfaces = self.params.get("interfaces",
-                                               default="").split(" ")
-        if not self.host_interfaces:
-            self.cancel("User should specify host interface/s")
-
+        self.host_interfaces = []
+        local = LocalHost()
+        interfaces = os.listdir('/sys/class/net')
+        devices = self.params.get("interfaces", default="").split(" ")
+        for device in devices:
+            if device in interfaces:
+                self.host_interfaces.append(device)
+            elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
+                self.host_interfaces.append(local.get_interface_by_hwaddr(device).name)
+            else:
+                self.cancel("Please check the network device")
         if self.host_interfaces[0:2] == 'ib':
             self.cancel("Network Bridge is not supported for IB")
-
-        interfaces = netifaces.interfaces()
-        for host_interface in self.host_interfaces:
-            if host_interface not in interfaces:
-                self.cancel("Interface is not available")
 
         self.peer_ip = self.params.get("peer_ip", default=None)
         if not self.peer_ip:
@@ -60,7 +60,6 @@ class Bridging(Test):
                                         default="None")
         self.bridge_interface = self.params.get("bridge_interface",
                                                 default="br0")
-        local = LocalHost()
         self.networkinterface = NetworkInterface(self.bridge_interface, local,
                                                  if_type="Bridge")
 

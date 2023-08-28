@@ -5,5 +5,5 @@ netmask:
 bridge_interface: "br0"
 peer_interface:
 peer_public_ip:
-peer_password: "********"
+peer_password:
 user_name:
