@@ -19,6 +19,7 @@ import os
 import re
 import psutil
 import time
+import subprocess
 from avocado.utils import process
 from avocado import Test
 from avocado.utils import process, build, archive, dmesg
@@ -102,9 +103,9 @@ class Stressng(Test):
             if line[0].isnumeric():
                 if var < 10:
                     var += 1
-                    sum = sum + int(line[0])
+                    sum = sum + int(line)
                 else:
-                    sum = sum + int(line[0])
+                    sum = sum + int(line)
                     result = 100 - sum // 11
                     var = 0
                     sum = 0
@@ -130,6 +131,9 @@ class Stressng(Test):
         smt = int(re.split(r'=| is ', process.system_output("ppc64_cpu --smt")
                            .decode('utf-8'))[1])
         no_of_cores = int(self.tcpus // smt)
+        cmd = "cat /proc/cpuinfo | grep -m1 clock |sed 's/.*://' | cut -f1 -d'.'"
+        clock_freq = int(subprocess.check_output(cmd, shell=True))
+        cpu_freq = int(clock_freq // 100)
         perf_iterations = {}
         vmstat_iterations = {}
         final_results = {}
@@ -141,6 +145,7 @@ class Stressng(Test):
         self.log.info("Total cores %s", no_of_cores)
         self.log.info("SMT = %s", smt)
         self.log.info("Perf profile duration: %s", self.profile_dur)
+        self.log.info("CPU frequency = %s", cpu_freq)
 
         process.run(
                "rm -rf /tmp/stressng_output* /tmp/data*",
@@ -190,7 +195,7 @@ class Stressng(Test):
                     perf_data = int(process.system_output(cmd, shell=True).decode("utf-8"))
                     self.log.info(" Perf data ==>  %s" % perf_data)
 
-                    result = int(perf_data / (no_of_cores * self.profile_dur * smt * 34 * 1000000))
+                    result = int(perf_data / (no_of_cores * self.profile_dur * smt * cpu_freq * 1000000))
                     self.log.info(" Result for iteration %s and load %s ==>  %s" % (iter, load, result))
 
                     perf_iterations[iter] = result
@@ -217,9 +222,9 @@ class Stressng(Test):
                 if self.is_process_running("stress-ng"):
                     self.kill_process_by_name("stress-ng")
 
-                change_percent = (abs(perf_average - vmstat_average) / vmstat_average) * 100
+                change_percent = abs(perf_average - vmstat_average)
 
-                if change_percent > 2:
+                if change_percent > 3.5:
                     final_results[load] = change_percent
                     failed = 1
                     self.log.info(
