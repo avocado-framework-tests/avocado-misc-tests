@@ -17,6 +17,7 @@
 Veth DLPAR operations
 """
 
+import os
 import time
 from avocado import Test
 from avocado.utils import process
@@ -35,7 +36,16 @@ class VethdlparTest(Test):
         '''
         Gather necessary test inputs.
         '''
-        self.interface = self.params.get('interface', default=None)
+        local = LocalHost()
+        interfaces = os.listdir('/sys/class/net')
+        device = self.params.get('interface', default=None)
+        if device in interfaces:
+            self.interface = device
+        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
+            self.interface = local.get_interface_by_hwaddr(device).name
+        else:
+            self.interface = None
+            self.cancel("Please check the network device")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         self.peer_ip = self.params.get('peer_ip', default=None)
@@ -46,7 +56,6 @@ class VethdlparTest(Test):
         self.session = Session(self.vios_ip, user=self.vios_user,
                                password=self.vios_pwd)
         self.session.connect()
-        local = LocalHost()
         self.networkinterface = NetworkInterface(self.interface, local)
         try:
             self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
@@ -110,6 +119,7 @@ class VethdlparTest(Test):
                 self.fail("ping failed after add operation")
 
     def tearDown(self):
-        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-        self.networkinterface.restore_from_backup()
-        self.session.quit()
+        if self.interface:
+            self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+            self.networkinterface.restore_from_backup()
+            self.session.quit()
