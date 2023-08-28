@@ -10,8 +10,9 @@ Python module 'netifaces' is needed. Install via 'pip install netifaces' (or)
 
 Input Needed (in multiplexer file):
 -----------------------------------
-Interface - Specify the interface with which the bridge interface needs to
-            be created.
+Interfaces - Specify the space separated interface names or mac addresses 
+             with which the bridge interface needs to be created.
+             interfaces: "env3 env4"  or interfaces: '02:xx:xx:xx:xx:03 02:xx:xx:xx:xx:04'
 Peer-IP   - Specify the IP for ping test after bridge interface is created
 host-IP   - Specify the IP for ip configuration for interface.
 Netmask   - Specify the netmask for ip configuration for interface.
