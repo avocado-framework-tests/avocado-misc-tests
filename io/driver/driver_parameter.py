@@ -17,8 +17,8 @@
 """
 This Script verfies driver module parameter.
 """
+import os
 import time
-import netifaces
 from avocado.utils import process
 from avocado.utils import linux_modules, genio
 from avocado import Test
@@ -37,13 +37,19 @@ class Moduleparameter(Test):
         """
         get parameters
         """
+        local = LocalHost()
+        interfaces = os.listdir('/sys/class/net')
+        device = self.params.get("interface", default=None)
+        if device in interfaces:
+            self.ifaces = device
+        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
+            self.ifaces = local.get_interface_by_hwaddr(device).name
+        else:
+            self.module = None
+            self.cancel("%s interface is not available" % device)
         self.module = self.params.get('module', default=None)
         if not self.module:
             self.cancel("Please provide the Module name")
-        interfaces = netifaces.interfaces()
-        self.ifaces = self.params.get("interface")
-        if self.ifaces not in interfaces:
-            self.cancel("%s interface is not available" % self.ifaces)
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         self.peer = self.params.get("peer_ip")
@@ -52,7 +58,6 @@ class Moduleparameter(Test):
         self.param_name = self.params.get('module_param_name', default=None)
         self.param_value = self.params.get('module_param_value', default=None)
         self.sysfs_chk = self.params.get('sysfs_check_required', default=None)
-        local = LocalHost()
         if self.ifaces[0:2] == 'ib':
             self.networkinterface = NetworkInterface(self.ifaces, local,
                                                      if_type='Infiniband')
