@@ -14,7 +14,7 @@
 # Copyright: 2017 IBM
 # Author: Harsha Thyagaraja <harshkid@linux.vnet.ibm.com>
 
-import netifaces
+import os
 from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import process
@@ -32,10 +32,18 @@ class MultiportStress(Test):
         '''
         To check and install dependencies for the test
         '''
-        self.host_interfaces = self.params.get("host_interfaces",
-                                               default="").split(" ")
-        if not self.host_interfaces:
-            self.cancel("user should specify host interfaces")
+        self.host_interfaces = []
+        interfaces = os.listdir('/sys/class/net')
+        self.local = LocalHost()
+        devices = self.params.get("host_interfaces", default=None)
+        for device in devices.split(" "):
+            if device in interfaces:
+                self.host_interfaces.append(device)
+            elif self.local.validate_mac_addr(device) and device in self.local.get_all_hwaddr():
+                self.host_interfaces.append(self.local.get_interface_by_hwaddr(device).name)
+            else:
+                self.host_interfaces = None
+                self.cancel("Please check the network device")
         smm = SoftwareManager()
         if distro.detect().name == 'Ubuntu':
             pkg = 'iputils-ping'
@@ -46,14 +54,9 @@ class MultiportStress(Test):
         self.peer_ips = self.params.get("peer_ips",
                                         default="").split(" ")
         self.peer_public_ip = self.params.get("peer_public_ip", default="")
-        interfaces = netifaces.interfaces()
-        for self.host_interface in self.host_interfaces:
-            if self.host_interface not in interfaces:
-                self.cancel("interface is not available")
         self.count = self.params.get("count", default="1000")
         self.ipaddr = self.params.get("host_ips", default="").split(" ")
         self.netmask = self.params.get("netmask", default="")
-        self.local = LocalHost()
         for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
             networkinterface = NetworkInterface(interface, self.local)
             try:
@@ -121,28 +124,29 @@ class MultiportStress(Test):
         '''
         unset ip for host interface
         '''
-        for host_interface in self.host_interfaces:
-            networkinterface = NetworkInterface(host_interface, self.local)
-            if networkinterface.set_mtu("1500") is not None:
-                self.cancel("Failed to set mtu in host")
-        for peer_ip in self.peer_ips:
-            peer_interface = self.remotehost.get_interface_by_ipaddr(
-                peer_ip).name
-            try:
-                peer_networkinterface = NetworkInterface(peer_interface,
-                                                         self.remotehost)
-                peer_networkinterface.set_mtu("1500")
-            except Exception:
-                peer_public_networkinterface = NetworkInterface(peer_interface,
-                                                                self.remotehost_public)
-                peer_public_networkinterface.set_mtu("1500")
-        for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
-            networkinterface = NetworkInterface(interface, self.local)
-            networkinterface.remove_ipaddr(ipaddr, self.netmask)
-            try:
-                networkinterface.restore_from_backup()
-            except Exception:
-                self.log.info(
-                    "backup file not availbale, could not restore file.")
-            self.remotehost.remote_session.quit()
-            self.remotehost_public.remote_session.quit()
+        if self.host_interfaces:
+            for host_interface in self.host_interfaces:
+                networkinterface = NetworkInterface(host_interface, self.local)
+                if networkinterface.set_mtu("1500") is not None:
+                    self.cancel("Failed to set mtu in host")
+            for peer_ip in self.peer_ips:
+                peer_interface = self.remotehost.get_interface_by_ipaddr(
+                    peer_ip).name
+                try:
+                    peer_networkinterface = NetworkInterface(peer_interface,
+                                                             self.remotehost)
+                    peer_networkinterface.set_mtu("1500")
+                except Exception:
+                    peer_public_networkinterface = NetworkInterface(peer_interface,
+                                                                    self.remotehost_public)
+                    peer_public_networkinterface.set_mtu("1500")
+            for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
+                networkinterface = NetworkInterface(interface, self.local)
+                networkinterface.remove_ipaddr(ipaddr, self.netmask)
+                try:
+                    networkinterface.restore_from_backup()
+                except Exception:
+                    self.log.info(
+                        "backup file not availbale, could not restore file.")
+                self.remotehost.remote_session.quit()
+                self.remotehost_public.remote_session.quit()
