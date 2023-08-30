@@ -19,7 +19,7 @@
 # then ping from peer to multicast group
 
 
-import netifaces
+import os
 from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.ssh import Session
@@ -39,18 +39,23 @@ class ReceiveMulticastTest(Test):
         '''
         To check and install dependencies for the test
         '''
+        local = LocalHost()
+        interfaces = os.listdir('/sys/class/net')
         self.peer = self.params.get("peer_ip", default="")
         self.user = self.params.get("user_name", default="root")
         self.peer_password = self.params.get("peer_password",
                                              '*', default="None")
-        interfaces = netifaces.interfaces()
-        self.iface = self.params.get("interface", default="")
-        if self.iface not in interfaces:
-            self.cancel("%s interface is not available" % self.iface)
+        device = self.params.get("interface", default=None)
+        if device in interfaces:
+            self.iface = device
+        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
+            self.iface = local.get_interface_by_hwaddr(device).name
+        else:
+            self.iface = None
+            self.cancel("%s interface is not available" % device)
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         self.hbond = self.params.get("hbond", default=False)
-        local = LocalHost()
         if self.hbond:
             self.networkinterface = NetworkInterface(self.iface, local,
                                                      if_type='Bond')
@@ -121,24 +126,25 @@ class ReceiveMulticastTest(Test):
         '''
         delete multicast route and turn off multicast option
         '''
-        cmd = "ip route del 224.0.0.0/4"
-        output = self.session.cmd(cmd)
-        if not output.exit_status == 0:
-            self.log.info("Unable to delete multicast route added for peer")
-        cmd = "echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts"
-        if process.system(cmd, shell=True, verbose=True,
-                          ignore_status=True) != 0:
-            self.log.info("unable to unset all mulicast option")
-        cmd = "ip link set %s allmulticast off" % self.iface
-        if process.system(cmd, shell=True, verbose=True,
-                          ignore_status=True) != 0:
-            self.log.info("unable to unset all mulicast option")
-        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-        try:
-            self.networkinterface.restore_from_backup()
-        except Exception:
-            self.networkinterface.remove_cfg_file()
-            self.log.info("backup file not availbale, could not restore file.")
-        if self.hbond:
-            self.networkinterface.restore_slave_cfg_file()
-        self.session.quit()
+        if self.iface:
+            cmd = "ip route del 224.0.0.0/4"
+            output = self.session.cmd(cmd)
+            if not output.exit_status == 0:
+                self.log.info("Unable to delete multicast route added for peer")
+            cmd = "echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts"
+            if process.system(cmd, shell=True, verbose=True,
+                              ignore_status=True) != 0:
+                self.log.info("unable to unset all mulicast option")
+            cmd = "ip link set %s allmulticast off" % self.iface
+            if process.system(cmd, shell=True, verbose=True,
+                              ignore_status=True) != 0:
+                self.log.info("unable to unset all mulicast option")
+            self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+            try:
+                self.networkinterface.restore_from_backup()
+            except Exception:
+                self.networkinterface.remove_cfg_file()
+                self.log.info("backup file not availbale, could not restore file.")
+            if self.hbond:
+                self.networkinterface.restore_slave_cfg_file()
+            self.session.quit()

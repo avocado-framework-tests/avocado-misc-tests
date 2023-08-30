@@ -6,7 +6,7 @@ workload profiles
 
 Inputs Needed To Run Tests:
 -----------------------------
-interface		- interface on which test run
+interface		- test interface name eth2 or mac addr 02:5d:c7:xx:xx:03 
 peer_ip			- IP of the Peer interface to be tested
 peer_user		- Username in Peer system to be used
 UPERF_SERVER_RUN	- Whether to run netserver in peer or not (1 to run, 0 to not run)

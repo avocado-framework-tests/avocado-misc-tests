@@ -14,6 +14,7 @@
 # Author: Pridhiviraj Paidipeddi <ppaidipe@linux.vnet.ibm.com>
 # VLAN Testcase
 
+import os
 import time
 import paramiko
 
@@ -21,6 +22,7 @@ from avocado import Test
 from avocado.utils import process
 from avocado.utils.ssh import Session
 from avocado.utils.process import CmdError
+from avocado.utils.network.hosts import LocalHost
 
 
 class VlanTest(Test):
@@ -53,13 +55,24 @@ class VlanTest(Test):
         self.get_ips()
 
     def parameters(self):
+        local = LocalHost()
+        self.host_intf = None
+        interfaces = os.listdir('/sys/class/net')
+        device = self.params.get("interface", default=None)
+        if device in interfaces:
+            self.host_intf = device
+        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
+            self.host_intf = local.get_interface_by_hwaddr(device).name
+        else:
+            self.cancel("%s interface is not available" % device)
+        if self.host_intf[0:2] == 'ib':
+            self.cancel("vlan is not supported for IB")
         self.switch_name = self.params.get("switch_name", '*', default=None)
         self.userid = self.params.get("userid", '*', default=None)
         self.password = self.params.get("password", '*', default=None)
         self.vlan_num = self.params.get("vlan_num", '*', default=None)
         self.host_port = self.params.get("host_port", '*', default=None)
         self.peer_port = self.params.get("peer_port", '*', default=None)
-        self.host_intf = self.params.get("interface", '*', default=None)
         if self.host_intf[0:2] == 'ib':
             self.cancel("vlan is not supported for IB")
         self.peer_intf = self.params.get("peer_interface", '*', default=None)
@@ -311,10 +324,11 @@ class VlanTest(Test):
         Restore back the default VLAN ID 1
         and also restore interfaces back when full test is run
         """
-        self.vlan_port_conf("1", "1")
-        if hasattr(self, 'test_type') and self.test_type == "full":
-            # Disable PVID tagging as other tests need it to be in disabled.
-            self.run_switch_command("no vlan dot1q tag native")
-            self.restore_host_intf()
-            self.restore_peer_intf()
-        self.peer_logout()
+        if self.host_intf:
+            self.vlan_port_conf("1", "1")
+            if hasattr(self, 'test_type') and self.test_type == "full":
+                # Disable PVID tagging as other tests need it to be in disabled.
+                self.run_switch_command("no vlan dot1q tag native")
+                self.restore_host_intf()
+                self.restore_peer_intf()
+            self.peer_logout()

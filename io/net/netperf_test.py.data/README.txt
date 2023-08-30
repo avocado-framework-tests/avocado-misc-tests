@@ -6,6 +6,7 @@ unidirectional throughput, and end-to-end latency.
 
 Inputs Needed To Run Tests:
 -----------------------------
+interface		- test interface name eth2 or mac addr 02:5d:c7:xx:xx:03
 PEERIP			- IP of the Peer interface to be tested
 PEERUSER		- Username in Peer system to be used
 Iface			- interface on which test run

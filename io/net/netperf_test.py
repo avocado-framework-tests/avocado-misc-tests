@@ -23,7 +23,6 @@ unidirectional throughput, and end-to-end latency.
 
 
 import os
-import netifaces
 from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import distro
@@ -45,18 +44,23 @@ class Netperf(Test):
         """
         To check and install dependencies for the test
         """
+        local = LocalHost()
+        interfaces = os.listdir('/sys/class/net')
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_public_ip = self.params.get("peer_public_ip", default="")
         self.peer_ip = self.params.get("peer_ip", default="")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
-        interfaces = netifaces.interfaces()
-        self.iface = self.params.get("interface", default="")
-        if self.iface not in interfaces:
-            self.cancel("%s interface is not available" % self.iface)
+        device = self.params.get("interface", default=None)
+        if device in interfaces:
+            self.iface = device
+        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
+            self.iface = local.get_interface_by_hwaddr(device).name
+        else:
+            self.iface = None
+            self.cancel("%s interface is not available" % device)
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        local = LocalHost()
         self.networkinterface = NetworkInterface(self.iface, local)
         try:
             self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
@@ -185,21 +189,22 @@ class Netperf(Test):
         """
         removing the data in peer machine
         """
-        cmd = "pkill netserver; rm -rf /tmp/%s" % self.version
-        output = self.session.cmd(cmd)
-        if not output.exit_status == 0:
-            self.fail("test failed because peer sys not connected")
-        if self.networkinterface.set_mtu('1500') is not None:
-            self.cancel("Failed to set mtu in host")
-        try:
-            self.peer_networkinterface.set_mtu('1500')
-        except Exception:
-            self.peer_public_networkinterface.set_mtu('1500')
-        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-        try:
-            self.networkinterface.restore_from_backup()
-        except Exception:
-            self.log.info("backup file not availbale, could not restore file.")
-        self.remotehost.remote_session.quit()
-        self.remotehost_public.remote_session.quit()
-        self.session.quit()
+        if self.iface:
+            cmd = "pkill netserver; rm -rf /tmp/%s" % self.version
+            output = self.session.cmd(cmd)
+            if not output.exit_status == 0:
+                self.fail("test failed because peer sys not connected")
+            if self.networkinterface.set_mtu('1500') is not None:
+                self.cancel("Failed to set mtu in host")
+            try:
+                self.peer_networkinterface.set_mtu('1500')
+            except Exception:
+                self.peer_public_networkinterface.set_mtu('1500')
+            self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+            try:
+                self.networkinterface.restore_from_backup()
+            except Exception:
+                self.log.info("backup file not availbale, could not restore file.")
+            self.remotehost.remote_session.quit()
+            self.remotehost_public.remote_session.quit()
+            self.session.quit()

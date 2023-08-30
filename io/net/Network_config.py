@@ -18,6 +18,7 @@
 # network configuration includes speed,
 # driver name, businfo, hardware address
 
+import os
 import netifaces
 from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -37,17 +38,22 @@ class NetworkconfigTest(Test):
         '''
         To check and install dependencies for the test
         '''
+        local = LocalHost()
+        interfaces = os.listdir('/sys/class/net')
         sm = SoftwareManager()
         for pkg in ["ethtool", "net-tools"]:
             if not sm.check_installed(pkg) and not sm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
-        interfaces = netifaces.interfaces()
-        self.iface = self.params.get("interface")
-        if self.iface not in interfaces:
-            self.cancel("%s interface is not available" % self.iface)
+        device = self.params.get("interface", default=None)
+        if device in interfaces:
+            self.iface = device
+        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
+            self.iface = local.get_interface_by_hwaddr(device).name
+        else:
+            self.iface = None
+            self.cancel("%s interface is not available" % device)
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        local = LocalHost()
         self.networkinterface = NetworkInterface(self.iface, local)
         try:
             self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
@@ -162,8 +168,9 @@ class NetworkconfigTest(Test):
         '''
         unset ip for host interface
         '''
-        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-        try:
-            self.networkinterface.restore_from_backup()
-        except Exception:
-            self.log.info("backup file not availbale, could not restore file.")
+        if self.iface:
+            self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+            try:
+                self.networkinterface.restore_from_backup()
+            except Exception:
+                self.log.info("backup file not availbale, could not restore file.")

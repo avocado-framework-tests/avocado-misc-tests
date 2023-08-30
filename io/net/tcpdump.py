@@ -19,7 +19,6 @@ Tcpdump Test.
 """
 
 import os
-import netifaces
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import distro
@@ -40,7 +39,16 @@ class TcpdumpTest(Test):
         """
         Set up.
         """
-        self.iface = self.params.get("interface", default="")
+        localhost = LocalHost()
+        self.networkinterface = None
+        interfaces = os.listdir('/sys/class/net')
+        device = self.params.get("interface", default=None)
+        if device in interfaces:
+            self.iface = device
+        elif localhost.validate_mac_addr(device) and device in localhost.get_all_hwaddr():
+            self.iface = localhost.get_interface_by_hwaddr(device).name
+        else:
+            self.cancel("%s interface is not available" % device)
         self.count = self.params.get("count", default="500")
         self.peer_ip = self.params.get("peer_ip", default="")
         self.peer_public_ip = self.params.get("peer_public_ip", default="")
@@ -49,17 +57,10 @@ class TcpdumpTest(Test):
         self.option = self.params.get("option", default='')
         self.hbond = self.params.get("hbond", default=False)
         # Check if interface exists in the system
-        self.networkinterface = None
-        interfaces = netifaces.interfaces()
-        if not self.iface:
-            self.cancel("Please specify interface to be used")
-        if self.iface not in interfaces:
-            self.cancel("%s interface is not available" % self.iface)
         if not self.peer_ip:
             self.cancel("peer ip should specify in input")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        localhost = LocalHost()
         if self.hbond:
             self.networkinterface = NetworkInterface(self.iface, localhost,
                                                      if_type='Bond')
