@@ -6,7 +6,7 @@ then test fails.
 
 Inputs
 ------
-interface: interface for which tcpdump is to be run
+interface: test interface name env3 or mac addr 02:5d:c7:xx:xx:03
 count: number of packets
 drop_accepted: interface packet drop accepted in percentage (eg 10 for 10%)
 host-IP : Specify host-IP for ip configuration.

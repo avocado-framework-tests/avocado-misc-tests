@@ -20,7 +20,6 @@ bandwidth on IP networks.
 """
 
 import os
-import netifaces
 from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import build
@@ -43,19 +42,24 @@ class Iperf(Test):
         """
         To check and install dependencies for the test
         """
+        localhost = LocalHost()
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_ip = self.params.get("peer_ip", default="")
         self.peer_public_ip = self.params.get("peer_public_ip", default="")
         self.peer_password = self.params.get("peer_password", '*',
                                              default=None)
-        interfaces = netifaces.interfaces()
-        self.iface = self.params.get("interface", default="")
-        if self.iface not in interfaces:
-            self.cancel("%s interface is not available" % self.iface)
+        interfaces = os.listdir('/sys/class/net')
+        device = self.params.get("interface", default="")
+        if device in interfaces:
+            self.iface = device
+        elif localhost.validate_mac_addr(device) and device in localhost.get_all_hwaddr():
+            self.iface = localhost.get_interface_by_hwaddr(device).name
+        else:
+            self.iface = None
+            self.cancel("%s interface is not available" % device)
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         self.hbond = self.params.get("hbond", default=False)
-        localhost = LocalHost()
         if self.hbond:
             self.networkinterface = NetworkInterface(self.iface, localhost,
                                                      if_type='Bond')
@@ -217,26 +221,27 @@ class Iperf(Test):
         """
         Killing Iperf process in peer machine
         """
-        cmd = "pkill iperf; rm -rf /tmp/%s" % self.version
-        output = self.session.cmd(cmd)
-        if not output.exit_status == 0:
-            self.fail("Either the ssh to peer machine machine\
-                       failed or iperf process was not killed")
-        self.obj.stop()
-        if self.networkinterface.set_mtu('1500') is not None:
-            self.cancel("Failed to set mtu in host")
-        try:
-            self.peer_networkinterface.set_mtu('1500')
-        except Exception:
-            self.peer_public_networkinterface.set_mtu('1500')
-        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-        try:
-            self.networkinterface.restore_from_backup()
-        except Exception:
-            self.networkinterface.remove_cfg_file()
-            self.log.info("backup file not availbale, could not restore file.")
-        if self.hbond:
-            self.networkinterface.restore_slave_cfg_file()
-        self.remotehost.remote_session.quit()
-        self.remotehost_public.remote_session.quit()
-        self.session.quit()
+        if self.iface:
+            cmd = "pkill iperf; rm -rf /tmp/%s" % self.version
+            output = self.session.cmd(cmd)
+            if not output.exit_status == 0:
+                self.fail("Either the ssh to peer machine machine\
+                          failed or iperf process was not killed")
+            self.obj.stop()
+            if self.networkinterface.set_mtu('1500') is not None:
+                self.cancel("Failed to set mtu in host")
+            try:
+                self.peer_networkinterface.set_mtu('1500')
+            except Exception:
+                self.peer_public_networkinterface.set_mtu('1500')
+            self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+            try:
+                self.networkinterface.restore_from_backup()
+            except Exception:
+                self.networkinterface.remove_cfg_file()
+                self.log.info("backup file not availbale, could not restore file.")
+            if self.hbond:
+                self.networkinterface.restore_slave_cfg_file()
+            self.remotehost.remote_session.quit()
+            self.remotehost_public.remote_session.quit()
+            self.session.quit()

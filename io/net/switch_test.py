@@ -19,9 +19,9 @@ check the statistics of interface, test big ping
 test lro and gro and interface
 """
 
+import os
 import time
 import paramiko
-import netifaces
 from avocado import Test
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
@@ -36,17 +36,18 @@ class SwitchTest(Test):
         '''
         To get all the parameter for the test
         '''
-        interfaces = netifaces.interfaces()
-        interface = self.params.get("interface")
+        local = LocalHost()
         self.networkinterface = None
-        if not interface:
-            self.cancel("Please specify interface to be used")
-        if interface not in interfaces:
-            self.cancel("%s interface is not available" % interface)
-        self.iface = interface
+        interfaces = os.listdir('/sys/class/net')
+        device = self.params.get("interface", default=None)
+        if device in interfaces:
+            self.iface = device
+        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
+            self.iface = local.get_interface_by_hwaddr(device).name
+        else:
+            self.cancel("%s interface is not available" % device)
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        local = LocalHost()
         self.networkinterface = NetworkInterface(self.iface, local)
         try:
             self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)

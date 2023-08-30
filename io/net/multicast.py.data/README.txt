@@ -6,7 +6,7 @@ Inputs Needed To Run Tests:
 -----------------------------
 peerip ---> IP of the Peer interface to be tested
 user_name---> name of the user
-interface --> host interface through which we get host_ip
+interface --> host test interface name eth1 or mac address 02:5d:xx:xx:xx:xx 
 host-IP  ---> Specify host-IP for ip configuration.
 netmask  ---> specify netmask for ip configuration.
 -----------------------

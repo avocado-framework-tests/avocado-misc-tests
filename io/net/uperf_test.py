@@ -21,7 +21,6 @@ workload profiles
 """
 
 import os
-import netifaces
 from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import distro
@@ -44,21 +43,23 @@ class Uperf(Test):
         """
         To check and install dependencies for the test
         """
+        local = LocalHost()
+        self.networkinterface = None
+        interfaces = os.listdir('/sys/class/net')
         self.peer_ip = self.params.get("peer_ip", default="")
         self.peer_public_ip = self.params.get("peer_public_ip", default="")
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
-        interfaces = netifaces.interfaces()
-        self.iface = self.params.get("interface", default="")
-        self.networkinterface = None
-        if not self.iface:
-            self.cancel("Please specify interface to be used")
-        if self.iface not in interfaces:
-            self.cancel("%s interface is not available" % self.iface)
+        device = self.params.get("interface", default=None)
+        if device in interfaces:
+            self.iface = device
+        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
+            self.iface = local.get_interface_by_hwaddr(device).name
+        else:
+            self.cancel("%s interface is not available" % device)
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        local = LocalHost()
         self.networkinterface = NetworkInterface(self.iface, local)
         try:
             self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)

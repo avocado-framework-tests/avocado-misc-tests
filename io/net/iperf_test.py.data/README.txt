@@ -5,7 +5,7 @@ bandwidth on IP networks.
 
 Inputs Needed To Run Tests:
 ---------------------------
-interface		- interface on which test run
+interface		- interface name eth1 or interface mac 02:5d:xx:xx:0x:00 
 peer_ip			- IP of the Peer interface to be tested
 peer_user		- Username in Peer system to be used
 IPERF_SERVER_RUN	- Whether to run iperf server in peer or not (1 to run, 0 to not run)

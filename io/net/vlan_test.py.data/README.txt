@@ -25,7 +25,7 @@ host_port: 38
 peer_port: 45
 
 Host & Peer Interfaces for the VLAN test
-interface: "enp128s0f4d1"
+interface: "enp128s0f4d1" or mac address
 peer_interface: "enP4p1s0f2"
 
 Peer Details
