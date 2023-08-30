@@ -59,8 +59,8 @@ class HtxNicTest(Test):
                                                 sudo=True).decode("utf-8"):
             self.cancel("Platform does not support HTX tests")
 
-        self.parameters()
         self.localhost = LocalHost()
+        self.parameters()
         if 'start' in str(self.name.name):
             for ipaddr, interface in zip(self.ipaddr, self.host_intfs):
                 networkinterface = NetworkInterface(interface, self.localhost)
@@ -204,13 +204,22 @@ class HtxNicTest(Test):
             self.session.cmd("./installer.sh -f")
 
     def parameters(self):
+        self.host_intfs = []
         self.host_ip = self.params.get("host_public_ip", '*', default=None)
         self.peer_ip = self.params.get("peer_public_ip", '*', default=None)
         self.peer_user = self.params.get("peer_user", '*', default=None)
         self.peer_password = self.params.get("peer_password",
                                              '*', default=None)
-        self.host_intfs = self.params.get("htx_host_interfaces",
-                                          '*', default=None).split(" ")
+        devices = self.params.get("htx_host_interfaces", '*', default=None)
+        if devices:
+            interfaces = os.listdir('/sys/class/net')
+        for device in devices.split(" "):
+            if device in interfaces:
+                self.host_intfs.append(device)
+            elif self.localhost.validate_mac_addr(device) and device in self.localhost.get_all_hwaddr():
+                self.host_intfs.append(self.localhost.get_interface_by_hwaddr(device).name)
+            else:
+                self.cancel("Please check the network device")
         self.peer_intfs = self.params.get("peer_interfaces",
                                           '*', default=None).split(" ")
         self.net_ids = self.params.get("net_ids", '*', default=None).split(" ")
