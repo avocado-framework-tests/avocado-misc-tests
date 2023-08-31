@@ -56,13 +56,13 @@ class hv_24x7_all_events(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
-        cpu_family = cpu.get_family()
+        self.rev = cpu.get_revision()
         perf_args = "perf stat -v -e"
-        if cpu_family == 'power8':
+        if self.rev == '004b':
             perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % perf_args
-        elif cpu_family == 'power9':
+        elif self.rev == '004e':
             perf_stat = "%s hv_24x7/CPM_TLBIE" % perf_args
-        elif cpu_family == 'power10':
+        elif self.rev == '0080':
             perf_stat = "%s hv_24x7/CPM_TLBIE_FIN" % perf_args
         event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
 
