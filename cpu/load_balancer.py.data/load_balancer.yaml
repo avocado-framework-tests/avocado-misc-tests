@@ -1,0 +1,3 @@
+no_threads: 24
+cpu_cycles: 10000000
+capacity: 100
