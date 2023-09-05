@@ -17,7 +17,7 @@
 import os
 import platform
 from avocado import Test
-from avocado.utils import cpu, distro, memory, process
+from avocado.utils import cpu, distro, process
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -56,13 +56,13 @@ class hv_24x7_all_events(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
-        cpu_family = cpu.get_family()
+        self.rev = cpu.get_revision()
         perf_args = "perf stat -v -e"
-        if cpu_family == 'power8':
+        if self.rev == '004b':
             perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % perf_args
-        elif cpu_family == 'power9':
+        elif self.rev == '004e':
             perf_stat = "%s hv_24x7/CPM_TLBIE" % perf_args
-        elif cpu_family == 'power10':
+        elif self.rev == '0080':
             perf_stat = "%s hv_24x7/CPM_TLBIE_FIN" % perf_args
         event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
 
@@ -86,14 +86,17 @@ class hv_24x7_all_events(Test):
             self.cancel("Please enable LPAR to allow collecting"
                         " the 24x7 counters info")
 
-        # Getting the number of cores
+        # Getting the number of cores and chips available in the machine
         output = process.run("lscpu")
         for line in output.stdout.decode("utf-8").split('\n'):
             if 'Core(s) per socket:' in line:
                 self.cores = int(line.split(':')[1].strip())
-
-        # Getting the number of chips available in the machine
-        self.chip = memory.numa_nodes()
+            if 'Physical sockets:' in line:
+                self.physical_sockets = int(line.split(':')[1].strip())
+            if 'Physical chips:' in line:
+                self.physical_chips = int(line.split(':')[1].strip())
+            # chip = physical socket x physical chip
+            self.chip = int(self.physical_sockets*self.physical_chips)
 
         # Collect all hv_24x7 events
         self.list_of_hv_24x7_events = []
@@ -114,13 +117,15 @@ class hv_24x7_all_events(Test):
                         events = "hv_24x7/%s,domain=%s,core=%s/" % \
                                  (line, domain, core)
                         cmd = 'perf stat %s %s sleep 1' % (perf_args, events)
-                        if process.system(cmd, ignore_status=True):
+                        res = process.run(cmd, ignore_status=True)
+                        if res.exit_status != 0 or b"not supported" in res.stderr:
                             self.fail_cmd.append(cmd)
             else:
-                for chip_item in self.chip:
+                for chip_item in range(0, self.chip):
                     events = "hv_24x7/%s,chip=%s/" % (line, chip_item)
                     cmd = "perf stat %s %s sleep 1" % (perf_args, events)
-                    if process.system(cmd, ignore_status=True):
+                    res = process.run(cmd, ignore_status=True)
+                    if res.exit_status != 0 or b"not supported" in res.stderr:
                         self.fail_cmd.append(cmd)
 
         if len(self.fail_cmd) > 0:
