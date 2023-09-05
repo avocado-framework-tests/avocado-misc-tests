@@ -59,7 +59,7 @@ class perf_sched(Test):
         self.temp_file = tempfile.NamedTemporaryFile().name
 
         # Getting the parameters from yaml file
-        self.optname = self.params.get('name', default='')
+        self.optname = self.params.get('name', default='latency')
         self.option = self.params.get('option', default='')
 
         # Clear the dmesg by that we can capture delta at the end of the test
