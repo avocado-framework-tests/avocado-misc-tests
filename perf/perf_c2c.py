@@ -99,7 +99,12 @@ class perf_c2c(Test):
         self.run_cmd(record_cmd)
         # Report command
         report_cmd = "perf c2c report %s" % self.report
-        self.run_cmd(report_cmd)
+        # Validate the output of perf c2c
+        if os.path.exists(output_file):
+            if not os.stat(output_file).st_size:
+                self.fail("%s sample not captured" % output_file)
+            else:
+                self.run_cmd(report_cmd)
         # Verify dmesg
         dmesg.collect_errors_dmesg(['WARNING: CPU:', 'Oops', 'Segfault',
                                     'soft lockup', 'Unable to handle'])
