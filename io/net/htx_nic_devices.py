@@ -118,7 +118,7 @@ class HtxNicTest(Test):
             packages.extend(['libncurses5', 'g++', 'ncurses-dev',
                              'libncurses-dev', 'tar', 'wget'])
         elif detected_distro.name == 'SuSE':
-            packages.extend(['libncurses5', 'gcc-c++',
+            packages.extend(['libncurses6', 'gcc-c++',
                             'ncurses-devel', 'tar', 'wget'])
         else:
             self.cancel("Test not supported in  %s" % detected_distro.name)
@@ -134,6 +134,9 @@ class HtxNicTest(Test):
                     "Unable to install the package %s on peer machine" % pkg)
 
         if self.htx_rpm_link:
+            if self.host_distro_name and self.peer_distro == "SuSE":
+                self.host_distro_name = self.peer_distro = "sles"
+
             host_distro_pattern = "%s%s" % (
                                             self.host_distro_name,
                                             self.host_distro_version)
