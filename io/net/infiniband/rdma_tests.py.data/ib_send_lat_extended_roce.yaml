@@ -24,8 +24,8 @@ test_opt: !mux
         test_opt: -y 10G
     -z:
         test_opt: -z
-    -D_10s:
-        test_opt: -D 10s
+    -D_10:
+        test_opt: -D 10
     -a:
         test_opt: -a
     -c_XRC:
@@ -42,10 +42,10 @@ test_opt: !mux
         test_opt: -R -a
     -R_-c_RC:
         test_opt: -R -c RC
-    -R_-D_30s:
-        test_opt: -R -D 30s
-    -R_-f_5s_-D_11s:
-        test_opt: -R -f 5s -D 11s
+    -R_-D_30:
+        test_opt: -R -D 30
+    -R_-f_5_-D_11:
+        test_opt: -R -f 5 -D 11
     -R_-m_1024:
         test_opt: -R -m 1024
     -R_-n_100000:
