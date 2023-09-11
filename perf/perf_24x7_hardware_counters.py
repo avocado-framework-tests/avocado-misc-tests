@@ -90,9 +90,10 @@ class EliminateDomainSuffix(Test):
         if "operations is limited" in result_perf.stderr.decode("utf-8"):
             self.cancel("Please enable lpar to allow collecting"
                         " the 24x7 counters info")
-        if "You may not have permission to collect stats." in result_perf.stderr.decode("utf-8"):
-            self.cancel("Please enable lpar to allow collecting"
-                        " the 24x7 counters info")
+
+        # Initializing the values of chips and cores using lspcu
+        self.chips = cpu.lscpu()["chips"]
+        self.cores = cpu.lscpu()["cores"]
 
     # Features testing
     def test_display_domain_indices_in_sysfs(self):
@@ -131,26 +132,41 @@ class EliminateDomainSuffix(Test):
         else:
             self.log.info('perf recognized unsupported event')
 
-    def test_event_w_domain_param(self):
-        result1 = self.event_stat(',domain=2,core=1/ sleep 1')
-        if "Performance counter stats for" not in result1.stderr.decode("utf-8"):
-            self.fail('perf unable to recognize domain name'
-                      ' in param=value format')
-        else:
-            self.log.info('perf recognized domain name in param=value format')
-
-    def test_check_domain_not_existing(self):
-        self.event_stat(',domain=12,core=1/ sleep 1')
-
     def test_check_all_domains(self):
-        for domain in range(1, 6):
-            result1 = self.event_stat(',domain=%s,core=1/ sleep 1' % domain)
-            if "Performance counter stats for" not in result1.stderr.decode("utf-8"):
-                self.fail('perf unable to recognize domain name in'
-                          ' param=value format for all domains')
+        # supported domain range 1-6 and max 15
+        # check all valid domains
+        # TODO get lpar id value from command line
+        for domain in range(1, 7):
+            for core in range(0, self.cores + 1):
+                result1 = self.event_stat(
+                    ',domain=%s,core=%s,lpar=1/ sleep 1' % (domain, core))
+                if "Performance counter stats for" not in result1.stderr.decode("utf-8"):
+                    self.fail('perf unable to recognize domain name in'
+                              ' param=value format for all domains')
+                else:
+                    self.log.info('perf recognized domain name in param=value'
+                                  ' format for all 6 domains')
+
+    def test_check_invalid_domains(self):
+        # check invalid domains
+        invalid_domains = [0, 7, 16]
+        for domain in invalid_domains:
+            result = self.event_stat(',domain=%s,core=1/ sleep 1' % domain)
+            if result.exit_status == 0 and b"not supported" in result.stderr:
+                self.log.info("perf recognized domain as invalid domains")
+            elif domain == 16 and result.exit_status != 0:
+                self.log.info("perf recognized domain as invalid domain")
             else:
-                self.log.info('perf recognized domain name in param=value'
-                              ' format for all 6 domains')
+                self.fail("perf unable to recognize invalid domain")
+
+    def test_check_invalid_core(self):
+        """
+        supported core value 0-65535
+        check invalid core value
+        """
+        result = self.event_stat(',domain=3,core=65536/ sleep 1')
+        if result.exit_status == 0:
+            self.fail('perf unable to recognize out of range core value')
 
     def test_event_w_chip_param(self):
         if self.rev == '004b' or self.rev == '004e':
@@ -180,13 +196,34 @@ class EliminateDomainSuffix(Test):
                       ' parameter missing')
         else:
             self.log.info('perf detected chip parameter missing')
-        if self.rev == '004b' or self.rev == '004e':
-            cmd = "hv_24x7/PM_PB_CYC,domain=1,chip=1/ /bin/true"
-        if self.rev == '0080':
-            cmd = "hv_24x7/PM_PHB0_0_CYC,domain=1,chip=1/ /bin/true"
-        output_chip = self.event_stat1(cmd)
-        if "Performance counter stats for" not in output_chip.stderr.decode("utf-8"):
-            self.fail('performance counter stats for missing')
+
+    def test_check_valid_chip(self):
+        """
+        Valid chip values 0-self.chips and max 65535
+        Test chip value in range self.chips and max 65535
+        """
+        for chip_val in range(0, self.chips):
+            if self.rev == '004b' or self.rev == '004e':
+                cmd = "hv_24x7/PM_PB_CYC,domain=1,chip=%s/ /bin/true" % chip_val
+            if self.rev == '0080':
+                cmd = "hv_24x7/PM_PHB0_0_CYC,domain=1,chip=%s/ /bin/true" % chip_val
+            output_chip = self.event_stat1(cmd)
+            if "Performance counter stats for" not in output_chip.stderr.decode("utf-8"):
+                self.fail('performance counter stats are missing')
+
+    def test_check_invalid_chip(self):
+        """
+        Test invalid out of range chip value
+        """
+        invalid_chip = [self.chips, 65536]
+        for chip_val in invalid_chip:
+            if self.rev == '004b' or self.rev == '004e':
+                cmd = "hv_24x7/PM_PB_CYC,domain=1,chip=%s/ /bin/true" % chip_val
+            if self.rev == '0080':
+                cmd = "hv_24x7/PM_PHB0_0_CYC,domain=1,chip=%s/ /bin/true" % chip_val
+            res = self.event_stat1(cmd)
+            if res.exit_status == 0:
+                self.fail("perf unable to recognise invalid chip value")
 
     def test_domain_chip_offset(self):
         cmd = "perf stat -r 10 -x ' ' perf stat -r 10 -x ' ' \
