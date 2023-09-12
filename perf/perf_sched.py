@@ -59,7 +59,7 @@ class perf_sched(Test):
         self.temp_file = tempfile.NamedTemporaryFile().name
 
         # Getting the parameters from yaml file
-        self.optname = self.params.get('name', default='')
+        self.optname = self.params.get('name', default='latency')
         self.option = self.params.get('option', default='')
 
         # Clear the dmesg by that we can capture delta at the end of the test
@@ -83,6 +83,14 @@ class perf_sched(Test):
 
         record_cmd = "perf sched record -o %s ls" % self.temp_file
         self.run_cmd(record_cmd)
+
+        # Validate the output of perf sched
+        if os.path.exists(self.temp_file):
+            if not os.stat(self.temp_file).st_size:
+                self.fail("%s sample not captured" % self.temp_file)
+            else:
+                self.run_cmd("perf report --stdio -i %s" % self.temp_file)
+
         report_cmd = "perf sched -i %s %s %s" % (self.temp_file, self.optname,
                                                  self.option)
         self.run_cmd(report_cmd)
