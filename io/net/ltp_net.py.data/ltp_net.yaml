@@ -1,0 +1,34 @@
+peer_public_ip: 
+peer_password: 
+peer_user: 
+two_host_configuration : True
+runltp: !mux
+    script: 'runltp'
+    net.ipv6:
+        args: '-f net.ipv6'
+    net.ipv6_lib:
+        args: '-f net.ipv6_lib'
+    net.sctp:
+        args: '-f net.sctp'
+    net.multicast:
+        args: '-f net.multicast'
+    net_stress.appl:
+        args: '-f net_stress.appl'
+    net_stress.broken_ip:
+        args: '-f net_stress.broken_ip'
+    net_stress.interface:
+        args: '-f net_stress.interface'
+    net_stress.ipsec_dccp:
+        args: '-f net_stress.ipsec_dccp'
+    net_stress.ipsec_icmp:
+        args: '-f net_stress.ipsec_icmp'
+    net_stress.ipsec_sctp:
+        args: '-f net_stress.ipsec_sctp'
+    net_stress.ipsec_tcp:
+        args: '-f net_stress.ipsec_tcp'
+    net_stress.ipsec_udp:
+        args: '-f net_stress.ipsec_udp'
+    net_stress.multicast:
+        args: '-f net_stress.multicast'
+    net_stress.route:
+        args: '-f net_stress.route'
