@@ -21,6 +21,7 @@
 
 import os
 import re
+import shutil
 from avocado import Test
 from avocado.utils import build, distro, genio, dmesg
 from avocado.utils import process, archive
@@ -159,5 +160,9 @@ class LTP(Test):
             self.fail("Issue %s listed in dmesg please check" % error)
 
     def tearDown(self):
+        if os.path.exists(self.workdir):
+            shutil.rmtree(self.workdir)
+        else:
+            self.log.info("Unable to delete ltp directory from the machine")
         if self.mount_dir:
             self.device.unmount()
