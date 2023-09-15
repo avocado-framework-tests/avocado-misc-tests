@@ -74,7 +74,7 @@ class Netperf(Test):
             self.cancel("failed connecting to peer")
         smm = SoftwareManager()
         detected_distro = distro.detect()
-        pkgs = ['gcc', 'unzip', 'flex', 'bison']
+        pkgs = ['gcc', 'unzip', 'flex', 'bison', 'patch']
         if detected_distro.name == "Ubuntu":
             pkgs.append('openssh-client')
         elif detected_distro.name == "SuSE":
@@ -123,12 +123,23 @@ class Netperf(Test):
             self.cancel("unable to copy the netperf into peer machine")
         self.netperf_dir_peer = "/tmp/%s" % self.version
         self.netperf_dir = os.path.join(self.netperf, self.version)
-        cmd = "unzip /tmp/%s -d /tmp;cd %s;./configure --build=powerpc64le;make" % (
-            os.path.basename(tarball), self.netperf_dir_peer)
-        output = self.session.cmd(cmd)
+        cmd1 = "unzip /tmp/%s -d /tmp;cd %s" % (os.path.basename(tarball), self.netperf_dir_peer)
+        output = self.session.cmd(cmd1)
         if not output.exit_status == 0:
             self.fail("test failed because command failed in peer machine")
         os.chdir(self.netperf_dir)
+        patch_file = self.params.get('patch', default='nettest_omni.patch')
+        patch = self.get_data(patch_file)
+        process.run('patch -p1 < %s' % patch, shell=True)
+        peer_patch_name = patch.split('/')[-1]
+        peer_destination = "%s:%s" % (self.peer_ip, self.netperf_dir_peer)
+        self.session.copy_files(patch, peer_destination,
+                                recursive=True)
+        cmd = "cd %s; patch -p1 < %s; ./configure --build=powerpc64le;make" % (
+               self.netperf_dir_peer, peer_patch_name)
+        self.session.cmd(cmd)
+        if not output.exit_status == 0:
+            self.fail("test failed because command failed in peer machine")
         process.system('./configure --build=powerpc64le', shell=True)
         build.make(self.netperf_dir)
         self.perf = os.path.join(self.netperf_dir, 'src', 'netperf')

@@ -1,0 +1,17 @@
+--- netperf-netperf-2.7.0/src/nettest_omni.c.orig	2023-09-07 05:58:10.502387356 -0500
++++ netperf-netperf-2.7.0/src/nettest_omni.c	2023-09-07 05:58:41.922334737 -0500
+@@ -456,14 +456,6 @@ static int client_port_max = 65535;
+ 
+  /* different options for the sockets				*/
+ 
+-int
+-  loc_nodelay,		/* don't/do use NODELAY	locally		*/
+-  rem_nodelay,		/* don't/do use NODELAY remotely	*/
+-  loc_sndavoid,		/* avoid send copies locally		*/
+-  loc_rcvavoid,		/* avoid recv copies locally		*/
+-  rem_sndavoid,		/* avoid send copies remotely		*/
+-  rem_rcvavoid; 	/* avoid recv_copies remotely		*/
+-
+ extern int
+   loc_tcpcork,
+   rem_tcpcork,
