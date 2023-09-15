@@ -48,8 +48,8 @@ class NetworkSriovDevice(Test):
         self.hmc_ip = self.get_mcp_component("HMCIPAddr")
         if not self.hmc_ip:
             self.cancel("HMC IP not got")
-        self.hmc_pwd = self.params.get("hmc_pwd", '*', default=None)
-        self.hmc_username = self.params.get("hmc_username", '*', default=None)
+        self.hmc_pwd = self.params.get("hmc_pwd", default=None)
+        self.hmc_username = self.params.get("hmc_username", default=None)
         self.lpar = self.get_partition_name("Partition Name")
         if not self.lpar:
             self.cancel("LPAR Name not got from lparstat command")
@@ -67,21 +67,25 @@ class NetworkSriovDevice(Test):
         if not self.server:
             self.cancel("Managed System not got")
         self.sriov_adapter = self.params.get('sriov_adapter',
-                                             '*', default=None).split(' ')
-        self.sriov_port = self.params.get('sriov_port', '*',
+                                             default=None).split(' ')
+        self.sriov_port = self.params.get('sriov_port',
                                           default=None).split(' ')
-        self.ipaddr = self.params.get('ipaddr', '*', default="").split(' ')
-        self.netmask = self.params.get('netmasks', '*', default="").split(' ')
-        self.prefix = self.netmask_to_cidr(self.netmask[0])
-        self.peer_ip = self.params.get('peer_ip', '*', default="").split(' ')
+        self.max_sriov_port = self.params.get('max_sriov_ports')
+        self.ipaddr = self.params.get('ipaddr', default='').split(' ')
+        self.netmask = self.params.get('netmasks', default="").split(' ')
+
+        if self.params.get('netmasks'):
+            self.prefix = self.netmask_to_cidr(self.netmask[0])
+        self.peer_ip = self.params.get('peer_ip', default="").split(' ')
         self.mac_id = self.params.get('mac_id',
                                       default="02:03:03:03:03:01").split(' ')
         self.mac_id = [mac.replace(':', '') for mac in self.mac_id]
-        self.migratable = self.params.get('migratable', '*', default=0)
+        self.migratable = self.params.get('migratable', default=0)
+
         self.backup_veth_vnetwork = self.params.get(
-            'backup_veth_vnetwork', '*', default="")
+            'backup_veth_vnetwork', default="")
         self.vnic_sriov_adapter = self.params.get(
-            'vnic_sriov_adapter', '*', default="")
+            'vnic_sriov_adapter', default="")
 
         if not self.backup_veth_vnetwork and not self.vnic_sriov_adapter and self.sriov_adapter:
             self.local = LocalHost()
@@ -93,14 +97,14 @@ class NetworkSriovDevice(Test):
                     self.cancel("Please provide veth or vnic inputs")
             if 'vnic' in self.backup_device_type:
                 self.vnic_port_id = self.params.get(
-                    'vnic_port_id', '*', default=None)
+                    'vnic_port_id', default=None)
                 self.vnic_adapter_id = self.get_adapter_id(self.vnic_sriov_adapter)
                 self.priority = self.params.get(
-                    'failover_priority', '*', default='50')
+                    'failover_priority', default='50')
                 self.max_capacity = self.params.get(
-                    'max_capacity', '*', default='10')
-                self.capacity = self.params.get('capacity', '*', default='2')
-                self.vios_name = self.params.get('vios_name', '*', default=None)
+                    'max_capacity', default='10')
+                self.capacity = self.params.get('capacity', default='2')
+                self.vios_name = self.params.get('vios_name', default=None)
                 cmd = 'lssyscfg -m %s -r lpar --filter lpar_names=%s -F lpar_id' % (
                     self.server, self.vios_name)
                 self.vios_id = self.session.cmd(cmd).stdout_text.split()[0]
@@ -155,10 +159,14 @@ class NetworkSriovDevice(Test):
         '''
         if self.migratable:
             self.cancel("Test unsupported")
+        if self.max_sriov_port:
+            self.cancel("Test unsupported")
         for slot, port, mac, ipaddr, netmask, peer_ip in zip(self.sriov_adapter,
                                                              self.sriov_port,
-                                                             self.mac_id, self.ipaddr,
-                                                             self.netmask, self.peer_ip):
+                                                             self.mac_id,
+                                                             self.ipaddr,
+                                                             self.netmask,
+                                                             self.peer_ip):
             self.device_add_remove(slot, port, mac, '', 'add')
             if not self.list_device(mac):
                 self.fail("failed to list logical device after add operation")
@@ -180,8 +188,10 @@ class NetworkSriovDevice(Test):
 
         for slot, port, mac, ipaddr, netmask, peer_ip in zip(self.sriov_adapter,
                                                              self.sriov_port,
-                                                             self.mac_id, self.ipaddr,
-                                                             self.netmask, self.peer_ip):
+                                                             self.mac_id,
+                                                             self.ipaddr,
+                                                             self.netmask,
+                                                             self.peer_ip):
 
             self.device_add_remove(slot, port, mac, '', 'add')
             if not self.list_device(mac):
@@ -235,6 +245,10 @@ class NetworkSriovDevice(Test):
         """
         if self.migratable:
             self.cancel("Test unsupported")
+
+        if self.max_sriov_port:
+            self.cancel("Test unsupported")
+
         for mac, slot in zip(self.mac_id, self.sriov_adapter):
             logical_port_id = self.get_logical_port_id(mac)
             self.device_add_remove(slot, '', '', logical_port_id, 'remove')
@@ -250,11 +264,19 @@ class NetworkSriovDevice(Test):
 
         if not self.backup_veth_vnetwork and not self.vnic_sriov_adapter and self.sriov_adapter:
             if operation == 'add':
-                cmd = 'chhwres -r sriov -m %s --rsubtype logport \
-                      -o a -p %s -a \"adapter_id=%s,phys_port_id=%s, \
-                      logical_port_type=eth,mac_addr=%s,migratable=%s%s\" ' \
-                      % (self.server, self.lpar, adapter_id,
-                         port, mac, self.migratable, backup_device)
+                if mac is None:
+                    cmd = 'chhwres -r sriov -m %s --rsubtype logport \
+                    -o a -p %s -a \"adapter_id=%s,phys_port_id=%s, \
+                    logical_port_type=eth,migratable=%s%s\" ' \
+                    % (self.server, self.lpar, adapter_id,
+                       port, self.migratable, backup_device)
+                else:
+                    cmd = 'chhwres -r sriov -m %s --rsubtype logport \
+                    -o a -p %s -a \"adapter_id=%s,phys_port_id=%s, \
+                    logical_port_type=eth,mac_addr=%s,migratable=%s%s\" ' \
+                    % (self.server, self.lpar, adapter_id,
+                       port, mac, self.migratable, backup_device)
+
             else:
                 cmd = 'chhwres -r sriov -m %s --rsubtype logport \
                       -o r -p %s -a \"adapter_id=%s,logical_port_id=%s\" ' \
@@ -322,11 +344,51 @@ class NetworkSriovDevice(Test):
         list the sriov logical device
         """
         cmd = 'lshwres -r sriov --rsubtype logport -m %s \
-              --level eth --filter \"lpar_names=%s\" ' % (self.server, self.lpar)
+              --level eth --filter \"lpar_names=%s\" ' % (self.server,
+                                                          self.lpar)
         output = self.session.cmd(cmd)
         if mac in output.stdout_text:
             return True
         return False
+
+    def test_add_max_logical_devices(self):
+        '''
+        test to create logical sriov devices
+        '''
+        if self.migratable:
+            self.cancel("Test unsupported")
+
+        if not self.max_sriov_port:
+            self.cancel("Test unsupported")
+
+        if self.max_sriov_port:
+            for i in range(self.max_sriov_port):
+                for slot, port in zip(self.sriov_adapter, self.sriov_port):
+                    self.device_add_remove(slot, port, mac=None,
+                                           logical_id='',
+                                           operation='add')
+                if not self.list_device(mac=''):
+                    self.fail("failed to list logical device after add operation")
+
+    def test_remove_max_logical_devices(self):
+        '''
+        test to remove logical sriov devices
+        '''
+        if self.migratable:
+            self.cancel("Test unsupported")
+
+        if not self.max_sriov_port:
+            self.cancel("Test unsupported")
+
+        if self.max_sriov_port:
+            for i in range(self.max_sriov_port):
+                for slot, port in zip(self.sriov_adapter,
+                                      self.sriov_port):
+                    logical_port_id = self.get_logical_port_id(mac='mac')
+                    self.device_add_remove(slot, port, '',
+                                           logical_port_id, 'remove')
+                if self.list_device(logical_port_id):
+                    self.fail("still list logical device after remove operation")
 
     def tearDown(self):
         if hasattr(self, 'session'):
