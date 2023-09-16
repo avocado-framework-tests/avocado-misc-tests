@@ -22,10 +22,12 @@
 import os
 import re
 import shutil
+import time
 from avocado import Test
 from avocado.utils import build, distro, genio, dmesg
 from avocado.utils import process, archive
 from avocado.utils.partition import Partition
+from avocado.utils.ssh import Session
 
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -79,8 +81,18 @@ class LTP(Test):
         dist = distro.detect()
         self.args = self.params.get('args', default='')
         self.mem_leak = self.params.get('mem_leak', default=0)
+        self.peer_public_ip = self.params.get("peer_public_ip", default="")
+        self.peer_user = self.params.get("peer_user", default="root")
+        self.peer_password = self.params.get("peer_password", default=None)
+        self.two_host_configuration = self.params.get("two_host_configuration",
+                                                      default=False)
+        self.session = Session(self.peer_public_ip, user=self.peer_user,
+                               password=self.peer_password)
+        if not self.session.connect():
+            self.cancel("failed connecting to peer")
 
-        deps = ['gcc', 'make', 'automake', 'autoconf', 'psmisc']
+        deps = ['gcc', 'make', 'automake', 'autoconf', 'psmisc',
+                'libtirpc', 'nfs-utils', 'rpcbind', 'httpd', 'vsftpd']
         if dist.name == "Ubuntu":
             deps.extend(['libnuma-dev'])
         elif dist.name in ["centos", "rhel", "fedora"]:
@@ -112,17 +124,64 @@ class LTP(Test):
                 "ltp-master%s" % match, locations=[url], expire='7d')
         else:
             self.cancel("Provided LTP Url is not valid")
-        archive.extract(tarball, self.workdir)
-        ltp_dir = os.path.join(self.workdir, "ltp-master")
+        self.ltpdir = '/home/ltp'
+        if not os.path.exists(self.ltpdir):
+            os.mkdir(self.ltpdir)
+        archive.extract(tarball, self.ltpdir)
+        ltp_dir = os.path.join(self.ltpdir, "ltp-master")
         os.chdir(ltp_dir)
         build.make(ltp_dir, extra_args='autotools')
         if not self.ltpbin_dir:
             self.ltpbin_dir = os.path.join(self.teststmpdir, 'bin')
         if not os.path.exists(self.ltpbin_dir):
             os.mkdir(self.ltpbin_dir)
+
+        if self.two_host_configuration and "-f net" in self.args:
+            # setting ltp direcory in peer LPAR for 2 host configuration tests
+            destination = "%s:/home" % self.peer_public_ip
+            output = self.session.copy_files(self.ltpdir, destination,
+                                             recursive=True)
+            if not output:
+                self.cancel("unable to copy the ltp into peer machine")
+            time.sleep(10)
+            cmd = "cd %s;make autotools;./configure;make;make install" % ltp_dir
+            output = self.session.cmd(cmd)
+            if not output.exit_status == 0:
+                self.cancel("Unable to compile ltp in peer machine")
+
+            # Adding Rhost name and passwd in tst_net.sh for ltp between 2 host
+            output = self.session.cmd('hostname')
+            if not output.exit_status == 0:
+                self.cancel("Unable to get the hostname of peer machine")
+            ltp_tstnet_dir = os.path.join(ltp_dir, 'testcases/lib/tst_net.sh')
+            if not os.path.exists(ltp_tstnet_dir):
+                self.log.info("File tst_net.sh does not exist")
+
+            ltp_tstnet_dir_copy = os.path.join(ltp_dir,
+                                               'testcases/lib/tst_net_copy.sh')
+            shutil.copy(ltp_tstnet_dir, ltp_tstnet_dir_copy)
+            replacements = [("export RHOST=\"$RHOST\"",
+                            "export RHOST=\"" + str(output.stdout) + "\""),
+                            ("export PASSWD=\"${PASSWD:-}\"",
+                            "export PASSWD=\"" + self.peer_password + "\"")]
+            with open(ltp_tstnet_dir_copy, 'r') as input_file, open(ltp_tstnet_dir, 'w') as output_file:
+                for line in input_file:
+                    if replacements:
+                        for old_string, new_string in replacements:
+                            line = line.replace(old_string, new_string)
+                    output_file.write(line)
+            os.remove(ltp_tstnet_dir_copy)
+
         process.system('./configure --prefix=%s' % self.ltpbin_dir)
         build.make(ltp_dir)
         build.make(ltp_dir, extra_args='install')
+
+        # necessary services to be started on the host before test run starts
+        services = ['nfs-server', 'rpcbind', 'httpd', 'vsftpd']
+        for service in services:
+            cmd = "service " + service + " restart"
+            if process.system(cmd, ignore_status=True, shell=True) != 0:
+                self.cancel("Unable to start the service in host machine")
 
     def test(self):
         logfile = os.path.join(self.logdir, 'ltp.log')
@@ -160,9 +219,13 @@ class LTP(Test):
             self.fail("Issue %s listed in dmesg please check" % error)
 
     def tearDown(self):
-        if os.path.exists(self.workdir):
-            shutil.rmtree(self.workdir)
+        if os.path.exists(self.ltpdir):
+            shutil.rmtree(self.ltpdir)
         else:
-            self.log.info("Unable to delete ltp directory from the machine")
+            self.log.info("Unable to delete ltp from host machine")
+        cmd = "rm -rf %s" % self.ltpdir
+        output = self.session.cmd(cmd)
+        if not output.exit_status == 0:
+            self.cancel("Unable to delete ltp in peer machine")
         if self.mount_dir:
             self.device.unmount()

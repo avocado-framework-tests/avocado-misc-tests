@@ -23,7 +23,7 @@
 import os
 
 from avocado import Test
-from avocado.utils import process, distro
+from avocado.utils import process, archive, build
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -41,32 +41,25 @@ class Aiostress(Test):
          testcases/kernel/io/ltp-aiodio/aio-stress.c
         """
         smm = SoftwareManager()
-        packages = []
-        dist_name = distro.detect().name.lower()
-        if dist_name == 'ubuntu':
-            packages.extend(['libaio1', 'libaio-dev'])
-        elif dist_name in ['centos', 'fedora', 'rhel']:
-            packages.extend(['libaio', 'libaio-devel'])
-        elif dist_name == 'suse':
-            packages.extend(['libaio1', 'libaio-devel'])
-
+        packages = ['make', 'gcc']
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        url = self.params.get('url', default='https//github.com/linux-test-project/'
-                                             'ltp/blob/master/testcases/kernel/io/'
-                                             'ltp-aiodio/aio-stress.c')
-        aiostress = self.fetch_asset(url, expire='10d')
-        os.chdir(self.workdir)
-        # This requires libaio.h in order to build
-        # -laio -lpthread is provided at end as a workaround for Ubuntu
-        process.run('gcc -Wall -o aio-stress %s -laio -lpthread' % aiostress)
+
+        url = self.params.get(
+            'url', default='https://github.com/linux-test-project/ltp/archive/master.zip')
+        tarball = self.fetch_asset(url, expire='7d')
+        archive.extract(tarball, self.workdir)
+        ltp_dir = os.path.join(self.workdir, "ltp-master")
+        os.chdir(ltp_dir)
+        build.make(ltp_dir, extra_args='autotools')
+        process.system('./configure')
+        ltp_aio = os.path.join(ltp_dir, "testcases/kernel/io/ltp-aiodio/")
+        os.chdir(ltp_aio)
+        build.make(ltp_aio)
 
     def test(self):
         """
         Run aiostress
         """
-        os.chdir(self.workdir)
-        # aio-stress needs a filename (foo) to run tests on.
-        cmd = ('./aio-stress foo')
-        process.run(cmd)
+        process.system('./aio-stress')
