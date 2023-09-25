@@ -35,7 +35,7 @@ class MultiportStress(Test):
         self.host_interfaces = []
         interfaces = os.listdir('/sys/class/net')
         self.local = LocalHost()
-        devices = self.params.get("host_interfaces", default=None)
+        devices = self.params.get("interfaces", default=None)
         for device in devices.split(" "):
             if device in interfaces:
                 self.host_interfaces.append(device)
