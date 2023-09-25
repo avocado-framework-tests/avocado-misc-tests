@@ -25,7 +25,6 @@ from avocado import Test
 from avocado.utils import disk
 from avocado.utils import process
 from avocado.utils import archive
-from avocado.utils import build
 from avocado.utils import download
 from avocado.utils import nvme
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -52,17 +51,22 @@ class NVMeTest(Test):
         if process.system(cmd, ignore_status=True):
             self.cancel("%s does not exist" % self.device)
 
+        smm = SoftwareManager()
         self.package = self.params.get('package', default='distro')
         if self.package == 'upstream':
+            if not smm.check_installed("meson") and not \
+                    smm.install("meson"):
+                self.cancel('meson is needed for the test to be run')
             locations = ["https://github.com/linux-nvme/nvme-cli/archive/"
                          "master.zip"]
             tarball = self.fetch_asset("nvme-cli.zip", locations=locations,
                                        expire='15d')
             archive.extract(tarball, self.teststmpdir)
             os.chdir("%s/nvme-cli-master" % self.teststmpdir)
-            process.system("./NVME-VERSION-GEN", ignore_status=True)
-            build.make(".")
-            self.binary = './nvme'
+            cmd = "meson setup --force-fallback-for=libnvme .build"
+            process.system(cmd, ignore_status=True)
+            process.system("meson compile -C .build", ignore_status=True)
+            self.binary = './.build/nvme'
         else:
             smm = SoftwareManager()
             if not smm.check_installed("nvme-cli") and not \
