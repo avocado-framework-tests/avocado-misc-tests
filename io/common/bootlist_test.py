@@ -43,7 +43,7 @@ class BootlisTest(Test):
         local = LocalHost()
         interfaces = os.listdir('/sys/class/net')
         disks = self.params.get("disks", default=None)
-        ifaces = self.params.get("host_interfaces", default=None)
+        ifaces = self.params.get("interfaces", default=None)
         if ifaces:
             for device in ifaces.split(" "):
                 if device in interfaces:
