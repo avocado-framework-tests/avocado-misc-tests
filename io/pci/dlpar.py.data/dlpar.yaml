@@ -2,7 +2,7 @@ manageSystem:
 hmc_pwd: 
 hmc_username: 
 lpar_2: 
-pci_device:
+pci_devices:
 num_of_dlpar: 
 peer_ip:
 sriov: 'no'
