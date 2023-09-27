@@ -79,8 +79,10 @@ class Numatop(Test):
 
         mgen_flag = False
         mgen = os.path.join(self.sourcedir, 'mgen')
+        numatop = os.path.join(self.sourcedir, 'numatop')
+        cmd = numatop+" -d result_file"
         self.numa_pid = process.SubProcess(
-            'numatop -d result_file', shell=True)
+            cmd, shell=True)
         self.numa_pid.start()
 
         # Run mgen for 5 seconds to generate a single snapshot of numatop
