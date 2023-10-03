@@ -18,8 +18,13 @@ import sys
 import time
 import platform
 import pexpect
+import os
+import subprocess
+import tempfile
+import threading
+
 from avocado import Test
-from avocado.utils import distro, dmesg
+from avocado.utils import distro, dmesg, process, archive, build
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -56,11 +61,53 @@ class perf_top(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
+        # Creating a temprory file
+        self.temp_file = tempfile.NamedTemporaryFile().name
+
         # Getting the parameters from yaml file
         self.option = self.params.get('option', default='')
 
         # Clear the dmesg by that we can capture delta at the end of the test
         dmesg.clear_dmesg()
+
+    def test_workload(self):
+        """
+        Get ebizzy workload as a tar file and build it.
+        """
+        url = 'https://sourceforge.net/projects/ebizzy/files/ebizzy/0.3/ebizzy-0.3.tar.gz'
+        tarball = self.fetch_asset(url, expire='7d')
+        archive.extract(tarball, self.workdir)
+        version = os.path.basename(tarball.split('.tar.')[0])
+        self.sourcedir = os.path.join(self.workdir, version)
+        os.chdir(self.sourcedir)
+        process.run("./configure")
+        build.make(self.sourcedir, extra_args='LDFLAGS=-static')
+
+        # Create thread objects
+        thread1 = threading.Thread(target=self.run_workload)
+        thread2 = threading.Thread(target=self.capture_top_output)
+        # Start the threads
+        thread1.start()
+        thread2.start()
+        # Wait for both threads to finish
+        thread1.join()
+        thread2.join()
+        # Main thread continues here
+        output = subprocess.check_output("grep ebizzy %s" % self.temp_file, shell=True, stderr=subprocess.STDOUT)
+        if not output:
+            self.fail("ebizzy workload not captured in perf top")
+
+    def run_workload(self):
+        """
+        Run ebizzy workload
+        """
+        process.run("./ebizzy -S1 -s1024 -t1", shell=True)
+
+    def capture_top_output(self):
+        """
+        Run perf top to capture output in a temp file
+        """
+        process.getoutput("perf top -a > %s " % self.temp_file, timeout=10)
 
     def test_top(self):
         if self.option in ["-k", "--vmlinux", "--kallsyms"]:
@@ -80,3 +127,7 @@ class perf_top(Test):
             self.fail("Unknown option %s" % self.option)
         dmesg.collect_errors_dmesg(['WARNING: CPU:', 'Oops', 'Segfault',
                                     'soft lockup', 'Unable to handle'])
+
+    def teardown(self):
+        if os.path.isfile(self.temp_file):
+            process.system('rm -f %s' % self.temp_file)

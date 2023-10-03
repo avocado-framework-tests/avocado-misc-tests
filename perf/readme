@@ -1,0 +1,8 @@
+perf_top has two functions to run:
+test_workload will test perf_top by running ebizzy workload. To run this no need to pass yaml file, can be run like:
+avocado run <test_name:class_name.function_name>
+Ex-> avocad run perf_top.py:perf_top.test_workload
+test_top will test all different top options with the help of yaml file. It can be run like:
+avocado run --max-parallel-tasks=1 perf_top.py:perf_top.test_top -m perf_top.py.data/perf_top.yaml
+To get different supported values for yaml parameters refer man page of perf top.
+Ex-> man perf top
