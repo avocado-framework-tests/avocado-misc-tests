@@ -70,6 +70,7 @@ class NetworkSriovDevice(Test):
                                              default=None).split(' ')
         self.sriov_port = self.params.get('sriov_port',
                                           default=None).split(' ')
+        self.sriov_roce = self.params.get('sriov_roce', default=False)
         self.max_sriov_port = self.params.get('max_sriov_ports')
         self.ipaddr = self.params.get('ipaddr', default='').split(' ')
         self.netmask = self.params.get('netmasks', default="").split(' ')
@@ -98,7 +99,8 @@ class NetworkSriovDevice(Test):
             if 'vnic' in self.backup_device_type:
                 self.vnic_port_id = self.params.get(
                     'vnic_port_id', default=None)
-                self.vnic_adapter_id = self.get_adapter_id(self.vnic_sriov_adapter)
+                self.vnic_adapter_id = self.get_adapter_id(
+                    self.vnic_sriov_adapter)
                 self.priority = self.params.get(
                     'failover_priority', default='50')
                 self.max_capacity = self.params.get(
@@ -115,7 +117,7 @@ class NetworkSriovDevice(Test):
 
     @staticmethod
     def netmask_to_cidr(netmask):
-        return(sum([bin(int(bits)).count("1") for bits in netmask.split(".")]))
+        return (sum([bin(int(bits)).count("1") for bits in netmask.split(".")]))
 
     def get_adapter_id(self, slot):
         cmd = "lshwres -m %s -r sriov --rsubtype adapter -F phys_loc:adapter_id" \
@@ -271,12 +273,18 @@ class NetworkSriovDevice(Test):
                     % (self.server, self.lpar, adapter_id,
                        port, self.migratable, backup_device)
                 else:
-                    cmd = 'chhwres -r sriov -m %s --rsubtype logport \
-                    -o a -p %s -a \"adapter_id=%s,phys_port_id=%s, \
-                    logical_port_type=eth,mac_addr=%s,migratable=%s%s\" ' \
-                    % (self.server, self.lpar, adapter_id,
-                       port, mac, self.migratable, backup_device)
-
+                    if not self.sriov_roce:
+                        cmd = 'chhwres -r sriov -m %s --rsubtype logport \
+                        -o a -p %s -a \"adapter_id=%s,phys_port_id=%s, \
+                        logical_port_type=eth,mac_addr=%s,migratable=%s%s\" ' \
+                        % (self.server, self.lpar, adapter_id,
+                           port, mac, self.migratable, backup_device)
+                    else:
+                        cmd = 'chhwres -r sriov -m %s --rsubtype logport \
+                        -o a -p %s -a \"adapter_id=%s,phys_port_id=%s, \
+                        logical_port_type=roce,mac_addr=%s,migratable=%s%s\" ' \
+                        % (self.server, self.lpar, adapter_id,
+                           port, mac, self.migratable, backup_device)
             else:
                 cmd = 'chhwres -r sriov -m %s --rsubtype logport \
                       -o r -p %s -a \"adapter_id=%s,logical_port_id=%s\" ' \
@@ -310,9 +318,14 @@ class NetworkSriovDevice(Test):
         """
         findout logical device port id
         """
-        cmd = "lshwres -r sriov --rsubtype logport -m  %s \
-               --level eth | grep %s | grep %s" \
-               % (self.server, self.lpar, mac)
+        if not self.sriov_roce:
+            cmd = "lshwres -r sriov --rsubtype logport -m  %s \
+                   --level eth | grep %s | grep %s" \
+                   % (self.server, self.lpar, mac)
+        else:
+            cmd = "lshwres -r sriov --rsubtype logport -m  %s \
+                   --level roce | grep %s | grep %s" \
+                   % (self.server, self.lpar, mac)
         output = self.session.cmd(cmd)
         logical_port_id = output.stdout_text.split(',')[6].split('=')[-1]
         return logical_port_id
@@ -343,9 +356,12 @@ class NetworkSriovDevice(Test):
         """
         list the sriov logical device
         """
-        cmd = 'lshwres -r sriov --rsubtype logport -m %s \
-              --level eth --filter \"lpar_names=%s\" ' % (self.server,
-                                                          self.lpar)
+        if not self.sriov_roce:
+            cmd = 'lshwres -r sriov --rsubtype logport -m %s \
+                  --level eth --filter \"lpar_names=%s\" ' % (self.server, self.lpar)
+        else:
+            cmd = 'lshwres -r sriov --rsubtype logport -m %s \
+                  --level roce --filter \"lpar_names=%s\" ' % (self.server, self.lpar)
         output = self.session.cmd(cmd)
         if mac in output.stdout_text:
             return True
@@ -368,7 +384,8 @@ class NetworkSriovDevice(Test):
                                            logical_id='',
                                            operation='add')
                 if not self.list_device(mac=''):
-                    self.fail("failed to list logical device after add operation")
+                    self.fail(
+                        "failed to list logical device after add operation")
 
     def test_remove_max_logical_devices(self):
         '''
@@ -388,7 +405,8 @@ class NetworkSriovDevice(Test):
                     self.device_add_remove(slot, port, '',
                                            logical_port_id, 'remove')
                 if self.list_device(logical_port_id):
-                    self.fail("still list logical device after remove operation")
+                    self.fail(
+                        "still list logical device after remove operation")
 
     def tearDown(self):
         if hasattr(self, 'session'):
