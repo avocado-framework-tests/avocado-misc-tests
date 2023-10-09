@@ -14,7 +14,7 @@
 # Author: Nageswara R Sastry <rnsastry@linux.ibm.com>
 
 from avocado import Test
-from avocado.utils import linux_modules
+from avocado.utils import linux_modules, distro
 
 
 class KerelHardConfig(Test):
@@ -29,6 +29,8 @@ class KerelHardConfig(Test):
             self.no_config.append(config_option)
 
     def setUp(self):
+        if distro.detect().version == '8':
+            self.cancel("This test not applicable to RHEL8 series")
         self.no_config = []
         # Check the kernel config options
 
