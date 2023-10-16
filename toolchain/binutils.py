@@ -44,7 +44,7 @@ class Binutils(Test):
         """
         if (not self._sm.check_installed(package) and
                 not self._sm.install(package)):
-            self.cancel('Please install %s for the test to run' % self.package)
+            self.cancel('Please install %s for the test to run' % package)
 
     def setUp(self):
         # Check for basic utilities
