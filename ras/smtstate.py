@@ -28,9 +28,10 @@ class smtstate_tool(Test):
 
         sm = SoftwareManager()
         self.detected_distro = distro.detect()
-        if not sm.check_installed("powerpc-utils") and \
-                not sm.install("powerpc-utils"):
-            self.cancel("powerpc-utils is needed for the test to be run")
+        deps = ['powerpc-utils', 'time']
+        for packages in deps:
+            if not sm.check_installed(packages) and not sm.install(packages):
+                self.cancel("powerpc-utils is needed for the test to be run")
         smt_op = process.run("ppc64_cpu --smt", shell=True,
                              ignore_status=True).stderr.decode("utf-8")
         if "is not SMT capable" in smt_op:
