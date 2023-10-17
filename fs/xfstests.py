@@ -250,6 +250,16 @@ class Xfstests(Test):
             prefix = "/usr/local"
             bin_prefix = "/usr/local/bin"
 
+            if 'verity' in self.args:
+                fsverity_dir = os.path.join(self.teststmpdir, 'fsverity-utils')
+                if not os.path.exists(fsverity_dir):
+                    os.makedirs(fsverity_dir)
+                fsverity_url = self.params.get('fsverity_url')
+                git.get_repo(fsverity_url, destination_dir=fsverity_dir)
+                os.chdir(fsverity_dir)
+                build.make(fsverity_dir)
+                build.make(fsverity_dir, extra_args='install')
+
             if self.detected_distro.name == 'SuSE':
                 # SuSE has /sbin at a higher priority than /usr/local/bin
                 # in $PATH, so install all the binaries in /sbin to make
