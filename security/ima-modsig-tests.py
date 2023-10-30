@@ -14,7 +14,7 @@
 # Author: Nageswara R Sastry <rnsastry@linux.ibm.com>
 
 from avocado import Test
-from avocado.utils import linux_modules, process
+from avocado.utils import linux_modules, process, distro
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -30,6 +30,8 @@ class IMAmodsig(Test):
             self.no_config.append(config_option)
 
     def setUp(self):
+        if distro.detect().version == '8':
+            self.cancel("This test not applicable to RHEL8 series")
         # Check for basic utilities
         smm = SoftwareManager()
         for package in ['keyutils']:
