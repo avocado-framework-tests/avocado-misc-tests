@@ -10,8 +10,8 @@ loop_type: !mux
     disk: "null"
 
 fs_type: !mux
-    fs_ext4_64k_auto:
+    fs_ext4_4k_adv_auto:
         fs: 'ext4'
         args: '-R xunit -g auto'
-        mkfs_opt: '-b 65536'
+        mkfs_opt: '-b 4096 -O inline_data,fast_commit'
         mount_opt: '-o block_validity'
