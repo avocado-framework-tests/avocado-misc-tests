@@ -19,7 +19,7 @@ Irq-balance and CPU affinity test for IO subsystem.
 '''
 
 import re
-import netifaces
+import os
 from avocado import Test
 from avocado.utils import process, cpu, wait, dmesg, genio
 from avocado.utils.network.interfaces import NetworkInterface
@@ -61,7 +61,7 @@ class irq_balance(Test):
         if self.iface:
             self.peer_ip = self.params.get("peer_ip", default=None)
             self.ping_count = self.params.get("ping_count", default=None)
-            interfaces = netifaces.interfaces()
+            interfaces = os.listdir('/sys/class/net')
             self.interface = self.params.get("interface", default=None)
             if not self.interface:
                 self.cancel("Please specify interface to be used")
