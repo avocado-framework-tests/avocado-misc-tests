@@ -67,9 +67,12 @@ class kernelLockdown(Test):
 
     def test_check_kernel_config(self):
         # Checking the required kernel config options for lockdown
-        self._check_kernel_config('CONFIG_SECURITY_LOCKDOWN_LSM')
-        self._check_kernel_config('CONFIG_SECURITY_LOCKDOWN_LSM_EARLY')
-        self._check_kernel_config('CONFIG_LSM')
+        kclist = ['CONFIG_SECURITY_LOCKDOWN_LSM',
+                  'CONFIG_SECURITY_LOCKDOWN_LSM_EARLY']
+        if self.distro_version.version == '8':
+            kclist = ['CONFIG_LOCK_DOWN_KERNEL']
+        for kconfig in kclist:
+            self._check_kernel_config(kconfig)
         if self.no_config:
             self.fail("Config options not set are: %s" % self.no_config)
 
@@ -77,15 +80,18 @@ class kernelLockdown(Test):
         # Try changing the lockdown value to 'none'
         try:
             genio.write_one_line(self.lockdown_file, 'none')
-        except IOError as err:
+        except PermissionError as err:
             if 'Operation not permitted' not in str(err):
+                self.fail("Kernel Lockdown value changed to 'none'")
+        except OSError as err:
+            if 'Invalid argument' not in str(err):
                 self.fail("Kernel Lockdown value changed to 'none'")
 
     def test_lockdown_mem(self):
         # Try read the values from /dev/mem
         try:
             genio.read_file("/dev/mem")
-        except IOError as err:
+        except PermissionError as err:
             if 'Operation not permitted' not in str(err):
                 self.fail("'/dev/mem' file access permitted.")
 
@@ -100,7 +106,7 @@ class kernelLockdown(Test):
         if os.path.exists(dbg_file):
             try:
                 genio.read_file(dbg_file)
-            except IOError as err:
+            except PermissionError as err:
                 if 'Operation not permitted' not in str(err):
                     self.fail("Access to %s permitted." % dbg_file)
         else:
