@@ -32,16 +32,10 @@ class perf_metric(Test):
     fail_cmd = list()
 
     def _create_all_metric_events(self, match):
-        cmd = "perf list %s" % match
+        cmd = "perf list --raw-dump %s" % match
         output = process.system_output(cmd, shell=True, ignore_status=True)
-        for ln in output.decode().splitlines():
-            ln = ln.strip()
-            # Skipping empty line, header and comment
-            if not ln or "List of pre-defined events" in ln or "[" in ln or\
-               "Metrics:" in ln or "Metric Groups:" in ln or not ln.isupper():
-                continue
-            else:
-                self.list_of_metric_events.append(ln)
+        for ln in output.decode().split():
+            self.list_of_metric_events.append(ln)
 
     def setUp(self):
         """
