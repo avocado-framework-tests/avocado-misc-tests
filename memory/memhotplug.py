@@ -220,7 +220,7 @@ class MemStress(Test):
             node = node.strip('\n')
             self.log.info("Hotplug all memory in Numa Node %s", node)
             mem_blocks = get_hotpluggable_blocks((
-                '/sys/devices/system/node/node%s/memory*' % node), self.memratio)
+                '/sys/devices/system/node/node%s/memory[0-9]*' % node), self.memratio)
             for block in mem_blocks:
                 self.log.info(
                     "offline memory%s in numa node%s", block, node)
