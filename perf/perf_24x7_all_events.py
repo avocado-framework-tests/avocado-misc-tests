@@ -95,8 +95,8 @@ class hv_24x7_all_events(Test):
                 self.physical_sockets = int(line.split(':')[1].strip())
             if 'Physical chips:' in line:
                 self.physical_chips = int(line.split(':')[1].strip())
-            # chip = physical socket x physical chip
-            self.chip = int(self.physical_sockets*self.physical_chips)
+        # chip = physical socket x physical chip
+        self.chip = int(self.physical_sockets*self.physical_chips)
 
         # Collect all hv_24x7 events
         self.list_of_hv_24x7_events = []
