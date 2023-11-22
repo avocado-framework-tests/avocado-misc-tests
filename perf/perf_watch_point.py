@@ -17,17 +17,17 @@
 import os
 import platform
 from avocado import Test
-from avocado import skipUnless
-from avocado.utils import archive
+from avocado import skipIf
+from avocado.utils import archive, linux_modules
 from avocado.utils import cpu, build, distro, process, genio
 from avocado.utils.software_manager.manager import SoftwareManager
 
-IS_POWER8 = 'power8' in cpu.get_family()
+IS_POWER9 = 'power9' in cpu.get_family()
 
 
 class PerfWatchPoint(Test):
 
-    @skipUnless(IS_POWER8, 'Supported only on Power8')
+    @skipIf(IS_POWER9, 'Watchpoint not supported on Power9')
     def setUp(self):
         '''
         Install the basic packages to support perf
@@ -55,9 +55,9 @@ class PerfWatchPoint(Test):
         self.build_dir = os.path.join(self.workdir, 'wptest-master')
         build.make(self.build_dir)
         os.chdir(self.build_dir)
-        process.run("insmod wptest.ko")
-        if not os.path.exists('wptest.ko'):
-            self.fail("module is not inserted")
+        if os.path.exists('wptest.ko'):
+            if not linux_modules.load_module("wptest"):
+                process.run("insmod wptest.ko")
 
     def run_cmd(self):
         i = 1
@@ -85,4 +85,5 @@ class PerfWatchPoint(Test):
 
     def tearDown(self):
         process.system('pkill perf', ignore_status=True)
-        process.run("rmmod wptest")
+        if linux_modules.load_module("wptest"):
+            process.run("rmmod wptest")
