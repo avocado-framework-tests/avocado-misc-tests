@@ -35,7 +35,7 @@ auto_failover --> enable auto_failover flag, 1 to enable or 0 to disable, defaul
 device_ip ---> Ip to be configured for the added Network virtualized interface, space separated if multiple
 netmask ---> netmask value for the added Network virtualized interface, space separated if multiple
 peer_ip ---> Peer ip to which the added Network virtualized interface will ping to check for ping test
-vnic_test_count ---> The number of times the failover test has to be executed
+count ---> The number of times the failover test has to be executed
 num_of_dlpar --> number of times ddlpar remove and add operation to be executed
 mac_id ---> MAC ID to be set for the vnic interface. This is needed for us to have control over interface name via interface file or udev rules, space separated if multiple
 

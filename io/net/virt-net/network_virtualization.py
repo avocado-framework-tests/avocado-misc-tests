@@ -111,7 +111,7 @@ class NetworkVirtualization(Test):
         self.vios_ip = self.params.get('vios_ip', default=None)
         self.vios_user = self.params.get('vios_username', default=None)
         self.vios_pwd = self.params.get('vios_pwd', default=None)
-        self.count = int(self.params.get('vnic_test_count', default="1"))
+        self.count = int(self.params.get('count', default="1"))
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         self.device_ip = self.params.get('device_ip', default=None).split(' ')
         self.mac_id = self.params.get('mac_id',

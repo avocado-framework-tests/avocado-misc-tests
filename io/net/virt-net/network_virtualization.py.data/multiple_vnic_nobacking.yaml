@@ -13,6 +13,6 @@ bandwidth: 2
 device_ip: "147.1.1.247 111.1.1.77"
 netmasks: "255.255.255.0 255.255.255.0"
 peer_ip: "147.1.1.246 111.1.1.88"
-vnic_test_count: 1
+count: 1
 num_of_dlpar: 1
 mac_id: "02:03:05:02:05:06 02:03:05:02:05:04"
