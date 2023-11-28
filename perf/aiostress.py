@@ -23,7 +23,7 @@
 import os
 
 from avocado import Test
-from avocado.utils import process, archive, build
+from avocado.utils import process, archive, build, distro
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -41,7 +41,14 @@ class Aiostress(Test):
          testcases/kernel/io/ltp-aiodio/aio-stress.c
         """
         smm = SoftwareManager()
-        packages = ['make', 'gcc']
+        packages = ['make', 'gcc', 'autoconf', 'automake', 'pkg-config']
+        dist_name = distro.detect().name.lower()
+        if dist_name == 'ubuntu':
+            packages.extend(['libaio1', 'libaio-dev'])
+        elif dist_name in ['centos', 'fedora', 'rhel']:
+            packages.extend(['libaio', 'libaio-devel'])
+        elif dist_name == 'suse':
+            packages.extend(['libaio1', 'libaio-devel'])
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
