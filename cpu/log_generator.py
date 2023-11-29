@@ -28,7 +28,7 @@ class log_generator(Test):
         """
         Here in this test case we are running any cpu intensive workload
         and capturing the disfferent logs,
-        Ex: perf_stat, starce and sched_scoreboard etc.
+        Ex: perf_stat, strace and sched_scoreboard etc.
         """
         pkgs = []
         directory_name = "sched-scoreboard"
@@ -51,19 +51,6 @@ class log_generator(Test):
                 "bpftrace is not installed. Please install it \
                         for sched-scoreboard to work.")
 
-    def test_sched_scoreboard_setup(self):
-        """_summary_
-        Here in this test case we are cloning the sched_scoreboard
-        repo and prepareing the sched_scoreboard to run.
-        """
-        scoreboard_setup_log_file = self.logdir + "/sched_scoreboard_setup"
-        os.mkdir(scoreboard_setup_log_file)
-
-        log_file = "%s/starce_command_output_%s.log" % (
-            scoreboard_setup_log_file, self.kernel_ver)
-        cmd = 'echo "Using command: %s >> %s" 2>&1' % (
-            self.user_command, log_file)
-        process.run(cmd, ignore_status=True, sudo=True, shell=True)
         if os.path.exists(self.sched_scoreboard_dir) and os.path.isdir(
                 self.sched_scoreboard_dir):
             os.chdir(self.sched_scoreboard_dir)
@@ -80,6 +67,20 @@ class log_generator(Test):
             cmd = 'ln -s "$(which bpftrace)" "%s/bpftrace"' % \
                 (self.sched_scoreboard_dir)
             process.run(cmd, ignore_status=True, sudo=True, shell=True)
+
+    def test_sched_scoreboard_setup(self):
+        """_summary_
+        Here in this test case we are cloning the sched_scoreboard
+        repo and prepareing the sched_scoreboard to run.
+        """
+        scoreboard_setup_log_file = self.logdir + "/sched_scoreboard_setup"
+        os.mkdir(scoreboard_setup_log_file)
+
+        log_file = "%s/sched_scoreboard_command_output_%s.log" % (
+            scoreboard_setup_log_file, self.kernel_ver)
+        cmd = 'echo "Using command: %s >> %s" 2>&1' % (
+            self.user_command, log_file)
+        process.run(cmd, ignore_status=True, sudo=True, shell=True)
 
         cmd = 'lscpu >> "%s" 2>&1' % (log_file)
         process.run(cmd, ignore_status=True, sudo=True, shell=True)
@@ -100,15 +101,15 @@ class log_generator(Test):
                 self.user_command, log_file)
             process.run(cmd, ignore_status=True, sudo=True, shell=True)
 
-    def test_starce_cmd(self):
+    def test_strace_cmd(self):
         """
-        Run the starce command
+        Run the strace command
         """
-        starce_log_file = self.logdir + "/starce"
-        os.mkdir(starce_log_file)
+        strace_log_file = self.logdir + "/strace"
+        os.mkdir(strace_log_file)
 
-        log_file = "%s/starce_command_output_%s.log" % (
-            starce_log_file, self.kernel_ver)
+        log_file = "%s/strace_command_output_%s.log" % (
+            strace_log_file, self.kernel_ver)
         cmd = 'strace -c $(echo %s) >> "%s" 2>&1' % (self.user_command,
                                                      log_file)
         for i in range(2):
