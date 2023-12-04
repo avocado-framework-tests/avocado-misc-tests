@@ -1,25 +1,28 @@
 diff --git a/eatmemory.c b/eatmemory.c
-index e5891fa..8b1e345 100644
+index 481918d..2a88382 100644
 --- a/eatmemory.c
 +++ b/eatmemory.c
-@@ -86,16 +86,10 @@ int main(int argc, char *argv[]){
-             }
-             printf("Eating %ld bytes in chunks of %d...\n",size,chunk);
-             if(eat(size,chunk)){
--                if(isatty(fileno(stdin))) {
--                    printf("Done, press any key to free the memory\n");
--                    getchar();
--                } else {
--                    printf("Done, kill this process to free the memory\n");
--                    while(true) {
--                        sleep(1);
--                    }
--                }
--            }else{
-+                printf("Done\n");
-+                exit(0);
-+            }
-+            else{
-                 printf("ERROR: Could not allocate the memory");
-             }
-         }
+@@ -128,20 +128,10 @@ int main(int argc, char *argv[]){
+     printf("Eating %ld bytes in chunks of %d...\n",size,chunk);
+     short** eaten = eat(size,chunk);
+     if(eaten){
+-        if(timeout < 0 && isatty(fileno(stdin))) {
+-            printf("Done, press ENTER to free the memory\n");
+-            getchar();
+-        } else if (timeout >= 0) {
+-            printf("Done, sleeping for %d seconds before exiting...\n", timeout);
+-            sleep(timeout);
+-        } else {
+-            printf("Done, kill this process to free the memory\n");
+-            while(true) {
+-                sleep(1);
+-            }
+-        }
+-        digest(eaten, size, chunk);
+-    }else{
++        printf("Done\n");
++        exit(0);
++    }
++    else{
+         printf("ERROR: Could not allocate the memory");
+     }
