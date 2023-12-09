@@ -166,7 +166,7 @@ class Numactl(Test):
         if " 0% packet loss" not in output:
             self.cancel("failed due to packet loss")
 
-    def test(self):
+    def test_basic(self):
 
         if build.make(self.sourcedir, extra_args='-k -j 1'
                       ' test', ignore_status=True):
