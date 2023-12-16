@@ -18,7 +18,7 @@ This script will perform usb related testcases
 """
 from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
-from avocado.utils import disk, dmesg, pci, process, service, wait
+from avocado.utils import disk, distro, dmesg, pci, process, service, wait
 
 
 class USBTests(Test):
@@ -31,8 +31,16 @@ class USBTests(Test):
         """
         Function for preliminary set-up to execute the test
         """
+        distro_name = distro.detect().name.lower()
         smm = SoftwareManager()
-        for pkg in ["libqb", "protobuf", "usbguard"]:
+        pkgs = ["usbguard"]
+        if distro_name in ['rhel', 'fedora']:
+            pkgs.extend(["libqb", "protobuf"])
+        elif distro_name == 'suse':
+            pkgs.extend(["libqb-devel", "protobuf-devel"])
+        else:
+            self.cancel("Install required packages")
+        for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel(f"{pkg} is not installed")
         self.usb_pci_device = self.params.get("pci_device", default=None)
