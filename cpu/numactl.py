@@ -17,7 +17,6 @@
 #        :Shaik Abdulla <shaik.abdulla1@ibm.com>
 
 import os
-import netifaces
 from random import choice
 from avocado import Test
 from avocado.utils import archive, build, process, distro, memory, cpu, wait
@@ -77,7 +76,7 @@ class Numactl(Test):
         if self.iface:
             self.ping_count = self.params.get("ping_count", default=100)
             self.peer = self.params.get("peer_ip", default="")
-            interfaces = netifaces.interfaces()
+            interfaces = os.listdir('/sys/class/net')
             if not self.iface:
                 self.cancel("Please specify interface to be used")
             if self.iface not in interfaces:
