@@ -1,0 +1,6 @@
+scaling_factor: 100
+transaction_count: 
+benchmark_duration: 120
+worker_threads: 16
+db_clients: 16
+protocol: "prepared"
