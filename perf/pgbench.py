@@ -35,21 +35,20 @@ class Pgbench(Test):
     already_installed = True
 
     def run_cmd(self, cmd, ignore_failure):
-        command = process.SubProcess(cmd)
-        command.run()
+        command = process.run(cmd, ignore_status=True)
 
-        if command.result.exit_status and ignore_failure:
-            self.log.info(f"Command '{cmd}' returned '{command.result.exit_status}' "
-                          f"with the text '{command.result.stderr_text}'")
-            return [command.result.exit_status, command.result.stderr_text]
-        elif command.result.exit_status:
-            self.cancel(f"Command '{cmd}' returned '{command.result.exit_status}' "
-                        f"with the text '{command.result.stderr_text}'")
+        if command.exit_status and ignore_failure:
+            self.log.info(f"Command '{cmd}' returned '{command.exit_status}' "
+                          f"with the text '{command.stderr_text}'")
+            return [command.exit_status, command.stderr_text]
+        elif command.exit_status:
+            self.cancel(f"Command '{cmd}' returned '{command.exit_status}' "
+                        f"with the text '{command.stderr_text}'")
         else:
-            return [command.result.exit_status, command.result.stdout_text]
+            return [command.exit_status, command.stdout_text]
 
     def get_pkg_manager(self):
-        for pkg_mgr in ['apt', 'dnf', 'yum']:
+        for pkg_mgr in ['apt', 'dnf', 'yum', 'zypper']:
             if self.sm.check_installed(pkg_mgr):
                 return pkg_mgr
         return None
