@@ -17,7 +17,7 @@
 import os
 
 from avocado import Test
-from avocado.utils import process, cpu
+from avocado.utils import process, cpu, distro
 from avocado.utils.service import ServiceManager
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -47,19 +47,19 @@ class Pgbench(Test):
         else:
             return [command.exit_status, command.stdout_text]
 
-    def get_pkg_manager(self):
-        for pkg_mgr in ['apt', 'dnf', 'yum', 'zypper']:
-            if self.sm.check_installed(pkg_mgr):
-                return pkg_mgr
+    def get_distro_name(self):
+        distro_name = distro.detect().name
+        if distro_name in ['debian', 'fedora', 'rhel', 'SuSE']:
+            return distro_name
         return None
 
-    def install_and_initialize_postgres(self, pkg_mgr):
+    def install_and_initialize_postgres(self, distro_name):
         packages = ["postgresql", "postgresql-contrib"]
         for package in packages:
             self.sm.install(package)
 
-        # rhel needs an extra pkg and initialization
-        if pkg_mgr in ['dnf', 'yum']:
+        # rhel/fedora need an extra pkg and initialization
+        if distro_name in ['fedora', 'rhel']:
             self.sm.install('postgresql-server')
             output = self.run_cmd("postgresql-setup --initdb", True)
             if output[0] and "not empty" not in output[1]:
@@ -79,9 +79,9 @@ class Pgbench(Test):
         if (self.sm.check_installed("pgbench")):
             self.log.info("Pgbench is already installed")
         else:
-            pkg_mgr = self.get_pkg_manager()
-            if pkg_mgr:
-                self.install_and_initialize_postgres(pkg_mgr)
+            distro_name = self.get_distro_name()
+            if distro_name:
+                self.install_and_initialize_postgres(distro_name)
                 self.already_installed = False
             else:
                 self.cancel("Unsupported Linux distribution")
@@ -137,6 +137,6 @@ class Pgbench(Test):
             for package in packages:
                 self.sm.remove(package)
 
-            pkg_mgr = self.get_pkg_manager()
-            if pkg_mgr in ['dnf', 'yum']:
+            distro_name = self.get_distro_name()
+            if distro_name in ['fedora', 'rhel']:
                 self.sm.remove('postgresql-server')
