@@ -1,0 +1,10 @@
+This script is useful for running the pgbench benchmark (postgres db) and identifying potential performance regressions in the system.
+
+Inputs in yaml file
+--------------------
+1. scaling_factor : Factor by which we multiply the number of rows generated.
+2. transaction_count: Number of transactions each client runs.
+3. benchmark_duration: Run the benchmark for specified number of seconds.
+4. worker_threads: Number of worker threads spawned by pgbench.
+5. db_clients: Number of clients / concurrent database connections created.
+6. protocol : Protocol to use for submitting queries to the server (simple/extended/prepared).
