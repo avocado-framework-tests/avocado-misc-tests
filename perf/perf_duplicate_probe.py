@@ -34,14 +34,8 @@ class PerfDuplicateProbe(Test):
         if 'Ubuntu' in distro_name:
             deps.extend(['linux-tools-common', 'linux-tools-%s' %
                          platform.uname()[2]])
-        elif 'rhel' in distro_name:
+        elif distro_name in ['rhel', 'SuSE']:
             deps.extend(['perf'])
-            if run_type == 'distro':
-                deps.extend(['kernel-debuginfo'])
-        elif 'SuSE' in distro_name:
-            deps.extend(['perf'])
-            if run_type == 'distro':
-                deps.extend(['kernel-default-debuginfo'])
         else:
             self.cancel("Install the package for perf supported\
                       by %s" % distro_name)
