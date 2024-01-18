@@ -64,7 +64,7 @@ class Perftest(Test):
             elif detected_distro.name in ['rhel', 'SuSE', 'fedora', 'centos']:
                 deps.extend(['perf', 'gcc-c++'])
                 if 'SuSE' in detected_distro.name:
-                    deps.extend(['kernel-default-debuginfo'])
+                    deps.extend(['kernel-default-devel'])
                 else:
                     deps.extend(['clang', 'kernel-debuginfo',
                                  'perf-debuginfo'])
