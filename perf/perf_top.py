@@ -74,9 +74,11 @@ class perf_top(Test):
         child = pexpect.spawn("perf top %s" % self.option, encoding='utf-8')
         time.sleep(10)
         child.logfile = sys.stdout
-        err = child.expect_exact(['Error: unknown option', pexpect.TIMEOUT])
+        err = child.expect_exact(
+            ['Error: ', 'perf: Segmentation fault', pexpect.TIMEOUT])
         child.send('q')
-        if err == 0:
+        exit_status = child.wait()
+        if exit_status != 0 or err == 0:
             self.fail("Unknown option %s" % self.option)
         dmesg.collect_errors_dmesg(['WARNING: CPU:', 'Oops', 'Segfault',
                                     'soft lockup', 'Unable to handle'])

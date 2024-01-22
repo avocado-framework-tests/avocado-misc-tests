@@ -27,8 +27,6 @@ variants: !mux
         option: -f 5
     count-filter_full:
         option: --count-filter 5
-    group:
-        option: --group
     group-sort-idx:
         option: --group-sort-idx 1
     freq:
