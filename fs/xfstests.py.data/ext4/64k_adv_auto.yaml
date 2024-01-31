@@ -12,6 +12,6 @@ loop_type: !mux
 fs_type: !mux
     fs_ext4_64k_adv_auto:
         fs: 'ext4'
-        args: '-R xunit -g auto'
+        args: '-R xunit -e ext4/048 -g auto'
         mkfs_opt: '-b 65536 -O inline_data,fast_commit'
         mount_opt: '-o block_validity'
