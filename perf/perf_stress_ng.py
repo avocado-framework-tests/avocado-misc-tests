@@ -39,7 +39,7 @@ class Stressng(Test):
         self.timeout = self.params.get('timeout', default='1')
         self.cpu_per = self.params.get("cpu_load", default='10')
         self.profile_dur = int(self.params.get("profile_duration", default=1))
-        run_type = self.params.get('type', default='upstream')
+        run_type = self.params.get('type', default='distro')
         dmesg.clear_dmesg()
 
         deps = ['gcc', 'perf']
@@ -232,7 +232,7 @@ class Stressng(Test):
                            (load, change_percent))
             else:
                 self.log.info(
-                       "stress-ng is ether not running or all the process are now killed ")
+                       "stress-ng is either not running or all the process are now killed ")
 
         self.log.info("=====================================================")
         if failed == 1:
@@ -240,7 +240,7 @@ class Stressng(Test):
 
     def tearDown(self):
         """
-        removes the log files and collectes the dmesg data
+        removes the log files and collects the dmesg data
         :param: none
         """
 
@@ -248,5 +248,5 @@ class Stressng(Test):
         try:
             os.remove(file_name)
         except OSError:
-            self.log.warn("Files do not exsists")
+            self.log.warn("Files do not exist")
         dmesg.collect_dmesg()
