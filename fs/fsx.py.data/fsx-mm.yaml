@@ -1,12 +1,9 @@
 url: 'https://github.com/linux-test-project/ltp/archive/master.zip'
-
 thp_page_cache: True
 disk:
 dir: '/mnt/tmpfs'
-
 #only when mounting is not required
 output_file:
-
 test_file_max_size:
 single_op_max_size:
 total_ops:
