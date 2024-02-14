@@ -73,7 +73,7 @@ class ModuleLoadUnload(Test):
         """
         flush the multipath
         """
-        cmd = "lsmod | grep -i ^%s" % mdl
+        cmd = "lsmod | grep -iw ^%s" % mdl
         for i in range(20):
             if process.getoutput(cmd).split(" ")[-1] == '0':
                 return True
@@ -106,18 +106,26 @@ class ModuleLoadUnload(Test):
                             if linux_modules.module_is_loaded(mod) is True:
                                 self.error_modules.append(mod)
                                 break
+                self.log.info("error_module list before unloading: %s, iteration : %s" % (self.error_modules, _))
                 self.log.info("unloading module %s " % mdl)
                 linux_modules.unload_module(mdl)
                 time.sleep(self.load_unload_sleep_time)
                 if linux_modules.module_is_loaded(mdl) is True:
+                    self.log.info("failed to unload the module, iteration : %s" % _)
                     self.error_modules.append(mdl)
                     break
+                else:
+                    self.log.info("successfully unload: iteration : %s" % _)
                 self.log.info("loading module : %s " % mdl)
+                self.log.info("error_module list before loading: %s,iteration : %s" % (self.error_modules, _))
                 linux_modules.load_module(mdl)
                 time.sleep(self.load_unload_sleep_time)
                 if linux_modules.module_is_loaded(mdl) is False:
+                    self.log.info("failed to load the module, iteration : %s" % _)
                     self.error_modules.append(mdl)
                     break
+                else:
+                    self.log.info("successfully load: iteration : %s" % _)
 
     def test(self):
         """
