@@ -65,8 +65,8 @@ class smt(Test):
         Kill the SMT workload
         """
         grep_cmd = "grep -i {}".format("smt.sh")
-        process_kill = 'ps aux | {} | awk "{{ print $2 }}" | \
-                xargs kill'.format(grep_cmd)
+        awk_cmd = "awk '{print $2}'"
+        process_kill = "ps aux | {} | {} | head -1 | xargs kill".format(grep_cmd, awk_cmd)
         process.run(process_kill, ignore_status=True,
                     sudo=True, shell=True)
         self.log.info("SMT Workload killed successfully--!!")
