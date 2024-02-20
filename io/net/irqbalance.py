@@ -56,21 +56,23 @@ class irq_balance(Test):
         '''
         Set up
         '''
-        self.iface = self.params.get("interface", default=None)
+        self.interface = None
+        device = self.params.get("interface", default=None)
         self.disk = self.params.get("disk", default=None)
-        if self.iface:
+        if device:
             self.peer_ip = self.params.get("peer_ip", default=None)
             self.ping_count = self.params.get("ping_count", default=None)
             interfaces = os.listdir('/sys/class/net')
-            self.interface = self.params.get("interface", default=None)
-            if not self.interface:
-                self.cancel("Please specify interface to be used")
-            if self.interface not in interfaces:
-                self.cancel("%s interface is not available" % self.interface)
+            self.localhost = LocalHost()
+            if device in interfaces:
+                self.interface = device
+            elif self.localhost.validate_mac_addr(device) and device in self.localhost.get_all_hwaddr():
+                self.interface = self.localhost.get_interface_by_hwaddr(device).name
+            else:
+                self.cancel("Please check the network device")
             if not self.peer_ip:
                 self.cancel("peer ip need to specify in YAML")
             self.ipaddr = self.params.get("host_ip", default="")
-            self.localhost = LocalHost()
             self.networkinterface = NetworkInterface(self.interface,
                                                      self.localhost)
             if not self.networkinterface.validate_ipv4_format(self.ipaddr):
@@ -217,7 +219,7 @@ class irq_balance(Test):
         Function to validate the CPU number set by "taskset" command.
         Returns : <int> value set by script.
         '''
-        if self.iface:
+        if self.interface:
             cmd = "ps -o psr -p %s | awk 'NR>1 {print $1}'" % (
                 self.get_ping_process_pid()
             )
@@ -385,7 +387,7 @@ class irq_balance(Test):
            CPU1 ---> CPU2
            CPU2 ---> CPU3, ----> till last availble CPU number.
         '''
-        if self.iface:
+        if self.interface:
             for cpu_number in self.cpu_list:
                 if self.networkinterface.ping_flood(self.interface,
                                                     self.peer_ip,
@@ -447,7 +449,7 @@ class irq_balance(Test):
                                   shell=True
                                   )
         self.__online_cpus(totalcpus)
-        if self.iface:
+        if self.interface:
             if self.networkinterface:
                 self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
                 try:
