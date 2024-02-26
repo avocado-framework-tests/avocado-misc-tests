@@ -37,14 +37,14 @@ class smtstate_tool(Test):
         if "is not SMT capable" in smt_op:
             self.cancel("Machine is not SMT capable, skipping the test")
         distro_name = self.detected_distro.name
-        distro_ver = self.detected_distro.version
-        distro_rel = self.detected_distro.release
+        distro_ver = eval(self.detected_distro.version)
+        distro_rel = eval(self.detected_distro.release)
         if distro_name == "rhel":
-            if (distro_ver == "7" or
-                    (distro_ver == "8" and distro_rel < "4")):
+            if (distro_ver == 7 or
+                    (distro_ver == 8 and distro_rel < 4)):
                 self.cancel("smtstate tool is supported only after RHEL8.4")
         elif distro_name == "SuSE":
-            if (distro_ver == "12" or (distro_ver == "15" and distro_rel < 3)):
+            if (distro_ver == 12 or (distro_ver == 15 and distro_rel < 3)):
                 self.cancel("smtstate tool is supported only after SLES15 SP3")
         else:
             self.cancel("Test case is supported only on RHEL and SLES")
