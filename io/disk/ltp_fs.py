@@ -316,8 +316,13 @@ class LtpFs(Test):
         self.args += (" -q -p -l %s -C %s -d %s"
                       % (logfile, failcmdfile, self.dir))
         self.log.info("Args = %s", self.args)
-        cmd = '%s %s' % (os.path.join(self.ltpbin_dir, 'runltp'),
-                         self.args)
+        self.ltpbin_path = os.path.join(self.ltpbin_dir, 'runltp')
+        with open(self.ltpbin_path, 'r') as lfile:
+            data = lfile.read()
+            data = data.replace("    ${LTPROOT}/IDcheck.sh || \\", "    echo -e \"y\" | ${LTPROOT}/IDcheck.sh || \\")
+        with open(self.ltpbin_path, 'w') as ofile:
+            ofile.write(data)
+        cmd = '%s %s' % (self.ltpbin_path, self.args)
         result = process.run(cmd, ignore_status=True)
         # Walk the stdout and try detect failed tests from lines
         # like these:
