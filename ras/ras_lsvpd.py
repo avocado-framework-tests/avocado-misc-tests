@@ -349,11 +349,6 @@ class RASToolsLsvpd(Test):
         '''
         Capture data from lscfg and lspci then compare data
         '''
-        # get_pci_info() routine is available with avocado v99.0
-        # Add a check for the same to cancel the test.
-        avocado_ver = os.environ['AVOCADO_VERSION']
-        if avocado_ver < '99.0':
-            self.cancel("Test requires Avocado v99.0+ test runner")
         error = []
         for pci_addr in pci.get_pci_addresses():
             self.log.info("Checking for PCI Address: %s\n\n", pci_addr)
