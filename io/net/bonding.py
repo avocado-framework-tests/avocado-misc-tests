@@ -49,8 +49,10 @@ class Bonding(Test):
         '''
         To check and install dependencies for the test
         '''
+        self.localhost = LocalHost()
         detected_distro = distro.detect()
         smm = SoftwareManager()
+        self.host_interfaces = []
         depends = []
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
@@ -73,10 +75,15 @@ class Bonding(Test):
         self.user = self.params.get("user_name", default="root")
         self.password = self.params.get("peer_password", '*',
                                         default="None")
-        self.host_interfaces = self.params.get("bond_interfaces",
-                                               default="").split(" ")
-        if not self.host_interfaces:
-            self.cancel("user should specify host interfaces")
+        devices = self.params.get("bond_interfaces", default=None)
+        if devices:
+            for device in devices.split(" "):
+                if device in interfaces:
+                    self.host_interfaces.append(device)
+                elif self.localhost.validate_mac_addr(device) and device in self.localhost.get_all_hwaddr():
+                    self.host_interfaces.append(self.localhost.get_interface_by_hwaddr(device).name)
+                else:
+                    self.cancel("user should specify host interfaces")
         self.peer_interfaces = self.params.get("peer_interfaces",
                                                default="").split(" ")
         for self.host_interface in self.host_interfaces:
@@ -90,7 +97,6 @@ class Bonding(Test):
         self.netmask = self.params.get("netmask", default="")
         self.peer_bond_needed = self.params.get("peer_bond_needed",
                                                 default=False)
-        self.localhost = LocalHost()
         if 'setup' in str(self.name.name):
             for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
                 networkinterface = NetworkInterface(interface, self.localhost)
@@ -579,4 +585,5 @@ class Bonding(Test):
             self.fail("Tests failed. Details:\n%s" % "\n".join(self.err))
 
     def tearDown(self):
-        self.session.quit()
+        if self.host_interfaces:
+            self.session.quit()
