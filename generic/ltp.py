@@ -218,7 +218,13 @@ class LTP(Test):
                          skipfilepath))
         if self.mem_leak:
             self.args += " -M %s" % self.mem_leak
-        cmd = "%s %s" % (os.path.join(self.ltpbin_dir, 'runltp'), self.args)
+        self.ltpbin_path = os.path.join(self.ltpbin_dir, 'runltp')
+        with open(self.ltpbin_path, 'r') as lfile:
+            data = lfile.read()
+            data = data.replace("    ${LTPROOT}/IDcheck.sh || \\", "    echo -e \"y\" | ${LTPROOT}/IDcheck.sh || \\")
+        with open(self.ltpbin_path, 'w') as ofile:
+            ofile.write(data)
+        cmd = '%s %s' % (self.ltpbin_path, self.args)
         process.run(cmd, ignore_status=True)
         # Walk the ltp.log and try detect failed tests from lines like these:
         # msgctl04                                           FAIL       2
