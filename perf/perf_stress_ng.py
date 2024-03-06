@@ -247,8 +247,5 @@ class Stressng(Test):
                            "/tmp/stressng_output*"]
         for file_path in files_to_remove:
             if os.path.exists(file_path):
-                try:
-                    os.remove(file_path)
-                except OSError:
-                    self.log.warn("Files do not exist")
+                os.remove(file_path)
         dmesg.collect_dmesg()
