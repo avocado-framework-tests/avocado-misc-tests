@@ -56,6 +56,10 @@ class kselftest(Test):
             self.test_type = self.params.get('test_type', default='-H')
             self.Size_flag = self.params.get('Size', default='-s')
             self.Dup_MM_Area = self.params.get('Dup_MM_Area', default='100')
+        if self.comp == "cpufreq":
+            self.test_mode = self.params.get('test_mode', default='')
+            self.testdir = 'tools/testing/selftests/cpufreq'
+
         self.build_option = self.params.get('build_option', default='-bp')
         self.run_type = self.params.get('type', default='upstream')
         detected_distro = distro.detect()
@@ -116,9 +120,11 @@ class kselftest(Test):
                 if os.path.isdir(l_dir) and 'Makefile' in os.listdir(l_dir):
                     self.buldir = os.path.join(self.workdir, l_dir)
                     break
-            process.system("make headers -C %s" % self.buldir, shell=True, sudo=True)
+
             self.sourcedir = os.path.join(self.buldir, self.testdir)
-            process.system("make install -C %s" % self.sourcedir, shell=True, sudo=True)
+            if self.comp != "cpufreq":
+                process.system("make headers -C %s" % self.buldir, shell=True, sudo=True)
+                process.system("make install -C %s" % self.sourcedir, shell=True, sudo=True)
         else:
             if self.subtest == 'pmu/event_code_tests':
                 self.cancel("selftest not supported on distro")
@@ -154,10 +160,11 @@ class kselftest(Test):
                            shell=True, sudo=True)
             process.system("sed -i 's/^.*cmsg_time.sh/#&/g' %s" % make_path,
                            shell=True, sudo=True)
-        if self.comp:
-            build_str = '-C %s' % self.comp
-        if build.make(self.sourcedir, extra_args='%s' % build_str):
-            self.fail("Compilation failed, Please check the build logs !!")
+        if self.comp != "cpufreq":
+            if self.comp:
+                build_str = '-C %s' % self.comp
+            if build.make(self.sourcedir, extra_args='%s' % build_str):
+                self.fail("Compilation failed, Please check the build logs !!")
 
     def test(self):
         """
@@ -167,6 +174,8 @@ class kselftest(Test):
         kself_args = self.params.get("kself_args", default='')
         if self.comp == "bpf":
             self.bpf()
+        if self.comp == "cpufreq":
+            self.cpufreq()
         else:
             if self.subtest == "ksm_tests":
                 self.ksmtest()
@@ -197,7 +206,8 @@ class kselftest(Test):
         Ex: ./ksm_tests -M
         """
         try:
-            process.run(cmd, ignore_status=False, sudo=True)
+            result = process.run(cmd, ignore_status=False, sudo=True)
+            self.log.info(result)
         except process.CmdError as details:
             self.fail("Command %s failed: %s" % (cmd, details))
 
@@ -231,6 +241,14 @@ class kselftest(Test):
         build.make(bpf_test_dir)
         self.run_cmd("./test_verifier")
         build.make(bpf_test_dir, extra_args='run_tests')
+
+    def cpufreq(self):
+        """
+        Execute the kernel cpufreq selftests
+        """
+        os.chdir(self.sourcedir)
+        cmd = "./main.sh -t " + self.test_mode
+        self.run_cmd(cmd)
 
     def tearDown(self):
         self.log.info('Cleaning up')
