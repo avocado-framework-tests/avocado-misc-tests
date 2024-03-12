@@ -1,0 +1,22 @@
+component: !mux
+    cpufreq:
+        comp: "cpufreq"
+        test_modes: !mux
+            basic:
+                test_mode: "basic"
+            sptest1:
+                test_mode: "sptest1"
+            sptest2:
+                test_mode: "sptest2"
+            sptest3:
+                test_mode: "sptest3"
+            sptest4:
+                test_mode: "sptest4"
+    mm:
+        comp: "mm"
+    mem_plug:
+        comp: "memory-hotplug"
+run_type: !mux
+    upstream:
+        type: 'upstream'
+        location: "https://github.com/torvalds/linux/archive/master.zip"
