@@ -91,3 +91,26 @@ class GrubExtendPCR(Test):
             pcr8_flag = pcr9_flag = False
         if not (pcr8_flag and pcr9_flag):
             self.fail("PCR 8 and/or PCR 9 not having correct values.")
+
+    def test_boot_aggregate(self):
+        '''
+        Output validation for boot aggregate from two different files
+        ascii_runtime_measurements and binary_bios_measurements
+        '''
+        ascii_file = "/sys/kernel/security/ima/ascii_runtime_measurements"
+        binary_bios_file = "/sys/kernel/security/tpm0/binary_bios_measurements"
+        if not os.path.exists(ascii_file):
+            self.cancel("ascii_runtime_measurements files doesn't exist")
+        if not os.path.exists(binary_bios_file):
+            self.cancel("binary_bios_file file doesn't exist")
+        ascii_output = genio.read_file(ascii_file).splitlines()
+        ascii_output = ascii_output[0].split(" ")
+        for att in ascii_output:
+            if "sha" in att:
+                arm_value = att.split(":")[-1]
+                break
+        cmd1 = "tsseventextend -if {0} -sim -pcrmax 9".format(binary_bios_file)
+        tssevent_output = process.system_output(cmd1, ignore_status=True).decode().splitlines()[-1]
+        tssevent_value = tssevent_output.split(":")[1].strip().replace(" ", "")
+        if arm_value != tssevent_value:
+            self.fail("Boot aggregate output not matched from ascii and binary measurements")
