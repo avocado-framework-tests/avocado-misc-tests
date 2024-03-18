@@ -19,7 +19,7 @@
 import os
 import re
 from avocado import Test
-from avocado.utils import process, distro, build, archive
+from avocado.utils import process, distro, build, archive, disk
 from avocado import skipIf, skipUnless
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -339,10 +339,18 @@ class RASToolsPpcutils(Test):
         """
         self.log.info("===============Executing ls-vdev tool test===="
                       "===========")
+        self.is_fail = 0
         self.run_cmd("ls-vdev")
         self.run_cmd("ls-vdev -h")
         self.run_cmd("ls-vdev -V")
-        self.error_check()
+        dev_name = self.run_cmd_out("ls-vdev").split()[1]
+        lsblk_disks = disk.get_disks()
+        lsblk_dev_name = [i.replace('/dev/', '') for i in lsblk_disks]
+        if dev_name.strip() not in lsblk_dev_name:
+            self.is_fail += 1
+        if self.is_fail >= 1:
+            self.fail("%s command(s) failed in ls-vdev tool "
+                      "verification" % self.is_fail)
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST,
             "This test is not supported on KVM guest or PowerNV platform")
