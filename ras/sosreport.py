@@ -57,16 +57,15 @@ class Sosreport(Test):
             self.sos_cmd = "sosreport"
         elif dist.name in ['rhel', 'centos', 'fedora']:
             sos_pkg = 'sos'
+            self.sos_cmd = "sos report"
+            if dist.name == "rhel" and dist.version <= "7" and dist.release <= "4":
+                self.sos_cmd = "sosreport"
         else:
             self.cancel("sosreport is not supported on %s" % dist.name)
         for package in (sos_pkg, 'java'):
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel(
                     "Package %s is missing and could not be installed" % (package))
-        if dist.name == "rhel":
-            self.sos_cmd = "sos report"
-            if dist.version <= "7" and dist.release <= "4":
-                self.sos_cmd = "sosreport"
 
     def test_short(self):
         """
