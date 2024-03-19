@@ -114,7 +114,8 @@ class kselftest(Test):
                 archive.extract(tarball, self.workdir)
                 path = glob.glob(os.path.join(self.workdir, "linux*"))
             else:
-                git.get_repo(location, branch=git_branch, destination_dir=self.workdir)
+                git.get_repo(location, branch=git_branch,
+                             destination_dir=self.workdir)
                 path = glob.glob(self.workdir)
             for l_dir in path:
                 if os.path.isdir(l_dir) and 'Makefile' in os.listdir(l_dir):
@@ -123,8 +124,10 @@ class kselftest(Test):
 
             self.sourcedir = os.path.join(self.buldir, self.testdir)
             if self.comp != "cpufreq":
-                process.system("make headers -C %s" % self.buldir, shell=True, sudo=True)
-                process.system("make install -C %s" % self.sourcedir, shell=True, sudo=True)
+                process.system("make headers -C %s" % self.buldir, shell=True,
+                               sudo=True)
+                process.system("make install -C %s" % self.sourcedir,
+                               shell=True, sudo=True)
         else:
             if self.subtest == 'pmu/event_code_tests':
                 self.cancel("selftest not supported on distro")
@@ -221,11 +224,11 @@ class kselftest(Test):
         self.test_list = ["-M", "-Z", "-N", "-U", "-C"]
         if os.path.exists(ksm_test_bin):
             os.chdir(ksm_test_dir)
-            if(self.test_type == "-H" or self.test_type == "-P"):
+            if (self.test_type in ["-H", "-P"]):
                 arg_payload = " ".join(["./ksm_tests", self.test_type,
                                        self.Size_flag, self.Dup_MM_Area])
                 self.run_cmd(arg_payload)
-            elif(self.test_type in self.test_list):
+            elif (self.test_type in self.test_list):
                 arg_payload = " ".join(["./ksm_tests", self.test_type])
                 self.run_cmd(arg_payload)
             else:
