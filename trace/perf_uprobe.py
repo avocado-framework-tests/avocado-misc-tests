@@ -98,7 +98,8 @@ class PerfUprobe(Test):
         if (self.distro_name == "rhel" and self.detected_distro.version > "7")\
            or (self.distro_name == "SuSE" and
                self.detected_distro.version >= 15 and
-               self.detected_distro.release >= 2):
+               self.detected_distro.release >= 2)\
+           or (self.distro_name == "fedora"):
             output = self.cmd_verify('%s__return -- ./uprobe_test'
                                      % self.recProbe)
         else:

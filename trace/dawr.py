@@ -68,6 +68,10 @@ class Dawr(Test):
         executing the program
         """
         child, return_value = self.run_cmd('dawr_v1')
+        i = 0
+        if self.distro_name == "fedora":
+            child.sendline('set debuginfod enabled on')
+            child.expect_exact([pexpect.TIMEOUT, ''])
         child.sendline('awatch a')
         return_value.append(child.expect_exact(['watchpoint 1: a',
                                                 pexpect.TIMEOUT]))
@@ -88,6 +92,9 @@ class Dawr(Test):
         """
         child, return_value = self.run_cmd('dawr_v2')
         i = 0
+        if self.distro_name == "fedora":
+            child.sendline('set debuginfod enabled on')
+            child.expect_exact([pexpect.TIMEOUT, ''])
         for value in ['a', 'b']:
             i = i+1
             child.sendline('awatch %s' % value)
