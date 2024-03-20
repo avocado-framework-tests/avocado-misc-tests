@@ -182,6 +182,9 @@ class Xfstests(Test):
                              'e2fsprogs-devel', 'asciidoc', 'xmlto',
                              'libzstd-devel', 'systemd-devel', 'meson',
                              'gcc-c++'])
+            if self.detected_distro.name == 'rhel' and (
+                    self.detected_distro.version.startswith('9')):
+                packages.extend(['inih-devel'])
 
             if self.detected_distro.name == 'SuSE':
                 packages.extend(['libbtrfs-devel', 'libcap-progs',
