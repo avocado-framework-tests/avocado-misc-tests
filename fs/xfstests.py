@@ -246,6 +246,9 @@ class Xfstests(Test):
         if os.path.exists(f"{self.teststmpdir}/results"):
             shutil.rmtree(f"{self.teststmpdir}/results")
 
+        shutil.copyfile(self.get_data('local.config'),
+                        os.path.join(self.teststmpdir, 'local.config'))
+
         self.devices = []
         self.part = None
 
@@ -350,9 +353,6 @@ class Xfstests(Test):
         self.num_loop_dev = 2
         if self.fs_to_test == "btrfs":
             self.num_loop_dev = 5
-
-        shutil.copyfile(self.get_data('local.config'),
-                        os.path.join(self.teststmpdir, 'local.config'))
 
         if self.dev_type == 'loop':
             loop_size = self.params.get('loop_size', default='7GiB')
