@@ -28,7 +28,6 @@ class Hwinfo(Test):
     def run_cmd(self, cmd):
         self.log.info("executing ============== %s =================" % cmd)
         if process.system(cmd, ignore_status=True, sudo=True):
-            self.log.info("%s command failed" % cmd)
             self.fail("hwinfo: %s command failed to execute" % cmd)
 
     def setUp(self):
@@ -55,9 +54,17 @@ class Hwinfo(Test):
 
     def test_unique_id_save(self):
         self.run_cmd("hwinfo --disk --save-config %s" % self.Unique_Id)
+        if "failed" in process.system_output("hwinfo --disk --save-config %s"
+                                             % self.Unique_Id,
+                                             shell=True).decode("utf-8"):
+            self.fail("hwinfo: --save-config UDI option failed")
 
     def test_unique_id_show(self):
         self.run_cmd("hwinfo --disk --show-config %s" % self.Unique_Id)
+        if "No config" in process.system_output("hwinfo --disk --show-config %s"
+                                                % self.Unique_Id,
+                                                shell=True).decode("utf-8"):
+            self.cancel("hwinfo: --save-config UDI cancelled, no saved config present")
 
     def test_verbose_map(self):
         self.run_cmd("hwinfo --verbose --map")
@@ -65,7 +72,6 @@ class Hwinfo(Test):
     def test_log_file(self):
         self.run_cmd("hwinfo --all --log FILE")
         if (not os.path.exists('./FILE')) or (os.stat("FILE").st_size == 0):
-            self.log.info("--log option failed")
             self.fail("hwinfo: failed with --log option")
 
     def test_dump_0(self):
@@ -90,5 +96,5 @@ class Hwinfo(Test):
         self.run_cmd("hwinfo --disk --save-config=all")
         if "failed" in process.system_output("hwinfo --disk --save-config=all",
                                              shell=True).decode("utf-8"):
-            self.log.info("--save-config option failed")
-            self.fail("hwinfo: --save-config option failed")
+            self.fail("hwinfo: --save-config=all option failed")
+
