@@ -97,4 +97,3 @@ class Hwinfo(Test):
         if "failed" in process.system_output("hwinfo --disk --save-config=all",
                                              shell=True).decode("utf-8"):
             self.fail("hwinfo: --save-config=all option failed")
-
