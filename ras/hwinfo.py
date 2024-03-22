@@ -64,7 +64,8 @@ class Hwinfo(Test):
         if "No config" in process.system_output("hwinfo --disk --show-config %s"
                                                 % self.Unique_Id,
                                                 shell=True).decode("utf-8"):
-            self.cancel("hwinfo: --save-config UDI cancelled, no saved config present")
+            self.cancel(
+                "hwinfo: --save-config UDI cancelled, no saved config present")
 
     def test_verbose_map(self):
         self.run_cmd("hwinfo --verbose --map")
@@ -97,4 +98,3 @@ class Hwinfo(Test):
         if "failed" in process.system_output("hwinfo --disk --save-config=all",
                                              shell=True).decode("utf-8"):
             self.fail("hwinfo: --save-config=all option failed")
-
