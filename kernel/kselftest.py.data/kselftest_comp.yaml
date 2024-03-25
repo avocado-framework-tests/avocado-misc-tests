@@ -17,6 +17,10 @@ component: !mux
     copyloops:
         comp: 'powerpc'
         subtest: 'copyloops'
+    # Via commit bdb07f35a52f: Add hashst/hashchk test
+    dexcr:
+        comp: 'powerpc'
+        subtest: 'dexcr'
     dscr:
        comp: 'powerpc'
        subtest: 'dscr'
@@ -32,6 +36,18 @@ component: !mux
     nx-gzip:
        comp: 'powerpc'
        subtest: 'nx-gzip'
+    # Via commit 57201d657eb7: Add PAPR sysfs attributes sniff test
+    papr_attributes:
+       comp: 'powerpc'
+       subtest: 'papr_attributes'
+    # Via commit 76b2ec3faeaa: Add test for papr-sysparm
+    papr_sysparm:
+       comp: 'powerpc'
+       subtest: 'papr_sysparm'
+    # Via commit 9118c5d32bdd: Add test for papr-vpd
+    papr_vpd:
+       comp: 'powerpc'
+       subtest: 'papr_vpd'
     pmu:
        comp: 'powerpc'
        subtest: 'pmu/ebb'
