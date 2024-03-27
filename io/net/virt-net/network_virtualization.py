@@ -35,6 +35,9 @@ from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
 from avocado.utils.ssh import Session
 from avocado.utils import wait
+import pexpect
+from pexpect import pxssh
+import re
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
@@ -593,6 +596,61 @@ class NetworkVirtualization(Test):
                     self.fail("dlpar has affected Network connectivity")
                 count += 1
         self.check_dmesg_error()
+
+    def test_vnic_eeh(self):
+        """
+        Perform EEH on vnic interface from vios
+        """
+        if self.backing_dev_count() == 1:
+            self.cancel("EEH cannot be tested as the interface has single backing device")
+        current_logport = self.get_active_device_logport(self.slot_num[0])
+        if not self.original_logport == current_logport:
+            self.trigger_failover(self.original_logport)
+        else:
+            self.log.info("Unable to set the logport to original one")
+        time.sleep(5)
+        self.session = Session(self.vios_ip, user=self.vios_user,
+                               password=self.vios_pwd)
+        self.session.cleanup_master()
+        if not wait.wait_for(self.session.connect, timeout=30):
+            self.fail("Failed connecting to VIOS")
+        cmd = "ioscli lsmap -all -vnic -cpid %s" % self.lpar_id
+        vnic_servers = self.session.cmd(cmd).stdout_text.splitlines()
+        device = self.find_device(self.mac_id[0])
+        temp_idx = vnic_servers.index("Client device name:" + device)
+        vnic_bankingdevice = vnic_servers[temp_idx - 3].split(":")[1]
+        vios = pxssh.pxssh()
+        try:
+            vios.login(self.vios_ip, self.vios_user, self.vios_pwd)
+        except Exception:
+            self.warn("Unable to login to vios")
+        time.sleep(2)
+        vios.sendline("oem_setup_env")
+        time.sleep(5)
+        vios.sendline("kdb")
+        time.sleep(5)
+        vios.sendline("set scroll false")
+        time.sleep(5)
+        cmd = "mlxcent setacs %s" % vnic_bankingdevice
+        vios.sendline(cmd)
+        time.sleep(2)
+        vios.sendline("mlxcent pollq 0")
+        vios.prompt()
+        mapstart = vios.before.decode("utf-8").split("\r\n ")
+        for i in mapstart:
+            if re.search("map_start", i):
+                map_start_value = i.split("=")[1]
+        vios.sendline("quit")
+        cmd = "./eeh_tool_64 %s 3 15 -w 64 -a %s -m 0xFFFFFFFFFFFFF000" % (vnic_bankingdevice, map_start_value)
+        vios.sendline(cmd)
+        time.sleep(5)
+        active_logport = self.get_active_device_logport(self.slot_num[0])
+        if current_logport == active_logport:
+            self.fail("EEH unsuccessful as there is no failover triggered on the OS")
+        device = self.find_device(self.mac_id[0])
+        networkinterface = NetworkInterface(device, self.local)
+        if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
+            self.fail("Ping to peer failed. EEH has affected Network connectivity")
 
     def backing_dev_count_w_slot_num(self, slot):
         """
