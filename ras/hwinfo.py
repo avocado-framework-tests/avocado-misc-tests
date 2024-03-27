@@ -43,16 +43,18 @@ class Hwinfo(Test):
                                                "cut -d':' -f2" % self.disk_name,
                                                shell=True).decode("utf-8")
 
-    def test_list(self):
+    def test_list_options(self):
         lists = self.params.get('list', default=['--all', '--cpu', '--disk'])
         for list_item in lists:
             cmd = "hwinfo %s" % list_item
             self.run_cmd(cmd)
 
-    def test_disk(self):
+    def test_only(self):
         self.run_cmd("hwinfo --disk --only %s" % self.disk_name)
 
     def test_unique_id_save(self):
+        if not os.path.isdir("/var/lib/hardware/udi"):
+            self.cancel("/var/lib/hardware/udi path does not exist")
         self.run_cmd("hwinfo --disk --save-config %s" % self.Unique_Id)
         if "failed" in process.system_output("hwinfo --disk --save-config %s"
                                              % self.Unique_Id,
@@ -60,6 +62,8 @@ class Hwinfo(Test):
             self.fail("hwinfo: --save-config UDI option failed")
 
     def test_unique_id_show(self):
+        if not os.path.isdir("/var/lib/hardware/udi"):
+            self.cancel("/var/lib/hardware/udi path does not exist")
         self.run_cmd("hwinfo --disk --show-config %s" % self.Unique_Id)
         if "No config" in process.system_output("hwinfo --disk --show-config %s"
                                                 % self.Unique_Id,
@@ -75,11 +79,10 @@ class Hwinfo(Test):
         if (not os.path.exists('./FILE')) or (os.stat("FILE").st_size == 0):
             self.fail("hwinfo: failed with --log option")
 
-    def test_dump_0(self):
-        self.run_cmd("hwinfo --dump-db 0")
-
-    def test_dump_1(self):
-        self.run_cmd("hwinfo --dump-db 1")
+    def test_dump(self):
+        level = [0, 1]
+        for value in level:
+            self.run_cmd("hwinfo --dump-db %i" % value)
 
     def test_version(self):
         self.run_cmd("hwinfo --version")
@@ -88,12 +91,16 @@ class Hwinfo(Test):
         self.run_cmd("hwinfo --help")
 
     def test_debug(self):
-        self.run_cmd("hwinfo --debug 0 --disk --log=-")
+        level = [0, 1]
+        for value in level:
+            self.run_cmd("hwinfo --debug %i --disk --log=-" % value)
 
     def test_short_block(self):
         self.run_cmd("hwinfo --short --block")
 
     def test_save_config(self):
+        if not os.path.isdir("/var/lib/hardware/udi"):
+            self.cancel("/var/lib/hardware/udi path does not exist")
         self.run_cmd("hwinfo --disk --save-config=all")
         if "failed" in process.system_output("hwinfo --disk --save-config=all",
                                              shell=True).decode("utf-8"):
