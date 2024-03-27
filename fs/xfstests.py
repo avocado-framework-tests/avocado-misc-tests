@@ -177,20 +177,21 @@ class Xfstests(Test):
             packages.extend(['acl', 'bc', 'indent', 'libtool', 'lvm2',
                              'xfsdump', 'psmisc', 'sed', 'libacl-devel',
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
-                             'openssl-devel', 'xfsprogs-devel', 'gettext',
                              'libblkid-devel', 'lzo-devel', 'zlib-devel',
                              'e2fsprogs-devel', 'asciidoc', 'xmlto',
                              'libzstd-devel', 'systemd-devel', 'meson',
-                             'gcc-c++'])
+                             'xfsprogs-devel', 'gcc-c++'])
             if self.detected_distro.name == 'rhel' and (
                     self.detected_distro.version.startswith('9')):
                 packages.extend(['inih-devel'])
 
             if self.detected_distro.name == 'SuSE':
                 packages.extend(['libbtrfs-devel', 'libcap-progs',
-                                'liburcu-devel', 'libinih-devel'])
+                                'liburcu-devel', 'libinih-devel',
+                                 'libopenssl-devel', 'gettext-tools'])
             else:
-                packages.extend(['btrfs-progs-devel', 'userspace-rcu-devel'])
+                packages.extend(['btrfs-progs-devel', 'userspace-rcu-devel'
+                                 'openssl-devel', 'gettext'])
 
             packages_remove = ['indent', 'btrfs-progs-devel']
             if self.detected_distro.name == 'rhel' and (
