@@ -177,17 +177,21 @@ class Xfstests(Test):
             packages.extend(['acl', 'bc', 'indent', 'libtool', 'lvm2',
                              'xfsdump', 'psmisc', 'sed', 'libacl-devel',
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
-                             'openssl-devel', 'xfsprogs-devel', 'gettext',
                              'libblkid-devel', 'lzo-devel', 'zlib-devel',
                              'e2fsprogs-devel', 'asciidoc', 'xmlto',
                              'libzstd-devel', 'systemd-devel', 'meson',
-                             'gcc-c++'])
+                             'xfsprogs-devel', 'gcc-c++'])
+            if self.detected_distro.name == 'rhel' and (
+                    self.detected_distro.version.startswith('9')):
+                packages.extend(['inih-devel'])
 
             if self.detected_distro.name == 'SuSE':
                 packages.extend(['libbtrfs-devel', 'libcap-progs',
-                                'liburcu-devel', 'libinih-devel'])
+                                'liburcu-devel', 'libinih-devel',
+                                 'libopenssl-devel', 'gettext-tools'])
             else:
-                packages.extend(['btrfs-progs-devel', 'userspace-rcu-devel'])
+                packages.extend(['btrfs-progs-devel', 'userspace-rcu-devel'
+                                 'openssl-devel', 'gettext'])
 
             packages_remove = ['indent', 'btrfs-progs-devel']
             if self.detected_distro.name == 'rhel' and (
@@ -218,9 +222,6 @@ class Xfstests(Test):
             self.use_dd = True
 
         self.dev_type = self.params.get('type', default='loop')
-
-        self.__setUp_packages()
-
         self.logflag = self.params.get('logdev', default=False)
         self.fs_to_test = self.params.get('fs', default='ext4')
         self.args = self.params.get('args', default='-g quick')
@@ -243,8 +244,13 @@ class Xfstests(Test):
         if os.path.exists(f"{self.teststmpdir}/results"):
             shutil.rmtree(f"{self.teststmpdir}/results")
 
+        shutil.copyfile(self.get_data('local.config'),
+                        os.path.join(self.teststmpdir, 'local.config'))
+
         self.devices = []
         self.part = None
+
+        self.__setUp_packages()
 
         if self.run_type == 'upstream':
             prefix = "/usr/local"
@@ -347,9 +353,6 @@ class Xfstests(Test):
         self.num_loop_dev = 2
         if self.fs_to_test == "btrfs":
             self.num_loop_dev = 5
-
-        shutil.copyfile(self.get_data('local.config'),
-                        os.path.join(self.teststmpdir, 'local.config'))
 
         if self.dev_type == 'loop':
             loop_size = self.params.get('loop_size', default='7GiB')
