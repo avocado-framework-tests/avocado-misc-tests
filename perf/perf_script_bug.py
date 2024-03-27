@@ -37,7 +37,7 @@ class PerfScript(Test):
         parser.read(self.get_data('probe.cfg'))
         self.perf_probe = parser.get(detected_distro.name, 'probepoint')
         deps = ['gcc', 'make']
-        if detected_distro.name in ['rhel', 'SuSE']:
+        if detected_distro.name in ['rhel', 'SuSE', 'fedora', 'centos']:
             deps.extend(['perf'])
         elif detected_distro.name in ['Ubuntu']:
             deps.extend(['linux-tools-common', 'linux-tools-%s' %
