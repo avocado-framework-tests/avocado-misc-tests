@@ -36,7 +36,7 @@ class TraceUDT(Test):
         if 'Ubuntu' in self.distro_name:
             deps.extend(['linux-tools-common', 'linux-tools-%s' %
                          platform.uname()[2]])
-        elif self.distro_name in ['rhel', 'SuSE']:
+        elif self.distro_name in ['rhel', 'SuSE', 'fedora', 'centos']:
             deps.extend(['perf', 'systemtap-sdt-devel.ppc64le'])
         else:
             self.cancel("Install the package for perf supported\
