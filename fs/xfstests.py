@@ -221,9 +221,6 @@ class Xfstests(Test):
             self.use_dd = True
 
         self.dev_type = self.params.get('type', default='loop')
-
-        self.__setUp_packages()
-
         self.logflag = self.params.get('logdev', default=False)
         self.fs_to_test = self.params.get('fs', default='ext4')
         self.args = self.params.get('args', default='-g quick')
@@ -251,6 +248,8 @@ class Xfstests(Test):
 
         self.devices = []
         self.part = None
+
+        self.__setUp_packages()
 
         if self.run_type == 'upstream':
             prefix = "/usr/local"
