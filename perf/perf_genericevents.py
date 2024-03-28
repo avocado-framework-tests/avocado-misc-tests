@@ -12,8 +12,10 @@
 #
 #
 # Copyright: 2017 IBM
+# Copyright (C) 2024 Advanced Micro Devices, Inc.
 # Author: Athira Rajeev<atrajeev@linux.vnet.ibm.com>
 # Author: Shriya Kulkarni <shriyak@linux.vnet.ibm.com>
+# Author: Ayush Jain <ayush.jain3@amd.com>
 
 import os
 import configparser
@@ -46,18 +48,27 @@ class test_generic_events(Test):
                     self.generic_events = dict(parser.items('POWER10'))
                 else:
                     self.cancel("Processor is not supported: %s" % cpu_info)
-        if 'amd' in cpu.get_vendor():
-            for line in cpu_info.splitlines():
-                if 'cpu family' in line:
-                    self.family = int(line.split(':')[1])
+        self.arch = cpu.get_arch()
+        self.vendor = cpu.get_vendor()
+        if 'amd' in self.vendor:
+            self.family = cpu.get_family()
             if self.family == 0x16:
                 self.log.info("AMD Family: 16h")
                 self.generic_events = dict(parser.items('AMD16h'))
             elif self.family >= 0x17:
-                self.log.info("AMD Family: 17h")
-                self.generic_events = dict(parser.items('AMD17h'))
+                self.amd_zen = cpu.get_x86_amd_zen()
+                if self.amd_zen is None:
+                    self.cancel("Unsupported AMD ZEN")
+                self.log.info(f"AMD Family: {self.family} ZEN{self.amd_zen}")
+                if f'AMDZEN{self.amd_zen}' in parser.keys() is not None:
+                    self.generic_events = dict(parser.items(f'AMDZEN{self.amd_zen}'))
+                else:
+                    self.cancel(f"AMD ZEN{self.amd_zen} raw_code cfg not found")
             else:
                 self.cancel("Unsupported AMD Family")
+
+    def hex_to_int(self, input):
+        return int(input, 0)
 
     def test(self):
         nfail = 0
@@ -71,19 +82,24 @@ class test_generic_events(Test):
             if val is None:
                 continue
             if 'umask' in event_code:
-                self.log.debug("EventCode: %s" % event_code)
-                event = (event_code.split('0x')[1]).rstrip(',umask=')
                 umask = event_code.split('=', 2)[2].rstrip()
-                raw_code = umask + event
+                if self.arch == "x86_64" and 'amd' in self.vendor:
+                    umask = self.hex_to_int(umask)
+                    event = self.hex_to_int(event_code.split('=', 2)[1].rstrip(',umask='))
+                    raw_code = (event & 0xff) | (umask << 8) | ((event & 0xf00) << 24)
+                else:
+                    event = (event_code.split('0x')[1]).rstrip(',umask=')
+                    raw_code = self.hex_to_int(umask + event)
             else:
-                raw_code = event_code.split('=', 2)[1].rstrip()
+                raw_code = self.hex_to_int(event_code.split('=', 2)[1].rstrip())
+
             self.log.info('FILE in %s is %s' % (dir, file))
-            if raw_code != val:
+            if raw_code != self.hex_to_int(val):
                 nfail += 1
-                self.log.info('FAIL : Expected value is %s but got '
-                              '%s' % (val, raw_code))
+                self.log.info('FAIL : Expected value is %s or %s but got '
+                              '%s' % (val, self.hex_to_int(val), raw_code))
             else:
-                self.log.info('PASS : Expected value: %s and got '
-                              '%s' % (val, raw_code))
+                self.log.info('PASS : Expected value: %s or %s and got '
+                              '%s' % (val, self.hex_to_int(val), raw_code))
         if nfail != 0:
             self.fail('Failed to verify generic PMU event codes')
