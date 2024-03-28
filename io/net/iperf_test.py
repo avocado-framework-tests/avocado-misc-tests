@@ -31,6 +31,7 @@ from avocado.utils.network.hosts import LocalHost, RemoteHost
 from avocado.utils.ssh import Session
 from avocado.utils.process import SubProcess
 from avocado.utils import distro
+import re
 
 
 class Iperf(Test):
@@ -76,7 +77,7 @@ class Iperf(Test):
         if not self.session.connect():
             self.cancel("failed connecting to peer")
         smm = SoftwareManager()
-        for pkg in ["gcc", "autoconf", "perl", "m4", "libtool", "gcc-c++", "flex", "bison"]:
+        for pkg in ["gcc", "autoconf", "perl", "m4", "libtool", "gcc-c++", "flex", "bison", "irqbalance"]:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
             cmd = "%s install %s" % (smm.backend.base_command, pkg)
@@ -183,29 +184,61 @@ class Iperf(Test):
             cmd = "nping --tcp %s -c 10" % self.peer_ip
             return process.run(cmd, verbose=False, shell=True)
 
+    def enable_irqbalance(self):
+        """
+        Enable irqbalance service on host and peer
+        """
+        cmd_start = "systemctl start irqbalance"
+        self.session.cmd(cmd_start)
+        cmd_status = "systemctl status irqbalance"
+        output = self.session.cmd(cmd_status).stdout_text.splitlines()
+        for line in output:
+            if re.search("Active: active (running)", line):
+                self.log("irqbalance service is active in peer")
+        process.system(cmd_start)
+        for line in process.system_output(cmd_status).decode("utf-8").splitlines():
+            if re.search("Active: active (running)", line):
+                self.log("irqbalance service is active in host")
+
+    def tune_rxtx_queue(self):
+        """
+        Increase rx/tx queues to 16 for test interface
+        """
+        cmd = "ethtool -L %s rx 16 tx 16" % self.peer_interface
+        output = self.session.cmd(cmd)
+        if not output:
+            self.cancel("Unable to tune RX and TX queue in peer")
+        cmd = "ethtool -L %s rx 16 tx 16" % self.iface
+        result = process.run(cmd)
+        if result.exit_status:
+            self.cancel("Unable to tune RX and TX queue in host")
+
     def test(self):
         """
         Test run is a One way throughput test. In this test, we have one host
         transmitting (or receiving) data from a client. This transmit large
         messages using multiple threads or processes.
         """
+        self.enable_irqbalance()
+        self.tune_rxtx_queue()
         speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
+        if speed == 100000:
+            iperf_pthread = 10
+        elif speed == 25000:
+            iperf_pthread = 4
         os.chdir(self.iperf)
-        cmd = "./iperf -c %s" % self.peer_ip
+        cmd = "iperf -c %s -P %s -t 20 -i 5" % (self.peer_ip, iperf_pthread)
         result = process.run(cmd, shell=True, ignore_status=True)
         nping_result = self.nping()
         if result.exit_status:
             self.fail("FAIL: Iperf Run failed")
         for line in result.stdout.decode("utf-8").splitlines():
-            if 'local {}'.format(self.ipaddr) in line:
-                id = line[3]
-        for line in result.stdout.decode("utf-8").splitlines():
-            if id in line and 'Mbits/sec' in line:
-                tput = int(line.split()[6])
-            elif id in line and 'Gbits/sec' in line:
-                tput = int(float(line.split()[6])) * 1000
-            elif id in line and 'Kbits/sec' in line:
-                tput = int(float(line.split()[6])) / 1000
+            if 'SUM' in line and 'Mbits/sec' in line:
+                tput = int(line.split()[5])
+            elif 'SUM' in line and 'Gbits/sec' in line:
+                tput = int(float(line.split()[5])) * 1000
+            elif 'SUM' in line and 'Kbits/sec' in line:
+                tput = int(float(line.split()[5])) / 1000
         if tput < (int(self.expected_tp) * speed) / 100:
             self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%"
                       ", Throughput Actual value - %s "
