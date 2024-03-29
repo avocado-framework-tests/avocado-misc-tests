@@ -165,6 +165,45 @@ class PPC64Test(Test):
                               shell=True):
                 self.fail('SMT loop test failed')
 
+    def test_single_core_smt(self):
+        """
+        Test smt level change when single core is online. This
+        scenario was attempted to catch a regression.
+
+        ppc64_cpu --cores-on=all
+        ppc64_cpu —-smt=on
+        ppc64_cpu --cores-on=1
+        ppc64_cpu --cores-on
+        ppc64_cpu --smt=2
+        ppc64_cpu --smt=4
+        ppc64_cpu --cores-on
+           At this stage the number of online cores should be one.
+           If not fail the test case
+
+        """
+        # online all cores
+        process.system("ppc64_cpu --cores-on=all", shell=True)
+        # Set highest SMT level
+        process.system("ppc64_cpu --smt=on", shell=True)
+        # online single core
+        process.system("ppc64_cpu --cores-on=1", shell=True)
+        # Record the output
+        cores_on = process.system_output("ppc64_cpu --cores-on",
+                                         shell=True).decode("utf-8")
+        op1 = cores_on.strip().split("=")[-1]
+        self.log.debug(op1)
+        # Set 2 threads online
+        process.system("ppc64_cpu --smt=2", shell=True)
+        # Set 4 threads online
+        process.system("ppc64_cpu --smt=4", shell=True)
+        # Record the output
+        cores_on = process.system_output("ppc64_cpu --cores-on",
+                                         shell=True).decode("utf-8")
+        op2 = cores_on.strip().split("=")[-1]
+        self.log.debug(op2)
+        if str(op1) != str(op2):
+            self.fail("SMT with Single core test failed")
+
     def tearDown(self):
         """
         Sets back SMT to original value as was before the test.
