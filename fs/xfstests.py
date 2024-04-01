@@ -190,7 +190,7 @@ class Xfstests(Test):
                                 'liburcu-devel', 'libinih-devel',
                                  'libopenssl-devel', 'gettext-tools'])
             else:
-                packages.extend(['btrfs-progs-devel', 'userspace-rcu-devel'
+                packages.extend(['btrfs-progs-devel', 'userspace-rcu-devel',
                                  'openssl-devel', 'gettext'])
 
             packages_remove = ['indent', 'btrfs-progs-devel']
