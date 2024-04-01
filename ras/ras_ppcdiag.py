@@ -66,7 +66,7 @@ class RASToolsPpcdiag(Test):
             self.detected_distro = distro.detect()
             deps = ['gcc', 'make', 'automake', 'autoconf', 'bison', 'flex',
                     'libtool', 'zlib-devel', 'ncurses-devel', 'librtas-devel',
-                    'libservicelog-devel']
+                    'libservicelog-devel', 'systemd-devel']
             if 'SuSE' in self.detected_distro.name:
                 deps.extend(['libvpd2-devel'])
             elif self.detected_distro.name in ['centos', 'fedora', 'rhel']:
