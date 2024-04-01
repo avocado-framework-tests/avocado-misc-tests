@@ -19,3 +19,6 @@ peer_ip:
 count:
 num_of_dlpar:
 mac_id:
+user_name: ""
+host_public_ip: ""
+host_password: ""
