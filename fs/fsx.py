@@ -102,7 +102,7 @@ class Fsx(Test):
 
         if not os.path.exists(self.output):
             os.makedirs(self.output)
-        repo = 'https: // github.com/linux-test-project/ltp/archive/master.zip'
+        repo = 'https://github.com/linux-test-project/ltp/archive/master.zip'
         url = self.params.get('url', default=repo)
         match = next((ext for ext in [".zip", ".tar"] if ext in url), None)
         tarball = ''
