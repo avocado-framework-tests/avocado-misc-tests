@@ -65,6 +65,8 @@ class Perftest(Test):
                 deps.extend(['perf', 'gcc-c++'])
                 if 'SuSE' in detected_distro.name:
                     deps.extend(['kernel-default-debuginfo'])
+                elif 'fedora' in detected_distro.name:
+                    deps.extend(['clang', 'kernel-debuginfo'])
                 else:
                     deps.extend(['clang', 'kernel-debuginfo',
                                  'perf-debuginfo'])
@@ -72,7 +74,7 @@ class Perftest(Test):
                 self.cancel("Install the package for perf supported\
                           by %s" % detected_distro.name)
         if run_type == 'upstream':
-            if 'rhel' in detected_distro.name:
+            if detected_distro.name in ['rhel', 'fedora']:
                 deps.extend(['systemtap-sdt-devel', 'slang-devel',
                              'perl-ExtUtils-Embed', 'libcap-devel',
                              'numactl-devel', 'libbabeltrace-devel',
