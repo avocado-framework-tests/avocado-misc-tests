@@ -1,0 +1,69 @@
+record: !mux
+        event_load:
+                record_method: -e ldlat-loads
+        event__load_full:
+                record_method: --event ldlat-loads
+        event_store:
+                record_method: -e ldlat-stores
+        event__store_full:
+                record_method: --event ldlat-stores
+        all_kernel:
+                record_method: -K -v
+        all_kernel_full:
+                record_method: --all-kernel --event ldlat-stores
+        all_user:
+                record_method: -U -e ldlat-loads
+        all_user_full:
+                record_method: --all-user
+        force:
+                record_method: -f --event ldlat-stores
+        force_full:
+                record_method: --force -t load
+        type_load:
+                record_method: -t load -e ldlat-stores
+        type_store:
+                record_method: -t store --event ldlat-loads
+        type_load_full:
+                record_method: --type=load -C 0 -e ldlat-loads
+        type_store_full:
+                record_method: --type=store
+        cpu_verbose:
+                record_method: -C 0 --verbose
+        cpu_full:
+                record_method: --cpu=0
+        Physical_address:
+                record_method: -p
+        Physical_address_full:
+                record_method: --phys-data
+        data_page_size:
+                record_method: --data-page-size
+        event_store_load:
+                record_method: -e ldlat-stores -t load -f -v -C 0
+
+report: !mux
+        input_data:
+                report_method: -i
+        input_data_full:
+                report_method: --input
+        force_ownership_validation:
+                report_method: -f
+        force_ownership_validation_full:
+                report_method: --force
+        dump_raw_sample:
+                report_method: -D
+        dump_raw_sample_full:
+                report_method: --dump-raw-samples
+        dump_raw_sample_seperator:
+                report_method: -D -x ','
+        dump_raw_sample_sep_full:
+                report_method: --dump-raw-samples --field-separator=?
+        hide_unresolved:
+                report_method: -U
+        hide_unresolved_full:
+                report_method: --hide-unresolved
+        physical_address:
+                report_method: -p
+        physical_address_full:
+                report_method: --phys-data
+        physical_address_data_size:
+                report_method: --data-page-size
