@@ -18,8 +18,10 @@ import sys
 import time
 import platform
 import pexpect
+import tempfile
+import os
 from avocado import Test
-from avocado.utils import distro, dmesg
+from avocado.utils import distro, dmesg, process, genio
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -62,6 +64,9 @@ class perf_top(Test):
         # Clear the dmesg by that we can capture delta at the end of the test
         dmesg.clear_dmesg()
 
+        # Creating a temprory file
+        self.temp_file = tempfile.NamedTemporaryFile().name
+
     def test_top(self):
         if self.option in ["-k", "--vmlinux", "--kallsyms"]:
             if self.distro_name in ['rhel', 'fedora', 'centos']:
@@ -82,3 +87,18 @@ class perf_top(Test):
             self.fail("Unknown option %s" % self.option)
         dmesg.collect_errors_dmesg(['WARNING: CPU:', 'Oops', 'Segfault',
                                     'soft lockup', 'Unable to handle'])
+
+    def test_workload_output(self):
+        process.getoutput("perf top -a > %s " % self.temp_file, timeout=10)
+        perf_top_output = genio.read_file(self.temp_file).splitlines()
+        flag = False
+        for lines in perf_top_output:
+            if "ebizzy" in lines:
+                flag = True
+                break
+        if flag is False:
+            self.fail("ebizzy workload not captured in perf top")
+
+    def tearDown(self):
+        if os.path.isfile(self.temp_file):
+            process.system('rm -f %s' % self.temp_file)
