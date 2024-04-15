@@ -42,6 +42,8 @@ class perf_mem(Test):
         deps = ['gcc', 'make']
         if self.distro_name in ['rhel', 'SuSE', 'fedora', 'centos']:
             deps.extend(['perf'])
+        elif self.distro_name in ['Ubuntu', 'debian']:
+            deps.extend(['linux-tools-common'])
         else:
             self.cancel("Install the package for perf supported \
                          by %s" % detected_distro.name)
