@@ -16,7 +16,7 @@
 
 import os
 from avocado import Test
-from avocado.utils import archive, build
+from avocado.utils import build, distro, git, process
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -31,19 +31,22 @@ class secvarctl(Test):
         Install the basic packages to support secvarctl
         '''
         # Check for basic utilities
+        self.distro_version = distro.detect()
         smm = SoftwareManager()
-        deps = ['gcc', 'make', 'openssl-devel']
+        deps = ['gcc', 'make', 'cmake']
+        if self.distro_version.name in ['rhel', 'redhat']:
+            deps.extend(['openssl-devel'])
+        if self.distro_version.name in ['SuSE']:
+            deps.extend(['libopenssl-devel'])
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
+        self.srcdir = ""
         run_type = self.params.get('type', default='upstream')
         if run_type == "upstream":
-            def_url = ("https://github.com/open-power/secvarctl/archive/"
-                       "refs/heads/main.zip")
-            url = self.params.get('url', default=def_url)
-            tarball = self.fetch_asset(url, expire='7d')
-            archive.extract(tarball, self.workdir)
-            self.srcdir = os.path.join(self.workdir, 'secvarctl-main/test')
+            url = "https://github.com/open-power/secvarctl"
+            git.get_repo(url, destination_dir=self.workdir, submodule=True, branch="main")
+            self.srcdir = self.workdir
         elif run_type == "distro":
             self.srcdir = os.path.join(self.workdir, "secvarctl-distro")
             if not os.path.exists(self.srcdir):
@@ -51,18 +54,26 @@ class secvarctl(Test):
             self.srcdir = smm.get_source('secvarctl', self.srcdir)
             if not self.srcdir:
                 self.fail("secvarctl source install failed.")
-            self.srcdir = os.path.join(self.srcdir, 'test')
-        os.chdir(self.srcdir)
+        self.build_dir = os.path.join(self.srcdir, "build")
+        os.mkdir(self.build_dir)
+        os.chdir(self.build_dir)
+        rc = process.system("cmake ../")
+        if rc:
+            self.cancel("secvarctl:'cmake' command failed, cancelling the test.")
 
     def test(self):
         '''
         Running tests from secvarctl
         '''
         count = 0
-        output = build.run_make(self.srcdir, extra_args="OPENSSL=1",
+        output = build.run_make(self.build_dir,
                                 process_kwargs={"ignore_status": True})
         if output.exit_status:
-            self.fail("secvarctl 'make check' failed.")
+            self.cancel("secvarctl:'make' command failed, cancelling the test.")
+        output = build.run_make(self.srcdir, extra_args="check",
+                                process_kwargs={"ignore_status": True})
+        if output.exit_status:
+            self.fail("secvarctl:'make check' command failed. Check the logs.")
         for line in output.stdout_text.splitlines():
             if 'FAIL:' in line and 'XFAIL:' not in line and \
                '# FAIL:' not in line:
