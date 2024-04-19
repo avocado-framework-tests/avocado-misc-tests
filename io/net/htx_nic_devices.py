@@ -18,14 +18,12 @@
 import os
 import re
 import time
+import shutil
 
 from avocado import Test
 from avocado.utils import distro
 from avocado.utils import process
 from avocado.utils.software_manager.manager import SoftwareManager
-from avocado.utils import build
-from avocado.utils import archive
-from avocado.utils.process import CmdError
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost, RemoteHost
 from avocado.utils.ssh import Session
@@ -61,15 +59,6 @@ class HtxNicTest(Test):
 
         self.localhost = LocalHost()
         self.parameters()
-        if 'start' in str(self.name.name):
-            for ipaddr, interface in zip(self.ipaddr, self.host_intfs):
-                networkinterface = NetworkInterface(interface, self.localhost)
-                try:
-                    networkinterface.add_ipaddr(ipaddr, self.netmask)
-                    networkinterface.save(ipaddr, self.netmask)
-                except Exception:
-                    networkinterface.save(ipaddr, self.netmask)
-                networkinterface.bring_up()
         self.host_distro = distro.detect()
         self.host_distro_name = self.host_distro.name
         self.host_distro_version = self.host_distro.version
@@ -79,6 +68,21 @@ class HtxNicTest(Test):
             self.cancel("failed connecting to peer")
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
                                      password=self.peer_password)
+
+        if 'start' in str(self.name.name):
+            # Flush out the ip addresses on host before starting the test
+            for interface in self.host_intfs:
+                cmd = 'ip addr flush dev %s' % interface
+                process.run(cmd, shell=True, sudo=True, ignore_status=True)
+                cmd = 'ip link set dev %s up' % interface
+                process.run(cmd, shell=True, sudo=True, ignore_status=True)
+
+            # Flush out the ip addresses on peer before starting the test
+            for peer_interface in self.peer_intfs:
+                cmd = 'ip addr flush dev %s' % peer_interface
+                self.session.cmd(cmd)
+                cmd = 'ip link set dev %s up' % peer_interface
+                self.session.cmd(cmd)
 
         self.get_peer_distro()
         self.get_peer_distro_version()
@@ -133,78 +137,74 @@ class HtxNicTest(Test):
                 self.cancel(
                     "Unable to install the package %s on peer machine" % pkg)
 
-        if self.htx_rpm_link:
-            if self.host_distro_name and self.peer_distro == "SuSE":
-                self.host_distro_name = self.peer_distro = "sles"
+        # Deleting old htx rpms as sometimes the old rpm packages doesn't
+        # support the latest htx changes. Also old  multiple htx rpms must be
+        # deleted before starting the htx on multisystems for NIC devices
+        ins_htx = process.system_output('rpm -qa | grep htx', shell=True,
+                                        sudo=True, ignore_status=True)
+        ins_htx = ins_htx.decode("utf-8").splitlines()
+        if ins_htx:
+            for rpm in ins_htx:
+                process.run("rpm -e %s" % rpm, shell=True, sudo=True,
+                            ignore_status=True, timeout=30)
+                if os.path.exists('/usr/lpp/htx'):
+                    shutil.rmtree('/usr/lpp/htx')
+            self.log.info("Deleted old htx rpm packages from host")
 
-            host_distro_pattern = "%s%s" % (
-                                            self.host_distro_name,
-                                            self.host_distro_version)
-            peer_distro_pattern = "%s%s" % (
-                                            self.peer_distro,
-                                            self.peer_distro_version)
-            patterns = [host_distro_pattern, peer_distro_pattern]
-            for pattern in patterns:
-                temp_string = process.getoutput(
-                              "curl --silent %s" % (self.htx_rpm_link),
-                              verbose=False, shell=True, ignore_status=True)
-                matching_htx_versions = re.findall(
-                    r"(?<=\>)htx\w*[-]\d*[-]\w*[.]\w*[.]\w*", str(temp_string))
-                distro_specific_htx_versions = [htx_rpm
-                                                for htx_rpm
-                                                in matching_htx_versions
-                                                if pattern in htx_rpm]
-                distro_specific_htx_versions.sort(reverse=True)
-                self.latest_htx_rpm = distro_specific_htx_versions[0]
+        peer_ins_htx = self.session.cmd('rpm -qa | grep htx')
+        peer_ins_htx = peer_ins_htx.stdout.decode("utf-8").splitlines()
+        if peer_ins_htx:
+            for rpm in peer_ins_htx:
+                self.session.cmd('rpm -e %s' % rpm)
+            self.log.info("Deleted old htx rpm package from peer")
 
-                if pattern == host_distro_pattern:
-                    if process.system('rpm -ivh --nodeps %s%s '
-                                      '--force' % (
-                                       self.htx_rpm_link, self.latest_htx_rpm
-                                       ), shell=True, ignore_status=True):
-                        self.cancel("Installion of rpm failed")
+        if self.host_distro_name and self.peer_distro == "SuSE":
+            self.host_distro_name = self.peer_distro = "sles"
 
-                if pattern == peer_distro_pattern:
-                    cmd = ('rpm -ivh --nodeps %s%s '
-                           '--force' % (self.htx_rpm_link,
-                                        self.latest_htx_rpm))
-                    output = self.session.cmd(cmd)
-                    if not output.exit_status == 0:
-                        self.cancel("Unable to install the package %s %s"
-                                    " on peer machine" % (self.htx_rpm_link,
-                                                          self.latest_htx_rpm))
-        else:
-            url = "https://github.com/open-power/HTX/archive/master.zip"
-            tarball = self.fetch_asset("htx.zip", locations=[url], expire='7d')
-            archive.extract(tarball, self.teststmpdir)
-            htx_path = os.path.join(self.teststmpdir, "HTX-master")
-            os.chdir(htx_path)
+        host_distro_pattern = "%s%s" % (
+                                        self.host_distro_name,
+                                        self.host_distro_version)
+        peer_distro_pattern = "%s%s" % (
+                                        self.peer_distro,
+                                        self.peer_distro_version)
+        patterns = [host_distro_pattern, peer_distro_pattern]
+        for pattern in patterns:
+            temp_string = process.getoutput(
+                          "curl --silent %s" % (self.htx_rpm_link),
+                          verbose=False, shell=True, ignore_status=True)
+            matching_htx_versions = re.findall(
+                r"(?<=\>)htx\w*[-]\d*[-]\w*[.]\w*[.]\w*", str(temp_string))
+            distro_specific_htx_versions = [htx_rpm
+                                            for htx_rpm
+                                            in matching_htx_versions
+                                            if pattern in htx_rpm]
+            distro_specific_htx_versions.sort(reverse=True)
+            self.latest_htx_rpm = distro_specific_htx_versions[0]
 
-            exercisers = ["hxecapi_afu_dir", "hxecapi", "hxeocapi"]
-            if not smm.check_installed('dapl-devel'):
-                exercisers.append("hxedapl")
-            for exerciser in exercisers:
-                process.run("sed -i 's/%s//g' %s/bin/Makefile" % (exerciser,
-                                                                  htx_path))
-            build.make(htx_path, extra_args='all')
-            build.make(htx_path, extra_args='tar')
-            process.run('tar --touch -xvzf htx_package.tar.gz')
-            os.chdir('htx_package')
-            if process.system('./installer.sh -f'):
-                self.fail("Installation of htx fails:please refer job.log")
+            cmd = ('rpm -ivh --nodeps %s%s '
+                   '--force' % (self.htx_rpm_link,
+                                self.latest_htx_rpm))
+            # If host and peer distro is same then perform installation
+            # only one time. This check is to avoid multiple times installation
+            if host_distro_pattern == peer_distro_pattern:
+                if process.system(cmd, shell=True, ignore_status=True):
+                    self.cancel("Installion of rpm failed")
+                output = self.session.cmd(cmd)
+                if not output.exit_status == 0:
+                    self.cancel("Unable to install the package %s %s"
+                                " on peer machine" % (self.htx_rpm_link,
+                                                      self.latest_htx_rpm))
+                break
+            if pattern == host_distro_pattern:
+                if process.system(cmd, shell=True, ignore_status=True):
+                    self.cancel("Installion of rpm failed")
 
-            # Installing htx on peer
-            self.session.cmd("wget %s -O /tmp/master.zip" % url)
-            self.session.cmd("cd /tmp")
-            self.session.cmd("unzip master.zip")
-            self.session.cmd("cd HTX-master")
-            for exerciser in exercisers:
-                self.session.cmd("sed -i 's/%s//g' bin/Makefile" % exerciser)
-            self.session.cmd("make all")
-            self.session.cmd("make tar")
-            self.session.cmd("tar --touch -xvzf htx_package.tar.gz")
-            self.session.cmd("cd htx_package")
-            self.session.cmd("./installer.sh -f")
+            if pattern == peer_distro_pattern:
+                output = self.session.cmd(cmd)
+                if not output.exit_status == 0:
+                    self.cancel("Unable to install the package %s %s"
+                                " on peer machine" % (self.htx_rpm_link,
+                                                      self.latest_htx_rpm))
 
     def parameters(self):
         self.host_intfs = []
@@ -219,20 +219,18 @@ class HtxNicTest(Test):
         for device in devices.split(" "):
             if device in interfaces:
                 self.host_intfs.append(device)
-            elif self.localhost.validate_mac_addr(device) and device in self.localhost.get_all_hwaddr():
-                self.host_intfs.append(self.localhost.get_interface_by_hwaddr(device).name)
+            elif self.localhost.validate_mac_addr(
+                 device) and device in self.localhost.get_all_hwaddr():
+                self.host_intfs.append(self.localhost.get_interface_by_hwaddr(
+                                       device).name)
             else:
                 self.cancel("Please check the network device")
         self.peer_intfs = self.params.get("peer_interfaces",
                                           '*', default=None).split(" ")
-        self.net_ids = self.params.get("net_ids", '*', default=None).split(" ")
         self.mdt_file = self.params.get("mdt_file", '*', default="net.mdt")
         self.time_limit = int(self.params.get("time_limit",
                                               '*', default=2)) * 60
         self.query_cmd = "htxcmdline -query -mdt %s" % self.mdt_file
-        self.ipaddr = self.params.get("host_ips", default="").split(" ")
-        self.netmask = self.params.get("netmask", default="")
-        self.peer_ips = self.params.get("peer_ips", default="").split(" ")
         self.htx_url = self.params.get("htx_rpm", default="")
 
     def test_start(self):
@@ -243,7 +241,7 @@ class HtxNicTest(Test):
         Phase 2: Start the HTX setup & execution of test.
         """
         self.build_htx()
-        self.setup_htx_nic()
+        self.htx_configuration()
         self.run_htx()
 
     def test_check(self):
@@ -252,339 +250,39 @@ class HtxNicTest(Test):
     def test_stop(self):
         self.htx_cleanup()
 
-    def setup_htx_nic(self):
-        self.update_host_peer_names()
-        self.generate_bpt_file()
-        self.check_bpt_file_existence()
-        self.update_otherids_in_bpt()
-        self.update_net_ids_in_bpt()
-        self.htx_configure_net()
-
-    def update_host_peer_names(self):
+    def htx_configuration(self):
         """
-        Update hostname & ip of both Host & Peer in /etc/hosts file of both
-        Host & Peer
+        The function is to setup network topology for htx run
+        on both host and peer.
+        The build_net multisystem <hostname/IP> command
+        configures the netwrok interfaces on both host and peer Lpars with
+        some random net_ids and check pingum and also
+        starts the htx deamon for net.mdt
+        There is no need to explicitly start the htx deamon, create/select
+        nd activate for net.mdt
         """
-        host_name = process.system_output("hostname",
-                                          ignore_status=True,
-                                          shell=True,
-                                          sudo=True).decode("utf-8")
-        cmd = "hostname"
-        output = self.session.cmd(cmd)
-        peer_name = output.stdout.decode("utf-8")
-        hosts_file = '/etc/hosts'
-        self.log.info("Updating hostname of both Host & Peer in \
-                      %s file", hosts_file)
-        with open(hosts_file, 'r') as file:
-            filedata = file.read().splitlines()
-        search_str1 = "%s %s.*" % (self.host_ip, host_name)
-        search_str2 = "%s %s.*" % (self.peer_ip, peer_name)
-        add_str1 = "%s %s" % (self.host_ip, host_name)
-        add_str2 = "%s %s" % (self.peer_ip, peer_name)
+        self.log.info("Setting up the Network configuration on Host and Peer")
 
-        for index, line in enumerate(filedata):
-            filedata[index] = line.replace('\t', ' ')
-
-        filedata = "\n".join(filedata)
-        obj = re.search(search_str1, filedata)
-        if not obj:
-            filedata = "%s\n%s" % (filedata, add_str1)
-
-        obj = re.search(search_str2, filedata)
-        if not obj:
-            filedata = "%s\n%s" % (filedata, add_str2)
-
-        with open(hosts_file, 'w') as file:
-            for line in filedata:
-                file.write(line)
-
-        destination = "%s:/etc" % self.peer_ip
-        output = self.session.copy_files(hosts_file, destination)
-        if not output:
-            self.fail("unable to copy the file into peer machine")
-
-    def generate_bpt_file(self):
-        """
-        Generates bpt file in both Host & Peer
-        """
-        self.log.info("Generating bpt file in both Host & Peer")
-        cmd = "/usr/bin/build_net help n"
-        self.session.cmd(cmd)
-        exit_code = process.run(
-            cmd, shell=True, sudo=True, ignore_status=True).exit_status
-        if exit_code == 0 or exit_code == 43:
-            return True
-        else:
-            self.fail("Command %s failed with exit status %s " %
-                      (cmd, exit_code))
-
-    def check_bpt_file_existence(self):
-        """
-        Verifies the bpt file existence in both Host & Peer
-        """
-        self.bpt_file = '/usr/lpp/htx/bpt'
-        cmd = "ls %s" % self.bpt_file
-        res = self.session.cmd(cmd)
-        if "No such file or directory" in res.stdout.decode("utf-8"):
-            self.fail("bpt file not generated in peer lpar")
-        try:
-            process.run(cmd, shell=True, sudo=True)
-        except CmdError as details:
-            msg = "Command %s failed %s, bpt file %s doesn't \
-                  exist in host" % (cmd, details, self.bpt_file)
-            self.fail(msg)
-
-    def update_otherids_in_bpt(self):
-        """
-        Update host ip in peer bpt file & peer ip in host bpt file
-        """
-        # Update other id's in host lpar
-        with open(self.bpt_file, 'r') as file:
-            filedata = file.read()
-        search_str1 = "other_ids=%s:" % self.host_ip
-        replace_str1 = "%s%s" % (search_str1, self.peer_ip)
-
-        filedata = re.sub(search_str1, replace_str1, filedata)
-        with open(self.bpt_file, 'w') as file:
-            for line in filedata:
-                file.write(line)
-
-        # Update other id's in peer lpar
-        search_str2 = "other_ids=%s:" % self.peer_ip
-        replace_str2 = "%s%s" % (search_str2, self.host_ip)
-        self.session.cmd("hostname")
-        filedata = self.session.cmd("cat %s" % self.bpt_file)
-        filedata = filedata.stdout.decode("utf-8")
-        filedata = filedata.splitlines()
-
-        for index, line in enumerate(filedata):
-            obj = re.search(search_str2, line)
-            if obj:
-                filedata[index] = replace_str2
-                break
-
-        else:
-            self.fail("Failed to get other_ids string in peer lpar")
-
-        filedata = "\n".join(filedata)
-        self.session.cmd("echo \"%s\" > %s" % (filedata, self.bpt_file))
-        self.session.cmd("cat %s" % self.bpt_file)
-
-    def update_net_ids_in_bpt(self):
-        """
-        Update net id's in both Host & Peer bpt file for both N/W interfaces
-        """
-        # Update net id in host lpar
-        with open(self.bpt_file, 'r') as file:
-            filedata = file.read()
-        for (host_intf, net_id) in zip(self.host_intfs, self.net_ids):
-            search_str = "%s n" % host_intf
-            replace_str = "%s %s" % (host_intf, net_id)
-            filedata = re.sub(search_str, replace_str, filedata)
-        with open(self.bpt_file, 'w') as file:
-            for line in filedata:
-                file.write(line)
-
-        # Update net id in peer lpar
-        filedata = self.session.cmd("cat %s" % self.bpt_file)
-        filedata = filedata.stdout.decode("utf-8")
-        filedata = filedata.splitlines()
-
-        for (peer_intf, net_id) in zip(self.peer_intfs, self.net_ids):
-            search_str = "%s n" % peer_intf
-            replace_str = "%s %s" % (peer_intf, net_id)
-
-            for index, line in enumerate(filedata):
-                obj = re.search(search_str, line)
-                if obj:
-                    string = re.sub(search_str, replace_str, line)
-                    filedata[index] = string
-                    break
-
-            else:
-                self.fail("Failed to get %s net_id in peer bpt" % peer_intf)
-
-        filedata = "\n".join(filedata)
-        self.session.cmd("echo \"%s\" > %s" % (filedata, self.bpt_file))
-
-    def ip_config(self):
-        """
-        configuring ip for host and peer interfaces
-        """
-        for (host_intf, net_id) in zip(self.host_intfs, self.net_ids):
-            ip_addr = "%s.1.1.%s" % (net_id, self.host_ip.split('.')[-1])
-            networkinterface = NetworkInterface(host_intf, self.localhost)
-            try:
-                networkinterface.add_ipaddr(ip_addr, self.netmask)
-                networkinterface.save(ip_addr, self.netmask)
-            except Exception:
-                networkinterface.save(ip_addr, self.netmask)
-            networkinterface.bring_up()
-
-        for (peer_intf, net_id) in zip(self.peer_intfs, self.net_ids):
-            ip_addr = "%s.1.1.%s" % (net_id, self.peer_ip.split('.')[-1])
-            peer_networkinterface = NetworkInterface(
-                peer_intf, self.remotehost)
-            peer_networkinterface.add_ipaddr(ip_addr, self.netmask)
-            peer_networkinterface.bring_up()
-
-    def htx_configure_net(self):
-        self.log.info("Starting the N/W ping test for HTX in Host")
-        cmd = "build_net %s" % self.bpt_file
+        cmd = "build_net multisystem %s" % self.peer_ip
         output = process.system_output(cmd, ignore_status=True, shell=True,
                                        sudo=True)
         output = output.decode("utf-8")
         host_obj = re.search("All networks ping Ok", output)
 
-        # Try up to 10 times until pingum test passes
-        for count in range(11):
-            if count == 0:
-                try:
-                    peer_output = self.session.cmd(cmd)
-                    peer_output = peer_output.stdout.decode("utf-8")
-                    peer_obj = re.search("All networks ping Ok", peer_output)
-                except Exception:
-                    self.log.info("build_net command failed in peer")
+        # try up to 3 times if the command fails to set the network interfaces
+        for i in range(3):
             if host_obj is not None:
-                if self.peer_distro == "rhel":
-                    self.session.cmd("systemctl start NetworkManager")
-                else:
-                    self.session.cmd("systemctl restart network")
-                if self.host_distro == "rhel":
-                    process.system("systemctl start NetworkManager",
-                                   shell=True,
-                                   ignore_status=True)
-                else:
-                    process.system("systemctl restart network", shell=True,
-                                   ignore_status=True)
-                output = process.system_output("pingum", ignore_status=True,
-                                               shell=True, sudo=True)
-            else:
+                self.log.info("Htx setup was successful on host and peer")
                 break
-            time.sleep(30)
-        else:
-            self.log.info("manually configuring ip because of pingum failed.")
-            self.ip_config()
-
-        self.log.info("Starting the N/W ping test for HTX in Peer")
-        for count in range(11):
-            if peer_obj is not None:
-                try:
-                    self.session.cmd("pingum")
-                except Exception:
-                    self.log.info("Pingum failed on peer lpar")
-            else:
-                break
-            time.sleep(30)
-
-        self.log.info("N/W ping test for HTX passed in both Host & Peer")
+        output = process.system_output('pingum', ignore_status=True,
+                                       shell=True, sudo=True)
+        output = output.decode("utf-8")
+        ping_obj = re.search("All networks ping Ok", output)
+        if ping_obj is None:
+            self.fail("Failed to set htx configuration on host and peer")
 
     def run_htx(self):
-        self.start_htx_deamon()
-        self.shutdown_active_mdt()
-        self.generate_mdt_files()
-        self.select_net_mdt()
-        self.query_net_devices_in_mdt()
-        self.suspend_all_net_devices()
-        self.activate_mdt()
-        self.is_net_devices_active()
         self.start_htx_run()
-
-    def start_htx_deamon(self):
-        cmd = '/usr/lpp/htx/etc/scripts/htxd_run'
-        self.log.info("Starting the HTX Deamon in Host")
-        process.run(cmd, shell=True, sudo=True)
-
-        self.log.info("Starting the HTX Deamon in Peer")
-        self.session.cmd(cmd)
-
-    def generate_mdt_files(self):
-        self.log.info("Generating mdt files in Host")
-        cmd = "htxcmdline -createmdt"
-        process.run(cmd, shell=True, sudo=True)
-
-        self.log.info("Generating mdt files in Peer")
-        self.session.cmd(cmd)
-
-    def select_net_mdt(self):
-        self.log.info("Selecting the htx %s file in Host", self.mdt_file)
-        cmd = "htxcmdline -select -mdt %s" % self.mdt_file
-        process.run(cmd, shell=True, sudo=True)
-
-        self.log.info("Selecting the htx %s file in Peer", self.mdt_file)
-        self.session.cmd(cmd)
-
-    def query_net_devices_in_mdt(self):
-        self.is_net_devices_in_host_mdt()
-        self.is_net_devices_in_peer_mdt()
-
-    def is_net_devices_in_host_mdt(self):
-        '''
-        verifies the presence of given net devices in selected mdt file
-        '''
-        self.log.info("Checking host_interfaces presence in %s",
-                      self.mdt_file)
-        output = process.system_output(self.query_cmd, shell=True,
-                                       sudo=True).decode("utf-8")
-        absent_devices = []
-        for intf in self.host_intfs:
-            if intf not in output:
-                absent_devices.append(intf)
-        if absent_devices:
-            self.log.info("net_devices %s are not avalable in host %s ",
-                          absent_devices, self.mdt_file)
-            self.fail("HTX fails to list host n/w interfaces")
-
-        self.log.info("Given host net interfaces %s are available in %s",
-                      self.host_intfs, self.mdt_file)
-
-    def is_net_devices_in_peer_mdt(self):
-        '''
-        verifies the presence of given net devices in selected mdt file
-        '''
-        self.log.info("Checking peer_interfaces presence in %s",
-                      self.mdt_file)
-        output = self.session.cmd(self.query_cmd)
-        output = output.stdout.decode("utf-8")
-        absent_devices = []
-        for intf in self.peer_intfs:
-            if intf not in output:
-                absent_devices.append(intf)
-        if absent_devices:
-            self.log.info("net_devices %s are not avalable in peer %s ",
-                          absent_devices, self.mdt_file)
-            self.fail("HTX fails to list peer n/w interfaces")
-
-        self.log.info("Given peer net interfaces %s are available in %s",
-                      self.peer_intfs, self.mdt_file)
-
-    def activate_mdt(self):
-        self.log.info("Activating the N/W devices with mdt %s in Host",
-                      self.mdt_file)
-        cmd = "htxcmdline -activate all -mdt %s" % self.mdt_file
-        try:
-            process.run(cmd, shell=True, sudo=True)
-        except CmdError as details:
-            self.log.debug("Activation of N/W devices (%s) failed in Host",
-                           self.mdt_file)
-            self.fail("Command %s failed %s" % (cmd, details))
-
-        self.log.info("Activating the N/W devices with mdt %s in Peer",
-                      self.mdt_file)
-        try:
-            self.session.cmd(cmd)
-        except Exception:
-            self.log.debug("Activation of N/W devices (%s) failed in Peer",
-                           self.mdt_file)
-            self.fail("Command %s failed" % cmd)
-
-    def is_net_devices_active(self):
-        if not self.is_net_device_active_in_host():
-            self.fail("Net devices are failed to activate in Host \
-                       after HTX activate")
-        if not self.is_net_device_active_in_peer():
-            self.fail("Net devices are failed to activate in Peer \
-                       after HTX activate")
 
     def start_htx_run(self):
         self.log.info("Running the HTX for %s on Host", self.mdt_file)
@@ -633,71 +331,6 @@ class HtxNicTest(Test):
         if not output.exit_status == 0:
             pass
 
-    def suspend_all_net_devices(self):
-        self.suspend_all_net_devices_in_host()
-        self.suspend_all_net_devices_in_peer()
-
-    def suspend_all_net_devices_in_host(self):
-        '''
-        Suspend the Net devices, if active.
-        '''
-        self.log.info("Suspending net_devices in host if any running")
-        self.susp_cmd = "htxcmdline -suspend all  -mdt %s" % self.mdt_file
-        process.run(self.susp_cmd, ignore_status=True, shell=True, sudo=True)
-
-    def suspend_all_net_devices_in_peer(self):
-        '''
-        Suspend the Net devices, if active.
-        '''
-        self.log.info("Suspending net_devices in peer if any running")
-        cmd = "htxcmdline -suspend all  -mdt %s" % self.mdt_file
-        output = self.session.cmd(cmd)
-        if not output.exit_status == 0:
-            pass
-
-    def is_net_device_active_in_host(self):
-        '''
-        Verifies whether the net devices are active or not in host
-        '''
-        self.log.info("Checking whether all net_devices are active or \
-                      not in host ")
-        output = process.system_output(self.query_cmd, ignore_status=True,
-                                       shell=True,
-                                       sudo=True).decode("utf-8").split('\n')
-        active_devices = []
-        for line in output:
-            for intf in self.host_intfs:
-                if intf in line and 'ACTIVE' in line:
-                    active_devices.append(intf)
-        non_active_device = list(set(self.host_intfs) - set(active_devices))
-        if non_active_device:
-            return False
-        else:
-            self.log.info("Active N/W devices in Host %s", active_devices)
-            return True
-
-    def is_net_device_active_in_peer(self):
-        '''
-        Verifies whether the net devices are active or not in peer
-        '''
-        self.log.info("Checking whether all net_devices are active or \
-                      not in peer")
-        output = self.session.cmd(self.query_cmd)
-        if not output.exit_status == 0:
-            pass
-        active_devices = []
-        output = output.stdout.decode("utf-8").splitlines()
-        for line in output:
-            for intf in self.peer_intfs:
-                if intf in line and 'ACTIVE' in line:
-                    active_devices.append(intf)
-        non_active_device = list(set(self.peer_intfs) - set(active_devices))
-        if non_active_device:
-            return False
-        else:
-            self.log.info("Active N/W devices in Peer %s", active_devices)
-            return True
-
     def shutdown_htx_daemon(self):
         status_cmd = '/usr/lpp/htx/etc/scripts/htx.d status'
         shutdown_cmd = '/usr/lpp/htx/etc/scripts/htxd_shutdown'
@@ -719,69 +352,28 @@ class HtxNicTest(Test):
             if not output.exit_status == 0:
                 pass
 
-    def clean_state(self):
-        '''
-        Reset bpt, suspend and shutdown the active mdt
-        '''
-        self.log.info("Resetting bpt file in both Host & Peer")
-        cmd = "/usr/bin/build_net help n"
-        self.session.cmd(cmd)
-        exit_code = process.run(
-            cmd, shell=True, sudo=True, ignore_status=True).exit_status
-        if exit_code == 0 or exit_code == 43:
-            return True
-        else:
-            self.fail("Command %s failed with exit status %s " %
-                      (cmd, exit_code))
-
-        if self.is_net_device_active_in_host():
-            self.suspend_all_net_devices_in_host()
-            self.log.info("Shutting down the %s in host", self.mdt_file)
-            cmd = 'htxcmdline -shutdown -mdt %s' % self.mdt_file
-            process.system(cmd, timeout=120, ignore_status=True,
-                           shell=True, sudo=True)
-        if self.is_net_device_active_in_peer():
-            self.suspend_all_net_devices_in_peer()
-            self.log.info("Shutting down the %s in peer", self.mdt_file)
-            try:
-                output = self.session.cmd(cmd)
-            except Exception:
-                self.log.info("Unable to shutdown the mdt")
-            if not output.exit_status == 0:
-                pass
-
-        self.session.cmd("rm -rf /tmp/HTX-master")
-
     def ip_restore_host(self):
         '''
         restoring ip for host
         '''
-        for ipaddr, interface in zip(self.ipaddr, self.host_intfs):
+        for interface in self.host_intfs:
             cmd = "ip addr flush %s" % interface
             process.run(cmd, ignore_status=True, shell=True, sudo=True)
             networkinterface = NetworkInterface(interface, self.localhost)
-            networkinterface.add_ipaddr(ipaddr, self.netmask)
-            networkinterface.save(ipaddr, self.netmask)
             networkinterface.bring_up()
 
     def ip_restore_peer(self):
         '''
         config ip for peer
         '''
-        for ip, interface in zip(self.peer_ips, self.peer_intfs):
+        for interface in self.peer_intfs:
+            cmd = "ip addr flush %s" % interface
+            self.session.cmd(cmd)
             peer_networkinterface = NetworkInterface(
                 interface, self.remotehost)
-            try:
-                cmd = "ip addr flush %s" % interface
-                self.session.cmd(cmd)
-                peer_networkinterface.add_ipaddr(ip, self.netmask)
-                peer_networkinterface.save(ip, self.netmask)
-            except Exception:
-                peer_networkinterface.save(ip, self.netmask)
             peer_networkinterface.bring_up()
 
     def htx_cleanup(self):
-        self.clean_state()
         self.shutdown_htx_daemon()
         self.ip_restore_host()
         self.ip_restore_peer()
