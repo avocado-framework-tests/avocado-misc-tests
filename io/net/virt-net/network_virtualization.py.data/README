@@ -16,6 +16,9 @@ RHEL :
 Links :
 -> https://pypi.python.org/packages/source/p/pycrypto/pycrypto-2.6.1.tar.gz#md5=55a61a054aa66812daf5161a0d5d7eda
 
+Install pexpect module 
+-> pip install pexpect 
+
 Explanation of the input parameters for single vnic:
 hmc_pwd ---> HMC password
 hmc_username ---> HMC user name
@@ -38,6 +41,9 @@ peer_ip ---> Peer ip to which the added Network virtualized interface will ping 
 count ---> The number of times the failover test has to be executed
 num_of_dlpar --> number of times ddlpar remove and add operation to be executed
 mac_id ---> MAC ID to be set for the vnic interface. This is needed for us to have control over interface name via interface file or udev rules, space separated if multiple
+host_public_ip ---> Public IP of the host
+host_password ---> Login password for the host machine 
+user_name ---> Host user name 
 
 Explanation of the input parameters for multiple vnic:
 hmc_pwd ---> HMC password
@@ -55,6 +61,9 @@ device_ip ---> space separated ip address
 netmasks ---> space separated netmask
 peer_ip ---> space separated peer ip
 mac_id ---> MAC ID to be set for the vnic interface. This is needed for us to have control over interface name via interface file or udev rules, space separated mac id
+user_name ---> host user name 
+host_public_ip ---> public IP of the host, required to copy the eeh_tool to vios 
+host_password ---> Login password of the host, required to copy the eeh_tool to vios 
 
 NOTE: all failover test will not execute when it will create multiple Network virtualized interface.
 and for now multiple Network virtualized interface with multiple backing device will not work.
