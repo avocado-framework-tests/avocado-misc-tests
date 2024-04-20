@@ -243,10 +243,9 @@ class Stressng(Test):
         removes the log files and collects the dmesg data
         :param: none
         """
-
-        file_name = "rm -rf /tmp/stdout /tmp/stderr /tmp/data* /tmp/stressng_output*"
-        try:
-            os.remove(file_name)
-        except OSError:
-            self.log.warn("Files do not exist")
+        files_to_remove = ["/tmp/stdout", "/tmp/stderr", "/tmp/data*",
+                           "/tmp/stressng_output*"]
+        for file_path in files_to_remove:
+            if os.path.exists(file_path):
+                os.remove(file_path)
         dmesg.collect_dmesg()
