@@ -22,7 +22,7 @@ import os
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import cpu
-from avocado.utils import distro
+from avocado.utils import distro, build, archive
 from avocado.utils import genio
 from avocado.utils.software_manager.manager import SoftwareManager
 from math import ceil
@@ -41,11 +41,13 @@ class PPC64Test(Test):
         """
         if 'ppc' not in distro.detect().arch:
             self.cancel("Processor is not ppc64")
-        if SoftwareManager().check_installed("powerpc-utils") is False:
-            if SoftwareManager().install("powerpc-utils") is False:
-                self.cancel("powerpc-utils is not installing")
+        self.sm = SoftwareManager()
+        if not self.sm.check_installed("powerpc-utils"):
+            if not self.sm.install("powerpc-utils"):
+                self.cancel("Cannot install powerpc-utils, check the log!")
 
         self.loop = int(self.params.get('test_loop', default=100))
+        self.run_type = self.params.get('type', default='distro')
         self.smt_str = "ppc64_cpu --smt"
         # Dynamically set max SMT specified at boot time
         process.system("%s=on" % self.smt_str, shell=True)
@@ -66,6 +68,49 @@ class PPC64Test(Test):
         self.key = 0
         self.value = ""
         self.max_smt_value = int(self.curr_smt)
+
+    def test_build_upstream(self):
+        """
+        For upstream target download and compile source code
+        Caution : This function will overwrite system installed
+        lsvpd Tool binaries with upstream code.
+        """
+        if self.run_type == 'upstream':
+            self.detected_distro = distro.detect()
+            deps = ['gcc', 'make', 'automake', 'autoconf', 'bison', 'flex',
+                    'libtool', 'zlib-devel', 'ncurses-devel', 'librtas-devel']
+            if 'SuSE' in self.detected_distro.name:
+                deps.extend(['libnuma-devel'])
+            elif self.detected_distro.name in ['centos', 'fedora', 'rhel']:
+                deps.extend(['numactl-devel'])
+            else:
+                self.cancel("Unsupported Linux distribution")
+            for package in deps:
+                if not self.sm.check_installed(package) and not \
+                        self.sm.install(package):
+                    self.cancel("Fail to install %s required for this test." %
+                                package)
+            url = self.params.get(
+                'ppcutils_url', default='https://github.com/'
+                'ibm-power-utilities/powerpc-utils/archive/refs/heads/'
+                'master.zip')
+            tarball = self.fetch_asset('ppcutils.zip', locations=[url],
+                                       expire='7d')
+            archive.extract(tarball, self.workdir)
+            self.sourcedir = os.path.join(self.workdir, 'powerpc-utils-master')
+            os.chdir(self.sourcedir)
+            cmd_result = process.run('./autogen.sh', ignore_status=True,
+                                     sudo=True, shell=True)
+            if cmd_result.exit_status:
+                self.fail('Upstream build: Pre configure step failed')
+            cmd_result = process.run('./configure --prefix=/usr',
+                                     ignore_status=True, sudo=True, shell=True)
+            if cmd_result.exit_status:
+                self.fail('Upstream build: Configure step failed')
+            build.make(self.sourcedir)
+            build.make(self.sourcedir, extra_args='install')
+        else:
+            self.cancel("This test is supported with upstream as target")
 
     def equality_check(self, test_name, cmd1, cmd2):
         """

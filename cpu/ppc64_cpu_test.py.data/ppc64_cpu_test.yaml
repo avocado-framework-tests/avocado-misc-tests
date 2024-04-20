@@ -1,1 +1,7 @@
 test_loop : 10
+run_type: !mux
+    upstream:
+        ppcutils_url: 'https://github.com/ibm-power-utilities/powerpc-utils/archive/refs/heads/master.zip'
+        type: 'upstream'
+    distro:
+        type: 'distro'
