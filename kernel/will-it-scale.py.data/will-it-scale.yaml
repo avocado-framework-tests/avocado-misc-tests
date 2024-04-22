@@ -1,0 +1,122 @@
+postprocess: True
+testcase: !mux
+    brk1:
+        name: brk1
+    brk2:
+        name: brk2
+    context_switch1:
+        name: context_switch1
+    dup1:
+        name: dup1
+    eventfd1:
+        name: eventfd1
+    fallocate1:
+        name: fallocate1
+    fallocate2:
+        name: fallocate2
+    futex1:
+        name: futex1
+    futex2:
+        name: futex2
+    futex3:
+        name: futex3
+    futex4:
+        name: futex4
+    getppid1:
+        name: getppid1
+    lock1:
+        name: lock1
+    lock2:
+        name: lock2
+    lseek1:
+        name: lseek1
+    lseek2:
+        name: lseek2
+    malloc1:
+        name: malloc1
+    malloc2:
+        name: malloc2
+    mmap1:
+        name: mmap1
+    mmap2:
+        name: mmap2
+    open1:
+        name: open1
+    open2:
+        name: open2
+    open3:
+        name: open3
+    page_fault1:
+        name: page_fault1
+    page_fault2:
+        name: page_fault2
+    page_fault3:
+        name: page_fault3
+    pipe1:
+        name: pipe1
+    poll1:
+        name: poll1
+    poll2:
+        name: poll2
+    posix_semaphore1:
+        name: posix_semaphore1
+    pread1:
+        name: pread1
+    pread2:
+        name: pread2
+    pread3:
+        name: pread3
+    pthread_mutex1:
+        name: pthread_mutex1
+    pthread_mutex2:
+        name: pthread_mutex2
+    pthread_mutex3:
+        name: pthread_mutex3
+    pthread_mutex4:
+        name: pthread_mutex4
+    pthread_mutex5:
+        name: pthread_mutex5
+    pwrite1:
+        name: pwrite1
+    pwrite2:
+        name: pwrite2
+    pwrite3:
+        name: pwrite3
+    read1:
+        name: read1
+    read2:
+        name: read2
+    read3:
+        name: read3
+    read4:
+        name: read4
+    readseek1:
+        name: readseek1
+    readseek2:
+        name: readseek2
+    readseek3:
+        name: readseek3
+    sched_yield:
+        name: sched_yield
+    signal1:
+        name: signal1
+    tlb_flush1:
+        name: tlb_flush1
+    tlb_flush2:
+        name: tlb_flush2
+    tlb_flush3:
+        name: tlb_flush3
+    unix1:
+        name: unix1
+    unlink1:
+        name: unlink1
+    unlink2:
+        name: unlink2
+    write1:
+        name: write1
+    writeseek1:
+        name: writeseek1
+    writeseek2:
+        name: writeseek2
+    writeseek3:
+        name: writeseek3
