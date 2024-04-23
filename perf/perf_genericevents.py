@@ -96,10 +96,10 @@ class test_generic_events(Test):
             self.log.info('FILE in %s is %s' % (dir, file))
             if raw_code != self.hex_to_int(val):
                 nfail += 1
-                self.log.info('FAIL : Expected value is %s or %s but got '
-                              '%s' % (val, self.hex_to_int(val), raw_code))
+                self.log.info('FAIL : Expected value is %s(hex: %s) but got '
+                              '%s' % (self.hex_to_int(val), val, raw_code))
             else:
-                self.log.info('PASS : Expected value: %s or %s and got '
-                              '%s' % (val, self.hex_to_int(val), raw_code))
+                self.log.info('PASS : Expected value is %s(hex: %s) and got '
+                              '%s' % (self.hex_to_int(val), val, raw_code))
         if nfail != 0:
             self.fail('Failed to verify generic PMU event codes')
