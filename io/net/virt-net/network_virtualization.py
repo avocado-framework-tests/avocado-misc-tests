@@ -37,6 +37,7 @@ from avocado.utils.ssh import Session
 from avocado.utils import wait
 from pexpect import pxssh
 import re
+from avocado.utils.network.hosts import RemoteHost
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
@@ -121,6 +122,8 @@ class NetworkVirtualization(Test):
         self.mac_id = [mac.replace(':', '') for mac in self.mac_id]
         self.netmask = self.params.get('netmasks', default=None).split(' ')
         self.peer_ip = self.params.get('peer_ip', default=None).split(' ')
+        self.peer_user = self.params.get('peer_user', default=None)
+        self.peer_password = self.params.get('peer_password', default=None)
         self.host_public_ip = self.params.get('host_public_ip', default=None)
         self.host_user = self.params.get('user_name', default=None)
         self.host_password = self.params.get('host_password', default=None)
@@ -223,7 +226,7 @@ class NetworkVirtualization(Test):
         '''
         smm = SoftwareManager()
         packages = ['ksh', 'src', 'rsct.basic', 'rsct.core.utils',
-                    'rsct.core', 'DynamicRM', 'powerpc-utils']
+                    'rsct.core', 'DynamicRM', 'powerpc-utils', 'irqbalance']
         detected_distro = distro.detect()
         if detected_distro.name == "Ubuntu":
             packages.extend(['python-paramiko'])
@@ -240,6 +243,39 @@ class NetworkVirtualization(Test):
                 shutil.copy(deb_install, self.workdir)
                 process.system("dpkg -i %s/%s" % (self.workdir, deb),
                                ignore_status=True, sudo=True)
+
+    def tune_rxtx_queue(self):
+        """
+        Increase rx/tx queues to 16 for test interface
+        """
+        self.remotehost = RemoteHost(self.peer_ip[0], self.peer_user,
+                                     password=self.peer_password)
+        peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip[0]).name
+        cmd = "ethtool -L %s rx 16 tx 16" % peer_interface
+        output = self.session.cmd(cmd)
+        if not output:
+            self.cancel("Unable to tune RX and TX queue in peer")
+        device = self.find_device(self.mac_id[0])
+        cmd = "ethtool -L %s rx 16 tx 16" % device
+        result = process.run(cmd)
+        if result.exit_status:
+            self.cancel("Unable to tune RX and TX queue in host")
+
+    def enable_irqbalance(self):
+        """
+        Enable irqbalance service on host and peer
+        """
+        cmd_start = "systemctl start irqbalance"
+        self.session.cmd(cmd_start)
+        cmd_status = "systemctl status irqbalance"
+        output = self.session.cmd(cmd_status).stdout_text.splitlines()
+        for line in output:
+            if re.search("Active: active (running)", line):
+                self.log("irqbalance service is active in peer")
+        process.system(cmd_start)
+        for line in process.system_output(cmd_status).decode("utf-8").splitlines():
+            if re.search("Active: active (running)", line):
+                self.log("irqbalance service is active in host")
 
     def test_add(self):
         '''
@@ -277,6 +313,10 @@ class NetworkVirtualization(Test):
                        virtualized device")
             if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
                 self.fail("Ping failed with active vnic device")
+        self.session = Session(self.peer_ip[0], user=self.peer_user,
+                               password=self.peer_password)
+        self.enable_irqbalance()
+        self.tune_rxtx_queue()
         self.check_dmesg_error()
 
     def test_backingdevadd(self):
@@ -1096,3 +1136,5 @@ class NetworkVirtualization(Test):
         result = process.run(cmd, shell=True, ignore_status=True)
         if result.exit_status:
             self.log.debug("failed to disable debug mode")
+        self.tune_rxtx_queue()
+        self.session.quit()

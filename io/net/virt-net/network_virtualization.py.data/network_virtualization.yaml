@@ -22,3 +22,5 @@ mac_id:
 user_name: ""
 host_public_ip: ""
 host_password: ""
+peer_user: ""
+peer_password: ""
