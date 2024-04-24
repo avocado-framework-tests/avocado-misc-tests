@@ -50,6 +50,8 @@ class PCIHotPlugTest(Test):
             self.cancel("Processor is not ppc64")
         if os.path.exists('/proc/device-tree/bmc'):
             self.cancel("Test Unsupported! on this platform")
+        if 'IBM,9028-21B' in open('/proc/device-tree/model', 'r').read():
+            self.cancel("Test Unsupported! on this Hardware platform")
         if 'pSeries' in open('/proc/cpuinfo', 'r').read():
             for mdl in ['rpaphp', 'rpadlpar_io']:
                 if not linux_modules.module_is_loaded(mdl):
