@@ -62,9 +62,11 @@ class Perftest(Test):
             elif 'debian' in detected_distro.name:
                 deps.extend(['linux-tools-%s' % platform.uname()[2][3]])
             elif detected_distro.name in ['rhel', 'SuSE', 'fedora', 'centos']:
-                deps.extend(['perf', 'gcc-c++'])
+                deps.extend(['perf', 'gcc-c++', 'bpftool'])
                 if 'SuSE' in detected_distro.name:
                     deps.extend(['kernel-default-debuginfo'])
+                elif 'rhel' in detected_distro.name:
+                    deps.extend(['clang', 'llvm', 'libbpf', 'python3-perf'])
                 elif 'fedora' in detected_distro.name:
                     deps.extend(['clang', 'kernel-debuginfo'])
                 else:
