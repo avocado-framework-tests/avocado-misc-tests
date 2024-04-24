@@ -1,0 +1,84 @@
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    branches:
+      - 'master'
+  workflow_dispatch: # manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10"]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        pip install -r requirements-travis.txt
+    - name: List files in the repository
+      run: |
+       ls ${{ github.workspace }}
+    - name : variable
+      run: |
+       echo  $(git rev-list ${{github.event.before}}...${{github.event.after}})
+    - name: Analysing the code with pylint
+      run: |
+        inspekt checkall --disable-lint W,R,C,E1002,E1101,E1103,E1120,F0401,I0011,E0203,E711,W605,E721 --no-license-check
+        inspekt indent
+        inspekt style
+        error=""
+        for COMMIT in $(git rev-list ${{github.event.before}}...${{github.event.after}}); do
+            echo "-----< $(git log -1 --oneline $COMMIT) >-----"
+            msg=$(git show -s --format=%B $COMMIT)
+            # Skip merge commits
+            if [ $(echo "${msg::4}") == 'Merg' ]
+            then
+                continue
+            fi
+            # Skip some commits which make travis fail due to commit message
+            list='8fd5b57 840e774 c35ffeb'
+            for item in $list
+            do
+            if [ "$COMMIT" == "$item" ]; then
+              echo "In the list"
+              continue
+            fi
+            done  
+            # Test commit message size
+            if [ $(echo "$msg" | wc -l) -ge 5 ]
+            then
+                echo "OK: Commit message size."
+            else
+                echo "ERR: Commit message is too short (less than 5 lines)."
+                echo "     Here a minimal template:"
+                echo "     ------------------------------------"
+                echo "     header          <- Limited to 50 characters. No period."
+                echo "                     <- Blank line"
+                echo "     message         <- Any number of lines, limited to 72 characters per line."
+                echo "                     <- Blank line"
+                echo "     Signed-off-by:  <- Signature (created by git commit -s)"
+                echo "     ------------------------------------"
+                error=true
+            fi
+            # Test commit message signature
+            if echo "$msg" | grep -q 'Signed-off-by:'
+            then
+                echo "OK: 'Signed-off-by:' present."
+            else
+                echo "ERR: 'Signed-off-by:' not found (use '-s' in 'git commit')."
+                error=true
+            fi
+        done
+        # Look for errors
+        if [ "$error" ]; then
+            echo
+            echo "Incremental smokecheck failed."
+            exit 1
+        fi
