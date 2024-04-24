@@ -93,7 +93,8 @@ class EliminateDomainSuffix(Test):
 
         # Initializing the values of chips and cores using lspcu
         self.chips = cpu.lscpu()["chips"]
-        self.cores = cpu.lscpu()["cores"]
+        self.phys_cores = cpu.lscpu()["physical_cores"]
+        self.vir_cores = cpu.lscpu()["virtual_cores"]
 
     # Features testing
     def test_display_domain_indices_in_sysfs(self):
@@ -136,8 +137,12 @@ class EliminateDomainSuffix(Test):
         # supported domain range 1-6 and max 15
         # check all valid domains
         # TODO get lpar id value from command line
-        for domain in range(1, 7):
-            for core in range(0, self.cores + 1):
+        for domain in range(2, 7):
+            if domain == 2:
+                core_range = self.phys_cores
+            else:
+                core_range = self.vir_cores
+            for core in range(0, core_range):
                 result1 = self.event_stat(
                     ',domain=%s,core=%s,lpar=1/ sleep 1' % (domain, core))
                 if "Performance counter stats for" not in result1.stderr.decode("utf-8"):
@@ -161,10 +166,11 @@ class EliminateDomainSuffix(Test):
 
     def test_check_invalid_core(self):
         """
-        supported core value 0-65535
+        for domain 2, supported core value is physical core range
+        physical_core = Physical Sockets * Physical chips * Physical cores/chip
         check invalid core value
         """
-        result = self.event_stat(',domain=3,core=65536/ sleep 1')
+        result = self.event_stat(',domain=2,core=%s/ sleep 1' % self.phys_cores)
         if result.exit_status == 0:
             self.fail('perf unable to recognize out of range core value')
 
@@ -199,8 +205,8 @@ class EliminateDomainSuffix(Test):
 
     def test_check_valid_chip(self):
         """
-        Valid chip values 0-self.chips and max 65535
-        Test chip value in range self.chips and max 65535
+        Valid chip value ranges from 0 to self.chips-1 and max 65535
+        Test chip value in range self.chips-1 and max 65535
         """
         for chip_val in range(0, self.chips):
             if self.rev == '004b' or self.rev == '004e':
