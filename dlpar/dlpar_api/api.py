@@ -452,6 +452,16 @@ class TestCase:
         self.log.debug(d_msg)
         return opt_value
 
+    def get_lmb_value(self, linux_machine, option):
+        """to get lmb size of a managed system"""
+        o_cmd = 'lshwres -r mem -m ' + linux_machine.machine + \
+                ' --level sys -F ' + option
+        opt_value = self.hmc.sshcnx.cmd(o_cmd).stdout_text.strip()
+        d_msg = option + ": " + opt_value + " for CEC " + \
+            linux_machine.machine
+        self.log.debug(d_msg)
+        return opt_value
+
     def linux_check_add_cpu(self, linux_machine, quantity):
         """Check if the processors were added at the linux partition.
 
@@ -646,30 +656,40 @@ class DedicatedCpu(TestCase):
         TestCase.__init__(self, log, 'Dedicated CPU', config_payload)
 
         # Get test configuration
-        self.quant_to_test = 2
-        self.quant_to_test = config_payload.get('ded_quantity_to_test')
+        # self.quant_to_test = 2
+        # self.quant_to_test = config_payload.get('ded_quantity_to_test')
         self.sleep_time = 60
         self.sleep_time = config_payload.get('sleep_time')
 
-        self.log.check_log('Getting Test configuration.',
-                           (self.quant_to_test is not None))
-        self.log.debug("Testing with %s Dedicated CPU units." %
-                       self.quant_to_test)
+        # self.log.check_log('Getting Test configuration.',
+        #                  (self.quant_to_test is not None))
+        # self.log.debug("Testing with %s Dedicated CPU units." %
+        #              self.quant_to_test)
         self.value = self.get_connections(config_payload, clients='both')
         # Check linux partitions configuration
         self.__check_set_cfg(self.linux_1)
         self.__check_set_cfg(self.linux_2)
 
-    def add_ded_cpu(self):
-        rvalue = self.__add_dedicated_cpu(self.linux_1, self.quant_to_test)
+    def get_max_proc(self):
+        curr_max_proc = int(self.get_cpu_option(self.linux_1,
+                                                'curr_max_procs'))
+        return curr_max_proc
+
+    def get_curr_proc(self):
+        curr_proc = int(self.get_cpu_option(self.linux_1,
+                                            'curr_procs'))
+        return curr_proc
+
+    def add_ded_cpu(self, cpu):
+        rvalue = self.__add_dedicated_cpu(self.linux_1, cpu)
         if rvalue == 1:
             return rvalue
         else:
             self.log.info("Test finished successfully.")
             return 0
 
-    def rem_ded_cpu(self):
-        rvalue = self.__remove_dedicated_cpu(self.linux_1, self.quant_to_test)
+    def rem_ded_cpu(self, cpu):
+        rvalue = self.__remove_dedicated_cpu(self.linux_1, cpu)
         if rvalue == 1:
             return rvalue
         else:
@@ -1034,8 +1054,8 @@ class Memory(TestCase):
         TestCase.__init__(self, log, 'Memory', config_payload)
 
         # Get test configuration
-        self.quant_to_test = 1024
-        self.quant_to_test = config_payload.get('mem_quantity_to_test')
+        # self.quant_to_test = 1024
+        # self.quant_to_test = config_payload.get('mem_quantity_to_test')
         self.sleep_time = 60
         self.sleep_time = config_payload.get('sleep_time')
 
@@ -1058,11 +1078,11 @@ class Memory(TestCase):
             self.log.error(e_msg_2)
             raise TestException(e_msg_1 + " " + e_msg_2)
 
-        self.log.debug("Testing with %s megabytes of memory." %
-                       self.quant_to_test)
+        # self.log.debug("Testing with %s megabytes of memory." %
+        #              self.quant_to_test)
         c_msg = 'Getting Test configuration.'
-        c_condition = self.quant_to_test is not None
-        self.log.check_log(c_msg, c_condition)
+        # c_condition = self.quant_to_test is not None
+        # self.log.check_log(c_msg, c_condition)
 
         # Check linux partitions configuration
         try:
@@ -1108,8 +1128,22 @@ class Memory(TestCase):
         self.log.info('Configuration data for LPAR %s is OK.' %
                       linux_machine.partition)
 
-    def mem_add(self):
-        rvalue = self.__add_memory(self.linux, self.quant_to_test)
+    def get_max_mem(self):
+        curr_max_mem = int(self.get_mem_option(self.linux,
+                                               'curr_max_mem'))
+        return curr_max_mem
+
+    def get_curr_mem(self):
+        curr_mem = int(self.get_mem_option(self.linux,
+                                           'curr_mem'))
+        return curr_mem
+
+    def get_lmb_size(self):
+        lmb = int(self.get_lmb_value(self.linux, 'mem_region_size'))
+        return lmb
+
+    def mem_add(self, mem):
+        rvalue = self.__add_memory(self.linux, mem)
         if rvalue == 1:
             return rvalue
         else:
