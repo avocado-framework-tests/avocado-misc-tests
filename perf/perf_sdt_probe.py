@@ -54,10 +54,10 @@ class PerfSDT(Test):
         for line in str(self.libpthread).splitlines():
             if re.search('libpthread.so', line, re.IGNORECASE):
                 if 'lib64' in line:
-                    self.libpthread = line.split(" ")[7]
+                    self.libpthread = line.split("=>")[1]
             if re.search('libc.so', line, re.IGNORECASE):
                 if 'lib64' in line:
-                    self.libc = line.split(" ")[7]
+                    self.libc = line.split("=>")[1]
         if not self.libpthread:
             self.fail("Library %s not found" % self.libpthread)
         if not self.libc:
