@@ -174,7 +174,7 @@ class NVMeTest(Test):
         """
         output = self.get_id_ctrl_prop('tnvmcap')
         if output:
-            return int(output)
+            return int(output.replace(',', ''))
         return 0
 
     def ns_list(self):
