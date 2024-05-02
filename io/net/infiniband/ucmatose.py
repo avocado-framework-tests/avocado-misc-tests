@@ -63,16 +63,25 @@ class Ucmatose(Test):
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("Not able to install %s" % pkg)
+
+        local = LocalHost()
         interfaces = netifaces.interfaces()
+        device = self.params.get("interface", default=None)
+        if device in interfaces:
+            self.iface = device
+        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
+            self.iface = local.get_interface_by_hwaddr(device).name
+        else:
+            self.iface = None
+            self.cancel("%s interface is not available" % device)
+
         self.flag = self.params.get("ext_flag", default="0")
-        self.iface = self.params.get("interface", default="")
         self.peer_ip = self.params.get("peer_ip", default="")
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        local = LocalHost()
         if self.iface[0:2] == 'ib':
             self.networkinterface = NetworkInterface(self.iface, local,
                                                      if_type='Infiniband')
@@ -100,7 +109,8 @@ class Ucmatose(Test):
         self.mtu = self.params.get("mtu", default=1500)
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
                                      password=self.peer_password)
-        self.peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip).name
+        self.peer_interface = self.remotehost.get_interface_by_ipaddr(
+            self.peer_ip).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
                                                       self.remotehost)
 
@@ -160,8 +170,9 @@ class Ucmatose(Test):
         """
         unset ip
         """
-        if self.networkinterface.set_mtu('1500') is not None:
-            self.fail("Failed to set mtu in host")
-        if self.peer_networkinterface.set_mtu('1500') is not None:
-            self.fail("Failed to set mtu in peer")
-        self.remotehost.remote_session.quit()
+        if self.iface:
+            if self.networkinterface.set_mtu('1500') is not None:
+                self.fail("Failed to set mtu in host")
+            if self.peer_networkinterface.set_mtu('1500') is not None:
+                self.fail("Failed to set mtu in peer")
+            self.remotehost.remote_session.quit()
