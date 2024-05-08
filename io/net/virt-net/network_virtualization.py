@@ -35,6 +35,7 @@ from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
 from avocado.utils.ssh import Session
 from avocado.utils import wait
+from avocado.utils import linux
 from pexpect import pxssh
 import re
 from avocado.utils.network.hosts import RemoteHost
@@ -156,10 +157,13 @@ class NetworkVirtualization(Test):
                'failover' in str(self.name.name):
                 self.cancel("this test is not needed")
         self.local = LocalHost()
-        cmd = "echo 'module ibmvnic +pt; func send_subcrq -pt' > /sys/kernel/debug/dynamic_debug/control"
-        result = process.run(cmd, shell=True, ignore_status=True)
-        if result.exit_status:
-            self.fail("failed to enable debug mode")
+        if not linux.is_os_secureboot_enabled():
+            cmd = "echo 'module ibmvnic +pt; func send_subcrq -pt' > /sys/kernel/debug/dynamic_debug/control"
+            result = process.run(cmd, shell=True, ignore_status=True)
+            if result.exit_status:
+                self.fail("failed to enable debug mode")
+        else:
+            self.log("failed to enable debug mode")
 
     @staticmethod
     def get_mcp_component(component):
@@ -1132,9 +1136,10 @@ class NetworkVirtualization(Test):
         except Exception:
             self.log.debug("Unable to set back the original active device")
         self.session_hmc.quit()
-        cmd = "echo 'module ibmvnic -pt; func send_subcrq -pt' > /sys/kernel/debug/dynamic_debug/control"
-        result = process.run(cmd, shell=True, ignore_status=True)
-        if result.exit_status:
-            self.log.debug("failed to disable debug mode")
+        if not linux.is_os_secureboot_enabled():
+            cmd = "echo 'module ibmvnic -pt; func send_subcrq -pt' > /sys/kernel/debug/dynamic_debug/control"
+            result = process.run(cmd, shell=True, ignore_status=True)
+            if result.exit_status:
+                self.log.debug("failed to disable debug mode")
         self.tune_rxtx_queue()
         self.session.quit()
