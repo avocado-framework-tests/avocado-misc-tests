@@ -66,6 +66,10 @@ class annobin(Test):
         Running tests from annobin
         '''
         count = 0
+        output = build.run_make(self.annobin_dir,
+                                process_kwargs={"ignore_status": True})
+        if output.exit_status:
+            self.cancel("annobin-tests.py: make failed")
         output = build.run_make(self.annobin_dir, extra_args="check",
                                 process_kwargs={"ignore_status": True})
         if output.exit_status:
