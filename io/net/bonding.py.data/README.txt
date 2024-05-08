@@ -16,7 +16,7 @@ Note:
 -----------------------------
 Inputs Needed To Run Tests:
 ------------------------------
-bond_interfaces --> Interfaces in the Host machine requird for Bonding
+bond_interfaces --> Interfaces names or mac address space separated in the Host machine requird for Bonding
 Note: example bond_interfaces = "ib0 ib1", Space between the interface names
 peerip --> peer ip address
 peer_interfaces --> This is needed only if a Bond interface is to be created in the Peer machine, space separated names if specifying multiple
@@ -31,5 +31,3 @@ Requirements:
 -----------------------
 1. install netifaces using pip
 command: pip install netifaces
-2. Generate sshkey for your test partner to run the test uninterrupted.(Have a passwordless ssh between the peers)
-3. Make sure IPs are set for interfaces to be used, via configuration file. ifup / ifdown should set the IPs back.
