@@ -63,8 +63,18 @@ class Ping6(Test):
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("Not able to install %s" % pkg)
+
+        local = LocalHost()
         interfaces = netifaces.interfaces()
-        self.iface = self.params.get("interface", default="")
+        device = self.params.get("interface", default=None)
+        if device in interfaces:
+            self.iface = device
+        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
+            self.iface = local.get_interface_by_hwaddr(device).name
+        else:
+            self.iface = None
+            self.cancel("%s interface is not available" % device)
+
         self.peer_iface = self.params.get("peer_interface", default="")
         self.ipv6_peer = self.params.get("peer_ipv6", default="")
         self.peer_ip = self.params.get("peer_ip", default="")
@@ -73,7 +83,6 @@ class Ping6(Test):
                                              default="None")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        local = LocalHost()
         if self.iface[0:2] == 'ib':
             self.networkinterface = NetworkInterface(self.iface, local,
                                                      if_type='Infiniband')
@@ -113,7 +122,8 @@ class Ping6(Test):
         self.mtu = self.params.get("mtu", default=1500)
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
                                      password=self.peer_password)
-        self.peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip).name
+        self.peer_interface = self.remotehost.get_interface_by_ipaddr(
+            self.peer_ip).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
                                                       self.remotehost)
 
