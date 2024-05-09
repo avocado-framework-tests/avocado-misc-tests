@@ -50,13 +50,13 @@ variants: !mux
     mmap-pages_full:
         option: --mmap-pages 8
     pid:
-        option: -p 10
+        option: -p 1
     pid_full:
-        option: --pid 10
+        option: --pid 1
     tid:
-        option: -t 10
+        option: -t 1
     tid_full:
-        option: --tid 10
+        option: --tid 1
     uid:
         option: -u 1
     uid_full:
@@ -159,9 +159,9 @@ variants: !mux
         option: --namespaces
     all-cgroups:
         option: --all-cgroups
-    switch-on:
-        option: --switch-on cycles
-    switch-off:
-        option: --switch-off cycles
     show-on-off-events:
         option: --show-on-off-events
+    addr2line:
+        option: --addr2line /usr/bin/addr2line
+    objdump:
+        option: --objdump /usr/bin/objdump

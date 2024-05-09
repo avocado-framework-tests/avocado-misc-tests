@@ -19,6 +19,10 @@ record: !mux
                 record_method: -u
         all_user_full:
                 record_method: --all-user
+        verbose:
+                record_method: -v
+        verbose_full:
+                record_method: --verbose
 
 report: !mux
         coalesce:
@@ -63,3 +67,7 @@ report: !mux
                 report_method: --stats
         stdio:
                 report_method: --stdio
+        verbose:
+              report_method: -v
+        verbose_full:
+              report_method: --verbose

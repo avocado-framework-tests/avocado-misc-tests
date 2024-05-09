@@ -4,14 +4,14 @@ subsystem: !mux
     script:
         name: script
     replay:
-        name: replay
+        name: replay -f
     map:
         name: map
         variants: !mux
             compact:
                 option: --compact
             cpus:
-                option: --cpus 0
+                option: --cpus 0 -v
             color-cpus:
                 option: --color-cpus 0
             color-pids:
@@ -20,7 +20,7 @@ subsystem: !mux
         name: timehist
         variants: !mux
             call-graph:
-                option: -g
+                option: -g -D
             call-graph_full:
                 option: --call-graph
             max-stack:
@@ -38,7 +38,7 @@ subsystem: !mux
             tid_full:
                 option: --tid 10
             summary:
-                option: -s
+                option: -s -f
             summary_full:
                 option: --summary
             with-summary:
