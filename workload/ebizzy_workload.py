@@ -53,10 +53,13 @@ class ebizzy(Test):
 
     def test_start_ebizzy_workload(self):
         # Run ebizzy workload for time duration taken from YAML file
-        process.run("nohup ./ebizzy {0} &".format(self.args))
+        process.run("./ebizzy {0} &> /tmp/ebizzy_workload.log &".format(
+            self.args), ignore_status=True, sudo=True, shell=True)
+        self.log.info("Workload started--!!")
 
     def test_stop_ebizzy_workload(self):
-        ps = process.system_output("ps -e", ignore_status=True).decode().splitlines()
+        ps = process.system_output(
+            "ps -e", ignore_status=True).decode().splitlines()
         pid = 0
         for w_load in ps:
             if "ebizzy" in w_load:
