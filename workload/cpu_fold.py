@@ -19,7 +19,7 @@ from avocado.utils.software_manager.manager import SoftwareManager
 import os
 
 
-class cpu_workload(Test):
+class Cpuworkload(Test):
     """
     This test is basically run the cpu workload as a daemon process,
     -> Covers all different cpu off on scenarios for single cpu,
