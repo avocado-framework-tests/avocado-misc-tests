@@ -53,7 +53,8 @@ class Cpuworkload(Test):
         """
         self.grep_cmd = "grep -i {}".format("cpu.sh")
         self.awk_cmd = "awk '{print $2}'"
-        self.process_kill = "ps aux | {} | {} | head -1 | xargs kill".format(self.grep_cmd, self.awk_cmd)
+        self.process_kill = "ps aux | {} | {} | head -1 | xargs kill".format(
+            self.grep_cmd, self.awk_cmd)
         process.run(self.process_kill, ignore_status=True,
                     sudo=True, shell=True)
         self.log.info("CPU Workload killed successfully--!!")
