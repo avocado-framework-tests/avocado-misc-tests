@@ -53,17 +53,19 @@ class ebizzy(Test):
 
     def test_start_ebizzy_workload(self):
         # Run ebizzy workload for time duration taken from YAML file
-        process.run("./ebizzy {0} &> /tmp/ebizzy_workload.log &".format(
-            self.args), ignore_status=True, sudo=True, shell=True)
+        process.run("./ebizzy {0} &> /tmp/ebizzy_workload.log &".format(self.args), ignore_status=True, sudo=True, shell=True)
         self.log.info("Workload started--!!")
 
     def test_stop_ebizzy_workload(self):
-        ps = process.system_output(
-            "ps -e", ignore_status=True).decode().splitlines()
+        ps = process.system_output("ps -e", ignore_status=True, shell=True).decode().splitlines()
         pid = 0
+        flag = 0
         for w_load in ps:
             if "ebizzy" in w_load:
-                pid = int(w_load.split(" ")[0])
+                pid = int(w_load.strip().split(" ")[0])
+                flag = 1
                 break
         if pid:
             os.kill(pid, 9)
+        if flag == 0:
+            self.cancel("Ebizzy workload is not running or already execution finished")
