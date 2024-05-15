@@ -20,7 +20,7 @@ from avocado.utils import distro, process, archive, build
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
-class ebizzy(Test):
+class Ebizzyworkload(Test):
 
     """
     ebizzy workload
