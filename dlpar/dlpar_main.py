@@ -98,7 +98,7 @@ class DlparTests(Test):
         test_mem_remove
         '''
         get_cwd = os.getcwd()
-        file_path = 'dlpar_main.py.data/config.txt'
+        file_path = 'config.txt'
         payload_path = os.path.join(get_cwd, file_path)
         with open(payload_path, 'a') as file:
             # Write configuration data to the file
@@ -128,7 +128,7 @@ class DlparTests(Test):
             next_index_value = index
 
             # Check if adding the next index value exceeds the max_value
-            if current_sum + next_index_value > max_value:
+            if (current_sum + next_index_value) > max_value:
                 break  # If exceeding, stop adding more index values
 
             # Add the next index value to the list
@@ -232,10 +232,47 @@ class DlparTests(Test):
                     "===============> %s cpu got added=======>\n " % cpu)
         elif self.lpar_mode == 'shared':
             Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
-            for i in range(self.iterations):
-                rvalue = Sha_obj.add_proc()
-                if rvalue == 1:
-                    self.fail("Proc add Command failed please check the logs")
+            max_proc_units = Sha_obj.get_max_proc_units()
+            self.log.info("max proc units: %s" % max_proc_units)
+            curr_proc_units = Sha_obj.get_curr_proc_unit()
+            self.log.info("current proc units :%s" % curr_proc_units)
+            max_procs = Sha_obj.get_shared_max_proc()
+            self.log.info("max proc value:%s" % max_procs)
+            curr_proc = Sha_obj.get_shared_curr_proc()
+            self.log.info("current proc value :%s" % curr_proc)
+            if max_procs > 20:
+                self.virtual_procs = self.cpu_payload_data(
+                    max_procs, curr_proc, step=2)
+            else:
+                self.virtual_procs = self.cpu_payload_data(
+                    max_procs, curr_proc)
+            self.proc_units = self.cpu_payload_data(
+                max_proc_units, curr_proc_units, step=0.75)
+            if len(self.proc_units) > len(self.virtual_procs):
+                del self.proc_units[len(self.virtual_procs):]
+            elif len(self.proc_units) < len(self.virtual_procs):
+                del self.virtual_procs[len(self.proc_units):]
+            self.log.info("proc units list: %s" % self.proc_units)
+            self.log.info("virtual procs list: %s" % self.virtual_procs)
+            Pu = []
+            Vp = []
+            for i in range(len(self.proc_units)):
+                result = self.proc_units[i] / self.virtual_procs[i]
+                if 0.05 <= result <= 1:
+                    Pu.append(self.proc_units[i])
+                    Vp.append(self.virtual_procs[i])
+            self.data_payload_backup(Vp)
+            self.data_payload_backup(Pu)
+            # Add proc_units and  virtual_procs
+            for i in range(len(Pu)):
+                if Sha_obj.add_proc(Pu[i], '--procunits') == 1:
+                    self.fail(
+                        "proc_units add Command failed please check the logs")
+                self.log.info("====>%s procunits got added====>\n " % Pu[i])
+                if Sha_obj.add_proc(Vp[i], '--procs') == 1:
+                    self.fail("CPU add Command failed please check the logs")
+                self.log.info(
+                    "===============>%s cpus got added=======>\n " % Vp[i])
 
     def test_cpu_rm(self):
         if self.lpar_mode == 'dedicated':
@@ -243,7 +280,7 @@ class DlparTests(Test):
                                    log='dedicated_cpu.log')
             # We need to read the file in terms of list
             get_cwd = os.getcwd()
-            file_path = 'dlpar_main.py.data/config.txt'
+            file_path = 'config.txt'
             payload_path = os.path.join(get_cwd, file_path)
             loaded_payload_data = self.data_payload_extract(payload_path)
             cpupayload = eval(str(loaded_payload_data[0]))
@@ -255,21 +292,36 @@ class DlparTests(Test):
                               check the logs")
                 self.log.info(
                     "=====> %s cpus got removed====>\n " % cpu)
-
         elif self.lpar_mode == 'shared':
             Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
-            for i in range(self.iterations):
-                rvalue = Sha_obj.remove_proc()
-                if rvalue == 1:
-                    self.fail("Proc remove Command failed please \
-                            check the logs")
+            get_cwd = os.getcwd()
+            file_path = 'config.txt'
+            payload_path = os.path.join(get_cwd, file_path)
+            loaded_payload_data = self.data_payload_extract(payload_path)
+            Vp = eval(str(loaded_payload_data[0]))
+            Pu = eval(str(loaded_payload_data[1]))
+            # Reverse the lists
+            Vp_reverse = reversed(Vp)
+            Pu_reverse = reversed(Pu)
+
+            # Iterate through the reversed lists
+            for vp, pu in zip(Vp_reverse, Pu_reverse):
+                if Sha_obj.remove_proc(vp, '--procs') == 1:
+                    self.fail("Cpu remove Command failed please \
+                              check the logs")
+                self.log.info("====>%s cpu got removed====>\n " % vp)
+                if Sha_obj.remove_proc(pu, '--procunits') == 1:
+                    self.fail("proc units remove Command failed \
+                              please check the logs")
+                self.log.info(
+                    "===============>%s procunits got removed=======>\n " % pu)
 
     def test_mix_cpu(self):
         if self.lpar_mode == 'dedicated':
             Ded_obj = DedicatedCpu(self.sorted_payload,
                                    log='dedicated_cpu.log')
             get_cwd = os.getcwd()
-            file_path = 'dlpar_main.py.data/config.txt'
+            file_path = 'config.txt'
             payload_path = os.path.join(get_cwd, file_path)
             loaded_payload_data = self.data_payload_extract(payload_path)
             cpu_payload = eval(str(loaded_payload_data[0]))
@@ -289,6 +341,33 @@ class DlparTests(Test):
                               check the logs")
                 self.log.info(
                     "===============>%s cpus got removed=======>\n " % cpu)
+        elif self.lpar_mode == 'shared':
+            Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
+            get_cwd = os.getcwd()
+            file_path = 'config.txt'
+            payload_path = os.path.join(get_cwd, file_path)
+            loaded_payload_data = self.data_payload_extract(payload_path)
+            Vp = eval(str(loaded_payload_data[0]))
+            Pu = eval(str(loaded_payload_data[1]))
+            # Iterate through the reversed lists
+            for pu, vp in zip(Pu, Vp):
+                if Sha_obj.add_proc(vp, '--procs') == 1:
+                    self.fail("CPU add Command failed please check the logs")
+                self.log.info(
+                    "===============>%s cpus got added=======>\n " % vp)
+                if Sha_obj.add_proc(pu, '--procunits') == 1:
+                    self.fail(
+                        "proc_units add Command failed please check the logs")
+                self.log.info("====>%s procunits got added====>\n " % pu)
+                if Sha_obj.remove_proc(pu, '--procunits') == 1:
+                    self.fail("proc units remove Command failed \
+                              please check the logs")
+                self.log.info(
+                    "===============>%s procunits got removed=======>\n " % pu)
+                if Sha_obj.remove_proc(vp, '--procs') == 1:
+                    self.fail("Cpu remove Command failed \
+                              please check the logs")
+                self.log.info("====>%s cpu got removed====>\n " % vp)
 
     def test_mem_add(self):
         Mem_obj = Memory(self.sorted_payload, log='memory.log')
@@ -299,7 +378,7 @@ class DlparTests(Test):
         self.data_payload_backup(self.mem_payload)
         self.log.info("=====list of memory to be added=====:%s" %
                       self.mem_payload)
-        for mem in self.mem_payload:
+        for mem in self.mem_payload[:-1]:
             rvalue = Mem_obj.mem_add(mem)
             if rvalue == 1:
                 self.fail(
@@ -324,47 +403,46 @@ class DlparTests(Test):
     def test_mem_mix(self):
         Mem_obj = Memory(self.sorted_payload, log='memory.log')
         get_cwd = os.getcwd()
-        file_path = 'dlpar_main.py.data/config.txt'
+        file_path = 'config.txt'
         payload_path = os.path.join(get_cwd, file_path)
         loaded_payload_data = self.data_payload_extract(payload_path)
-        mem_add_list = eval(str(loaded_payload_data[1]))
-        self.log.info("memory add list values: %s" % mem_add_list)
+        if self.lpar_mode == 'dedicated':
+            mem_add = eval(str(loaded_payload_data[1]))
+        else:
+            mem_add = eval(str(loaded_payload_data[2]))
+        self.log.info("memory add list values: %s" % mem_add)
         lmb = Mem_obj.get_lmb_size()
-        mem_rem_list = []
-        for i in mem_add_list:
+        mem_rem = []
+        for i in mem_add:
             i = int(i * 0.8)
             # Ensure max_value is divisible by lmb
             i += lmb - (i % lmb)
-            mem_rem_list.append(i)
-        self.log.info("memory remove list values: %s" % mem_rem_list)
-        for i in range(len(mem_add_list)):
-            rvalue = Mem_obj.mem_add(mem_add_list[i])
+            mem_rem.append(i)
+        self.log.info("memory remove list values: %s" % mem_rem)
+        for add, rem in zip(mem_add, mem_rem):
+            rvalue = Mem_obj.mem_add(add)
             if rvalue == 1:
                 self.fail("MEM add Command failed please check the logs")
             self.log.info(
-                "=====>%s memory got added====>\n " % mem_add_list[i])
-            rvalue = Mem_obj.mem_rem(mem_rem_list[i])
+                "=====>%s memory got added====>\n " % add)
+            rvalue = Mem_obj.mem_rem(rem)
             if rvalue == 1:
                 self.fail("MEM remove Command failed please check the logs")
             self.log.info(
-                "====>%s memory got removed====>\n " % mem_rem_list[i])
+                "====>%s memory got removed====>\n " % rem)
+        file_to_remove = 'config.txt'
+        os.remove(file_to_remove)
 
     def test_cpu_move(self):
         if self.lpar_mode == 'dedicated':
             Ded_obj = DedicatedCpu(self.sorted_payload,
                                    log='dedicated_cpu.log')
-            if Ded_obj.value:
-                self.cancel("Failed to connect secondary machine canceling \
-                        the move operation")
             for i in range(self.iterations):
                 rvalue = Ded_obj.move_ded_cpu()
                 if rvalue == 1:
                     self.fail("CPU move Command failed please check the logs")
         elif self.lpar_mode == 'shared':
             Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
-            if Sha_obj.value == 1:
-                self.cancel("Failed to connect secondary machine \
-                        canceling the move operation")
             for i in range(self.iterations):
                 rvalue = Sha_obj.move_proc()
                 if rvalue == 1:
@@ -372,9 +450,6 @@ class DlparTests(Test):
 
     def test_mem_mov(self):
         Mem_obj = Memory(self.sorted_payload, log='memory.log')
-        if Mem_obj.value == 1:
-            self.cancel("Failed to connect secondary machine canceling \
-                    the move operation")
         rvalue_move = Mem_obj.mem_move()
         if rvalue_move == 1:
             self.fail("Memory move Command failed please check the logs")

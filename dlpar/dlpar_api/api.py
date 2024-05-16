@@ -290,9 +290,9 @@ class TestCase:
             # Check at HMC
             r_msg = 'Removing %s proc units from partition %s.' % \
                     (quantity, linux_machine.partition)
-            r_condition = float(self.get_cpu_option(linux_machine,
-                                                    'curr_proc_units')) == \
-                round((curr_proc_units_before - quantity))
+            r_condition = (self.get_cpu_option(linux_machine,
+                                               'curr_proc_units') ==
+                           str(curr_proc_units_before - quantity))
             if not self.log.check_log(r_msg, r_condition, False):
                 e_msg = 'Error removing %s proc units from partition %s.' % \
                         (quantity, linux_machine.partition)
@@ -308,13 +308,10 @@ class TestCase:
                                                      'curr_proc_units'))
             proc_after_1 = float((self.get_cpu_option(linux_machine[1],
                                                       'curr_proc_units')))
-            m_condition = (float(self.get_cpu_option(linux_machine[0],
-                                                     'curr_proc_units')) ==
-                           round(float(curr_proc_units_before[0]) -
-                                 quantity)) and \
-                (float((self.get_cpu_option(linux_machine[1],
-                                            'curr_proc_units'))) ==
-                 float((curr_proc_units_before[1]) + quantity))
+            m_condition = (self.get_cpu_option(linux_machine[0], 'curr_proc_units') ==
+                           str(curr_proc_units_before[0] - quantity)) and \
+                          (self.get_cpu_option(linux_machine[1], 'curr_proc_units') ==
+                           str(curr_proc_units_before[1] + quantity))
             if not self.log.check_log(m_msg, m_condition, False):
                 e_msg = 'Moving %s proc units from %s to %s.' % \
                         (quantity, linux_machine[0].partition,
@@ -656,15 +653,15 @@ class DedicatedCpu(TestCase):
         TestCase.__init__(self, log, 'Dedicated CPU', config_payload)
 
         # Get test configuration
-        # self.quant_to_test = 2
-        # self.quant_to_test = config_payload.get('ded_quantity_to_test')
+        self.quant_to_test = 2
+        self.quant_to_test = config_payload.get('ded_quantity_to_test')
         self.sleep_time = 60
         self.sleep_time = config_payload.get('sleep_time')
 
-        # self.log.check_log('Getting Test configuration.',
-        #                  (self.quant_to_test is not None))
-        # self.log.debug("Testing with %s Dedicated CPU units." %
-        #              self.quant_to_test)
+        self.log.check_log('Getting Test configuration.',
+                           (self.quant_to_test is not None))
+        self.log.debug("Testing with %s Dedicated CPU units." %
+                       self.quant_to_test)
         self.value = self.get_connections(config_payload, clients='both')
         # Check linux partitions configuration
         self.__check_set_cfg(self.linux_1)
@@ -704,26 +701,6 @@ class DedicatedCpu(TestCase):
         else:
             self.log.info("Test finished successfully.")
             return 0
-
-    def rem_sec_cpu(self):
-        rvalue = self.__remove_dedicated_cpu(self.linux_2, self.quant_to_test)
-        if rvalue == 1:
-            return rvalue
-        else:
-            self.log.info("Test finished successfully.")
-            return 0
-
-    def mix_ded_ope(self):
-        self.__add_dedicated_cpu(self.linux_1, self.quant_to_test)
-        self.__move_dedicated_cpu(self.linux_1, self.linux_2,
-                                  self.quant_to_test)
-        self.__remove_dedicated_cpu(self.linux_2, self.quant_to_test)
-        self.__add_dedicated_cpu(self.linux_2, self.quant_to_test)
-        self.__move_dedicated_cpu(self.linux_2, self.linux_1,
-                                  self.quant_to_test)
-        self.__remove_dedicated_cpu(self.linux_1, self.quant_to_test)
-
-        self.log.info("Test finished successfully :)")
 
     def __check_set_cfg(self, linux_machine):
         """
@@ -885,54 +862,43 @@ class CpuUnit(TestCase):
                                                         'curr_min_proc_units'))
         curr_max_proc_units = float(self.get_cpu_option(linux_machine,
                                                         'curr_max_proc_units'))
-
-        # Check if the system support the virtual cpu inits to add
-        c_msg = "Checking if the machine %s supports adding %s cpu units." % \
-                (linux_machine.machine, self.quant_to_test)
-        c_condition = self.quant_to_test <= (curr_max_proc_units -
-                                             curr_min_proc_units)
-        self.log.check_log(c_msg, c_condition)
-
-        # This is the minimal virtual proc units to have
-        ideal_procs = int(curr_min_proc_units + self.quant_to_test)
-        if (((curr_min_proc_units + self.quant_to_test) % 1) != 0.0):
-            ideal_procs += + 1
-
-        # This is the ideal proc units to have
-        # XXX: We need to improve this, because we need to check the min
-        # XXX: virtual cpu, the max virtual cpu and etc
-        ideal_proc_units = float(ideal_procs)/10
-        if ideal_proc_units < curr_min_proc_units:
-            ideal_proc_units = curr_min_proc_units
-
-        # Check if the system support the needed virtual cpu quantity to have
-        c_msg = "Checking if %s profile supports %d virtual cpu units." % \
-                (linux_machine.machine, ideal_procs)
-        self.log.check_log(c_msg, ideal_procs <= curr_max_procs)
-
-        self.log.debug('Setting the curr_procs at partition %s to %d' %
-                       (linux_machine.partition, ideal_procs))
-        self.log.debug('Setting the curr_proc_units at partition %s to %f' %
-                       (linux_machine.partition, ideal_proc_units))
-
-        # Add and Remove all needed virtual cpus and proc units
-        # self.set_virtual_proc_and_proc_units(linux_machine, ideal_procs,
-        #                       ideal_proc_units, self.sleep_time)
-
-        i_msg = 'Configuration settings for partition %s correct.' % \
+        self.log.debug("curr_min_proc_units: %s" % curr_min_proc_units)
+        self.log.debug("curr_max_proc_units: %s" % curr_max_proc_units)
+        o_msg = 'Configuration settings for partition %s all correct.' % \
                 linux_machine.partition
-        self.log.info(i_msg)
+        self.log.info(o_msg)
 
-    def add_proc(self):
-        rvalue = self.__add_cpu_units(self.linux_1, self.quant_to_test)
+    def get_shared_max_proc(self):
+        curr_max_proc = int(self.get_cpu_option(self.linux_1,
+                                                'curr_max_procs'))
+        return curr_max_proc
+
+    def get_shared_curr_proc(self):
+        curr_proc = int(self.get_cpu_option(self.linux_1,
+                                            'curr_procs'))
+        return curr_proc
+
+    def get_max_proc_units(self):
+        max_proc_units = float(self.get_cpu_option(self.linux_1,
+                                                   'curr_max_proc_units'))
+        print(type(max_proc_units))
+        return max_proc_units
+
+    def get_curr_proc_unit(self):
+        curr_proc_unit = float(self.get_cpu_option(self.linux_1,
+                                                   'curr_proc_units'))
+        return curr_proc_unit
+
+    def add_proc(self, cpu, flag):
+        rvalue = self.__add_cpu_units(self.linux_1, cpu, flag)
         if rvalue == 1:
             return rvalue
         else:
             self.log.info("Test finished successfully.")
             return 0
 
-    def remove_proc(self):
-        rvalue = self.__remove_cpu_units(self.linux_1, self.quant_to_test)
+    def remove_proc(self, cpu, flag):
+        rvalue = self.__remove_cpu_units(self.linux_1, cpu, flag)
         if rvalue == 1:
             return rvalue
         else:
@@ -948,33 +914,16 @@ class CpuUnit(TestCase):
             self.log.info("Test finished successfully.")
             return 0
 
-    def remove_sec_proc(self):
-        rvalue = self.__remove_cpu_units(self.linux_2, self.quant_to_test)
-        if rvalue == 1:
-            return rvalue
-        else:
-            self.log.info("Test finished successfully.")
-            return 0
-
-    def mix_proc_ope(self):
-        self.__add_cpu_units(self.linux_1, self.quant_to_test)
-        self.__move_cpu_units(self.linux_1, self.linux_2,
-                              self.quant_to_test)
-        self.__remove_cpu_units(self.linux_2, self.quant_to_test)
-        self.__add_cpu_units(self.linux_2, self.quant_to_test)
-        self.__move_cpu_units(self.linux_2, self.linux_1,
-                              self.quant_to_test)
-        self.__remove_cpu_units(self.linux_1, self.quant_to_test)
-        self.log.info("Test finished successfully.")
-
-    def __add_cpu_units(self, linux_machine, quantity):
+    def __add_cpu_units(self, linux_machine, quantity, flag):
         """Add 'quantity' proc units at the a linux partition."""
         # Get all values before adding
         curr_proc_units_before = float(self.get_cpu_option(linux_machine,
                                                            'curr_proc_units'))
+        curr_procs_before = int(self.get_cpu_option(linux_machine,
+                                                    'curr_procs'))
 
         # Add the cpus
-        flag = ['proc', 'a', '--procunits']
+        flag = ['proc', 'a', flag]
         self.cmd_result = self.Dlpar_engine(flag, linux_machine, quantity)
         if self.cmd_result.stdout_text != "":
             return 1
@@ -983,8 +932,12 @@ class CpuUnit(TestCase):
         time.sleep(self.sleep_time)
 
         # Call to Dlpar_validation
-        self.Dlpar_cpu_validation("cpu_a", linux_machine, quantity,
-                                  curr_proc_units_before, self.cmd_result)
+        if flag[2] == '--procs':
+            self.Dlpar_cpu_validation("a", linux_machine, quantity,
+                                      curr_procs_before, self.cmd_result)
+        else:
+            self.Dlpar_cpu_validation("cpu_a", linux_machine, quantity,
+                                      curr_proc_units_before, self.cmd_result)
 
     def __move_cpu_units(self, linux_machine_1, linux_machine_2, quantity):
         """
@@ -1017,13 +970,15 @@ class CpuUnit(TestCase):
         self.Dlpar_cpu_validation("cpu_m", linux_machine, quantity,
                                   proc_info, self.cmd_output)
 
-    def __remove_cpu_units(self, linux_machine, quantity):
+    def __remove_cpu_units(self, linux_machine, quantity, flag):
         """Remove 'quantity' proc units from linux_machine."""
         # Get all values before removing
         curr_proc_units_before = float(self.get_cpu_option(linux_machine,
                                                            'curr_proc_units'))
+        curr_procs_before = int(self.get_cpu_option(linux_machine,
+                                                    'curr_procs'))
         # Remove the cpus
-        flag = ['proc', 'r', '--procunits']
+        flag = ['proc', 'r', flag]
         self.cmd_output = self.Dlpar_engine(flag, linux_machine, quantity)
         if self.cmd_result.stdout_text != "":
             return 1
@@ -1033,8 +988,12 @@ class CpuUnit(TestCase):
         time.sleep(self.sleep_time)
 
         # Check at HMC
-        self.Dlpar_cpu_validation("cpu_r", linux_machine, quantity,
-                                  curr_proc_units_before, self.cmd_output)
+        if flag[2] == '--procs':
+            self.Dlpar_cpu_validation("r", linux_machine, quantity,
+                                      curr_procs_before, self.cmd_result)
+        else:
+            self.Dlpar_cpu_validation("cpu_r", linux_machine, quantity,
+                                      curr_proc_units_before, self.cmd_output)
 
 
 class Memory(TestCase):
@@ -1054,22 +1013,19 @@ class Memory(TestCase):
         TestCase.__init__(self, log, 'Memory', config_payload)
 
         # Get test configuration
-        # self.quant_to_test = 1024
-        # self.quant_to_test = config_payload.get('mem_quantity_to_test')
+        self.quant_to_test = 1024
+        self.quant_to_test = config_payload.get('mem_quantity_to_test')
         self.sleep_time = 60
         self.sleep_time = config_payload.get('sleep_time')
 
         self.value = self.get_connections(config_payload, clients='both')
 
         self.linux_machine = config_payload.get('mem_linux_machine')
-        # self.linux_machine = self.config.get('memory', 'linux_machine')
         if self.linux_machine == 'primary':
             self.get_connections(config_payload, clients='primary')
-            # self.get_connections(clients='primary')
             self.linux = self.linux_1
         elif self.linux_machine == 'secondary':
             self.get_connections(config_payload, clients='secondary')
-            # self.get_connections(clients='secondary')
             self.linux = self.linux_2
         else:
             e_msg_1 = "Invalid 'linux_machine' at the configuration file."
@@ -1078,11 +1034,11 @@ class Memory(TestCase):
             self.log.error(e_msg_2)
             raise TestException(e_msg_1 + " " + e_msg_2)
 
-        # self.log.debug("Testing with %s megabytes of memory." %
-        #              self.quant_to_test)
+        self.log.debug("Testing with %s megabytes of memory." %
+                       self.quant_to_test)
         c_msg = 'Getting Test configuration.'
-        # c_condition = self.quant_to_test is not None
-        # self.log.check_log(c_msg, c_condition)
+        c_condition = self.quant_to_test is not None
+        self.log.check_log(c_msg, c_condition)
 
         # Check linux partitions configuration
         try:
@@ -1109,13 +1065,11 @@ class Memory(TestCase):
         # Getting memory configuration
         m_cmd = 'lshwres -m ' + linux_machine.machine + \
                 ' --level sys -r mem -F curr_avail_sys_mem'
-        # curr_avail_sys_mem = int(self.hmc.sshcnx.cmd(m_cmd))
         curr_avail_sys_mem = int(
             self.hmc.sshcnx.cmd(m_cmd).stdout_text.strip())
         curr_max_mem = int(self.get_mem_option(linux_machine, 'curr_max_mem'))
         curr_mem = int(self.get_mem_option(linux_machine, 'curr_mem'))
 
-        # Check if the system support the memory units to add
         m_msg = "Checking if the system has enough available memory to add."
         m_condition = self.quant_to_test <= curr_avail_sys_mem
         self.log.check_log(m_msg, m_condition)
@@ -1150,8 +1104,8 @@ class Memory(TestCase):
             self.log.info("Test finished successfully.")
             return 0
 
-    def mem_rem(self):
-        rvalue = self.__remove_memory(self.linux, self.quant_to_test)
+    def mem_rem(self, mem):
+        rvalue = self.__remove_memory(self.linux, mem)
         if rvalue == 1:
             return rvalue
         else:
@@ -1166,15 +1120,6 @@ class Memory(TestCase):
         else:
             self.log.info("Test finished successfully.")
             return 0
-
-    def mem_mix_ope(self):
-        self.__add_memory(self.linux_1, self.quant_to_test)
-        self.__move_memory(self.linux_1, self.linux_2, self.quant_to_test)
-        self.__remove_memory(self.linux_2, self.quant_to_test)
-        self.__add_memory(self.linux_2, self.quant_to_test)
-        self.__move_memory(self.linux_2, self.linux_1, self.quant_to_test)
-        self.__remove_memory(self.linux_1, self.quant_to_test)
-        self.log.info("Test finished successfully.")
 
     def __add_memory(self, linux_machine, quantity):
         """
