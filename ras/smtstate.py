@@ -37,8 +37,8 @@ class smtstate_tool(Test):
         if "is not SMT capable" in smt_op:
             self.cancel("Machine is not SMT capable, skipping the test")
         distro_name = self.detected_distro.name
-        distro_ver = eval(self.detected_distro.version)
-        distro_rel = eval(self.detected_distro.release)
+        distro_ver = eval(str(self.detected_distro.version))
+        distro_rel = eval(str(self.detected_distro.release))
         if distro_name == "rhel":
             if (distro_ver == 7 or
                     (distro_ver == 8 and distro_rel < 4)):
