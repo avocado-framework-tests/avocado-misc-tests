@@ -42,7 +42,7 @@ class XIVE(Test):
         else:
             self.cancel("Unsupported processor family")
 
-        mode = genio.read_file("/proc/interrupts")
+        mode = genio.read_file("/proc/interrupts").rstrip('\t\r\n\0')
         if 'XIVE' in mode:
             self.intr = 'XIVE'
         elif 'XICS' in mode:
