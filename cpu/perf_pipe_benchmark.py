@@ -14,33 +14,34 @@
 # Copyright: 2024 IBM
 # Author: Samir A Mulani <samir@linux.vnet.ibm.com>
 
-import os
-import shutil
 from avocado import Test
 from avocado.utils import process
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class perf_sched_pip_workload(Test):
+
     def setUp(self):
         """
-        Here in this test case  the command is running a scheduler benchmark
-        using perf with the perf bench subcommand, specifically testing the
-        scheduler's performance with a pipeline workload. The benchmark is
-        repeated 5 times for accuracy, and the pipeline length is set to
-        10,000,000 tasks. The perf stat command is used to collect performance
-        statistics during the benchmarking process.
+        In This test case command runs a scheduler benchmark using
+        perf bench to test pipeline workload performance, repeating
+        it 5 times for accuracy with 10,000,000 iterations.
+        perf stat collects performance statistics during the benchmark.
         """
         pkgs = []
         smm = SoftwareManager()
         pkgs.extend(["perf"])
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.cancel("Not able to install %s" % pkg)
+                self.cancel(f"Not able to install {pkg}")
+
+        self.stat_loop = self.params.get("stat_loop", default=5)
+        self.load_iteration = self.params.get(
+            "load_iteration", default=10000000)
 
     def run_workload(self, cmd):
         perf_stats_data = process.run(cmd)
-        self.log.info("successfully run cmd: %s", cmd)
+        self.log.info(f"successfully run cmd: {cmd}")
         return perf_stats_data
 
     def extract_data(self, payload_data):
@@ -51,16 +52,16 @@ class perf_sched_pip_workload(Test):
 
     def test(self):
         """
-        This command runs a performance measurement using the perf tool in
-        Linux to benchmark the scheduler's performance under high
-        contention for a piped communication scenario.
+        In this function we are running the perf benchmark 
+        for scheduler pipeline.
         """
-        cmd = "perf stat -r 5 -a perf bench sched pipe -l 10000000"
+        cmd = "perf stat -r %s -a perf bench sched pipe \
+                -l %s" % (self.stat_loop, self.load_iteration)
         payload_data = self.run_workload(cmd)
         filtered_data = self.extract_data(payload_data)
-        self.log.info("Perf stat data : \n%s", filtered_data[-1])
+        self.log.info(f"Perf stat data : \n {filtered_data[-1]}")
 
-        cmd = "perf stat -n -r 5 perf bench sched pipe"
+        cmd = "perf stat -n -r %s perf bench sched pipe" % (self.stat_loop)
         payload_data = self.run_workload(cmd)
         filtered_data = self.extract_data(payload_data)
-        self.log.info("Perf stat data: \n %s", filtered_data[-1])
+        self.log.info(f"Perf stat data: \n {filtered_data[-1]}")
