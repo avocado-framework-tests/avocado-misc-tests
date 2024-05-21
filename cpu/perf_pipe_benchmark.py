@@ -52,7 +52,7 @@ class perf_sched_pip_workload(Test):
 
     def test(self):
         """
-        In this function we are running the perf benchmark 
+        In this function we are running the perf benchmark
         for scheduler pipeline.
         """
         cmd = "perf stat -r %s -a perf bench sched pipe \
