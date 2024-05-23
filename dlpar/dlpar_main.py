@@ -375,7 +375,6 @@ class DlparTests(Test):
         curr_mem = Mem_obj.get_curr_mem()
         lmb_value = Mem_obj.get_lmb_size()
         self.mem_payload = self.mem_payload_data(max_mem, curr_mem, lmb_value)
-        self.data_payload_backup(self.mem_payload)
         self.log.info("=====list of memory to be added=====:%s" %
                       self.mem_payload)
         for mem in self.mem_payload[:-1]:
@@ -387,13 +386,13 @@ class DlparTests(Test):
                 "===============> %s Memory got added=======>\n " % mem)
 
     def test_mem_rem(self):
-        Mem_obj = Memory(self.sorted_payload, log='memory.log')
+        Mem_obj = Memory(self.sorted_payload, log='memory.log', flag='r')
         curr_mem = Mem_obj.get_curr_mem()
         lmb_value = Mem_obj.get_lmb_size()
         self.mem_remove = self.mem_payload_data(curr_mem, lmb_value)
         self.log.info(
             "==list of memory values to be removed==:%s " % self.mem_remove)
-        for mem in self.mem_remove:
+        for mem in self.mem_remove[:-1]:
             rvalue = Mem_obj.mem_rem(mem)
             if rvalue == 1:
                 self.fail("Memory remove Command failed please check the logs")
@@ -402,21 +401,18 @@ class DlparTests(Test):
 
     def test_mem_mix(self):
         Mem_obj = Memory(self.sorted_payload, log='memory.log')
-        get_cwd = os.getcwd()
-        file_path = 'config.txt'
-        payload_path = os.path.join(get_cwd, file_path)
-        loaded_payload_data = self.data_payload_extract(payload_path)
-        if self.lpar_mode == 'dedicated':
-            mem_add = eval(str(loaded_payload_data[1]))
-        else:
-            mem_add = eval(str(loaded_payload_data[2]))
+        max_mem = Mem_obj.get_max_mem()
+        self.log.info(max_mem)
+        curr_mem = Mem_obj.get_curr_mem()
+        lmb_value = Mem_obj.get_lmb_size()
+        self.log.info(lmb_value)
+        mem_add = self.mem_payload_data(curr_mem, lmb_value, max_mem)
         self.log.info("memory add list values: %s" % mem_add)
-        lmb = Mem_obj.get_lmb_size()
         mem_rem = []
         for i in mem_add:
             i = int(i * 0.8)
             # Ensure max_value is divisible by lmb
-            i += lmb - (i % lmb)
+            i += lmb_value - (i % lmb_value)
             mem_rem.append(i)
         self.log.info("memory remove list values: %s" % mem_rem)
         for add, rem in zip(mem_add, mem_rem):
