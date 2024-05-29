@@ -4,12 +4,12 @@ disk_mnt: '/mnt/loop-device'
 
 loop_section:
     type: 'loop'
-    loop_size: '12GiB'
+    loop_size: '9GiB'
     disk: "null"
 
 fs_type: !mux
     fs_ext2_4k_auto:
         fs: 'ext2'
-        args: '-R xunit -g auto'
+        args: '-R xunit -L 10 -g auto'
         mkfs_opt: '-F -b 4096'
         mount_opt: ''

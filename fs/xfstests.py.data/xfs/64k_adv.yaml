@@ -10,8 +10,8 @@ loop_type: !mux
     disk: "null"
 
 fs_type: !mux
-    fs_ext4_1k_nojournal:
-        fs: 'ext4'
+    fs_xfs_64k_adv:
+        fs: 'xfs'
         args: '-R xunit -L 10 -g quick'
-        mkfs_opt: '-b 1024 -O ^has_journal'
-        mount_opt: '-o block_validity'
+        mkfs_opt: '-f -m inobtcount=1,bigtime=1,rmapbt=1 -b size=65536'
+        mount_opt: ''
