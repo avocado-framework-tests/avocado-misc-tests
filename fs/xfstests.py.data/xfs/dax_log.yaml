@@ -5,7 +5,7 @@ logdev: true
 fs_type: !mux
     fs_xfs_dax_log:
         fs: 'xfs'
-        args: '-R xunit -g quick'
+        args: '-R xunit -L 10 -g quick'
         mkfs_opt: '-b size=65536 -s size=512 -m reflink=0'
         logdev_opt: '-l logdev'
         mount_opt: '-o dax'
