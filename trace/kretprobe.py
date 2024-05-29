@@ -71,19 +71,25 @@ class Kretprobe(Test):
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
+        cmd = "lsprop  /proc/device-tree/ibm,secure-boot"
+        output = process.system_output(cmd, ignore_status=True).decode()
+        if '00000002' in output:
+            self.cancel("Secure boot is enabled.")
 
     def build_module(self):
         """
         Building of the kretprobe kernel module
         """
-        self.log.info("============== Building kretprobe Module =================")
+        self.log.info(
+            "============== Building kretprobe Module =================")
         self.sourcedir = tempfile.mkdtemp()
         os.chdir(self.sourcedir)
 
         self.location = ('https://raw.githubusercontent.com/torvalds/linux/'
                          'master/samples/kprobes/kretprobe_example.c')
         self.kretprobe_file = self.fetch_asset(self.location, expire='7d')
-        self.kretprobe_dst = os.path.join(self.sourcedir, 'kretprobe_example.c')
+        self.kretprobe_dst = os.path.join(
+            self.sourcedir, 'kretprobe_example.c')
         shutil.copy(self.kretprobe_file, self.kretprobe_dst)
 
         """
@@ -110,7 +116,8 @@ class Kretprobe(Test):
             self.fail("insmod kretprobe_example.ko failed")
 
         if "Planted return probe" not in self.run_cmd_out("dmesg |grep -i planted"):
-            self.fail("kretprobe couldn't be planted, check dmesg for more information")
+            self.fail(
+                "kretprobe couldn't be planted, check dmesg for more information")
 
         """
         Execute date to trigger kernel_clone syscall
@@ -118,14 +125,16 @@ class Kretprobe(Test):
         self.run_cmd("date")
 
         if "return" not in self.run_cmd_out("dmesg |grep -i kernel_clone"):
-            self.fail("kretprobe probing issues, check dmesg for more information")
+            self.fail(
+                "kretprobe probing issues, check dmesg for more information")
 
         self.run_cmd("rmmod kretprobe_example")
         if self.is_fail >= 1:
             self.fail("rmmod kretprobe_example.ko failed")
 
         if "kretprobe" not in self.run_cmd_out("dmesg |grep -i unregistered"):
-            self.fail("kretprobe unregistering failed, check dmesg for more information")
+            self.fail(
+                "kretprobe unregistering failed, check dmesg for more information")
 
     def test(self):
         self.build_module()

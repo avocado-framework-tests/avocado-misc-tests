@@ -51,6 +51,10 @@ class PerfWatchPoint(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
+        cmd = "lsprop  /proc/device-tree/ibm,secure-boot"
+        output = process.system_output(cmd, ignore_status=True).decode()
+        if '00000002' in output:
+            self.cancel("Secure boot is enabled.")
         archive.extract(self.get_data("wptest-master.tar.gz"), self.workdir)
         self.build_dir = os.path.join(self.workdir, 'wptest-master')
         build.make(self.build_dir)
