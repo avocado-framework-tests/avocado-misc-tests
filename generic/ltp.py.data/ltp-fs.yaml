@@ -11,3 +11,5 @@ runltp: !mux
         args: '-f fs_bind'
     fs_readonly:
         args: '-f fs_readonly'
+    fs_aio_stress:
+        args: '-f ltp-aio-stress'
