@@ -56,7 +56,7 @@ class Schbench(Test):
                 self.cancel("%s is needed for the test to be run" % package)
         url = 'https://git.kernel.org/pub/scm/linux/kernel/git/mason/schbench.git'
         schbench_url = self.params.get("schbench_url", default=url)
-
+        self.workload_iter = self.params.get("workload_iter", default=5)
         git.get_repo(schbench_url, destination_dir=self.workdir)
         os.chdir(self.workdir)
         build.make(self.workdir)
@@ -175,18 +175,19 @@ class Schbench(Test):
             ])
         )
         # Run the benchmark command
-        res = process.run(cmd, ignore_status=True, shell=True)
-        # Check for failure and handle accordingly
-        if res.exit_status:
-            self.fail(f"The test failed. Failed command is {cmd}")
-        # Parse schbench data
-        data = res.stderr.decode().splitlines()
-        result = self.parse_schbench_data(data)
-        # Include perf data if perf_stat is enabled
-        if perf_stat:
-            result.update(self.parse_perf_data(data))
-        # Write result to JSON file
-        json_object = json.dumps(result, indent=4)
-        logfile = os.path.join(self.logdir, "schbench.json")
-        with open(logfile, "w") as outfile:
-            outfile.write(json_object)
+        for run in range(self.workload_iter):
+            res = process.run(cmd, ignore_status=True, shell=True)
+            # Check for failure and handle accordingly
+            if res.exit_status:
+                self.fail(f"The test failed. Failed command is {cmd}")
+            # Parse schbench data
+            data = res.stderr.decode().splitlines()
+            result = self.parse_schbench_data(data)
+            # Include perf data if perf_stat is enabled
+            if perf_stat:
+                result.update(self.parse_perf_data(data))
+            # Write result to JSON file
+            json_object = json.dumps(result, indent=4)
+            logfile = os.path.join(self.logdir, "schbench.json")
+            with open(logfile, "w") as outfile:
+                outfile.write(json_object)
