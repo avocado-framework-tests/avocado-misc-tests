@@ -91,7 +91,7 @@ class Netperf(Test):
                             % pkg)
         if self.peer_ip == "":
             self.cancel("%s peer machine is not available" % self.peer_ip)
-        self.timeout = self.params.get("TIMEOUT", default="600")
+
         self.mtu = self.params.get("mtu", default=1500)
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
                                      password=self.peer_password)
@@ -147,6 +147,10 @@ class Netperf(Test):
         self.duration = self.params.get("duration", default="300")
         self.min = self.params.get("minimum_iterations", default="1")
         self.max = self.params.get("maximum_iterations", default="15")
+
+        # setting netperf timeout values dynamically based on
+        # duration and max values, with additional 60 sec.
+        self.timeout = self.duration * self.max + 60
         self.option = self.params.get("option", default='')
 
     def test(self):

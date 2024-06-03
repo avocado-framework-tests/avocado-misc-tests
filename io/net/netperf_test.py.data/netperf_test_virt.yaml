@@ -5,7 +5,6 @@ host_ip: ""
 netmask: ""
 peer_user: "root"
 peer_password: "********"
-TIMEOUT: "720"
 NETSERVER_RUN: 1
 EXPECTED_THROUGHPUT: 90
 duration: 120
