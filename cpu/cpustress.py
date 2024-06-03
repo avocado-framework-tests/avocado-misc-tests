@@ -278,13 +278,13 @@ class cpustresstest(Test):
                     self.log.info("DLPAR remove cpu operation")
                     init_count = int(multiprocessing.cpu_count())
                     process.run(
-                        "drmgr -c cpu -d 5 -w 30 -r", shell=True,
+                        "drmgr -c cpu -d 5 -w 30 -r -q 1", shell=True,
                         ignore_status=True, sudo=True)
                     if int(multiprocessing.cpu_count()) >= init_count:
                         self.log.info("no more hotunpluggable cpus")
                     self.log.info("DLPAR add cpu operation")
                     process.run(
-                        "drmgr -c cpu -d 5 -w 30 -a", shell=True,
+                        "drmgr -c cpu -d 5 -w 30 -a -q 1", shell=True,
                         ignore_status=True, sudo=True)
                     if init_count != int(multiprocessing.cpu_count()):
                         self.log.info("no more hotpluggable cpus")

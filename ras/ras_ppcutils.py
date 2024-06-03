@@ -154,9 +154,9 @@ class RASToolsPpcutils(Test):
         if lcpu_count:
             lcpu_count = int(lcpu_count)
             if lcpu_count >= 2:
-                self.run_cmd("drmgr -c cpu -r 1")
+                self.run_cmd("drmgr -c cpu -r -q 1")
                 self.run_cmd("lparstat")
-                self.run_cmd("drmgr -c cpu -a 1")
+                self.run_cmd("drmgr -c cpu -a -q 1")
                 self.run_cmd("lparstat")
         self.error_check()
 

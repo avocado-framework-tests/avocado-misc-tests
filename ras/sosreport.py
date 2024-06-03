@@ -314,8 +314,8 @@ class Sosreport(Test):
             if lcpu_count:
                 lcpu_count = int(lcpu_count)
                 if lcpu_count >= 2:
-                    self.run_cmd("drmgr -c cpu -r 1")
-                    self.run_cmd("drmgr -c cpu -a 1")
+                    self.run_cmd("drmgr -c cpu -r -q 1")
+                    self.run_cmd("drmgr -c cpu -a -q 1")
                     self.run_cmd("%s --batch --tmp-dir=%s --all-logs" %
                                  (self.sos_cmd, directory_name))
                 else:
@@ -342,8 +342,8 @@ class Sosreport(Test):
             if mem_count:
                 mem_count = int(mem_count)
                 if mem_count > 512000:
-                    self.run_cmd("drmgr -c mem -r 2")
-                    self.run_cmd("drmgr -c mem -a 2")
+                    self.run_cmd("drmgr -c mem -r -q 2")
+                    self.run_cmd("drmgr -c mem -a -q 2")
                     self.run_cmd("%s --batch --tmp-dir=%s --all-logs" %
                                  (self.sos_cmd, directory_name))
                 else:
