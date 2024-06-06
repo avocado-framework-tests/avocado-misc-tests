@@ -127,6 +127,7 @@ class NetworkVirtualization(Test):
         self.host_public_ip = self.params.get('host_public_ip', default=None)
         self.host_user = self.params.get('user_name', default=None)
         self.host_password = self.params.get('host_password', default=None)
+        self.is_mlx_driver = self.params.get('is_mlx_driver', default=True)
         dmesg.clear_dmesg()
         self.session_hmc.cmd("uname -a")
         cmd = 'lssyscfg -m ' + self.server + \
@@ -680,19 +681,35 @@ class NetworkVirtualization(Test):
         time.sleep(5)
         vios.sendline("set scroll false")
         time.sleep(5)
-        cmd = "mlxcent setacs %s" % vnic_backingdevice
-        vios.sendline(cmd)
-        time.sleep(2)
-        vios.sendline("mlxcent pollq 0")
-        vios.prompt()
-        mapstart = vios.before.decode("utf-8").split("\r\n ")
-        for i in mapstart:
-            if re.search("map_start", i):
-                map_start_value = i.split("=")[1]
-        vios.sendline("quit")
-        cmd = "./eeh_tool_64 %s 3 15 -w 64 -a %s -m 0xFFFFFFFFFFFFF000" % (vnic_backingdevice, map_start_value)
-        vios.sendline(cmd)
-        time.sleep(5)
+        if self.is_mlx_driver:
+            cmd = "mlxcent setacs %s" % vnic_backingdevice
+            vios.sendline(cmd)
+            time.sleep(2)
+            vios.sendline("mlxcent pollq 0")
+            vios.prompt()
+            mapstart = vios.before.decode("utf-8").split("\r\n ")
+            for i in mapstart:
+                if re.search("map_start", i):
+                    map_start_value = i.split("=")[1]
+            vios.sendline("quit")
+            cmd = "./eeh_tool_64 %s 3 15 -w 64 -a %s -m 0xFFFFFFFFFFFFF000" % (vnic_backingdevice, map_start_value)
+            vios.sendline(cmd)
+            time.sleep(5)
+        else:
+            cmd = "lnc2ent setacs %s" % vnic_backingdevice
+            vios.sendline(cmd)
+            time.sleep(2)
+            cmd = "lnc2ent hw pollq 0"
+            vios.sendline(cmd)
+            vios.prompt()
+            tcestart = vios.before.decode("utf-8").split("\r\n ")
+            for i in tcestart:
+                if re.search("tce_start", i):
+                    tce_start_value = i.split("=")[1]
+            vios.sendline("quit")
+            cmd = "./eeh_tool_64 %s 3 15 -w 64 -a %s -m 0xFFFFFFFFFFFFF000" % (vnic_backingdevice, tce_start_value)
+            vios.sendline(cmd)
+            time.sleep(5)
         active_logport = self.get_active_device_logport(self.slot_num[0])
         if current_logport == active_logport:
             self.fail("EEH unsuccessful as there is no failover triggered on the OS")
