@@ -78,12 +78,17 @@ class Kprobe(Test):
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
+        cmd = "lsprop  /proc/device-tree/ibm,secure-boot"
+        output = process.system_output(cmd, ignore_status=True).decode()
+        if '00000002' in output:
+            self.cancel("Secure boot is enabled.")
 
     def build_module(self):
         """
         Building of the kprobe kernel module
         """
-        self.log.info("============== Building kprobe Module =================")
+        self.log.info(
+            "============== Building kprobe Module =================")
         self.sourcedir = tempfile.mkdtemp()
         os.chdir(self.sourcedir)
 
@@ -117,7 +122,8 @@ class Kprobe(Test):
             self.fail("insmod kprobe_example.ko failed")
 
         if "Planted kprobe" not in self.run_cmd_out("dmesg |grep -i planted"):
-            self.fail("kprobe couldn't be planted, check dmesg for more information")
+            self.fail(
+                "kprobe couldn't be planted, check dmesg for more information")
 
         """
         Execute date to trigger kernel_clone syscall
@@ -132,12 +138,14 @@ class Kprobe(Test):
             self.fail("rmmod kprobe_example.ko failed")
 
         if "kprobe" not in self.run_cmd_out("dmesg |grep -i unregistered"):
-            self.fail("kprobe unregistering failed, check dmesg for more information")
+            self.fail(
+                "kprobe unregistering failed, check dmesg for more information")
 
     def optprobes_disable_test(self):
         optprobes_file = "/proc/sys/debug/kprobes-optimization"
         if not self.check_kernel_support():
-            self.log.info("No support available for optprobes, skipping optprobes test")
+            self.log.info(
+                "No support available for optprobes, skipping optprobes test")
             return
 
         if not os.path.exists(optprobes_file):
@@ -147,12 +155,14 @@ class Kprobe(Test):
 
         cur_val = genio.read_one_line(optprobes_file)
         genio.write_one_line(optprobes_file, "0")
-        self.log.info("================= Disabling optprobes ==================")
+        self.log.info(
+            "================= Disabling optprobes ==================")
         if "0" not in genio.read_one_line(optprobes_file):
             self.fail("Not able to disable optprobes")
         self.execute_test()
 
-        self.log.info("================= Restoring optprobes ==================")
+        self.log.info(
+            "================= Restoring optprobes ==================")
         genio.write_one_line(optprobes_file, cur_val)
         if cur_val not in genio.read_one_line(optprobes_file):
             self.fail("Not able to restore optprobes to %s", cur_val)
