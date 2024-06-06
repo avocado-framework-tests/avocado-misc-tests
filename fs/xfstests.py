@@ -427,7 +427,7 @@ class Xfstests(Test):
                 else:
                     dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
 
-        git.get_repo('git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
+        git.get_repo('https://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
                      destination_dir=self.teststmpdir)
 
         extra_args = f"-j{os.cpu_count()}"
