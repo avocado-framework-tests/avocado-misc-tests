@@ -45,7 +45,7 @@ class Perfmon(Test):
                 self.cancel(
                     "Fail to install %s required for this test." % package)
 
-        git.get_repo('git://git.code.sf.net/p/perfmon2/libpfm4',
+        git.get_repo('https://git.code.sf.net/p/perfmon2/libpfm4 perfmon2-libpfm4',
                      destination_dir=self.workdir)
 
         os.chdir(self.workdir)
