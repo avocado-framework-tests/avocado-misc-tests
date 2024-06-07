@@ -93,7 +93,7 @@ class EliminateDomainSuffix(Test):
 
         # Initializing the values of chips and cores using lspcu
         self.chips = cpu.lscpu()["chips"]
-        self.cores = cpu.lscpu()["cores"]
+        self.cores = cpu.lscpu()["physical_cores"]
 
     # Features testing
     def test_display_domain_indices_in_sysfs(self):
