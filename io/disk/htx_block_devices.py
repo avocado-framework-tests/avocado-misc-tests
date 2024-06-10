@@ -162,6 +162,8 @@ class HtxTest(Test):
         Execute 'HTX' with appropriate parameters.
         """
         self.setup_htx()
+        self.log.info("Stopping existing htx daemon")
+        process.run(" ps -C htxd -o pid=|xargs kill -9")
         self.log.info("Starting the HTX Deamon")
         process.run("/usr/lpp/htx/etc/scripts/htxd_run")
 
