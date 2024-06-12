@@ -187,10 +187,14 @@ class kselftest(Test):
                     test_comp = self.comp + "/" + self.subtest
                 else:
                     test_comp = self.comp
-                build.make(self.sourcedir,
-                           extra_args='%s -C %s run_tests' %
-                           (kself_args, test_comp))
-        for line in open(os.path.join(self.logdir, 'debug.log')).readlines():
+                make_cmd = 'make -C %s %s -C %s run_tests' % (
+                    self.sourcedir, kself_args, test_comp)
+                result = process.run(make_cmd, shell=True, ignore_status=True)
+        log_output = result.stdout.decode('utf-8')
+        results_path = os.path.join(self.outputdir, 'raw_output')
+        with open(results_path, 'w') as r_file:
+            r_file.write(log_output)
+        for line in open(results_path).readlines():
             if self.run_type == 'upstream':
                 self.find_match(r'not ok (.*) selftests:(.*)', line)
             elif self.run_type == 'distro':
