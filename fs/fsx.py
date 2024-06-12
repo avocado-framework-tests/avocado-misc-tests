@@ -81,12 +81,13 @@ class Fsx(Test):
         '''
         Setup fsx
         '''
+
+        self.thp_page_cache = self.params.get('thp_page_cache', default=False)
         smm = SoftwareManager()
         for package in ['gcc', 'make', 'automake']:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel(package + ' is needed for the test to be run')
 
-        self.thp_page_cache = self.params.get('thp_page_cache', default=False)
         self.disk = self.params.get('disk', default="none")
         if self.thp_page_cache:
             self.dir = self.params.get('dir', default=self.workdir)
