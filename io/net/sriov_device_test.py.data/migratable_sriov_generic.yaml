@@ -4,7 +4,7 @@ sriov_adapter: "U78D8.ND0.FGXX-P0-C2-C0"
 sriov_port: "0"
 ipaddr: ""
 netmasks: ""
-peer_ip: ""
+peer_ips: ""
 mac_id: ""
 migratable: 1
 backup_veth_vnetwork: ""

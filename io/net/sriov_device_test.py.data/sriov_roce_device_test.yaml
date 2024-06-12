@@ -5,5 +5,5 @@ sriov_port: ""
 sriov_roce: True
 ipaddr: ""
 netmasks: ""
-peer_ip: ""
+peer_ips: ""
 mac_id: ""

@@ -4,7 +4,7 @@ sriov_adapter: "U78D5.ND2.CSS140C-P1-C5-C1"
 sriov_port: "0"
 ipaddr: ""
 netmasks: ""
-peer_ip: ""
+peer_ips: ""
 mac_id: ""
 migratable: 1
 vnic_sriov_adapter: ""
