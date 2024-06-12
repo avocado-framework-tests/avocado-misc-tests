@@ -37,6 +37,8 @@ class PerfUprobe(Test):
         '''
 
         # Check for basic utilities
+
+        self.temp_file = tempfile.NamedTemporaryFile().name
         smm = SoftwareManager()
         self.detected_distro = distro.detect()
         self.distro_name = self.detected_distro.name
@@ -65,7 +67,6 @@ class PerfUprobe(Test):
 
         build.make(self.teststmpdir)
         os.chdir(self.teststmpdir)
-        self.temp_file = tempfile.NamedTemporaryFile().name
         self.cmdProbe = "perf probe -x"
         self.recProbe = "perf record -o %s -e probe_uprobe_test:doit" % self.temp_file
         self.report = "perf report --input=%s" % self.temp_file
