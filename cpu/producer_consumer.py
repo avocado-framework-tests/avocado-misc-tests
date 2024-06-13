@@ -56,6 +56,7 @@ class Producer_Consumer(Test):
                 self.cancel("%s is needed for the test to be run" % package)
         url = 'https://github.com/gautshen/misc.git'
         pc_url = self.params.get("pc_url", default=url)
+        self.workload_iteration = self.params.get("workload_iter", default=5)
         git.get_repo(pc_url, destination_dir=self.workdir)
         self.sourcedir = os.path.join(self.workdir, 'producer_consumer')
         os.chdir(self.sourcedir)
@@ -79,8 +80,8 @@ class Producer_Consumer(Test):
         if not cache_size:
             iteration_length = self.params.get(
                 'iteration_length', default=1024)
-            args = '-p %s -c %s -r %s -l %s -t %s' % (pcpu, ccpu, random_seed,
-                                                      iteration_length, runtime)
+            args = '-p %s -c %s -r %s -l %s -t %s' % (
+                pcpu, ccpu, random_seed, iteration_length, runtime)
         else:
             args = '-p %s -c %s -r %s -s %s -t %s' % (pcpu, ccpu, random_seed,
                                                       cache_size, runtime)
@@ -90,28 +91,28 @@ class Producer_Consumer(Test):
             args += ' --precompute-random'
         if intermediate_stats:
             args += ' --intermediate-stats'
-
         cmd = '%s %s/producer_consumer %s' % (perfstat, self.sourcedir, args)
-        res = process.run(cmd, ignore_status=True, shell=True)
+        for run in range(self.workload_iteration):
+            res = process.run(cmd, ignore_status=True, shell=True)
 
-        if res.exit_status:
-            self.fail("The test failed. Failed command is %s" % cmd)
-        lines = res.stdout.decode().splitlines()
-        for line in lines:
-            if line.startswith('Consumer(0) :'):
-                print(line)
-                pattern = re.compile(r":\s(.*?) iterations")
-                iteration = pattern.findall(line)[0]
-                pattern = re.compile(r"time/iteration: (.*?) ns")
-                time_iter = pattern.findall(line)[0]
-                pattern = re.compile(r"time/access:  (.*?) ns")
-                time_acc = pattern.findall(line)[0]
+            if res.exit_status:
+                self.fail("The test failed. Failed command is %s" % cmd)
+            lines = res.stdout.decode().splitlines()
+            for line in lines:
+                if line.startswith('Consumer(0) :'):
+                    print(line)
+                    pattern = re.compile(r":\s(.*?) iterations")
+                    iteration = pattern.findall(line)[0]
+                    pattern = re.compile(r"time/iteration: (.*?) ns")
+                    time_iter = pattern.findall(line)[0]
+                    pattern = re.compile(r"time/access:  (.*?) ns")
+                    time_acc = pattern.findall(line)[0]
 
-                json_object = json.dumps({'iterations': iteration,
-                                          'iter_time': time_iter,
-                                          'access_time': time_acc})
-                break
+                    json_object = json.dumps({'iterations': iteration,
+                                              'iter_time': time_iter,
+                                              'access_time': time_acc})
+                    break
 
-        logfile = os.path.join(self.logdir, "time_log.json")
-        with open(logfile, "w") as outfile:
-            outfile.write(json_object)
+            logfile = os.path.join(self.logdir, "time_log.json")
+            with open(logfile, "w") as outfile:
+                outfile.write(json_object)
