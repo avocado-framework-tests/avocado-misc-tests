@@ -77,7 +77,8 @@ class NetworkSriovDevice(Test):
 
         if self.params.get('netmasks'):
             self.prefix = self.netmask_to_cidr(self.netmask[0])
-        self.peer_ip = self.params.get('peer_ip', default="").split(' ')
+        self.peer_ip = self.params.get(
+            'peer_ips', default="").split(' ')
         self.mac_id = self.params.get('mac_id',
                                       default="02:03:03:03:03:01").split(' ')
         self.mac_id = [mac.replace(':', '') for mac in self.mac_id]
