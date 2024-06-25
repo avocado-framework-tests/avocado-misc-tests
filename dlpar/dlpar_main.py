@@ -374,7 +374,7 @@ class DlparTests(Test):
         max_mem = Mem_obj.get_max_mem()
         curr_mem = Mem_obj.get_curr_mem()
         lmb_value = Mem_obj.get_lmb_size()
-        self.mem_payload = self.mem_payload_data(max_mem, curr_mem, lmb_value)
+        self.mem_payload = self.mem_payload_data(curr_mem, lmb_value, max_mem)
         self.log.info("=====list of memory to be added=====:%s" %
                       self.mem_payload)
         for mem in self.mem_payload[:-1]:
