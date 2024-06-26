@@ -123,7 +123,7 @@ class Netperf(Test):
             self.cancel("unable to copy the netperf into peer machine")
         self.netperf_dir_peer = "/tmp/%s" % self.version
         self.netperf_dir = os.path.join(self.netperf, self.version)
-        cmd1 = "unzip /tmp/%s -d /tmp;cd %s" % (os.path.basename(tarball), self.netperf_dir_peer)
+        cmd1 = "unzip -o /tmp/%s -d /tmp;cd %s" % (os.path.basename(tarball), self.netperf_dir_peer)
         output = self.session.cmd(cmd1)
         if not output.exit_status == 0:
             self.fail("test failed because command failed in peer machine")
