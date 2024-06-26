@@ -26,3 +26,9 @@ Requirements:
 2.install nteifaces using pip.
 command: pip install netifaces
 3.user should have root access to both client machine and peer machine.
+
+Additional Notes:
+-----------------
+Currently "Netserver" supports only for IPv4/AF_INET Ports,
+where Netserver initialize and listens on IPV4 interfaces for both Host and Peer systems.
+

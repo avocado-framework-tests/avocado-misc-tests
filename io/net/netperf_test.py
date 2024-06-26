@@ -162,7 +162,7 @@ class Netperf(Test):
             output = self.session.cmd(cmd)
             if not output.exit_status == 0:
                 self.fail("test failed because netserver not available")
-            cmd = "/tmp/%s/src/netserver" % self.version
+            cmd = "/tmp/%s/src/netserver -4" % self.version
             output = self.session.cmd(cmd)
             if not output.exit_status == 0:
                 self.fail("test failed because netserver not available")
