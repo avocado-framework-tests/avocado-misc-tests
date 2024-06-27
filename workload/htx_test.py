@@ -161,6 +161,12 @@ class HtxTest(Test):
                 else:
                     self.cancel("RPM link is required for RPM run type")
         self.log.info("Starting the HTX Deamon")
+        # Kill existing HTXD process if running
+        htxd_pid = process.getoutput("pgrep -f htxd")
+        if htxd_pid:
+            self.log.info("HTXD is already running with PID: %s. Killing it.", htxd_pid)
+            process.run("pkill -f htxd", ignore_status=True)
+            time.sleep(10)
         process.run('/usr/lpp/htx/etc/scripts/htxd_run')
 
         self.log.info("Creating the HTX mdt files")
