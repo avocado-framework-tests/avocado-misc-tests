@@ -70,7 +70,7 @@ class SmtFolding(Test):
             'patch', default='Fix-build-issues-with-ebizzy.patch')
 
         os.chdir(self.sourcedir)
-        fix_patch = 'patch -p0 < %s' % (self.get_data(patch))
+        fix_patch = 'patch -p0 < %s' % (os.path.abspath(self.get_data(patch)))
         process.run(fix_patch, shell=True)
         process.run("./configure")
         build.make(self.sourcedir)
