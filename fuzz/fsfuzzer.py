@@ -67,8 +67,8 @@ class Fsfuzzer(Test):
 
         if d_name == "ubuntu":
             # Patch for ubuntu
-            fuzz_fix_patch = 'patch -p1 < %s' % self.get_data(
-                'fsfuzz_fix.patch')
+            fuzz_fix_patch = 'patch -p1 < %s' % os.path.abspath(self.get_data(
+                'fsfuzz_fix.patch'))
             if process.system(fuzz_fix_patch, shell=True, ignore_status=True):
                 self.log.warn("Unable to apply sh->bash patch!")
 

@@ -67,7 +67,7 @@ class Dwh(Test):
         os.chdir(self.teststmpdir)
         if dist.name in ['fedora', 'rhel']:
             process.system('patch -p0 < %s' %
-                           self.get_data('fofd.patch'), shell=True)
+                           os.path.abspath(self.get_data('fofd.patch')), shell=True)
         elif dist.name in ['Ubuntu', 'debian']:
             process.system("sed -i 's/g++.*/& -lrt/' Makefile", shell=True)
         build.make(self.teststmpdir)
