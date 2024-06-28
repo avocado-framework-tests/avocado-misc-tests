@@ -16,7 +16,7 @@
 
 import platform
 from avocado import Test
-from avocado.utils import distro, dmesg, genio, process
+from avocado.utils import distro, dmesg, genio, process, cpu
 from avocado.utils.software_manager.manager import SoftwareManager
 
 IS_POWER_NV = 'PowerNV' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0')
@@ -51,6 +51,7 @@ class perf_metric(Test):
         if 'ppc64' not in detected_distro.arch:
             self.cancel("Processor is not PowerPC")
 
+        self.rev = cpu.get_revision()
         deps = ['gcc', 'make']
         if 'Ubuntu' in detected_distro.name:
             deps.extend(['linux-tools-common', 'linux-tools-%s'
@@ -102,6 +103,9 @@ class perf_metric(Test):
                     self.fail_cmd.append(cmd)
             if ("not counted" in output) or ("not supported" in output):
                 self.fail_cmd.append(cmd)
+            if "operations is limited" in output:
+                self.cancel("Please enable lpar to allow collecting the"
+                            " hv_24x7 counters info")
         if self.fail_cmd:
             self.fail("perf_metric: commands failed are %s" % self.fail_cmd)
 
@@ -110,6 +114,39 @@ class perf_metric(Test):
 
     def test_all_metric_events_with_metric(self):
         self._run_cmd("--metric-only -M")
+
+    def test_cpi_stall(self):
+        """
+        Function to test CPI_STALL_RATIO feature. Power10 PMU provides events
+        to understand stall cycles of different pipeline stages.
+        """
+        # Check if CPI_STALL_RATIO metricgroup is present in perf list or not
+        output = process.system_output('perf list metricgroup')
+        if self.rev == '0080' and 'CPI_STALL_RATIO' in output.decode().split():
+            cmd = "perf stat --metric-no-group -M CPI_STALL_RATIO perf bench sched messaging"
+            res = process.run(cmd, shell=True, verbose=True)
+            result = (res.stdout + res.stderr).decode()
+            if res.exit_status != 0 or "not counted" in result or "not supported" in result:
+                self.fail("Failed to collect perf stats with CPI_STALL_RATIO"
+                          " metricgroup")
+
+            # Check if the required metrics are present and only once
+            required_metrics = ['PM_CMPL_STALL', 'PM_ISSUE_STALL', 'PM_RUN_INST_CMPL',
+                                'PM_DISP_STALL_CYC', 'PM_EXEC_STALL',
+                                'COMPLETION_STALL_CPI', 'ISSUE_STALL_CPI',
+                                'DISPATCH_STALL_CPI', 'EXECUTION_STALL_CPI']
+            metric_count = {metric: result.count(metric) for metric in required_metrics}
+            for metric, count in metric_count.items():
+                if count == 0:
+                    self.fail(f"Error: Metric {metric} is not present in the output")
+                elif count > 1:
+                    self.fail(f"Error: Metric {metric} appears more than once"
+                              " in the output results in multiplexing")
+            self.log.info("All required metrics are present and no "
+                          "multiplexing is happening")
+        else:
+            self.cancel("Feature not supported on platform or metricgroup not "
+                        "present in perf list")
 
     def tearDown(self):
         # Collect the dmesg
