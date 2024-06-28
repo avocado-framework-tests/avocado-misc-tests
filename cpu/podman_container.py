@@ -15,7 +15,6 @@
 # Author: Samir A Mulani <samir@linux.vnet.ibm.com>
 
 import os
-import shutil
 from avocado import Test
 from avocado.utils import process, distro
 from avocado.utils import build, distro
