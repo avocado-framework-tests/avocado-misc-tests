@@ -1,0 +1,9 @@
+time_limit: 24
+time_unit: 'h'
+mdt: !mux
+    bu:
+        mdt_file: 'mdt.bu'
+    less:
+        mdt_file: 'mdt.less'
+    all:
+        mdt_file: 'mdt.all'
