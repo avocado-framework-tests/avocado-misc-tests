@@ -35,6 +35,7 @@ class perf_sched_pip_workload(Test):
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel(f"Not able to install {pkg}")
 
+        self.test_iter = self.params.get("test_iter", default=5)
         self.stat_loop = self.params.get("stat_loop", default=5)
         self.load_iteration = self.params.get(
             "load_iteration", default=10000000)
@@ -55,13 +56,16 @@ class perf_sched_pip_workload(Test):
         In this function we are running the perf benchmark
         for scheduler pipeline.
         """
-        cmd = "perf stat -r %s -a perf bench sched pipe \
-                -l %s" % (self.stat_loop, self.load_iteration)
-        payload_data = self.run_workload(cmd)
-        filtered_data = self.extract_data(payload_data)
-        self.log.info(f"Performance matrix : \n {filtered_data[-1]}")
+        for test_run in range(self.test_iter):
+            self.log.info("Test iteration %s " % (test_run))
+            cmd = "perf stat -r %s -a perf bench sched pipe \
+                    -l %s" % (self.stat_loop, self.load_iteration)
+            payload_data = self.run_workload(cmd)
+            filtered_data = self.extract_data(payload_data)
+            self.log.info(f"Performance matrix : \n {filtered_data[-1]}")
 
-        cmd = "perf stat -n -r %s perf bench sched pipe" % (self.stat_loop)
-        payload_data = self.run_workload(cmd)
-        filtered_data = self.extract_data(payload_data)
-        self.log.info(f"Performance matrix: \n {filtered_data[-1]}")
+            cmd = "perf stat -n -r %s perf bench sched pipe" % (self.stat_loop)
+            payload_data = self.run_workload(cmd)
+            filtered_data = self.extract_data(payload_data)
+            self.log.info(f"Performance matrix: \n {filtered_data[-1]}")
+            self.log.info("===========================================")
