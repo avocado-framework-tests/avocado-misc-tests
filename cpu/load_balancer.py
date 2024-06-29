@@ -37,7 +37,6 @@ class load_balancer(Test):
     1. RHEL distro version should greter than 8 and distro release
         should not less than 4
     2. SUSE supported only after SLES15 SP3.
-    -> Python pandas package need to be installed
     Below packages to be installed to run the test,
     -> powerpc-utils, sysstat, stress-ng.
     """
