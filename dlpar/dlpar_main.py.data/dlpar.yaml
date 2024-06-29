@@ -16,5 +16,4 @@ mem_linux_machine: primary
 
 config:
     lpar_mode: !mux
-        dedicated:
-            lp_mode: 'dedicated'
+        lp_mode: 'dedicated' #for shared mode use lp_mode: 'shared'
