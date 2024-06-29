@@ -253,9 +253,13 @@ class NetworkVirtualization(Test):
                                      password=self.peer_password)
         peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip[0]).name
         cmd = "ethtool -L %s rx 16 tx 16" % peer_interface
+        self.session = Session(self.peer_ip[0], user=self.peer_user,
+                               password=self.peer_password)
+        time.sleep(5)
         output = self.session.cmd(cmd)
         if not output:
             self.cancel("Unable to tune RX and TX queue in peer")
+        self.session.quit()
         device = self.find_device(self.mac_id[0])
         cmd = "ethtool -L %s rx 16 tx 16" % device
         result = process.run(cmd)
@@ -267,12 +271,16 @@ class NetworkVirtualization(Test):
         Enable irqbalance service on host and peer
         """
         cmd_start = "systemctl start irqbalance"
+        self.session = Session(self.peer_ip[0], user=self.peer_user,
+                               password=self.peer_password)
+        time.sleep(5)
         self.session.cmd(cmd_start)
         cmd_status = "systemctl status irqbalance"
         output = self.session.cmd(cmd_status).stdout_text.splitlines()
         for line in output:
             if re.search("Active: active (running)", line):
                 self.log("irqbalance service is active in peer")
+        self.session.quit()
         process.system(cmd_start)
         for line in process.system_output(cmd_status).decode("utf-8").splitlines():
             if re.search("Active: active (running)", line):
@@ -314,8 +322,6 @@ class NetworkVirtualization(Test):
                        virtualized device")
             if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
                 self.fail("Ping failed with active vnic device")
-        self.session = Session(self.peer_ip[0], user=self.peer_user,
-                               password=self.peer_password)
         self.enable_irqbalance()
         self.tune_rxtx_queue()
         self.check_dmesg_error()
