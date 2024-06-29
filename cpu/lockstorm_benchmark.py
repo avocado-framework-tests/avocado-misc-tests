@@ -45,6 +45,7 @@ class lockstorm_benchmark(Test):
                 self.cancel(f'{package} is needed for the test to be run')
 
         self.cpu_list = self.params.get("cpu_list", default=0)
+        self.test_iter = self.params.get("test_iter", default=5)
 
         url = "https://github.com/npiggin/lockstorm.git"
         git.get_repo(url, branch='master', destination_dir=self.workdir)
@@ -57,8 +58,8 @@ class lockstorm_benchmark(Test):
         """
         This function capture the spinlock performance stats from dmesg.
 
-        :param smt_state: Here we are passing the smt state that we are going to
-        change.
+        :param smt_state: Here we are passing the smt state that we are
+        going to change.
         """
         cmd = "dmesg | tail -n 1"
         self.log.info(f"=================Dump data for \
@@ -76,19 +77,20 @@ class lockstorm_benchmark(Test):
         process.run('ppc64_cpu --cores-on=all', shell=True)
         process.run('ppc64_cpu --smt=on', shell=True)
         cpu_controller = ["2", "4", "6", "on", "off"]
-        for smt_mode in cpu_controller:
-            cmd = "ppc64_cpu --smt={}".format(smt_mode)
-            self.log.info(f"=======smt mode {smt_mode}=======")
-            process.run(cmd, shell=True)
-            cmd = "insmod ./lockstorm.ko" + " cpulist=%s" % \
-                (self.cpu_list)
+        for test_run in range(self.test_iter):
+            self.log.info("Test iteration %s " % (test_run))
+            for smt_mode in cpu_controller:
+                cmd = "ppc64_cpu --smt={}".format(smt_mode)
+                self.log.info(f"=======smt mode {smt_mode}=======")
+                process.run(cmd, shell=True)
+                cmd = "insmod ./lockstorm.ko" + " cpulist=%s" % \
+                    (self.cpu_list)
 
-            if self.cpu_list == 0:
-                cmd = "insmod ./lockstorm.ko"
-
-            process.system(cmd,
-                           ignore_status=True, shell=False, sudo=True)
-            self.capture_dmesg_dump(smt_mode)
+                if self.cpu_list == 0:
+                    cmd = "insmod ./lockstorm.ko"
+                process.system(cmd,
+                               ignore_status=True, shell=False, sudo=True)
+                self.capture_dmesg_dump(smt_mode)
 
     def tearDown(self):
         """
