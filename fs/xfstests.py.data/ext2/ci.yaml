@@ -4,7 +4,7 @@ disk_mnt: '/mnt/loop-device'
 
 loop_section:
     type: 'loop'
-    loop_size: '12GiB'
+    loop_size: '9GiB'
     disk: "null"
 
 fs_type: !mux

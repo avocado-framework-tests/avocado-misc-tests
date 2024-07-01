@@ -3,18 +3,18 @@ test_mnt: '/mnt/test'
 fs_type: !mux
     fs_ext4:
         fs: 'ext4'
-        args: '-e ext4/048 -R xunit generic/001'
-        mkfs_opt: '-b 65536'
+        args: '-e ext4/048 -R xunit -L 10 -g quick'
+        mkfs_opt: '-b 4096 -O quota'
         mount_opt: '-o block_validity'
     fs_xfs:
         fs: 'xfs'
-        args: '-e ext4/048 -R xunit generic/001'
+        args: '-R xunit -L 10 -g quick'
         mkfs_opt: '-f -b size=4096'
         mount_opt: ''
     fs_btrfs:
         fs: 'btrfs'
-        args: '-R xunit generic/001'
-        mkfs_opt: '-f -s 4096 -n 4096'
+        args: '-R xunit -L 10 -g quick'
+        mkfs_opt: '-f -s 4096 -n 4096 -O quota'
         mount_opt: ''
 disk_type: !mux
     type: 'disk'
