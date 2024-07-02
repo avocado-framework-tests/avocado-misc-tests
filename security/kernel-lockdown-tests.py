@@ -41,8 +41,9 @@ class kernelLockdown(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
         val = genio.read_file("/proc/cpuinfo")
-        if 'POWER10' not in val:
-            self.cancel("Power10 LPAR is required to run this test.")
+        power_ver = ['POWER10', 'Power11']
+        if not any(x in val for x in power_ver):
+            self.cancel("LPAR on Power10 and above is required for this test.")
         # Checking whether lockdown enabled or not.
         self.lockdown_file = "/sys/kernel/security/lockdown"
         if not os.path.exists(self.lockdown_file):
