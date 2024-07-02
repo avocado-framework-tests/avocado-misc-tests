@@ -31,8 +31,10 @@ class GrubExtendPCR(Test):
         Install the basic packages
         '''
         # Check for basic utilities
-        if 'POWER10' not in genio.read_file("/proc/cpuinfo"):
-            self.cancel("Power10 LPAR is required to run this test.")
+        val = genio.read_file("/proc/cpuinfo")
+        power_ver = ['POWER10', 'Power11']
+        if not any(x in val for x in power_ver):
+            self.cancel("LPAR on Power10 and above is required for this test.")
         device_tree_path = "/proc/device-tree/vdevice/"
         vtpm = [i for i, item in enumerate(os.listdir(device_tree_path)) if item.startswith('vtpm@')]
         if not vtpm:
