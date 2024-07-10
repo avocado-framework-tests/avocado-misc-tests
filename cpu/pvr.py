@@ -80,6 +80,9 @@ class pvr(Test):
                 self.pvr_value = parser.get('PVR_Values', 'pvr_value_p10_1')
             elif rev[1] == '2.0':
                 self.pvr_value = parser.get('PVR_Values', 'pvr_value_p10_2')
+        elif 'pSeries' in val and 'Power11' in val:
+            if rev[1] == '2.0':
+                self.pvr_value = parser.get('PVR_Values', 'pvr_value_p11')
         else:
             self.fail("Unsupported processor family")
 
