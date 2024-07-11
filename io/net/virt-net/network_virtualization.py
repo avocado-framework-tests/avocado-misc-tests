@@ -165,6 +165,7 @@ class NetworkVirtualization(Test):
                 self.fail("failed to enable debug mode")
         else:
             self.log("failed to enable debug mode")
+        self.session = Session(self.peer_ip, user=self.peer_user, password=self.peer_password)
 
     @staticmethod
     def get_mcp_component(component):
@@ -318,8 +319,6 @@ class NetworkVirtualization(Test):
                        virtualized device")
             if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
                 self.fail("Ping failed with active vnic device")
-        self.session = Session(self.peer_ip[0], user=self.peer_user,
-                               password=self.peer_password)
         self.enable_irqbalance()
         self.tune_rxtx_queue()
         self.check_dmesg_error()
