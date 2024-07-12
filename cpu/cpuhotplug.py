@@ -39,7 +39,7 @@ def collect_dmesg(object):
     object.whiteboard = process.system_output("dmesg").decode('utf-8')
 
 
-class cpustresstest(Test):
+class cpuHotplug(Test):
 
     """
     Test to stress the CPU's and its functionality.
