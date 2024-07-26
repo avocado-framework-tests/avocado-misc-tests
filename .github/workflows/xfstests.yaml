@@ -55,13 +55,13 @@ jobs:
           docker exec avocado_test_container bash -c "\
           if [[ '${{ matrix.container }}' == 'ubuntu:latest' ]]; then \
             apt-get update && apt-get -y upgrade && apt-get install -y build-essential python3 python3-pip && \
-            pip3 install avocado-framework && pip3 install avocado-framework-plugin-varianter-yaml-to-mux; \
+            pip3 install --break-system-packages avocado-framework && pip3 install --break-system-packages avocado-framework-plugin-varianter-yaml-to-mux; \
           elif [[ '${{ matrix.container }}' == 'fedora:latest' ]]; then \
             dnf -y update && dnf -y groupinstall 'Development Tools' && dnf -y install python3 python3-pip hostname which && \
             pip3 install avocado-framework && pip3 install avocado-framework-plugin-varianter-yaml-to-mux; \
           elif [[ '${{ matrix.container }}' == 'opensuse/leap:latest' ]]; then \
             zypper -n update && zypper -n install -t pattern devel_basis && zypper -n install python3 python3-pip hostname which && \
-            pip3 install avocado-framework==100 && pip3 install avocado-framework-plugin-varianter-yaml-to-mux==100; \
+            pip3 install PyYAML==6.0.1 && pip3 install avocado-framework==100.1 && pip3 install avocado-framework-plugin-varianter-yaml-to-mux==100.1; \
           fi \
           "
 
