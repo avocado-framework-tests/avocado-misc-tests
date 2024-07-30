@@ -257,7 +257,7 @@ class NetworkVirtualization(Test):
         self.remotehost = RemoteHost(self.peer_ip[0], self.peer_user,
                                      password=self.peer_password)
         peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip[0]).name
-        cmd = "ethtool -L %s rx 16 tx 16" % peer_interface
+        cmd = "ethtool -L %s rx 10 tx 10" % peer_interface
         output = self.session.cmd(cmd)
         if not output:
             self.cancel("Unable to tune RX and TX queue in peer")
