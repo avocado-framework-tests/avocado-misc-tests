@@ -25,3 +25,5 @@ host_password: ""
 peer_user: ""
 peer_password: ""
 is_mlx_driver: True
+transmit_tx: 10
+receive_rx: 10

@@ -129,6 +129,8 @@ class NetworkVirtualization(Test):
         self.host_user = self.params.get('user_name', default=None)
         self.host_password = self.params.get('host_password', default=None)
         self.is_mlx_driver = self.params.get('is_mlx_driver', default=True)
+        self.transmit_tx = self.params.get('transmit_tx', default=10)
+        self.receive_rx = self.params.get('receive_rx', default=10)
         dmesg.clear_dmesg()
         self.session_hmc.cmd("uname -a")
         cmd = 'lssyscfg -m ' + self.server + \
@@ -165,7 +167,6 @@ class NetworkVirtualization(Test):
                 self.fail("failed to enable debug mode")
         else:
             self.log("failed to enable debug mode")
-        self.session = Session(self.peer_ip, user=self.peer_user, password=self.peer_password)
 
     @staticmethod
     def get_mcp_component(component):
@@ -257,12 +258,12 @@ class NetworkVirtualization(Test):
         self.remotehost = RemoteHost(self.peer_ip[0], self.peer_user,
                                      password=self.peer_password)
         peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip[0]).name
-        cmd = "ethtool -L %s rx 16 tx 16" % peer_interface
-        output = self.session.cmd(cmd)
+        cmd = "ethtool -L %s rx %s tx %s" % (peer_interface, self.transmit_tx, self.receive_rx)
+        output = self.session_peer.cmd(cmd)
         if not output:
             self.cancel("Unable to tune RX and TX queue in peer")
         device = self.find_device(self.mac_id[0])
-        cmd = "ethtool -L %s rx 16 tx 16" % device
+        cmd = "ethtool -L %s rx %s tx %s" % (device, self.transmit_tx, self.receive_rx)
         result = process.run(cmd)
         if result.exit_status:
             self.cancel("Unable to tune RX and TX queue in host")
@@ -272,9 +273,9 @@ class NetworkVirtualization(Test):
         Enable irqbalance service on host and peer
         """
         cmd_start = "systemctl start irqbalance"
-        self.session.cmd(cmd_start)
+        self.session_peer.cmd(cmd_start)
         cmd_status = "systemctl status irqbalance"
-        output = self.session.cmd(cmd_status).stdout_text.splitlines()
+        output = self.session_peer.cmd(cmd_status).stdout_text.splitlines()
         for line in output:
             if re.search("Active: active (running)", line):
                 self.log("irqbalance service is active in peer")
@@ -319,6 +320,9 @@ class NetworkVirtualization(Test):
                        virtualized device")
             if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
                 self.fail("Ping failed with active vnic device")
+        self.session_peer = Session(self.peer_ip[0], user=self.peer_user, password=self.peer_password)
+        if not wait.wait_for(self.session_peer.connect, timeout=30):
+            self.fail("Failed connecting to peer lpar")
         self.enable_irqbalance()
         self.tune_rxtx_queue()
         self.check_dmesg_error()
@@ -1136,10 +1140,18 @@ class NetworkVirtualization(Test):
         """
         error = ['uevent: failed to send synthetic uevent',
                  'Invalid request detected while CRQ is inactive',
-                 'failed to send uevent', 'registration failed']
+                 'failed to send uevent', 'registration failed',
+                 'CRQ-init failed, -11']
+        error_list = ["Virtual Adapter failed", "Failed to set link state"]
+        if 'test_remove' not in str(self.name.name):
+            device = self.find_device(self.mac_id[0])
+            networkinterface = NetworkInterface(device, self.local)
+            for err in error_list:
+                if networkinterface.ping_check(self.peer_ip[0], count=5) is None:
+                    error.append(err)
         self.log.info("Gathering kernel errors if any")
         try:
-            dmesg.collect_errors_by_level(skip_errors=error)
+            dmesg.collect_errors_by_level(level_check=4, skip_errors=error)
         except Exception as exc:
             self.log.info(exc)
             self.fail("test failed,check dmesg log in debug log")
@@ -1157,5 +1169,5 @@ class NetworkVirtualization(Test):
             result = process.run(cmd, shell=True, ignore_status=True)
             if result.exit_status:
                 self.log.debug("failed to disable debug mode")
-        self.tune_rxtx_queue()
-        self.session.quit()
+        if 'test_add' in str(self.name.name):
+            self.session_peer.quit()
