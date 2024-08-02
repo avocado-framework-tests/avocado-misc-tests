@@ -44,7 +44,7 @@ class test_generic_events(Test):
                     self.generic_events = dict(parser.items('POWER8'))
                 elif '004e' in self.rev:
                     self.generic_events = dict(parser.items('POWER9'))
-                elif '0080' in self.rev:
+                elif '0080' in self.rev or '0082' in self.rev:
                     self.generic_events = dict(parser.items('POWER10'))
                 else:
                     self.cancel("Processor is not supported: %s" % cpu_info)
