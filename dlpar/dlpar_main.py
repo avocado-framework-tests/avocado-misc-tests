@@ -164,9 +164,14 @@ class DlparTests(Test):
         result_list = []
         current_sum = 0
         index_value = lmb
+        cmd = 'htxcmdline -query  -mdt mdt.*'
         if max_value == 0:
-            # Calculate 80% of curr_mem
-            max_value = curr_mem * 0.8
+            cmd_output = process.system_output(cmd, ignore_status=True).decode()
+            if 'IDLE' not in cmd_output:
+                max_value = curr_mem * 0.4
+            else:
+                # Calculate 80% of curr_mem
+                max_value = curr_mem * 0.8
             # Ensure max_value is divisible by lmb
             max_value += lmb - (max_value % lmb)
             current_sum = 0
@@ -368,6 +373,8 @@ class DlparTests(Test):
                     self.fail("Cpu remove Command failed \
                               please check the logs")
                 self.log.info("====>%s cpu got removed====>\n " % vp)
+        file_to_remove = 'config.txt'
+        os.remove(file_to_remove)
 
     def test_mem_add(self):
         Mem_obj = Memory(self.sorted_payload, log='memory.log')
@@ -426,8 +433,6 @@ class DlparTests(Test):
                 self.fail("MEM remove Command failed please check the logs")
             self.log.info(
                 "====>%s memory got removed====>\n " % rem)
-        file_to_remove = 'config.txt'
-        os.remove(file_to_remove)
 
     def test_cpu_move(self):
         if self.lpar_mode == 'dedicated':
