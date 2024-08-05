@@ -20,6 +20,8 @@ MOFED Install Test
 
 import os
 import re
+import urllib.request
+import ssl
 from avocado import Test
 from avocado.utils import process, distro
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -57,10 +59,13 @@ class MOFEDInstallTest(Test):
                     detected_distro.version, detected_distro.release)
                 patterns = [host_distro_pattern]
                 for pattern in patterns:
-                    temp_string = process.getoutput(
-                        "curl --silent %s" % (self.iso_location), verbose=False, shell=True, ignore_status=True)
+                    scontext = ssl.SSLContext(ssl.PROTOCOL_TLS)
+                    scontext.verify_mode = ssl.VerifyMode.CERT_NONE
+                    response = urllib.request.urlopen(
+                        self.iso_location, context=scontext)
+                    temp_string = response.read()
                     matching_mofed_versions = re.findall(
-                        r"(?<=\>)MLNX_OFED_LINUX-\w*[.]\w*[-]\w*[.]\w*[.]\w*[.]\w*[-]\w*[-]\w*[.]\w*", str(temp_string))
+                        r"MLNX_OFED_LINUX-\w*[.]\w*[-]\w*[.]\w*[.]\w*[.]\w*[-]\w*[-]\w*[.]\w*", str(temp_string))
                     distro_specific_mofed_versions = [host_distro_pattern
                                                       for host_distro_pattern
                                                       in matching_mofed_versions
@@ -72,10 +77,10 @@ class MOFEDInstallTest(Test):
                     detected_distro.name, detected_distro.version, detected_distro.release)
                 patterns = [host_distro_pattern]
                 for pattern in patterns:
-                    temp_string = process.getoutput(
-                        "curl --silent %s" % (self.iso_location), verbose=False, shell=True, ignore_status=True)
+                    response = urllib.request.urlopen(self.iso_location)
+                    temp_string = response.read()
                     matching_mofed_versions = re.findall(
-                        r"(?<=\>)MLNX_OFED_LINUX-\w*[.]\w*[-]\w*[.]\w*[.]\w*[.]\w*[-]\w*[.]\w*[-]\w*[.]\w*", str(temp_string))
+                        r"MLNX_OFED_LINUX-\w*[.]\w*[-]\w*[.]\w*[.]\w*[.]\w*[-]\w*[.]\w*[-]\w*[.]\w*", str(temp_string))
                     distro_specific_mofed_versions = [host_distro_pattern
                                                       for host_distro_pattern
                                                       in matching_mofed_versions
