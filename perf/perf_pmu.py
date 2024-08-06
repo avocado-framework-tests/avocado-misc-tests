@@ -15,6 +15,8 @@
 
 import os
 import glob
+import random
+import re
 from avocado import Test
 from avocado.utils import cpu, dmesg, genio, linux_modules, process
 from avocado import skipIf, skipUnless
@@ -82,6 +84,22 @@ class PerfBasic(Test):
         if not process.system('id test_pmu', sudo=True, ignore_status=True):
             process.system('userdel -r test_pmu', sudo=True,
                            ignore_status=True)
+
+    def get_random_filenames(self, directory, num_files=3):
+        files = os.listdir(directory)
+        random_files = random.sample(files, num_files)
+        return random_files
+
+    def check_ProcessorCompatMode(self, file_path, patterns):
+        found_patterns = set()
+        with open(file_path, 'r') as file:
+            content = file.read()
+            for pattern in patterns:
+                if re.search(pattern, content):
+                    found_patterns.add(pattern)
+        compat_mode = str(found_patterns)
+        compat_mode = compat_mode.strip('{}').strip("'")
+        return compat_mode
 
     def _check_kernel_config(self, config_option):
         # This function checks the kernel configuration with the input
@@ -208,6 +226,40 @@ class PerfBasic(Test):
         # This test checks for the sysfs event_source directory and checks for
         # cpu events count
         self._check_count('cpu')
+
+    def test_sysfs_events(self):
+        devices_events = ['cpu',  'hv_24x7', 'hv_gpci']
+        for type_events in devices_events:
+            directory_base = '/sys/bus/event_source/devices'
+            directory = os.path.join(directory_base, type_events, 'events')
+            print(directory)
+            random_files = self.get_random_filenames(directory)
+            self._create_temp_user()
+            if not process.system('id test_pmu', sudo=True, ignore_status=True):
+                for file in random_files:
+                    eventdir = os.path.join(directory, file)
+                    result = process.run("su - test_pmu -c 'echo 1 >  %s'" % eventdir,
+                                         shell=True, ignore_status=True)
+                    output = result.stdout.decode() + result.stderr.decode()
+                    self.log.info("Test passes for %s of %s" %
+                                  (file, type_events))
+                if 'Permission denied' not in output:
+                    self.fail("Able to read  %s of %s as normal user" %
+                              (file, type_events))
+                self._remove_temp_user()
+            else:
+                self.log.warn('User test_pmu does not exist, skipping test')
+
+    def test_checkPowerVersion(self):
+        modes = ['POWER8', 'POWER9', 'POWER10']
+        proc_cpuinfo_path = "/proc/cpuinfo"
+        compat_mode = self.check_ProcessorCompatMode(proc_cpuinfo_path, modes)
+        cmd = "cat /sys/bus/event_source/devices/cpu/caps/pmu_name"
+        sysfs_value = process.system_output(cmd, shell=True,
+                                            ignore_status=True).decode()
+        if not compat_mode == sysfs_value:
+            self.fail(
+                "Sysfs cpu caps value differs from cpu compat mode in /proc/cpuinfo")
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is for PowerVM")
     def test_hv_24x7_event_count(self):
