@@ -72,7 +72,7 @@ class EliminateDomainSuffix(Test):
             self.perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % self.perf_args
         if self.rev == '004e':
             self.perf_stat = "%s hv_24x7/CPM_TLBIE" % self.perf_args
-        if self.rev == '0080':
+        if self.rev in ['0080', '0082']:
             self.perf_stat = "%s hv_24x7/CPM_TLBIE_FIN" % self.perf_args
         self.event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
 
@@ -175,10 +175,10 @@ class EliminateDomainSuffix(Test):
             self.fail('perf unable to recognize out of range core value')
 
     def test_event_w_chip_param(self):
-        if self.rev == '004b' or self.rev == '004e':
+        if self.rev in ['004b', '004e']:
             event_out = genio.read_file(
                 "%s/events/PM_PB_CYC" % self.event_sysfs).rstrip('\t\r\n\0')
-        if self.rev == '0080':
+        if self.rev in ['0080', '0082']:
             event_out = genio.read_file(
                 "%s/events/PM_PHB0_0_CYC" % self.event_sysfs).rstrip('\t\r\n\0')
         if "chip=?" in event_out:
@@ -192,9 +192,9 @@ class EliminateDomainSuffix(Test):
             self.fail('chip file does not exist')
 
     def test_event_wo_chip_param(self):
-        if self.rev == '004b' or self.rev == '004e':
+        if self.rev in ['004b', '004e']:
             cmd = "hv_24x7/PM_PB_CYC,domain=1/ /bin/true"
-        if self.rev == '0080':
+        if self.rev in ['0080', '0082']:
             cmd = "hv_24x7/PM_PHB0_0_CYC,domain=1/ /bin/true"
         chip_miss = self.event_stat1(cmd)
         if "Required parameter 'chip' not specified" not in chip_miss.stdout.decode("utf-8"):
@@ -209,9 +209,9 @@ class EliminateDomainSuffix(Test):
         Test chip value in range self.chips-1 and max 65535
         """
         for chip_val in range(0, self.chips):
-            if self.rev == '004b' or self.rev == '004e':
+            if self.rev in ['004b', '004e']:
                 cmd = "hv_24x7/PM_PB_CYC,domain=1,chip=%s/ /bin/true" % chip_val
-            if self.rev == '0080':
+            if self.rev in ['0080', '0082']:
                 cmd = "hv_24x7/PM_PHB0_0_CYC,domain=1,chip=%s/ /bin/true" % chip_val
             output_chip = self.event_stat1(cmd)
             if "Performance counter stats for" not in output_chip.stderr.decode("utf-8"):
@@ -223,9 +223,9 @@ class EliminateDomainSuffix(Test):
         """
         invalid_chip = [self.chips, 65536]
         for chip_val in invalid_chip:
-            if self.rev == '004b' or self.rev == '004e':
+            if self.rev in ['004b', '004e']:
                 cmd = "hv_24x7/PM_PB_CYC,domain=1,chip=%s/ /bin/true" % chip_val
-            if self.rev == '0080':
+            if self.rev in ['0080', '0082']:
                 cmd = "hv_24x7/PM_PHB0_0_CYC,domain=1,chip=%s/ /bin/true" % chip_val
             res = self.event_stat1(cmd)
             if res.exit_status == 0:
