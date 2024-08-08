@@ -107,8 +107,7 @@ class NXGZipTests(Test):
         self.branch = self.params.get('git_branch', default='master')
         git.get_repo(self.url, branch=self.branch,
                      destination_dir=self.teststmpdir)
-        if self.branch == 'develop':
-            process.run('./configure', sudo=True, shell=True)
+        process.run('./configure', sudo=True, shell=True)
         os.chdir(self.teststmpdir)
         build.make(self.teststmpdir)
 
