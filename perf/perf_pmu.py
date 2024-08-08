@@ -14,6 +14,7 @@
 # Author: Nageswara R Sastry <rnsastry@linux.vnet.ibm.com>
 
 import os
+import configparser
 import glob
 from avocado import Test
 from avocado.utils import cpu, dmesg, genio, linux_modules, process
@@ -109,14 +110,11 @@ class PerfBasic(Test):
 
         sysfs_file = "/sys/devices/system/cpu/cpu0/"
 
-        sysfs_dict = {"power8": ['mmcr0', 'mmcr1', 'mmcra'],
-                      "power8e": ['mmcr0', 'mmcr1', 'mmcra'],
-                      "power9": ['mmcr0', 'mmcr1', 'mmcra'],
-                      "power10": ['mmcr0', 'mmcr1', 'mmcr3', 'mmcra']}
-
+        parser = configparser.ConfigParser()
+        parser.read(self.get_data('sysfs_PMU.cfg'))
+        sysfs_PMU_list = parser.get(self.model, 'dir_list').split(',')
         # Check for any missing files according to the model
-        self._check_file_existence(
-            sysfs_dict[self.model], os.listdir(sysfs_file))
+        self._check_file_existence(sysfs_PMU_list, os.listdir(sysfs_file))
 
         try:
             for filename in glob.glob("%smmcr*" % sysfs_file):
