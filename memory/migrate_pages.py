@@ -31,7 +31,6 @@ class MigratePages(Test):
     2) hugepages
     3) hugepages with overcommit
     4) transparent hugepages
-
     :avocado: tags=memory,hugepage,migration
     """
 
@@ -65,6 +64,7 @@ class MigratePages(Test):
                 os.environ['HAVE_HUGETLB_HEADER'] = '1'
                 pkgs.extend(['libhugetlbfs-devel'])
         elif self.dist.name == "SuSE":
+            os.environ['HAVE_HUGETLB_HEADER'] = '1'
             pkgs.extend(['libnuma-devel'])
             if self.dist.version >= 15:
                 pkgs.extend(['libhugetlbfs-devel'])
