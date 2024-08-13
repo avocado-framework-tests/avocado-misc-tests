@@ -107,12 +107,12 @@ class kselftest(Test):
             git_branch = self.params.get('branch', default='master')
             path = ''
             match = next(
-                (ext for ext in [".zip", ".tar"] if ext in location), None)
+                (ext for ext in [".zip", ".tar", ".gz"] if ext in location), None)
             if match:
                 tarball = self.fetch_asset("kselftest%s" % match,
                                            locations=[location], expire='1d')
-                archive.extract(tarball, self.workdir)
-                path = glob.glob(os.path.join(self.workdir, "linux*"))
+                extracted_dir = archive.uncompress(tarball, self.workdir)
+                path = glob.glob(os.path.join(self.workdir, extracted_dir))
             else:
                 git.get_repo(location, branch=git_branch,
                              destination_dir=self.workdir)
