@@ -170,8 +170,7 @@ class irq_balance(Test):
                                             ignore_status=True,
                                             sudo=True).decode("utf-8")
         if not process_pid:
-            self.log.debug(f"No more process PID avaialable")
-            return False
+            self.cancel(f"No process PID of ping command avaialable")
         return process_pid
 
     def compare_range_strings(self, range_str1, range_str2):
