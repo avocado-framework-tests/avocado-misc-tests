@@ -1,0 +1,9 @@
+hmc_username: '******'
+hmc_pwd: '********'
+access_files: [
+            'affinity_domain_via_partition',
+            'affinity_domain_via_domain',
+            'affinity_domain_via_virtual_processor',
+            'processor_config',
+            'processor_bus_topology'
+        ]
