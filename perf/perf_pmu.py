@@ -244,13 +244,14 @@ class PerfBasic(Test):
             else:
                 self.log.warn('User test_pmu does not exist, skipping test')
         self._remove_temp_user()
+
     def test_caps_feat(self):
-        modes = [ 'power10', 'power11']
+        modes = ['power10', 'power11']
         if self.model in modes:
             cmd = "cat /sys/bus/event_source/devices/cpu/caps/pmu_name"
             sysfs_value = process.system_output(cmd, shell=True,
-                                            ignore_status=True).decode()
-            self.log.info(" Sysfs caps version : %s "%sysfs_value)
+                                                ignore_status=True).decode()
+            self.log.info(" Sysfs caps version : %s " % sysfs_value)
         else:
             self.cancel("This test is supported only for Power10 and above")
 
