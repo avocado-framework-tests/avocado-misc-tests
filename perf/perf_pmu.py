@@ -241,8 +241,6 @@ class PerfBasic(Test):
                     result = process.run("su - test_pmu -c 'echo 1 >  %s'" % eventdir,
                                          shell=True, ignore_status=True)
                     output = result.stdout.decode() + result.stderr.decode()
-                    self.log.info("Test passes for %s of %s" %
-                                  (file, type_events))
             else:
                 self.log.warn('User test_pmu does not exist, skipping test')
         self._remove_temp_user()
