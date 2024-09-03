@@ -56,7 +56,7 @@ class Schbench(Test):
                 self.cancel("%s is needed for the test to be run" % package)
         url = 'https://git.kernel.org/pub/scm/linux/kernel/git/mason/schbench.git'
         schbench_url = self.params.get("schbench_url", default=url)
-        self.workload_iter = self.params.get("workload_iter", default=5)
+        self.workload_iter = self.params.get("workload_iter", default=20)
         git.get_repo(schbench_url, destination_dir=self.workdir)
         os.chdir(self.workdir)
         build.make(self.workdir)
