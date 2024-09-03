@@ -129,8 +129,8 @@ class NetworkVirtualization(Test):
         self.host_user = self.params.get('user_name', default=None)
         self.host_password = self.params.get('host_password', default=None)
         self.is_mlx_driver = self.params.get('is_mlx_driver', default=True)
-        self.transmit_tx = self.params.get('transmit_tx', default=10)
-        self.receive_rx = self.params.get('receive_rx', default=10)
+        self.tx_channel = self.params.get('tx_channel', default=10)
+        self.rx_channel = self.params.get('rx_channel', default=10)
         dmesg.clear_dmesg()
         self.session_hmc.cmd("uname -a")
         cmd = 'lssyscfg -m ' + self.server + \
@@ -258,12 +258,12 @@ class NetworkVirtualization(Test):
         self.remotehost = RemoteHost(self.peer_ip[0], self.peer_user,
                                      password=self.peer_password)
         peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip[0]).name
-        cmd = "ethtool -L %s rx %s tx %s" % (peer_interface, self.transmit_tx, self.receive_rx)
+        cmd = "ethtool -L %s rx %s tx %s" % (peer_interface, self.rx_channel, self.tx_channel)
         output = self.session_peer.cmd(cmd)
         if not output:
             self.cancel("Unable to tune RX and TX queue in peer")
         device = self.find_device(self.mac_id[0])
-        cmd = "ethtool -L %s rx %s tx %s" % (device, self.transmit_tx, self.receive_rx)
+        cmd = "ethtool -L %s rx %s tx %s" % (device, self.rx_channel, self.tx_channel)
         result = process.run(cmd)
         if result.exit_status:
             self.cancel("Unable to tune RX and TX queue in host")
