@@ -48,6 +48,7 @@ class smt(Test):
                 self.cancel("smtstate tool is supported only after SLES15 SP3")
         else:
             self.cancel("Test case is supported only on RHEL and SLES")
+        self.runtime = self.params.get('runtime', default='')
 
     def test_smt_start(self):
         """
@@ -55,7 +56,12 @@ class smt(Test):
         """
         relative_path = 'smt.py.data/smt.sh'
         absolute_path = os.path.abspath(relative_path)
-        smt_workload = "bash " + absolute_path + " &> /tmp/smt.log &"
+        smt_workload = ""
+        if self.runtime == "":
+            smt_workload = "bash " + absolute_path + " &> /tmp/smt.log &"
+        else:
+            smt_workload = "timeout " + str(self.runtime) + "m" + " bash " + \
+                absolute_path + " &> /tmp/smt.log &"
         process.run(
             smt_workload, ignore_status=True, sudo=True, shell=True)
         self.log.info("SMT Workload started--!!")
@@ -66,7 +72,8 @@ class smt(Test):
         """
         grep_cmd = "grep -i {}".format("smt.sh")
         awk_cmd = "awk '{print $2}'"
-        process_kill = "ps aux | {} | {} | head -1 | xargs kill".format(grep_cmd, awk_cmd)
+        process_kill = "ps aux | {} | {} | head -1 | xargs kill".format(
+            grep_cmd, awk_cmd)
         process.run(process_kill, ignore_status=True,
                     sudo=True, shell=True)
         self.log.info("SMT Workload killed successfully--!!")
