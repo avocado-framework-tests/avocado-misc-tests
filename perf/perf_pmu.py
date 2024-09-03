@@ -17,7 +17,6 @@ import os
 import configparser
 import glob
 import random
-import re
 from avocado import Test
 from avocado.utils import cpu, dmesg, genio, linux_modules, process
 from avocado import skipIf, skipUnless
@@ -90,17 +89,6 @@ class PerfBasic(Test):
         files = os.listdir(directory)
         random_files = random.sample(files, num_files)
         return random_files
-
-    def check_ProcessorCompatMode(self, file_path, patterns):
-        found_patterns = set()
-        with open(file_path, 'r') as file:
-            content = file.read()
-            for pattern in patterns:
-                if re.search(pattern, content):
-                    found_patterns.add(pattern)
-        compat_mode = str(found_patterns)
-        compat_mode = compat_mode.strip('{}').strip("'")
-        return compat_mode
 
     def _check_kernel_config(self, config_option):
         # This function checks the kernel configuration with the input
@@ -225,30 +213,32 @@ class PerfBasic(Test):
         # cpu events count
         self._check_count('cpu')
 
-    def test_sysfs_events(self):
+    def test_write_sysfs_events(self):
         devices_events = ['cpu',  'hv_24x7', 'hv_gpci']
         self._create_temp_user()
+        if process.system('id test_pmu', sudo=True, ignore_status=True):
+            self.log.warn('User test_pmu does not exist, skipping test')
+            return
+
         for type_events in devices_events:
             directory_base = '/sys/bus/event_source/devices'
             directory = os.path.join(directory_base, type_events, 'events')
-            print(directory)
             random_files = self.get_random_filenames(directory)
-            if not process.system('id test_pmu', sudo=True, ignore_status=True):
-                for file in random_files:
-                    eventdir = os.path.join(directory, file)
-                    result = process.run("su - test_pmu -c 'echo 1 >  %s'" % eventdir,
-                                         shell=True, ignore_status=True)
+            for file in random_files:
+                eventdir = os.path.join(directory, file)
+                commands = {'root': f"echo 1 > {eventdir}", 'test_pmu': f"su - test_pmu -c echo 1 > {eventdir}"}
+                for user, cmd in commands.items():
+                    result = process.run(cmd, shell=True, ignore_status=True)
                     output = result.stdout.decode() + result.stderr.decode()
-            else:
-                self.log.warn('User test_pmu does not exist, skipping test')
+                    if 'Permission denied' not in output:
+                        self.fail("sysfs files are readonly but user has write access")
         self._remove_temp_user()
 
     def test_caps_feat(self):
         modes = ['power10', 'power11']
         if self.model in modes:
             cmd = "cat /sys/bus/event_source/devices/cpu/caps/pmu_name"
-            sysfs_value = process.system_output(cmd, shell=True,
-                                                ignore_status=True).decode()
+            sysfs_value = process.system_output(cmd, shell=True).decode()
             self.log.info(" Sysfs caps version : %s " % sysfs_value)
         else:
             self.cancel("This test is supported only for Power10 and above")
