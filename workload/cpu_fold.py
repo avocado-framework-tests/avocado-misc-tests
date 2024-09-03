@@ -36,6 +36,7 @@ class Cpuworkload(Test):
         for pkg in ['util-linux', 'powerpc-utils', 'numactl']:
             if not sm.check_installed(pkg) and not sm.install(pkg):
                 self.cancel("%s is required to continue..." % pkg)
+        self.runtime = self.params.get('runtime', default='')
 
     def test_cpu_start(self):
         """
@@ -43,7 +44,14 @@ class Cpuworkload(Test):
         """
         relative_path = 'cpu_fold.py.data/cpu.sh'
         absolute_path = os.path.abspath(relative_path)
-        cpu_folding = "bash " + absolute_path + " &> /tmp/cpu_folding.log &"
+        cpu_folding = ""
+        if self.runtime == "":
+            cpu_folding = "bash " + absolute_path + \
+                " &> /tmp/cpu_folding.log &"
+        else:
+            cpu_folding = "timeout " + str(self.runtime) + "m" + " bash " + \
+                absolute_path + " &> /tmp/cpu_folding.log &"
+
         process.run(cpu_folding, ignore_status=True, sudo=True, shell=True)
         self.log.info("CPU Workload started--!!")
 
