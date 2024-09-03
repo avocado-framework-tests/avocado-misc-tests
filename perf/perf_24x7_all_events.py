@@ -62,7 +62,7 @@ class hv_24x7_all_events(Test):
             perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % perf_args
         elif self.rev == '004e':
             perf_stat = "%s hv_24x7/CPM_TLBIE" % perf_args
-        elif self.rev == '0080':
+        elif self.rev in ['0080', '0082']:
             perf_stat = "%s hv_24x7/CPM_TLBIE_FIN" % perf_args
         event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
 

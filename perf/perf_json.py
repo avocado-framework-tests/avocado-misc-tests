@@ -96,7 +96,7 @@ class perf_json(Test):
             process.system("make prefix=/usr/local install -C %s" % self.sourcedir, shell=True, sudo=True)
 
         self.rev = cpu.get_revision()
-        rev_to_power = {'004b': 'power8', '004e': 'power9', '0080': 'power10'}
+        rev_to_power = {'004b': 'power8', '004e': 'power9', '0080': 'power10', '0082': 'power10'}
         if self.rev in rev_to_power:
             self.testdir += '%s/' % rev_to_power[self.rev]
         self.sourcedir = os.path.join(self.buldir, self.testdir)

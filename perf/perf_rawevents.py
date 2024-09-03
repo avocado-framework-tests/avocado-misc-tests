@@ -18,14 +18,14 @@ import os
 import platform
 import shutil
 from avocado import Test
-from avocado.utils import distro, process, genio
+from avocado.utils import distro, process, genio, cpu
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class PerfRawevents(Test):
 
     """
-    Tests raw events on Power8, Power9 and Power10 along with
+    Tests raw events on different Power platforms along with
     named events
     :avocado: tags=perf,rawevents,events
     """
@@ -33,8 +33,11 @@ class PerfRawevents(Test):
     fail_cmd = list()
 
     def copy_files(self, filename):
-        shutil.copyfile(self.get_data(filename),
-                        os.path.join(self.teststmpdir, filename))
+        src = self.get_data(filename)
+        if src is None or not os.path.isfile(src):
+            self.cancel(f'File {filename} not found.')
+        else:
+            shutil.copyfile(src, os.path.join(self.teststmpdir, filename))
 
     def setUp(self):
         '''
@@ -45,10 +48,7 @@ class PerfRawevents(Test):
         smm = SoftwareManager()
         detected_distro = distro.detect()
         self.distro_name = detected_distro.name
-        processor = genio.read_file("/proc/cpuinfo")
-        for line in processor.splitlines():
-            if 'revision' in line:
-                self.rev = (line.split(' ')[3].strip())
+        self.rev = cpu.get_revision()
         if detected_distro.arch != 'ppc64le':
             self.cancel('This test is not supported on %s architecture'
                         % detected_distro.arch)
@@ -67,9 +67,13 @@ class PerfRawevents(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
-        for filename in ['name_events_004b', 'raw_codes_004b', 'name_events_004e',
-                         'raw_codes_004e', 'name_events_0080', 'raw_codes_0080']:
-            self.copy_files(filename)
+        revisions_to_test = ['004b', '004e', '0080', '0082']
+        for rev in revisions_to_test:
+            for filename in [f'name_events_{rev}', f'raw_codes_{rev}']:
+                if rev == '0082':
+                    # Use Power10 files for Power11
+                    filename = filename.replace('0082', '0080')
+                self.copy_files(filename)
 
         os.chdir(self.teststmpdir)
         # Clear the dmesg to capture the delta at the end of the test.
@@ -91,13 +95,13 @@ class PerfRawevents(Test):
             self.fail("perf_raw_events: refer log file for failed events")
 
     def test_raw_code(self):
-        file_name = 'raw_codes_' + self.rev
+        file_name = 'raw_codes_' + (self.rev if self.rev != '0082' else '0080')
         perf_flags = "perf stat -e r"
         self.run_event(file_name, perf_flags)
         self.error_check()
 
     def test_name_event(self):
-        file_name = 'name_events_' + self.rev
+        file_name = 'name_events_' + (self.rev if self.rev != '0082' else '0080')
         perf_flags = "perf stat -e "
         self.run_event(file_name, perf_flags)
         self.error_check()
