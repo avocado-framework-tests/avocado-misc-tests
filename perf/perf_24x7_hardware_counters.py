@@ -220,16 +220,16 @@ class EliminateDomainSuffix(Test):
     def test_check_invalid_chip(self):
         """
         Test invalid out of range chip value
+        chip can take maximum value of 65535 only
         """
-        invalid_chip = [self.chips, 65536]
-        for chip_val in invalid_chip:
-            if self.rev == '004b' or self.rev == '004e':
-                cmd = "hv_24x7/PM_PB_CYC,domain=1,chip=%s/ /bin/true" % chip_val
-            if self.rev == '0080':
-                cmd = "hv_24x7/PM_PHB0_0_CYC,domain=1,chip=%s/ /bin/true" % chip_val
-            res = self.event_stat1(cmd)
-            if res.exit_status == 0:
-                self.fail("perf unable to recognise invalid chip value")
+        invalid_chip = 65536
+        if self.rev == '004b' or self.rev == '004e':
+            cmd = "hv_24x7/PM_PB_CYC,domain=1,chip=%s/ /bin/true" % invalid_chip
+        if self.rev == '0080':
+            cmd = "hv_24x7/PM_PHB0_0_CYC,domain=1,chip=%s/ /bin/true" % invalid_chip
+        res = self.event_stat1(cmd)
+        if res.exit_status == 0:
+            self.fail("perf unable to recognise invalid chip value")
 
     def test_domain_chip_offset(self):
         cmd = "perf stat -r 10 -x ' ' perf stat -r 10 -x ' ' \
