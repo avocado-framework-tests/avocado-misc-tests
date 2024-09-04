@@ -286,12 +286,12 @@ class HtxNicTest(Test):
 
     def start_htx_run(self):
         self.log.info("Running the HTX for %s on Host", self.mdt_file)
-        # Kill existing HTXD process if running
-        htxd_pid = process.getoutput("pgrep -f htxd")
-        if htxd_pid:
-            self.log.info("HTXD is already running with PID: %s. Killing it.", htxd_pid)
-            process.run("pkill -f htxd", ignore_status=True)
-            time.sleep(10)
+        # Find and Kill existing HXE process if running
+        hxe_pid = process.getoutput("pgrep -f hxe")
+        if hxe_pid:
+            self.log.info("HXE is already running with PID: %s. Killing it.", hxe_pid)
+            process.run("hcl -shutdown", ignore_status=True)
+            time.sleep(20)
         cmd = "htxcmdline -run -mdt %s" % self.mdt_file
         process.run(cmd, shell=True, sudo=True)
 
