@@ -56,7 +56,7 @@ class Producer_Consumer(Test):
                 self.cancel("%s is needed for the test to be run" % package)
         url = 'https://github.com/gautshen/misc.git'
         pc_url = self.params.get("pc_url", default=url)
-        self.workload_iteration = self.params.get("workload_iter", default=5)
+        self.workload_iteration = self.params.get("workload_iter", default=20)
         git.get_repo(pc_url, destination_dir=self.workdir)
         self.sourcedir = os.path.join(self.workdir, 'producer_consumer')
         os.chdir(self.sourcedir)
