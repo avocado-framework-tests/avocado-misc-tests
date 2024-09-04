@@ -1,0 +1,7 @@
+component: !mux
+    futex:
+        comp: 'futex'
+run_type: !mux
+    upstream:
+        type: 'upstream'
+        location: "https://github.com/torvalds/linux/archive/master.zip
