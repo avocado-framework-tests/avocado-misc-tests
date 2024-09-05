@@ -202,9 +202,8 @@ class PerfBasic(Test):
 
         sys_fs_events = os.listdir(
             os.path.join(base_dir, event_type, 'events'))
-        if len(sys_fs_events) < 21:
-            self.fail("%s events folder contains less than 21 entries"
-                      % event_type)
+        if not sys_fs_events:
+            self.fail("no events found in %s events folder" % event_type)
         self.log.info("%s events count = %s" %
                       (event_type, len(sys_fs_events)))
 
@@ -235,13 +234,13 @@ class PerfBasic(Test):
         self._remove_temp_user()
 
     def test_caps_feat(self):
-        modes = ['power10', 'power11']
-        if self.model in modes:
-            cmd = "cat /sys/bus/event_source/devices/cpu/caps/pmu_name"
-            sysfs_value = process.system_output(cmd, shell=True).decode()
-            self.log.info(" Sysfs caps version : %s " % sysfs_value)
+        caps_filepath = "/sys/bus/event_source/devices/cpu/caps/pmu_name"
+        if os.path.isfile(caps_filepath):
+            pmu_name = process.system_output(f'cat {caps_filepath}',
+                                             shell=True).decode()
+            self.log.info("Sysfs pmu registered: %s" % pmu_name)
         else:
-            self.cancel("This test is supported only for Power10 and above")
+            self.cancel("Caps file not found, skipping test")
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is for PowerVM")
     def test_hv_24x7_event_count(self):

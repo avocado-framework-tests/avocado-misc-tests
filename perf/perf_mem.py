@@ -52,7 +52,7 @@ class perf_mem(Test):
                 self.cancel('%s is needed for the test to be run' % package)
 
         # Check for mem is available in the system.
-        output = process.run('perf mem record -e list').stderr.decode("utf-8")
+        output = process.run('perf mem record -e list', ignore_status=True).stderr.decode("utf-8")
         if 'ldlat-stores' in output or 'ldlat-loads' in output:
             self.log.info("perf mem is available")
         else:
