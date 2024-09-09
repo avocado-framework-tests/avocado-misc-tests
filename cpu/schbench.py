@@ -27,8 +27,8 @@ from avocado.utils.software_manager.manager import SoftwareManager
 class Schbench(Test):
 
     '''
-    schbench is designed to provide detailed latency distributions for scheduler
-    wakeups.
+    schbench is designed to provide detailed latency distributions
+    for scheduler wakeups.
 
     :avocado: tags=cpu
     '''
@@ -54,7 +54,8 @@ class Schbench(Test):
         for package in deps:
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel("%s is needed for the test to be run" % package)
-        url = 'https://git.kernel.org/pub/scm/linux/kernel/git/mason/schbench.git'
+        url = 'https://git.kernel.org/pub/scm/linux/kernel/git/mason/\
+                schbench.git'
         schbench_url = self.params.get("schbench_url", default=url)
         self.workload_iter = self.params.get("workload_iter", default=20)
         git.get_repo(schbench_url, destination_dir=self.workdir)
@@ -147,6 +148,8 @@ class Schbench(Test):
         return results
 
     def test(self):
+        sch_bench = self.logdir + "/sch_bench"
+        os.makedirs(sch_bench, exist_ok=True)
         # Extract parameters from self.params with defaults
         perf_stat = self.params.get('perf_stat', default='')
         taskset = self.params.get('taskset', default='')
@@ -163,8 +166,10 @@ class Schbench(Test):
         # Construct the args string using a formatted string
         args = (
             f'-m {num_threads} -t {num_workers} -p {byte_size} -r {runtime} '
-            f'-i {runtime} -F {cache_footprint} -n {num_operations} -R {requests_per_second} '
-            f'-w {warmup_time} {"-A" if autobench_enabled else ""} {"-L" if locking_enabled else ""}'
+            f'-i {runtime} -F {cache_footprint} -n {num_operations} -R \
+                    {requests_per_second} '
+            f'-w {warmup_time} {"-A" if autobench_enabled else ""} \
+                    {"-L" if locking_enabled else ""}'
         )
         # Build the command string for running the benchmark
         cmd = " ".join(
@@ -182,12 +187,24 @@ class Schbench(Test):
                 self.fail(f"The test failed. Failed command is {cmd}")
             # Parse schbench data
             data = res.stderr.decode().splitlines()
+            stderr_output = res.stderr
             result = self.parse_schbench_data(data)
-            # Include perf data if perf_stat is enabled
+            sch_bench_payload = sch_bench + "/sch_bench_payload.log"
+            with open(sch_bench_payload, "a") as payload:
+                payload.write(
+                    "==================Iteration {}=============\n".format(
+                        str(run)))
+                lines = stderr_output.splitlines()
+                for line in lines:
+                    decoded_string = line.decode('utf-8')
+                    cleaned_string = decoded_string.lstrip('\t')
+                    payload.write(cleaned_string + '\n')
+                payload.write("\n")
             if perf_stat:
                 result.update(self.parse_perf_data(data))
             # Write result to JSON file
             json_object = json.dumps(result, indent=4)
-            logfile = os.path.join(self.logdir, "schbench.json")
-            with open(logfile, "w") as outfile:
+            sch_bench_log = sch_bench + "/schbench_iter[" + str(run) + "].json"
+            # logfile = os.path.join(self.logdir, sch_bench_log)
+            with open(sch_bench_log, "a") as outfile:
                 outfile.write(json_object)
