@@ -56,14 +56,39 @@ class Producer_Consumer(Test):
                 self.cancel("%s is needed for the test to be run" % package)
         url = 'https://github.com/gautshen/misc.git'
         pc_url = self.params.get("pc_url", default=url)
-        self.workload_iteration = self.params.get("workload_iter", default=20)
+        self.workload_iteration = self.params.get("workload_iter", default=5)
         git.get_repo(pc_url, destination_dir=self.workdir)
         self.sourcedir = os.path.join(self.workdir, 'producer_consumer')
         os.chdir(self.sourcedir)
         build.make(self.sourcedir)
 
-    def test(self):
+    def create_json_dump(self, stdout_output):
+        # Defining regex patterns to capture the perf stats
+        patterns = {
+            'cpu_clock': r'([\d.]+)\s+msec cpu-clock',
+            'context_switches': r'([\d.]+)\s+context-switches',
+            'cpu_migrations': r'([\d.]+)\s+cpu-migrations',
+            'page_faults': r'([\d.]+)\s+page-faults',
+            'cycles': r'([\d.]+)\s+cycles',
+            'instructions': r'([\d.]+)\s+instructions',
+            'branches': r'([\d.]+)\s+branches',
+            'branch_misses': r'([\d.]+)\s+branch-misses',
+            'elapsed_time': r'([\d.]+)\s+seconds elapsed'
+        }
 
+        # Extract data using regex
+        extracted_data = {}
+        for key, pattern in patterns.items():
+            match = re.search(pattern, stdout_output)
+            if match:
+                extracted_data[key] = float(match.group(1))
+
+        return extracted_data
+
+    def test(self):
+        pro_cons_payload = []
+        pro_cons_dir = self.logdir + "/prod_cons_worklaod"
+        os.makedirs(pro_cons_dir, exist_ok=True)
         perfstat = self.params.get('perfstat', default='')
         if perfstat:
             perfstat = 'perf stat ' + perfstat
@@ -97,7 +122,21 @@ class Producer_Consumer(Test):
 
             if res.exit_status:
                 self.fail("The test failed. Failed command is %s" % cmd)
+            stdout_bk = res.stdout
             lines = res.stdout.decode().splitlines()
+            stderr_output = res.stderr
+            pro_cons_file = pro_cons_dir + "/pro_cons.log"
+            with open(pro_cons_file, "a") as payload:
+                payload.write("==================Iteration {}=============\
+                        \n".format(str(run)))
+                lines1 = stderr_output.splitlines()
+                stdout_bk = stdout_bk.splitlines()
+                pro_cons_payload = stdout_bk + lines1
+                for line in pro_cons_payload:
+                    decoded_string = line.decode('utf-8')
+                    cleaned_string = decoded_string.lstrip('\t')
+                    payload.write(cleaned_string + '\n')
+
             for line in lines:
                 if line.startswith('Consumer(0) :'):
                     print(line)
@@ -107,12 +146,15 @@ class Producer_Consumer(Test):
                     time_iter = pattern.findall(line)[0]
                     pattern = re.compile(r"time/access:  (.*?) ns")
                     time_acc = pattern.findall(line)[0]
-
+                    perf_stat = self.create_json_dump(
+                        stderr_output.decode("utf-8"))
                     json_object = json.dumps({'iterations': iteration,
                                               'iter_time': time_iter,
-                                              'access_time': time_acc})
+                                              'access_time': time_acc,
+                                              'perf_stat': perf_stat})
                     break
 
             logfile = os.path.join(self.logdir, "time_log.json")
-            with open(logfile, "w") as outfile:
+            pro_cons_log = pro_cons_dir + "/pro_cons[" + str(run) + "].json"
+            with open(pro_cons_log, "w") as outfile:
                 outfile.write(json_object)
