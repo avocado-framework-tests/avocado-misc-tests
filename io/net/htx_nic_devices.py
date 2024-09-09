@@ -189,6 +189,8 @@ class HtxNicTest(Test):
             if host_distro_pattern == peer_distro_pattern:
                 if process.system(cmd, shell=True, ignore_status=True):
                     self.cancel("Installion of rpm failed")
+                if not self.session.connect():
+                    self.cancel("failed connecting to peer")
                 output = self.session.cmd(cmd)
                 if not output.exit_status == 0:
                     self.cancel("Unable to install the package %s %s"
@@ -383,4 +385,5 @@ class HtxNicTest(Test):
         self.shutdown_htx_daemon()
         self.ip_restore_host()
         self.ip_restore_peer()
+        self.session.quit()
         self.remotehost.remote_session.quit()
