@@ -5,7 +5,7 @@ numactl is a tool to Control NUMA policy for processes or shared memory.
 Types of Test:
 ---------------
 
-This scripts supports Network and FC based numactl operations, along with PCI hot plug between diffrent NUMA nodes.
+This scripts supports Network and FC based numactl operations, along with PCI hot plug between different NUMA nodes.
 
 Inputs Needed To Run Tests:
 ---------------------------

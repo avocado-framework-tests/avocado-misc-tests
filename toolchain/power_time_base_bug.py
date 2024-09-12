@@ -47,7 +47,7 @@ class PowerTimeBaseBug(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
-        self.log.info("Tranferring the files ...")
+        self.log.info("Transferring the files ...")
         shutil.copyfile(self.get_data('print_power_time_base.c'),
                         os.path.join(self.teststmpdir, 'print_power_time_base.c'))
 

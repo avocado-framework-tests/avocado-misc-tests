@@ -172,7 +172,7 @@ class EEH(Test):
                   pci_mem_addr, pci_mask, add_cmd):
         """
         Injects Error, and checks for PE recovery
-        returns True, if recovery is success, else Flase
+        returns True, if recovery is success, else False
         """
         dmesg.clear_dmesg()
         if self.is_baremetal():

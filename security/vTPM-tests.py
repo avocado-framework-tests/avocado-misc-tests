@@ -48,7 +48,7 @@ class vTPM(Test):
         if not len(output):
             self.skip("TPM initialized message not found, dmesg got cleared(?)")
         else:
-            self.log.info("TPM intialized successfully.")
+            self.log.info("TPM initialized successfully.")
 
     def _check_kernel_config(self, config_option):
         ret = linux_modules.check_kernel_config(config_option)

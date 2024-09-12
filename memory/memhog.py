@@ -26,7 +26,7 @@ from avocado.utils.software_manager.manager import SoftwareManager
 
 class MemoHog(Test):
     """
-    Hogs up memory to sepcified size
+    Hogs up memory to specified size
 
     :avocado: tags=memory
     """

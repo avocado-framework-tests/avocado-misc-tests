@@ -25,7 +25,7 @@ from avocado.utils.software_manager.manager import SoftwareManager
 
 class Forkoff(Test):
     """
-    Perform mmap and process forking to maxiumum extent
+    Perform mmap and process forking to maximum extent
 
     :avocado: tags=memory
     """
@@ -69,7 +69,7 @@ class Forkoff(Test):
         '''
         Execute memory fork off tests
         1. Total memory with one process
-        2. Split memeory between given processes
+        2. Split memory between given processes
         3. Maximum process with minimum memory (10 MB) per process
         '''
         os.chdir(self.teststmpdir)

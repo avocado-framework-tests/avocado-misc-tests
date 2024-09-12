@@ -14,7 +14,7 @@
 # Author: Santhosh G <santhog4@linux.vnet.ibm.com>
 #
 # Copyright: 2014 Red Hat Inc.
-# Besed on the Sample Idea from:
+# Based on the Sample Idea from:
 # https://github.com/autotest/virt-test/blob/master/samples/service.py
 
 import os

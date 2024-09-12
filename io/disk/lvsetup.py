@@ -23,7 +23,7 @@
 # Author: Plamen Dimitrov (plamen.dimitrov@intra2net.com)
 
 """
-Test that automatically takes shapshots from created logical volumes
+Test that automatically takes snapshots from created logical volumes
 using a given policy.
 
 For details about the policy see README.
@@ -126,7 +126,7 @@ class Lvsetup(Test):
             # converting bytes to megabytes
             self.lv_size = self.lv_size / (1024 * 1024)
 
-        # Using only 45% of lv size, to accomodate lv snapshot also.
+        # Using only 45% of lv size, to accommodate lv snapshot also.
         self.lv_size = (self.lv_size * 45) / 100
 
         self.lv_snapshot_size = self.params.get('lv_snapshot_size',

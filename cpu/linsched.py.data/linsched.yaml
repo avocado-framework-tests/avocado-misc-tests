@@ -8,7 +8,7 @@
 #             a specific scheduling policy
 #./pi-rw-sched - A simple program that combines the previous two programs
 #./driver - A program that forks processes to run multiple of the above programs
-#           at the same time with different scheduling processses
+#           at the same time with different scheduling processes
 runargs: !mux
  testscript:
    args: 'testscript'

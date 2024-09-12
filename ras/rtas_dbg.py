@@ -49,5 +49,5 @@ class rtas_dbg(Test):
             cmd = "rtas_dbg %s" % list_item
             if not process.system(cmd, ignore_status=True, sudo=True):
                 self.log.info("%s command passed" % cmd)
-                self.fail("rtas_dbg: Expected failure, %s command exeucted \
+                self.fail("rtas_dbg: Expected failure, %s command executed \
                           successfully." % cmd)

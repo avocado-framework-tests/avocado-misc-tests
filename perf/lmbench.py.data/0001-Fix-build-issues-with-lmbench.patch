@@ -42,7 +42,7 @@ diff --git a/scripts/config-run b/scripts/config-run
 index b8c17d5..9958a31 100755
 --- a/scripts/config-run
 +++ b/scripts/config-run
-@@ -115,9 +115,12 @@ three attendent child processes sending data down the pipes and
+@@ -115,9 +115,12 @@ three attendant child processes sending data down the pipes and
  three benchmark processes reading data and doing the measurements.
  
  EOF

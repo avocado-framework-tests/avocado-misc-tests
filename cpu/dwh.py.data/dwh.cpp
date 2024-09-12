@@ -2441,7 +2441,7 @@ void *WorkerThreadStart(void *arg)
                         }
                     }
 /* This block and the #if 0 excluded dv variable above are for diagnosing the
- * selection of a size to use for a memory allocation for a thread insance.
+ * selection of a size to use for a memory allocation for a thread instance.
  * The diagnosis would show the path taken and the size value generated. It
  * is not required when no problems are expected */
 #if 0
@@ -2564,7 +2564,7 @@ void *WorkerThreadStart(void *arg)
                 break;
 
             /* Use two actions for (ultimately) the set signal mask so that
-             * it has double the probablity of the other actions */
+             * it has double the probability of the other actions */
             case 5:
             case 6:
                 /* Set the signal mask */

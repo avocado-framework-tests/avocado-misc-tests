@@ -194,16 +194,16 @@ class NetworkTest(Test):
 
     def test_ipv6_ping(self):
         '''
-        Ping test with ipv6 addrress
+        Ping test with ipv6 address
         '''
         try:
             self.networkinterface.get_ipaddrs(version=6)
         except Exception:
-            self.cancel("IPV6 addrress is not set for host interface")
+            self.cancel("IPV6 address is not set for host interface")
         try:
             peer_ipv6 = self.peer_networkinterface.get_ipaddrs(version=6)
             if not peer_ipv6[0]:
-                self.cancel("IPV6 addrress is not set for peer interface")
+                self.cancel("IPV6 address is not set for peer interface")
         except Exception:
             self.cancel(
                 "Test failing while getting IPV6 address for peer interface")
@@ -344,7 +344,7 @@ class NetworkTest(Test):
             except Exception:
                 self.networkinterface.remove_cfg_file()
                 self.log.info(
-                    "backup file not availbale, could not restore file.")
+                    "backup file not available, could not restore file.")
             if self.hbond:
                 self.networkinterface.restore_slave_cfg_file()
         self.remotehost.remote_session.quit()

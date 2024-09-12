@@ -7,7 +7,7 @@ Command 1: perf stat -r 5 -a perf bench sched pipe -l 10000000
 *********
 This command measures the performance of the sched pipe benchmark with a specified loop count.
 
-Prameter details:
+Parameter details:
 ****************
 -> perf stat: Collects and displays performance statistics.
 -> -r 5: Runs the benchmark 5 times and averages the results.
@@ -21,7 +21,7 @@ Command 2: perf stat -n -r 5 perf bench sched pipe
 *********
 This command also measures the performance of the sched pipe benchmark but with a default loop count.
 
-Prameter details:
+Parameter details:
 ****************
 -> perf stat: Collects and displays performance statistics.
 -> -n: Ensures that the results include a notation of how many times each event was recorded.

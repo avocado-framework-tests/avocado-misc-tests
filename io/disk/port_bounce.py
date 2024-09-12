@@ -152,7 +152,7 @@ class PortBounceTest(Test):
 
     def port_bounce(self):
         '''
-        defins and test for different scenarios
+        define and test for different scenarios
         '''
         bounce_time = [self.sbt, self.lbt]
         self.log.info("short/long port bounce for individual ports:")
@@ -160,7 +160,7 @@ class PortBounceTest(Test):
             self.log.info("test is running for %s bounce time" % b_time)
             for port in self.port_ids:
                 # appending the each port into list and sending same list
-                # element for port_toggle which are usefull in verification
+                # element for port_toggle which are useful in verification
                 # methods
                 test_ports = []
                 test_ports.append(port)
@@ -198,7 +198,7 @@ class PortBounceTest(Test):
         enable or disable the port based on typ variable passed
         '''
         switch_info = self.run_command("switchshow")
-        self.log.info("Swicth info: %s", switch_info)
+        self.log.info("Switch info: %s", switch_info)
 
         # Port Disable/enable
         self.log.info("%s port(s) %s", typ, test_ports)

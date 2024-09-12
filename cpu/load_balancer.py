@@ -159,7 +159,7 @@ class load_balancer(Test):
 
     def test(self):
         """
-        In this funtion basically we are online and offline the
+        In this function basically we are online and offline the
         cores and cpu's in sequence,
         1.Running the stress-ng workload.
         2.changing the SMT modes.

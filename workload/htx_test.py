@@ -63,7 +63,7 @@ class HtxTest(Test):
         if process.system('rpm -ivh --nodeps %s%s '
                           '--force' % (self.rpm_link, self.latest_htx_rpm),
                           shell=True, ignore_status=True):
-            self.cancel("Installion of rpm failed")
+            self.cancel("Installation of rpm failed")
 
     def setUp(self):
         """
@@ -160,7 +160,7 @@ class HtxTest(Test):
                     self.install_latest_htx_rpm()
                 else:
                     self.cancel("RPM link is required for RPM run type")
-        self.log.info("Starting the HTX Deamon")
+        self.log.info("Starting the HTX Daemon")
         # Kill existing HTXD process if running
         htxd_pid = process.getoutput("pgrep -f htxd")
         if htxd_pid:

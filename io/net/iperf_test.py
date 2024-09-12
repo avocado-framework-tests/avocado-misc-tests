@@ -255,7 +255,7 @@ class Iperf(Test):
                 self.networkinterface.restore_from_backup()
             except Exception:
                 self.networkinterface.remove_cfg_file()
-                self.log.info("backup file not availbale, could not restore file.")
+                self.log.info("backup file not available, could not restore file.")
             if self.hbond:
                 self.networkinterface.restore_slave_cfg_file()
             self.remotehost.remote_session.quit()

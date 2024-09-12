@@ -81,7 +81,7 @@ def collect_dmesg(object):
 class MemStress(Test):
 
     '''
-    Stress test to excersize memory component
+    Stress test to exercise memory component
 
     This test performs memory hotunplug/hotplug tests with below scenarios:
        1. hotunplug one by one in a loop for all

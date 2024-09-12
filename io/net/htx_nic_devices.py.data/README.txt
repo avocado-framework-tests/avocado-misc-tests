@@ -25,7 +25,7 @@ will be executed as ssh will not happen and the test will fail.
 Make sure that there is a separate interface configured with Public IP
 and is left untouched.
 
-Please pass these parameters as space spearated values if there are more than one inputts
+Please pass these parameters as space separarted values if there are more than one inputts
 host_interfaces: "env2 env5" or "02:5d:c7:xx:xx:03 02:5d:c7:xx:xx:04"
 peer_interfaces: "eht1 eth2"
 net_ids: "150 151"

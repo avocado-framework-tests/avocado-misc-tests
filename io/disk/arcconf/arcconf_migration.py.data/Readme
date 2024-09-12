@@ -6,8 +6,8 @@ specific to Migration and Rebuilding functionality.
  
 Note:
     1. supported controllers pci_ids can be entered 
-       seperated by space " "
+       separated by space " "
     2. ensure to set spare_drive only if rebuild
        functionality need to be tested. 
-    3. Specificy only one intial raid level i.e 
+    3. Specify only one initial raid level i.e 
        initial_raid in yaml file per yaml iteration. 

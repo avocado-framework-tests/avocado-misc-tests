@@ -120,7 +120,7 @@ class NVMeTest(Test):
 
     def get_firmware_version(self):
         """
-        Returns the firmware verison.
+        Returns the firmware version.
         """
         return self.get_id_ctrl_prop('fr')
 

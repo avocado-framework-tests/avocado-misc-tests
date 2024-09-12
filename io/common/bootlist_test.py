@@ -91,7 +91,7 @@ class BootlisTest(Test):
 
     def service_bootlist_file(self):
         '''
-        default sevice bootlist write in to a file
+        default service bootlist write in to a file
         '''
         cmd = "bootlist -m service -r > /tmp/service"
         if process.system(cmd, shell=True, ignore_status=True):

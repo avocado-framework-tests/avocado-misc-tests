@@ -64,7 +64,7 @@ class SysfsDisk_Att(Test):
         """
         Reads file content of all files in a directory
         f_name function accepts path and then returns absolute path
-        Iterates through all files in a directoty
+        Iterates through all files in a directory
         Tuple Format:(File Name, Value in File)
         Example: [(file1,file1_value),(file2,file2_value),........,(filen,filen_value)]
         """
@@ -81,7 +81,7 @@ class SysfsDisk_Att(Test):
 
     def catch(self, func, handle=lambda excep: excep, *args, **kwargs):
         """
-        Defined to handle execption while reading a file
+        Defined to handle exception while reading a file
         """
         try:
             self.fail("Found an exception while reading attribute from file")

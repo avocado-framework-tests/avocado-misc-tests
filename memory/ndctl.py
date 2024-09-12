@@ -273,7 +273,7 @@ class NdctlTest(Test):
         self.disk = None
         self.plib = pmem.PMem(self.ndctl, self.daxctl)
         if not self.plib.check_buses():
-            self.cancel("Test needs atleast one region")
+            self.cancel("Test needs at least one region")
 
     @avocado.fail_on(pmem.PMemException)
     def test_bus_ids(self):
@@ -453,7 +453,7 @@ class NdctlTest(Test):
         namespace_size = self.params.get('size', default=None)
         size_align = self.get_size_alignval()
         slot_count = self.plib.get_slot_count(region)
-        self.log.info("Using %s for muliple namespace regions", region)
+        self.log.info("Using %s for multiple namespace regions", region)
         self.plib.disable_namespace(region=region)
         self.plib.destroy_namespace(region=region)
         if namespace_size and ((namespace_size % size_align) != 0):
@@ -516,7 +516,7 @@ class NdctlTest(Test):
         region = self.get_default_region()
         if (self.plib.is_region_legacy(region)):
             self.cancel("Legacy config skipping the test")
-        self.log.info("Using %s for muliple namespace regions", region)
+        self.log.info("Using %s for multiple namespace regions", region)
         self.plib.disable_namespace(region=region)
         self.plib.destroy_namespace(region=region)
         size = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(

@@ -32,7 +32,7 @@ from avocado.utils import process, multipath, disk
 class SmartctlTest(Test):
 
     """
-    This scripts performs S.M.A.R.T relavent tests using smartctl tool
+    This scripts performs S.M.A.R.T relevant tests using smartctl tool
     on different scsi disk types
     """
 

@@ -615,7 +615,7 @@ class NetworkVirtualization(Test):
             device_name = self.find_device(mac)
             networkinterface = NetworkInterface(device_name, self.local)
             count = 0
-            self.log.info("Preforming DLPAR on %s" % device_name)
+            self.log.info("Performing DLPAR on %s" % device_name)
             for _ in range(self.num_of_dlpar):
                 self.log.info("DLPAR iteration #%d" % count)
                 num_backingdevs = self.backing_dev_count_w_slot_num(slot_no)

@@ -48,7 +48,7 @@ class FioTest(Test):
 
     :see: http://freecode.com/projects/fio
 
-    :param fio_tarbal: name of the tarbal of fio suite located in deps path
+    :param fio_tarbal: name of the tarball of fio suite located in deps path
     :param fio_job: config defining set of executed tests located in deps path
     """
 
@@ -204,23 +204,23 @@ class FioTest(Test):
         """
         cleanup the disk and directory before test starts on it
         """
-        self.log.info("Pre_cleaning of disk and diretories...")
+        self.log.info("Pre_cleaning of disk and directories...")
         disk_list = ['/dev/mapper/avocado_vg-avocado_lv', self.raid_name,
                      self.disk]
         for disk in disk_list:
             self.delete_fs(disk)
-        self.log.info("checking ...lv/vg existance...")
+        self.log.info("checking ...lv/vg existence...")
         if lv_utils.lv_check(self.vgname, self.lvname):
-            self.log.info("found lv existance... deleting it")
+            self.log.info("found lv existence... deleting it")
             self.delete_lv()
         elif lv_utils.vg_check(self.vgname):
-            self.log.info("found vg existance ... deleting it")
+            self.log.info("found vg existence ... deleting it")
             lv_utils.vg_remove(self.vgname)
         else:
             self.log.info("No VG/LV detected")
-        self.log.info("checking for sraid existance...")
+        self.log.info("checking for sraid existence...")
         if self.sraid.exists():
-            self.log.info("found sraid existance... deleting it")
+            self.log.info("found sraid existence... deleting it")
             self.delete_raid()
         else:
             self.log.info("No softwareraid detected ")
@@ -316,7 +316,7 @@ class FioTest(Test):
             self.log.info("lv %s deleted" % self.lvname)
         else:
             self.err_mesg.append("lv %s not deleted" % self.lvname)
-        # checking and deleteing if lvm_meta_data exists after lv removed
+        # checking and deleting if lvm_meta_data exists after lv removed
         cmd = 'blkid -o value -s TYPE %s' % self.lv_disk
         out = process.system_output(cmd, shell=True,
                                     ignore_status=True).decode("utf-8")
@@ -327,7 +327,7 @@ class FioTest(Test):
     def delete_fs(self, l_disk):
         """
         checks for disk/dir mount, unmount if mounted and checks for
-        filesystem exitance and wipe it off after dir/disk unmount.
+        filesystem existence and wipe it off after dir/disk unmount.
 
         :param l_disk: disk name for which you want to check the mount status
         :return: None

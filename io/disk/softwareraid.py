@@ -74,7 +74,7 @@ class SoftwareRaid(Test):
 
     def test(self):
         """
-        Decides which functions to be run for a perticular raid level, and runs
+        Decides which functions to be run for a particular raid level, and runs
         those tests.
         """
         if not self.sraid.create():

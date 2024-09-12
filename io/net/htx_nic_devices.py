@@ -188,7 +188,7 @@ class HtxNicTest(Test):
             # only one time. This check is to avoid multiple times installation
             if host_distro_pattern == peer_distro_pattern:
                 if process.system(cmd, shell=True, ignore_status=True):
-                    self.cancel("Installion of rpm failed")
+                    self.cancel("Installation of rpm failed")
                 output = self.session.cmd(cmd)
                 if not output.exit_status == 0:
                     self.cancel("Unable to install the package %s %s"
@@ -197,7 +197,7 @@ class HtxNicTest(Test):
                 break
             if pattern == host_distro_pattern:
                 if process.system(cmd, shell=True, ignore_status=True):
-                    self.cancel("Installion of rpm failed")
+                    self.cancel("Installation of rpm failed")
 
             if pattern == peer_distro_pattern:
                 output = self.session.cmd(cmd)
@@ -255,10 +255,10 @@ class HtxNicTest(Test):
         The function is to setup network topology for htx run
         on both host and peer.
         The build_net multisystem <hostname/IP> command
-        configures the netwrok interfaces on both host and peer Lpars with
+        configures the network interfaces on both host and peer Lpars with
         some random net_ids and check pingum and also
-        starts the htx deamon for net.mdt
-        There is no need to explicitly start the htx deamon, create/select
+        starts the htx daemon for net.mdt
+        There is no need to explicitly start the htx daemon, create/select
         nd activate for net.mdt
         """
         self.log.info("Setting up the Network configuration on Host and Peer")

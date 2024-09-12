@@ -535,7 +535,7 @@ class Bonding(Test):
                 networkinterface.restore_from_backup()
             except Exception:
                 self.log.info(
-                    "backup file not availbale, could not restore file.")
+                    "backup file not available, could not restore file.")
 
         if self.peer_bond_needed:
             self.bond_remove("peer")

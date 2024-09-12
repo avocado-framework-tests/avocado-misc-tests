@@ -76,7 +76,7 @@ class DlparPci(Test):
         '''
         # lshwres command can return message No results were found
         # in case hardware discovery is not done yet or needs to be refreshed.
-        # Handle such condition in the scipt and skip the test in such case.
+        # Handle such condition in the script and skip the test in such case.
         no_result = 'No results were found'
         if self.lpar_2 is not None:
             cmd = 'lshwres -r io -m %s --rsubtype slot --filter \
@@ -434,9 +434,9 @@ class DlparPci(Test):
 
         def net_recovery_check():
             """
-            Checks if the network adapter fuctionality like ping/link_state,
+            Checks if the network adapter functionality like ping/link_state,
             after adapter added back.
-            Returns True on propper Recovery, False if not.
+            Returns True on proper Recovery, False if not.
             """
             self.log.info("entering the net recovery check")
             local = LocalHost()
@@ -444,7 +444,7 @@ class DlparPci(Test):
             networkinterface = NetworkInterface(iface[0], local)
             if wait.wait_for(networkinterface.is_link_up, timeout=120):
                 if networkinterface.ping_check(self.peer_ip, count=5) is None:
-                    self.log.info("inteface is up and pinging")
+                    self.log.info("interface is up and pinging")
                     return True
             return False
 
