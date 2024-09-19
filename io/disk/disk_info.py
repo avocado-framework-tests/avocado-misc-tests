@@ -292,7 +292,7 @@ class DiskInfo(Test):
 
     def tearDown(self):
         '''
-        Unmount the directory at the end if incase of test fails in between
+        Unmount the directory at the end if in case of test fails in between
         '''
         if hasattr(self, "part_obj"):
             if self.disk is not None:

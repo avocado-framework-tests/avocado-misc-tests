@@ -185,7 +185,7 @@ class cpupower(Test):
 
     def final_freq(self, cur, initial_governor):
         """
-        Set the system with Intial values
+        Set the system with Initial values
         :param cur: Current frequency which was set on system
         :prama initial_governor: Initial governor which was set on the system
         """

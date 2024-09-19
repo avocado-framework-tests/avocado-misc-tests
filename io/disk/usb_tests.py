@@ -47,7 +47,7 @@ class USBTests(Test):
         if not self.usb_pci_device:
             self.cancel("please provide pci adrees or wwids of scsi disk")
         if self.usb_pci_device not in pci.get_pci_addresses():
-            self.cancel(f"PCI Adress {self.usb_pci_device} not found among "
+            self.cancel(f"PCI Address {self.usb_pci_device} not found among "
                         f"list of available PCI devices")
         self.usb_disk = self.params.get("disk", default=None)
         if not self.usb_disk:

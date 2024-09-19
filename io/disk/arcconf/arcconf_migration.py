@@ -108,7 +108,7 @@ class Arcconftest(Test):
         """
         disk_val1 = ""
         disk_val2 = ""
-        # create the inital disk required for raid creation
+        # create the initial disk required for raid creation
         loop_count = 0
         for disk in self.disk_no:
             loop_count += 1

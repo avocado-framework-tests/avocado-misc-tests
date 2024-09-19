@@ -32,8 +32,8 @@ sriov_adapters ---> space separated location code (DRC) of the the adapters that
 sriov_ports ---> space separated ports using which the Network virtualized interface will be added/removed
 Ex: if the adapter has 2 ports and the Network virtualized interface should be added using Port 1, mention value as 0
 else mention 2 if Network virtualized interface should be added using Port 1
-bandwidth ---> The percentage of the ports bandwidth this Network virtualized interface is entitled to, space seprated for more
-priority ---> space seperated prirotiy value for backing devices should be range of 1-100 (1,100,50,.. 1 for active and 100, 50 for consecutive backing device). 1 represents highest priority, 100 represents lowest, 50 is default if param not specified
+bandwidth ---> The percentage of the ports bandwidth this Network virtualized interface is entitled to, space separated for more
+priority ---> space separated prirotiy value for backing devices should be range of 1-100 (1,100,50,.. 1 for active and 100, 50 for consecutive backing device). 1 represents highest priority, 100 represents lowest, 50 is default if param not specified
 auto_failover --> enable auto_failover flag, 1 to enable or 0 to disable, defaults to 1
 device_ip ---> Ip to be configured for the added Network virtualized interface, space separated if multiple
 netmask ---> netmask value for the added Network virtualized interface, space separated if multiple
@@ -51,12 +51,12 @@ hmc_username ---> HMC user name
 slot_num ---> multiple slot number separated with space, on which the Network virtualized interface will be added. Should be 3 - 2999 and unused currently. space separated for more
 vios_names ---> space separated name of the vios used to add/remove Network virtualized interface
 sriov_adapters ---> space separated location code (DRC) of the the adapters that is assigned to the hypervisor.
-if want mutiple Network virtualized interface from same adapter, ex : "U78D5.ND1.CSS130E-P1-C4-C1 U78D5.ND1.CSS130E-P1-C4-C1"
-if want mutiple Network virtualized interface from different adapter, ex : "U78D5.ND1.CSS130E-P1-C4-C1 U78D5.ND2.CSS140C-P1-C5-C1"
+if want multiple Network virtualized interface from same adapter, ex : "U78D5.ND1.CSS130E-P1-C4-C1 U78D5.ND1.CSS130E-P1-C4-C1"
+if want multiple Network virtualized interface from different adapter, ex : "U78D5.ND1.CSS130E-P1-C4-C1 U78D5.ND2.CSS140C-P1-C5-C1"
 sriov_ports ---> space separated ports using which the Network virtualized interface will be added/removed
-priority: space seperated prirotiy value for backing devices should be range of 1-100 (1,100,50,.. 1 for active and 100, 50 for consecutive backing device). 1 represents highest priority, 100 represents lowest, 50 is default if param not specified
+priority: space separated prirotiy value for backing devices should be range of 1-100 (1,100,50,.. 1 for active and 100, 50 for consecutive backing device). 1 represents highest priority, 100 represents lowest, 50 is default if param not specified
 auto_failover ---> enable auto_failover flag, 1 to enable or 0 to disable, defaults to 1
-bandwidth ---> The percentage of the ports bandwidth this Network virtualized interface is entitled to, space seprated for more
+bandwidth ---> The percentage of the ports bandwidth this Network virtualized interface is entitled to, space separated for more
 device_ip ---> space separated ip address
 netmasks ---> space separated netmask
 peer_ip ---> space separated peer ip

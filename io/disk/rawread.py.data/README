@@ -10,7 +10,7 @@ Last update to rawread binaries by:
 Author: Abdul Haleem <abdhalee@linux.vnet.ibm.com>
 Date: 15 Mar 2023
 
-The curent rawread.c code allows short disk device names and
+The current rawread.c code allows short disk device names and
 test fails for long device path names, so increased buffer size
 of 'devices' to higher value 255 
 

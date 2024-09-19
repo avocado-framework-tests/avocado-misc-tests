@@ -29,7 +29,7 @@ from avocado.utils import distro
 class Arcconftest(Test):
 
     """
-    Covers functionality relavent to controller settings.
+    Covers functionality relevant to controller settings.
     """
 
     def setUp(self):

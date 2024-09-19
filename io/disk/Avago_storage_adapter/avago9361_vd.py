@@ -259,7 +259,7 @@ class Avago9361(Test):
 
     def sleep_function(self, cmd):
         """
-        Helper function for scrit to wait, till the background operation is
+        Helper function for script to wait, till the background operation is
         complete
         """
         while self.showprogress(cmd):
@@ -409,7 +409,7 @@ class Avago9361(Test):
 
     def tearDown(self):
         """
-        Function to reset the chages made for a particular test
+        Function to reset the changes made for a particular test
         """
         if str(self.name) in self.list_test:
             cmd = "%s /c%d set autorebuild=on" % (self.tool, self.controller)

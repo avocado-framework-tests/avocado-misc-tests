@@ -229,7 +229,7 @@ class NXGZipTests(Test):
 
     def test_zpipe_repeat(self):
         '''
-        Running NX-GZIP: Run zpipe repeates tests
+        Running NX-GZIP: Run zpipe repeats tests
         '''
         self.cancel("NX-GZIP:Intentionally Cancelled test_zpipe_repeat tests,\
                     due to test case issues.")

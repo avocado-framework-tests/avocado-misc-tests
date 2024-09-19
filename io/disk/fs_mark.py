@@ -44,7 +44,7 @@ class FSMark(Test):
     """
     The fs_mark program is meant to give a low level bashing to file
     systems. The write pattern that we concentrate on is heavily
-    synchronous IO across mutiple directories, drives, etc.
+    synchronous IO across multiple directories, drives, etc.
     """
 
     def setUp(self):
@@ -173,21 +173,21 @@ class FSMark(Test):
         """
         cleanup the disk and directory before test starts on it
         """
-        self.log.info("Pre_cleaning of disk and diretories...")
+        self.log.info("Pre_cleaning of disk and directories...")
         disk_list = ['/dev/mapper/avocado_vg-avocado_lv', self.raid_name,
                      self.disk]
         for disk in disk_list:
             self.delete_fs(disk)
-        self.log.info("checking ...lv/vg existance...")
+        self.log.info("checking ...lv/vg existence...")
         if lv_utils.lv_check(self.vgname, self.lvname):
-            self.log.info("found lv existance... deleting it")
+            self.log.info("found lv existence... deleting it")
             self.delete_lv()
         elif lv_utils.vg_check(self.vgname):
-            self.log.info("found vg existance ... deleting it")
+            self.log.info("found vg existence ... deleting it")
             lv_utils.vg_remove(self.vgname)
-        self.log.info("checking for softwareraid existance...")
+        self.log.info("checking for softwareraid existence...")
         if self.sw_raid.exists():
-            self.log.info("found softwareraid existance... deleting it")
+            self.log.info("found softwareraid existence... deleting it")
             self.delete_raid()
         else:
             self.log.info("No softwareraid detected ")
@@ -236,7 +236,7 @@ class FSMark(Test):
             self.log.info("lv %s deleted" % self.lvname)
         else:
             self.err_mesg.append("failed to delete lv %s" % self.lvname)
-        # checking and deleteing if lvm_meta_data exists after lv removed
+        # checking and deleting if lvm_meta_data exists after lv removed
         cmd = 'blkid -o value -s TYPE %s' % self.lv_disk
         out = process.system_output(cmd, shell=True,
                                     ignore_status=True).decode("utf-8")
@@ -247,7 +247,7 @@ class FSMark(Test):
     def delete_fs(self, l_disk):
         """
         checks for disk/dir mount, unmount if mounted and checks for
-        filesystem exitance and wipe it off after dir/disk unmount.
+        filesystem existence and wipe it off after dir/disk unmount.
 
         :param l_disk: disk name for which you want to check the mount status
         :return: None

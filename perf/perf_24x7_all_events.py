@@ -67,7 +67,7 @@ class hv_24x7_all_events(Test):
         event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
 
         # Check if this is a guest
-        # 24x7 is not suported on guest
+        # 24x7 is not supported on guest
         if "emulated by" in cpu._get_info():
             self.cancel("This test is not supported on guest")
 

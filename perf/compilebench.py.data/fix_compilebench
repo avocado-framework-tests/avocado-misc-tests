@@ -146,7 +146,7 @@
 -    print "=" * 74
 +    print("\nrun complete:")
 +    print("=" * 74)
-     print_stat(dset.initial_create_stats, "intial create", "MB/s")
+     print_stat(dset.initial_create_stats, "initial create", "MB/s")
      print_stat(dset.create_stats, "create", "MB/s")
      print_stat(dset.patch_stats, "patch", "MB/s")
 @@ -485,7 +485,7 @@

@@ -38,7 +38,7 @@ class WillItScaleTest(Test):
     :avocado: tags=kernel,ppc64le
     """
 
-    @skipIf(SINGLE_NODE, "Test requires atleast two numa nodes")
+    @skipIf(SINGLE_NODE, "Test requires at least two numa nodes")
     @skipIf(VERSION_CHK, "Test requires Python 3.7+")
     def setUp(self):
         """

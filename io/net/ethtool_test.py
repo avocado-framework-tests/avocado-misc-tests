@@ -213,7 +213,7 @@ class Ethtool(Test):
                         self.fail("%s failed" % self.args)
         if not wait.wait_for(lambda: self.networkinterface.are_packets_lost(
                 self.peer, options=['-c 10000', '-f']), timeout=30):
-            self.cancel("Packet recieved in Ping flood is not 100 percent \
+            self.cancel("Packet received in Ping flood is not 100 percent \
                          after waiting for 30sec")
         if self.priv_test:
             self.ethtool_toggle_priv_flags()
@@ -268,6 +268,6 @@ class Ethtool(Test):
                 self.networkinterface.restore_from_backup()
             except Exception:
                 self.networkinterface.remove_cfg_file()
-                self.log.info("backup file not availbale, could not restore file.")
+                self.log.info("backup file not available, could not restore file.")
             if self.hbond:
                 self.networkinterface.restore_slave_cfg_file()

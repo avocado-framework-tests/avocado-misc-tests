@@ -6,7 +6,7 @@ Test: !mux
             basic_option: -v -C 100 -S 1024 , -a peer_ip -v -C 100 -S 1024
         third:
             basic_option: -a ::0 , -C300 -a peer_ipv6%interface -v
-# Placeholder for exended option
+# Placeholder for extended option
 #        fourth:
 #            ext_option:
 Parameters:

@@ -135,4 +135,4 @@ class SwitchTest(Test):
                 self.networkinterface.restore_from_backup()
             except Exception:
                 self.log.info(
-                    "backup file not availbale, could not restore file.")
+                    "backup file not available, could not restore file.")

@@ -38,7 +38,7 @@ diff -u old/ new/
 +	sema = shmat(shmid, NULL, 0);
 +
 +	if (sem_init(sema, 1, 0) < 0) {
-+		perror("semaphore initilization failed");
++		perror("semaphore initialization failed");
 +		exit(1);
 +	}
 +

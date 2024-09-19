@@ -123,7 +123,7 @@ class TestLog(logging.Logger):
         self.addHandler(console)
 
     def __get_log_level(self, log_level):
-        """Just to translate the strig format to logging format."""
+        """Just to translate the string format to logging format."""
         if log_level not in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'):
             self.warning('Misconfigured log level %s. Assuming INFO.' %
                          log_level)
@@ -517,7 +517,7 @@ class DedicatedCpu(TestCase):
         Check:
          1 - Processor type (dedicated, shared);
          2 - Max cpus;
-         3 - Have enought processor units;
+         3 - Have enough processor units;
         """
         self.log.info("Checking partition '%s' configuration." %
                       linux_machine.partition)
@@ -649,7 +649,7 @@ class CpuUnit(TestCase):
         Check:
         1 - Processor type (dedicated, shared);
         2 - Max cpu units;
-        3 - Have enought virtual cpu units;
+        3 - Have enough virtual cpu units;
         """
         self.log.info("Checking partition '%s' configuration." %
                       linux_machine.partition)

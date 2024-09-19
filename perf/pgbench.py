@@ -27,7 +27,7 @@ class Pgbench(Test):
     """
     This module will run the pgbench benchmark. Pgbench is a benchmark for
     measuring the throughput achieved by executing database transactions on
-    PostgresSQL database.
+    PostgreSQL database.
     """
     sm = SoftwareManager()
     scaling_factor = worker_threads = db_clients = protocol = \
@@ -128,7 +128,7 @@ class Pgbench(Test):
             self.log.info(result[1])
 
     def tearDown(self):
-        # destory the db
+        # destroy the db
         self.run_cmd("dropdb pgbench", True)
 
         # reset things if we set them up

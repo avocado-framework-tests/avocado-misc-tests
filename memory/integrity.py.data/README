@@ -10,12 +10,12 @@ pattern is read again. It also verifies whether all pages faulted and has pfn or
 
 
 Scenario 2:
-It determines two nodes which contains atleast 10% of total memory and allocate
+It determines two nodes which contains at least 10% of total memory and allocate
 pages in node1 and writes pattern into it. Then, the pages are moved to node2,
 pattern is read and verified from node2. It also verifies whether all pages 
 are faulted in the corresponding node requested else test is failed.
 
-The test fails if numa suport is not there or if two nodes does not contains 
+The test fails if numa support is not there or if two nodes does not contains 
 at least 10% of total system memory.
 
 Scenario 3:

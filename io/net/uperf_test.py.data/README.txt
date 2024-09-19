@@ -18,7 +18,7 @@ Requirements:
 -----------------------
 1. Generate sshkey for your test partner to run the test uninterrupted.
 2. Install netifaces using pip. command: pip install netifaces
-3. Install dependant packages for uperf tools to be compiled in the
+3. Install dependent packages for uperf tools to be compiled in the
 Peer machine. 
 For Rhel and Sles distros: lksctp-tools, lksctp-tools-devel
 For Ubuntu: libsctp1, libsctp-dev, lksctp-tools

@@ -451,7 +451,7 @@ class RASToolsPpcutils(Test):
             cmd = "lparstat %s" % list_item
             if not process.system(cmd, ignore_status=True, sudo=True):
                 self.log.info("%s command passed" % cmd)
-                self.fail("lparstat: Expected failure, %s command exeucted \
+                self.fail("lparstat: Expected failure, %s command executed \
                           successfully." % cmd)
         output = process.system_output("lparstat -E 1 1").decode("utf-8")
         for line in output.splitlines():

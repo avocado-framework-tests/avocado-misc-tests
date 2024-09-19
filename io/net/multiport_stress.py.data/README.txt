@@ -1,5 +1,5 @@
 This is a test to run multiport stress on the NIC adapter.
-To begin with, the test runs a Ping test on multiple interfaces parallely
+To begin with, the test runs a Ping test on multiple interfaces parallelly
 which is followed by Flood ping
 
 The yaml files has following parameters:

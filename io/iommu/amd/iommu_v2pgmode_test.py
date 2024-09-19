@@ -83,11 +83,11 @@ class IommuPageTable(Test):
                 if check_v2pgtbl_mode("5"):
                     self.log.info("Host page table mode (5lvl) match with IOMMU V2 Page mode")
                 else:
-                    self.fail("Host page table mode (5lvl) doesnot match with IOMMU V2 Paging mode")
+                    self.fail("Host page table mode (5lvl) does not match with IOMMU V2 Paging mode")
             else:
                 if check_v2pgtbl_mode(self.bits_to_pgmode[cpu.get_va_bits()]):
                     self.log.info("Host page table mode match with IOMMU V2 Page mode")
                 else:
-                    self.fail("Host page table mode doesnot match with IOMMU V2 Paging mode")
+                    self.fail("Host page table mode does does not match with IOMMU V2 Paging mode")
         else:
             self.cancel("IOMMU is in v1 page table")

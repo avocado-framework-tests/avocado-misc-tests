@@ -110,7 +110,7 @@ class IommuTest(Test):
                              'iommu_group/devices/')
             if len(lst) != 1:
                 self.cancel(f"{pci_addr} belongs to iommu group having more "
-                            "than one device but system doesnot support "
+                            "than one device but system does not support "
                             "domain type change for such device")
         cmd = "dmesg -C"
         process.run(cmd, ignore_status=True, shell=True, sudo=True)
@@ -192,7 +192,7 @@ class IommuTest(Test):
         if not wait.wait_for(lambda: rescan_check(pci_addr), timeout=5):
             self.fail(f'Unsuccessful to rescan for {pci_addr}')
         else:
-            self.log.info("successfully rescaned for the device %s", pci_addr)
+            self.log.info("successfully rescanned for the device %s", pci_addr)
 
     def get_params(self, pci_addr):
         """

@@ -109,13 +109,13 @@ class PerfCoreIMCEvents(Test):
                       self.list_trace_imc]:
             self.imc_events(event)
 
-        # negative testcase running two different imc events parallely
+        # negative testcase running two different imc events parallelly
         process.run("perf stat -e core_imc/CPM_CCYC/ -I 1000 &",
                     sudo=True, shell=True, ignore_bg_processes=True)
         if not process.system("perf stat -e thread_imc/CPM_CCYC/ -I 1000 ls",
                               ignore_status=True, sudo=True):
             self.fail("test failed because able to run two different imc "
-                      "events parallely")
+                      "events parallelly")
 
     def tearDown(self):
         # kill process running in background

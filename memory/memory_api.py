@@ -29,7 +29,7 @@ from avocado.utils.software_manager.manager import SoftwareManager
 
 class MemorySyscall(Test):
     """
-    Excercises malloc, mmap, mprotect, mremap syscalls with 90 %
+    Exercises malloc, mmap, mprotect, mremap syscalls with 90 %
     of the machine's free memory
 
     :avocado: tags=memory

@@ -51,7 +51,7 @@ class PCP(Test):
         if self.dist.arch != 'ppc64le':
             self.cancel("Not supported on %s" % self.dist.arch)
         # Check if this is a guest
-        # 24x7 is not suported on guest
+        # 24x7 is not supported on guest
         if "emulated by" in genio.read_file("/proc/cpuinfo").rstrip('\t\r\n\0'):
             self.cancel("24x7: This test is not supported on guest")
 

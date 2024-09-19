@@ -137,7 +137,7 @@ class NetworkconfigTest(Test):
             if 'Speed' in line:
                 eth_speed = line.split()[-1].strip('Mb/s')
         if speed != eth_speed:
-            self.fail("mis match in speed")
+            self.fail("mismatch in speed")
 
     def test_mac_aadr_check(self):
         '''
@@ -173,4 +173,4 @@ class NetworkconfigTest(Test):
             try:
                 self.networkinterface.restore_from_backup()
             except Exception:
-                self.log.info("backup file not availbale, could not restore file.")
+                self.log.info("backup file not available, could not restore file.")

@@ -136,7 +136,7 @@ class PerfSDT(Test):
         self.temp_file = tempfile.NamedTemporaryFile().name
         detected_distro = distro.detect()
         if 'ppc' not in distro.detect().arch:
-            self.cancel("Test supportd only on  ppc64 arch")
+            self.cancel("Test supported only on  ppc64 arch")
         deps = ['gcc', 'make']
         if 'Ubuntu' in detected_distro.name:
             deps.extend(['libc-dev', 'libc-bin', 'linux-tools-common',

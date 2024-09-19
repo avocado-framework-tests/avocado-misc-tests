@@ -15,7 +15,7 @@
 # Author: Narasimhan V <sim@linux.vnet.ibm.com>
 
 """
-This Suite tests the GenWQE Accelarator.
+This Suite tests the GenWQE Accelerator.
 """
 
 import os

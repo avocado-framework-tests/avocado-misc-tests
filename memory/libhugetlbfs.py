@@ -35,7 +35,7 @@ from avocado.utils.software_manager.manager import SoftwareManager
 class LibHugetlbfs(Test):
     '''
     libhugetlbfs: libhugetlbfs is a library which provides easy
-    access to huge pages of memory. test to excersize libhugetlbfs library
+    access to huge pages of memory. test to exercise libhugetlbfs library
 
     :avocado: tags=memory,privileged,hugepage
     '''

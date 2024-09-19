@@ -68,7 +68,7 @@ class lockstorm_benchmark(Test):
 
     def test(self):
         """
-        In this funtion basically we are changing the SMT states
+        In this function basically we are changing the SMT states
         and running the lockstorm benchmark.
         1.changing the SMT modes.
         2.Running the lockstorm benchmark.

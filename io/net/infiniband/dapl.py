@@ -173,7 +173,7 @@ class dapl(Test):
         try:
             self.networkinterface.restore_from_backup()
         except Exception:
-            self.log.info("backup file not availbale, could not restore file.")
+            self.log.info("backup file not available, could not restore file.")
         self.remotehost.remote_session.quit()
         self.remotehost_public.remote_session.quit()
         self.session.quit()

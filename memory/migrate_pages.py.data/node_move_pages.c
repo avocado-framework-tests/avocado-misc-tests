@@ -58,7 +58,7 @@ void get_total_mem_bytes()
 		exit(-1);
 }
 
-/* Sets the nodes to be used in test which contains atleast 10% of total memory*/
+/* Sets the nodes to be used in test which contains at least 10% of total memory*/
 void get_numa_nodes_to_use(unsigned long memory_to_use)
 {
 	unsigned long free_node_sizes;
@@ -149,7 +149,7 @@ void read_memory(char *addr, char pattern, unsigned long size, unsigned long pag
 		if (val != pattern) {
 			printf("Iterator %lu\n", iterator);
 			printf("Correctness failed at loop read\n"
-                               "PATTERN MISMATCH OCCURED \n");
+                               "PATTERN MISMATCH OCCURRED \n");
 			exit(-1);
 		}
 		read++;

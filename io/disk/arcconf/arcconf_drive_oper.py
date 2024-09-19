@@ -29,7 +29,7 @@ from avocado.utils import distro
 
 class Arcconftest(Test):
     """
-    Covers functionality relavent to device settings.
+    Covers functionality relevant to device settings.
     """
 
     def setUp(self):

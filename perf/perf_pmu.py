@@ -190,7 +190,7 @@ class PerfBasic(Test):
             output = dmesg.collect_errors_dmesg(
                 'rtas error: Error calling get-system-parameter')
             if len(output):
-                self.fail("RTAS error occured")
+                self.fail("RTAS error occurred")
 
     def _check_count(self, event_type):
         base_dir = "/sys/bus/event_source/devices/"

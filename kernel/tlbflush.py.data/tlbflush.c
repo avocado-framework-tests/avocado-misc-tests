@@ -17,7 +17,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    Copyright (C) Intel 2012
-   Coypright Alex Shi alex.shi@intel.com 
+   Copyright Alex Shi alex.shi@intel.com 
 
    gcc -o munmap munmap.c -lrt -lpthread -O2
 

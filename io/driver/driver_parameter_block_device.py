@@ -16,7 +16,7 @@
 # Author: Naresh Bannoth<nbannoth@in.ibm.com>
 
 """
-This Script verfies driver module parameter.
+This Script verifies driver module parameter.
 """
 import time
 from avocado.utils import process
@@ -28,7 +28,7 @@ from avocado import Test
 class Moduleparameter(Test):
 
     """
-    This Script verfies driver module parameter.
+    This Script verifies driver module parameter.
     """
 
     def setUp(self):
@@ -163,7 +163,7 @@ class Moduleparameter(Test):
         """
         Restore back the default Parameters
         """
-        self.log.info("Restoiring Default param")
+        self.log.info("Restoring Default param")
         if self.mpath_enabled is True:
             if not wait.wait_for(self.is_mpath_flushed, timeout=150):
                 self.fail("multipath is in USE and cannot be flushed")

@@ -34,7 +34,7 @@ IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
 
 class VirtualFC(Test):
     '''
-    Removing and Adding and Fibre Chanel Virtualized devices from the HMC
+    Removing and Adding and Fibre Channel Virtualized devices from the HMC
     '''
     @skipUnless("ppc" in distro.detect().arch,
                 "supported only on Power platform")
