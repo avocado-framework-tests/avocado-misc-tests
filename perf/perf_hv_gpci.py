@@ -68,7 +68,7 @@ class perf_hv_gpci(Test):
         self.list_partition = []
         self.list_hw = []
         self.list_noid = []
-        for line in process.get_command_output_matching('perf list', 'hv_gpci'):
+        for line in process.get_command_output_matching("perf list | grep 'hv_gpci' | grep -v 'descriptor'", 'hv_gpci'):
             line = "%s/%s" % (line.split('/')[0], line.split('/')[1])
             if 'phys_processor_idx' in line:
                 self.list_phys.append(line)
