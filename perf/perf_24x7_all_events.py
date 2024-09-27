@@ -93,7 +93,7 @@ class hv_24x7_all_events(Test):
 
         # Collect all hv_24x7 events
         self.list_of_hv_24x7_events = []
-        for lne in process.get_command_output_matching('perf list', 'hv_24x7'):
+        for lne in process.get_command_output_matching("perf list | grep 'hv_24x7' | grep -v 'descriptor'", 'hv_24x7'):
             lne = lne.split(',')[0].split('/')[1]
             self.list_of_hv_24x7_events.append(lne)
 
