@@ -148,7 +148,7 @@ class Ethtool(Test):
                     "-l", self.interface, self.elapse)
                 output = process.run(cmd_l, shell=True, verbose=True,
                                      ignore_status=True).stdout_text \
-                                                        .splitlines()[2:6]
+                                                        .splitlines()[7:11]
                 for i in range(len(output)):
                     default.append(output[i].split(':')[1])
                     if 'n/a' in output[i]:
@@ -193,10 +193,21 @@ class Ethtool(Test):
                                         else:
                                             self.fail("%s %s" % (
                                                 self.args, result.stderr_text))
-                    cmd = "ethtool %s %s %s %s %s %s %s %s %s %s" % (
-                        self.args, self.interface, self.param[0], value[0],
-                        self.param[1], value[1], self.param[2], value[2],
-                        self.param[3], value[3])
+                    cmd = (
+                        f"ethtool {self.args} {self.interface} {self.param[0]} {value[0]}"
+                        f"{self.param[1]} {value[1]} {self.param[2]} {value[2]}"
+                        f"{self.param[3]} {value[3]}"
+                        )
+                    ret = process.run(cmd, shell=True, verbose=True,
+                                      ignore_status=True)
+                    if ret.exit_status != 0:
+                        self.fail(f"{self.args} {ret.stderr_text}")
+                    # Set queue values to original values
+                    cmd = (
+                        f"ethtool {self.args} {self.interface} {self.param[0]} {self.default_set[0]}"
+                        f"{self.param[1]} {self.default_set[1]} {self.param[2]}"
+                        f"{self.default_set[2]} {self.param[3]} {self.default_set[3]}"
+                        )
                     ret = process.run(cmd, shell=True, verbose=True,
                                       ignore_status=True)
                     if ret.exit_status != 0:
@@ -213,7 +224,7 @@ class Ethtool(Test):
                         self.fail("%s failed" % self.args)
         if not wait.wait_for(lambda: self.networkinterface.are_packets_lost(
                 self.peer, options=['-c 10000', '-f']), timeout=30):
-            self.cancel("Packet received in Ping flood is not 100 percent \
+            self.cancel("Packet recieved in Ping flood is not 100 percent \
                          after waiting for 30sec")
         if self.priv_test:
             self.ethtool_toggle_priv_flags()
@@ -252,22 +263,12 @@ class Ethtool(Test):
         '''
         Set the interface up at the end of test.
         '''
-        if self.interface:
-            if self.args == "-L":
-                cmd = "ethtool %s %s %s %s %s %s %s %s %s %s" % (
-                    self.args, self.interface, self.param[0], self.default_set[0],
-                    self.param[1], self.default_set[1], self.param[2],
-                    self.default_set[2], self.param[3], self.default_set[3])
-                ret = process.run(cmd, shell=True, verbose=True,
-                                  ignore_status=True)
-                if ret.exit_status != 0:
-                    self.fail("%s %s" % (self.args, ret.stderr_text))
-            self.interface_state_change(self.interface, "up", "yes")
-            self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-            try:
-                self.networkinterface.restore_from_backup()
-            except Exception:
-                self.networkinterface.remove_cfg_file()
-                self.log.info("backup file not available, could not restore file.")
-            if self.hbond:
-                self.networkinterface.restore_slave_cfg_file()
+        self.interface_state_change(self.interface, "up", "yes")
+        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
+        try:
+            self.networkinterface.restore_from_backup()
+        except Exception:
+            self.networkinterface.remove_cfg_file()
+            self.log.info("backup file not availbale, could not restore file.")
+        if self.hbond:
+            self.networkinterface.restore_slave_cfg_file()
