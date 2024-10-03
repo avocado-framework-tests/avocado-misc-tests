@@ -441,18 +441,22 @@ class RASToolsPpcutils(Test):
         output = process.system_output("grep security /proc/powerpc/lparcfg"
                                        ).decode("utf-8")
         security_flavor = output.split("=")[1]
+        '''Multiple tests are there for lparstat, to continue the execution
+        of whole code we can capture the error message and use that for fail
+        condition at the end of code.'''
+        error_messages = []
         if value == security_flavor:
             self.log.info("Lpar security flavor is correct")
         else:
-            self.fail("Lpar security flavor is incorrect")
+            error_messages.append("Lpar security flavor is incorrect")
         lists = self.params.get('lparstat_nlist',
                                 default=['--nonexistingoption'])
         for list_item in lists:
             cmd = "lparstat %s" % list_item
             if not process.system(cmd, ignore_status=True, sudo=True):
                 self.log.info("%s command passed" % cmd)
-                self.fail("lparstat: Expected failure, %s command executed \
-                          successfully." % cmd)
+                error_messages.append("lparstat: Expected failure, %s command \
+                                      executed successfully." % cmd)
         output = process.system_output("lparstat -E 1 1").decode("utf-8")
         for line in output.splitlines():
             if 'GHz' in line:
@@ -471,13 +475,15 @@ class RASToolsPpcutils(Test):
         if (actual_busy > 0) and (actual_idle < 100):
             self.log.info("Busy and idle actual values are correct")
         else:
-            self.fail("Busy and idle actual values are incorrect")
+            error_messages.append("Busy and idle actual values are incorrect")
+
         if normal == freq_percentile:
             self.log.info("Normalised busy plus idle value match with \
                           Frequency percentage")
         else:
-            self.fail("Normalised busy plus idle value does not match \
-                        with Frequency percentage")
+            error_messages.append("Normalised busy plus idle value \
+                                  does not match with Frequency percentage")
+
         list_physc = []
         for i in [2, 4, 8, "off"]:
             self.run_cmd("ppc64_cpu --smt=%s" % i)
@@ -492,12 +498,18 @@ class RASToolsPpcutils(Test):
                     matches = re.findall(pattern, last_line)
                     physc_val = float(matches[4])
                     list_physc.append(physc_val)
+
         if len(set(list_physc)) == 1:
             self.log.info("Correctly displaying the number of physical \
                           processors consumed")
         else:
-            self.fail("number of physical processors consumed are not \
-                      displaying correct")
+            error_messages.append("number of physical processors consumed \
+                                  are not displaying correct")
+
+        if len(error_messages) != 0:
+            self.fail(error_messages)
+        else:
+            self.log.info("no failures in lparstat command")
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST,
             "This test is not supported on KVM guest or PowerNV platform")
