@@ -27,7 +27,7 @@ class Package_check(Test):
 
         self.sm = SoftwareManager()
         self.packages = self.params.get(
-            'packages', default=['powerpc-utils', 'ppc64-diag', 'lsvpd'])
+            'packages', default=['powerpc-utils', 'lsvpd'])
         if 'PowerNV' in open('/proc/cpuinfo', 'r').read():
             self.packages.extend(['opal-prd'])
 
@@ -36,6 +36,10 @@ class Package_check(Test):
         if dist.name == 'rhel':
             packages_rhel = self.params.get(
                 'packages_rhel', default=['lshw', 'librtas', 'powerpc-utils-core'])
+            if dist.version <= "8.10":
+                self.packages.extend(['ppc64-diag'])
+            else:
+                self.packages.extend(['ppc64-diag-rtas'])
             self.packages.extend(packages_rhel)
         elif dist.name == 'Ubuntu':
             packages_ubuntu = self.params.get(
