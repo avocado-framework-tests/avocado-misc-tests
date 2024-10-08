@@ -21,10 +21,10 @@ available. Then it verifies all the tools with certain parameters like disk
 name, Size, UUID, mount points and IO Sector sizes
 """
 
-import platform
 import os
 from avocado import Test
 from avocado.utils import process
+from avocado.utils import cpu
 from avocado.utils import genio
 from avocado.utils import distro
 from avocado.utils import multipath
@@ -54,7 +54,7 @@ class DiskInfo(Test):
         pkg = ""
         device = self.params.get('disk', default=None)
         self.disk = disk.get_absolute_disk_path(device)
-        if 'ppc' not in platform.processor():
+        if 'ppc' not in cpu.get_arch():
             self.cancel("Processor is not ppc64")
         self.dirs = self.params.get('dir', default=self.workdir)
         self.fstype = self.params.get('fs', default='ext4')
