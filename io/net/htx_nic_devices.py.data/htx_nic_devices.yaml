@@ -5,6 +5,10 @@ peer_password: "*******"
 peer_user: "root"
 htx_host_interfaces: ""
 peer_interfaces: ""
+host_ips: ""
+peer_ips: ""
+netmask:
 # time limit in minutes
 time_limit: 2
 htx_rpm_link: ""
+hbond: False

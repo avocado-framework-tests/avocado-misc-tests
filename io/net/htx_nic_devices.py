@@ -68,22 +68,26 @@ class HtxNicTest(Test):
             self.cancel("failed connecting to peer")
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
                                      password=self.peer_password)
-
         if 'start' in str(self.name.name):
-            # Flush out the ip addresses on host before starting the test
-            for interface in self.host_intfs:
-                cmd = 'ip addr flush dev %s' % interface
-                process.run(cmd, shell=True, sudo=True, ignore_status=True)
-                cmd = 'ip link set dev %s up' % interface
-                process.run(cmd, shell=True, sudo=True, ignore_status=True)
-
-            # Flush out the ip addresses on peer before starting the test
-            for peer_interface in self.peer_intfs:
-                cmd = 'ip addr flush dev %s' % peer_interface
-                self.session.cmd(cmd)
-                cmd = 'ip link set dev %s up' % peer_interface
-                self.session.cmd(cmd)
-
+            for ipaddr, interface in zip(self.host_private_ips, self.host_intfs):
+                if self.hbond:
+                    networkinterface = NetworkInterface(interface, self.localhost, if_type='Bond')
+                else:
+                    networkinterface = NetworkInterface(interface, self.localhost)
+                try:
+                    networkinterface.add_ipaddr(ipaddr, self.netmask)
+                    networkinterface.save(ipaddr, self.netmask)
+                except Exception:
+                    networkinterface.save(ipaddr, self.netmask)
+            for interface in self.peer_intfs:
+                peer_networkinterface = NetworkInterface(interface, self.remotehost)
+            for peerip in self.peer_ipaddrs:
+                try:
+                    peer_networkinterface.add_ipaddr(peerip, self.netmask)
+                    peer_networkinterface.save(peerip, self.netmask)
+                except Exception:
+                    peer_networkinterface.save(peerip, self.netmask)
+        self.ip_addr_remove()
         self.get_peer_distro()
         self.get_peer_distro_version()
         self.htx_rpm_link = self.params.get('htx_rpm_link', default=None)
@@ -133,6 +137,7 @@ class HtxNicTest(Test):
                 self.cancel("Can not install %s" % pkg)
             cmd = "%s install %s" % (smm.backend.base_command, pkg)
             output = self.session.cmd(cmd)
+            self.session.connect()
             if not output.exit_status == 0:
                 self.cancel(
                     "Unable to install the package %s on peer machine" % pkg)
@@ -189,6 +194,7 @@ class HtxNicTest(Test):
             if host_distro_pattern == peer_distro_pattern:
                 if process.system(cmd, shell=True, ignore_status=True):
                     self.cancel("Installation of rpm failed")
+                self.session.connect()
                 output = self.session.cmd(cmd)
                 if not output.exit_status == 0:
                     self.cancel("Unable to install the package %s %s"
@@ -232,6 +238,10 @@ class HtxNicTest(Test):
                                               '*', default=2)) * 60
         self.query_cmd = "htxcmdline -query -mdt %s" % self.mdt_file
         self.htx_url = self.params.get("htx_rpm", default="")
+        self.host_private_ips = self.params.get("host_ips", '*', default=None).split(" ")
+        self.peer_ipaddrs = self.params.get("peer_ips", '*', default=None).split(" ")
+        self.netmask = self.params.get("netmask", '*', default=None)
+        self.hbond = self.params.get("hbond", default=False)
 
     def test_start(self):
         """
@@ -365,7 +375,18 @@ class HtxNicTest(Test):
         for interface in self.host_intfs:
             cmd = "ip addr flush %s" % interface
             process.run(cmd, ignore_status=True, shell=True, sudo=True)
-            networkinterface = NetworkInterface(interface, self.localhost)
+        for ipaddr, interface in zip(self.host_private_ips, self.host_intfs):
+            if self.hbond:
+                networkinterface = NetworkInterface(interface, self.localhost, if_type='Bond')
+            else:
+                networkinterface = NetworkInterface(interface, self.localhost)
+            networkinterface.add_ipaddr(ipaddr, self.netmask)
+            try:
+                networkinterface.restore_from_backup()
+            except Exception:
+                networkinterface.remove_cfg_file()
+                self.log.info(
+                        "backup file not availbale, could not restore file.")
             networkinterface.bring_up()
 
     def ip_restore_peer(self):
@@ -375,12 +396,38 @@ class HtxNicTest(Test):
         for interface in self.peer_intfs:
             cmd = "ip addr flush %s" % interface
             self.session.cmd(cmd)
-            peer_networkinterface = NetworkInterface(
-                interface, self.remotehost)
+        for peerip, interface in zip(self.peer_ipaddrs, self.peer_intfs):
+            peer_networkinterface = NetworkInterface(interface, self.remotehost)
+            peer_networkinterface.add_ipaddr(peerip, self.netmask)
+            try:
+                peer_networkinterface.restore_from_backup()
+            except Exception:
+                peer_networkinterface.remove_cfg_file()
+                self.log.info(
+                        "backup file not availbale, could not restore file.")
             peer_networkinterface.bring_up()
+
+    def ip_addr_remove(self):
+        '''
+        Flush the IP address before the tests and after htx tests
+        '''
+        # Flush out the ip addresses on host
+        for interface in self.host_intfs:
+            cmd = 'ip addr flush dev %s' % interface
+            process.run(cmd, shell=True, sudo=True, ignore_status=True)
+            cmd = 'ip link set dev %s up' % interface
+            process.run(cmd, shell=True, sudo=True, ignore_status=True)
+
+        # Flush out the ip addresses on peer
+        for peer_interface in self.peer_intfs:
+            cmd = 'ip addr flush dev %s' % peer_interface
+            self.session.cmd(cmd)
+            cmd = 'ip link set dev %s up' % peer_interface
+            self.session.cmd(cmd)
 
     def htx_cleanup(self):
         self.shutdown_htx_daemon()
+        self.ip_addr_remove()
         self.ip_restore_host()
         self.ip_restore_peer()
         self.remotehost.remote_session.quit()
