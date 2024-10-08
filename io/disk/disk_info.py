@@ -129,15 +129,13 @@ class DiskInfo(Test):
         size, UUID and IO sizes etc
         """
         msg = []
-        if process.system("ls /dev/disk/by-id -l| grep -i %s" % self.disk_base,
+        if process.system(f"ls /dev/disk/by-id -l| grep -i {self.disk_base}",
                           ignore_status=True, shell=True, sudo=True) != 0:
-            msg.append("Given disk %s is not in /dev/disk/by-id" %
-                       self.disk_base)
+            msg.append(f"Given disk {self.disk_base} not in /dev/disk/by-id")
         for disk_node in self.disk_nodes:
-            if process.system("ls /dev/disk/by-path -l| grep -i %s" % disk_node,
+            if process.system(f"ls /dev/disk/by-path -l| grep -i {disk_node}",
                               ignore_status=True, shell=True, sudo=True) != 0:
-                msg.append(
-                    "Given disk %s is not in /dev/disk/by-path" % disk_node)
+                msg.append(f"Given disk {disk_node} not in /dev/disk/by-path")
 
         # Verify disk listed in all tools
         if self.mpath:
@@ -155,30 +153,31 @@ class DiskInfo(Test):
                            (self.disk_base, cmd))
         if self.mpath:
             for disk_node in self.disk_nodes:
-                if process.system("lshw -c disk | grep -i %s" % disk_node,
-                                  ignore_status=True, shell=True, sudo=True) != 0:
+                if process.system(f"lshw -c disk | grep -i {disk_node}",
+                                  ignore_status=True, shell=True,
+                                  sudo=True) != 0:
                     msg.append("Given disk %s is not in lshw -c disk" %
                                disk_node)
 
         # Get the size and UUID of the disk
-        cmd = "lsblk -l %s --output SIZE -b |sed -n 2p" % self.disk
+        cmd = f"lsblk -l {self.disk} --output SIZE -b |sed -n 2p"
         output = process.system_output(cmd, ignore_status=True,
                                        shell=True, sudo=True).decode("utf-8")
         if not output:
             self.cancel("No information available in lsblk")
         self.size_b = (output.strip("\n"))[0]
-        self.log.info("Disk: %s Size: %s", self.disk, self.size_b)
+        self.log.info("Disk: %s Size: %s" % (self.disk, self.size_b))
 
         # Get the physical/logical and minimal/optimal sector sizes
-        pbs_sysfs = "/sys/block/%s/queue/physical_block_size" % self.disk_abs
+        pbs_sysfs = f"/sys/block/{self.disk_abs}/queue/physical_block_size"
         pbs = genio.read_file(pbs_sysfs).rstrip("\n")
-        lbs_sysfs = "/sys/block/%s/queue/logical_block_size" % self.disk_abs
+        lbs_sysfs = f"/sys/block/{self.disk_abs}/queue/logical_block_size"
         lbs = genio.read_file(lbs_sysfs).rstrip("\n")
-        mis_sysfs = "/sys/block/%s/queue/minimum_io_size" % self.disk_abs
+        mis_sysfs = f"/sys/block/{self.disk_abs}/queue/minimum_io_size"
         mis = genio.read_file(mis_sysfs).rstrip("\n")
-        ois_sysfs = "/sys/block/%s/queue/optimal_io_size" % self.disk_abs
+        ois_sysfs = f"/sys/block/{self.disk_abs}/queue/optimal_io_size"
         ois = genio.read_file(ois_sysfs).rstrip("\n")
-        self.log.info("pbs: %s, lbs: %s, mis: %s, ois: %s", pbs, lbs, mis, ois)
+        self.log.info("pbs:%s, lbs:%s, mis:%s, ois:%s" % (pbs, lbs, mis, ois))
 
         # Verify sector sizes
         sector_string = "Sector size (logical/physical): %s " \
@@ -196,18 +195,18 @@ class DiskInfo(Test):
                        " in fdisk o/p w.r.t sysfs paths")
 
         # Verify disk size in other tools
-        cmd = "fdisk -l %s | grep -i %s" % (self.disk, self.disk)
+        cmd = f"fdisk -l {self.disk} | grep -i {self.disk}"
         if self.size_b not in process.system_output(cmd,
                                                     ignore_status=True,
                                                     shell=True,
                                                     sudo=True).decode("utf-8"):
-            msg.append("Size of disk %s mismatch in fdisk o/p" % self.disk)
-        cmd = "sfdisk -l %s | grep -i %s" % (self.disk, self.disk)
+            msg.append(f"Size of disk {self.disk} mismatch in fdisk o/p")
+        cmd = f"sfdisk -l {self.disk} | grep -i {self.disk}"
         if self.size_b not in process.system_output(cmd,
                                                     ignore_status=True,
                                                     shell=True,
                                                     sudo=True).decode("utf-8"):
-            msg.append("Size of disk %s mismatch in sfdisk o/p" % self.disk)
+            msg.append(f"Size of disk {self.disk} mismatch in sfdisk o/p")
 
         # Mount
         self.part_obj = Partition(self.disk, mountpoint=self.dirs)
@@ -225,31 +224,31 @@ class DiskInfo(Test):
                                                               self.dirs))
 
         # Get UUID of the disk for each filesystem mount
-        cmd = "blkid %s | cut -d '=' -f 2" % self.disk
+        cmd = f"blkid {self.disk} | cut -d '=' -f 2"
         output = process.system_output(cmd, ignore_status=True,
                                        shell=True, sudo=True).decode("utf-8")
         self.uuid = output.split('"')[1]
-        self.log.info("Disk: %s UUID: %s", self.disk, self.uuid)
+        self.log.info("Disk: %s UUID: %s" % (self.disk, self.uuid))
 
         # Verify mount point, filesystem type and UUID for each test variant
-        output = process.system_output("lsblk -l %s" % self.disk,
+        output = process.system_output(f"lsblk -l {self.disk}",
                                        ignore_status=True, shell=True,
                                        sudo=True).decode("utf-8")
         if self.dirs in output:
             self.log.info("Mount point %s for disk %s updated in lsblk o/p",
                           self.dirs, self.disk)
-        output = process.system_output("df %s" % self.disk,
+        output = process.system_output(f"df {self.disk}",
                                        ignore_status=True, shell=True,
                                        sudo=True).decode("utf-8")
         if self.dirs in output:
             self.log.info("Mount point %s for disk %s updated in df o/p",
                           self.dirs, self.disk)
 
-        if process.system("ls /dev/disk/by-uuid -l| grep -i %s" % self.disk_abs,
+        if process.system(f"ls /dev/disk/by-uuid -l| grep -i {self.disk_abs}",
                           ignore_status=True, shell=True, sudo=True) != 0:
-            msg.append("Given disk %s not having uuid" % self.disk_abs)
+            msg.append(f"Given disk {self.disk_abs} not having uuid")
 
-        output = process.system_output("blkid %s" % self.disk,
+        output = process.system_output(f"blkid {self.disk}",
                                        ignore_status=True, shell=True,
                                        sudo=True).decode("utf-8")
         if (self.disk in output and self.fstype in output and
@@ -263,9 +262,9 @@ class DiskInfo(Test):
                        self.disk_base)
 
         # Un-mount the directory
-        self.log.info("Unmounting directory %s", self.dirs)
+        self.log.info("Unmounting directory %s" % self.dirs)
         self.part_obj.unmount()
-        cmd = 'lshw -c disk | grep -n "%s" | cut -d ":" -f 1' % self.disk
+        cmd = f'lshw -c disk | grep -n "{self.disk}" | cut -d ":" -f 1'
         middle = process.system_output(cmd, ignore_status=True,
                                        shell=True, sudo=True).decode('utf-8')
         if middle:
@@ -278,11 +277,11 @@ class DiskInfo(Test):
             index = lst.index(middle.splitlines()[0])
             low = lst[index-1]
             high = lst[index+1]
-            cmd = "lshw -c disk |sed -n '%s, %sp'" % (low, high)
+            cmd = f"lshw -c disk |sed -n '{low}, {high}p'"
             disk_details = process.system_output(cmd, ignore_status=True,
                                                  shell=True,
                                                  sudo=True).decode('utf-8')
-            ls_string = "logicalsectorsize=%s sectorsize=%s" % (lbs, pbs)
+            ls_string = f"logicalsectorsize={lbs} sectorsize={pbs}"
             if ls_string not in disk_details:
                 msg.append("Mismatch in sector sizes of lbs,pbs"
                            " in lshw o/p w.r.t sysfs paths")
@@ -296,9 +295,9 @@ class DiskInfo(Test):
         '''
         if hasattr(self, "part_obj"):
             if self.disk is not None:
-                self.log.info("Unmounting directory %s", self.dirs)
+                self.log.info("Unmounting directory %s" % self.dirs)
                 self.part_obj.unmount()
-        self.log.info("Removing the filesystem created on %s", self.disk)
-        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % self.disk
+        self.log.info("Removing the filesystem created on %s" % self.disk)
+        delete_fs = f"dd if=/dev/zero bs=512 count=512 of={self.disk}"
         if process.system(delete_fs, shell=True, ignore_status=True):
-            self.fail("Failed to delete filesystem on %s", self.disk)
+            self.fail(f"Failed to delete filesystem on {self.disk}")
