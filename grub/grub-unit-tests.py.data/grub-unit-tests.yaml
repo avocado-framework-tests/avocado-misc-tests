@@ -1,0 +1,24 @@
+test_type: !mux
+  unit:
+    test_type: "unit"
+  shell:
+    test_type: "shell"
+  fs:
+    test_type: "fs"
+
+# GRUB source repo (upstream GNU mirror)
+grub_url: "https://git.savannah.gnu.org/git/grub.git"
+
+# Wall-clock limit (seconds) for the fast parallel test pass
+suite_timeout: 7200
+
+# Per-test timeout (seconds) for slow individually-run tests
+slow_test_timeout: 60
+
+# Source URLs and versions for out-of-distro builds
+qemu_url: "https://download.qemu.org/qemu-9.2.3.tar.xz"
+qemu_version: "9.2.3"
+erofs_utils_url: "https://github.com/erofs/erofs-utils/archive/refs/tags/v1.8.1.tar.gz"
+erofs_utils_version: "1.8.1"
+ntfs3g_url: "https://github.com/tuxera/ntfs-3g/archive/refs/tags/2022.10.3.tar.gz"
+ntfs3g_version: "2022.10.3"
