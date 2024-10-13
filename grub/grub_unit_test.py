@@ -83,8 +83,10 @@ class UnitTestCases(Test):
                 xfail = int(line.strip().split(":")[-1])
             if "# FAIL:" in line:
                 fail = int(line.strip().split(":")[-1])
-        if xfail > 0 or fail > 0:
-            self.fail("Total test fail are {}, please check the logs".format(line))
+        if xfail > 0:
+            self.fail("Total test fail are {}, please check the logs".format(xfail))
+        if fail > 0:
+            self.fail("Total test fail are {}, please check the logs".format(fail))
 
     def tearDown(self):
         if os.path.exists(self.sourcedir_grub):
