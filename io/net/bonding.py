@@ -95,7 +95,7 @@ class Bonding(Test):
             for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
                 networkinterface = NetworkInterface(interface, self.localhost)
                 try:
-                    networkinterface.flush_ipaddr()
+                    networkinterface.nm_flush_ipaddr()
                     networkinterface.add_ipaddr(ipaddr, self.netmask)
                     networkinterface.save(ipaddr, self.netmask)
                 except Exception:
@@ -110,7 +110,7 @@ class Bonding(Test):
                     peer_networkinterface = NetworkInterface(interface,
                                                              self.remotehost)
                     try:
-                        peer_networkinterface.flush_ipaddr()
+                        peer_networkinterface.nm_flush_ipaddr()
                         peer_networkinterface.add_ipaddr(ipaddr, self.netmask)
                         peer_networkinterface.save(ipaddr, self.netmask)
                     except Exception:
@@ -391,9 +391,9 @@ class Bonding(Test):
         if arg1 == "local":
             self.log.info("Configuring Bonding on Local machine")
             self.log.info("--------------------------------------")
-            for ifs in self.host_interfaces:
-                cmd = "ip addr flush dev %s" % ifs
-                process.system(cmd, shell=True, ignore_status=True)
+            for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
+                networkinterface = NetworkInterface(interface, self.localhost)
+                networkinterface.nm_flush_ipaddr()
             for ifs in self.host_interfaces:
                 cmd = "ip link set %s down" % ifs
                 process.system(cmd, shell=True, ignore_status=True)
@@ -457,6 +457,12 @@ class Bonding(Test):
         else:
             self.log.info("Configuring Bonding on Peer machine")
             self.log.info("------------------------------------------")
+            for ipaddr, interface in zip(self.peer_first_ipinterface,
+                                         self.peer_interfaces):
+                peer_networkinterface = NetworkInterface(interface,
+                                                         self.remotehost)
+                peer_networkinterface.nm_flush_ipaddr()
+
             cmd = ''
             for val in self.peer_interfaces:
                 cmd += 'ip addr flush dev %s;' % val
@@ -520,23 +526,16 @@ class Bonding(Test):
             cmd = 'ip route add default via %s' % \
                 (self.gateway)
             process.system(cmd, shell=True, ignore_status=True)
-
         for ipaddr, host_interface in zip(self.ipaddr, self.host_interfaces):
             networkinterface = NetworkInterface(host_interface, self.localhost)
             try:
-                networkinterface.flush_ipaddr()
-                networkinterface.add_ipaddr(ipaddr, self.netmask)
+                networkinterface.nm_flush_ipaddr()
+                networkinterface.restore_from_backup()
                 networkinterface.bring_up()
             except Exception:
                 self.fail("Interface is taking long time to link up")
             if networkinterface.set_mtu("1500") is not None:
                 self.cancel("Failed to set mtu in host")
-            try:
-                networkinterface.restore_from_backup()
-            except Exception:
-                self.log.info(
-                    "backup file not available, could not restore file.")
-
         if self.peer_bond_needed:
             self.bond_remove("peer")
             for ipaddr, interface in zip(self.peer_first_ipinterface,
@@ -547,8 +546,8 @@ class Bonding(Test):
                 peer_networkinterface = NetworkInterface(interface,
                                                          self.remotehost)
                 try:
-                    peer_networkinterface.flush_ipaddr()
-                    peer_networkinterface.add_ipaddr(ipaddr, self.netmask)
+                    peer_networkinterface.nm_flush_ipaddr()
+                    networkinterface.restore_from_backup()
                     peer_networkinterface.bring_up()
                 except Exception:
                     peer_networkinterface.save(ipaddr, self.netmask)
