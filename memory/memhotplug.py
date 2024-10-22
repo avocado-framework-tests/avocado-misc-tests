@@ -16,8 +16,8 @@
 import os
 import glob
 import re
-import platform
 import multiprocessing
+from avocado.utils import cpu
 from avocado import Test
 from avocado.utils import process, memory, build, archive
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -81,7 +81,7 @@ def collect_dmesg(object):
 class MemStress(Test):
 
     '''
-    Stress test to exercise memory component
+    Stress test to exercize memory component
 
     This test performs memory hotunplug/hotplug tests with below scenarios:
        1. hotunplug one by one in a loop for all
@@ -195,7 +195,7 @@ class MemStress(Test):
         self.__error_check()
 
     def test_dlpar_mem_hotplug(self):
-        if 'ppc' in platform.processor() and 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
+        if 'ppc' in cpu.get_arch() and 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
             if b"mem_dlpar=yes" in process.system_output("drmgr -C", ignore_status=True, shell=True):
                 self.log.info("\nDLPAR remove memory operation\n")
                 for _ in range(len(self.blocks_hotpluggable) // 2):

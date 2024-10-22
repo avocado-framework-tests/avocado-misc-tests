@@ -22,8 +22,8 @@ This test verifies that for supported slots.
 
 import os
 import time
-import platform
 from avocado import Test
+from avocado.utils import cpu
 from avocado.utils import nvme
 from avocado.utils import wait, multipath
 from avocado.utils import linux_modules, genio, pci
@@ -46,7 +46,7 @@ class PCIHotPlugTest(Test):
         """
         Setup the device.
         """
-        if 'ppc' not in platform.processor():
+        if 'ppc' not in cpu.get_arch():
             self.cancel("Processor is not ppc64")
         if os.path.exists('/proc/device-tree/bmc'):
             self.cancel("Test Unsupported! on this platform")
