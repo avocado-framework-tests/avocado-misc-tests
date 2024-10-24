@@ -213,6 +213,8 @@ class DlparPci(Test):
         '''
         drmgr remove, add and replace operations
         '''
+        if self.sriov == "yes":
+            self.cancel("drmgr -c pci test is not supported for this device")
         for pci in self.pci_device:
             self.set_adapter_details(pci)
             for _ in range(self.num_of_dlpar):
