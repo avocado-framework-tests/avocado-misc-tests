@@ -198,11 +198,12 @@ class Stressng(Test):
                       "\n".join(ERROR))
 
     def tearDown(self):
-        if 'filesystem' in self.class_type:
+        if hasattr(self, 'loop_dev') and os.path.exists(self.loop_dev):
             process.run("umount %s" % self.loop_dev, ignore_status=True,
                         sudo=True)
             process.run("losetup -d %s" % self.loop_dev, ignore_status=True,
                         sudo=True)
+        if os.path.exists('/tmp/blockfile'):
             process.run("rm -rf /tmp/blockfile", ignore_status=True, sudo=True)
-            if (os.path.exists(self.stressmnt)):
-                process.run(f"rm -rf {self.stressmnt}")
+        if hasattr(self, 'stressmnt') and os.path.exists(self.stressmnt):
+            process.run(f"rm -rf {self.stressmnt}", ignore_status=True)
