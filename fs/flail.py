@@ -36,18 +36,11 @@ class Flail(Test):
         for package in ['gcc', 'make']:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel(package + ' is needed for the test to be run')
-        self.fs_type = self.params.get('fstype', default='xfs')
+        self.args = self.params.get('args', default='')
 
         archive.extract(self.get_data("flail-0.2.0.tar.gz"), self.workdir)
         self.build_dir = os.path.join(self.workdir, 'flail-0.2.0')
         os.chdir(self.build_dir)
-        fin = open("Makefile", "rt")
-        data = fin.read()
-        data = data.replace('-lm -o $@ flail.c', '-o $@ flail.c -lm')
-        fin.close()
-        fin = open("Makefile", "wt")
-        fin.write(data)
-        fin.close()
         build.make(self.build_dir)
 
     def test(self):
@@ -58,7 +51,7 @@ class Flail(Test):
         '''
         self.clear_dmesg()
         os.chdir(self.build_dir)
-        process.system('./flail %s 1' % self.fs_type, ignore_status=True)
+        process.system('./flail %s' % self.args, ignore_status=True)
         dmesg = process.system_output('dmesg')
         match = re.search(br'Call Trace:', dmesg, re.M | re.I)
         if match:
