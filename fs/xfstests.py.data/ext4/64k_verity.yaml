@@ -4,7 +4,7 @@ disk_mnt: '/mnt/loop-device'
 
 loop_type: !mux
     type: 'loop'
-    loop_size: '7GiB'
+    loop_size: '12GiB'
     # Option to provide disk for loop device creation,
     # Uses '/' by default for file creation
     disk: "null"
@@ -12,7 +12,7 @@ loop_type: !mux
 fs_type: !mux
     fs_ext4_64k_verity:
         fs: 'ext4'
-        args: '-R xunit -g verity'
+        args: '-R xunit -L 10 -g verity'
         mkfs_opt: '-b 65536 -O verity'
         mount_opt: '-o block_validity'
 
