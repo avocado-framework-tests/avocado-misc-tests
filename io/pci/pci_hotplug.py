@@ -25,6 +25,7 @@ import time
 from avocado import Test
 from avocado.utils import cpu
 from avocado.utils import nvme
+from avocado.utils import process
 from avocado.utils import wait, multipath
 from avocado.utils import linux_modules, genio, pci
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -63,6 +64,7 @@ class PCIHotPlugTest(Test):
         self.device = self.params.get('pci_devices', default="")
         self.peer_ip = self.params.get('peer_ip', default="")
         self.count = int(self.params.get('count', default='1'))
+        self.adaptertype = self.params.get('adapter_type', default="None")
         if not self.device:
             self.cancel("PCI_address not given")
         self.device = self.device.split(" ")
@@ -73,10 +75,14 @@ class PCIHotPlugTest(Test):
         for pci_addr in self.device:
             if not os.path.isdir('/sys/bus/pci/devices/%s' % pci_addr):
                 self.cancel("%s not present in device path" % pci_addr)
-            slot = pci.get_slot_from_sysfs(pci_addr)
+            if self.adaptertype == "nvme_splitter":
+                slot = self.nvme_splitter_slot(pci_addr)
+            else:
+                slot = pci.get_slot_from_sysfs(pci_addr)
             if not slot:
                 self.cancel("slot number not available for: %s" % pci_addr)
             self.dic[pci_addr] = slot
+        self.log.info(f"Final pci_adress and respective slots {self.dic}")
         self.adapter_type = pci.get_pci_class_name(self.device[0])
         if self.adapter_type == 'nvme':
             self.contr_name = nvme.get_controller_name(self.device[0])
@@ -118,6 +124,21 @@ class PCIHotPlugTest(Test):
             return True
 
         return wait.wait_for(is_removed, timeout=10) or False
+
+    def nvme_splitter_slot(self, pci_addrs):
+        """
+        Returs the physical slot of a nvme splitter drive
+
+        :param pci_addrs: pci_adress of the drive
+        :rtype: string
+        """
+        process.run("drmgr -c pci", ignore_status=True, shell=False)
+        cmd = "lsslot -c pci"
+        out = process.getoutput(cmd, ignore_status=True)
+        for line in out.splitlines():
+            if pci_addrs in line:
+                return str(line.split(" ")[0].strip())
+        return None
 
     def hotplug_add(self, slot, pci_addr):
         """
