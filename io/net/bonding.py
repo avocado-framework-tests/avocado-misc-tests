@@ -49,15 +49,15 @@ class Bonding(Test):
         '''
         To check and install dependencies for the test
         '''
-        detected_distro = distro.detect()
+        self.detected_distro = distro.detect()
         smm = SoftwareManager()
         depends = []
         # FIXME: "redhat" as the distro name for RHEL is deprecated
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
-        if detected_distro.name == "Ubuntu":
+        if self.detected_distro.name == "Ubuntu":
             depends.extend(["openssh-client", "iputils-ping"])
-        elif detected_distro.name in ["rhel", "fedora", "centos", "redhat"]:
+        elif self.detected_distro.name in ["rhel", "fedora", "centos", "redhat"]:
             depends.extend(["openssh-clients", "iputils"])
         else:
             depends.extend(["openssh", "iputils"])
@@ -95,7 +95,10 @@ class Bonding(Test):
             for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
                 networkinterface = NetworkInterface(interface, self.localhost)
                 try:
-                    networkinterface.nm_flush_ipaddr()
+                    if self.detected_distro.name == "SuSE":
+                        networkinterface.flush_ipaddr()
+                    else:
+                        networkinterface.nm_flush_ipaddr()
                     networkinterface.add_ipaddr(ipaddr, self.netmask)
                     networkinterface.save(ipaddr, self.netmask)
                 except Exception:
@@ -131,7 +134,6 @@ class Bonding(Test):
         self.peer_wait_time = self.params.get("peer_wait_time", default=20)
         self.sleep_time = int(self.params.get("sleep_time", default=10))
         self.peer_wait_time = self.params.get("peer_wait_time", default=5)
-        self.sleep_time = int(self.params.get("sleep_time", default=5))
         self.mtu = self.params.get("mtu", default=1500)
         self.ib = False
         if self.host_interface[0:2] == 'ib':
@@ -393,7 +395,10 @@ class Bonding(Test):
             self.log.info("--------------------------------------")
             for ipaddr, interface in zip(self.ipaddr, self.host_interfaces):
                 networkinterface = NetworkInterface(interface, self.localhost)
-                networkinterface.nm_flush_ipaddr()
+                if self.detected_distro.name == "SuSE":
+                    networkinterface.flush_ipaddr()
+                else:
+                    networkinterface.nm_flush_ipaddr()
             for ifs in self.host_interfaces:
                 cmd = "ip link set %s down" % ifs
                 process.system(cmd, shell=True, ignore_status=True)
@@ -529,7 +534,10 @@ class Bonding(Test):
         for ipaddr, host_interface in zip(self.ipaddr, self.host_interfaces):
             networkinterface = NetworkInterface(host_interface, self.localhost)
             try:
-                networkinterface.nm_flush_ipaddr()
+                if self.detected_distro.name == "SuSE":
+                    networkinterface.flush_ipaddr()
+                else:
+                    networkinterface.nm_flush_ipaddr()
                 networkinterface.restore_from_backup()
                 networkinterface.bring_up()
             except Exception:
@@ -554,10 +562,9 @@ class Bonding(Test):
                 time.sleep(self.sleep_time)
         self.error_check()
 
-        detected_distro = distro.detect()
-        if detected_distro.name == "rhel":
+        if self.detected_distro.name == "rhel":
             cmd = "systemctl restart NetworkManager.service"
-        elif detected_distro.name == "Ubuntu":
+        elif self.detected_distro.name == "Ubuntu":
             cmd = "systemctl restart networking"
         else:
             cmd = "systemctl restart network"
