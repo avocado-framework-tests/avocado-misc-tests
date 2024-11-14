@@ -1,7 +1,8 @@
 component: !mux
-    net:
-        comp: "net"
-        kself_args: "summary=1"
+    ftrace:
+        comp: 'ftrace'
+        kself_args: 'summary=1'
+
 run_type: !mux
     upstream:
         type: 'upstream'

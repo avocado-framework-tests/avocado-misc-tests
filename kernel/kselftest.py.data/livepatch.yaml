@@ -1,6 +1,6 @@
 component: !mux
-    net:
-        comp: "net"
+    livepatch:
+        comp: "livepatch"
         kself_args: "summary=1"
 run_type: !mux
     upstream:

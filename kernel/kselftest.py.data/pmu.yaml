@@ -3,7 +3,7 @@ run_type: !mux
         type: 'distro'
     upstream:
         type: 'upstream'
-        location: "https://github.com/torvalds/linux/archive/master.zip"
+        location: 'https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git'
 component: !mux
     pmu/ebb:
        comp: 'powerpc'

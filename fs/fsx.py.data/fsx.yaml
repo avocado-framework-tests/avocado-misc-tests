@@ -1,0 +1,7 @@
+setup:
+ file_ub: '1000'
+ op_ub: '1000'
+ output_file: '/tmp/result'
+ num_times: '100'
+ thp_page_cache: True
+ tmpfs_mount_dir: '/mnt/tmpfs/'

@@ -1,0 +1,7 @@
+lparstat_list: ['-h', '-V', '--version', '-i', '-x', '-E', '-l', '--legacy', "1 10"]
+lparstat_nlist: ['--nonexistingoption', '-1000']
+lparnumascore_list: ['-c cpu', '-c mem']
+run_type: !mux
+    upstream:
+        ppcutils_url: 'https://github.com/ibm-power-utilities/powerpc-utils/archive/refs/heads/master.zip'
+        type: 'upstream'

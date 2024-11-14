@@ -1,0 +1,6 @@
+run_type: !mux
+    upstream:
+        location: 'git://git.kernel.org/pub/scm/linux/kernel/git/acme/linux.git'
+        branch: 'perf-tools-next'
+        usegit: 1
+        type: 'upstream'

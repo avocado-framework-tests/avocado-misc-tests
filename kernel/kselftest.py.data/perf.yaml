@@ -1,8 +1,8 @@
-component: !mux
-    net:
-        comp: "net"
-        kself_args: "summary=1"
 run_type: !mux
     upstream:
         type: 'upstream'
         location: 'https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git'
+component: !mux
+    pmu/ebb:
+        comp: 'powerpc'
+        subtest: 'pmu/ebb'

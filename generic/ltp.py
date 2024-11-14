@@ -126,19 +126,20 @@ class LTP(Test):
 
         dmesg.clear_dmesg()
         url = self.params.get(
-            'url', default='https://github.com/linux-test-project/ltp/archive/master.zip')
+            'url',
+            default='https://github.com/sacsant/ltp/archive/refs/heads/ci.zip')
         match = next((ext for ext in [".zip", ".tar"] if ext in url), None)
         tarball = ''
         if match:
             tarball = self.fetch_asset(
-                "ltp-master%s" % match, locations=[url], expire='7d')
+                "ltp-ci%s" % match, locations=[url], expire='7d')
         else:
             self.cancel("Provided LTP Url is not valid")
         self.ltpdir = '/tmp/ltp'
         if not os.path.exists(self.ltpdir):
             os.mkdir(self.ltpdir)
         archive.extract(tarball, self.ltpdir)
-        ltp_dir = os.path.join(self.ltpdir, "ltp-master")
+        ltp_dir = os.path.join(self.ltpdir, "ltp-ci")
         os.chdir(ltp_dir)
         build.make(ltp_dir, extra_args='autotools')
         if not self.ltpbin_dir:
