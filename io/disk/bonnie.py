@@ -101,12 +101,14 @@ class Bonnie(Test):
                 self.cancel("%s package required for this test" % package)
 
         if process.system("which bonnie++", ignore_status=True):
-            tarball = self.fetch_asset('http://www.coker.com.au/bonnie++/'
-                                       'bonnie++-1.03e.tgz', expire='7d')
+            self.source_url = self.params.get('bonie_url', default='https://www.coker.com.au/bonnie++/'
+                                              'bonnie++_1.04.tgz')
+
+            tarball = self.fetch_asset(self.source_url, expire='7d')
             archive.extract(tarball, self.teststmpdir)
+            source_dir = os.path.basename(tarball.split('.tgz')[0])
             self.source = os.path.join(self.teststmpdir,
-                                       os.path.basename(
-                                           tarball.split('.tgz')[0]))
+                                       os.path.basename(source_dir.replace('_', '-')))
             os.chdir(self.source)
             process.run('./configure')
             build.make(self.source)

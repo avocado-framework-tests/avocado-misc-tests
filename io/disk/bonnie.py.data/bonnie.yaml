@@ -3,6 +3,7 @@ dir:
 uid-to-use: root
 number-to-stat: 10:100:10:1000
 data_size_to_pass: 0
+bonie_url: "https://www.coker.com.au/bonnie++/bonnie++_1.04.tgz"
 fs: !mux
     ext4:
         fs: 'ext4'
