@@ -195,9 +195,9 @@ class Xfstests(Test):
 
             packages_remove = ['indent', 'btrfs-progs-devel']
             if self.detected_distro.name == 'rhel' and (
-                    self.detected_distro.version.startswith('8') or
-                    self.detected_distro.version.startswith('9')
-                    self.detected_distro.version.startswith('10')):
+                self.detected_distro.version.startswith('8') or 
+                self.detected_distro.version.startswith('9') or 
+                self.detected_distro.version.startswith('10')):
                 packages = list(set(packages)-set(packages_remove))
 
             if self.detected_distro.name in ['centos', 'fedora']:
