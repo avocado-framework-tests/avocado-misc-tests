@@ -89,22 +89,23 @@ class FioTest(Test):
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
 
+        pkg_list = ['libaio-devel', 'cmake', 'gcc-c++']
         if distro.detect().name in ['Ubuntu', 'debian']:
-            pkg_list = ['libaio-dev']
+            pkg_list.append('libaio-dev')
             if fstype == 'btrfs':
                 pkg_list.append('btrfs-progs')
         elif distro.detect().name is 'SuSE':
-            pkg_list = ['libaio1', 'libaio-devel']
+            pkg_list.append('libaio1')
         else:
-            pkg_list = ['libaio', 'libaio-devel']
-            if self.disk_type == 'nvdimm':
-                pkg_list.extend(['autoconf', 'pkg-config'])
-                if distro.detect().name == 'SuSE':
-                    pkg_list.extend(['ndctl', 'libnuma-devel',
-                                     'libndctl-devel'])
-                else:
-                    pkg_list.extend(['ndctl', 'daxctl', 'numactl-devel',
-                                     'ndctl-devel', 'daxctl-devel'])
+            pkg_list.append('libaio')
+        if self.disk_type == 'nvdimm':
+            pkg_list.extend(['autoconf', 'pkg-config'])
+            if distro.detect().name == 'SuSE':
+                pkg_list.extend(['ndctl', 'libnuma-devel',
+                                 'libndctl-devel'])
+            else:
+                pkg_list.extend(['ndctl', 'daxctl', 'numactl-devel',
+                                 'ndctl-devel', 'daxctl-devel'])
         if raid_needed:
             pkg_list.append('mdadm')
 
