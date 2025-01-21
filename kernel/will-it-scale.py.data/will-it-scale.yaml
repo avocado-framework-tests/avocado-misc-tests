@@ -32,10 +32,6 @@ testcase: !mux
         name: lseek1
     lseek2:
         name: lseek2
-    malloc1:
-        name: malloc1
-    malloc2:
-        name: malloc2
     mmap1:
         name: mmap1
     mmap2:
