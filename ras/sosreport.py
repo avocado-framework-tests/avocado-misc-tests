@@ -58,7 +58,7 @@ class Sosreport(Test):
         elif dist.name in ['rhel', 'centos', 'fedora']:
             sos_pkg = 'sos'
             self.sos_cmd = "sos report"
-            if dist.name == "rhel" and dist.version <= "7" and dist.release <= "4":
+            if dist.name == "rhel" and int(dist.version) <= 7 and int(dist.release) <= 4:
                 self.sos_cmd = "sosreport"
         else:
             self.cancel("sosreport is not supported on %s" % dist.name)
