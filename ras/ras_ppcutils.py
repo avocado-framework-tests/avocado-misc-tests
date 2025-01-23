@@ -311,8 +311,13 @@ class RASToolsPpcutils(Test):
         """
         self.log.info("===============Executing serv_config tool test===="
                       "===========")
+        # -s, -b, -r and -m are interactive options and requires input
+        # from user depending on the machine it is executed on. Until
+        # the test case is updated to handle interactive response
+        # comment out these tests.
+        #    '-l', '-b', '-s', '-r', '-m', '-d', '--remote-maint',
         list = [
-            '-l', '-b', '-s', '-r', '-m', '-d', '--remote-maint',
+            '-l', '-d', '--remote-maint',
             '--surveillance', '--reboot-policy', '--remote-pon', '-d --force']
         for list_item in list:
             cmd = "serv_config %s" % list_item
