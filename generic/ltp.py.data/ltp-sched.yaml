@@ -1,0 +1,4 @@
+runltp:
+    script: 'runltp'
+    sched:
+        args: '-f sched'
