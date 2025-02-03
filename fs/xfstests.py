@@ -195,9 +195,9 @@ class Xfstests(Test):
 
             packages_remove = ['indent', 'btrfs-progs-devel']
             if self.detected_distro.name == 'rhel' and (
-                self.detected_distro.version.startswith('8') or 
-                self.detected_distro.version.startswith('9') or 
-                self.detected_distro.version.startswith('10')):
+                    self.detected_distro.version.startswith('8') or
+                    self.detected_distro.version.startswith('9') or
+                    self.detected_distro.version.startswith('10')):
                 packages = list(set(packages)-set(packages_remove))
 
             if self.detected_distro.name in ['centos', 'fedora']:
@@ -359,7 +359,8 @@ class Xfstests(Test):
             loop_size = self.params.get('loop_size', default='7GiB')
             if not self.base_disk:
                 # Using root for file creation by default
-                check = (int(loop_size.split('GiB')[0]) * self.num_loop_dev) + 1
+                check = (int(loop_size.split('GiB')[
+                         0]) * self.num_loop_dev) + 1
                 if disk.freespace('/') / 1073741824 > check:
                     self.disk_mnt = ''
                     mount = False
