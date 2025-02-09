@@ -86,7 +86,7 @@ class Dbench(Test):
                 self.error('%s is needed for the test to be run' % pkg)
 
         if fstype == 'btrfs':
-            ver = int(distro.detect().version)
+            ver = int(distro.detect().version.split('.')[0])
             rel = int(distro.detect().release)
             if distro.detect().name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
