@@ -70,7 +70,7 @@ class kselftest(Test):
         if detected_distro.name in ['Ubuntu', 'debian']:
             deps.extend(['libpopt0', 'libc6', 'libc6-dev', 'libcap-dev',
                          'libpopt-dev', 'libcap-ng0', 'libcap-ng-dev',
-                         'libnuma-dev', 'libfuse-dev', 'elfutils', 'libelf1',
+                         'libnuma-dev', 'libfuse-dev', 'elfutils', 'libelf-dev',
                          'libhugetlbfs-dev'])
         elif 'SuSE' in detected_distro.name:
             deps.extend(['glibc', 'glibc-devel', 'popt-devel', 'sudo',
@@ -189,8 +189,8 @@ class kselftest(Test):
                     test_comp = self.comp
                 make_cmd = 'make -C %s %s -C %s run_tests' % (
                     self.sourcedir, kself_args, test_comp)
-                result = process.run(make_cmd, shell=True, ignore_status=True)
-        log_output = result.stdout.decode('utf-8')
+                self.result = process.run(make_cmd, shell=True, ignore_status=True)
+        log_output = self.result.stdout.decode('utf-8')
         results_path = os.path.join(self.outputdir, 'raw_output')
         with open(results_path, 'w') as r_file:
             r_file.write(log_output)
@@ -213,8 +213,8 @@ class kselftest(Test):
         Ex: ./ksm_tests -M
         """
         try:
-            result = process.run(cmd, ignore_status=False, sudo=True)
-            self.log.info(result)
+            self.result = process.run(cmd, ignore_status=False, sudo=True)
+            self.log.info(self.result)
         except process.CmdError as details:
             self.fail("Command %s failed: %s" % (cmd, details))
 
