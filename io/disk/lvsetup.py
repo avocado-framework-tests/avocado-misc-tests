@@ -63,7 +63,7 @@ class Lvsetup(Test):
         if self.fs_name == 'xfs':
             pkgs = ['xfsprogs']
         if self.fs_name == 'btrfs':
-            ver = int(distro.detect().version)
+            ver = int(distro.detect().version.split('.')[0])
             rel = int(distro.detect().release)
             if distro.detect().name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:

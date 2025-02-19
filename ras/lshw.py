@@ -65,7 +65,7 @@ class Lshwrun(Test):
         if dist.name == "SuSE" and int(dist.version) < 15:
             self.cancel("lshw not supported on SLES-%s. Please run "
                         "on SLES15 or higher versions only " % dist.version)
-        if ((dist.name == 'Ubuntu' and int(dist.version) >= 18) or
+        if ((dist.name == 'Ubuntu' and int(dist.version.split('.')[0]) >= 18) or
                 (dist.name in ["SuSE", 'debian'])):
             packages.extend(['iproute2'])
         else:
