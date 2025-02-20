@@ -177,7 +177,7 @@ class kselftest(Test):
         kself_args = self.params.get("kself_args", default='')
         if self.comp == "bpf":
             self.bpf()
-        if self.comp == "cpufreq":
+        elif self.comp == "cpufreq":
             self.cpufreq()
         else:
             if self.subtest == "ksm_tests":
