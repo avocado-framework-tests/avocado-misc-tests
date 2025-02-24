@@ -50,7 +50,7 @@ class HtxTest(Test):
         distro_pattern = "%s%s" % (
             self.dist_name, self.detected_distro.version)
         temp_string = process.getoutput(
-            "curl --silent %s" % (self.rpm_link),
+            "curl --silent -k  %s" % (self.rpm_link),
             verbose=False, shell=True, ignore_status=True)
         matching_htx_versions = re.findall(
             r"(?<=\>)htx\w*[-]\d*[-]\w*[.]\w*[.]\w*", str(temp_string))
