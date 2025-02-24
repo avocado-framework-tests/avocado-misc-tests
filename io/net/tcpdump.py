@@ -102,7 +102,7 @@ class TcpdumpTest(Test):
         pkgs = ['tcpdump', 'flex', 'bison', 'gcc', 'gcc-c++', 'nmap']
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.cancel("%s package Can not install" % pkg)
+                self.cancel("Cannot install package: %s" % pkg)
         if detected_distro.name == "SuSE":
             self.nmap = os.path.join(self.teststmpdir, 'nmap')
             nmap_download = self.params.get("nmap_download", default="https:"
