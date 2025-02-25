@@ -89,7 +89,7 @@ class FioTest(Test):
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
 
-        pkg_list = ['libaio-devel', 'cmake', 'gcc-c++']
+        pkg_list = ['cmake', 'gcc-c++']
         if distro.detect().name in ['Ubuntu', 'debian']:
             pkg_list.append('libaio-dev')
             if fstype == 'btrfs':
