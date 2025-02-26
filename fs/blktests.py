@@ -59,7 +59,6 @@ class Blktests(Test):
 
         build.make(self.sourcedir)
 
-            
     def test(self):
 
         self.clear_dmesg()
