@@ -1,2 +1,12 @@
-disk: "null"
-type: "null"
+disk: "/dev/mapper/mpathi,/dev/mapper/mpathh"
+component: !mux
+    block:
+        type: "block"
+    scsi:
+        type" "scsi"
+    nvme:
+        type: "nvme"
+    loop:
+        type: "loop"
+    dm:
+        type: "dm"
