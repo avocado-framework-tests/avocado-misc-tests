@@ -129,8 +129,6 @@ class kselftest(Test):
                 process.system("make install -C %s" % self.sourcedir,
                                shell=True, sudo=True)
         else:
-            if self.subtest == 'pmu/event_code_tests':
-                self.cancel("selftest not supported on distro")
             # Make sure kernel source repo is configured
             if detected_distro.name in ['centos', 'fedora', 'rhel']:
                 src_name = 'kernel'
@@ -155,6 +153,11 @@ class kselftest(Test):
                 self.buldir = "/usr/src/linux"
 
         self.sourcedir = os.path.join(self.buldir, self.testdir)
+        if self.subtest == 'pmu/event_code_tests':
+            pmu_test_dir = os.path.join(
+                self.sourcedir, 'powerpc/pmu/event_code_tests')
+            if not os.path.exists(pmu_test_dir):
+                self.cancel("selftest not supported on distro")
         # cmsg_* tests from net/ subdirectory takes a lot of time to complete.
         # Until they have been root caused skip them.
         if self.comp == 'net':
