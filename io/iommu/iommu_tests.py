@@ -32,8 +32,8 @@ def change_domain_check(dom, pci_addr, def_dom):
     Check if the domain changed successfully to "dom" for "pci_addr"
 
     :param dom: domain type
-    :param def_dom: default domain of pci device(pci_addr)
-    :param pci_addr: pci device
+    :param def_dom: default domain of pci address (pci_addr)
+    :param pci_addr: full pci address including domain (0000:03:00.0)
     return: bool
     """
     output = genio.read_one_line(
@@ -49,7 +49,7 @@ def reset_check(pci_addr):
     """
     Check if reset for "pci_addr" is successful
 
-    :param pci_addr: pci device
+    :param pci_addr: full pci address including domain (0000:03:00.0)
     return: bool
     """
     cmd = f"lspci -vvs {pci_addr}"
@@ -64,7 +64,7 @@ def rescan_check(pci_addr):
     """
     Check if rescan for pci_addr is successful
 
-    :param pci_addr: pci device
+    :param pci_addr: full pci address including domain (0000:03:00.0)
     return: bool
     """
     cmd = f"lspci -vvs {pci_addr}"
@@ -81,7 +81,7 @@ class IommuTest(Test):
     reset and rescan is used to form sub-tests that test and exercise iommu
     code.
 
-    :param device: Name of the pci device
+    :param device: full pci address including domain (0000:03:00.0)
     """
 
     def setUp(self):
@@ -96,8 +96,16 @@ class IommuTest(Test):
         smm = SoftwareManager()
         if not smm.check_installed("pciutils") and not smm.install("pciutils"):
             self.cancel("pciutils package not found and installing failed")
+
         # Check the number of devices in iommu-group for pci device passed.
         for pci_addr in self.pci_devices.split(" "):
+
+            # Check if device input is valid
+            cmd = f"lspci -s {pci_addr}"
+            out = process.run(cmd, ignore_status=True, shell=True).stdout_text
+            if not out:
+                self.cancel(f"{pci_addr} not found on the system")
+
             driver = pci.get_driver(pci_addr)
             if driver is None:
                 self.cancel("Device passed is not bound to any driver")
@@ -120,8 +128,8 @@ class IommuTest(Test):
         """
         Unbind the device
 
-        :param driver: driver of the pci device(pci_addr)
-        :param pci_addr: pci device to be unbind from driver
+        :param driver: driver of the pci address (pci_addr)
+        :param pci_addr: full pci address including domain (0000:03:00.0)
         return: None
         """
         genio.write_file(f'/sys/bus/pci/drivers/{driver}/unbind', pci_addr)
@@ -137,8 +145,8 @@ class IommuTest(Test):
         Change the domain of device to dom
 
         :param dom: domain type
-        :param def_dom: default domain of pci device(pci_addr)
-        :param pci_addr: pci device
+        :param def_dom: default domain of pci address (pci_addr)
+        :param pci_addr: full pci address including domain (0000:03:00.0)
         return: None
         """
         genio.write_file(f'/sys/bus/pci/devices/{pci_addr}/iommu_group/type',
@@ -154,8 +162,8 @@ class IommuTest(Test):
         """
         Bind the device to driver
 
-        :param driver: driver of the pci device(pci_addr)
-        :param pci_addr: pci device
+        :param driver: driver of the pci address (pci_addr)
+        :param pci_addr: full pci address including domain (0000:03:00.0)
         return: None
         """
         genio.write_file(f"/sys/bus/pci/drivers/{driver}/bind", pci_addr)
@@ -171,7 +179,7 @@ class IommuTest(Test):
         """
         Remove the device
 
-        :param pci_addr: pci device
+        :param pci_addr: full pci address including domain (0000:03:00.0)
         return: None
         """
         genio.write_file(f'/sys/bus/pci/devices/{pci_addr}/remove', '1')
@@ -185,7 +193,7 @@ class IommuTest(Test):
         """
         Rescan the system
 
-        :param pci_addr: pci device
+        :param pci_addr: full pci address including domain (0000:03:00.0)
         return: None
         """
         genio.write_file('/sys/bus/pci/rescan', '1')
@@ -198,9 +206,9 @@ class IommuTest(Test):
         """
         Get device parameter-driver, group, default domain(def_dom)
 
-        :param pci_addr: pci device
-        return: driver (driver of pci device),
-                def_dom (default domain of pci device)
+        :param pci_addr: full pci address including domain (0000:03:00.0)
+        return: driver (driver of pci address (pci_addr)),
+                def_dom (default domain of pci address (pci_addr))
         """
         driver = pci.get_driver(pci_addr)
 
@@ -217,9 +225,9 @@ class IommuTest(Test):
         """
         Check if the PCI device is in default domain
 
-        :param def_dom: default domain of pci device(pci_addr)
-        :param pci_addr: pci device
-        :param driver: driver of the pci device(pci_addr)
+        :param def_dom: default domain of pci address (pci_addr)
+        :param pci_addr: full pci address including domain (0000:03:00.0)
+        :param driver: driver of the pci address (pci_addr)
         return: None
         """
         output = genio.read_one_line(
