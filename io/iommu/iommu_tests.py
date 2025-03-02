@@ -120,7 +120,8 @@ class IommuTest(Test):
                 self.cancel(f"{pci_addr} belongs to iommu group having more "
                             "than one device but system does not support "
                             "domain type change for such device")
-        cmd = "dmesg -C"
+
+        cmd = "dmesg -T --level=alert,crit,err,warn > dmesg_initial.txt"
         process.run(cmd, ignore_status=True, shell=True, sudo=True)
 
     # TODO: Need to push this to avocado utils later
@@ -391,8 +392,17 @@ class IommuTest(Test):
         """
         Checks for any error or failure messages in dmesg after test
         """
-        cmd = "dmesg -T --level=alert,crit,err,warn"
-        out = process.run(cmd, ignore_status=True, shell=True, sudo=True)
-        output = out.stdout_text
-        if output:
-            self.fail(f"Kernel Errors: {output}")
+
+        cmd = "dmesg -T --level=alert,crit,err,warn > dmesg_final.txt"
+        process.run(cmd, ignore_status=True, shell=True, sudo=True)
+
+        cmd = "diff dmesg_final.txt dmesg_initial.txt"
+        dmesg_diff = process.run(cmd, ignore_status=True, shell=True, sudo=True).stdout_text
+        if dmesg_diff != '':
+            self.whiteboard = f"{dmesg_diff}"
+            self.fail("Running test logged warn,err,alert,crit logs in dmesg. "
+                      "Please refer whiteboard of the test result")
+
+        # Clean temprorary files created
+        cmd = "rm dmesg_final.txt dmesg_initial.txt"
+        process.run(cmd, ignore_status=True, shell=True, sudo=True)
