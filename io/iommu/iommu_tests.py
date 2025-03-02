@@ -91,6 +91,7 @@ class IommuTest(Test):
         self.pci_devices = self.params.get('pci_devices', default=None)
         self.count = int(self.params.get('count', default=1))
         self.domains = ["DMA", "DMA-FQ", "identity", "auto"]
+        self.dmesg_grep = self.params.get('dmesg_grep', default='')
         if not self.pci_devices:
             self.cancel("No pci device given")
         smm = SoftwareManager()
@@ -397,6 +398,8 @@ class IommuTest(Test):
         process.run(cmd, ignore_status=True, shell=True, sudo=True)
 
         cmd = "diff dmesg_final.txt dmesg_initial.txt"
+        if self.dmesg_grep != '':
+            cmd = f"{cmd} | grep -i -e '{self.dmesg_grep}'"
         dmesg_diff = process.run(cmd, ignore_status=True, shell=True, sudo=True).stdout_text
         if dmesg_diff != '':
             self.whiteboard = f"{dmesg_diff}"
