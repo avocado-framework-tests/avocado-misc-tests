@@ -195,7 +195,7 @@ class MemStress(Test):
         self.__error_check()
 
     def test_dlpar_mem_hotplug(self):
-        if 'ppc' in cpu.get_arch() and 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
+        if 'power' in cpu.get_arch() and 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
             if b"mem_dlpar=yes" in process.system_output("drmgr -C", ignore_status=True, shell=True):
                 self.log.info("\nDLPAR remove memory operation\n")
                 for _ in range(len(self.blocks_hotpluggable) // 2):
