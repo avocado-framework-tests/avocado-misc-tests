@@ -35,6 +35,7 @@ class Blktests(Test):
         '''
         self.disk = self.params.get('disk', default='')
         self.dev_type = self.params.get('type', default='')
+        self.disk = self.disk.split(' ')
         smm = SoftwareManager()
         dist = distro.detect()
         if dist.name in ['Ubuntu', 'debian']:
@@ -57,14 +58,15 @@ class Blktests(Test):
 
         build.make(self.sourcedir)
 
+
     def test(self):
 
         self.clear_dmesg()
         os.chdir(self.sourcedir)
 
         genio.write_one_line("/proc/sys/kernel/hung_task_timeout_secs", "0")
-        if self.disk:
-            os.environ['TEST_DEVS'] = self.disk
+        for disk in self.disk:
+            os.environ['TEST_DEVS'] = ' '.join(self.disk)
         cmd = './check %s' % self.dev_type
         result = process.run(cmd, ignore_status=True, verbose=True)
         if result.exit_status != 0:
