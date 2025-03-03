@@ -54,7 +54,7 @@ class DiskInfo(Test):
         pkg = ""
         device = self.params.get('disk', default=None)
         self.disk = disk.get_absolute_disk_path(device)
-        if 'ppc' not in cpu.get_arch():
+        if 'power' not in cpu.get_arch():
             self.cancel("Processor is not ppc64")
         self.dirs = self.params.get('dir', default=self.workdir)
         self.fstype = self.params.get('fs', default='ext4')

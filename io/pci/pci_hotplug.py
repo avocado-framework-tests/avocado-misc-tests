@@ -47,7 +47,7 @@ class PCIHotPlugTest(Test):
         """
         Setup the device.
         """
-        if 'ppc' not in cpu.get_arch():
+        if 'power' not in cpu.get_arch():
             self.cancel("Processor is not ppc64")
         if os.path.exists('/proc/device-tree/bmc'):
             self.cancel("Test Unsupported! on this platform")
