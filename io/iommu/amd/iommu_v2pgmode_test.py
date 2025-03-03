@@ -50,7 +50,12 @@ def check_dmesg(string):
     """
     cmd = f'dmesg | grep -i "{string}"'
     output = process.run(cmd, ignore_status=True, shell=True).stdout_text
-    if output != "":
+    if output == "":
+        cmd = f'journalctl -k -b | grep -i "{string}"'
+        output = process.run(cmd, ignore_status=True, shell=True).stdout_text
+        if output != "":
+            return True
+    else:
         return True
     return False
 
