@@ -252,10 +252,17 @@ class kselftest(Test):
         """
         Execute the kernel bpf selftests
         """
+<<<<<<< HEAD
         os.chdir(self.sourcedir)
         build.make(self.sourcedir)
         self.run_cmd("./test_verifier")
         self.run_cmd("./test_progs -d @DENYLIST")
+=======
+        self.sourcedir = os.path.join(self.buldir, self.testdir)
+        os.chdir(self.sourcedir)
+        build.make(self.sourcedir)
+        self.run_cmd("./test_verifier")
+>>>>>>> a6c29f15 (This commit has BPF specific chnages)
         build.make(self.sourcedir, extra_args='run_tests')
 
     def cpufreq(self):
