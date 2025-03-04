@@ -12,3 +12,8 @@ disk_type:
     type: 'nvdimm'
     disk_test: "null"
     disk_scratch: "null"
+
+run_type: !mux
+    upstream:
+        run_type: 'upstream'
+        e2fsprogs_url: 'https://git.kernel.org/pub/scm/fs/ext2/e2fsprogs.git'
