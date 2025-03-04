@@ -104,7 +104,8 @@ class IommuPageTable(Test):
         if os.path.exists(config_file):
             return check_kernelconf(config_file, "CONFIG_X86_5LEVEL")
 
-        self.cancel("Kernel config not found in '/boot/' and '/lib/modules/<uname -r>/build/'")
+        self.log.info("Kernel config not found in '/boot/' and '/lib/modules/<uname -r>/build/'."
+                      "Using VA bits in /proc/cpuinfo to derive cpu page table level")
         return False
 
     def test(self):
