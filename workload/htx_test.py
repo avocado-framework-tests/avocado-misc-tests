@@ -58,12 +58,21 @@ class HtxTest(Test):
             htx_rpm for htx_rpm in matching_htx_versions
             if distro_pattern in htx_rpm]
         distro_specific_htx_versions.sort(reverse=True)
-        self.latest_htx_rpm = distro_specific_htx_versions[0]
-
-        if process.system('rpm -ivh --nodeps %s%s '
-                          '--force' % (self.rpm_link, self.latest_htx_rpm),
+        tmp_htx_rpm = distro_specific_htx_versions[0]
+        self.latest_htx_rpm = tmp_htx_rpm
+        tmp_dir = "/tmp/" + tmp_htx_rpm
+        cmd = "curl -k %s/%s -o %s" % (self.rpm_link, self.latest_htx_rpm,
+                                       tmp_dir)
+        if process.system(cmd,
                           shell=True, ignore_status=True):
-            self.cancel("Installation of rpm failed")
+            self.cancel("rpm download failed")
+        cmd = "rpm -ivh --nodeps %s" % (tmp_dir)
+        if process.system(cmd,
+                          shell=True, ignore_status=True):
+            self.cancel("rpm installation failed")
+        cmd = "rm -rf %s" % (tmp_dir)
+        # Remove the downloaded HTX rpm from /tmp directory
+        process.run(cmd)
 
     def setUp(self):
         """
@@ -164,7 +173,9 @@ class HtxTest(Test):
         # Kill existing HTXD process if running
         htxd_pid = process.getoutput("pgrep -f htxd")
         if htxd_pid:
-            self.log.info("HTXD is already running with PID: %s. Killing it.", htxd_pid)
+            self.log.info(
+                "HTXD is already running with PID: %s. Killing it.",
+                htxd_pid)
             process.run("pkill -f htxd", ignore_status=True)
             time.sleep(10)
         process.run('/usr/lpp/htx/etc/scripts/htxd_run')
