@@ -359,4 +359,4 @@ class Disktest(Test):
             self.delete_raid()
         dmesg.clear_dmesg()
         if self.err_mesg:
-            self.warn("test failed due to following errors %s" % self.err_mesg)
+            self.log.warn("test failed due to following errors %s" % self.err_mesg)

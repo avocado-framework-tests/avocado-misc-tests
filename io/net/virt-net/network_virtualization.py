@@ -673,7 +673,7 @@ class NetworkVirtualization(Test):
         try:
             vios.login(self.vios_ip, self.vios_user, self.vios_pwd)
         except Exception:
-            self.warn("Unable to login to vios")
+            self.log.warn("Unable to login to vios")
         time.sleep(2)
         vios.sendline("oem_setup_env")
         time.sleep(5)
