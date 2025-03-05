@@ -1,0 +1,7 @@
+component: !mux
+    bpf:
+        comp: 'bpf'
+run_type: !mux
+    upstream:
+        type: 'upstream'
+        location: ''
