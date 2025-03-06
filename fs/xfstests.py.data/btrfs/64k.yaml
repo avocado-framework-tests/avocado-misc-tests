@@ -15,3 +15,8 @@ fs_type: !mux
         args: '-R xunit -L 10 -g quick'
         mkfs_opt: '-f -s 65536 -n 65536'
         mount_opt: ''
+
+run_type: !mux
+    upstream:
+        run_type: 'upstream'
+        btrfsprogs_url: 'https://git.kernel.org/pub/scm/linux/kernel/git/kdave/btrfs-progs.git'
