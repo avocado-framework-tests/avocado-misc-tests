@@ -59,6 +59,9 @@ class kselftest(Test):
         if self.comp == "cpufreq":
             self.test_mode = self.params.get('test_mode', default='')
             self.testdir = 'tools/testing/selftests/cpufreq'
+        if self.comp == "bpf":
+            self.test_mode = self.params.get('test_mode', default='')
+            self.testdir = 'tools/testing/selftests/bpf'
 
         self.build_option = self.params.get('build_option', default='-bp')
         self.run_type = self.params.get('type', default='upstream')
@@ -104,30 +107,33 @@ class kselftest(Test):
         if self.run_type == 'upstream':
             location = self.params.get('location', default='https://github.c'
                                        'om/torvalds/linux/archive/master.zip')
-            git_branch = self.params.get('branch', default='master')
-            path = ''
-            match = next(
-                (ext for ext in [".zip", ".tar", ".gz"] if ext in location), None)
-            if match:
-                tarball = self.fetch_asset("kselftest%s" % match,
-                                           locations=[location], expire='1d')
-                extracted_dir = archive.uncompress(tarball, self.workdir)
-                path = glob.glob(os.path.join(self.workdir, extracted_dir))
-            else:
-                git.get_repo(location, branch=git_branch,
-                             destination_dir=self.workdir)
-                path = glob.glob(self.workdir)
-            for l_dir in path:
-                if os.path.isdir(l_dir) and 'Makefile' in os.listdir(l_dir):
-                    self.buldir = os.path.join(self.workdir, l_dir)
-                    break
+            if re.match(r'^https|^git', location):
+                git_branch = self.params.get('branch', default='master')
+                path = ''
+                match = next(
+                    (ext for ext in [".zip", ".tar", ".gz"] if ext in location), None)
+                if match:
+                    tarball = self.fetch_asset("kselftest%s" % match,
+                                               locations=[location], expire='1d')
+                    extracted_dir = archive.uncompress(tarball, self.workdir)
+                    path = glob.glob(os.path.join(self.workdir, extracted_dir))
+                else:
+                    git.get_repo(location, branch=git_branch,
+                                 destination_dir=self.workdir)
+                    path = glob.glob(self.workdir)
+                for l_dir in path:
+                    if os.path.isdir(l_dir) and 'Makefile' in os.listdir(l_dir):
+                        self.buldir = os.path.join(self.workdir, l_dir)
+                        break
 
-            self.sourcedir = os.path.join(self.buldir, self.testdir)
-            if self.comp != "cpufreq":
-                process.system("make headers -C %s" % self.buldir, shell=True,
-                               sudo=True)
-                process.system("make install -C %s" % self.sourcedir,
-                               shell=True, sudo=True)
+                self.sourcedir = os.path.join(self.buldir, self.testdir)
+                if (self.comp != "cpufreq" and self.comp != "bpf"):
+                    process.system("make headers -C %s" % self.buldir, shell=True,
+                                   sudo=True)
+                    process.system("make install -C %s" % self.sourcedir,
+                                   shell=True, sudo=True)
+            else:
+                self.buldir = self.params.get('location', default='')
         else:
             if self.subtest == 'pmu/event_code_tests':
                 self.cancel("selftest not supported on distro")
@@ -163,7 +169,7 @@ class kselftest(Test):
                            shell=True, sudo=True)
             process.system("sed -i 's/^.*cmsg_time.sh/#&/g' %s" % make_path,
                            shell=True, sudo=True)
-        if self.comp != "cpufreq":
+        if (self.comp != "cpufreq" and self.comp != "bpf"):
             if self.comp:
                 build_str = '-C %s' % self.comp
             if build.make(self.sourcedir, extra_args='%s' % build_str):
@@ -243,11 +249,13 @@ class kselftest(Test):
                         .format(ksm_test_dir))
 
     def bpf(self):
-        bpf_test_dir = self.sourcedir + "/bpf/"
-        os.chdir(bpf_test_dir)
-        build.make(bpf_test_dir)
-        self.run_cmd("./test_verifier")
-        build.make(bpf_test_dir, extra_args='run_tests')
+        """
+        Execute the kernel bpf selftests
+        """
+        self.sourcedir = os.path.join(self.buldir, self.testdir)
+        os.chdir(self.sourcedir)
+        build.make(self.sourcedir)
+        build.make(self.sourcedir, extra_args='run_tests')
 
     def cpufreq(self):
         """
