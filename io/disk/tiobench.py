@@ -78,7 +78,7 @@ class Tiobench(Test):
         smm = SoftwareManager()
         packages = ['gcc', 'mdadm']
         if self.fstype == 'btrfs':
-            ver = int(distro.detect().version.split('.')[0])
+            ver = int(distro.detect().version)
             rel = int(distro.detect().release)
             if distro.detect().name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
