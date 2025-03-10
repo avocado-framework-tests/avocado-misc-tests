@@ -1,0 +1,10 @@
+diff -Naurp a/Makefile b/Makefile
+--- a/Makefile	2025-03-04 07:50:31.400000000 +0100
++++ b/Makefile	2025-03-04 07:51:58.560000000 +0100
+@@ -1,5 +1,5 @@
+ CFLAGS+=-Wall -O2 -g
+-LDFLAGS+=-lhwloc
++LDFLAGS+=-Wl,-rpath=/usr/lib -lhwloc
+ 
+ processes := $(patsubst tests/%.c,%_processes,$(wildcard tests/*.c))
+ threads := $(patsubst tests/%.c,%_threads,$(wildcard tests/*.c))
