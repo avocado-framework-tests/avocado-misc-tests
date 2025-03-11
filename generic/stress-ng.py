@@ -18,6 +18,7 @@
 
 import os
 import multiprocessing
+import math
 from avocado import Test
 from avocado.utils import process, build, archive, distro, memory
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -43,6 +44,28 @@ class Stressng(Test):
     :avocado: tags=cpu,memory,io,fs,privileged
     """
 
+    @staticmethod
+    def run_cmdout(cmd):
+        return process.system_output(cmd, shell=True, ignore_status=True,
+                                     sudo=True).decode("utf-8")
+
+    @staticmethod
+    def set_min_free_bytes(self):
+        """
+        Before running stress-ng stressors, if requested set the value
+        for /proc/sys/vm/min_free_kbytes to recommended value based on
+        following rule:
+
+        Recommended to be 10% of memory or 2GB, whichever is larger.
+        """
+        # calculate max of 10% of total mem or 2G
+        k_bytes = max(memory.memtotal() * 0.1, 2 * 1024 * 1024 * 1024) / 1024
+        k_bytes = math.floor(k_bytes)
+        self.run_cmdout("echo %s > /proc/sys/vm/min_free_kbytes" % k_bytes)
+        if str(k_bytes) not in \
+                self.run_cmdout("cat /proc/sys/vm/min_free_kbytes"):
+            self.log.warn("min_free_kbytes value in /proc is not optimal")
+
     def setUp(self):
         smm = SoftwareManager()
         detected_distro = distro.detect()
@@ -62,6 +85,7 @@ class Stressng(Test):
         self.parallel = self.params.get('parallel', default=True)
         self.common_args = self.params.get('common_args', default='')
         self.iteration = self.params.get('iteration', default=1)
+        self.min_free_bytes = self.params.get('min_free_bytes', default=True)
 
         deps = ['gcc', 'make']
         if detected_distro.name in ['Ubuntu', 'debian']:
@@ -163,6 +187,8 @@ class Stressng(Test):
             args.append('--times ')
         if self.common_args:
             args.append('%s ' % self.common_args)
+        if self.min_free_bytes:
+            self.set_min_free_bytes(self)
         cmd = 'stress-ng %s' % " ".join(args)
         if self.parallel:
             if self.ttimeout:

@@ -12,6 +12,7 @@ maximize: True
 times: True
 aggressive: True
 parallel: True
+min_free_bytes: True
 subsystem: !mux
     all:
         stressors: "null"
