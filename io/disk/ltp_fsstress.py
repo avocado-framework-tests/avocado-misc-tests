@@ -59,6 +59,7 @@ class LtpFs(Test):
         self.fsstress_count = self.params.get('fsstress_loop', default='1')
         self.n_val = self.params.get('n_val', default='100')
         self.p_val = self.params.get('p_val', default='100')
+        distro_name = distro.detect().name
 
         if device is not None:
             self.disk = disk.get_absolute_disk_path(device)
@@ -79,13 +80,16 @@ class LtpFs(Test):
                 self.cancel("%s is needed for the test to be run" % package)
 
         if self.fstype == 'btrfs':
-            ver = int(distro.detect().version)
+            if distro_name == 'Ubuntu':
+                ver = int(distro.detect().version.split('.')[0])
+            else:
+                ver = int(distro.detect().version)
             rel = int(distro.detect().release)
-            if distro.detect().name == 'rhel':
+            if distro_name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
-            if distro.detect().name == 'Ubuntu':
+            if distro_name == 'Ubuntu':
                 if not smm.check_installed("btrfs-tools") and not \
                         smm.install("btrfs-tools"):
                     self.cancel('btrfs-tools is needed for the test to be run')

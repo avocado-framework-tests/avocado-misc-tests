@@ -72,6 +72,7 @@ class FioTest(Test):
         self.devdax_file = None
         self.disk_type = self.params.get('disk_type', default='')
         device = self.params.get('disk', default=None)
+        distro_name = distro.detect().name
         if device and not self.disk_type:
             self.disk = disk.get_absolute_disk_path(device)
             if self.disk not in disk.get_all_disk_paths():
@@ -82,19 +83,22 @@ class FioTest(Test):
             self.cancel("Please Provide valid disk")
 
         if fstype == 'btrfs':
-            ver = int(distro.detect().version)
+            if distro_name == 'Ubuntu':
+                ver = int(distro.detect().version.split('.')[0])
+            else:
+                ver = int(distro.detect().version)
             rel = int(distro.detect().release)
-            if distro.detect().name == 'rhel':
+            if distro_name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
 
         pkg_list = ['cmake', 'gcc-c++']
-        if distro.detect().name in ['Ubuntu', 'debian']:
+        if distro_name in ['Ubuntu', 'debian']:
             pkg_list.append('libaio-dev')
             if fstype == 'btrfs':
                 pkg_list.append('btrfs-progs')
-        elif distro.detect().name is 'SuSE':
+        elif distro_name is 'SuSE':
             pkg_list.append('libaio1')
         else:
             pkg_list.append('libaio')
@@ -430,4 +434,4 @@ class FioTest(Test):
             self.delete_raid()
         dmesg.clear_dmesg()
         if self.err_mesg:
-            self.log.warn("test failed due to following errors %s" % self.err_mesg)
+            self.log.warn("test failed with errors: %s" % self.err_mesg)
