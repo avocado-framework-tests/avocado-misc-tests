@@ -129,7 +129,8 @@ class LibHugetlbfs(Test):
         os.chdir(self.workdir)
         patch = self.params.get('patch', default='elflink.patch')
         process.run('patch -p1 < %s' % self.get_data(patch), shell=True)
-
+        process.run('./autogen.sh', shell=True)
+        process.run('./configure', shell=True)
         build.make(self.workdir, extra_args='BUILDTYPE=NATIVEONLY')
 
     @staticmethod
