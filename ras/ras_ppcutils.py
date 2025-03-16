@@ -18,6 +18,8 @@
 
 import os
 import re
+import pexpect
+import sys
 from avocado import Test
 from avocado.utils import process, distro, build, archive, disk
 from avocado import skipIf, skipUnless
@@ -302,7 +304,18 @@ class RASToolsPpcutils(Test):
             '--surveillance', '--reboot-policy', '--remote-pon', '-d --force']
         for list_item in list:
             cmd = "serv_config %s" % list_item
-            self.run_cmd(cmd)
+            child = pexpect.spawn(cmd, encoding='utf-8')
+            child.logfile = sys.stdout  # Log output for debugging
+            if list_item == '-b':
+                try:
+                    child.expect("Reboot Policy Settings:", timeout=5)
+                    child.expect(r"Auto Restart Partition \(1=Yes, 0=No\) \[1\]:", timeout=5)
+                    child.sendline("1")
+                    child.expect(r"Are you certain you wish to update the system configuration\s*to the specified values\? \(yes/no\) \[no\]:", timeout=5)
+                    child.sendline("yes")
+                except pexpect.TIMEOUT:
+                    self.fail("Timeout waiting for expected prompt")
+            child.wait()
         self.error_check()
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST,
