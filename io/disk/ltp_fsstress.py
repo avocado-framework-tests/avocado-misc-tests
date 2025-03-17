@@ -81,7 +81,7 @@ class LtpFs(Test):
                 self.cancel("%s is needed for the test to be run" % package)
 
         if self.fstype == 'btrfs':
-            if distro_name == 'Ubuntu':
+            if self.d_distro.name == 'Ubuntu':
                 ver = int(self.d_distro.version.split('.')[0])
             else:
                 ver = int(self.d_distro.version)

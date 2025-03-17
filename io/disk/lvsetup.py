@@ -65,7 +65,7 @@ class Lvsetup(Test):
         if self.fs_name == 'xfs':
             pkgs = ['xfsprogs']
         if self.fs_name == 'btrfs':
-            if distro_name == 'Ubuntu':
+            if self.d_distro.name == 'Ubuntu':
                 ver = int(self.d_distro.version.split('.')[0])
             else:
                 ver = int(self.d_distro.version)

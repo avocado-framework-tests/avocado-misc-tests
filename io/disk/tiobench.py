@@ -80,7 +80,7 @@ class Tiobench(Test):
         smm = SoftwareManager()
         packages = ['gcc', 'mdadm']
         if self.fstype == 'btrfs':
-            if distro_name == 'Ubuntu':
+            if self.d_distro.name == 'Ubuntu':
                 ver = int(self.d_distro.version.split('.')[0])
             else:
                 ver = int(self.d_distro.version)

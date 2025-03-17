@@ -73,7 +73,6 @@ class FioTest(Test):
         self.disk_type = self.params.get('disk_type', default='')
         device = self.params.get('disk', default=None)
         self.d_distro = distro.detect()
-        distro_name = self.d_distro.name
         if device and not self.disk_type:
             self.disk = disk.get_absolute_disk_path(device)
             if self.disk not in disk.get_all_disk_paths():
@@ -84,28 +83,28 @@ class FioTest(Test):
             self.cancel("Please Provide valid disk")
 
         if fstype == 'btrfs':
-            if distro_name == 'Ubuntu':
+            if self.d_distro.name == 'Ubuntu':
                 ver = int(self.d_distro.version.split('.')[0])
             else:
                 ver = int(self.d_distro.version)
             rel = int(self.d_distro.release)
-            if distro_name == 'rhel':
+            if self.d_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
 
         pkg_list = ['cmake', 'gcc-c++']
-        if distro_name in ['Ubuntu', 'debian']:
+        if self.d_distro.name in ['Ubuntu', 'debian']:
             pkg_list.append('libaio-dev')
             if fstype == 'btrfs':
                 pkg_list.append('btrfs-progs')
-        elif distro_name is 'SuSE':
+        elif self.d_distro.name is 'SuSE':
             pkg_list.append('libaio1')
         else:
             pkg_list.append('libaio')
         if self.disk_type == 'nvdimm':
             pkg_list.extend(['autoconf', 'pkg-config'])
-            if distro_name == 'SuSE':
+            if self.d_distro.name == 'SuSE':
                 pkg_list.extend(['ndctl', 'libnuma-devel',
                                  'libndctl-devel'])
             else:

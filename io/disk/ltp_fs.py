@@ -79,7 +79,10 @@ class LtpFs(Test):
                 self.cancel("%s is needed for the test to be run" % package)
 
         if self.fstype == 'btrfs':
-            ver = int(self.d_distro.version)
+            if self.d_distro.name == 'Ubuntu':
+                ver = int(self.d_distro.version.split('.')[0])
+            else:
+                ver = int(self.d_distro.version)
             rel = int(self.d_distro.release)
             if self.d_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
