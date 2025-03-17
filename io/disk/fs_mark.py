@@ -77,15 +77,16 @@ class FSMark(Test):
         self.vgname = 'avocado_vg'
         self.lvname = 'avocado_lv'
         smm = SoftwareManager()
+        self.d_distro = distro.detect()
 
         if self.fstype == 'btrfs':
-            ver = int(distro.detect().version.split('.')[0])
-            rel = int(distro.detect().release)
-            if distro.detect().name == 'rhel':
+            ver = int(self.d_distro.version.split('.')[0])
+            rel = int(self.d_distro.release)
+            if self.d_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
-            if distro.detect().name == 'Ubuntu':
+            if self.d_distro.name == 'Ubuntu':
                 if not smm.check_installed("btrfs-tools") and not \
                         smm.install("btrfs-tools"):
                     self.cancel('btrfs-tools is needed for the test to be run')

@@ -64,6 +64,7 @@ class Disktest(Test):
         """
         self.err_mesg = []
         smm = SoftwareManager()
+        self.d_distro = distro.detect()
         if not smm.check_installed("gcc") and not smm.install("gcc"):
             self.cancel('Gcc is needed for the test to be run')
         # Log of all the disktest processes
@@ -80,9 +81,9 @@ class Disktest(Test):
         self.raid_name = '/dev/md/sraid'
 
         if self.fstype == 'btrfs':
-            ver = int(distro.detect().version)
-            rel = int(distro.detect().release)
-            if distro.detect().name == 'rhel':
+            ver = int(self.d_distro.version)
+            rel = int(self.d_distro.release)
+            if self.d_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")

@@ -72,7 +72,8 @@ class FioTest(Test):
         self.devdax_file = None
         self.disk_type = self.params.get('disk_type', default='')
         device = self.params.get('disk', default=None)
-        distro_name = distro.detect().name
+        self.d_distro = distro.detect()
+        distro_name = self.d_distro.name
         if device and not self.disk_type:
             self.disk = disk.get_absolute_disk_path(device)
             if self.disk not in disk.get_all_disk_paths():
@@ -84,10 +85,10 @@ class FioTest(Test):
 
         if fstype == 'btrfs':
             if distro_name == 'Ubuntu':
-                ver = int(distro.detect().version.split('.')[0])
+                ver = int(self.d_distro.version.split('.')[0])
             else:
-                ver = int(distro.detect().version)
-            rel = int(distro.detect().release)
+                ver = int(self.d_distro.version)
+            rel = int(self.d_distro.release)
             if distro_name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
@@ -104,7 +105,7 @@ class FioTest(Test):
             pkg_list.append('libaio')
         if self.disk_type == 'nvdimm':
             pkg_list.extend(['autoconf', 'pkg-config'])
-            if distro.detect().name == 'SuSE':
+            if distro_name == 'SuSE':
                 pkg_list.extend(['ndctl', 'libnuma-devel',
                                  'libndctl-devel'])
             else:

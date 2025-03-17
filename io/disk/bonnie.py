@@ -73,7 +73,7 @@ class Bonnie(Test):
 
         if not self.dir:
             self.dir = self.workdir
-
+        self.d_distro = distro.detect()
         self.uid_to_use = self.params.get('uid-to-use',
                                           default=getpass.getuser())
         self.number_to_stat = self.params.get('number-to-stat', default=2048)
@@ -81,17 +81,17 @@ class Bonnie(Test):
         smm = SoftwareManager()
         # Install the package from web
         deps = ['gcc', 'make']
-        if distro.detect().name == 'Ubuntu':
+        if self.d_distro.name == 'Ubuntu':
             deps.extend(['g++'])
         else:
             deps.extend(['gcc-c++'])
         if self.fstype == 'btrfs':
-            ver = int(distro.detect().version)
-            rel = int(distro.detect().release)
-            if distro.detect().name == 'rhel':
+            ver = int(self.d_distro.version)
+            rel = int(self.d_distro.release)
+            if self.d_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs not supported with RHEL 7.4 onwards")
-            elif distro.detect().name == 'Ubuntu':
+            elif self.d_distro.name == 'Ubuntu':
                 deps.extend(['btrfs-tools'])
         if raid_needed:
             deps.append('mdadm')
