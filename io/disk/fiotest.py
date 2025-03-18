@@ -93,15 +93,16 @@ class FioTest(Test):
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
 
-        pkg_list = ['cmake', 'gcc-c++']
-        if distro_name in ['Ubuntu', 'debian']:
-            pkg_list.append('libaio-dev')
+        pkg_list = ['cmake']
+        if distro_name in ['Ubuntu', 'debian', 'uos']:
+            pkg_list.extend(['libaio-dev', 'g++'])
             if fstype == 'btrfs':
                 pkg_list.append('btrfs-progs')
         elif distro_name is 'SuSE':
-            pkg_list.append('libaio1')
+            pkg_list.extend(['libaio1', 'gcc-c++'])
         else:
-            pkg_list.append('libaio')
+            pkg_list.extend(['libaio', 'gcc-c++'])
+
         if self.disk_type == 'nvdimm':
             pkg_list.extend(['autoconf', 'pkg-config'])
             if distro.detect().name == 'SuSE':
