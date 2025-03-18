@@ -60,15 +60,16 @@ class Lvsetup(Test):
         self.lv_name = self.params.get('lv_name', default='avocado_lv')
         self.fs_name = self.params.get('fs', default='ext4').lower()
         self.lv_size = self.params.get('lv_size', default='0')
-        distro_name = distro.detect().name
+        self.d_distro = distro.detect()
+        distro_name = self.d_distro.name
         if self.fs_name == 'xfs':
             pkgs = ['xfsprogs']
         if self.fs_name == 'btrfs':
-            if distro_name == 'Ubuntu':
-                ver = int(distro.detect().version.split('.')[0])
+            if self.d_distro.name == 'Ubuntu':
+                ver = int(self.d_distro.version.split('.')[0])
             else:
-                ver = int(distro.detect().version)
-            rel = int(distro.detect().release)
+                ver = int(self.d_distro.version)
+            rel = int(self.d_distro.release)
             if distro_name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with RHEL 7.4 onwards")

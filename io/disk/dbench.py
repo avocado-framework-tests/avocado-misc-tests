@@ -60,7 +60,7 @@ class Dbench(Test):
         device = self.params.get('disk', default=None)
         self.md_name = self.params.get('raid_name', default='md127')
         self.dir = self.params.get('dir', default=None)
-
+        self.d_distro = distro.detect()
         if device is not None:
             self.disk = disk.get_absolute_disk_path(device)
             if self.disk not in disk.get_all_disk_paths():
@@ -86,13 +86,16 @@ class Dbench(Test):
                 self.error('%s is needed for the test to be run' % pkg)
 
         if fstype == 'btrfs':
-            ver = int(distro.detect().version.split('.')[0])
-            rel = int(distro.detect().release)
-            if distro.detect().name == 'rhel':
+            if self.d_distro.name == 'Ubuntu':
+                ver = int(self.d_distro.version.split('.')[0])
+            else:
+                ver = int(self.d_distro.version)
+            rel = int(self.d_distro.release)
+            if self.d_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
-            if distro.detect().name == 'Ubuntu':
+            if self.d_distro.name == 'Ubuntu':
                 if not sm.check_installed("btrfs-tools") and not \
                         sm.install("btrfs-tools"):
                     self.cancel('btrfs-tools is needed for the test to be run')

@@ -70,10 +70,15 @@ class ParallelDd(Test):
         self.dd_roptions = self.params.get('dd_roptions', default='')
         self.fs_dd_woptions = self.params.get('fs_dd_woptions', default='')
         self.fs_dd_roptions = self.params.get('fs_dd_roptions', default='')
+        self.d_distro = distro.detect()
+
         if self.fstype == 'btrfs':
-            ver = int(distro.detect().version)
-            rel = int(distro.detect().release)
-            if distro.detect().name == 'rhel':
+            if self.d_distro.name == 'Ubuntu':
+                ver = int(self.d_distro.version.split('.')[0])
+            else:
+                ver = int(self.d_distro.version)
+            rel = int(self.d_distro.release)
+            if self.d_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with RHEL 7.4 onwards")
 

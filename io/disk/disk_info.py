@@ -54,6 +54,7 @@ class DiskInfo(Test):
         pkg = ""
         device = self.params.get('disk', default=None)
         self.disk = disk.get_absolute_disk_path(device)
+        self.d_distro = distro.detect()
         if 'power' not in cpu.get_arch():
             self.cancel("Processor is not ppc64")
         self.dirs = self.params.get('dir', default=self.workdir)
@@ -68,21 +69,23 @@ class DiskInfo(Test):
             self.cancel("Given disk is os boot disk,"
                         "it will be harmful to run this test")
         pkg_list = ["lshw"]
-        self.distro = distro.detect().name
-        if self.distro == 'Ubuntu':
+        if self.d_distro.name == 'Ubuntu':
             pkg_list.append("hwinfo")
         if self.fstype == 'ext4':
             pkg_list.append('e2fsprogs')
         if self.fstype == 'xfs':
             pkg_list.append('xfsprogs')
         if self.fstype == 'btrfs':
-            ver = int(distro.detect().version)
-            rel = int(distro.detect().release)
-            if distro.detect().name == 'rhel':
+            if self.d_distro.name == 'Ubuntu':
+                ver = int(self.d_distro.version.split('.')[0])
+            else:
+                ver = int(self.d_distro.version)
+            rel = int(self.d_distro.release)
+            if self.d_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
-            if self.distro == 'Ubuntu':
+            if self.d_distro.name == 'Ubuntu':
                 pkg_list.append("btrfs-tools")
         for pkg in pkg_list:
             if pkg and not smm.check_installed(pkg) and not smm.install(pkg):
@@ -117,7 +120,7 @@ class DiskInfo(Test):
         """
         cmd_list = ["lsblk -l", "fdisk -l", "sfdisk -l", "parted -l",
                     "df -h", "blkid", "lshw -c disk", "grub2-probe /boot"]
-        if self.distro == 'Ubuntu':
+        if self.d_distro.name == 'Ubuntu':
             cmd_list.append("hwinfo --block --short")
         for cmd in cmd_list:
             self.run_command(cmd)
@@ -143,7 +146,7 @@ class DiskInfo(Test):
         else:
             cmd_list = ["fdisk -l ", "parted -l", "lsblk ",
                         "lshw -c disk "]
-        if self.distro == 'Ubuntu':
+        if self.d_distro.name == 'Ubuntu':
             cmd_list.append("hwinfo --short --block")
         for cmd in cmd_list:
             cmd = cmd + " | grep -i %s" % self.disk_base
