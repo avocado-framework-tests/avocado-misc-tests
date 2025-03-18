@@ -88,7 +88,7 @@ class Tiobench(Test):
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with RHEL 7.4 onwards")
             if distro_name == 'Ubuntu':
-                packages.extend(['btrfs-tools'])
+                packages.extend(['btrfs-progs'])
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("%s package required for this test." % package)

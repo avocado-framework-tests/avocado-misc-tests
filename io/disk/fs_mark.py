@@ -86,9 +86,9 @@ class FSMark(Test):
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
             if distro.detect().name == 'Ubuntu':
-                if not smm.check_installed("btrfs-tools") and not \
-                        smm.install("btrfs-tools"):
-                    self.cancel('btrfs-tools is needed for the test to be run')
+                if not smm.check_installed("btrfs-progs") and not \
+                        smm.install("btrfs-progs"):
+                    self.cancel('btrfs-progs is needed for the test to be run')
 
         if raid_needed:
             if not smm.check_installed('mdadm') and not smm.install('mdadm'):

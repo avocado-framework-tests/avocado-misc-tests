@@ -83,7 +83,7 @@ class DiskInfo(Test):
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
             if self.distro == 'Ubuntu':
-                pkg_list.append("btrfs-tools")
+                pkg_list.append("btrfs-progs")
         for pkg in pkg_list:
             if pkg and not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("Package %s is missing and could not be installed"
