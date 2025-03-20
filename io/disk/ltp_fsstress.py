@@ -90,9 +90,9 @@ class LtpFs(Test):
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
             if distro_name == 'Ubuntu':
-                if not smm.check_installed("btrfs-tools") and not \
-                        smm.install("btrfs-tools"):
-                    self.cancel('btrfs-tools is needed for the test to be run')
+                if not smm.check_installed("btrfs-progs") and not \
+                        smm.install("btrfs-progs"):
+                    self.cancel('btrfs-progs is needed for the test to be run')
 
         self.raid_name = '/dev/md/sraid'
         self.vgname = 'avocado_vg'

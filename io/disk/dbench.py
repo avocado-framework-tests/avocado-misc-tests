@@ -93,9 +93,9 @@ class Dbench(Test):
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
             if distro.detect().name == 'Ubuntu':
-                if not sm.check_installed("btrfs-tools") and not \
-                        sm.install("btrfs-tools"):
-                    self.cancel('btrfs-tools is needed for the test to be run')
+                if not sm.check_installed("btrfs-progs") and not \
+                        sm.install("btrfs-progs"):
+                    self.cancel('btrfs-progs is needed for the test to be run')
 
         self.results = []
         tarball = self.fetch_asset(

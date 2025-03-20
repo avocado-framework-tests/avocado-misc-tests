@@ -92,7 +92,7 @@ class Bonnie(Test):
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs not supported with RHEL 7.4 onwards")
             elif distro.detect().name == 'Ubuntu':
-                deps.extend(['btrfs-tools'])
+                deps.extend(['btrfs-progs'])
         if raid_needed:
             deps.append('mdadm')
 
