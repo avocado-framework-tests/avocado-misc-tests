@@ -135,8 +135,6 @@ class kselftest(Test):
             else:
                 self.buldir = self.params.get('location', default='')
         else:
-            if self.subtest == 'pmu/event_code_tests':
-                self.cancel("selftest not supported on distro")
             # Make sure kernel source repo is configured
             if detected_distro.name in ['centos', 'fedora', 'rhel']:
                 src_name = 'kernel'
@@ -189,6 +187,11 @@ class kselftest(Test):
             if self.subtest == "ksm_tests":
                 self.ksmtest()
             else:
+                if self.subtest == 'pmu/event_code_tests':
+                    pmu_test_dir = os.path.join(self.sourcedir,
+                                                'powerpc/pmu/event_code_tests')
+                    if not os.path.exists(pmu_test_dir):
+                        self.cancel("selftest not supported on distro")
                 if self.subtest:
                     test_comp = self.comp + "/" + self.subtest
                 else:
