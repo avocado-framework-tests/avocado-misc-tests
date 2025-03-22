@@ -127,9 +127,9 @@ class Netperf(Test):
         output = self.session.cmd(cmd1)
         if not output.exit_status == 0:
             self.fail("test failed because command failed in peer machine")
-        os.chdir(self.netperf_dir)
         patch_file = self.params.get('patch', default='nettest_omni.patch')
-        patch = self.get_data(patch_file)
+        patch = os.path.abspath(self.get_data(patch_file))
+        os.chdir(self.netperf_dir)
         process.run('patch -p1 < %s' % patch, shell=True)
         peer_patch_name = patch.split('/')[-1]
         peer_destination = "%s:%s" % (self.peer_ip, self.netperf_dir_peer)
