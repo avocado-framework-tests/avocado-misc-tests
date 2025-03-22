@@ -60,8 +60,7 @@ class Tiobench(Test):
         self.raid_create = False
         device = self.params.get('disk', default=None)
         self.dir = self.params.get('dir', default=None)
-        distro_name = distro.detect().name
-
+        detected_distro = distro.detect()
         if device is not None:
             self.disk = disk.get_absolute_disk_path(device)
             if self.disk not in disk.get_all_disk_paths():
@@ -79,15 +78,15 @@ class Tiobench(Test):
         smm = SoftwareManager()
         packages = ['gcc', 'mdadm']
         if self.fstype == 'btrfs':
-            if distro_name == 'Ubuntu':
-                ver = int(distro.detect().version.split('.')[0])
+            if detected_distro.name == 'Ubuntu':
+                ver = int(detected_distro.version.split('.')[0])
             else:
-                ver = int(distro.detect().version)
-            rel = int(distro.detect().release)
-            if distro_name == 'rhel':
+                ver = int(detected_distro.version)
+            rel = int(detected_distro.release)
+            if detected_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with RHEL 7.4 onwards")
-            if distro_name == 'Ubuntu':
+            if detected_distro.name == 'Ubuntu':
                 packages.extend(['btrfs-progs'])
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):

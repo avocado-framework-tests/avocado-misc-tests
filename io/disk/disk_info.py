@@ -51,6 +51,7 @@ class DiskInfo(Test):
         :param dir: path of the directory to mount the disk device
         """
         smm = SoftwareManager()
+        detected_distro = distro.detect()
         pkg = ""
         device = self.params.get('disk', default=None)
         self.disk = disk.get_absolute_disk_path(device)
@@ -68,7 +69,7 @@ class DiskInfo(Test):
             self.cancel("Given disk is os boot disk,"
                         "it will be harmful to run this test")
         pkg_list = ["lshw"]
-        self.distro = distro.detect().name
+        self.distro = detected_distro.name
         if self.distro == 'Ubuntu':
             pkg_list.append("hwinfo")
         if self.fstype == 'ext4':
@@ -76,9 +77,9 @@ class DiskInfo(Test):
         if self.fstype == 'xfs':
             pkg_list.append('xfsprogs')
         if self.fstype == 'btrfs':
-            ver = int(distro.detect().version)
-            rel = int(distro.detect().release)
-            if distro.detect().name == 'rhel':
+            ver = int(detected_distro.version)
+            rel = int(detected_distro.release)
+            if detected_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")

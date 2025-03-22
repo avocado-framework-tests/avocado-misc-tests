@@ -78,6 +78,7 @@ class Dbench(Test):
         if not os.path.exists(self.mountpoint):
             os.mkdir(self.mountpoint)
         sm = SoftwareManager()
+        detected_distro = distro.detect()
         pkgs = ["gcc", "patch"]
         if raid_needed:
             pkgs.append('mdadm')
@@ -86,13 +87,13 @@ class Dbench(Test):
                 self.error('%s is needed for the test to be run' % pkg)
 
         if fstype == 'btrfs':
-            ver = int(distro.detect().version.split('.')[0])
-            rel = int(distro.detect().release)
-            if distro.detect().name == 'rhel':
+            ver = int(detected_distro.version.split('.')[0])
+            rel = int(detected_distro.release)
+            if detected_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
-            if distro.detect().name == 'Ubuntu':
+            if detected_distro.name == 'Ubuntu':
                 if not sm.check_installed("btrfs-progs") and not \
                         sm.install("btrfs-progs"):
                     self.cancel('btrfs-progs is needed for the test to be run')

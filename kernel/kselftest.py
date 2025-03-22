@@ -65,34 +65,34 @@ class kselftest(Test):
 
         self.build_option = self.params.get('build_option', default='-bp')
         self.run_type = self.params.get('type', default='upstream')
-        detected_distro = distro.detect()
+        self.detected_distro = distro.detect()
         deps = ['gcc', 'make', 'automake', 'autoconf', 'rsync']
         if (self.comp == "powerpc"):
-            if 'ppc' not in detected_distro.arch:
+            if 'ppc' not in self.detected_distro.arch:
                 self.cancel("Testing on a non powerpc platform")
-        if detected_distro.name in ['Ubuntu', 'debian']:
+        if self.detected_distro.name in ['Ubuntu', 'debian']:
             deps.extend(['libpopt0', 'libc6', 'libc6-dev', 'libcap-dev',
                          'libpopt-dev', 'libcap-ng0', 'libcap-ng-dev',
                          'libnuma-dev', 'libfuse-dev', 'elfutils', 'libelf-dev',
                          'libhugetlbfs-dev'])
-        elif 'SuSE' in detected_distro.name:
+        elif 'SuSE' in self.detected_distro.name:
             deps.extend(['glibc', 'glibc-devel', 'popt-devel', 'sudo',
                          'libcap2', 'libcap-devel', 'libcap-ng-devel',
                          'fuse', 'fuse-devel', 'glibc-devel-static',
                          'traceroute', 'iproute2', 'socat', 'clang7',
                          'libnuma-devel'])
-            if detected_distro.version >= 15:
+            if self.detected_distro.version >= 15:
                 deps.extend(['libhugetlbfs-devel'])
             else:
                 deps.extend(['libhugetlbfs-libhugetlb-devel'])
-        elif detected_distro.name in ['centos', 'fedora', 'rhel']:
+        elif self.detected_distro.name in ['centos', 'fedora', 'rhel']:
             deps.extend(['popt', 'glibc', 'glibc-devel', 'glibc-static',
                          'libcap-ng', 'libcap', 'libcap-devel',
                          'libcap-ng-devel', 'popt-devel',
                          'libhugetlbfs-devel', 'clang', 'traceroute',
                          'iproute-tc', 'socat', 'numactl-devel'])
-            dis_ver = int(detected_distro.version)
-            if detected_distro.name == 'rhel' and dis_ver >= 9:
+            dis_ver = int(self.detected_distro.version)
+            if self.detected_distro.name == 'rhel' and dis_ver >= 9:
                 packages_remove = ['libhugetlbfs-devel']
                 deps = list(set(deps)-set(packages_remove))
                 deps.extend(['fuse3-devel'])
@@ -138,9 +138,9 @@ class kselftest(Test):
             if self.subtest == 'pmu/event_code_tests':
                 self.cancel("selftest not supported on distro")
             # Make sure kernel source repo is configured
-            if detected_distro.name in ['centos', 'fedora', 'rhel']:
+            if self.detected_distro.name in ['centos', 'fedora', 'rhel']:
                 src_name = 'kernel'
-                if detected_distro.name == 'rhel':
+                if self.detected_distro.name == 'rhel':
                     # Check for "el*a" where ALT always ends with 'a'
                     if platform.uname()[2].split(".")[-2].endswith('a'):
                         self.log.info('Using ALT as kernel source')
@@ -149,9 +149,9 @@ class kselftest(Test):
                     src_name, self.workdir, self.build_option)
                 self.buldir = os.path.join(
                     self.buldir, os.listdir(self.buldir)[0])
-            elif detected_distro.name in ['Ubuntu', 'debian']:
+            elif self.detected_distro.name in ['Ubuntu', 'debian']:
                 self.buldir = smg.get_source('linux', self.workdir)
-            elif 'SuSE' in detected_distro.name:
+            elif 'SuSE' in self.detected_distro.name:
                 if not smg.check_installed("kernel-source") and not\
                         smg.install("kernel-source"):
                     self.cancel(
@@ -204,8 +204,8 @@ class kselftest(Test):
             if self.run_type == 'upstream':
                 self.find_match(r'not ok (.*) selftests:(.*)', line)
             elif self.run_type == 'distro':
-                if distro.detect().name == 'SuSE' and\
-                        distro.detect().version == 12:
+                if self.detected_distro.name == 'SuSE' and\
+                        self.detected_distro.version == 12:
                     self.find_match(r'selftests:(.*)\[FAIL\]', line)
                 else:
                     self.find_match(r'not ok (.*) selftests:(.*)', line)

@@ -428,6 +428,7 @@ class IOZone(Test):
 
         self.base_dir = os.path.abspath(self.basedir)
         smm = SoftwareManager()
+        detected_distro = distro.detect()
         packages = ['gcc', 'make', 'patch']
         if raid_needed:
             packages.append('mdadm')
@@ -436,13 +437,13 @@ class IOZone(Test):
                 self.cancel("%s is needed for the test to be run" % package)
 
         if fstype == 'btrfs':
-            ver = int(distro.detect().version)
-            rel = int(distro.detect().release)
-            if distro.detect().name == 'rhel':
+            ver = int(detected_distro.version)
+            rel = int(detected_distro.release)
+            if detected_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
-                if distro.detect().name == 'Ubuntu':
+                if detected_distro.name == 'Ubuntu':
                     if not smm.check_installed("btrfs-progs") and not \
                             smm.install("btrfs-progs"):
                         self.cancel(
@@ -459,13 +460,11 @@ class IOZone(Test):
         patch = self.get_data(patch)
         process.run('patch -p3 < %s' % patch, shell=True)
 
-        d_distro = distro.detect()
-        arch = d_distro.arch
-        if arch == 'ppc':
+        if detected_distro.arch == 'ppc':
             build.make(make_dir, extra_args='linux-powerpc')
-        elif arch == 'ppc64' or arch == 'ppc64le':
+        elif detected_distro.arch == 'ppc64' or detected_distro.arch == 'ppc64le':
             build.make(make_dir, extra_args='linux-powerpc64')
-        elif arch == 'x86_64':
+        elif detected_distro.arch == 'x86_64':
             build.make(make_dir, extra_args='linux-AMD64')
         else:
             build.make(make_dir, extra_args='linux')
