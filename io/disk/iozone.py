@@ -437,7 +437,10 @@ class IOZone(Test):
                 self.cancel("%s is needed for the test to be run" % package)
 
         if fstype == 'btrfs':
-            ver = int(detected_distro.version)
+            if detected_distro.name == 'Ubuntu':
+                ver = int(detected_distro.version.split('.')[0])
+            else:
+                ver = int(detected_distro.version)
             rel = int(detected_distro.release)
             if detected_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:

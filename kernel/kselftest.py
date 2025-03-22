@@ -66,6 +66,10 @@ class kselftest(Test):
         self.build_option = self.params.get('build_option', default='-bp')
         self.run_type = self.params.get('type', default='upstream')
         self.detected_distro = distro.detect()
+        if self.detected_distro.name == 'Ubuntu':
+            self.distro_ver = int(self.detected_distro.version.split('.')[0])
+        else:
+            self.distro_ver = int(self.detected_distro.version)
         deps = ['gcc', 'make', 'automake', 'autoconf', 'rsync']
         if (self.comp == "powerpc"):
             if 'ppc' not in self.detected_distro.arch:
@@ -81,7 +85,7 @@ class kselftest(Test):
                          'fuse', 'fuse-devel', 'glibc-devel-static',
                          'traceroute', 'iproute2', 'socat', 'clang7',
                          'libnuma-devel'])
-            if self.detected_distro.version >= 15:
+            if self.distro_ver >= 15:
                 deps.extend(['libhugetlbfs-devel'])
             else:
                 deps.extend(['libhugetlbfs-libhugetlb-devel'])
@@ -91,8 +95,7 @@ class kselftest(Test):
                          'libcap-ng-devel', 'popt-devel',
                          'libhugetlbfs-devel', 'clang', 'traceroute',
                          'iproute-tc', 'socat', 'numactl-devel'])
-            dis_ver = int(self.detected_distro.version)
-            if self.detected_distro.name == 'rhel' and dis_ver >= 9:
+            if self.detected_distro.name == 'rhel' and self.distro_ver >= 9:
                 packages_remove = ['libhugetlbfs-devel']
                 deps = list(set(deps)-set(packages_remove))
                 deps.extend(['fuse3-devel'])
@@ -205,7 +208,7 @@ class kselftest(Test):
                 self.find_match(r'not ok (.*) selftests:(.*)', line)
             elif self.run_type == 'distro':
                 if self.detected_distro.name == 'SuSE' and\
-                        self.detected_distro.version == 12:
+                        self.distro_ver == 12:
                     self.find_match(r'selftests:(.*)\[FAIL\]', line)
                 else:
                     self.find_match(r'not ok (.*) selftests:(.*)', line)

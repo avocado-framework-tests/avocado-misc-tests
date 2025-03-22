@@ -72,7 +72,10 @@ class ParallelDd(Test):
         self.fs_dd_roptions = self.params.get('fs_dd_roptions', default='')
         detected_distro = distro.detect()
         if self.fstype == 'btrfs':
-            ver = int(detected_distro.version)
+            if detected_distro.name == 'Ubuntu':
+                ver = int(detected_distro.version.split('.')[0])
+            else:
+                ver = int(detected_distro.version)
             rel = int(detected_distro.release)
             if detected_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:

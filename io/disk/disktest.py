@@ -81,7 +81,10 @@ class Disktest(Test):
         self.raid_name = '/dev/md/sraid'
 
         if self.fstype == 'btrfs':
-            ver = int(detected_distro.version)
+            if detected_distro.name == 'Ubuntu':
+                ver = int(detected_distro.version.split('.')[0])
+            else:
+                ver = int(detected_distro.version)
             rel = int(detected_distro.release)
             if detected_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
