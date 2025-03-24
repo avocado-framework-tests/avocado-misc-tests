@@ -20,7 +20,7 @@ import glob
 import shutil
 
 from avocado import Test
-from avocado.utils import build, process
+from avocado.utils import build, process, cpu
 from avocado.utils import distro
 from avocado.utils import archive, git
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -52,6 +52,7 @@ class kselftest(Test):
         smg = SoftwareManager()
         self.comp = self.params.get('comp', default='')
         self.subtest = self.params.get('subtest', default='')
+        self.cores = cpu.lscpu().get("physical_cores") 
         if self.comp == "mm" and self.subtest == "ksm_tests":
             self.test_type = self.params.get('test_type', default='-H')
             self.Size_flag = self.params.get('Size', default='-s')
@@ -128,10 +129,10 @@ class kselftest(Test):
 
                 self.sourcedir = os.path.join(self.buldir, self.testdir)
                 if (self.comp != "cpufreq" and self.comp != "bpf"):
-                    process.system("make headers -C %s" % self.buldir, shell=True,
-                                   sudo=True)
-                    process.system("make install -C %s" % self.sourcedir,
-                                   shell=True, sudo=True)
+                    build.run_make(path = self.buldir, make = "make",\
+                                  extra_args = f" headers -C {self.buldir}")
+                    build.run_make(path = self.sourcedir, make = "make",\
+                                  extra_args = f" install -C {self.sourcedir}")
             else:
                 self.buldir = self.params.get('location', default='')
         else:
@@ -172,7 +173,7 @@ class kselftest(Test):
         if (self.comp != "cpufreq" and self.comp != "bpf"):
             if self.comp:
                 build_str = '-C %s' % self.comp
-            if build.make(self.sourcedir, extra_args='%s' % build_str):
+            if build.make(path = self.sourcedir, extra_args= f" {build_str}"):
                 self.fail("Compilation failed, Please check the build logs !!")
 
     def test(self):
@@ -193,9 +194,9 @@ class kselftest(Test):
                     test_comp = self.comp + "/" + self.subtest
                 else:
                     test_comp = self.comp
-                make_cmd = 'make -C %s %s -C %s run_tests' % (
-                    self.sourcedir, kself_args, test_comp)
-                self.result = process.run(make_cmd, shell=True, ignore_status=True)
+                self.result = build.run_make(path = self.sourcedir, extra_args= f"\
+                                            -C {self.sourcedir} {kself_args} -C\
+                                            {test_comp} run_tests")
         log_output = self.result.stdout.decode('utf-8')
         results_path = os.path.join(self.outputdir, 'raw_output')
         with open(results_path, 'w') as r_file:
@@ -254,8 +255,8 @@ class kselftest(Test):
         """
         self.sourcedir = os.path.join(self.buldir, self.testdir)
         os.chdir(self.sourcedir)
-        build.make(self.sourcedir)
-        build.make(self.sourcedir, extra_args='run_tests')
+        build.run_make(path = self.sourcedir)
+        build.run_make(self.sourcedir, extra_args= f" run_tests")
 
     def cpufreq(self):
         """
