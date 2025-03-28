@@ -270,5 +270,3 @@ class Ethtool(Test):
         except Exception:
             self.networkinterface.remove_cfg_file()
             self.log.info("backup file not availbale, could not restore file.")
-        if self.hbond:
-            self.networkinterface.restore_slave_cfg_file()

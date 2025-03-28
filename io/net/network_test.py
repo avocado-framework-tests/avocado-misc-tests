@@ -345,8 +345,6 @@ class NetworkTest(Test):
                 self.networkinterface.remove_cfg_file()
                 self.log.info(
                     "backup file not available, could not restore file.")
-            if self.hbond:
-                self.networkinterface.restore_slave_cfg_file()
         self.remotehost.remote_session.quit()
         self.remotehost_public.remote_session.quit()
         if 'scp' or 'ssh' in str(self.name.name):
