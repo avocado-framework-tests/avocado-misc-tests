@@ -65,7 +65,7 @@ class DisrtoTool(Test):
                                               device_path_name)
 
         smm = SoftwareManager()
-        for pkg in ['pciutils', 'net-tools']:
+        for pkg in ['pciutils', 'net-tools', 'lshw']:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
 
