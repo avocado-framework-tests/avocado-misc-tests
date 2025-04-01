@@ -70,6 +70,7 @@ class LtpFs(Test):
         self.fstype = self.params.get('fs', default='ext4')
         self.args = self.params.get('args', default='')
         smm = SoftwareManager()
+        detected_distro = distro.detect()
         packages = ['gcc', 'make', 'automake', 'autoconf']
         if raid_needed:
             packages.append('mdadm')
@@ -78,9 +79,12 @@ class LtpFs(Test):
                 self.cancel("%s is needed for the test to be run" % package)
 
         if self.fstype == 'btrfs':
-            ver = int(distro.detect().version)
-            rel = int(distro.detect().release)
-            if distro.detect().name == 'rhel':
+            if detected_distro.name == 'Ubuntu':
+                ver = int(detected_distro.version.split('.')[0])
+            else:
+                ver = int(detected_distro.version)
+            rel = int(detected_distro.release)
+            if detected_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
