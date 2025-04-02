@@ -77,11 +77,16 @@ class Stressng(Test):
                 self.cancel("%s is needed, get the source and build" %
                             package)
 
-        asset_url = 'https://github.com/ColinIanKing/stress-ng/archive/master.zip'
+        self.branch = self.params.get('branch', default='master')
+        self.base_url = 'https://github.com/ColinIanKing/stress-ng/archive'
+        if 'master' in self.branch:
+            asset_url = '%s/master.zip' % self.base_url
+        else:
+            asset_url = '%s/refs/tags/V%s.zip' % (self.base_url, self.branch)
         tarball = self.fetch_asset('stressng.zip', locations=[asset_url],
                                    expire='7d')
         archive.extract(tarball, self.workdir)
-        sourcedir = os.path.join(self.workdir, 'stress-ng-master')
+        sourcedir = os.path.join(self.workdir, 'stress-ng-%s' % self.branch)
         os.chdir(sourcedir)
         result = build.run_make(sourcedir,
                                 process_kwargs={'ignore_status': True})
