@@ -19,16 +19,8 @@
 import os
 import multiprocessing
 from avocado import Test
-from avocado.utils import process, build, archive, distro, memory
+from avocado.utils import process, build, archive, distro, memory, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
-
-
-def clear_dmesg():
-    process.run("dmesg -C ", sudo=True)
-
-
-def collect_dmesg(object):
-    return process.system_output("dmesg").decode()
 
 
 class Stressng(Test):
@@ -95,7 +87,7 @@ class Stressng(Test):
                 self.cancel(
                     "Build Failed, Please check the build logs for details !!")
         build.make(sourcedir, extra_args='install')
-        clear_dmesg()
+        dmesg.clear_dmesg()
 
     def test(self):
         args = []
@@ -191,16 +183,11 @@ class Stressng(Test):
                     for _ in range(self.iteration):
                         process.run("%s %s" % (cmd, stress_cmd),
                                     ignore_status=True, sudo=True)
-        ERROR = []
-        pattern = ['WARNING: CPU:', 'Oops', 'Segfault', 'soft lockup',
-                   'Unable to handle', 'ard LOCKUP']
-        for fail_pattern in pattern:
-            for log in collect_dmesg(self).splitlines():
-                if fail_pattern in log:
-                    ERROR.append(log)
-        if ERROR:
-            self.fail("Test failed with following errors in dmesg :  %s " %
-                      "\n".join(ERROR))
+        error = dmesg.collect_errors_dmesg(['WARNING: CPU:', 'Oops',
+                                            'Segfault', 'soft lockup',
+                                            'Unable to handle', 'ard LOCKUP'])
+        if len(error):
+            self.fail("Test failed with errors %s in dmesg" % error)
 
     def tearDown(self):
         if hasattr(self, 'loop_dev') and os.path.exists(self.loop_dev):
