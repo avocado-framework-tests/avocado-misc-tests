@@ -125,8 +125,8 @@ class TestLog(logging.Logger):
     def __get_log_level(self, log_level):
         """Just to translate the string format to logging format."""
         if log_level not in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'):
-            self.warning('Misconfigured log level %s. Assuming INFO.' %
-                         log_level)
+            self.log.warn('Misconfigured log level %s. Assuming INFO.' %
+                          log_level)
             return logging.INFO
         return getattr(logging, log_level)
 
