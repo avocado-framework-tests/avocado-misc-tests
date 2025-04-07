@@ -77,7 +77,7 @@ class NdctlDeviceTreeCheck(Test):
         """
         Build 'ndctl' and setup the binary.
         """
-        if "powerpc" not in cpu.get_cpu_arch():
+        if cpu.get_cpu_arch() not in ["powerpc", "ppc64le"]:
             self.cancel("Test supported only on POWER arch")
 
         deps = []
