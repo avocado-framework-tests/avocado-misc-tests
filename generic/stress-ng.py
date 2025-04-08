@@ -23,10 +23,6 @@ from avocado.utils import process, build, archive, distro, memory, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
-def collect_dmesg(object):
-    return process.system_output("dmesg").decode()
-
-
 class Stressng(Test):
 
     """
@@ -73,11 +69,16 @@ class Stressng(Test):
                 self.cancel("%s is needed, get the source and build" %
                             package)
 
-        asset_url = 'https://github.com/ColinIanKing/stress-ng/archive/master.zip'
+        self.branch = self.params.get('branch', default='master')
+        self.base_url = 'https://github.com/ColinIanKing/stress-ng/archive'
+        if 'master' in self.branch:
+            asset_url = '%s/master.zip' % self.base_url
+        else:
+            asset_url = '%s/refs/tags/V%s.zip' % (self.base_url, self.branch)
         tarball = self.fetch_asset('stressng.zip', locations=[asset_url],
                                    expire='7d')
         archive.extract(tarball, self.workdir)
-        sourcedir = os.path.join(self.workdir, 'stress-ng-master')
+        sourcedir = os.path.join(self.workdir, 'stress-ng-%s' % self.branch)
         os.chdir(sourcedir)
         result = build.run_make(sourcedir,
                                 process_kwargs={'ignore_status': True})
@@ -182,16 +183,11 @@ class Stressng(Test):
                     for _ in range(self.iteration):
                         process.run("%s %s" % (cmd, stress_cmd),
                                     ignore_status=True, sudo=True)
-        ERROR = []
-        pattern = ['WARNING: CPU:', 'Oops', 'Segfault', 'soft lockup',
-                   'Unable to handle', 'ard LOCKUP']
-        for fail_pattern in pattern:
-            for log in collect_dmesg(self).splitlines():
-                if fail_pattern in log:
-                    ERROR.append(log)
-        if ERROR:
-            self.fail("Test failed with following errors in dmesg :  %s " %
-                      "\n".join(ERROR))
+        error = dmesg.collect_errors_dmesg(['WARNING: CPU:', 'Oops',
+                                            'Segfault', 'soft lockup',
+                                            'Unable to handle', 'ard LOCKUP'])
+        if len(error):
+            self.fail("Test failed with errors %s in dmesg" % error)
 
     def tearDown(self):
         if hasattr(self, 'loop_dev') and os.path.exists(self.loop_dev):

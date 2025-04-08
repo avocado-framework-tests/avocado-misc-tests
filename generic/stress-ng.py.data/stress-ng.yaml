@@ -1,3 +1,8 @@
+# While specifying a branch with tag omit `V` from the name.
+# e.g say V0.18.11 is the tag to be used specify
+# branch: '0.18.11'
+# 
+branch: 'master'
 workers:
 ttimeout: '5m'
 verify: True
