@@ -100,6 +100,8 @@ class TcpdumpTest(Test):
         smm = SoftwareManager()
         detected_distro = distro.detect()
         pkgs = ['tcpdump', 'flex', 'bison', 'gcc', 'gcc-c++', 'nmap']
+        if detected_distro.name == "SuSE" and detected_distro.version == 16:
+            pkgs.extend(["pcre2-devel", "python311-build"])
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("Cannot install package: %s" % pkg)
