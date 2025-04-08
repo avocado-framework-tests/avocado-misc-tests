@@ -52,6 +52,7 @@ class Lvsetup(Test):
         pkgs = []
         self.disks = []
         smm = SoftwareManager()
+        detected_distro = distro.detect()
         devices = self.params.get('lv_disks', default=None).split()
         if devices:
             for dev in devices:
@@ -60,23 +61,22 @@ class Lvsetup(Test):
         self.lv_name = self.params.get('lv_name', default='avocado_lv')
         self.fs_name = self.params.get('fs', default='ext4').lower()
         self.lv_size = self.params.get('lv_size', default='0')
-        distro_name = distro.detect().name
         if self.fs_name == 'xfs':
             pkgs = ['xfsprogs']
         if self.fs_name == 'btrfs':
-            if distro_name == 'Ubuntu':
-                ver = int(distro.detect().version.split('.')[0])
+            if detected_distro.name == 'Ubuntu':
+                ver = int(detected_distro.version.split('.')[0])
             else:
-                ver = int(distro.detect().version)
-            rel = int(distro.detect().release)
-            if distro_name == 'rhel':
+                ver = int(detected_distro.version)
+            rel = int(detected_distro.release)
+            if detected_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with RHEL 7.4 onwards")
-            if distro_name == 'SuSE':
+            if detected_distro.name == 'SuSE':
                 pkgs = ['btrfsprogs']
             else:
                 pkgs = ['btrfs-progs']
-        if distro_name in ['Ubuntu', 'debian']:
+        if detected_distro.name in ['Ubuntu', 'debian']:
             pkgs.extend(['lvm2'])
 
         for pkg in pkgs:
