@@ -109,7 +109,7 @@ class Iperf(Test):
         elif detected_distro.name in ['rhel', 'fedora', 'redhat']:
             cmd_fw = "systemctl stop firewalld"
         elif detected_distro.name == "SuSE":
-            if detected_distro.version == 15:
+            if detected_distro.version >= 15:
                 cmd_fw = "systemctl stop firewalld"
             else:
                 cmd_fw = "rcSuSEfirewall2 stop"
