@@ -145,6 +145,4 @@ class ReceiveMulticastTest(Test):
             except Exception:
                 self.networkinterface.remove_cfg_file()
                 self.log.info("backup file not available, could not restore file.")
-            if self.hbond:
-                self.networkinterface.restore_slave_cfg_file()
             self.session.quit()
