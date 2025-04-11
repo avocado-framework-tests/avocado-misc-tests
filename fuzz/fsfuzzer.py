@@ -65,6 +65,7 @@ class Fsfuzzer(Test):
                      "master.zip"]
         tarball = self.fetch_asset("fsfuzzer.zip", locations=locations)
         archive.extract(tarball, self.workdir)
+        build_path = os.path.join(self.workdir, "fsfuzzer-master")
         os.chdir(os.path.join(self.workdir, "fsfuzzer-master"))
 
         if d_name == "ubuntu":
@@ -73,9 +74,9 @@ class Fsfuzzer(Test):
                 'fsfuzz_fix.patch'))
             if process.system(fuzz_fix_patch, shell=True, ignore_status=True):
                 self.log.warn("Unable to apply sh->bash patch!")
+        if build.configure(build_path):
+            self.fail("fsfuzzer: Configure failed")
 
-        process.run('./autogen.sh', shell=True)
-        process.run('./configure', shell=True)
 
         build.make('.')
         
