@@ -66,7 +66,6 @@ class Fsfuzzer(Test):
         tarball = self.fetch_asset("fsfuzzer.zip", locations=locations)
         archive.extract(tarball, self.workdir)
         build_path = os.path.join(self.workdir, "fsfuzzer-master")
-        os.chdir(os.path.join(self.workdir, "fsfuzzer-master"))
 
         if d_name == "ubuntu":
             # Patch for ubuntu
@@ -77,17 +76,16 @@ class Fsfuzzer(Test):
         if build.configure(build_path):
             self.fail("fsfuzzer: Configure failed")
 
+        os.chdir(build_path)
+        if build.make('.'):
+            self.fail("fsfuzzer: Building source failed")
 
-        build.make('.')
-        
         self._fsfuzz = os.path.abspath(os.path.join('.', "fsfuzz"))
         fs_sup = process.system_output('%s %s' % (self._fsfuzz, ' --help'))
         match = re.search(r'%s' % self._args, fs_sup.decode(), re.M | re.I)
         if not match:
             self.cancel('File system ' + self._args +
                         ' is unsupported in ' + detected_distro.name)
-
-
 
     def test(self):
         '''
