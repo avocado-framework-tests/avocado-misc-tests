@@ -97,13 +97,11 @@ class kernelLockdown(Test):
                 self.fail("'/dev/mem' file access permitted.")
 
     def test_lockdown_debugfs(self):
-        if self.distro_version.name == "SuSE":
-            self.cancel("This test not supported on SuSE")
         # Try read the values from sysfs file
         output = process.system_output('mount', ignore_status=True).decode()
         if 'debugfs' not in output:
             self.cancel("Skip this test as 'debugfs' not mounted.")
-        dbg_file = "/sys/kernel/debug/powerpc/xive"
+        dbg_file = "/sys/kernel/debug/powerpc/xive/store-eoi"
         if os.path.exists(dbg_file):
             try:
                 genio.read_file(dbg_file)
