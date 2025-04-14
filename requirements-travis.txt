@@ -1,4 +1,4 @@
 pycodestyle==2.4.0
 inspektor==0.5.3
 pep8==1.7.1
-pylint==3.3.6
+pylint==3.0.0
