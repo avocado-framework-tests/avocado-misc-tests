@@ -15,8 +15,9 @@
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 
 import os
+import re
 from avocado import Test
-from avocado.utils import process
+from avocado.utils import process, distro
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -31,17 +32,31 @@ class Hwinfo(Test):
             self.fail("hwinfo: %s command failed to execute" % cmd)
 
     def setUp(self):
+        distro_name = distro.detect().name
+        if distro_name != 'SuSE':
+            self.cancel("This test case not supported on %s" % distro_name)
         sm = SoftwareManager()
         if not sm.check_installed("hwinfo") and not sm.install("hwinfo"):
             self.cancel("Fail to install hwinfo required for this test.")
         self.clear_dmesg()
-        self.disk_name = process.system_output("df -h | egrep '(s|v)d[a-z][1-8]' | "
-                                               "tail -1 | cut -d' ' -f1",
-                                               shell=True).decode("utf-8").strip("12345")
-        self.Unique_Id = process.system_output("hwinfo --disk --only %s | "
-                                               "grep 'Unique' | head -1 | "
-                                               "cut -d':' -f2" % self.disk_name,
-                                               shell=True).decode("utf-8")
+        self.disk_name = ''
+        output = process.system_output("df -h", shell=True).decode().splitlines()
+        filtered_lines = [line for line in output
+                          if re.search(r'(s|v)d[a-z][1-8]', line)]
+        if filtered_lines:
+            self.disk_name = filtered_lines[-1].split()[0].strip("12345")
+        if not self.disk_name:
+            self.cancel("Couldn't get Disk name.")
+        self.Unique_Id = ''
+        output = process.system_output("hwinfo --disk --only %s"
+                                       % self.disk_name, shell=True).decode()
+        for line in output.splitlines():
+            if 'Unique' in line:
+                self.Unique_Id = line.split(":")[1].strip()
+                break
+        if not self.Unique_Id:
+            self.cancel("Couldn't get Unique ID for the disk: %s" %
+                        self.disk_name)
 
     def test_list_options(self):
         lists = self.params.get('list', default=['--all', '--cpu', '--disk'])
