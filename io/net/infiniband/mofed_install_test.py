@@ -99,9 +99,15 @@ class MOFEDInstallTest(Test):
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
         elif detected_distro.name in ['rhel', 'fedora', 'redhat']:
-            pkgs.extend(["make", "gcc", "python36-devel", "tcsh",
+            pkgs.extend(["make", "gcc", "tcsh",
                          "kernel-rpm-macros", "gdb-headless", "rpm-build",
                          "gcc-gfortran", kernel_ver])
+
+            if detected_distro.version == "8":
+                pkgs.extend(["python36-devel"])
+            else:
+                pkgs.extend(["python3-devel"])
+
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("Not able to install %s" % pkg)
