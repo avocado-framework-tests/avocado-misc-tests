@@ -68,18 +68,19 @@ class perf_hv_gpci(Test):
         self.list_partition = []
         self.list_hw = []
         self.list_noid = []
-        for line in process.get_command_output_matching("perf list | grep 'hv_gpci' | grep -v 'descriptor'", 'hv_gpci'):
-            line = "%s/%s" % (line.split('/')[0], line.split('/')[1])
-            if 'phys_processor_idx' in line:
-                self.list_phys.append(line)
-            elif 'sibling_part_id' in line:
-                self.list_sibling.append(line)
-            elif 'partition_id' in line:
-                self.list_partition.append(line)
-            elif 'hw_chip_id' in line:
-                self.list_hw.append(line)
-            else:
-                self.list_noid.append(line)
+        for line in process.get_command_output_matching("perf list", 'hv_gpci'):
+            if 'descriptor' not in line:
+                line = "%s/%s" % (line.split('/')[0], line.split('/')[1])
+                if 'phys_processor_idx' in line:
+                    self.list_phys.append(line)
+                elif 'sibling_part_id' in line:
+                    self.list_sibling.append(line)
+                elif 'partition_id' in line:
+                    self.list_partition.append(line)
+                elif 'hw_chip_id' in line:
+                    self.list_hw.append(line)
+                else:
+                    self.list_noid.append(line)
 
         # Clear the dmesg, by that we can capture the delta at the end of
         # the test.
