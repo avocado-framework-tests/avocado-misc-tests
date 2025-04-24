@@ -107,34 +107,49 @@ class kselftest(Test):
                 self.cancel(
                     "Fail to install %s package" % (package))
 
-        if self.run_type == 'upstream':
-            location = self.params.get('location', default='https://github.c'
-                                       'om/torvalds/linux/archive/master.zip')
-            if re.match(r'^https|^git', location):
-                git_branch = self.params.get('branch', default='master')
-                path = ''
-                match = next(
-                    (ext for ext in [".zip", ".tar", ".gz"] if ext in location), None)
-                if match:
-                    tarball = self.fetch_asset("kselftest%s" % match,
-                                               locations=[location], expire='1d')
-                    extracted_dir = archive.uncompress(tarball, self.workdir)
-                    path = glob.glob(os.path.join(self.workdir, extracted_dir))
-                else:
-                    git.get_repo(location, branch=git_branch,
-                                 destination_dir=self.workdir)
-                    path = glob.glob(self.workdir)
-                for l_dir in path:
-                    if os.path.isdir(l_dir) and 'Makefile' in os.listdir(l_dir):
-                        self.buldir = os.path.join(self.workdir, l_dir)
-                        break
-
-                self.sourcedir = os.path.join(self.buldir, self.testdir)
-                if (self.comp != "cpufreq" and self.comp != "bpf"):
-                    process.system("make headers -C %s" % self.buldir, shell=True,
-                                   sudo=True)
-                    process.system("make install -C %s" % self.sourcedir,
-                                   shell=True, sudo=True)
+        if self.run_type == 'custom' or self.run_type == 'upstream':
+            if self.run_type == 'custom':
+                linux_dir = self.params.get('linux_dir', default=None)
+                if not linux_dir or not os.path.exists(linux_dir):
+                    self.cancel(
+                        "Custom kernel source directory %s does not exist" % (linux_dir))
+                linux_dir = os.path.abspath(os.path.expanduser(linux_dir))
+                if not os.path.exists(os.path.join(linux_dir, "tools/testing/selftests")):
+                    self.cancel(
+                        "Custom kernel source directory %s is not a valid kernel source" % linux_dir)
+                if not os.path.exists(os.path.join(linux_dir, "Makefile")):
+                    self.cancel(
+                        "Custom kernel source directory %s lacks a Makefile" % linux_dir)
+                path = [linux_dir]
+            if self.run_type == 'upstream':
+                location = self.params.get('location', default='https://github.c'
+                                           'om/torvalds/linux/archive/master.zip')
+                if re.match(r'^https|^git', location):
+                    git_branch = self.params.get('branch', default='master')
+                    path = ''
+                    match = next(
+                        (ext for ext in [".zip", ".tar", ".gz"] if ext in location), None)
+                    if match:
+                        tarball = self.fetch_asset("kselftest%s" % match,
+                                                   locations=[location], expire='1d')
+                        extracted_dir = archive.uncompress(
+                            tarball, self.workdir)
+                        path = glob.glob(os.path.join(
+                            self.workdir, extracted_dir))
+                    else:
+                        git.get_repo(location, branch=git_branch,
+                                     destination_dir=self.workdir)
+                        path = glob.glob(self.workdir)
+            for l_dir in path:
+                if os.path.isdir(l_dir) and 'Makefile' in os.listdir(l_dir):
+                    self.buldir = os.path.join(self.workdir, l_dir)
+                    break
+            self.sourcedir = os.path.join(self.buldir, self.testdir)
+            if (self.comp != "cpufreq" and self.comp != "bpf"):
+                process.system("make headers -C %s" % self.buldir, shell=True,
+                               sudo=True)
+                process.system("make install -C %s" % self.sourcedir,
+                               shell=True, sudo=True)
             else:
                 self.buldir = self.params.get('location', default='')
         else:
@@ -201,7 +216,8 @@ class kselftest(Test):
                     test_comp = self.comp
                 make_cmd = 'make -C %s %s -C %s run_tests' % (
                     self.sourcedir, kself_args, test_comp)
-                self.result = process.run(make_cmd, shell=True, ignore_status=True)
+                self.result = process.run(
+                    make_cmd, shell=True, ignore_status=True)
         log_output = self.result.stdout.decode('utf-8')
         results_path = os.path.join(self.outputdir, 'raw_output')
         with open(results_path, 'w') as r_file:
