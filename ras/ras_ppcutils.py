@@ -65,6 +65,15 @@ class RASToolsPpcutils(Test):
                     self.sm.install(package):
                 self.cancel("Fail to install %s required for this test." %
                             package)
+        # get the disk name
+        self.disk_name = ''
+        output = process.system_output("df -h", shell=True).decode().splitlines()
+        filtered_lines = [line for line in output
+                          if re.search(r'(s|v)d[a-z][1-8]', line)]
+        if filtered_lines:
+            self.disk_name = filtered_lines[-1].split()[0].strip("12345")
+        if not self.disk_name:
+            self.cancel("Couldn't get Disk name.")
 
     @staticmethod
     def run_cmd_out(cmd):
@@ -150,9 +159,10 @@ class RASToolsPpcutils(Test):
                       "==")
         self.run_cmd("drmgr -h")
         self.run_cmd("drmgr -C")
-        lcpu_count = self.run_cmd_out("lparstat -i | "
-                                      "grep \"Online Virtual CPUs\" | "
-                                      "cut -d':' -f2")
+        output = self.run_cmd_out("lparstat -i").splitlines()
+        for line in output:
+            if 'Online Virtual CPUs' in line:
+                lcpu_count = line.split(':')[1].strip()
         if lcpu_count:
             lcpu_count = int(lcpu_count)
             if lcpu_count >= 2:
@@ -185,8 +195,11 @@ class RASToolsPpcutils(Test):
         if not IS_KVM_GUEST:
             self.run_cmd("lsslot -c cpu -b")
         self.run_cmd("lsslot -c pci -o")
-        slot = self.run_cmd_out("lsslot | cut -d' ' -f1 | head -2"
-                                " | tail -1")
+        slot = ''
+        output = self.run_cmd_out("lsslot").splitlines()
+        fields = [line.split()[0] for line in output if line]
+        if len(fields) > 1:
+            slot = fields[1]
         if slot:
             self.run_cmd("lsslot -s %s" % slot)
         self.error_check()
@@ -213,12 +226,10 @@ class RASToolsPpcutils(Test):
                       "=====")
         self.run_cmd("ofpathname -h")
         self.run_cmd("ofpathname -V")
-        disk_name = self.run_cmd_out("df -h | egrep '(s|v)da[1-8]' | "
-                                     "tail -1 | cut -d' ' -f1")
-        if disk_name:
-            self.run_cmd("ofpathname %s" % disk_name)
+        if self.disk_name:
+            self.run_cmd("ofpathname %s" % self.disk_name)
             of_name = self.run_cmd_out("ofpathname %s"
-                                       % disk_name).split(':')[0]
+                                       % self.disk_name).split(':')[0]
             self.run_cmd("ofpathname -l %s" % of_name)
         self.error_check()
 
@@ -378,12 +389,20 @@ class RASToolsPpcutils(Test):
         for list_item in list:
             cmd = "lsdevinfo %s" % list_item
             self.run_cmd(cmd)
-        interface = self.run_cmd_out(
-            "ifconfig | head -1 | cut -d':' -f1")
+        output = process.system_output("ip link ls up", shell=True).decode().strip()
+        interface = ""
+        for line in output.splitlines():
+            # check if the line doesn't contain 'lo' or 'vir' and doesn't start
+            # with a non-digit character
+            if not re.search(r'lo|vir|^[^0-9]', line):
+                fields = line.split(':')
+                if fields[1]:
+                    interface = fields[1]
+            # For this test case we need only one active interface
+            if interface:
+                break
         self.run_cmd("lsdevinfo -q name=%s" % interface)
-        disk_name = self.run_cmd_out("df -h | egrep '(s|v)d[a-z][1-8]' | "
-                                     "tail -1 | cut -d' ' -f1").strip("12345")
-        self.run_cmd("lsdevinfo -q name=%s" % disk_name)
+        self.run_cmd("lsdevinfo -q name=%s" % self.disk_name)
         self.error_check()
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST,
@@ -413,13 +432,13 @@ class RASToolsPpcutils(Test):
         for list_item in list:
             cmd = "bootlist %s" % list_item
             self.run_cmd(cmd)
-        interface = self.run_cmd_out(
-            "lsvio -e | cut -d' ' -f2")
-        disk_name = self.run_cmd_out("df -h | egrep '(s|v)d[a-z][1-8]' | "
-                                     "tail -1 | cut -d' ' -f1").strip("12345")
+        output = self.run_cmd_out("lsvio -e").splitlines()
+        for line in output:
+            if len(line.split()) > 1:
+                interface = line.split()[1]
         file_path = os.path.join(self.workdir, 'file')
         process.run("echo %s > %s" %
-                    (disk_name, file_path), ignore_status=True,
+                    (self.disk_name, file_path), ignore_status=True,
                     sudo=True, shell=True)
         process.run("echo %s >> %s" %
                     (interface, file_path), ignore_status=True,
