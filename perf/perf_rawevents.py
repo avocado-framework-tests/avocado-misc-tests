@@ -67,8 +67,9 @@ class PerfRawevents(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
-        output = process.system_output("perf list --raw-dump pmu|grep pm_*",
-                                       shell=True, ignore_status=True)
+        # Equivalent Python code for bash command
+        # "perf list --raw-dump pmu|grep pm_*"
+        output = process.get_command_output_matching("perf list --raw-dump pmu", "pm_")
         if not output:
             self.cancel("No PMU events found. Skipping the test")
 

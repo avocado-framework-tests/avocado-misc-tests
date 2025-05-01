@@ -19,8 +19,8 @@ import os
 import re
 import psutil
 import time
-import subprocess
-from avocado.utils import process
+import glob
+from avocado.utils import process, genio
 from avocado import Test
 from avocado.utils import process, build, archive, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -45,14 +45,17 @@ class Stressng(Test):
         deps = ['gcc', 'perf']
         if run_type == "upstream":
             asset_url = 'https://github.com/ColinIanKing/stress-ng/archive/master.zip'
-            tarball = self.fetch_asset('stressng.zip', locations=[asset_url], expire='7d')
+            tarball = self.fetch_asset('stressng.zip', locations=[
+                                       asset_url], expire='7d')
             archive.extract(tarball, self.workdir)
             sourcedir = os.path.join(self.workdir, 'stress-ng-master')
             os.chdir(sourcedir)
-            result = build.run_make(sourcedir, process_kwargs={'ignore_status': True})
+            result = build.run_make(sourcedir, process_kwargs={
+                                    'ignore_status': True})
             for line in str(result).splitlines():
                 if 'error:' in line:
-                    self.cancel("Build Failed, Please check the build logs for details !!")
+                    self.cancel(
+                        "Build Failed, Please check the build logs for details !!")
             build.make(sourcedir, extra_args='install')
         elif run_type == "distro":
             deps.extend(['stress-ng'])
@@ -92,23 +95,25 @@ class Stressng(Test):
         :param filename: log file name
         """
         var = 0
-        sum = 0
+        total_sum = 0
         result = 0
-        cmd = "awk '!/procs|swpd/ && NF > 0 { print $15 }' %s > /tmp/data1.txt" % filename
-        vmstat_data = process.system_output(
-                cmd, ignore_status=True, sudo=True, shell=True)
-
-        f = open("/tmp/data1.txt", "r")
-        for line in f:
-            if line[0].isnumeric():
-                if var < 10:
-                    var += 1
-                    sum = sum + int(line)
-                else:
-                    sum = sum + int(line)
-                    result = 100 - sum // 11
-                    var = 0
-                    sum = 0
+        # Equivalent Python code for bash command
+        # "awk '!/procs|swpd/ && NF > 0 { print $15 }' %s > /tmp/data1.txt" % filename
+        exclude_patterns = re.compile(r'procs|swpd')
+        output = genio.read_all_lines(filename)
+        for line in output:
+            if not exclude_patterns.search(line) and len(line.split()) > 0:
+                fields = line.split()
+                if len(fields) >= 15:
+                    if fields[14].isnumeric():
+                        if var < 10:
+                            var += 1
+                            total_sum = total_sum + int(fields[14])
+                        else:
+                            total_sum = total_sum + int(fields[14])
+                            result = 100 - total_sum // 11
+                            var = 0
+                            total_sum = 0
         self.log.info(f" vmstat data  => %s" % result)
         return result
 
@@ -131,8 +136,14 @@ class Stressng(Test):
         smt = int(re.split(r'=| is ', process.system_output("ppc64_cpu --smt")
                            .decode('utf-8'))[1])
         no_of_cores = int(self.tcpus // smt)
-        cmd = "cat /proc/cpuinfo | grep -m1 clock |sed 's/.*://' | cut -f1 -d'.'"
-        clock_freq = int(subprocess.check_output(cmd, shell=True))
+        # Equivalent Python code for bash command
+        # "cat /proc/cpuinfo | grep -m1 clock |sed 's/.*://' | cut -f1 -d'.'"
+        clock_freq = 0
+        output = genio.read_all_lines("/proc/cpuinfo")
+        for line in output:
+            if 'clock' in line:
+                clock_freq = int(line.split(":")[1].split(".")[0].strip())
+                break
         cpu_freq = int(clock_freq // 100)
         perf_iterations = {}
         vmstat_iterations = {}
@@ -147,21 +158,24 @@ class Stressng(Test):
         self.log.info("Perf profile duration: %s", self.profile_dur)
         self.log.info("CPU frequency = %s", cpu_freq)
 
-        process.run(
-               "rm -rf /tmp/stressng_output* /tmp/data*",
-               ignore_status=True,
-               sudo=True)
+        # Equivalent Python code for bash command
+        # "rm -rf /tmp/stressng_output* /tmp/data*"
+        patterns = ['/tmp/stressng_output*', '/tmp/data*']
+        for pattern in patterns:
+            for file in glob.glob(pattern):
+                if os.path.isfile(file):
+                    os.remove(file)
 
         for load in self.cpu_per.split():
             cmd = f"timeout %s stress-ng --cpu=%s -l %s --timeout %s" \
-                   " 1>>/tmp/stdout 2>>/tmp/stderr &" % (
-                       self.timeout, self.tcpus, load, self.timeout)
+                " 1>>/tmp/stdout 2>>/tmp/stderr &" % (
+                    self.timeout, self.tcpus, load, self.timeout)
             return_val = process.run(
-                   cmd,
-                   ignore_status=True,
-                   sudo=True,
-                   shell=True,
-                   ignore_bg_processes=True)
+                cmd,
+                ignore_status=True,
+                sudo=True,
+                shell=True,
+                ignore_bg_processes=True)
             return_code = return_val.exit_status
             if (return_code != 0):
                 self.fail("stress-ng failed")
@@ -170,11 +184,13 @@ class Stressng(Test):
             if self.is_process_running("stress-ng"):
                 for iter in range(1, 6):
                     self.log.info(
-                           "Running stress-ng CPU load %s for iteration %s" %
-                           (load, iter))
+                        "Running stress-ng CPU load %s for iteration %s" %
+                        (load, iter))
 
-                    cmd = f"timeout %s vmstat 1 11 &>> /tmp/stressng_output_%s_%s.log &" % (self.timeout, load, iter)
-                    return_val = process.run(cmd, ignore_status=True, sudo=True, shell=True, ignore_bg_processes=True)
+                    cmd = f"timeout %s vmstat 1 11 &>> /tmp/stressng_output_%s_%s.log &" % (
+                        self.timeout, load, iter)
+                    return_val = process.run(
+                        cmd, ignore_status=True, sudo=True, shell=True, ignore_bg_processes=True)
                     return_code = return_val.exit_status
                     if (return_code != 0):
                         self.fail("vmstat failed")
@@ -185,39 +201,52 @@ class Stressng(Test):
                     if (return_code != 0):
                         self.fail("perf record failed")
 
-                    cmd = "perf report > /tmp/data.txt && sed -n '6,7p' /tmp/data.txt >> /tmp/stressng_output_%s_%s.log" % (load, iter)
-                    return_val = process.run(cmd, ignore_status=True, sudo=True, shell=True, ignore_bg_processes=True)
+                    cmd = "perf report > /tmp/data.txt && sed -n '6,7p' /tmp/data.txt >> /tmp/stressng_output_%s_%s.log" % (
+                        load, iter)
+                    return_val = process.run(
+                        cmd, ignore_status=True, sudo=True, shell=True, ignore_bg_processes=True)
                     return_code = return_val.exit_status
                     if (return_code != 0):
                         self.fail("perf report failed")
 
-                    cmd = "sed -n '/approx./{p;q}' < /tmp/data.txt | awk '{print $NF}'"
-                    perf_data = int(process.system_output(cmd, shell=True).decode("utf-8"))
+                    # Equivalent Python code for bash command
+                    # "sed -n '/approx./{p;q}' < /tmp/data.txt | awk '{print $NF}'"
+                    pattern = re.compile(r'approx.')
+                    output = genio.read_all_lines('/tmp/data.txt')
+                    perf_data = 0
+                    for line in output:
+                        if pattern.search(line):
+                            perf_data = int(line.strip().split()[-1])
+                            break
+
                     self.log.info(" Perf data ==>  %s" % perf_data)
 
-                    result = int(perf_data / (no_of_cores * self.profile_dur * smt * cpu_freq * 1000000))
-                    self.log.info(" Result for iteration %s and load %s ==>  %s" % (iter, load, result))
+                    result = int(perf_data / (no_of_cores *
+                                 self.profile_dur * smt * cpu_freq * 1000000))
+                    self.log.info(
+                        " Result for iteration %s and load %s ==>  %s" % (iter, load, result))
 
                     perf_iterations[iter] = result
-                    filename = str("/tmp/stressng_output_") + str(load) + str("_") + str(iter) + str(".log")
+                    filename = str("/tmp/stressng_output_") + \
+                        str(load) + str("_") + str(iter) + str(".log")
                     self.log.info("filename = %s " % (filename))
                     vmstat_iterations[iter] = self.vmstat_result(filename)
 
                 perf_average = self.calculate_average(perf_iterations)
                 vmstat_average = self.calculate_average(vmstat_iterations)
                 self.log.info(
-                       " ***************************************************************************************")
+                    " ***************************************************************************************")
                 self.log.info(
-                       " Summary for CPU Load %s for %s iterations" %
-                       (load, iter))
+                    " Summary for CPU Load %s for %s iterations" %
+                    (load, iter))
                 self.log.info(
-                       " Perf data %s   <=====> vmstat data %s" %
-                       (perf_iterations, vmstat_iterations))
+                    " Perf data %s   <=====> vmstat data %s" %
+                    (perf_iterations, vmstat_iterations))
                 self.log.info(
-                       " Perf Average %s <=====> vmstat Average %s " %
-                       (perf_average, vmstat_average))
+                    " Perf Average %s <=====> vmstat Average %s " %
+                    (perf_average, vmstat_average))
                 self.log.info(
-                       " ***************************************************************************************")
+                    " ***************************************************************************************")
 
                 if self.is_process_running("stress-ng"):
                     self.kill_process_by_name("stress-ng")
@@ -228,15 +257,16 @@ class Stressng(Test):
                     final_results[load] = change_percent
                     failed = 1
                     self.log.info(
-                           " CPU load %s Failed with percentage %s difference" %
-                           (load, change_percent))
+                        " CPU load %s Failed with percentage %s difference" %
+                        (load, change_percent))
             else:
                 self.log.info(
-                       "stress-ng is either not running or all the process are now killed ")
+                    "stress-ng is either not running or all the process are now killed ")
 
         self.log.info("=====================================================")
         if failed == 1:
-            self.fail(" CPU load %s combination's failed with percentage difference %s" % (self.cpu_per, final_results))
+            self.fail(" CPU load %s combination's failed with percentage difference %s" % (
+                self.cpu_per, final_results))
 
     def tearDown(self):
         """

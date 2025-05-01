@@ -36,14 +36,16 @@ class test_generic_events(Test):
         parser = configparser.ConfigParser()
         parser.optionxform = str
         parser.read(self.get_data('raw_code.cfg'))
-        pmu_registered = process.system_output("journalctl -k|grep -i performance",
-                                               shell=True).decode().strip().lower()
+        # Equivalent Python code for bash command
+        # "journalctl -k|grep -i performance"
+        pmu_registered = process.get_command_output_matching("journalctl -k",
+                                                             "performance")
         pmu_event_mapping = {'generic_compat': 'GENERIC_COMPAT_PMU',
                              'isav3': 'GENERIC_COMPAT_PMU', 'power8': 'POWER8',
                              'power9': 'POWER9', 'power10': 'POWER10',
                              'power11': 'POWER10'}
         for pmu, event_type in pmu_event_mapping.items():
-            if pmu in pmu_registered:
+            if pmu in pmu_registered[0].lower():
                 self.generic_events = dict(parser.items(event_type))
                 return
         self.cancel("Processor is not supported: %s" % pmu_registered)
