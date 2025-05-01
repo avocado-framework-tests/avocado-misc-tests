@@ -95,8 +95,10 @@ class lockstorm_benchmark(Test):
                 clear_dmesg()
                 if self.cpu_list == 0:
                     cmd = "insmod ./lockstorm.ko"
-                process.system(cmd,
-                               ignore_status=True, shell=False, sudo=True)
+                result = process.run(cmd, ignore_status=True, shell=False,
+                                     sudo=True)
+                if 'Key was rejected by service' in result.stderr.decode():
+                    self.cancel("Inserting module was rejected by kernel.")
                 lockstorm_data = self.capture_dmesg_dump(smt_mode)
                 stdout_output = lockstorm_data.stdout
                 lockstorm_log = lockstorm_dir + "/lockstorm.log"
