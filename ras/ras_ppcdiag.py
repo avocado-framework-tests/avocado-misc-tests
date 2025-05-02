@@ -140,7 +140,9 @@ class RASToolsPpcdiag(Test):
         value = self.params.get('usysattn_list', default=['-h', '-V', '-P'])
         for list_item in value:
             self.run_cmd('usysattn  %s ' % list_item)
-        loc_code = self.run_cmd_out("usysattn -P| awk 'NR==1{print $1}'")
+        loc_code = self.run_cmd_out("usysattn -P")
+        # Equivalent of awk 'NR==1{print $1}'
+        loc_code = loc_code.splitlines()[0].split()[0]
         self.run_cmd("usysattn -l %s -s normal -t" % loc_code)
         if self.fail_cmd:
             self.fail("%s command(s) failed to execute  "
@@ -158,7 +160,9 @@ class RASToolsPpcdiag(Test):
         value = self.params.get('usysfault_list', default=['-h', '-V', '-P'])
         for list_item in value:
             self.run_cmd('usysfault  %s ' % list_item)
-        loc_code = self.run_cmd_out("usysfault -P | awk 'NR==1{print $1}'")
+        loc_code = self.run_cmd_out("usysfault -P")
+        # Equivalent of awk 'NR==1{print $1}'
+        loc_code = loc_code.splitlines()[0].split()[0]
         self.run_cmd("usysfault -l %s -s normal -t" % loc_code)
         if self.fail_cmd:
             self.fail("%s command(s) failed to execute  "
@@ -176,7 +180,9 @@ class RASToolsPpcdiag(Test):
         value = self.params.get('usysident_list', default=['-h', '-V', '-P'])
         for list_item in value:
             self.run_cmd('usysident %s' % list_item)
-        loc_code = self.run_cmd_out("usysident -P | awk 'NR==1{print $1}'")
+        loc_code = self.run_cmd_out("usysident -P")
+        # Equivalent of awk 'NR==1{print $1}'
+        loc_code = loc_code.splitlines()[0].split()[0]
         cmd = "usysident -l %s -s normal" % loc_code
         self.run_cmd(cmd)
         cmd = "usysident -l %s -s identify" % loc_code

@@ -52,6 +52,8 @@ class Sosreport(Test):
     def setUp(self):
         dist = distro.detect()
         sm = SoftwareManager()
+        sos_pkg = ""
+        self.sos_cmd = ""
         if dist.name in ['Ubuntu', 'debian']:
             sos_pkg = 'sosreport'
             self.sos_cmd = "sosreport"
@@ -84,17 +86,21 @@ class Sosreport(Test):
         self.run_cmd("%s --batch --tmp-dir=%s --verify" %
                      (self.sos_cmd, directory_name))
         case_id = self.params.get('case_id', default='testid')
-        if case_id not in self.run_cmd_out("%s --batch --case-id=%s | "
-                                           "grep tar.xz"
-                                           % (self.sos_cmd, case_id)):
-            self.is_fail += 1
-            self.log.info("--case-id option failed")
+        output = self.run_cmd_out("%s --batch --case-id=%s"
+                                  % (self.sos_cmd, case_id))
+        for line in output.splitlines():
+            # Expecting case_id in the line
+            if 'tar.xz' in line and case_id not in line:
+                self.is_fail += 1
+                self.log.info("--case-id option failed")
 
-        if 'testname' not in self.run_cmd_out("%s --batch --tmp-dir=%s "
-                                              "--label=testname | "
-                                              "grep tar.xz" % (self.sos_cmd, directory_name)):
-            self.is_fail += 1
-            self.log.info("--label option failed")
+        output = self.run_cmd_out("%s --batch --tmp-dir=%s --label=testname"
+                                  % (self.sos_cmd, directory_name))
+        for line in output.splitlines():
+            # Expecting 'testname' in the line
+            if 'tar.xz' in line and 'testname' not in line:
+                self.is_fail += 1
+                self.log.info("--label option failed")
 
         shutil.rmtree(directory_name)
         if self.is_fail >= 1:
@@ -133,21 +139,29 @@ class Sosreport(Test):
         directory_name = tempfile.mkdtemp()
         self.is_fail = 0
 
-        if 'libraries' in self.run_cmd_out("%s --batch --tmp-dir=%s -n libraries | "
-                                           "grep libraries" % (self.sos_cmd, directory_name)):
+        output = self.run_cmd_search("%s --batch --tmp-dir=%s -n libraries"
+                                     % (self.sos_cmd, directory_name),
+                                     'libraries')
+        # Not expecting 'libraries' in the output
+        if output:
             self.is_fail += 1
             self.log.info("--skip-plugins option failed")
 
         self.run_cmd("%s --batch --tmp-dir=%s -e ntp,numa,snmp" %
                      (self.sos_cmd, directory_name))
-        if 'sendmail' not in self.run_cmd_out("%s --batch --tmp-dir=%s -e "
-                                              "sendmail | "
-                                              "grep sendmail" % (self.sos_cmd, directory_name)):
+        output = self.run_cmd_search("%s --batch --tmp-dir=%s -e sendmail"
+                                     % (self.sos_cmd, directory_name),
+                                     'sendmail')
+        # Expecting 'sendmail' in the output
+        if not output:
             self.is_fail += 1
             self.log.info("--enable-plugins option failed")
 
-        if 'cups' not in self.run_cmd_out("%s --batch --tmp-dir=%s -o cups | "
-                                          "grep cups" % (self.sos_cmd, directory_name)):
+        output = self.run_cmd_search("%s --batch --tmp-dir=%s -o cups"
+                                     % (self.sos_cmd, directory_name),
+                                     'cups')
+        # Expecting 'cups' in the output
+        if not output:
             self.is_fail += 1
             self.log.info("--only-plugins option failed")
 
@@ -176,8 +190,10 @@ class Sosreport(Test):
         self.run_cmd("%s --batch --tmp-dir=%s -p boot,memory" %
                      (self.sos_cmd, directory_name))
 
-        if "java" not in self.run_cmd_out("%s --batch --tmp-dir=%s -p webserver | "
-                                          "grep java" % (self.sos_cmd, directory_name)):
+        output = self.run_cmd_search("%s --batch --tmp-dir=%s -p webserver"
+                                     % (self.sos_cmd, directory_name), 'java')
+        # Expecting 'java' in the output
+        if not output:
             self.is_fail += 1
             self.log.info("--profile option failed")
 
@@ -240,9 +256,12 @@ class Sosreport(Test):
                    'xz': 'tar.xz', 'auto': 'tar.xz'}
         for key, value in f_name.items():
             file_name = str(f_name[key])
-            file_name = self.run_cmd_out("%s --batch --tmp-dir=%s -z %s | grep %s" %
-                                         (self.sos_cmd, directory_name, str(key),
-                                          str(archive[key]))).strip()
+            output = self.run_cmd_out("%s --batch --tmp-dir=%s -z %s"
+                                      % (self.sos_cmd, directory_name, str(key)))
+            for line in output.splitlines():
+                if str(archive[key]) in line:
+                    file_name = line.strip()
+                    break
             if not os.path.exists(file_name):
                 self.is_fail += 1
                 self.log.info("-z %s option failed" % str(key))
@@ -251,8 +270,7 @@ class Sosreport(Test):
 
         if os.path.exists(file_name):
             md5_sum1 = self.run_cmd_out("cat %s.md5" % file_name).strip()
-            md5_sum2 = self.run_cmd_out(
-                "md5sum %s | cut -d' ' -f1" % file_name).strip()
+            md5_sum2 = self.run_cmd_out("md5sum %s" % file_name).strip().split()[0]
             if md5_sum1 != md5_sum2:
                 self.is_fail += 1
                 self.log.info("md5sum check failed")
@@ -308,9 +326,8 @@ class Sosreport(Test):
         if "cpu_dlpar=yes" in process.system_output("drmgr -C",
                                                     ignore_status=True,
                                                     shell=True).decode("utf-8"):
-            lcpu_count = self.run_cmd_out("lparstat -i | "
-                                          "grep \"Online Virtual CPUs\" | "
-                                          "cut -d':' -f2")
+            output = self.run_cmd_search("lparstat -i", 'Online Virtual CPUs')
+            lcpu_count = output.split(":")[1].strip()
             if lcpu_count:
                 lcpu_count = int(lcpu_count)
                 if lcpu_count >= 2:
@@ -335,10 +352,8 @@ class Sosreport(Test):
         if "mem_dlpar=yes" in process.system_output("drmgr -C",
                                                     ignore_status=True,
                                                     shell=True).decode("utf-8"):
-            mem_value = self.run_cmd_out("lparstat -i | "
-                                         "grep \"Online Memory\" | "
-                                         "cut -d':' -f2")
-            mem_count = re.split(r'\s', mem_value)[1]
+            output = self.run_cmd_search("lparstat -i", 'Online Memory')
+            mem_count = output.split(":")[1].split()[0].strip()
             if mem_count:
                 mem_count = int(mem_count)
                 if mem_count > 512000:
@@ -388,7 +403,8 @@ class Sosreport(Test):
         process.run("umount %s" % loop_dev)
         if 'blockfile' in self.run_cmd_out("ls /tmp"):
             process.run("losetup -d %s" % loop_dev)
-            process.run("rm -rf /tmp/blockfile")
+            if os.path.exists("/tmp/blockfile"):
+                os.remove("/tmp/blockfile")
         if is_fail:
             self.fail(
                 "%s command(s) failed in sosreport tool verification" % is_fail)

@@ -13,6 +13,7 @@
 # Copyright: 2016 IBM.
 # Author: Ramya BS <ramya@linux.vnet.ibm.com>
 
+import re
 from avocado import Test
 from avocado import skipIf
 from avocado.utils import process, cpu
@@ -34,10 +35,20 @@ class Lshwrun(Test):
     :avocado: tags=privileged
     """
     interface = process.system_output("ip route show")
-    active_interface = process.system_output(
-        "ip link ls up  | awk -F: '$0 !~ \"lo|vir|^[^0-9]\"{print $2}'"
-        " | cut -d  \" \" -f2 | head -1",
-        shell=True).decode("utf-8").strip().split()[0]
+    # Equivalent Python code for bash command
+    # "ip link ls up  | awk -F: '$0 !~ \"lo|vir|^[^0-9]\"{print $2}'"
+    #" | cut -d  \" \" -f2 | head -1",
+    output = process.system_output("ip link ls up", shell=True).decode().strip()
+    active_interface = ""
+    for line in output.splitlines():
+        # check if the line doesn't contain 'lo' or 'vir' and doesn't start
+        # with a non-digit character
+        if not re.search(r'lo|vir|^[^0-9]', line):
+            fields = line.split(':')
+            if fields[1]:
+                active_interface = fields[1]
+                # for this test we need only one active interface
+                break
     fail_cmd = list()
 
     def run_cmd(self, cmd):
@@ -120,8 +131,16 @@ class Lshwrun(Test):
         compare the output of lshw with other tools
         which produces similar info of hardware.
         """
-        # verifying mac address
-        mac = self.run_cmd_out("ip addr | awk '/ether/ {print $2}' | head -1")
+        # verifying mac address for active device
+        # Equivalent Python code for bash command
+        # ip addr | awk '/ether/ {print $2}' | head -1
+        mac = ''
+        output = self.run_cmd_out("ip addr show %s" % self.active_interface)
+        for line in output.splitlines():
+            if 'ether' in line:
+                mac = line.split()[1]
+        if not mac:
+            self.cancel("Couldn't get mac address from the active interface.")
         if mac not in self.run_cmd_out("lshw"):
             self.fail("lshw failed to show correct mac address")
 

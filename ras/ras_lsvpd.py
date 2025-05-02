@@ -17,6 +17,7 @@
 
 import os
 import shutil
+import fnmatch
 from avocado.utils import pci
 from avocado import Test
 from avocado.utils import process, distro, build, archive
@@ -120,12 +121,18 @@ class RASToolsLsvpd(Test):
         for list_item in list:
             cmd = "vpdupdate %s" % list_item
             self.run_cmd(cmd)
-        path_db = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.db | "
-                                   "head -1")
+        # Equivalent Python code for bash command
+        # find /var/lib/lsvpd/ -iname vpd.db | head -1
+        path_db = ""
+        for root, dirs, files in os.walk("/var/lib/lsvpd/"):
+            for file in files:
+                if file.lower() == 'vpd.db':
+                    path_db = os.path.join(root, file)
         if path_db:
             copyfile_path = os.path.join(self.outputdir, 'vpd.db')
             shutil.copyfile(path_db, copyfile_path)
             self.run_cmd("vpdupdate --path=%s" % copyfile_path)
+        path = ""
         if os.path.exists('/var/lib/lsvpd/run.vpdupdate'):
             path = '/var/lib/lsvpd/run.vpdupdate'
         elif os.path.exists('/run/run.vpdupdate'):
@@ -135,13 +142,18 @@ class RASToolsLsvpd(Test):
         self.log.info("Running vpdupdate after removing run.vpdupdate")
         self.run_cmd("vpdupdate")
         shutil.move(move_path, path)
-        process.run("rm -f /var/lib/lsvpd/vpd.db; touch /var/lib/lsvpd/vpd.db",
-                    shell=True)
+        if os.path.exists('/var/lib/lsvpd/vpd.db'):
+            os.remove('/var/lib/lsvpd/vpd.db')
+        process.run("touch /var/lib/lsvpd/vpd.db", shell=True)
         for command in ["lsvpd", "lscfg", "lsmcode"]:
-            if not self.run_cmd_out("%s | grep run | grep vpdupdate" %
-                                    command):
-                self.fail(
-                    "Error message is not displayed when vpd.db is corrupted.")
+            output = self.run_cmd_out(command).splitlines()
+            flag = False
+            for line in output:
+                if 'run' in line and 'vpdupdate' in line:
+                    flag = True
+            if not flag:
+                self.fail("Error message is not displayed when vpd.db "
+                          "is corrupted.")
         self.run_cmd("vpdupdate")
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in vpdupdate tool "
@@ -161,14 +173,24 @@ class RASToolsLsvpd(Test):
         for list_item in list:
             cmd = "lsvpd %s" % list_item
             self.run_cmd(cmd)
-        path_db = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.db | "
-                                   "head -1").strip()
+        # Equivalent Python code for bash command
+        # find /var/lib/lsvpd/ -iname vpd.db | head -1
+        path_db = ""
+        for root, dirs, files in os.walk("/var/lib/lsvpd/"):
+            for file in files:
+                if file.lower() == 'vpd.db':
+                    path_db = os.path.join(root, file)
         if path_db:
             copyfile_path = os.path.join(self.outputdir, 'vpd.db')
             shutil.copyfile(path_db, copyfile_path)
             self.run_cmd("lsvpd --path=%s" % copyfile_path)
-        path_tar = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.*.gz"
-                                    " | head -1")
+        # Equivalent Python code for bash command
+        # find /var/lib/lsvpd/ -iname vpd.*.gz | head -1
+        path_tar = ""
+        for root, dirs, files in os.walk("/var/lib/lsvpd/"):
+            for file in files:
+                if fnmatch.fnmatch(file.lower(), 'vpd.*.gz'):
+                    path_tar = os.path.join(root, file)
         if path_tar:
             self.run_cmd("lsvpd --zip=%s" % path_tar)
         if self.is_fail >= 1:
@@ -191,14 +213,24 @@ class RASToolsLsvpd(Test):
         for list_item in list:
             cmd = "lscfg %s" % list_item
             self.run_cmd(cmd)
-        path_db = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.db | "
-                                   "head -1")
+        # Equivalent Python code for bash command
+        # find /var/lib/lsvpd/ -iname vpd.db | head -1
+        path_db = ""
+        for root, dirs, files in os.walk("/var/lib/lsvpd/"):
+            for file in files:
+                if file.lower() == 'vpd.db':
+                    path_db = os.path.join(root, file)
         if path_db:
             copyfile_path = os.path.join(self.outputdir, 'vpd.db')
             shutil.copyfile(path_db, copyfile_path)
             self.run_cmd("lscfg --data=%s" % copyfile_path)
-        path_tar = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.*.gz"
-                                    " | head -1")
+        # Equivalent Python code for bash command
+        # find /var/lib/lsvpd/ -iname vpd.*.gz | head -1
+        path_tar = ""
+        for root, dirs, files in os.walk("/var/lib/lsvpd/"):
+            for file in files:
+                if fnmatch.fnmatch(file.lower(), 'vpd.*.gz'):
+                    path_tar = os.path.join(root, file)
         if path_tar:
             self.run_cmd("lscfg --zip=%s" % path_tar)
         if self.is_fail >= 1:
@@ -221,14 +253,24 @@ class RASToolsLsvpd(Test):
         list = ['-A', '-v', '-D']
         for list_item in list:
             self.run_cmd('lsmcode %s' % list_item)
-        path_db = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.db"
-                                   " | head -1")
+        # Equivalent Python code for bash command
+        # find /var/lib/lsvpd/ -iname vpd.db | head -1
+        path_db = ""
+        for root, dirs, files in os.walk("/var/lib/lsvpd/"):
+            for file in files:
+                if file.lower() == 'vpd.db':
+                    path_db = os.path.join(root, file)
         if path_db:
             copyfile_path = os.path.join(self.outputdir, 'vpd.db')
             shutil.copyfile(path_db, copyfile_path)
             self.run_cmd("lsmcode --path=%s" % copyfile_path)
-        path_tar = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.*.gz"
-                                    " | head -1")
+        # Equivalent Python code for bash command
+        # find /var/lib/lsvpd/ -iname vpd.*.gz | head -1
+        path_tar = ""
+        for root, dirs, files in os.walk("/var/lib/lsvpd/"):
+            for file in files:
+                if fnmatch.fnmatch(file.lower(), 'vpd.*.gz'):
+                    path_tar = os.path.join(root, file)
         if path_tar:
             self.run_cmd("lsmcode --zip=%s" % path_tar)
         if self.is_fail >= 1:
