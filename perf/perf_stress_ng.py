@@ -36,7 +36,7 @@ class Stressng(Test):
 
     def setUp(self):
         smm = SoftwareManager()
-        self.timeout = self.params.get('timeout', default='1')
+        self.timeout = self.params.get('timeout', default=1)
         self.cpu_per = self.params.get("cpu_load", default='10')
         self.profile_dur = int(self.params.get("profile_duration", default=1))
         run_type = self.params.get('type', default='distro')
