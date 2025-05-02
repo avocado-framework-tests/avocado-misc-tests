@@ -14,6 +14,7 @@
 # Copyright: 2023 IBM
 # Author: kajol Jain<kjain@linux.ibm.com>
 #         Manvanthara Puttashakar <manvanth@linux.vnet.ibm.com>
+#         R Nageswara Sastry <rnsastry@linux.ibm.com>
 
 import os
 import re
@@ -170,14 +171,9 @@ class Stressng(Test):
             cmd = f"timeout %s stress-ng --cpu=%s -l %s --timeout %s" \
                 " 1>>/tmp/stdout 2>>/tmp/stderr &" % (
                     self.timeout, self.tcpus, load, self.timeout)
-            return_val = process.run(
-                cmd,
-                ignore_status=True,
-                sudo=True,
-                shell=True,
-                ignore_bg_processes=True)
-            return_code = return_val.exit_status
-            if (return_code != 0):
+            return_val = process.run(cmd, ignore_status=True, sudo=True,
+                                     shell=True, ignore_bg_processes=True)
+            if (return_val.exit_status != 0):
                 self.fail("stress-ng failed")
             time.sleep(3)
 
@@ -191,22 +187,19 @@ class Stressng(Test):
                         self.timeout, load, iter)
                     return_val = process.run(
                         cmd, ignore_status=True, sudo=True, shell=True, ignore_bg_processes=True)
-                    return_code = return_val.exit_status
-                    if (return_code != 0):
+                    if (return_val.exit_status != 0):
                         self.fail("vmstat failed")
 
                     cmd = "perf record -e cycles -a sleep 10 1>>/tmp/stdout 2>>/tmp/stderr"
                     return_val = process.run(cmd, shell=True)
-                    return_code = return_val.exit_status
-                    if (return_code != 0):
+                    if (return_val.exit_status != 0):
                         self.fail("perf record failed")
 
                     cmd = "perf report > /tmp/data.txt && sed -n '6,7p' /tmp/data.txt >> /tmp/stressng_output_%s_%s.log" % (
                         load, iter)
                     return_val = process.run(
                         cmd, ignore_status=True, sudo=True, shell=True, ignore_bg_processes=True)
-                    return_code = return_val.exit_status
-                    if (return_code != 0):
+                    if (return_val.exit_status != 0):
                         self.fail("perf report failed")
 
                     # Equivalent Python code for bash command
