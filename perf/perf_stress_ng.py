@@ -127,6 +127,16 @@ class Stressng(Test):
         total_sum = sum(iterations.values())
         return total_sum / len(iterations)
 
+    def _remove_pattern_files(self, patterns):
+        """
+        To remove files with a pattern
+        param patterns: list of files to be removed with pattern
+        """
+        for pattern in patterns:
+            for file in glob.glob(pattern):
+                if os.path.isfile(file):
+                    os.remove(file)
+
     def test(self):
         """
         Main function to test Perf record and vmstat with CPU stress
@@ -161,11 +171,7 @@ class Stressng(Test):
 
         # Equivalent Python code for bash command
         # "rm -rf /tmp/stressng_output* /tmp/data*"
-        patterns = ['/tmp/stressng_output*', '/tmp/data*']
-        for pattern in patterns:
-            for file in glob.glob(pattern):
-                if os.path.isfile(file):
-                    os.remove(file)
+        self._remove_pattern_files(['/tmp/stressng_output*', '/tmp/data*'])
 
         for load in self.cpu_per.split():
             cmd = f"timeout %s stress-ng --cpu=%s -l %s --timeout %s" \
@@ -266,9 +272,6 @@ class Stressng(Test):
         removes the log files and collects the dmesg data
         :param: none
         """
-        files_to_remove = ["/tmp/stdout", "/tmp/stderr", "/tmp/data*",
-                           "/tmp/stressng_output*"]
-        for file_path in files_to_remove:
-            if os.path.exists(file_path):
-                os.remove(file_path)
+        self._remove_pattern_files(["/tmp/stdout", "/tmp/stderr", "/tmp/data*",
+                                   "/tmp/stressng_output*"])
         dmesg.collect_dmesg()
