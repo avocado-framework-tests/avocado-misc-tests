@@ -16,7 +16,7 @@
 
 import os
 from avocado import Test
-from avocado.utils import process, distro, build, archive
+from avocado.utils import process, distro, build, archive, genio
 from avocado import skipIf
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -174,7 +174,10 @@ class RASToolsPpcdiag(Test):
         This tests to turn on device identify indicators and other help
         options of usysident  ppc64-diag
         """
-        if 'not supported' in self.run_cmd_out("usysident"):
+        cmd = "usysident"
+        if 'PowerNV' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
+            cmd = "usysident -P"
+        if 'not supported' in self.run_cmd_out(cmd):
             self.cancel(
                 "The identify indicators are not supported on this system")
         value = self.params.get('usysident_list', default=['-h', '-V', '-P'])
