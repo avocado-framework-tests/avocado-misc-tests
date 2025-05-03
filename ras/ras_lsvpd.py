@@ -14,9 +14,11 @@
 # Copyright: 2017 IBM
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 # Author: Sachin Sant <sachinp@linux.ibm.com>
+# Author: R Nageswara Sastry <rnsastry@linux.ibm.com>
 
 import os
 import shutil
+import fnmatch
 from avocado.utils import pci
 from avocado import Test
 from avocado.utils import process, distro, build, archive
@@ -56,6 +58,7 @@ class RASToolsLsvpd(Test):
                     self.sm.install(package):
                 self.cancel("Fail to install %s required for this"
                             " test." % package)
+        self.var_lib_lsvpd_dir = "/var/lib/lsvpd/"
 
     @staticmethod
     def run_cmd_out(cmd):
@@ -108,6 +111,24 @@ class RASToolsLsvpd(Test):
         else:
             self.cancel("This test is supported with upstream as a target")
 
+    def _find_vpd_db_and_execute(self, path, cmd):
+        """
+        Finds vpd.db file based on the path
+        And copies the vpd.db file to the outputdir, then
+        executes the command along with the copyfile_path
+        """
+        # Equivalent Python code for bash command
+        # find /var/lib/lsvpd/ -iname vpd.db | head -1
+        path_db = ""
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if file.lower() == 'vpd.db':
+                    path_db = os.path.join(root, file)
+        if path_db:
+            copyfile_path = os.path.join(self.outputdir, 'vpd.db')
+            shutil.copyfile(path_db, copyfile_path)
+            self.run_cmd("%s=%s" % (cmd, copyfile_path))
+
     @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_vpdupdate(self):
         """
@@ -120,32 +141,55 @@ class RASToolsLsvpd(Test):
         for list_item in list:
             cmd = "vpdupdate %s" % list_item
             self.run_cmd(cmd)
-        path_db = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.db | "
-                                   "head -1")
-        if path_db:
-            copyfile_path = os.path.join(self.outputdir, 'vpd.db')
-            shutil.copyfile(path_db, copyfile_path)
-            self.run_cmd("vpdupdate --path=%s" % copyfile_path)
-        if os.path.exists('/var/lib/lsvpd/run.vpdupdate'):
-            path = '/var/lib/lsvpd/run.vpdupdate'
-        elif os.path.exists('/run/run.vpdupdate'):
-            path = '/run/run.vpdupdate'
+        self._find_vpd_db_and_execute(self.var_lib_lsvpd_dir,
+                                      "vpdupdate --path")
+        path = ""
+        var_run = '/var/lib/lsvpd/run.vpdupdate'
+        run_run = '/run/run.vpdupdate'
+        if os.path.exists(var_run):
+            path = var_run
+        elif os.path.exists(run_run):
+            path = run_run
         move_path = '/root/run.vpdupdate'
         shutil.move(path, move_path)
         self.log.info("Running vpdupdate after removing run.vpdupdate")
         self.run_cmd("vpdupdate")
         shutil.move(move_path, path)
-        process.run("rm -f /var/lib/lsvpd/vpd.db; touch /var/lib/lsvpd/vpd.db",
-                    shell=True)
+        vpd_db = '/var/lib/lsvpd/vpd.db'
+        if os.path.exists(vpd_db):
+            os.remove(vpd_db)
+        process.run("touch %s" % vpd_db, shell=True)
         for command in ["lsvpd", "lscfg", "lsmcode"]:
-            if not self.run_cmd_out("%s | grep run | grep vpdupdate" %
-                                    command):
-                self.fail(
-                    "Error message is not displayed when vpd.db is corrupted.")
+            output = self.run_cmd_out(command).splitlines()
+            flag = False
+            for line in output:
+                if 'run' in line and 'vpdupdate' in line:
+                    flag = True
+            if not flag:
+                self.fail("Error message is not displayed when vpd.db "
+                          "is corrupted.")
         self.run_cmd("vpdupdate")
         if self.is_fail >= 1:
             self.fail("%s command(s) failed in vpdupdate tool "
                       "verification" % self.is_fail)
+
+    def _find_vpd_gzip_and_execute(self, path, cmd):
+        """
+        Finds vpd.*.gz file based on the path
+        And execute command
+        """
+        # Equivalent Python code for bash command
+        # find /var/lib/lsvpd/ -iname vpd.*.gz | head -1
+        path_tar = ""
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if fnmatch.fnmatch(file.lower(), 'vpd.*.gz'):
+                    path_tar = os.path.join(root, file)
+        if path_tar:
+            self.run_cmd("%s --zip=%s" % (cmd, path_tar))
+        if self.is_fail >= 1:
+            self.fail("%s command(s) failed in lsvpd tool verification"
+                      % self.is_fail)
 
     @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_lsvpd(self):
@@ -161,19 +205,8 @@ class RASToolsLsvpd(Test):
         for list_item in list:
             cmd = "lsvpd %s" % list_item
             self.run_cmd(cmd)
-        path_db = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.db | "
-                                   "head -1").strip()
-        if path_db:
-            copyfile_path = os.path.join(self.outputdir, 'vpd.db')
-            shutil.copyfile(path_db, copyfile_path)
-            self.run_cmd("lsvpd --path=%s" % copyfile_path)
-        path_tar = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.*.gz"
-                                    " | head -1")
-        if path_tar:
-            self.run_cmd("lsvpd --zip=%s" % path_tar)
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in lsvpd tool verification"
-                      % self.is_fail)
+        self._find_vpd_db_and_execute(self.var_lib_lsvpd_dir, "lsvpd --path")
+        self._find_vpd_gzip_and_execute(self.var_lib_lsvpd_dir, "lsvpd")
 
     @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_lscfg(self):
@@ -191,19 +224,8 @@ class RASToolsLsvpd(Test):
         for list_item in list:
             cmd = "lscfg %s" % list_item
             self.run_cmd(cmd)
-        path_db = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.db | "
-                                   "head -1")
-        if path_db:
-            copyfile_path = os.path.join(self.outputdir, 'vpd.db')
-            shutil.copyfile(path_db, copyfile_path)
-            self.run_cmd("lscfg --data=%s" % copyfile_path)
-        path_tar = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.*.gz"
-                                    " | head -1")
-        if path_tar:
-            self.run_cmd("lscfg --zip=%s" % path_tar)
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in lscfg tool verification"
-                      % self.is_fail)
+        self._find_vpd_db_and_execute(self.var_lib_lsvpd_dir, "lscfg --data")
+        self._find_vpd_gzip_and_execute(self.var_lib_lsvpd_dir, "lscfg")
 
     @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_lsmcode(self):
@@ -221,19 +243,8 @@ class RASToolsLsvpd(Test):
         list = ['-A', '-v', '-D']
         for list_item in list:
             self.run_cmd('lsmcode %s' % list_item)
-        path_db = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.db"
-                                   " | head -1")
-        if path_db:
-            copyfile_path = os.path.join(self.outputdir, 'vpd.db')
-            shutil.copyfile(path_db, copyfile_path)
-            self.run_cmd("lsmcode --path=%s" % copyfile_path)
-        path_tar = self.run_cmd_out("find /var/lib/lsvpd/ -iname vpd.*.gz"
-                                    " | head -1")
-        if path_tar:
-            self.run_cmd("lsmcode --zip=%s" % path_tar)
-        if self.is_fail >= 1:
-            self.fail("%s command(s) failed in lsmcode tool verification"
-                      % self.is_fail)
+        self._find_vpd_db_and_execute(self.var_lib_lsvpd_dir, "lsmcode --path")
+        self._find_vpd_gzip_and_execute(self.var_lib_lsvpd_dir, "lsmcode")
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST, "Not supported in PowerNV/KVM guest ")
     def test_lsvio(self):
