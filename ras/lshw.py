@@ -89,6 +89,7 @@ class Lshwrun(Test):
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel("Fail to install %s required for this"
                             " test." % package)
+        self.lshw_output = self.run_cmd_out("lshw")
 
     def test_lshw(self):
         """
@@ -141,7 +142,7 @@ class Lshwrun(Test):
                 mac = line.split()[1]
         if not mac:
             self.cancel("Couldn't get mac address from the active interface.")
-        if mac not in self.run_cmd_out("lshw"):
+        if mac not in self.lshw_output:
             self.fail("lshw failed to show correct mac address")
 
         # verify network
@@ -181,9 +182,14 @@ class Lshwrun(Test):
         sanitize output(remove sensitive information like serial numbers,etc.)
         """
         out_with_sanitize = self.run_cmd_out("lshw -sanitize")
-        for line in self.run_cmd_out("lshw").strip('\t\n\r').splitlines():
+        for line in self.lshw_output.strip('\t\n\r').splitlines():
             if ("serial:" in line) and (line in out_with_sanitize):
                 self.fail("Sensitive data is present in output")
+
+    def _filter_lshw_data(self, filter_string):
+        for line in self.lshw_output.splitlines():
+            if filter_string in line:
+                return line
 
     def test_prod_id_serial(self):
         """
@@ -211,11 +217,10 @@ class Lshwrun(Test):
             product_name = genio.read_file(product_path).rstrip(' \t\r\n\0')
             serial_num = genio.read_file(serial_path).rstrip(' \t\r\n\0')
 
-        if product_name\
-                not in self.run_cmd_out("lshw | grep product | head -1"):
+        if product_name not in self._filter_lshw_data('product'):
             self.is_fail += 1
             self.fail_cmd.append("lshw | grep product | head -1")
-        if serial_num not in self.run_cmd_out("lshw | grep serial | head -1"):
+        if serial_num not in self._filter_lshw_data('serial'):
             self.is_fail += 1
             self.fail_cmd.append("lshw | grep serial | head -1")
         self.error_check()
