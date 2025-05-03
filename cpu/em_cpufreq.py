@@ -72,14 +72,21 @@ class Cpufreq(Test):
     def get_ppc64_cpu_frequency(self, new_format):
         self.log.info('Getting ppc64 CPU frequency')
         if new_format:
-            freq_read = process.system_output(
-                "ppc64_cpu --frequency -t 5 | grep 'avg' | awk '{print $3}'",
-                shell=True)
+            output = process.system_output("ppc64_cpu --frequency -t 5",
+                                           shell=True).decode()
+            freq_read = 0
+            for line in output.splitlines():
+                if 'avg' in line:
+                    freq_read = line.split(":")[1].strip("GHz").strip()
+                    break
         else:
-            freq_read = process.system_output(
-                "ppc64_cpu --frequency -t 5 | grep 'avg:' | awk '{print $2}'",
-                shell=True)
-
+            output = process.system_output("ppc64_cpu --frequency -t 5",
+                                           shell=True).decode()
+            freq_read = 0
+            for line in output.splitlines():
+                if 'avg' in line:
+                    freq_read = line.split(":")[1].strip("GHz").strip()
+                    break
         return float(freq_read) * (10**6)
 
     # Get a random frequency
