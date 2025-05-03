@@ -38,13 +38,10 @@ class Cpuhotplug_Test(Test):
 
         self.loop = int(self.params.get('test_loop', default=100))
         self.nfail = 0
-        self.CORES = process.system_output("lscpu | grep 'Core(s) per socket:'"
-                                           "| awk '{print $4}'", shell=True)
-        self.SOCKETS = process.system_output("lscpu | grep 'Socket(s):'"
-                                             "| awk '{print $2}'", shell=True)
-        self.THREADS = process.system_output("lscpu | grep 'Thread(s) per core"
-                                             ":'| awk '{print $4}'",
-                                             shell=True)
+        lscpu_dict = cpu.lscpu()
+        self.CORES = lscpu_dict['virtual_cores']
+        self.SOCKETS = lscpu_dict['sockets']
+        self.THREADS = lscpu_dict['threads_per_core']
         self.T_CORES = int(self.CORES) * int(self.SOCKETS)
         self.log.info(" Cores = %s and threads = %s "
                       % (self.T_CORES, self.THREADS))
