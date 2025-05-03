@@ -11,8 +11,9 @@
 #
 # See LICENSE for more details.
 #
-# Copyright: 2016 IBM
+# Copyright: 2025 IBM
 # Author: Basheer Khadarsabgari <basheer@linux.vnet.ibm.com>
+#         R Nageswara Sastry <rnsastry@linux.ibm.com>
 
 import os
 import re
@@ -113,16 +114,15 @@ class Supportconfig(Test):
         3.output will be in the plugin-plugin_name.txt file
         """
         plugin_dir = "/usr/lib/supportconfig/plugins"
-        plugin_dir_exists = 1
         if not os.path.exists(plugin_dir):
-            plugin_dir_exists = 0
             os.mkdir(plugin_dir)
         # copy the plugin file
         plugin_name = '/usr/bin/pstree'
         shutil.copy(plugin_name, plugin_dir)
-        ret = process.run("supportconfig",
-                          sudo=True,
-                          ignore_status=True)
+        ret = process.run("supportconfig", sudo=True, ignore_status=True)
+        # Expecting supportconfig command exit status as '0'
+        if ret.exit_status:
+            self.fail("Failed to run supportconfig command with plugin enable")
         logfile = re.search(r"Log file tar ball: (\S+)\n",
                             ret.stdout.decode("utf-8")).group(1)
         # Expecting plugin-pstree.txt in the tar file
