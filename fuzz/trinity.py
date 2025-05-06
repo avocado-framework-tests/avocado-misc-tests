@@ -19,7 +19,7 @@ import os
 import re
 
 from avocado import Test
-from avocado.utils import archive, build, process
+from avocado.utils import archive, build, process, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -75,7 +75,7 @@ class Trinity(Test):
         '''
         Trinity need to run as non root user
         '''
-        process.run("dmesg -C", sudo=True)
+        dmesg.clear_dmesg()
         args = self.params.get('runargs', default=' ')
 
         if process.system('su - trinity -c " %s  %s  %s"' %
@@ -83,17 +83,17 @@ class Trinity(Test):
                            '-N 1000000'), shell=True, ignore_status=True):
             self.fail("trinity  command line  return as non zero exit code ")
 
-        dmesg = process.system_output('dmesg')
+        dmesg1 = process.system_output('dmesg')
 
         # verify if system having issue after fuzzer run
 
-        match = re.search(br'unhandled', dmesg, re.M | re.I)
+        match = re.search(br'unhandled', dmesg1, re.M | re.I)
         if match:
             self.log.info("Testcase failure as segfault")
-        match = re.search(br'Call Trace:', dmesg, re.M | re.I)
+        match = re.search(br'Call Trace:', dmesg1, re.M | re.I)
         if match:
             self.log.info("some call traces seen please check")
-        match = re.search(br'tainting kernel:', dmesg, re.M | re.I)
+        match = re.search(br'tainting kernel:', dmesg1, re.M | re.I)
         if match:
             self.log.info("tainting kernel seen please check")
 

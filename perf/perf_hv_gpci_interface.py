@@ -15,7 +15,7 @@
 # Author: Tejas Manhas <Tejas.Manhas1@ibm.com>
 import os
 from avocado import Test
-from avocado.utils import distro, process, genio, cpu
+from avocado.utils import distro, process, genio, cpu, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.ssh import Session
 
@@ -76,7 +76,7 @@ class perf_hv_gpci_interface(Test):
         if process.system('useradd test', sudo=True, ignore_status=True):
             self.log.warning('test useradd failed')
         # Clear the dmesg, by that we can capture the delta at the end of the test.
-        process.run("dmesg -C")
+        dmesg.clear_dmesg()
 
     @staticmethod
     def get_mcp_component(component):

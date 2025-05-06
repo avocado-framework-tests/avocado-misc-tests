@@ -17,7 +17,7 @@
 import os
 import platform
 from avocado import Test
-from avocado.utils import cpu, distro, process
+from avocado.utils import cpu, distro, process, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -101,7 +101,7 @@ class hv_24x7_all_events(Test):
                 self.list_of_hv_24x7_events.append(lne)
 
         # Clear the dmesg to capture the delta at the end of the test.
-        process.run("dmesg -C", sudo=True)
+        dmesg.clear_dmesg()
 
     def test_all_events(self):
         perf_args = "-v -e"

@@ -19,12 +19,8 @@
 import os
 import multiprocessing
 from avocado import Test
-from avocado.utils import process, build, archive, distro, memory
+from avocado.utils import process, build, archive, distro, memory, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
-
-
-def clear_dmesg():
-    process.run("dmesg -C ", sudo=True)
 
 
 def collect_dmesg(object):
@@ -90,7 +86,7 @@ class Stressng(Test):
                 self.cancel(
                     "Build Failed, Please check the build logs for details !!")
         build.make(sourcedir, extra_args='install')
-        clear_dmesg()
+        dmesg.clear_dmesg()
 
     def test(self):
         args = []

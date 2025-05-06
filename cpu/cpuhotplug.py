@@ -21,7 +21,7 @@ Stress test for CPU
 import multiprocessing
 from random import randint
 from avocado import Test
-from avocado.utils import process, cpu, distro
+from avocado.utils import process, cpu, distro, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -73,10 +73,6 @@ class cpuHotplug(Test):
                 self.cancel("%s is required to continue..." % pkg)
         self.iteration = int(self.params.get('iteration', default='10'))
         self.tests = self.params.get('test', default='all')
-
-    @staticmethod
-    def __clear_dmesg():
-        process.run("dmesg -C", sudo=True)
 
     @staticmethod
     def __error_check():
@@ -135,7 +131,7 @@ class cpuHotplug(Test):
 
         for method in tests:
             self.log.info("\nTEST: %s\n", method)
-            self.__clear_dmesg()
+            dmesg.clear_dmesg()
             run_test = 'self.%s()' % method
             eval(run_test)
             msg = self.__error_check()

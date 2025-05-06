@@ -16,7 +16,7 @@
 
 import platform
 from avocado import Test
-from avocado.utils import distro, process, genio
+from avocado.utils import distro, process, genio, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -86,7 +86,7 @@ class perf_hv_gpci(Test):
 
         # Clear the dmesg, by that we can capture the delta at the end of
         # the test.
-        process.run("dmesg -C")
+        dmesg.clear_dmesg()
 
     def error_check(self):
         if len(self.fail_cmd) > 0:
