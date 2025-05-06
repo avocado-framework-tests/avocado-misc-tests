@@ -20,6 +20,7 @@ from avocado import Test
 from avocado.utils import build
 from avocado.utils import distro
 from avocado.utils import process
+from avocado.utils import dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -43,9 +44,6 @@ class Kretprobe(Test):
     def run_cmd_out(cmd):
         return process.system_output(cmd, shell=True, ignore_status=True,
                                      sudo=True).decode("utf-8")
-
-    def clear_dmesg(self):
-        process.run("dmesg -C ", sudo=True)
 
     def setUp(self):
         """
@@ -110,7 +108,7 @@ class Kretprobe(Test):
 
     def execute_test(self):
         self.log.info("============== Testing kretprobe =================")
-        self.clear_dmesg()
+        dmesg.clear_dmesg()
         self.run_cmd("insmod ./kretprobe_example.ko")
         if self.is_fail >= 1:
             self.fail("insmod kretprobe_example.ko failed")

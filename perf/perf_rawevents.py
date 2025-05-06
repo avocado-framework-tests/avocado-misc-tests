@@ -18,7 +18,7 @@ import os
 import platform
 import shutil
 from avocado import Test
-from avocado.utils import distro, process, genio, cpu
+from avocado.utils import distro, process, genio, cpu, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -83,7 +83,7 @@ class PerfRawevents(Test):
 
         os.chdir(self.teststmpdir)
         # Clear the dmesg to capture the delta at the end of the test.
-        process.run("dmesg -C")
+        dmesg.clear_dmesg()
 
     def run_event(self, filename, perf_flags):
         for line in genio.read_all_lines(filename):

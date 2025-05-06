@@ -17,7 +17,7 @@ import os
 import re
 
 from avocado import Test
-from avocado.utils import process, build, archive
+from avocado.utils import process, build, archive, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -49,13 +49,10 @@ class Flail(Test):
 
         :param fstype: Filesystem type there user want to run flail
         '''
-        self.clear_dmesg()
+        dmesg.clear_dmesg()
         os.chdir(self.build_dir)
         process.system('./flail %s' % self.args, ignore_status=True)
-        dmesg = process.system_output('dmesg')
-        match = re.search(br'Call Trace:', dmesg, re.M | re.I)
+        dmesg1 = process.system_output('dmesg')
+        match = re.search(br'Call Trace:', dmesg1, re.M | re.I)
         if match:
             self.fail("some call traces seen please check")
-
-    def clear_dmesg(self):
-        process.run("dmesg -C ", sudo=True)
