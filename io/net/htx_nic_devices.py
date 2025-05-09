@@ -19,6 +19,8 @@ import os
 import re
 import time
 import shutil
+import urllib.request
+import ssl
 
 from avocado import Test
 from avocado.utils import distro
@@ -162,16 +164,19 @@ class HtxNicTest(Test):
             self.host_distro_name = self.peer_distro = "sles"
 
         host_distro_pattern = "%s%s" % (
-                                        self.host_distro_name,
-                                        self.host_distro_version)
+            self.host_distro_name,
+            self.host_distro_version)
         peer_distro_pattern = "%s%s" % (
-                                        self.peer_distro,
-                                        self.peer_distro_version)
+            self.peer_distro,
+            self.peer_distro_version)
         patterns = [host_distro_pattern, peer_distro_pattern]
         for pattern in patterns:
-            temp_string = process.getoutput(
-                          "curl --silent %s" % (self.htx_rpm_link),
-                          verbose=False, shell=True, ignore_status=True)
+            scontext = ssl.SSLContext(ssl.PROTOCOL_TLS)
+            scontext.verify_mode = ssl.VerifyMode.CERT_NONE
+            response = urllib.request.urlopen(
+                self.htx_rpm_link, context=scontext)
+            temp_string = response.read()
+
             matching_htx_versions = re.findall(
                 r"(?<=\>)htx\w*[-]\d*[-]\w*[.]\w*[.]\w*", str(temp_string))
             distro_specific_htx_versions = [htx_rpm
@@ -181,14 +186,30 @@ class HtxNicTest(Test):
             distro_specific_htx_versions.sort(reverse=True)
             self.latest_htx_rpm = distro_specific_htx_versions[0]
 
+            cmd = ('wget %s%s --no-check-certificate ' %
+                   (self.htx_rpm_link, self.latest_htx_rpm))
+            if process.system(cmd, shell=True, ignore_status=True):
+                self.cancel("wget of rpm failed")
+
             cmd = ('rpm -ivh --nodeps %s%s '
-                   '--force' % (self.htx_rpm_link,
-                                self.latest_htx_rpm))
+                   '--force' % (self.latest_htx_rpm))
             # If host and peer distro is same then perform installation
             # only one time. This check is to avoid multiple times installation
             if host_distro_pattern == peer_distro_pattern:
                 if process.system(cmd, shell=True, ignore_status=True):
                     self.cancel("Installation of rpm failed")
+
+                cmd = ('wget %s%s --no-check-certificate ' %
+                       (self.htx_rpm_link, self.latest_htx_rpm))
+                output = self.session.cmd(cmd)
+                if not output.exit_status == 0:
+                    self.cancel("Unable to wget the htx rpm package %s %s"
+                                " on peer machine" % (self.htx_rpm_link,
+                                                      self.latest_htx_rpm))
+
+                cmd = ('rpm -ivh --nodeps %s '
+                       '--force' % (self.latest_htx_rpm))
+
                 output = self.session.cmd(cmd)
                 if not output.exit_status == 0:
                     self.cancel("Unable to install the package %s %s"
@@ -220,7 +241,7 @@ class HtxNicTest(Test):
             if device in interfaces:
                 self.host_intfs.append(device)
             elif self.localhost.validate_mac_addr(
-                 device) and device in self.localhost.get_all_hwaddr():
+                    device) and device in self.localhost.get_all_hwaddr():
                 self.host_intfs.append(self.localhost.get_interface_by_hwaddr(
                                        device).name)
             else:
@@ -289,7 +310,8 @@ class HtxNicTest(Test):
         # Find and Kill existing HXE process if running
         hxe_pid = process.getoutput("pgrep -f hxe")
         if hxe_pid:
-            self.log.info("HXE is already running with PID: %s. Killing it.", hxe_pid)
+            self.log.info(
+                "HXE is already running with PID: %s. Killing it.", hxe_pid)
             process.run("hcl -shutdown", ignore_status=True)
             time.sleep(20)
         cmd = "htxcmdline -run -mdt %s" % self.mdt_file
@@ -363,9 +385,18 @@ class HtxNicTest(Test):
         restoring ip for host
         '''
         for interface in self.host_intfs:
-            cmd = "ip addr flush %s" % interface
-            process.run(cmd, ignore_status=True, shell=True, sudo=True)
             networkinterface = NetworkInterface(interface, self.localhost)
+            detected_distro = distro.detect()
+            if detected_distro.name in ['rhel', 'fedora', 'redhat']:
+                if detected_distro.version >= "9":
+                    networkinterface.nm_flush_ipaddr()
+                elif detected_distro.version == "8":
+                    networkinterface.flush_ipaddr()
+            elif detected_distro.name == "SuSE":
+                if detected_distro.version >= "16":
+                    networkinterface.nm_flush_ipaddr()
+                elif detected_distro.version <= "15":
+                    networkinterface.flush_ipaddr()
             networkinterface.bring_up()
 
     def ip_restore_peer(self):
@@ -373,10 +404,19 @@ class HtxNicTest(Test):
         config ip for peer
         '''
         for interface in self.peer_intfs:
-            cmd = "ip addr flush %s" % interface
-            self.session.cmd(cmd)
             peer_networkinterface = NetworkInterface(
                 interface, self.remotehost)
+            detected_distro = distro.detect()
+            if detected_distro.name in ['rhel', 'fedora', 'redhat']:
+                if detected_distro.version >= "9":
+                    peer_networkinterface.nm_flush_ipaddr()
+                elif detected_distro.version == "8":
+                    peer_networkinterface.flush_ipaddr()
+            elif detected_distro.name == "SuSE":
+                if detected_distro.version >= "16":
+                    peer_networkinterface.nm_flush_ipaddr()
+                elif detected_distro.version <= "15":
+                    peer_networkinterface.flush_ipaddr()
             peer_networkinterface.bring_up()
 
     def htx_cleanup(self):
