@@ -19,7 +19,7 @@ import re
 import multiprocessing
 from avocado.utils import cpu
 from avocado import Test
-from avocado.utils import process, memory, build, archive
+from avocado.utils import process, memory, build, archive, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -33,10 +33,6 @@ ERRORLOG = ['WARNING: CPU:', 'Oops',
             'INFO: possible recursive locking detected',
             'Kernel BUG at', 'Kernel panic - not syncing:',
             'double fault:', 'BUG: Bad page state in']
-
-
-def clear_dmesg():
-    process.run("dmesg -C ", sudo=True)
 
 
 def online(block):
@@ -129,7 +125,7 @@ class MemStress(Test):
         if os.path.exists("%s/auto_online_blocks" % MEM_PATH):
             if not self.__is_auto_online():
                 self.hotplug_all(self.blocks_hotpluggable)
-        clear_dmesg()
+        dmesg.clear_dmesg()
 
     def hotunplug_all(self, blocks):
         for block in blocks:

@@ -17,14 +17,11 @@
 import os
 import re
 from avocado import Test
-from avocado.utils import process, distro
+from avocado.utils import process, distro, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class Hwinfo(Test):
-
-    def clear_dmesg(self):
-        process.run("dmesg -C ", sudo=True)
 
     def run_cmd(self, cmd):
         self.log.info("executing ============== %s =================" % cmd)
@@ -38,7 +35,7 @@ class Hwinfo(Test):
         sm = SoftwareManager()
         if not sm.check_installed("hwinfo") and not sm.install("hwinfo"):
             self.cancel("Fail to install hwinfo required for this test.")
-        self.clear_dmesg()
+        dmesg.clear_dmesg()
         self.disk_name = ''
         output = process.system_output("df -h", shell=True).decode().splitlines()
         filtered_lines = [line for line in output

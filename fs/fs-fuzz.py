@@ -19,7 +19,7 @@
 import os
 
 from avocado import Test
-from avocado.utils import process, archive, build
+from avocado.utils import process, archive, build, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -28,9 +28,6 @@ class FsFuzz(Test):
     """
     fs-fuzz : Two simple fuzzers, both for  filesystem operations
     """
-
-    def clear_dmesg(self):
-        process.run("dmesg -C ", sudo=True)
 
     def verify_dmesg(self):
         self.whiteboard = process.system_output("dmesg").decode()
@@ -60,7 +57,7 @@ class FsFuzz(Test):
         archive.extract(tarball, self.workdir)
         self.build_dir = os.path.join(self.workdir, 'fs-fuzz-master')
         build.make(self.build_dir)
-        self.clear_dmesg()
+        dmesg.clear_dmesg()
 
     def test_fd(self):
         os.chdir(self.build_dir)
