@@ -16,7 +16,7 @@
 
 import os
 from avocado import Test
-from avocado.utils import process, distro, build, archive
+from avocado.utils import process, distro, build, archive, genio
 from avocado import skipIf
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -128,6 +128,27 @@ class RASToolsPpcdiag(Test):
             self.log.info(
                 "extract_opal_dump is supported on the PowerNV Platform")
 
+    def _run_cmd_extra_args(self, cmd, value):
+        '''
+        Common function for executing usysattn, usysfault and usysident
+        and identifying failures.
+        '''
+        for list_item in value:
+            self.run_cmd('%s  %s' % (cmd, list_item))
+        loc_code = self.run_cmd_out("%s -P" % cmd)
+        # Equivalent of awk 'NR==1{print $1}'
+        loc_code = loc_code.splitlines()[0].split()[0]
+        if cmd in ["usysattn", "usysfault"]:
+            self.run_cmd("%s -l %s -s normal -t" % (cmd, loc_code))
+        if cmd in ["usysident"]:
+            self.run_cmd("usysident -l %s -s normal" % loc_code)
+            cmd1 = "usysident -l %s -s identify" % loc_code
+            if 'on' not in self.run_cmd_out(cmd1):
+                self.fail_cmd.append(cmd1)
+        if self.fail_cmd:
+            self.fail("%s command(s) failed to execute  "
+                      % self.fail_cmd)
+
     @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_usysattn(self):
         """
@@ -138,13 +159,7 @@ class RASToolsPpcdiag(Test):
             self.cancel(
                 "The identify indicators are not supported on this system")
         value = self.params.get('usysattn_list', default=['-h', '-V', '-P'])
-        for list_item in value:
-            self.run_cmd('usysattn  %s ' % list_item)
-        loc_code = self.run_cmd_out("usysattn -P| awk 'NR==1{print $1}'")
-        self.run_cmd("usysattn -l %s -s normal -t" % loc_code)
-        if self.fail_cmd:
-            self.fail("%s command(s) failed to execute  "
-                      % self.fail_cmd)
+        self._run_cmd_extra_args("usysattn", value)
 
     @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_usysfault(self):
@@ -156,13 +171,7 @@ class RASToolsPpcdiag(Test):
             self.cancel(
                 "The identify indicators are not supported on this system")
         value = self.params.get('usysfault_list', default=['-h', '-V', '-P'])
-        for list_item in value:
-            self.run_cmd('usysfault  %s ' % list_item)
-        loc_code = self.run_cmd_out("usysfault -P | awk 'NR==1{print $1}'")
-        self.run_cmd("usysfault -l %s -s normal -t" % loc_code)
-        if self.fail_cmd:
-            self.fail("%s command(s) failed to execute  "
-                      % self.fail_cmd)
+        self._run_cmd_extra_args("usysfault", value)
 
     @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_usysident(self):
@@ -170,18 +179,11 @@ class RASToolsPpcdiag(Test):
         This tests to turn on device identify indicators and other help
         options of usysident  ppc64-diag
         """
-        if 'not supported' in self.run_cmd_out("usysident"):
+        cmd = "usysident"
+        if 'PowerNV' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
+            cmd = "usysident -P"
+        if 'not supported' in self.run_cmd_out(cmd):
             self.cancel(
                 "The identify indicators are not supported on this system")
         value = self.params.get('usysident_list', default=['-h', '-V', '-P'])
-        for list_item in value:
-            self.run_cmd('usysident %s' % list_item)
-        loc_code = self.run_cmd_out("usysident -P | awk 'NR==1{print $1}'")
-        cmd = "usysident -l %s -s normal" % loc_code
-        self.run_cmd(cmd)
-        cmd = "usysident -l %s -s identify" % loc_code
-        if 'on' not in self.run_cmd_out(cmd):
-            self.fail_cmd.append(cmd)
-        if self.fail_cmd:
-            self.fail("%s command(s) failed to execute  "
-                      % self.fail_cmd)
+        self._run_cmd_extra_args("usysident", value)
