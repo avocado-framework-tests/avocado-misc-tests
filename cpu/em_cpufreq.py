@@ -69,17 +69,15 @@ class Cpufreq(Test):
         return open(f_name, 'r').readline().strip('\n').strip(' ')
 
     # Get the ppc64 CPU frequency
-    def get_ppc64_cpu_frequency(self, new_format):
+    def get_ppc64_cpu_frequency(self):
         self.log.info('Getting ppc64 CPU frequency')
-        if new_format:
-            freq_read = process.system_output(
-                "ppc64_cpu --frequency -t 5 | grep 'avg' | awk '{print $3}'",
-                shell=True)
-        else:
-            freq_read = process.system_output(
-                "ppc64_cpu --frequency -t 5 | grep 'avg:' | awk '{print $2}'",
-                shell=True)
-
+        output = process.system_output("ppc64_cpu --frequency -t 5",
+                                       shell=True).decode()
+        freq_read = 0
+        for line in output.splitlines():
+            if 'avg' in line:
+                freq_read = line.split(":")[1].strip("GHz").strip()
+                break
         return float(freq_read) * (10**6)
 
     # Get a random frequency
@@ -87,18 +85,6 @@ class Cpufreq(Test):
         self.log.info('Getting a random frequency')
         cmd = "scaling_available_frequencies"
         return random.choice(self.get_cpufreq_attribute(cmd).split(' '))
-
-    # Check if the distro uses the new format
-    def check_new_format(self):
-        new_format = False
-        if self.distro_name == "rhel":
-            if (self.distro_ver == "9" and self.distro_rel > "1") or \
-               (self.distro_ver == "8" and self.distro_rel > "7"):
-                new_format = True
-        elif self.distro_name == "SuSE":
-            if self.distro_ver == "15" and self.distro_rel > "4":
-                new_format = True
-        return new_format
 
     # Compare two frequencies and check if they are within the threshold
     def compare_frequencies(self, loop, freq1, freq2):
@@ -147,6 +133,5 @@ class Cpufreq(Test):
             freq_set = self.get_cpufreq_attribute("cpuinfo_cur_freq")
             self.compare_frequencies(loop, rand_freq, freq_set)
 
-            new_format = self.check_new_format()
-            freq_read = self.get_ppc64_cpu_frequency(new_format)
+            freq_read = self.get_ppc64_cpu_frequency()
             self.compare_frequencies(loop, freq_set, freq_read)
