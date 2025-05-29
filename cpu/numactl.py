@@ -11,7 +11,6 @@
 #
 # See LICENSE for more details.
 #
-# Copyright: 2017 IBM
 # Copyright: 2022 IBM
 # Author:Praveen K Pandey <praveen@linux.vnet.ibm.com>
 #        :Shaik Abdulla <shaik.abdulla1@ibm.com>
