@@ -14,7 +14,7 @@
 # Author: Nageswara R Sastry <rnsastry@linux.ibm.com>
 
 from avocado import Test
-from avocado.utils import linux_modules, process, distro, genio
+from avocado.utils import linux_modules, process, distro, genio, linux
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -94,9 +94,7 @@ class IMAmodsig(Test):
         Check if IMA policy is loaded with secure boot enabled
         """
         # Checking the Guest Secure Boot enabled or not.
-        cmd = "lsprop  /proc/device-tree/ibm,secure-boot"
-        output = process.system_output(cmd, ignore_status=True).decode()
-        if '00000002' not in output:
+        if not linux.is_os_secureboot_enabled():
             self.cancel("Secure boot is not enabled.")
         output = genio.read_file("/sys/kernel/security/ima/policy")
         if not output:

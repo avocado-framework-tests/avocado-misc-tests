@@ -17,7 +17,7 @@ import os
 import fcntl
 import struct
 from avocado import Test
-from avocado.utils import distro, genio, linux_modules, process
+from avocado.utils import distro, genio, linux_modules, process, linux
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import dmesg
 
@@ -56,9 +56,7 @@ class kernelLockdown(Test):
         index2 = int(lockdown.index(']'))
         sys_lockdown = lockdown[index1:index2]
         # Checking the Guest Secure Boot enabled or not.
-        cmd = "lsprop  /proc/device-tree/ibm,secure-boot"
-        output = process.system_output(cmd, ignore_status=True).decode()
-        if '00000002' not in output:
+        if not linux.is_os_secureboot_enabled():
             self.cancel("Secure boot is not enabled.")
         # List required for kernel configuration check.
         self.no_config = []
