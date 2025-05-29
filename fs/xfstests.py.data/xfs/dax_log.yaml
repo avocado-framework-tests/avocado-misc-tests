@@ -1,0 +1,18 @@
+scratch_mnt: '/mnt/scratch_pmem'
+test_mnt: '/mnt/test_pmem'
+logdev: true
+
+fs_type: !mux
+    fs_xfs_dax_log:
+        fs: 'xfs'
+        args: '-R xunit -L 10 -g quick'
+        mkfs_opt: '-b size=65536 -s size=512 -m reflink=0'
+        logdev_opt: '-l logdev'
+        mount_opt: '-o dax'
+
+disk_type:
+    type: 'nvdimm'
+    disk_test: "null"
+    disk_scratch: "null"
+    log_test: "null"
+    log_scratch: "null"

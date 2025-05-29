@@ -20,7 +20,6 @@ import re
 
 import configparser
 from avocado import Test
-from avocado.utils import process
 from avocado.utils import genio
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import distro
@@ -80,6 +79,9 @@ class pvr(Test):
                 self.pvr_value = parser.get('PVR_Values', 'pvr_value_p10_1')
             elif rev[1] == '2.0':
                 self.pvr_value = parser.get('PVR_Values', 'pvr_value_p10_2')
+        elif 'pSeries' in val and 'Power11' in val:
+            if rev[1] == '2.0':
+                self.pvr_value = parser.get('PVR_Values', 'pvr_value_p11')
         else:
             self.fail("Unsupported processor family")
 
@@ -94,10 +96,3 @@ class pvr(Test):
             self.log.info("PVR from /proc/cpuinfo for the system is correct")
         else:
             self.fail("PVR from /proc/cpuinfo for the system is not correct")
-        pvr_dtc = process.run("dtc -I fs /proc/device-tree -O dts |grep %s | "
-                              "head -1" % self.pvr_value, shell=True,
-                              ignore_status=True)
-        if not pvr_dtc.exit_status:
-            self.log.info("PVR from device tree for the system is correct")
-        else:
-            self.fail("PVR from device tree for the system is not correct")

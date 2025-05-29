@@ -1,0 +1,9 @@
+disk: disk name for partition creation/deletion. It can be any of sdx, /dev/sdx, mpathx, /dev/mapper/mpathx. Any form of disk name is accepted - String
+pci_device: is B:D:F of a pci device - String
+partition_size: Partition can be provideds as eg's: 1G/1024M/10000K - String
+num_of_partitions: Number of partitions to be created on disk in integer
+Example yaml inputs
+disk: "/dev/disk/by-path/pci-0154:80:00.0-usb-0:4:1.0-scsi-0:0:0:0"
+pci_device: "0154:80:00.0"
+num_of_partitions: 8
+partition_size: "1G"

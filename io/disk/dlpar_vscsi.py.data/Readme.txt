@@ -1,4 +1,4 @@
-DLPAR vscsi test performs virtual scsi hotplug add remove operation from VIOS cosole
+DLPAR vscsi test performs virtual scsi hotplug add remove operation from VIOS console
 
 disk: Provide the device node name or device by-id or by-path
 vios_ip: Virtual IO server ip address

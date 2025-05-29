@@ -10,7 +10,6 @@ interface		- test interface name eth2 or mac addr 02:5d:c7:xx:xx:03
 PEERIP			- IP of the Peer interface to be tested
 PEERUSER		- Username in Peer system to be used
 Iface			- interface on which test run
-timeout			- Timeout
 NETSERVER_RUN		- Whether to run netserver in peer or not (1 to run, 0 to not run)
 EXPECTED_THROUGHPUT	- Expected Throughput as a percentage (1-100)
 netperf_download	- User has the option to choose download location for netperf tool.
@@ -27,3 +26,9 @@ Requirements:
 2.install nteifaces using pip.
 command: pip install netifaces
 3.user should have root access to both client machine and peer machine.
+
+Additional Notes:
+-----------------
+Currently "Netserver" supports only for IPv4/AF_INET Ports,
+where Netserver initialize and listens on IPV4 interfaces for both Host and Peer systems.
+

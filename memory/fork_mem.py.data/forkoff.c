@@ -25,14 +25,14 @@
 int
 main(int argc,char *argv[])
 {
-        unsigned long size, psize, procs, itterations;
+        unsigned long size, psize, procs, iterations;
         char    *ptr;
         char    *i;
         int     pid, j, k, status, maxpid=0;
         char    buf[32]={0x0};
 
         if ((argc <= 1)||(argc >4)) {
-                printf("bad args, usage: forkoff <memsize MB> #children #itterations\n");
+                printf("bad args, usage: forkoff <memsize MB> #children #iterations\n");
                 exit(-1);
         }
 	/* size of memory for each process */
@@ -45,7 +45,7 @@ main(int argc,char *argv[])
         procs = atol(argv[2]);
 
 	/* number of pages inside the mmap-ed memory to be touched */
-        itterations = atol(argv[3]);
+        iterations = atol(argv[3]);
 
 	/* check if the processes to be created don't exceed the max possible pid  */
         FILE *fd=fopen("/proc/sys/kernel/pid_max","r");
@@ -73,9 +73,9 @@ main(int argc,char *argv[])
                         printf("fork failure error %d: %s\n", errno, strerror(errno));
                         exit(-1);
                 } else if (!pid) {
-			printf("PID %d touching %lu pages\n", getpid(), itterations);
+			printf("PID %d touching %lu pages\n", getpid(), iterations);
 
-                        for (j=0; j<itterations; j++) {
+                        for (j=0; j<iterations; j++) {
                                 for (i = ptr; i < ptr + size - 1; i += psize) {
 					*i=(char)'i';
                                 }

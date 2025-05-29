@@ -5,7 +5,11 @@ runltp: !mux
         args: '-f fs'
     fs_perms_simple:
         args: '-f fs_perms_simple'
-    fsx:
-        args: '-f fsx'
+    fsx-linux:
+        args: '-f ltp-aiodio.part3'
     fs_bind:
         args: '-f fs_bind'
+    fs_readonly:
+        args: '-f fs_readonly'
+    fs_aio_stress:
+        args: '-f ltp-aio-stress'

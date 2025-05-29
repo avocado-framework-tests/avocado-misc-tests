@@ -16,9 +16,9 @@ Once you have the avocado installed, you can run the tests like below::
     JOB HTML   : $HOME/avocado/job-results/job-2016-01-18T15.32-0018adb/html/results.html
     TIME       : 62.67 s
 
-To run test that requires paramters, you'll need to populated the provided YAML
+To run test that requires parameters, you'll need to populated the provided YAML
 files in the corresponding ``*.py.data`` directory. In each directory, there
-should be a README explaining what each parameter cooresponds to. Once you have
+should be a README explaining what each parameter corresponds to. Once you have
 the YAML file populated you can run the test like below::
 
   # avocado run  avocado-misc-tests/io/common/bootlist_test.py -m avocado-misc-tests/io/common/bootlist_test.py.data/bootlist_test_network.yaml

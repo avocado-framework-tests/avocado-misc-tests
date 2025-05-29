@@ -1,25 +1,40 @@
-schbench_url: 'https://git.kernel.org/pub/scm/linux/kernel/git/mason/schbench.git'
-perf:
+workload_iter:
+schbench_url: !mux
+    default: 
+        schbench_url: 'https://git.kernel.org/pub/scm/linux/kernel/git/mason/schbench.git'
+perf_stat: !mux
     default:
-        perfstat: '-a'
-pin: !mux
+        perf_stat: ''
+taskset: !mux
     default:
-        taskset: '0'
-threads: !mux
+        taskset: ''
+locking: !mux
     default:
-        num_threads: 10
-workers: !mux
+        locking: True
+num_threads: !mux
     default:
-        num_workers: 10
+        num_threads: 1
+num_workers: !mux
+    default:
+        num_workers: 1
+cache_footprint:
+    default:
+        cache_footprint: 256
 bytes: !mux
     default:
-        bytes: 1000
-duration: !mux
+        bytes: 0
+runtime: !mux
     default:
-        runtime: 100
-cpu_duration: !mux
-    default:
-        cputime: 10000
-mode:
+        runtime: 10
+autobench: !mux
     default:
         autobench: False
+rps: !mux
+    default:
+        rps: 0
+num_operations: !mux
+    default:
+        num_operations: 5
+warmuptime: !mux
+    default:
+        warmuptime: 0

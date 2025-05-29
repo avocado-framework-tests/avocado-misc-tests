@@ -17,7 +17,7 @@
 import os
 import shutil
 from avocado import Test
-from avocado.utils import process, git
+from avocado.utils import process, git, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -28,9 +28,6 @@ class Sysbench(Test):
 
     :avocado: tags=cpu,threads
     """
-
-    def clear_dmesg(self):
-        process.run("dmesg -C ", sudo=True)
 
     def verify_dmesg(self):
         self.whiteboard = process.system_output("dmesg").decode("utf-8")
@@ -87,7 +84,7 @@ class Sysbench(Test):
         self.test_type = self.params.get('type', default='cpu')
         self.cpu_max_prime = int(self.params.get('cpu-max-prime', default=100))
         self.threads_locks = self.params.get('threads-locks', default=None)
-        self.clear_dmesg()
+        dmesg.clear_dmesg()
 
     def test(self):
         args = []

@@ -31,7 +31,7 @@ from avocado.utils import distro
 class Arcconftest(Test):
 
     """
-    Covers functionality relavent to RAID operations like creation,
+    Covers functionality relevant to RAID operations like creation,
     deletion, Physical & logical disk format and status information.
     """
 

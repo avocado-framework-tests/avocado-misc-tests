@@ -16,10 +16,10 @@
 import os
 import glob
 import re
-import platform
 import multiprocessing
+from avocado.utils import cpu
 from avocado import Test
-from avocado.utils import process, memory, build, archive
+from avocado.utils import process, memory, build, archive, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -33,10 +33,6 @@ ERRORLOG = ['WARNING: CPU:', 'Oops',
             'INFO: possible recursive locking detected',
             'Kernel BUG at', 'Kernel panic - not syncing:',
             'double fault:', 'BUG: Bad page state in']
-
-
-def clear_dmesg():
-    process.run("dmesg -C ", sudo=True)
 
 
 def online(block):
@@ -81,7 +77,7 @@ def collect_dmesg(object):
 class MemStress(Test):
 
     '''
-    Stress test to excersize memory component
+    Stress test to exercize memory component
 
     This test performs memory hotunplug/hotplug tests with below scenarios:
        1. hotunplug one by one in a loop for all
@@ -129,7 +125,7 @@ class MemStress(Test):
         if os.path.exists("%s/auto_online_blocks" % MEM_PATH):
             if not self.__is_auto_online():
                 self.hotplug_all(self.blocks_hotpluggable)
-        clear_dmesg()
+        dmesg.clear_dmesg()
 
     def hotunplug_all(self, blocks):
         for block in blocks:
@@ -195,7 +191,7 @@ class MemStress(Test):
         self.__error_check()
 
     def test_dlpar_mem_hotplug(self):
-        if 'ppc' in platform.processor() and 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
+        if 'power' in cpu.get_arch() and 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
             if b"mem_dlpar=yes" in process.system_output("drmgr -C", ignore_status=True, shell=True):
                 self.log.info("\nDLPAR remove memory operation\n")
                 for _ in range(len(self.blocks_hotpluggable) // 2):
@@ -220,7 +216,7 @@ class MemStress(Test):
             node = node.strip('\n')
             self.log.info("Hotplug all memory in Numa Node %s", node)
             mem_blocks = get_hotpluggable_blocks((
-                '/sys/devices/system/node/node%s/memory*' % node), self.memratio)
+                '/sys/devices/system/node/node%s/memory[0-9]*' % node), self.memratio)
             for block in mem_blocks:
                 self.log.info(
                     "offline memory%s in numa node%s", block, node)

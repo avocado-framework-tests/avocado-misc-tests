@@ -1,13 +1,12 @@
 language: python
+dist: jammy
 
 matrix:
-  allow_failures:
-        - python: "3.7" ## failing as recent changes in inspektor failed to install 
 
 python:
-    - "3.6"
-    - "3.7"
     - "3.8"
+    - "3.9"
+    - "3.10"
 branches:
     only:
         - master

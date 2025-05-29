@@ -1,0 +1,51 @@
+subsystem: !mux
+    record:
+        name: record
+        variants: !mux
+          all_cpus:
+            option: -a -v sleep 3
+
+    report:
+        name: report
+        variants: !mux
+            wait_field:
+                option: -k wait_total -i
+            all_fields:
+                option: -t -F acquired,contended,avg_wait,wait_total
+            locks_with_entries:
+                option: -c -D -E 5
+            vmlinux_full:
+                option: -E 3 --kallsyms
+
+    info:
+        name: info
+        variants: !mux
+            threads_list:
+                option: -t
+            map_instances:
+                option: -m
+
+    script:
+        name: script
+        variants: !mux
+           input_data:
+                option: -f -i
+
+    contention:
+        name: contention
+        variants: !mux
+          contention_fields:
+                  option: -C 0 -E 2 -F contended,wait_total -q
+          all_cpus_entires:
+                  option: -a -t -E 1 -q
+          avg_wait_key:
+                  option: -k avg_wait -l
+          trace_PID:
+                  option:  -p 1 -x ,
+          input_full:
+                  option: -Y spinlock -q -i
+          vmlinux_full:
+                  option: -E 2 --vmlinux
+
+    normal_user_test:
+        name: normal_user_test

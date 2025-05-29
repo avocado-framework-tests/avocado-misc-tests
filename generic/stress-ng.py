@@ -19,12 +19,8 @@
 import os
 import multiprocessing
 from avocado import Test
-from avocado.utils import process, build, archive, distro, memory
+from avocado.utils import process, build, archive, distro, memory, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
-
-
-def clear_dmesg():
-    process.run("dmesg -C ", sudo=True)
 
 
 def collect_dmesg(object):
@@ -90,7 +86,7 @@ class Stressng(Test):
                 self.cancel(
                     "Build Failed, Please check the build logs for details !!")
         build.make(sourcedir, extra_args='install')
-        clear_dmesg()
+        dmesg.clear_dmesg()
 
     def test(self):
         args = []
@@ -198,11 +194,12 @@ class Stressng(Test):
                       "\n".join(ERROR))
 
     def tearDown(self):
-        if 'filesystem' in self.class_type:
+        if hasattr(self, 'loop_dev') and os.path.exists(self.loop_dev):
             process.run("umount %s" % self.loop_dev, ignore_status=True,
                         sudo=True)
             process.run("losetup -d %s" % self.loop_dev, ignore_status=True,
                         sudo=True)
+        if os.path.exists('/tmp/blockfile'):
             process.run("rm -rf /tmp/blockfile", ignore_status=True, sudo=True)
-            if (os.path.exists(self.stressmnt)):
-                process.run(f"rm -rf {self.stressmnt}")
+        if hasattr(self, 'stressmnt') and os.path.exists(self.stressmnt):
+            process.run(f"rm -rf {self.stressmnt}", ignore_status=True)

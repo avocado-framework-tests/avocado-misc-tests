@@ -4,7 +4,7 @@ Test: !mux
             basic_option: ::1 -c 30 , ::1 -c 30 
         second:
             basic_option: -I peer_interface local_ipv6 -c 30 , -c 30 -I interface peer_ipv6
-# Placeholder for exended option
+# Placeholder for extended option
 #        fourth:
 #            ext_option:
 Parameters:

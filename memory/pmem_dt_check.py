@@ -131,7 +131,7 @@ class NdctlDeviceTreeCheck(Test):
 
         self.plib = pmem.PMem(self.ndctl, self.daxctl)
         if not self.plib.check_buses():
-            self.cancel("Test needs atleast one region")
+            self.cancel("Test needs at least one region")
 
     @avocado.fail_on(pmem.PMemException)
     def test(self):

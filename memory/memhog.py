@@ -26,7 +26,7 @@ from avocado.utils.software_manager.manager import SoftwareManager
 
 class MemoHog(Test):
     """
-    Hogs up memory to sepcified size
+    Hogs up memory to specified size
 
     :avocado: tags=memory
     """
@@ -123,7 +123,7 @@ class MemoHog(Test):
         self.log.info("Testing memory hog with given inputs")
         args = str(self.memsize)
         if self.file_type:
-            args = "%s -f%s" % (args, self.back_file)
+            args = "-f%s %s" % (self.back_file, args)
         if process.system('./memhog %s' % args, ignore_status=True):
             self.fail('Memory hog test failed')
 

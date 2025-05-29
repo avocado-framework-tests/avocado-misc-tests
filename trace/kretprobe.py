@@ -20,6 +20,7 @@ from avocado import Test
 from avocado.utils import build
 from avocado.utils import distro
 from avocado.utils import process
+from avocado.utils import dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -43,9 +44,6 @@ class Kretprobe(Test):
     def run_cmd_out(cmd):
         return process.system_output(cmd, shell=True, ignore_status=True,
                                      sudo=True).decode("utf-8")
-
-    def clear_dmesg(self):
-        process.run("dmesg -C ", sudo=True)
 
     def setUp(self):
         """
@@ -71,19 +69,25 @@ class Kretprobe(Test):
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
+        cmd = "lsprop  /proc/device-tree/ibm,secure-boot"
+        output = process.system_output(cmd, ignore_status=True).decode()
+        if '00000002' in output:
+            self.cancel("Secure boot is enabled.")
 
     def build_module(self):
         """
         Building of the kretprobe kernel module
         """
-        self.log.info("============== Building kretprobe Module =================")
+        self.log.info(
+            "============== Building kretprobe Module =================")
         self.sourcedir = tempfile.mkdtemp()
         os.chdir(self.sourcedir)
 
         self.location = ('https://raw.githubusercontent.com/torvalds/linux/'
                          'master/samples/kprobes/kretprobe_example.c')
         self.kretprobe_file = self.fetch_asset(self.location, expire='7d')
-        self.kretprobe_dst = os.path.join(self.sourcedir, 'kretprobe_example.c')
+        self.kretprobe_dst = os.path.join(
+            self.sourcedir, 'kretprobe_example.c')
         shutil.copy(self.kretprobe_file, self.kretprobe_dst)
 
         """
@@ -104,13 +108,14 @@ class Kretprobe(Test):
 
     def execute_test(self):
         self.log.info("============== Testing kretprobe =================")
-        self.clear_dmesg()
+        dmesg.clear_dmesg()
         self.run_cmd("insmod ./kretprobe_example.ko")
         if self.is_fail >= 1:
             self.fail("insmod kretprobe_example.ko failed")
 
         if "Planted return probe" not in self.run_cmd_out("dmesg |grep -i planted"):
-            self.fail("kretprobe couldn't be planted, check dmesg for more information")
+            self.fail(
+                "kretprobe couldn't be planted, check dmesg for more information")
 
         """
         Execute date to trigger kernel_clone syscall
@@ -118,14 +123,16 @@ class Kretprobe(Test):
         self.run_cmd("date")
 
         if "return" not in self.run_cmd_out("dmesg |grep -i kernel_clone"):
-            self.fail("kretprobe probing issues, check dmesg for more information")
+            self.fail(
+                "kretprobe probing issues, check dmesg for more information")
 
         self.run_cmd("rmmod kretprobe_example")
         if self.is_fail >= 1:
             self.fail("rmmod kretprobe_example.ko failed")
 
         if "kretprobe" not in self.run_cmd_out("dmesg |grep -i unregistered"):
-            self.fail("kretprobe unregistering failed, check dmesg for more information")
+            self.fail(
+                "kretprobe unregistering failed, check dmesg for more information")
 
     def test(self):
         self.build_module()

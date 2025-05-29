@@ -16,6 +16,14 @@ bandwidth:
 device_ip:
 netmasks:
 peer_ip:
-vnic_test_count:
+count:
 num_of_dlpar:
 mac_id:
+user_name: ""
+host_public_ip: ""
+host_password: ""
+peer_user: ""
+peer_password: ""
+is_mlx_driver: True
+tx_channel: 
+rx_channel: 

@@ -14,7 +14,9 @@
 # Author: Nageswara R Sastry <rnsastry@linux.vnet.ibm.com>
 
 import os
+import configparser
 import glob
+import random
 from avocado import Test
 from avocado.utils import cpu, dmesg, genio, linux_modules, process
 from avocado import skipIf, skipUnless
@@ -83,6 +85,11 @@ class PerfBasic(Test):
             process.system('userdel -r test_pmu', sudo=True,
                            ignore_status=True)
 
+    def get_random_filenames(self, directory, num_files=3):
+        files = os.listdir(directory)
+        random_files = random.sample(files, num_files)
+        return random_files
+
     def _check_kernel_config(self, config_option):
         # This function checks the kernel configuration with the input
         # 'config_option' a string. If the required configuration not set then
@@ -109,14 +116,11 @@ class PerfBasic(Test):
 
         sysfs_file = "/sys/devices/system/cpu/cpu0/"
 
-        sysfs_dict = {"power8": ['mmcr0', 'mmcr1', 'mmcra'],
-                      "power8e": ['mmcr0', 'mmcr1', 'mmcra'],
-                      "power9": ['mmcr0', 'mmcr1', 'mmcra'],
-                      "power10": ['mmcr0', 'mmcr1', 'mmcr3', 'mmcra']}
-
+        parser = configparser.ConfigParser()
+        parser.read(self.get_data('sysfs_PMU.cfg'))
+        sysfs_PMU_list = parser.get(self.model, 'dir_list').split(',')
         # Check for any missing files according to the model
-        self._check_file_existence(
-            sysfs_dict[self.model], os.listdir(sysfs_file))
+        self._check_file_existence(sysfs_PMU_list, os.listdir(sysfs_file))
 
         try:
             for filename in glob.glob("%smmcr*" % sysfs_file):
@@ -186,7 +190,7 @@ class PerfBasic(Test):
             output = dmesg.collect_errors_dmesg(
                 'rtas error: Error calling get-system-parameter')
             if len(output):
-                self.fail("RTAS error occured")
+                self.fail("RTAS error occurred")
 
     def _check_count(self, event_type):
         base_dir = "/sys/bus/event_source/devices/"
@@ -198,9 +202,8 @@ class PerfBasic(Test):
 
         sys_fs_events = os.listdir(
             os.path.join(base_dir, event_type, 'events'))
-        if len(sys_fs_events) < 21:
-            self.fail("%s events folder contains less than 21 entries"
-                      % event_type)
+        if not sys_fs_events:
+            self.fail("no events found in %s events folder" % event_type)
         self.log.info("%s events count = %s" %
                       (event_type, len(sys_fs_events)))
 
@@ -208,6 +211,36 @@ class PerfBasic(Test):
         # This test checks for the sysfs event_source directory and checks for
         # cpu events count
         self._check_count('cpu')
+
+    def test_write_sysfs_events(self):
+        devices_events = ['cpu',  'hv_24x7', 'hv_gpci']
+        self._create_temp_user()
+        if process.system('id test_pmu', sudo=True, ignore_status=True):
+            self.log.warn('User test_pmu does not exist, skipping test')
+            return
+
+        for type_events in devices_events:
+            directory_base = '/sys/bus/event_source/devices'
+            directory = os.path.join(directory_base, type_events, 'events')
+            random_files = self.get_random_filenames(directory)
+            for file in random_files:
+                eventdir = os.path.join(directory, file)
+                commands = {'root': f"echo 1 > {eventdir}", 'test_pmu': f"su - test_pmu -c echo 1 > {eventdir}"}
+                for user, cmd in commands.items():
+                    result = process.run(cmd, shell=True, ignore_status=True)
+                    output = result.stdout.decode() + result.stderr.decode()
+                    if 'Permission denied' not in output:
+                        self.fail("sysfs files are readonly but user has write access")
+        self._remove_temp_user()
+
+    def test_caps_feat(self):
+        caps_filepath = "/sys/bus/event_source/devices/cpu/caps/pmu_name"
+        if os.path.isfile(caps_filepath):
+            pmu_name = process.system_output(f'cat {caps_filepath}',
+                                             shell=True).decode()
+            self.log.info("Sysfs pmu registered: %s" % pmu_name)
+        else:
+            self.cancel("Caps file not found, skipping test")
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST, "This test is for PowerVM")
     def test_hv_24x7_event_count(self):

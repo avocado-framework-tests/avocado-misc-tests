@@ -191,7 +191,7 @@ class Arp(Test):
         interface_out = process.system_output("ip route show default",
                                               env={"LANG": "C"}).decode("utf-8")
         if "default via" not in interface_out:
-            self.cancel("No active interface with deafult gateway configured")
+            self.cancel("No active interface with default gateway configured")
         install_dependencies()
         search_obj = re.search(r"^default via\s+(\S+)\s+dev\s+(\w+)",
                                interface_out)

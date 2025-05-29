@@ -62,9 +62,13 @@ class Perftest(Test):
             elif 'debian' in detected_distro.name:
                 deps.extend(['linux-tools-%s' % platform.uname()[2][3]])
             elif detected_distro.name in ['rhel', 'SuSE', 'fedora', 'centos']:
-                deps.extend(['perf', 'gcc-c++'])
+                deps.extend(['perf', 'gcc-c++', 'bpftool'])
                 if 'SuSE' in detected_distro.name:
                     deps.extend(['kernel-default-debuginfo'])
+                elif 'rhel' in detected_distro.name:
+                    deps.extend(['clang', 'llvm', 'libbpf', 'python3-perf'])
+                elif 'fedora' in detected_distro.name:
+                    deps.extend(['clang', 'kernel-debuginfo'])
                 else:
                     deps.extend(['clang', 'kernel-debuginfo',
                                  'perf-debuginfo'])
@@ -72,7 +76,7 @@ class Perftest(Test):
                 self.cancel("Install the package for perf supported\
                           by %s" % detected_distro.name)
         if run_type == 'upstream':
-            if 'rhel' in detected_distro.name:
+            if detected_distro.name in ['rhel', 'fedora']:
                 deps.extend(['systemtap-sdt-devel', 'slang-devel',
                              'perl-ExtUtils-Embed', 'libcap-devel',
                              'numactl-devel', 'libbabeltrace-devel',

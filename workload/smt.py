@@ -16,6 +16,11 @@ from avocado import Test
 from avocado.utils import process, distro
 from avocado.utils.software_manager.manager import SoftwareManager
 import os
+import time
+
+
+def collect_dmesg(object):
+    return process.system_output("dmesg").decode()
 
 
 class smt(Test):
@@ -40,14 +45,35 @@ class smt(Test):
         distro_ver = self.detected_distro.version
         distro_rel = self.detected_distro.release
         if distro_name == "rhel":
-            if (distro_ver == "7" or
-                    (distro_ver == "8" and distro_rel < "4")):
+            if (distro_ver == 7 or
+                    (distro_ver == 8 and distro_rel < 4)):
                 self.cancel("smtstate tool is supported only after RHEL8.4")
         elif distro_name == "SuSE":
-            if (distro_ver == "12" or (distro_ver == "15" and distro_rel < 3)):
+            if (distro_ver == 12 or (distro_ver == 15 and distro_rel < 3)):
                 self.cancel("smtstate tool is supported only after SLES15 SP3")
         else:
             self.cancel("Test case is supported only on RHEL and SLES")
+        self.runtime = self.params.get('runtime', default='')
+
+    def dmesg_validater(self):
+        """
+        This function is responsible to validate the dmesg
+        for any errors after smt workload run.
+        """
+        ERROR = []
+        pattern = ['WARNING: CPU:', 'Oops', 'Segfault', 'soft lockup',
+                   'Unable to handle', 'ard LOCKUP']
+        for fail_pattern in pattern:
+            for log in collect_dmesg(self).splitlines():
+                if fail_pattern in log:
+                    ERROR.append(log)
+        if ERROR:
+            self.fail("Test failed with following errors in dmesg :  %s " %
+                      "\n".join(ERROR))
+        smt = self.logdir + "/smt"
+        os.makedirs(smt, exist_ok=True)
+        cmd = "mv /tmp/smt.log %s " % (smt)
+        process.run(cmd)
 
     def test_smt_start(self):
         """
@@ -59,14 +85,20 @@ class smt(Test):
         process.run(
             smt_workload, ignore_status=True, sudo=True, shell=True)
         self.log.info("SMT Workload started--!!")
+        if self.runtime != "":
+            runtime = self.runtime * 60
+            time.sleep(runtime)
 
     def test_smt_stop(self):
         """
         Kill the SMT workload
         """
         grep_cmd = "grep -i {}".format("smt.sh")
-        process_kill = 'ps aux | {} | awk "{{ print $2 }}" | \
-                xargs kill'.format(grep_cmd)
+        awk_cmd = "awk '{print $2}'"
+        process_kill = "ps aux | {} | {} | head -1 | xargs kill".format(
+            grep_cmd, awk_cmd)
         process.run(process_kill, ignore_status=True,
                     sudo=True, shell=True)
         self.log.info("SMT Workload killed successfully--!!")
+        # Validate the dmesg for any error
+        self.dmesg_validater()

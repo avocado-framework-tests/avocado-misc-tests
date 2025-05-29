@@ -59,7 +59,6 @@ class Xfstests(Test):
         return namespace_size
 
     def setup_nvdimm(self):
-        self.logflag = self.params.get('logdev', default=False)
         self.plib = pmem.PMem()
         self.plib.enable_region()
         regions = sorted(self.plib.run_ndctl_list('-R'),
@@ -178,22 +177,27 @@ class Xfstests(Test):
             packages.extend(['acl', 'bc', 'indent', 'libtool', 'lvm2',
                              'xfsdump', 'psmisc', 'sed', 'libacl-devel',
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
-                             'openssl-devel', 'xfsprogs-devel', 'gettext',
                              'libblkid-devel', 'lzo-devel', 'zlib-devel',
                              'e2fsprogs-devel', 'asciidoc', 'xmlto',
                              'libzstd-devel', 'systemd-devel', 'meson',
-                             'gcc-c++'])
+                             'xfsprogs-devel', 'gcc-c++'])
+            if self.detected_distro.name == 'rhel' and (
+                    self.detected_distro.version.startswith('9')):
+                packages.extend(['inih-devel'])
 
             if self.detected_distro.name == 'SuSE':
                 packages.extend(['libbtrfs-devel', 'libcap-progs',
-                                'liburcu-devel', 'libinih-devel'])
+                                'liburcu-devel', 'libinih-devel',
+                                 'libopenssl-devel', 'gettext-tools'])
             else:
-                packages.extend(['btrfs-progs-devel', 'userspace-rcu-devel'])
+                packages.extend(['btrfs-progs-devel', 'userspace-rcu-devel',
+                                 'openssl-devel', 'gettext'])
 
             packages_remove = ['indent', 'btrfs-progs-devel']
             if self.detected_distro.name == 'rhel' and (
                     self.detected_distro.version.startswith('8') or
-                    self.detected_distro.version.startswith('9')):
+                    self.detected_distro.version.startswith('9') or
+                    self.detected_distro.version.startswith('10')):
                 packages = list(set(packages)-set(packages_remove))
 
             if self.detected_distro.name in ['centos', 'fedora']:
@@ -219,31 +223,49 @@ class Xfstests(Test):
             self.use_dd = True
 
         self.dev_type = self.params.get('type', default='loop')
-
-        self.__setUp_packages()
-
+        self.logflag = self.params.get('logdev', default=False)
         self.fs_to_test = self.params.get('fs', default='ext4')
-
         self.args = self.params.get('args', default='-g quick')
         self.log.debug(f"FS: {self.fs_to_test}, args: {self.args}")
-
-        # If there is an existing results directory then just clean that up before running the test
-        if os.path.exists(f"{self.teststmpdir}/results"):
-            shutil.rmtree(f"{self.teststmpdir}/results")
-
         self.base_disk = self.params.get('disk', default=None)
         self.scratch_mnt = self.params.get(
             'scratch_mnt', default='/mnt/scratch')
         self.test_mnt = self.params.get('test_mnt', default='/mnt/test')
         self.disk_mnt = self.params.get('disk_mnt', default='/mnt/loop_device')
         self.run_type = self.params.get('run_type', default='distro')
+        self.log_test = self.params.get('log_test', default='')
+        self.log_scratch = self.params.get('log_scratch', default='')
+        self.test_dev = self.params.get('disk_test', default=None)
+        self.scratch_dev = self.params.get('disk_scratch', default=None)
+        self.mkfs_opt = self.params.get('mkfs_opt', default='')
+        self.mount_opt = self.params.get('mount_opt', default='')
+        self.logdev_opt = self.params.get('logdev_opt', default='')
+
+        # If there is an existing results directory then just clean that up before running the test
+        if os.path.exists(f"{self.teststmpdir}/results"):
+            shutil.rmtree(f"{self.teststmpdir}/results")
+
+        shutil.copyfile(self.get_data('local.config'),
+                        os.path.join(self.teststmpdir, 'local.config'))
 
         self.devices = []
         self.part = None
 
+        self.__setUp_packages()
+
         if self.run_type == 'upstream':
             prefix = "/usr/local"
             bin_prefix = "/usr/local/bin"
+
+            if 'verity' in self.args:
+                fsverity_dir = os.path.join(self.teststmpdir, 'fsverity-utils')
+                if not os.path.exists(fsverity_dir):
+                    os.makedirs(fsverity_dir)
+                fsverity_url = self.params.get('fsverity_url')
+                git.get_repo(fsverity_url, destination_dir=fsverity_dir)
+                os.chdir(fsverity_dir)
+                build.make(fsverity_dir)
+                build.make(fsverity_dir, extra_args='install')
 
             if self.detected_distro.name == 'SuSE':
                 # SuSE has /sbin at a higher priority than /usr/local/bin
@@ -333,16 +355,12 @@ class Xfstests(Test):
         if self.fs_to_test == "btrfs":
             self.num_loop_dev = 5
 
-        shutil.copyfile(self.get_data('local.config'),
-                        os.path.join(self.teststmpdir, 'local.config'))
-        self.log_test = self.params.get('log_test', default='')
-        self.log_scratch = self.params.get('log_scratch', default='')
-
         if self.dev_type == 'loop':
             loop_size = self.params.get('loop_size', default='7GiB')
             if not self.base_disk:
                 # Using root for file creation by default
-                check = (int(loop_size.split('GiB')[0]) * self.num_loop_dev) + 1
+                check = (int(loop_size.split('GiB')[
+                         0]) * self.num_loop_dev) + 1
                 if disk.freespace('/') / 1073741824 > check:
                     self.disk_mnt = ''
                     mount = False
@@ -352,14 +370,10 @@ class Xfstests(Test):
         elif self.dev_type == 'nvdimm':
             self.setup_nvdimm()
         else:
-            self.test_dev = self.params.get('disk_test', default=None)
-            self.scratch_dev = self.params.get('disk_scratch', default=None)
             self.devices.extend([self.test_dev, self.scratch_dev])
         # mkfs for devices
         if self.devices:
             cfg_file = os.path.join(self.teststmpdir, 'local.config')
-            self.mkfs_opt = self.params.get('mkfs_opt', default='')
-            self.mount_opt = self.params.get('mount_opt', default='')
             with open(cfg_file, "r") as sources:
                 lines = sources.readlines()
             with open(cfg_file, "w") as sources:
@@ -404,7 +418,6 @@ class Xfstests(Test):
                     sources.write('MKFS_OPTIONS="%s"\n' % self.mkfs_opt)
                 if self.mount_opt:
                     sources.write('MOUNT_OPTIONS="%s"\n' % self.mount_opt)
-            self.logdev_opt = self.params.get('logdev_opt', default='')
             for dev in self.log_devices:
                 dev_obj = partition.Partition(dev)
                 dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
@@ -416,7 +429,7 @@ class Xfstests(Test):
                 else:
                     dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
 
-        git.get_repo('git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
+        git.get_repo('https://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
                      destination_dir=self.teststmpdir)
 
         extra_args = f"-j{os.cpu_count()}"

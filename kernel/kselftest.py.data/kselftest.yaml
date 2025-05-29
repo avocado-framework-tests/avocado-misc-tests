@@ -6,6 +6,9 @@ component: !mux
         kself_args: "summary=1"
     mem_plug:
         comp: "memory-hotplug"
+    cpufreq:
+        comp: "cpufreq"
+        test_mode: "basic"
 run_type: !mux
     distro:
         type: 'distro'

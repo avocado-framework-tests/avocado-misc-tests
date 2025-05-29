@@ -36,7 +36,7 @@ Note: The value of Dup_MM_Area depends on the use case.
 
 To run with  -M, -Z, -N, -U and -C test types, there is no need to pass the
 "Size" and "Dup_MM_Area" parameters.
-Eample YAML section:
+Example YAML section:
     mm:
         comp: "mm"
         subtest: "ksm_tests"

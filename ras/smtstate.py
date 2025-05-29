@@ -28,22 +28,23 @@ class smtstate_tool(Test):
 
         sm = SoftwareManager()
         self.detected_distro = distro.detect()
-        if not sm.check_installed("powerpc-utils") and \
-                not sm.install("powerpc-utils"):
-            self.cancel("powerpc-utils is needed for the test to be run")
+        deps = ['powerpc-utils', 'time']
+        for packages in deps:
+            if not sm.check_installed(packages) and not sm.install(packages):
+                self.cancel("powerpc-utils is needed for the test to be run")
         smt_op = process.run("ppc64_cpu --smt", shell=True,
                              ignore_status=True).stderr.decode("utf-8")
         if "is not SMT capable" in smt_op:
             self.cancel("Machine is not SMT capable, skipping the test")
         distro_name = self.detected_distro.name
-        distro_ver = self.detected_distro.version
-        distro_rel = self.detected_distro.release
+        distro_ver = eval(str(self.detected_distro.version))
+        distro_rel = eval(str(self.detected_distro.release))
         if distro_name == "rhel":
-            if (distro_ver == "7" or
-                    (distro_ver == "8" and distro_rel < "4")):
+            if (distro_ver == 7 or
+                    (distro_ver == 8 and distro_rel < 4)):
                 self.cancel("smtstate tool is supported only after RHEL8.4")
         elif distro_name == "SuSE":
-            if (distro_ver == "12" or (distro_ver == "15" and distro_rel < 3)):
+            if (distro_ver == 12 or (distro_ver == 15 and distro_rel < 3)):
                 self.cancel("smtstate tool is supported only after SLES15 SP3")
         else:
             self.cancel("Test case is supported only on RHEL and SLES")

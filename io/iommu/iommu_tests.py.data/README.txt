@@ -17,3 +17,4 @@ Inputs Needed (in multiplexer file):
 ------------------------------------
 pci_devices -      can be fetched from <lspci -nnD>  output. Use space for multiple devices "001b:62:00.0 001b:62:00.1"
 count -      This is an integer value given for number of time tests to run.
+dmesg_grep -	can be used to filter the dmesg log by passing patterns separated by a pipe. For example: dmesg_grep: "IOMMU|NVME|..."

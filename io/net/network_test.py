@@ -23,7 +23,6 @@ test lro and gro and interface
 
 import os
 import hashlib
-import netifaces
 from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import process
@@ -56,21 +55,25 @@ class NetworkTest(Test):
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
-        interfaces = netifaces.interfaces()
-        interface = self.params.get("interface")
-        if interface not in interfaces:
-            self.cancel("%s interface is not available" % interface)
-        self.iface = interface
+        interfaces = os.listdir('/sys/class/net')
+        local = LocalHost()
+        device = self.params.get("interface")
+        if device in interfaces:
+            self.interface = device
+        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
+            self.interface = local.get_interface_by_hwaddr(device).name
+        else:
+            self.interface = None
+            self.cancel("Please check the network device")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         self.ip_config = self.params.get("ip_config", default=True)
         self.hbond = self.params.get("hbond", default=False)
-        local = LocalHost()
         if self.hbond:
             self.networkinterface = NetworkInterface(
-                self.iface, local, if_type='Bond')
+                self.interface, local, if_type='Bond')
         else:
-            self.networkinterface = NetworkInterface(self.iface, local)
+            self.networkinterface = NetworkInterface(self.interface, local)
         if self.ip_config:
             try:
                 self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
@@ -149,7 +152,7 @@ class NetworkTest(Test):
         '''
         ro_type = "lro"
         ro_type_full = "large-receive-offload"
-        path = '/sys/class/net/%s/device/uevent' % self.iface
+        path = '/sys/class/net/%s/device/uevent' % self.interface
         if os.path.exists(path):
             output = open(path, 'r').read()
             for line in output.splitlines():
@@ -191,16 +194,16 @@ class NetworkTest(Test):
 
     def test_ipv6_ping(self):
         '''
-        Ping test with ipv6 addrress
+        Ping test with ipv6 address
         '''
         try:
             self.networkinterface.get_ipaddrs(version=6)
         except Exception:
-            self.cancel("IPV6 addrress is not set for host interface")
+            self.cancel("IPV6 address is not set for host interface")
         try:
             peer_ipv6 = self.peer_networkinterface.get_ipaddrs(version=6)
             if not peer_ipv6[0]:
-                self.cancel("IPV6 addrress is not set for peer interface")
+                self.cancel("IPV6 address is not set for peer interface")
         except Exception:
             self.cancel(
                 "Test failing while getting IPV6 address for peer interface")
@@ -250,8 +253,8 @@ class NetworkTest(Test):
         '''
         Test Statistics
         '''
-        rx_file = "/sys/class/net/%s/statistics/rx_packets" % self.iface
-        tx_file = "/sys/class/net/%s/statistics/tx_packets" % self.iface
+        rx_file = "/sys/class/net/%s/statistics/rx_packets" % self.interface
+        tx_file = "/sys/class/net/%s/statistics/tx_packets" % self.interface
         rx_before = genio.read_file(rx_file)
         tx_before = genio.read_file(tx_file)
         self.networkinterface.ping_check(self.peer, self.count, options='-f')
@@ -289,7 +292,7 @@ class NetworkTest(Test):
         '''
         Change the state of LRO / GRO / GSO / TSO to specified state
         '''
-        cmd = "ethtool -K %s %s %s" % (self.iface, ro_type, state)
+        cmd = "ethtool -K %s %s %s" % (self.interface, ro_type, state)
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             return False
         if self.offload_state(ro_type_full) != state:
@@ -302,7 +305,7 @@ class NetworkTest(Test):
         If the state can not be changed, we return 'fixed'.
         If any other error, we return ''.
         '''
-        cmd = "ethtool -k %s" % self.iface
+        cmd = "ethtool -k %s" % self.interface
         output = process.system_output(cmd, shell=True,
                                        ignore_status=True).decode("utf-8")
         for line in output.splitlines():
@@ -316,11 +319,11 @@ class NetworkTest(Test):
         '''
         promisc mode testing
         '''
-        cmd = "ip link set %s promisc on" % self.iface
+        cmd = "ip link set %s promisc on" % self.interface
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("failed to enable promisc mode")
         self.networkinterface.ping_check(self.peer, self.count, options='-f')
-        cmd = "ip link set %s promisc off" % self.iface
+        cmd = "ip link set %s promisc off" % self.interface
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             self.fail("failed to disable promisc mode")
         self.networkinterface.ping_check(self.peer, count=5)
@@ -341,9 +344,7 @@ class NetworkTest(Test):
             except Exception:
                 self.networkinterface.remove_cfg_file()
                 self.log.info(
-                    "backup file not availbale, could not restore file.")
-            if self.hbond:
-                self.networkinterface.restore_slave_cfg_file()
+                    "backup file not available, could not restore file.")
         self.remotehost.remote_session.quit()
         self.remotehost_public.remote_session.quit()
         if 'scp' or 'ssh' in str(self.name.name):

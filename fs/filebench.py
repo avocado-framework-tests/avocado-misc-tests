@@ -65,6 +65,13 @@ class Filebench(Test):
         testfile = self.params.get('testfile', default='fileserver.f')
         testfile_path = os.path.join(self.install_prefix, 'share', 'filebench',
                                      'workloads', testfile)
-        cmd = '%s -f %s' % (binary_path, testfile_path)
+
+        # Due to compatibility issues with filebench, ASLR (Address Space
+        # Layout Randomization) is disabled in the process personality.
+        # Filebench does not work properly when ASLR is enabled.
+        # Disabling ASLR ensures consistent behavior and reliable execution
+        # of filebench benchmarks.
+
+        cmd = 'setarch --addr-no-randomize %s -f %s' % (binary_path, testfile_path)
         out = process.system_output(cmd)
         self.log.info(b"result:" + out)

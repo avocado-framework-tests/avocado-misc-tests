@@ -96,7 +96,6 @@ class Bridging(Test):
         '''
         try:
             self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
-            self.networkinterface.save(self.ipaddr, self.netmask)
         except Exception:
             self.networkinterface.save(self.ipaddr, self.netmask)
         self.networkinterface.bring_up()

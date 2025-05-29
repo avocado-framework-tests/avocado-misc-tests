@@ -141,7 +141,7 @@ class MultipathTest(Test):
                         return False
                     return True
 
-            # mutipath -f mpathX
+            # multipath -f mpathX
             test_mpath = path_dic["name"]
             self.log.info("flushing %s" % path_dic["name"])
             operation = 'block'

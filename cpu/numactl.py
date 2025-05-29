@@ -11,13 +11,11 @@
 #
 # See LICENSE for more details.
 #
-# Copyright: 2017 IBM
 # Copyright: 2022 IBM
 # Author:Praveen K Pandey <praveen@linux.vnet.ibm.com>
 #        :Shaik Abdulla <shaik.abdulla1@ibm.com>
 
 import os
-import netifaces
 from random import choice
 from avocado import Test
 from avocado.utils import archive, build, process, distro, memory, cpu, wait
@@ -70,23 +68,24 @@ class Numactl(Test):
         process.run('./configure', shell=True)
 
         build.make(self.sourcedir)
-
-        self.iface = self.params.get("interface", default="")
+        self.localhost = LocalHost()
+        self.interface = None
+        interfaces = os.listdir('/sys/class/net')
+        iface = self.params.get("interface", default="")
         self.disk = self.params.get("disk", default="")
-
-        if self.iface:
+        if iface:
+            if iface in interfaces:
+                self.interface = iface
+            elif self.localhost.validate_mac_addr(iface) and iface in self.localhost.get_all_hwaddr():
+                self.interface = self.localhost.get_interface_by_hwaddr(iface).name
+            else:
+                self.cancel("Please check the network device")
             self.ping_count = self.params.get("ping_count", default=100)
             self.peer = self.params.get("peer_ip", default="")
-            interfaces = netifaces.interfaces()
-            if not self.iface:
-                self.cancel("Please specify interface to be used")
-            if self.iface not in interfaces:
-                self.cancel("%s interface is not available" % self.iface)
             if not self.peer:
                 self.cancel("peer ip need to specify in YAML")
             self.ipaddr = self.params.get("host_ip", default="")
-            self.localhost = LocalHost()
-            self.networkinterface = NetworkInterface(self.iface,
+            self.networkinterface = NetworkInterface(self.interface,
                                                      self.localhost)
             if not self.networkinterface.validate_ipv4_format(self.ipaddr):
                 self.cancel("Host IP formatt in YAML is incorrect,"
@@ -136,13 +135,13 @@ class Numactl(Test):
 
     def check_numa_nodes(self):
         '''
-        :return: True when atleast two NUMA nodes with assigned CPU's
+        :return: True when at least two NUMA nodes with assigned CPU's
                  are available on system
         :return: False if the above condition has not met.
         :rtype: bool
         '''
         if len(cpu.get_numa_node_has_cpus()) < 2:
-            self.cancel("Required atleast two NUMA nodes with CPU"
+            self.cancel("Required at least two NUMA nodes with CPU"
                         " assigned for this test case!")
         else:
             return True
@@ -166,7 +165,7 @@ class Numactl(Test):
         if " 0% packet loss" not in output:
             self.cancel("failed due to packet loss")
 
-    def test(self):
+    def test_basic(self):
 
         if build.make(self.sourcedir, extra_args='-k -j 1'
                       ' test', ignore_status=True):
@@ -179,11 +178,11 @@ class Numactl(Test):
         '''
         To check memory interleave on NUMA nodes.
         '''
-        if not self.iface and not self.disk:
-            self.cancel("Network inferface or disk/device input missing")
-        if self.iface:
+        if not self.interface and not self.disk:
+            self.cancel("Network interface or disk/device input missing")
+        if self.interface:
             cmd = "numactl --interleave=all ping -I %s %s -c %s -f"\
-                % (self.iface, self.peer, self.ping_count)
+                % (self.interface, self.peer, self.ping_count)
             self.numa_ping(cmd)
 
         if self.disk:
@@ -199,11 +198,11 @@ class Numactl(Test):
         '''
         Test memory allocation on the current node
         '''
-        if not self.iface and not self.disk:
-            self.cancel("Network inferface or disk/device input missing")
-        if self.iface:
+        if not self.interface and not self.disk:
+            self.cancel("Network interface or disk/device input missing")
+        if self.interface:
             cmd = "numactl --localalloc ping -I %s %s -c %s -f"\
-                % (self.iface, self.peer, self.ping_count)
+                % (self.interface, self.peer, self.ping_count)
             self.numa_ping(cmd)
 
         if self.disk:
@@ -219,17 +218,17 @@ class Numactl(Test):
         '''
         Test Preferably allocate memory on node
         '''
-        if not self.iface and not self.disk:
-            self.cancel("Network inferface or disk/device input missing")
+        if not self.interface and not self.disk:
+            self.cancel("Network interface or disk/device input missing")
 
         if self.check_numa_nodes():
 
             self.node_number = [key for key in self.numa_dict.keys()][1]
 
-            if self.iface:
+            if self.interface:
                 cmd = "numactl --preferred=%s  ping -I %s %s -c %s -f" \
                         % (self.node_number,
-                           self.iface,
+                           self.interface,
                            self.peer,
                            self.ping_count)
                 self.numa_ping(cmd)
@@ -248,8 +247,8 @@ class Numactl(Test):
         '''
         Test CPU and memory bind
         '''
-        if not self.iface and not self.disk:
-            self.cancel("Network inferface or disk/device input missing")
+        if not self.interface and not self.disk:
+            self.cancel("Network interface or disk/device input missing")
         if self.check_numa_nodes():
             self.first_cpu_node_number = [key
                                           for key
@@ -260,13 +259,13 @@ class Numactl(Test):
             self.membind_node_number = [key
                                         for key
                                         in self.numa_dict.keys()][1]
-            if self.iface:
+            if self.interface:
                 for cpu in [self.first_cpu_node_number,
                             self.second_cpu_node_number]:
                     cmd = "numactl --cpunodebind=%s --membind=%s ping -I %s \
                            %s -c %s -f" % (cpu,
                                            self.membind_node_number,
-                                           self.iface,
+                                           self.interface,
                                            self.peer,
                                            self.ping_count)
                     self.numa_ping(cmd)
@@ -285,18 +284,18 @@ class Numactl(Test):
 
     def test_physical_cpu_bind(self):
         '''
-        Test physcial  CPU binds
+        Test physical  CPU binds
         '''
-        if not self.iface and not self.disk:
-            self.cancel("Network inferface or disk/device input missing")
+        if not self.interface and not self.disk:
+            self.cancel("Network interface or disk/device input missing")
         if self.check_numa_nodes():
             self.cpu_number = [value
                                for value
                                in self.numa_dict.values()][0][1]
-            if self.iface:
+            if self.interface:
 
                 cmd = "numactl --physcpubind=%s ping -I %s %s -c %s -f"\
-                    % (self.cpu_number, self.iface, self.peer, self.ping_count)
+                    % (self.cpu_number, self.interface, self.peer, self.ping_count)
                 self.numa_ping(cmd)
 
             if self.disk:
@@ -310,7 +309,7 @@ class Numactl(Test):
 
     def test_numa_pci_bind(self):
         '''
-        Test PCI binding to diferrent NUMA nodes
+        Test PCI binding to different NUMA nodes
         '''
         if self.check_numa_nodes():
             nodes = [node for node in self.numa_dict.keys()]
@@ -326,12 +325,12 @@ class Numactl(Test):
         '''
         Cleaning up Host IP address
         '''
-        if self.iface:
+        if self.interface:
             if self.networkinterface:
                 self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
                 try:
                     self.networkinterface.restore_from_backup()
                 except Exception:
                     self.networkinterface.remove_cfg_file()
-                    self.log.info("backup file not availbale,"
+                    self.log.info("backup file not available,"
                                   "could not restore file.")

@@ -51,7 +51,16 @@ class Errinjct(Test):
 
     def test_errinjct(self):
         self.log.info("===Executing errinjct tool====")
-        token = self.run_cmd_out("errinjct open| awk -F '=' '{print $2}'")
+        # Equivalent Python code for bash command
+        # errinjct open| awk -F '=' '{print $2}'
+        output = self.run_cmd_out("errinjct open")
+        token_flag = False
+        for line in output.splitlines():
+            if 'token' in line:
+                token = line.split("=")[1].strip()
+                token_flag = True
+        if not token_flag:
+            self.cancel("Can't open RTAS error injection facility.")
         runcmd = self.params.get('runcmd', default='corrupted-dcache-start')
         run_option = self.params.get(
             'run_option', default='-a 0 -C 0 --dry-run')

@@ -17,7 +17,7 @@
 import os
 import platform
 from avocado import Test
-from avocado.utils import cpu, distro, process
+from avocado.utils import cpu, distro, process, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -62,12 +62,12 @@ class hv_24x7_all_events(Test):
             perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % perf_args
         elif self.rev == '004e':
             perf_stat = "%s hv_24x7/CPM_TLBIE" % perf_args
-        elif self.rev == '0080':
+        elif self.rev in ['0080', '0082']:
             perf_stat = "%s hv_24x7/CPM_TLBIE_FIN" % perf_args
         event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
 
         # Check if this is a guest
-        # 24x7 is not suported on guest
+        # 24x7 is not supported on guest
         if "emulated by" in cpu._get_info():
             self.cancel("This test is not supported on guest")
 
@@ -87,25 +87,21 @@ class hv_24x7_all_events(Test):
                         " the 24x7 counters info")
 
         # Getting the number of cores and chips available in the machine
-        output = process.run("lscpu")
-        for line in output.stdout.decode("utf-8").split('\n'):
-            if 'Core(s) per socket:' in line:
-                self.cores = int(line.split(':')[1].strip())
-            if 'Physical sockets:' in line:
-                self.physical_sockets = int(line.split(':')[1].strip())
-            if 'Physical chips:' in line:
-                self.physical_chips = int(line.split(':')[1].strip())
-            # chip = physical socket x physical chip
-            self.chip = int(self.physical_sockets*self.physical_chips)
+        self.chips = cpu.lscpu()["chips"]
+        self.phys_cores = cpu.lscpu()["physical_cores"]
+        self.vir_cores = cpu.lscpu()["virtual_cores"]
 
         # Collect all hv_24x7 events
         self.list_of_hv_24x7_events = []
-        for lne in process.get_command_output_matching('perf list', 'hv_24x7'):
-            lne = lne.split(',')[0].split('/')[1]
-            self.list_of_hv_24x7_events.append(lne)
+        # Equivalent Python code for bash command
+        # "perf list | grep 'hv_24x7' | grep -v 'descriptor'
+        for lne in process.get_command_output_matching("perf list", 'hv_24x7'):
+            if 'descriptor' not in lne:
+                lne = lne.split(',')[0].split('/')[1]
+                self.list_of_hv_24x7_events.append(lne)
 
         # Clear the dmesg to capture the delta at the end of the test.
-        process.run("dmesg -C", sudo=True)
+        dmesg.clear_dmesg()
 
     def test_all_events(self):
         perf_args = "-v -e"
@@ -113,7 +109,11 @@ class hv_24x7_all_events(Test):
             if line.startswith('HP') or line.startswith('CP'):
                 # Running for domain range from 1-6
                 for domain in range(2, 7):
-                    for core in range(0, self.cores + 1):
+                    if domain == 2:
+                        core_range = self.phys_cores
+                    else:
+                        core_range = self.vir_cores
+                    for core in range(0, core_range):
                         events = "hv_24x7/%s,domain=%s,core=%s/" % \
                                  (line, domain, core)
                         cmd = 'perf stat %s %s sleep 1' % (perf_args, events)
@@ -121,8 +121,8 @@ class hv_24x7_all_events(Test):
                         if res.exit_status != 0 or b"not supported" in res.stderr:
                             self.fail_cmd.append(cmd)
             else:
-                for chip_item in range(0, self.chip):
-                    events = "hv_24x7/%s,chip=%s/" % (line, chip_item)
+                for chip_item in range(0, self.chips):
+                    events = "hv_24x7/%s,domain=1,chip=%s/" % (line, chip_item)
                     cmd = "perf stat %s %s sleep 1" % (perf_args, events)
                     res = process.run(cmd, ignore_status=True)
                     if res.exit_status != 0 or b"not supported" in res.stderr:

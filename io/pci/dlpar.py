@@ -67,9 +67,16 @@ class DlparPci(Test):
         if not self.server:
             self.cancel("Managed System not got")
         self.lpar_2 = self.params.get("lpar_2", default=None)
+        self.pci_device = self.params.get("pci_devices", default=None).split(' ')
+        self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
+
+    def set_adapter_details(self, pci_device):
+        '''
+        Function helps to set up and prepare environment for dlpar test
+        '''
         # lshwres command can return message No results were found
         # in case hardware discovery is not done yet or needs to be refreshed.
-        # Handle such condition in the scipt and skip the test in such case.
+        # Handle such condition in the script and skip the test in such case.
         no_result = 'No results were found'
         if self.lpar_2 is not None:
             cmd = 'lshwres -r io -m %s --rsubtype slot --filter \
@@ -79,14 +86,12 @@ class DlparPci(Test):
                 self.log.warn("Incomplete hardware discovery!!. Refresh it")
                 self.cancel("Incomplete hardware discovery, skipping tests")
             self.lpar2_id = output.stdout_text[0]
-        self.pci_device = self.params.get("pci_device", default=None)
-        self.loc_code = pci.get_slot_from_sysfs(self.pci_device)
-        self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
+        self.loc_code = pci.get_slot_from_sysfs(pci_device)
         if self.loc_code is None:
             self.cancel("Failed to get the location code for the pci device")
-        self.adapter_type = pci.get_pci_class_name(self.pci_device)
+        self.adapter_type = pci.get_pci_class_name(pci_device)
         if self.adapter_type == 'nvme':
-            self.contr_name = nvme.get_controller_name(self.pci_device)
+            self.contr_name = nvme.get_controller_name(pci_device)
             self.ns_list = nvme.get_current_ns_ids(self.contr_name)
         self.session.cmd("uname -a")
         if self.sriov == "yes":
@@ -196,32 +201,40 @@ class DlparPci(Test):
         '''
         DLPAR remove, add and move operations from lpar_1 to lpar_2
         '''
-        for _ in range(self.num_of_dlpar):
-            self.dlpar_remove()
-            self.dlpar_add()
-            self.validation_in_os()
-            self.dlpar_move()
+        for pci in self.pci_device:
+            self.set_adapter_details(pci)
+            for _ in range(self.num_of_dlpar):
+                self.dlpar_remove()
+                self.dlpar_add()
+                self.validation_in_os(pci)
+                self.dlpar_move()
 
     def test_drmgr_pci(self):
         '''
         drmgr remove, add and replace operations
         '''
-        for _ in range(self.num_of_dlpar):
-            self.do_drmgr_pci('r')
-            self.do_drmgr_pci('a')
-            self.validation_in_os()
-        for _ in range(self.num_of_dlpar):
-            self.do_drmgr_pci('R')
-            self.validation_in_os()
+        if self.sriov == "yes":
+            self.cancel("drmgr -c pci test is not supported for this device")
+        for pci in self.pci_device:
+            self.set_adapter_details(pci)
+            for _ in range(self.num_of_dlpar):
+                self.do_drmgr_pci('r')
+                self.do_drmgr_pci('a')
+                self.validation_in_os(pci)
+            for _ in range(self.num_of_dlpar):
+                self.do_drmgr_pci('R')
+                self.validation_in_os(pci)
 
     def test_drmgr_phb(self):
         '''
         drmgr remove, add and replace operations
         '''
-        for _ in range(self.num_of_dlpar):
-            self.do_drmgr_phb('r')
-            self.do_drmgr_phb('a')
-            self.validation_in_os()
+        for pci in self.pci_device:
+            self.set_adapter_details(pci)
+            for _ in range(self.num_of_dlpar):
+                self.do_drmgr_phb('r')
+                self.do_drmgr_phb('a')
+                self.validation_in_os(pci)
 
     def do_drmgr_pci(self, operation):
         '''
@@ -381,7 +394,7 @@ class DlparPci(Test):
             self.log.debug(cmd.stderr)
             self.fail("dlpar %s operation failed" % msg)
 
-    def validation_in_os(self):
+    def validation_in_os(self, pci_device):
         '''
         validating the adapter functionality after from OS adapter added
         '''
@@ -389,7 +402,7 @@ class DlparPci(Test):
             """
             Returns True if pci device is added, False otherwise.
             """
-            if self.pci_device not in pci.get_pci_addresses():
+            if pci_device not in pci.get_pci_addresses():
                 return False
             return True
 
@@ -408,7 +421,7 @@ class DlparPci(Test):
 
             curr_path = ''
             err_disks = []
-            disks = pci.get_disks_in_pci_address(self.pci_device)
+            disks = pci.get_disks_in_pci_address(pci_device)
             for disk in disks:
                 curr_path = disk.split("/")[-1]
                 self.log.info("curr_path=%s" % curr_path)
@@ -423,17 +436,17 @@ class DlparPci(Test):
 
         def net_recovery_check():
             """
-            Checks if the network adapter fuctionality like ping/link_state,
+            Checks if the network adapter functionality like ping/link_state,
             after adapter added back.
-            Returns True on propper Recovery, False if not.
+            Returns True on proper Recovery, False if not.
             """
             self.log.info("entering the net recovery check")
             local = LocalHost()
-            iface = pci.get_interfaces_in_pci_address(self.pci_device, 'net')
+            iface = pci.get_interfaces_in_pci_address(pci_device, 'net')
             networkinterface = NetworkInterface(iface[0], local)
             if wait.wait_for(networkinterface.is_link_up, timeout=120):
                 if networkinterface.ping_check(self.peer_ip, count=5) is None:
-                    self.log.info("inteface is up and pinging")
+                    self.log.info("interface is up and pinging")
                     return True
             return False
 

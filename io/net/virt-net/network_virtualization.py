@@ -35,6 +35,10 @@ from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
 from avocado.utils.ssh import Session
 from avocado.utils import wait
+from avocado.utils import linux
+from pexpect import pxssh
+import re
+from avocado.utils.network.hosts import RemoteHost
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
@@ -111,7 +115,7 @@ class NetworkVirtualization(Test):
         self.vios_ip = self.params.get('vios_ip', default=None)
         self.vios_user = self.params.get('vios_username', default=None)
         self.vios_pwd = self.params.get('vios_pwd', default=None)
-        self.count = int(self.params.get('vnic_test_count', default="1"))
+        self.count = int(self.params.get('count', default="1"))
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
         self.device_ip = self.params.get('device_ip', default=None).split(' ')
         self.mac_id = self.params.get('mac_id',
@@ -119,6 +123,14 @@ class NetworkVirtualization(Test):
         self.mac_id = [mac.replace(':', '') for mac in self.mac_id]
         self.netmask = self.params.get('netmasks', default=None).split(' ')
         self.peer_ip = self.params.get('peer_ip', default=None).split(' ')
+        self.peer_user = self.params.get('peer_user', default=None)
+        self.peer_password = self.params.get('peer_password', default=None)
+        self.host_public_ip = self.params.get('host_public_ip', default=None)
+        self.host_user = self.params.get('user_name', default=None)
+        self.host_password = self.params.get('host_password', default=None)
+        self.is_mlx_driver = self.params.get('is_mlx_driver', default=True)
+        self.tx_channel = self.params.get('tx_channel', default=10)
+        self.rx_channel = self.params.get('rx_channel', default=10)
         dmesg.clear_dmesg()
         self.session_hmc.cmd("uname -a")
         cmd = 'lssyscfg -m ' + self.server + \
@@ -148,10 +160,13 @@ class NetworkVirtualization(Test):
                'failover' in str(self.name.name):
                 self.cancel("this test is not needed")
         self.local = LocalHost()
-        cmd = "echo 'module ibmvnic +pt; func send_subcrq -pt' > /sys/kernel/debug/dynamic_debug/control"
-        result = process.run(cmd, shell=True, ignore_status=True)
-        if result.exit_status:
-            self.fail("failed to enable debug mode")
+        if not linux.is_os_secureboot_enabled():
+            cmd = "echo 'module ibmvnic +pt; func send_subcrq -pt' > /sys/kernel/debug/dynamic_debug/control"
+            result = process.run(cmd, shell=True, ignore_status=True)
+            if result.exit_status:
+                self.fail("failed to enable debug mode")
+        else:
+            self.log.info("Continue test with debug mode disabled")
 
     @staticmethod
     def get_mcp_component(component):
@@ -218,7 +233,7 @@ class NetworkVirtualization(Test):
         '''
         smm = SoftwareManager()
         packages = ['ksh', 'src', 'rsct.basic', 'rsct.core.utils',
-                    'rsct.core', 'DynamicRM', 'powerpc-utils']
+                    'rsct.core', 'DynamicRM', 'powerpc-utils', 'irqbalance']
         detected_distro = distro.detect()
         if detected_distro.name == "Ubuntu":
             packages.extend(['python-paramiko'])
@@ -235,6 +250,39 @@ class NetworkVirtualization(Test):
                 shutil.copy(deb_install, self.workdir)
                 process.system("dpkg -i %s/%s" % (self.workdir, deb),
                                ignore_status=True, sudo=True)
+
+    def tune_rxtx_queue(self):
+        """
+        Increase rx/tx queues to 16 for test interface
+        """
+        self.remotehost = RemoteHost(self.peer_ip[0], self.peer_user,
+                                     password=self.peer_password)
+        peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip[0]).name
+        cmd = "ethtool -L %s rx %s tx %s" % (peer_interface, self.rx_channel, self.tx_channel)
+        output = self.session_peer.cmd(cmd)
+        if not output:
+            self.cancel("Unable to tune RX and TX queue in peer")
+        device = self.find_device(self.mac_id[0])
+        cmd = "ethtool -L %s rx %s tx %s" % (device, self.rx_channel, self.tx_channel)
+        result = process.run(cmd)
+        if result.exit_status:
+            self.cancel("Unable to tune RX and TX queue in host")
+
+    def enable_irqbalance(self):
+        """
+        Enable irqbalance service on host and peer
+        """
+        cmd_start = "systemctl start irqbalance"
+        self.session_peer.cmd(cmd_start)
+        cmd_status = "systemctl status irqbalance"
+        output = self.session_peer.cmd(cmd_status).stdout_text.splitlines()
+        for line in output:
+            if re.search("Active: active (running)", line):
+                self.log.info("irqbalance service is active in peer")
+        process.system(cmd_start)
+        for line in process.system_output(cmd_status).decode("utf-8").splitlines():
+            if re.search("Active: active (running)", line):
+                self.log.info("irqbalance service is active in host")
 
     def test_add(self):
         '''
@@ -272,6 +320,11 @@ class NetworkVirtualization(Test):
                        virtualized device")
             if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
                 self.fail("Ping failed with active vnic device")
+        self.session_peer = Session(self.peer_ip[0], user=self.peer_user, password=self.peer_password)
+        if not wait.wait_for(self.session_peer.connect, timeout=30):
+            self.fail("Failed connecting to peer lpar")
+        self.enable_irqbalance()
+        self.tune_rxtx_queue()
         self.check_dmesg_error()
 
     def test_backingdevadd(self):
@@ -562,7 +615,7 @@ class NetworkVirtualization(Test):
             device_name = self.find_device(mac)
             networkinterface = NetworkInterface(device_name, self.local)
             count = 0
-            self.log.info("Preforming DLPAR on %s" % device_name)
+            self.log.info("Performing DLPAR on %s" % device_name)
             for _ in range(self.num_of_dlpar):
                 self.log.info("DLPAR iteration #%d" % count)
                 num_backingdevs = self.backing_dev_count_w_slot_num(slot_no)
@@ -593,6 +646,84 @@ class NetworkVirtualization(Test):
                     self.fail("dlpar has affected Network connectivity")
                 count += 1
         self.check_dmesg_error()
+
+    def test_vnic_eeh(self):
+        """
+        Perform EEH on vnic interface from vios
+        """
+        if self.backing_dev_count() == 1:
+            self.cancel("EEH cannot be tested as the interface has single backing device")
+        current_logport = self.get_active_device_logport(self.slot_num[0])
+        if not self.original_logport == current_logport:
+            self.trigger_failover(self.original_logport)
+        else:
+            self.log.info("Unable to set the logport to original one")
+        time.sleep(5)
+        self.session = Session(self.vios_ip, user=self.vios_user,
+                               password=self.vios_pwd)
+        self.session.cleanup_master()
+        if not wait.wait_for(self.session.connect, timeout=30):
+            self.fail("Failed connecting to VIOS")
+        cmd = "ioscli lsmap -all -vnic -cpid %s" % self.lpar_id
+        vnic_servers = self.session.cmd(cmd).stdout_text.splitlines()
+        device = self.find_device(self.mac_id[0])
+        temp_idx = vnic_servers.index("Client device name:" + device)
+        vnic_backingdevice = vnic_servers[temp_idx - 3].split(":")[1]
+        vios = pxssh.pxssh()
+        try:
+            vios.login(self.vios_ip, self.vios_user, self.vios_pwd)
+        except Exception:
+            self.warn("Unable to login to vios")
+        time.sleep(2)
+        vios.sendline("oem_setup_env")
+        time.sleep(5)
+        eeh_tool_64 = self.params.get('eeh_tool', default='eeh_tool_64')
+        eeh_tool_64 = self.get_data(eeh_tool_64)
+        cmd = "scp %s@%s:%s ." % (self.host_user, self.host_public_ip, eeh_tool_64)
+        vios.sendline(cmd)
+        time.sleep(3)
+        vios.sendline(self.host_password)
+        time.sleep(5)
+        vios.sendline("kdb")
+        time.sleep(5)
+        vios.sendline("set scroll false")
+        time.sleep(5)
+        if self.is_mlx_driver:
+            cmd = "mlxcent setacs %s" % vnic_backingdevice
+            vios.sendline(cmd)
+            time.sleep(2)
+            vios.sendline("mlxcent pollq 0")
+            vios.prompt()
+            mapstart = vios.before.decode("utf-8").split("\r\n ")
+            for i in mapstart:
+                if re.search("map_start", i):
+                    map_start_value = i.split("=")[1]
+            vios.sendline("quit")
+            cmd = "./eeh_tool_64 %s 3 15 -w 64 -a %s -m 0xFFFFFFFFFFFFF000" % (vnic_backingdevice, map_start_value)
+            vios.sendline(cmd)
+            time.sleep(5)
+        else:
+            cmd = "lnc2ent setacs %s" % vnic_backingdevice
+            vios.sendline(cmd)
+            time.sleep(2)
+            cmd = "lnc2ent hw pollq 0"
+            vios.sendline(cmd)
+            vios.prompt()
+            tcestart = vios.before.decode("utf-8").split("\r\n ")
+            for i in tcestart:
+                if re.search("tce_start", i):
+                    tce_start_value = i.split("=")[1]
+            vios.sendline("quit")
+            cmd = "./eeh_tool_64 %s 3 15 -w 64 -a %s -m 0xFFFFFFFFFFFFF000" % (vnic_backingdevice, tce_start_value)
+            vios.sendline(cmd)
+            time.sleep(5)
+        active_logport = self.get_active_device_logport(self.slot_num[0])
+        if current_logport == active_logport:
+            self.fail("EEH unsuccessful as there is no failover triggered on the OS")
+        device = self.find_device(self.mac_id[0])
+        networkinterface = NetworkInterface(device, self.local)
+        if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
+            self.fail("Ping to peer failed. EEH has affected Network connectivity")
 
     def backing_dev_count_w_slot_num(self, slot):
         """
@@ -1009,10 +1140,18 @@ class NetworkVirtualization(Test):
         """
         error = ['uevent: failed to send synthetic uevent',
                  'Invalid request detected while CRQ is inactive',
-                 'failed to send uevent', 'registration failed']
+                 'failed to send uevent', 'registration failed',
+                 'CRQ-init failed, -11']
+        error_list = ["Virtual Adapter failed", "Failed to set link state"]
+        if 'test_remove' not in str(self.name.name):
+            device = self.find_device(self.mac_id[0])
+            networkinterface = NetworkInterface(device, self.local)
+            for err in error_list:
+                if networkinterface.ping_check(self.peer_ip[0], count=5) is None:
+                    error.append(err)
         self.log.info("Gathering kernel errors if any")
         try:
-            dmesg.collect_errors_by_level(skip_errors=error)
+            dmesg.collect_errors_by_level(level_check=4, skip_errors=error)
         except Exception as exc:
             self.log.info(exc)
             self.fail("test failed,check dmesg log in debug log")
@@ -1025,7 +1164,10 @@ class NetworkVirtualization(Test):
         except Exception:
             self.log.debug("Unable to set back the original active device")
         self.session_hmc.quit()
-        cmd = "echo 'module ibmvnic -pt; func send_subcrq -pt' > /sys/kernel/debug/dynamic_debug/control"
-        result = process.run(cmd, shell=True, ignore_status=True)
-        if result.exit_status:
-            self.log.debug("failed to disable debug mode")
+        if not linux.is_os_secureboot_enabled():
+            cmd = "echo 'module ibmvnic -pt; func send_subcrq -pt' > /sys/kernel/debug/dynamic_debug/control"
+            result = process.run(cmd, shell=True, ignore_status=True)
+            if result.exit_status:
+                self.log.debug("failed to disable debug mode")
+        if 'test_add' in str(self.name.name):
+            self.session_peer.quit()

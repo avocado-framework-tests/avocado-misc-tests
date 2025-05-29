@@ -162,9 +162,12 @@ class HtxTest(Test):
         Execute 'HTX' with appropriate parameters.
         """
         self.setup_htx()
-        self.log.info("Starting the HTX Deamon")
-        process.run("/usr/lpp/htx/etc/scripts/htxd_run")
-
+        self.log.info("Stopping existing HXE process")
+        hxe_pid = process.getoutput("pgrep -f hxe")
+        if hxe_pid:
+            self.log.info("HXE is already running with PID: %s. Killing it.", hxe_pid)
+            process.run("hcl -shutdown", ignore_status=True)
+            time.sleep(20)
         self.log.info("Creating the HTX mdt files")
         process.run("htxcmdline -createmdt")
 
@@ -221,7 +224,7 @@ class HtxTest(Test):
                 device.append(dev)
         if device:
             self.log.info(
-                f"block_devices {device} are not avalable in {self.mdt_file} ")
+                f"block_devices {device} are not available in {self.mdt_file} ")
         self.log.info(
             f"BLOCK DEVICES {self.block_device} ARE AVAILABLE {self.mdt_file}")
         return True

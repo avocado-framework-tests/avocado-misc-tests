@@ -1,7 +1,7 @@
 stress-ng test
 --------------
 Stress-ng exercises various subsystems as well as kernel interfaces. 
-It has 175 stressor covering CPU, MEMORY, IO, INTERUPT, SCHEDULER, VM code paths.
+It has 175 stressor covering CPU, MEMORY, IO, INTERRUPT, SCHEDULER, VM code paths.
 
 Running stress-ng with root privileges will adjust out of memory settings on Linux systems 
 to make the stressors unkillable in low memory situations, so use this judiciously. 

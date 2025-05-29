@@ -104,7 +104,7 @@ class Unixbench(Test):
                 break
 
         if self.err is not None:
-            self.fail('Test failure  Has been Occured \n %s' % self.err)
+            self.fail('Test failure  Has been Occurred \n %s' % self.err)
         else:
             self.log.info('System Benchmarks Index Score is %s \n'
                           'Please check log for full stat\n', keyval['score'])

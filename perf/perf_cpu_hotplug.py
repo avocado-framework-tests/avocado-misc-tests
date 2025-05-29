@@ -16,6 +16,7 @@
 
 import os
 import platform
+import random
 from avocado import Test
 from avocado.utils import cpu, dmesg, distro, genio
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -56,19 +57,16 @@ class perf_cpu_hotplug(Test):
         3. Offline the cpumask CPU and check cpumask moved to new CPU or not
         """
         smm = SoftwareManager()
-        processor_type = genio.read_file("/proc/cpuinfo")
-
+        self.rev = cpu.get_revision()
         detected_distro = distro.detect()
+
         # Offline cpu list during the test
         self.cpu_off = []
 
         if 'ppc64' not in detected_distro.arch:
             self.cancel("Processor is not PowerPC")
-        for line in processor_type.splitlines():
-            if 'revision' in line:
-                self.rev = (line.split(':')[1])
-                if '0080' not in self.rev:
-                    self.cancel("Test is supported only on Power10")
+        if self.rev not in ['0080', '0082']:
+            self.cancel("Test is supported on Power10 and above")
 
         deps = ['gcc', 'make']
         if 'Ubuntu' in detected_distro.name:
@@ -87,7 +85,7 @@ class perf_cpu_hotplug(Test):
         hvgpci_present = False
         self.hv24x7_cpumask = False
         self.hvpgci_cpumask = False
-
+        self.events = ["hv_24x7", "hv_gpci"]
         hv24x7_present, self.hv24x7_cpumask = self._check_file("hv_24x7")
         hvgpci_present, self.hvpgci_cpumask = self._check_file("hv_gpci")
 
@@ -110,33 +108,53 @@ class perf_cpu_hotplug(Test):
         cpu_file = "/sys/bus/cpu/devices/cpu%s/online" % cpu_number
         if disable_flag:
             genio.write_one_line(cpu_file, "0")
-            self.log.info("Offline CPU: %s" % cpu_number)
+            self.log.info("Offlined CPU: %s" % cpu_number)
         else:
             genio.write_one_line(cpu_file, "1")
-            self.log.info("Online CPU: %s" % cpu_number)
+            self.log.info("Onlined CPU: %s" % cpu_number)
 
-    def _check_cpumask(self):
-        hv24x7_cpu = self._get_cpumask("hv_24x7")
-        hvgpci_cpu = self._get_cpumask("hv_gpci")
-        self.log.info("hv_24x7 cpumask = %s, hv_gpci cpumask = %s"
-                      % (hv24x7_cpu, hvgpci_cpu))
-        if hv24x7_cpu != hvgpci_cpu:
-            self.fail("cpumask values of hv24x7 and hv_gpci are not same.")
+    def test_cpumask_cpu_off_random(self):
+        """ Checks if the events hv_24X7 and hv_gpci points to any
+        offline cpu while randomly offlining n-1 CPUs """
+        for event in self.events:
+            for i in range(0, len(self.online_cpus)-1):
+                cpuno = random.choice(self.online_cpus)
+                self.log.info("Randomly offlining cpu no : %s" % cpuno)
+                self._cpu_on_off(cpuno)
+                self.cpu_off.append(cpuno)
+                new_event_cpu = self._get_cpumask(event)
+                self.log.info("Current cpumask of the %s event : %s " %
+                              (event, new_event_cpu))
+                self.online_cpus = cpu.online_list()
+                self.log.info("Updated online CPU list: %s" % self.online_cpus)
+                self.log.info("Updated offline CPU list:%s" % self.cpu_off)
+                if new_event_cpu not in self.online_cpus:
+                    self.fail("%s points to an offline cpu" % event)
+            for cpus in self.cpu_off:
+                self._cpu_on_off(cpus, disable_flag=False)
+                self.online_cpus = cpu.online_list()
 
-    def test_cpumask(self):
-        self._check_cpumask()
-
-    def test_cpumask_cpu_off(self):
-        disable_cpu = self._get_cpumask("hv_24x7")
-        self._cpu_on_off(disable_cpu)
-        current_cpu = self._get_cpumask("hv_24x7")
-        self.log.info("Current CPU: %s" % current_cpu)
-        if current_cpu in self.online_cpus and disable_cpu != current_cpu:
-            self.cpu_off.append(disable_cpu)
-        self._check_cpumask()
-
-    def tearDown(self):
-        dmesg.collect_dmesg()
-        if self.cpu_off:
-            for cpu in self.cpu_off:
-                self._cpu_on_off(cpu, disable_flag=False)
+    def test_cpumask_cpu_off_sequence(self):
+        """ Offlines the cpu pointed to by events hv_24X7 and hv_gpci
+        for n-1 times and  checks each time if the new cpu pointed
+        to by the events is an offline cpu """
+        for event in self.events:
+            for i in range(0, len(self.online_cpus)-1):
+                event_cpu = self._get_cpumask(event)
+                self.log.info("Offlining current cpu %s of %s event"
+                              % (event_cpu, event))
+                self._cpu_on_off(event_cpu)
+                self.cpu_off.append(event_cpu)
+                new_event_cpu = self._get_cpumask(event)
+                self.log.info("New cpumask of %s event : %s" %
+                              (event, new_event_cpu))
+                self.online_cpus = cpu.online_list()
+                self.log.info("Updated online CPU list: %s" % self.online_cpus)
+                self.log.info("Updated offline CPU list:%s" % self.cpu_off)
+                if event_cpu in self.online_cpus:
+                    self.fail("CPU offlining failed")
+                elif new_event_cpu == event_cpu | new_event_cpu not in self.online_cpus:
+                    self.fail("%s points to an offline cpu" % event)
+            for cpus in self.cpu_off:
+                self._cpu_on_off(cpus, disable_flag=False)
+                self.online_cpus = cpu.online_list()

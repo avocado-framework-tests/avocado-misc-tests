@@ -74,7 +74,7 @@ class PmemDeviceMapper(Test):
         self.dist = distro.detect()
         package = self.params.get('package', default='distro')
         self.preserve_dm = self.params.get('preserve_dm', default=False)
-
+        self.dm_disk = None
         if self.dist.name not in ['SuSE', 'rhel']:
             self.cancel('Unsupported OS %s' % self.dist.name)
 
@@ -123,7 +123,7 @@ class PmemDeviceMapper(Test):
 
         self.plib = pmem.PMem(self.ndctl, self.daxctl)
         if not self.plib.check_buses():
-            self.cancel("Test needs atleast one region")
+            self.cancel("Test needs at least one region")
 
     @avocado.fail_on(pmem.PMemException)
     def test(self):
@@ -184,8 +184,8 @@ class PmemDeviceMapper(Test):
         if process.system(dm_cmd, shell=True, sudo=True, ignore_status=True):
             self.fail("Creating DM failed")
         self.log.info("Running FIO on device-mapper")
-        dm_disk = "/dev/mapper/linear-pmem"
-        self.part = partition.Partition(dm_disk)
+        self.dm_disk = "/dev/mapper/linear-pmem"
+        self.part = partition.Partition(self.dm_disk)
         self.part.mkfs(fstype='xfs', args='-b size=%s -s size=512 -m reflink=0' %
                        memory.get_page_size())
         mnt_path = self.params.get('mnt_point', default='/pmem')
@@ -202,8 +202,8 @@ class PmemDeviceMapper(Test):
 
     @avocado.fail_on(pmem.PMemException)
     def tearDown(self):
-        if hasattr(self, 'part'):
-            self.part.unmount()
+        if self.dm_disk:
+            process.system('umount %s' % self.dm_disk, ignore_status=True)
         if not self.preserve_dm and hasattr(self, 'plib'):
             process.system('dmsetup remove linear-pmem',
                            sudo=True, ignore_status=True)

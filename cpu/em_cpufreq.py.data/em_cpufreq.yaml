@@ -1,0 +1,2 @@
+test_loop : 10
+cpufreq_diff_threshold : 10000

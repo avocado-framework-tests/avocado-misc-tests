@@ -49,7 +49,7 @@ class Pmqa(Test):
                 self.cancel(
                     "Fail to install %s required for this test." % package)
 
-        git.get_repo('git://git.linaro.org/power/pm-qa.git',
+        git.get_repo('https://git.linaro.org/power/pm-qa.git',
                      destination_dir=self.workdir)
         self.test_type = self.params.get('run_arg', default='cpufreq')
 

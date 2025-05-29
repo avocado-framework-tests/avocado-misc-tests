@@ -109,7 +109,7 @@ class Iperf(Test):
         elif detected_distro.name in ['rhel', 'fedora', 'redhat']:
             cmd_fw = "systemctl stop firewalld"
         elif detected_distro.name == "SuSE":
-            if detected_distro.version == 15:
+            if detected_distro.version >= 15:
                 cmd_fw = "systemctl stop firewalld"
             else:
                 cmd_fw = "rcSuSEfirewall2 stop"
@@ -190,22 +190,38 @@ class Iperf(Test):
         messages using multiple threads or processes.
         """
         speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
+        if speed == 100000:
+            iperf_pthread = 10
+        elif speed == 25000:
+            iperf_pthread = 4
         os.chdir(self.iperf)
-        cmd = "./iperf -c %s" % self.peer_ip
+        if self.networkinterface.is_vnic() or self.hbond:
+            cmd = "iperf -c %s -P %s -t 20 -i 5" % (self.peer_ip, iperf_pthread)
+        else:
+            cmd = "./iperf -c %s" % self.peer_ip
         result = process.run(cmd, shell=True, ignore_status=True)
         nping_result = self.nping()
         if result.exit_status:
             self.fail("FAIL: Iperf Run failed")
-        for line in result.stdout.decode("utf-8").splitlines():
-            if 'local {}'.format(self.ipaddr) in line:
-                id = line[3]
-        for line in result.stdout.decode("utf-8").splitlines():
-            if id in line and 'Mbits/sec' in line:
-                tput = int(line.split()[6])
-            elif id in line and 'Gbits/sec' in line:
-                tput = int(float(line.split()[6])) * 1000
-            elif id in line and 'Kbits/sec' in line:
-                tput = int(float(line.split()[6])) / 1000
+        if self.networkinterface.is_vnic() or self.hbond:
+            for line in result.stdout.decode("utf-8").splitlines():
+                if 'SUM' in line and 'Mbits/sec' in line:
+                    tput = int(line.split()[5])
+                elif 'SUM' in line and 'Gbits/sec' in line:
+                    tput = int(float(line.split()[5])) * 1000
+                elif 'SUM' in line and 'Kbits/sec' in line:
+                    tput = int(float(line.split()[5])) / 1000
+        else:
+            for line in result.stdout.decode("utf-8").splitlines():
+                if 'local {}'.format(self.ipaddr) in line:
+                    id = line[3]
+            for line in result.stdout.decode("utf-8").splitlines():
+                if id in line and 'Mbits/sec' in line:
+                    tput = int(line.split()[6])
+                elif id in line and 'Gbits/sec' in line:
+                    tput = int(float(line.split()[6])) * 1000
+                elif id in line and 'Kbits/sec' in line:
+                    tput = int(float(line.split()[6])) / 1000
         if tput < (int(self.expected_tp) * speed) / 100:
             self.fail("FAIL: Throughput Actual - %s%%, Expected - %s%%"
                       ", Throughput Actual value - %s "
@@ -239,7 +255,7 @@ class Iperf(Test):
                 self.networkinterface.restore_from_backup()
             except Exception:
                 self.networkinterface.remove_cfg_file()
-                self.log.info("backup file not availbale, could not restore file.")
+                self.log.info("backup file not available, could not restore file.")
             if self.hbond:
                 self.networkinterface.restore_slave_cfg_file()
             self.remotehost.remote_session.quit()

@@ -72,16 +72,40 @@ class Ebizzy(Test):
 
         patch = self.params.get(
             'patch', default='Fix-build-issues-with-ebizzy.patch')
+        patch_cmd = 'patch -p0 < %s' % os.path.abspath((self.get_data(patch)))
         os.chdir(self.sourcedir)
-        patch_cmd = 'patch -p0 < %s' % (self.get_data(patch))
         process.run(patch_cmd, shell=True)
         process.run('[ -x configure ] && ./configure', shell=True)
         build.make(self.sourcedir)
 
-    # Note: default we use always mmap()
-    def test(self):
+    def create_json_dump(self, stdout_output):
+        # Define regex patterns to capture the data
+        patterns = {
+            'cpu_clock': r'([\d.]+)\s+msec cpu-clock',
+            'context_switches': r'([\d.]+)\s+context-switches',
+            'cpu_migrations': r'([\d.]+)\s+cpu-migrations',
+            'page_faults': r'([\d.]+)\s+page-faults',
+            'cycles': r'([\d.]+)\s+cycles',
+            'instructions': r'([\d.]+)\s+instructions',
+            'branches': r'([\d.]+)\s+branches',
+            'branch_misses': r'([\d.]+)\s+branch-misses',
+            'elapsed_time': r'([\d.]+)\s+seconds elapsed'
+        }
 
-        iterations = self.params.get('iterations', default=5)
+        # Extract data using regex
+        extracted_data = {}
+        for key, pattern in patterns.items():
+            match = re.search(pattern, stdout_output)
+            if match:
+                extracted_data[key] = float(match.group(1))
+
+        return extracted_data
+
+    def test(self):
+        ebizzy_payload = []
+        ebizzy_dir = self.logdir + "/ebizzy_workload"
+        os.makedirs(ebizzy_dir, exist_ok=True)
+        iterations = self.params.get('iterations', default=2)
         perfstat = self.params.get('perfstat', default='')
         if perfstat:
             perfstat = 'perf stat ' + perfstat
@@ -99,22 +123,41 @@ class Ebizzy(Test):
 
         os.makedirs(os.path.join(self.logdir, "ebizzy_run"))
         for ite in range(iterations):
-            results = process.system_output('%s %s %s/ebizzy %s'
-                                            % (perfstat, taskset, self.sourcedir, args)).decode("utf-8")
+            results = process.run('%s %s %s/ebizzy %s'
+                                  % (perfstat, taskset, self.sourcedir, args))
+            stderr_output = results.stderr
+            stdout_output = results.stdout
+            ebizzy_payload = ebizzy_dir + "/ebizzy.log"
+            with open(ebizzy_payload, "a") as payload:
+                payload.write("==================Iteration {}============= \
+                        \n".format(str(ite)))
+                lines = stdout_output.splitlines()
+                lines1 = stderr_output.splitlines()
+                ebizzy_payload = lines + lines1
+                for line in ebizzy_payload:
+                    decoded_string = line.decode('utf-8')
+                    cleaned_string = decoded_string.lstrip('\t')
+                    payload.write(cleaned_string + '\n')
+
             pattern = re.compile(r"(.*?) records/s")
-            records = pattern.findall(results)[0]
+            records = pattern.findall(stdout_output.decode("utf-8"))[0]
             pattern = re.compile(r"real (.*?) s")
-            real = pattern.findall(results)[0].strip()
+            real = pattern.findall(stdout_output.decode("utf-8"))[0].strip()
             pattern = re.compile(r"user (.*?) s")
-            usr_time = pattern.findall(results)[0].strip()
+            usr_time = pattern.findall(
+                stdout_output.decode("utf-8"))[0].strip()
             pattern = re.compile(r"sys (.*?) s")
-            sys_time = pattern.findall(results)[0].strip()
+            sys_time = pattern.findall(
+                stdout_output.decode("utf-8"))[0].strip()
+            perf_stat = self.create_json_dump(stderr_output.decode("utf-8"))
             json_object = json.dumps({'records': records,
                                       'real_time': real,
                                       'user': usr_time,
-                                      'sys': sys_time})
+                                      'sys': sys_time,
+                                      'perf_stat': perf_stat})
 
             logfile = os.path.join(
                 self.logdir, "ebizzy_run", "run_%s.json" % (ite + 1))
-            with open(logfile, "w") as outfile:
+            ebizzy_log = ebizzy_dir + "/ebizzy[" + str(ite) + "].json"
+            with open(ebizzy_log, "w") as outfile:
                 outfile.write(json_object)

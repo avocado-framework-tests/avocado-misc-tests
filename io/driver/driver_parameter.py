@@ -15,7 +15,7 @@
 # Author: Manvanthara Puttashankar<manvanth@linux.vnet.ibm.com>
 
 """
-This Script verfies driver module parameter.
+This Script verifies driver module parameter.
 """
 import os
 import time
@@ -30,7 +30,7 @@ from avocado.utils.network.interfaces import NetworkInterface
 class Moduleparameter(Test):
 
     """
-    This Script verfies driver module parameter.
+    This Script verifies driver module parameter.
     """
 
     def setUp(self):

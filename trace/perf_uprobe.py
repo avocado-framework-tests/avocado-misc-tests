@@ -37,6 +37,8 @@ class PerfUprobe(Test):
         '''
 
         # Check for basic utilities
+
+        self.temp_file = tempfile.NamedTemporaryFile().name
         smm = SoftwareManager()
         self.detected_distro = distro.detect()
         self.distro_name = self.detected_distro.name
@@ -65,7 +67,6 @@ class PerfUprobe(Test):
 
         build.make(self.teststmpdir)
         os.chdir(self.teststmpdir)
-        self.temp_file = tempfile.NamedTemporaryFile().name
         self.cmdProbe = "perf probe -x"
         self.recProbe = "perf record -o %s -e probe_uprobe_test:doit" % self.temp_file
         self.report = "perf report --input=%s" % self.temp_file
@@ -98,7 +99,8 @@ class PerfUprobe(Test):
         if (self.distro_name == "rhel" and self.detected_distro.version > "7")\
            or (self.distro_name == "SuSE" and
                self.detected_distro.version >= 15 and
-               self.detected_distro.release >= 2):
+               self.detected_distro.release >= 2)\
+           or (self.distro_name == "fedora"):
             output = self.cmd_verify('%s__return -- ./uprobe_test'
                                      % self.recProbe)
         else:

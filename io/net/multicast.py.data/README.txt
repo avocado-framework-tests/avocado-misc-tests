@@ -1,6 +1,6 @@
 description:
 ------------------------
-This Program to check receive multicast. in peer machine mulicast group is configured, so we use the ping tool to send icmp echo request packets to all id's in group. if this icmp request received by host then we conclude that host is in multicast group.
+This Program to check receive multicast. in peer machine multicast group is configured, so we use the ping tool to send icmp echo request packets to all id's in group. if this icmp request received by host then we conclude that host is in multicast group.
 -----------------------------
 Inputs Needed To Run Tests:
 -----------------------------

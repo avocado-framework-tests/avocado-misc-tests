@@ -1,12 +1,13 @@
 The network sriov test for adding and removing logical
 sriov device.we can create multiple logical device.
 
-1. input requirment for normal SRIOV logical device
+1. input requirement for normal SRIOV logical device
 ---------------------------------------------------
 hmc_username = Specify the HMC user name.
 hmc_pwd = Specify the HMC password.
 sriov_adapter = Specify the sriov adapter loc code for test.
 sriov_port: specify adapter port for test.
+sriov_roce: specify if the roce adapter VF port needs to be added and removed ex: True
 ipaddr = ip address for ip configuration in sriov logical interface.
 netmask = specify the netmask for ip configuration.
 peer_ip = specify peer ip address.
@@ -14,8 +15,8 @@ mac_id = mac address for sriov logical device.
 
 Note(A):
 --------
-when YAML parameters given with space seperated, the script creates "N" number of
-logical ports with Network settings assocaited with it.
+when YAML parameters given with space separated, the script creates "N" number of
+logical ports with Network settings associated with it.
 
 Ex: To create 2 SRIOV logical ports coming from each port when card having 2 physical port.
 
@@ -34,7 +35,7 @@ max_sriov_ports = Specify the max number of logical SRIOV ports to be created.
 
 Note:
 -----
-Note(A) applies for max_sriov_ports also, like when 2 parameters given by space seperated,
+Note(A) applies for max_sriov_ports also, like when 2 parameters given by space separated,
 the script will creates one logical SRIOV port from each Physical port upto user given number.
 
 Ex:
@@ -43,7 +44,7 @@ sriov_port: "0 1"
 max_sriov_ports : 32
 
 This scenario creates 64 SRIOV logical port 32 ports created on each port.
-Incase of single sriov_port given,it creats 32 logical ports.
+In case of single sriov_port given,it creates 32 logical ports.
 
 
 3.The same test can be used to create Migratable SRIOV logical device (HNV)

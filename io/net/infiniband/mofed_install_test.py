@@ -19,6 +19,9 @@ MOFED Install Test
 """
 
 import os
+import re
+import urllib.request
+import ssl
 from avocado import Test
 from avocado.utils import process, distro
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -47,6 +50,47 @@ class MOFEDInstallTest(Test):
         pkgs = []
         self.uname = linux_modules.platform.uname()[2]
         kernel_ver = "kernel-devel-%s" % self.uname
+
+        if '.iso' in self.iso_location:
+            self.iso = self.fetch_asset(self.iso_location, expire='10d')
+        else:
+            if detected_distro.name == "SuSE":
+                host_distro_pattern = "sles%ssp%s" % (
+                    detected_distro.version, detected_distro.release)
+                patterns = [host_distro_pattern]
+                for pattern in patterns:
+                    scontext = ssl.SSLContext(ssl.PROTOCOL_TLS)
+                    scontext.verify_mode = ssl.VerifyMode.CERT_NONE
+                    response = urllib.request.urlopen(
+                        self.iso_location, context=scontext)
+                    temp_string = response.read()
+                    matching_mofed_versions = re.findall(
+                        r"MLNX_OFED_LINUX-\w*[.]\w*[-]\w*[.]\w*[.]\w*[.]\w*[-]\w*[-]\w*[.]\w*", str(temp_string))
+                    distro_specific_mofed_versions = [host_distro_pattern
+                                                      for host_distro_pattern
+                                                      in matching_mofed_versions
+                                                      if pattern in host_distro_pattern]
+                    distro_specific_mofed_versions.sort(reverse=True)
+                    self.iso_name = distro_specific_mofed_versions[0]
+            elif detected_distro.name in ['rhel', 'fedora', 'redhat']:
+                host_distro_pattern = "%s%s.%s" % (
+                    detected_distro.name, detected_distro.version, detected_distro.release)
+                patterns = [host_distro_pattern]
+                for pattern in patterns:
+                    response = urllib.request.urlopen(self.iso_location)
+                    temp_string = response.read()
+                    matching_mofed_versions = re.findall(
+                        r"MLNX_OFED_LINUX-\w*[.]\w*[-]\w*[.]\w*[.]\w*[.]\w*[-]\w*[.]\w*[-]\w*[.]\w*", str(temp_string))
+                    distro_specific_mofed_versions = [host_distro_pattern
+                                                      for host_distro_pattern
+                                                      in matching_mofed_versions
+                                                      if pattern in host_distro_pattern]
+                    distro_specific_mofed_versions.sort(reverse=True)
+                    self.iso_name = distro_specific_mofed_versions[0]
+
+            self.iso = "%s%s" % (self.iso_location, self.iso_name)
+            self.iso = self.fetch_asset(self.iso, expire='10d')
+
         smm = SoftwareManager()
         if detected_distro.name == "SuSE":
             pkgs.extend(["make", "gcc", "python3-devel", "kernel-source",
@@ -55,18 +99,25 @@ class MOFEDInstallTest(Test):
         # on Avocado versions >= 50.0.  This is a temporary compatibility
         # enabler for older runners, but should be removed soon
         elif detected_distro.name in ['rhel', 'fedora', 'redhat']:
-            pkgs.extend(["make", "gcc", "python36-devel", "tcsh",
+            pkgs.extend(["make", "gcc", "tcsh",
                          "kernel-rpm-macros", "gdb-headless", "rpm-build",
                          "gcc-gfortran", kernel_ver])
+
+            if detected_distro.version == "8":
+                pkgs.extend(["python36-devel"])
+            else:
+                pkgs.extend(["python3-devel"])
+
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("Not able to install %s" % pkg)
-        self.iso = self.fetch_asset(self.iso_location, expire='10d')
+
         cmd = "mount -o loop %s %s" % (self.iso, self.workdir)
         process.run(cmd, shell=True)
         self.pwd = os.getcwd()
         if self.options_check() is False:
-            self.cancel("option %s not supported with this MOFED" % self.option)
+            self.cancel("option %s not supported with this MOFED" %
+                        self.option)
 
     def install(self):
         """
@@ -117,9 +168,11 @@ class MOFEDInstallTest(Test):
         Returns False otherwise.
         '''
         os.chdir(self.workdir)
-        value_check = process.system_output('./mlnxofedinstall --help').decode('utf-8')
+        value_check = process.system_output(
+            './mlnxofedinstall --help').decode('utf-8')
         vlist = self.option.split(" ")
-        res = [idx for idx in vlist if idx.startswith('--') or idx.startswith('-')]
+        res = [idx for idx in vlist if idx.startswith(
+            '--') or idx.startswith('-')]
         for val in res:
             if val not in value_check:
                 return False

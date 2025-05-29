@@ -35,7 +35,7 @@ class MultiportStress(Test):
         self.host_interfaces = []
         interfaces = os.listdir('/sys/class/net')
         self.local = LocalHost()
-        devices = self.params.get("host_interfaces", default=None)
+        devices = self.params.get("interfaces", default=None)
         for device in devices.split(" "):
             if device in interfaces:
                 self.host_interfaces.append(device)
@@ -89,7 +89,7 @@ class MultiportStress(Test):
 
     def multiport_ping(self, ping_option):
         '''
-        Ping to multiple peers parallely
+        Ping to multiple peers parallelly
         '''
         parallel_procs = []
         for host, peer in zip(self.host_interfaces, self.peer_ips):
@@ -147,6 +147,6 @@ class MultiportStress(Test):
                     networkinterface.restore_from_backup()
                 except Exception:
                     self.log.info(
-                        "backup file not availbale, could not restore file.")
+                        "backup file not available, could not restore file.")
                 self.remotehost.remote_session.quit()
                 self.remotehost_public.remote_session.quit()

@@ -44,6 +44,8 @@ class Fsfuzzer(Test):
         Source:
         https://github.com/stevegrubb/fsfuzzer.git
         '''
+        self._args = self.params.get('fstype', default='')
+
         detected_distro = distro.detect()
         d_name = detected_distro.name.lower()
 
@@ -63,21 +65,21 @@ class Fsfuzzer(Test):
                      "master.zip"]
         tarball = self.fetch_asset("fsfuzzer.zip", locations=locations)
         archive.extract(tarball, self.workdir)
-        os.chdir(os.path.join(self.workdir, "fsfuzzer-master"))
+        build_path = os.path.join(self.workdir, "fsfuzzer-master")
 
         if d_name == "ubuntu":
             # Patch for ubuntu
-            fuzz_fix_patch = 'patch -p1 < %s' % self.get_data(
-                'fsfuzz_fix.patch')
+            fuzz_fix_patch = 'patch -p1 < %s' % os.path.abspath(self.get_data(
+                'fsfuzz_fix.patch'))
             if process.system(fuzz_fix_patch, shell=True, ignore_status=True):
                 self.log.warn("Unable to apply sh->bash patch!")
+        if build.configure(build_path):
+            self.fail("fsfuzzer: Configure failed")
 
-        process.run('./autogen.sh', shell=True)
-        process.run('./configure', shell=True)
+        os.chdir(build_path)
+        if build.make('.'):
+            self.fail("fsfuzzer: Building source failed")
 
-        build.make('.')
-
-        self._args = self.params.get('fstype', default='')
         self._fsfuzz = os.path.abspath(os.path.join('.', "fsfuzz"))
         fs_sup = process.system_output('%s %s' % (self._fsfuzz, ' --help'))
         match = re.search(r'%s' % self._args, fs_sup.decode(), re.M | re.I)

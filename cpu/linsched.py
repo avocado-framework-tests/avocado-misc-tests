@@ -52,8 +52,8 @@ class Linsched(Test):
         self.sourcedir = os.path.join(
             self.workdir, 'linux-scheduler-testing-master')
 
+        fix_patch = 'patch -p1 < %s' % os.path.abspath(self.get_data('fix.patch'))
         os.chdir(self.sourcedir)
-        fix_patch = 'patch -p1 < %s' % self.get_data('fix.patch')
         process.run(fix_patch, shell=True, ignore_status=True)
 
         build.make(self.sourcedir)

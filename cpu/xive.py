@@ -39,10 +39,12 @@ class XIVE(Test):
             self.hw = "POWER9"
         elif 'POWER10' in cpu_info:
             self.hw = "POWER10"
+        elif 'Power11' in cpu_info:
+            self.hw = "POWER11"
         else:
             self.cancel("Unsupported processor family")
 
-        mode = genio.read_file("/proc/interrupts")
+        mode = genio.read_file("/proc/interrupts").rstrip('\t\r\n\0')
         if 'XIVE' in mode:
             self.intr = 'XIVE'
         elif 'XICS' in mode:

@@ -1,11 +1,11 @@
 description:
 -------------
-This Program to assign and check different smp_affinity_list to IRQ of given IO device, and to caputure calltraces, dmesg stacks during the operations with validation of assigned values.
+This Program to assign and check different smp_affinity_list to IRQ of given IO device, and to capture calltraces, dmesg stacks during the operations with validation of assigned values.
 Along with above operations with Program also covers following tests.
 
-    1. Setting up diffrent avialble CPU'S to IO based process by taskset and validating values set.
+    1. Setting up different avialble CPU'S to IO based process by taskset and validating values set.
     2. Making off/on [ offline/online ] of CPU's from min available CPU's to Max available CPU's serial fashion.
-    3. Setting diffent SMT levels and off/on using ppc64_cpu utils.
+    3. Setting different SMT levels and off/on using ppc64_cpu utils.
 
 
 -----------------------------

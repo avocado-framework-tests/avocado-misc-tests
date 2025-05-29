@@ -35,7 +35,7 @@ class ThpDefrag(Test):
 
     '''
     Defrag test enables THP and fragments the system memory using dd load
-    and turns on THP defrag and checks whether defrag occured.
+    and turns on THP defrag and checks whether defrag occurred.
 
     :avocado: tags=memory,privileged,hugepage
     '''

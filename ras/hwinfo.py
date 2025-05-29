@@ -15,49 +15,73 @@
 # Author: Pavithra <pavrampu@linux.vnet.ibm.com>
 
 import os
+import re
 from avocado import Test
-from avocado.utils import process
+from avocado.utils import process, distro, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class Hwinfo(Test):
 
-    def clear_dmesg(self):
-        process.run("dmesg -C ", sudo=True)
-
     def run_cmd(self, cmd):
         self.log.info("executing ============== %s =================" % cmd)
         if process.system(cmd, ignore_status=True, sudo=True):
-            self.log.info("%s command failed" % cmd)
             self.fail("hwinfo: %s command failed to execute" % cmd)
 
     def setUp(self):
+        distro_name = distro.detect().name
+        if distro_name != 'SuSE':
+            self.cancel("This test case not supported on %s" % distro_name)
         sm = SoftwareManager()
         if not sm.check_installed("hwinfo") and not sm.install("hwinfo"):
             self.cancel("Fail to install hwinfo required for this test.")
-        self.clear_dmesg()
-        self.disk_name = process.system_output("df -h | egrep '(s|v)d[a-z][1-8]' | "
-                                               "tail -1 | cut -d' ' -f1",
-                                               shell=True).decode("utf-8").strip("12345")
-        self.Unique_Id = process.system_output("hwinfo --disk --only %s | "
-                                               "grep 'Unique' | head -1 | "
-                                               "cut -d':' -f2" % self.disk_name,
-                                               shell=True).decode("utf-8")
+        dmesg.clear_dmesg()
+        self.disk_name = ''
+        output = process.system_output("df -h", shell=True).decode().splitlines()
+        filtered_lines = [line for line in output
+                          if re.search(r'(s|v)d[a-z][1-8]', line)]
+        if filtered_lines:
+            self.disk_name = filtered_lines[-1].split()[0].strip("12345")
+        if not self.disk_name:
+            self.cancel("Couldn't get Disk name.")
+        self.Unique_Id = ''
+        output = process.system_output("hwinfo --disk --only %s"
+                                       % self.disk_name, shell=True).decode()
+        for line in output.splitlines():
+            if 'Unique' in line:
+                self.Unique_Id = line.split(":")[1].strip()
+                break
+        if not self.Unique_Id:
+            self.cancel("Couldn't get Unique ID for the disk: %s" %
+                        self.disk_name)
 
-    def test_list(self):
+    def test_list_options(self):
         lists = self.params.get('list', default=['--all', '--cpu', '--disk'])
         for list_item in lists:
             cmd = "hwinfo %s" % list_item
             self.run_cmd(cmd)
 
-    def test_disk(self):
+    def test_only(self):
         self.run_cmd("hwinfo --disk --only %s" % self.disk_name)
 
     def test_unique_id_save(self):
+        if not os.path.isdir("/var/lib/hardware/udi"):
+            self.cancel("/var/lib/hardware/udi path does not exist")
         self.run_cmd("hwinfo --disk --save-config %s" % self.Unique_Id)
+        if "failed" in process.system_output("hwinfo --disk --save-config %s"
+                                             % self.Unique_Id,
+                                             shell=True).decode("utf-8"):
+            self.fail("hwinfo: --save-config UDI option failed")
 
     def test_unique_id_show(self):
+        if not os.path.isdir("/var/lib/hardware/udi"):
+            self.cancel("/var/lib/hardware/udi path does not exist")
         self.run_cmd("hwinfo --disk --show-config %s" % self.Unique_Id)
+        if "No config" in process.system_output("hwinfo --disk --show-config %s"
+                                                % self.Unique_Id,
+                                                shell=True).decode("utf-8"):
+            self.cancel(
+                "hwinfo: --save-config UDI cancelled, no saved config present")
 
     def test_verbose_map(self):
         self.run_cmd("hwinfo --verbose --map")
@@ -65,14 +89,12 @@ class Hwinfo(Test):
     def test_log_file(self):
         self.run_cmd("hwinfo --all --log FILE")
         if (not os.path.exists('./FILE')) or (os.stat("FILE").st_size == 0):
-            self.log.info("--log option failed")
             self.fail("hwinfo: failed with --log option")
 
-    def test_dump_0(self):
-        self.run_cmd("hwinfo --dump-db 0")
-
-    def test_dump_1(self):
-        self.run_cmd("hwinfo --dump-db 1")
+    def test_dump(self):
+        level = [0, 1]
+        for value in level:
+            self.run_cmd("hwinfo --dump-db %i" % value)
 
     def test_version(self):
         self.run_cmd("hwinfo --version")
@@ -81,14 +103,17 @@ class Hwinfo(Test):
         self.run_cmd("hwinfo --help")
 
     def test_debug(self):
-        self.run_cmd("hwinfo --debug 0 --disk --log=-")
+        level = [0, 1]
+        for value in level:
+            self.run_cmd("hwinfo --debug %i --disk --log=-" % value)
 
     def test_short_block(self):
         self.run_cmd("hwinfo --short --block")
 
     def test_save_config(self):
+        if not os.path.isdir("/var/lib/hardware/udi"):
+            self.cancel("/var/lib/hardware/udi path does not exist")
         self.run_cmd("hwinfo --disk --save-config=all")
         if "failed" in process.system_output("hwinfo --disk --save-config=all",
                                              shell=True).decode("utf-8"):
-            self.log.info("--save-config option failed")
-            self.fail("hwinfo: --save-config option failed")
+            self.fail("hwinfo: --save-config=all option failed")
