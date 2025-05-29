@@ -19,7 +19,7 @@ import os
 import shutil
 import pexpect
 from avocado import Test
-from avocado.utils import build, distro, cpu, process
+from avocado.utils import build, distro, genio, process
 
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -152,7 +152,7 @@ class Dawr(Test):
                                                     % (i, value)]))
         child.sendline('r')
         return_value.append(child.expect_exact([pexpect.TIMEOUT,
-                                       'not enough available hardware']))
+                                                'not enough available hardware']))
         for i in return_value:
             if i == 0:
                 self.fail('Test case failed for 3 variables')
