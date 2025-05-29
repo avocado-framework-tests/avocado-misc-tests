@@ -101,14 +101,17 @@ class IMAmodsig(Test):
             self.fail("IMA policy not loaded with secure boot enabled.")
         self.log.info("IMA policy loaded with secure boot enabled.")
         if 'appraise' not in output or 'modsig' not in output:
-            self.fail("IMA policy not loaded 'appraise' or 'modsig' with secure boot enabled.")
-        self.log.info("IMA policy loaded 'appraise' or 'modsig' with secure boot enabled.")
+            self.fail(
+                "IMA policy not loaded 'appraise' or 'modsig' with secure boot enabled.")
+        self.log.info(
+            "IMA policy loaded 'appraise' or 'modsig' with secure boot enabled.")
 
     def test_ima_keyring_integrity(self):
         """
         Check if IMA keyring integrity is compromised
         """
-        output = process.system_output(self.ima_cmd, ignore_status=True, shell=True).decode("utf-8")
+        output = process.system_output(
+            self.ima_cmd, ignore_status=True, shell=True).decode("utf-8")
         if "tampered" in output:
             self.fail("IMA keyring integrity is compromised.")
         self.log.info("IMA keyring integrity is not compromised.")
