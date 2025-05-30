@@ -23,6 +23,7 @@ from avocado.utils import distro
 from avocado.utils import process
 from avocado.utils import linux_modules
 from avocado.utils import dmesg
+from avocado.utils import linux
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -76,9 +77,7 @@ class Kprobe(Test):
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        cmd = "lsprop  /proc/device-tree/ibm,secure-boot"
-        output = process.system_output(cmd, ignore_status=True).decode()
-        if '00000002' in output:
+        if not linux.is_os_secureboot_enabled():
             self.cancel("Secure boot is enabled.")
 
     def build_module(self):

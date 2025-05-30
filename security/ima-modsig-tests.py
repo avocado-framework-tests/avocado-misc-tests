@@ -14,7 +14,7 @@
 # Author: Nageswara R Sastry <rnsastry@linux.ibm.com>
 
 from avocado import Test
-from avocado.utils import linux_modules, process, distro, genio
+from avocado.utils import linux_modules, process, distro, genio, linux
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -94,23 +94,24 @@ class IMAmodsig(Test):
         Check if IMA policy is loaded with secure boot enabled
         """
         # Checking the Guest Secure Boot enabled or not.
-        cmd = "lsprop  /proc/device-tree/ibm,secure-boot"
-        output = process.system_output(cmd, ignore_status=True).decode()
-        if '00000002' not in output:
+        if not linux.is_os_secureboot_enabled():
             self.cancel("Secure boot is not enabled.")
         output = genio.read_file("/sys/kernel/security/ima/policy")
         if not output:
             self.fail("IMA policy not loaded with secure boot enabled.")
         self.log.info("IMA policy loaded with secure boot enabled.")
         if 'appraise' not in output or 'modsig' not in output:
-            self.fail("IMA policy not loaded 'appraise' or 'modsig' with secure boot enabled.")
-        self.log.info("IMA policy loaded 'appraise' or 'modsig' with secure boot enabled.")
+            self.fail(
+                "IMA policy not loaded 'appraise' or 'modsig' with secure boot enabled.")
+        self.log.info(
+            "IMA policy loaded 'appraise' or 'modsig' with secure boot enabled.")
 
     def test_ima_keyring_integrity(self):
         """
         Check if IMA keyring integrity is compromised
         """
-        output = process.system_output(self.ima_cmd, ignore_status=True, shell=True).decode("utf-8")
+        output = process.system_output(
+            self.ima_cmd, ignore_status=True, shell=True).decode("utf-8")
         if "tampered" in output:
             self.fail("IMA keyring integrity is compromised.")
         self.log.info("IMA keyring integrity is not compromised.")
