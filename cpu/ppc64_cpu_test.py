@@ -39,6 +39,15 @@ class PPC64Test(Test):
     :avocado: tags=cpu,power,privileged
     """
 
+    def _reset_system_state(self):
+        """
+        Helper function to reset system to clean state.
+        Brings all cores online and enables SMT.
+        """
+        process.system("ppc64_cpu --cores-on=all", shell=True)
+        process.system("ppc64_cpu --smt=on", shell=True)
+        time.sleep(1)
+
     def setUp(self):
         """
         Verifies if powerpc-utils is installed, and gets current SMT value.
@@ -236,7 +245,7 @@ class PPC64Test(Test):
         op1 = process.system_output(
             "ppc64_cpu --cores-present",
             shell=True).decode("utf-8").strip().split()[-1]
-        op2 = cpu.online_cpus_count() / int(self.key)
+        op2 = cpu.online_count() / int(self.key)
         self.equality_check("Core", op1, ceil(op2))
 
     def subcore(self):
@@ -565,9 +574,12 @@ class PPC64Test(Test):
                 # Verify cores didn't change due to SMT operation
                 cores_after = self.get_cores_info()
                 if cores_before['cores_on'] != cores_after['cores_on']:
-                    self.fail("SMT change affected core count! Before: %d, \
-                            After: %d" % (cores_before['cores_on'],
-                                          cores_after['cores_on']))
+                    msg = (
+                        f"SMT change affected core count! "
+                        f"Before: {cores_before['cores_on']}, "
+                        f"After: {cores_after['cores_on']}"
+                    )
+                    self.fail(msg)
 
                 process.system("ppc64_cpu --cores-on=%d" %
                                num_cores, shell=True)
@@ -718,9 +730,7 @@ class PPC64Test(Test):
         self.log.info("=== Testing SMT-Core Interaction ===")
 
         # Ensure clean start
-        process.system("ppc64_cpu --cores-on=all", shell=True)
-        process.system("ppc64_cpu --smt=on", shell=True)
-        time.sleep(1)
+        self._reset_system_state()
 
         num_iterations = min(5, self.stress_iterations // 4)
 
@@ -778,9 +788,7 @@ class PPC64Test(Test):
         self.log.info("=== Random Stress Test ===")
 
         # Ensure clean start
-        process.system("ppc64_cpu --cores-on=all", shell=True)
-        process.system("ppc64_cpu --smt=on", shell=True)
-        time.sleep(self.sleep_after_smt_change)
+        self._reset_system_state()
 
         for iteration in range(self.random_iterations):
             self.log.info("Random iteration %s/%s",
@@ -963,9 +971,7 @@ class PPC64Test(Test):
             return
 
         # Ensure clean start
-        process.system("ppc64_cpu --cores-on=all", shell=True)
-        process.system("ppc64_cpu --smt=on", shell=True)
-        time.sleep(1)
+        self._reset_system_state()
 
         num_iterations = min(3, self.stress_iterations // 10)
 
@@ -1037,14 +1043,14 @@ class PPC64Test(Test):
                 if not self.verify_system_state(
                         expected_smt=expected_smt,
                         expected_cores_on=cores_online_after):
-                    self.failures.append(
-                        "Verification failed for SMT=%s with specific\
-                                cores offline" % smt_val)
+                    msg = (
+                        f"Verification failed for SMT={smt_val} "
+                        "with specific cores offline"
+                    )
+                    self.failures.append(msg)
 
         # Final cleanup
-        process.system("ppc64_cpu --cores-on=all", shell=True)
-        process.system("ppc64_cpu --smt=on", shell=True)
-        time.sleep(1)
+        self._reset_system_state()
 
         if self.failures:
             self.fail("Specific cores offline test failed: %s" % self.failures)
