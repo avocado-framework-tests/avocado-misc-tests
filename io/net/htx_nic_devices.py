@@ -68,6 +68,19 @@ class HtxNicTest(Test):
             self.cancel("failed connecting to peer")
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
                                      password=self.peer_password)
+        # Disable firewall on the host and peer
+        if self.host_distro_name in ['rhel', 'fedora', 'redhat']:
+            cmd = "systemctl stop firewalld"
+        elif self.host_distro_name == "SuSE":
+            if self.host_distro_version >= 15:
+                cmd = "systemctl stop firewalld"
+            else:
+                cmd = "rcSuSEfirewall2 stop"
+        if process.system(cmd, ignore_status=True, shell=True) != 0:
+            self.cancel("Unable to disable firewall on host")
+        output = self.session.cmd(cmd)
+        if not output.exit_status == 0:
+            self.cancel("Unable to disable firewall on peer")
 
         if 'start' in str(self.name.name):
             # Flush out the ip addresses on host before starting the test
