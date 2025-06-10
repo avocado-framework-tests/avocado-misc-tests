@@ -72,6 +72,18 @@ class perf_json(Test):
         if 'ppc64' not in detected_distro.arch:
             self.cancel("Processor is not PowerPC")
 
+        # Collect all pmu events from perf list and json files
+        self.perf_list_pmu_events = set()
+        self.json_pmu_events = set()
+        self.json_event_info = {}
+
+        output = process.system_output("perf list --raw-dump pmu", shell=True)
+        for ln in output.decode().split():
+            if ln.startswith('pm_') and ln not in ("hv_24x7" or "hv_gpci"):
+                self.perf_list_pmu_events.add(ln)
+        if not self.perf_list_pmu_events:
+            self.cancel("No PMU events found. Skipping the test.")
+
         deps = ['gcc', 'make', 'perf']
         if 'Ubuntu' in detected_distro.name:
             deps.extend(['linux-tools-common', 'linux-tools-%s'
@@ -96,20 +108,10 @@ class perf_json(Test):
             process.system("make prefix=/usr/local install -C %s" % self.sourcedir, shell=True, sudo=True)
 
         self.rev = cpu.get_revision()
-        rev_to_power = {'004b': 'power8', '004e': 'power9', '0080': 'power10'}
+        rev_to_power = {'004b': 'power8', '004e': 'power9', '0080': 'power10', '0082': 'power10'}
         if self.rev in rev_to_power:
             self.testdir += '%s/' % rev_to_power[self.rev]
         self.sourcedir = os.path.join(self.buldir, self.testdir)
-
-        # Collect all pmu events from perf list and json files
-        self.perf_list_pmu_events = set()
-        self.json_pmu_events = set()
-        self.json_event_info = {}
-
-        output = process.system_output("perf list --raw-dump pmu", shell=True)
-        for ln in output.decode().split():
-            if ln.startswith('pm_') and ln not in ("hv_24x7" or "hv_gpci"):
-                self.perf_list_pmu_events.add(ln)
 
         # Clear the dmesg to capture the delta at the end of the test.
         dmesg.clear_dmesg()

@@ -43,13 +43,13 @@ class irq_balance(Test):
     '''
     Test to verify irqbalance by setting up various SMP_affinity levels for
     any given IO adapters/devices.
-    1. Covers assiging diffrent SMP affinity list to IO IRQ number and
+    1. Covers assigning different SMP affinity list to IO IRQ number and
        validating values set.
-    2. Setting up diffrent avialble CPU'S to IO based process by taskset
+    2. Setting up different avialble CPU'S to IO based process by taskset
        and validating values set.
     3. Making off/on [ offline/online ] of CPU's from min available CPU's
        to Max available CPU's serial fashion.
-    4. Setting diffent SMT levels and off/on using ppc64_cpu utils.
+    4. Setting different SMT levels and off/on using ppc64_cpu utils.
     '''
 
     def setUp(self):
@@ -147,7 +147,7 @@ class irq_balance(Test):
 
     def get_irq_numbers(self):
         '''
-        Function to get all IRQ numbers assocaited for given device.
+        Function to get all IRQ numbers associated for given device.
         '''
         self.irq_number = [int(x.strip(":"))
                            for x in re.findall(r'\b(\d+):',
@@ -156,9 +156,9 @@ class irq_balance(Test):
 
     def get_ping_process_pid(self):
         """
-        Funtion to get the process ID of ping flood.
+        Function to get the process ID of ping flood.
 
-        :returns : Process PID number that initated by ping flood command.
+        :returns : Process PID number that initiated by ping flood command.
         :rtype : int
         """
         cmd = (
@@ -170,8 +170,7 @@ class irq_balance(Test):
                                             ignore_status=True,
                                             sudo=True).decode("utf-8")
         if not process_pid:
-            self.log.debug(f"No more process PID avaialable")
-            return False
+            self.cancel(f"No process PID of ping command available")
         return process_pid
 
     def compare_range_strings(self, range_str1, range_str2):
@@ -192,7 +191,7 @@ class irq_balance(Test):
 
     def cpu_range_validation(self):
         '''
-        Funtion to validate the assinged CPU's by script.
+        Function to validate the assigned CPU's by script.
         '''
         self.irq_affinity = '-'.join([str(self.cpu_range[0]),
                                       str(self.cpu_range[-1])])
@@ -206,7 +205,7 @@ class irq_balance(Test):
 
     def get_module_interrupts(self):
         '''
-        Funtion to filter all interrupts along associated CPU's of device.
+        Function to filter all interrupts along associated CPU's of device.
         '''
         cmd = f'head -n 1 /proc/interrupts &&' \
               f' grep {self.interface_type} /proc/interrupts'
@@ -244,7 +243,7 @@ class irq_balance(Test):
                                                ignore_status=True, sudo=True
                                                ).decode("utf-8")
         if not dd_process_pid:
-            self.fail(f"No more dd run process PID avaialable")
+            self.fail(f"No more dd run process PID available")
         return dd_process_pid
 
     def dd_run(self):
@@ -259,7 +258,7 @@ class irq_balance(Test):
             universal_newlines=True
         )
         while True:
-            self.log.debug(f"Initaited dd command on disk {self.disk}")
+            self.log.debug(f"Initiated dd command on disk {self.disk}")
             return True
         process.stdout.close()
         process.wait()
@@ -283,17 +282,17 @@ class irq_balance(Test):
     def test_irq_balance(self):
         '''
         Selects single IRQ number of device and sets,
-        a. Assign all the avialable CPU's serially from min to maximum
-           avaliable CPU's and validates the operations.
+        a. Assign all the available CPU's serially from min to maximum
+           available CPU's and validates the operations.
         Eg: 1
             1,2
             1,2, ----> 99 [ upto max available CPU's ]
 
-        b. Unassing all the avialable CPU's serially from max to minimum
+        b. Unassign all the available CPU's serially from max to minimum
            avialble CPU's and validates the operations.
         Eg: 1,2 -----> 99
             1,2 ----> 98
-            1 [ upto min avialable CPU's ]
+            1 [ upto min available CPU's ]
         '''
         self.get_device_interrupts()
         self.get_irq_numbers()
@@ -304,7 +303,7 @@ class irq_balance(Test):
             self.irq_number = self.irq_number[1]
 
         '''
-        Assgining CPU's to IRQ serailly upto max available CPU's
+        Assigning CPU's to IRQ serailly upto max available CPU's
         '''
         for cpu_number in range(len(self.cpu_list)):
             self.cpu_range = self.cpu_list[:cpu_number+1]
@@ -343,7 +342,7 @@ class irq_balance(Test):
         online 99 -> 0
         '''
         if len(self.cpu_list) == 1:
-            self.cancel(" only one cpu is avialable cannot do this operation")
+            self.cancel(" only one cpu is available cannot do this operation")
 
         '''
         Making CPU offline serially
@@ -368,7 +367,7 @@ class irq_balance(Test):
 
     def test_smt_toggle(self):
         '''
-        Enables diferrent SMT options to offline multiple cpus
+        Enables different SMT options to offline multiple cpus
         1. makes offlines all cpu's
         2. enable smt value from 1 --> 8
         3. makes all cpu offline again.
@@ -385,7 +384,7 @@ class irq_balance(Test):
         changes the CPU number of PID while IO running.
         Eg:
            CPU1 ---> CPU2
-           CPU2 ---> CPU3, ----> till last availble CPU number.
+           CPU2 ---> CPU3, ----> till last available CPU number.
         '''
         if self.interface:
             for cpu_number in self.cpu_list:
@@ -456,5 +455,5 @@ class irq_balance(Test):
                     self.networkinterface.restore_from_backup()
                 except Exception:
                     self.networkinterface.remove_cfg_file()
-                    self.log.info("backup file not availbale,"
+                    self.log.info("backup file not available,"
                                   "could not restore file.")

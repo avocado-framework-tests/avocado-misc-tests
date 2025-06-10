@@ -109,7 +109,7 @@ class Iperf(Test):
         elif detected_distro.name in ['rhel', 'fedora', 'redhat']:
             cmd_fw = "systemctl stop firewalld"
         elif detected_distro.name == "SuSE":
-            if detected_distro.version == 15:
+            if detected_distro.version >= 15:
                 cmd_fw = "systemctl stop firewalld"
             else:
                 cmd_fw = "rcSuSEfirewall2 stop"
@@ -255,7 +255,7 @@ class Iperf(Test):
                 self.networkinterface.restore_from_backup()
             except Exception:
                 self.networkinterface.remove_cfg_file()
-                self.log.info("backup file not availbale, could not restore file.")
+                self.log.info("backup file not available, could not restore file.")
             if self.hbond:
                 self.networkinterface.restore_slave_cfg_file()
             self.remotehost.remote_session.quit()

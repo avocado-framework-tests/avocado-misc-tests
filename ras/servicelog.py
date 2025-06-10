@@ -174,7 +174,7 @@ class servicelog(Test):
         NoofRecords = self.run_cmd_out(cmd_num_records)
         if int(NoofRecords) == 0:
             self.is_fail += 1
-            self.log.info("servicelog --dump does have recored any "
+            self.log.info("servicelog --dump does have recorded any "
                           "RTAS Event")
         self.log.info("=====3 -  Cleaning events from the servicelog "
                       "database =======")
@@ -185,7 +185,7 @@ class servicelog(Test):
         NoofRecords = self.run_cmd_out(cmd_num_records)
         if int(NoofRecords):
             self.is_fail += 1
-            self.log.info("servicelog not trucated")
+            self.log.info("servicelog not truncated")
         # Start of the service stopped earlier
         Manageservice.start("rtas_errd")
         if self.is_fail >= 1:

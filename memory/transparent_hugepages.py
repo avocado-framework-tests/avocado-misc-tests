@@ -91,6 +91,8 @@ class Thp(Test):
         # Start Stresssing the  System
         self.log.info('Stress testing using dd command')
 
+        if not self.count:
+            self.cancel("Please pass valid value for mem_size in yaml file")
         for iterator in range(self.count):
             stress_cmd = 'dd if=/dev/zero of=%s/%d bs=%dM count=1'\
                          % (self.mem_path, iterator, self.block_size)

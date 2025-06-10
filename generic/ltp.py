@@ -151,7 +151,7 @@ class LTP(Test):
                                    password=self.peer_password)
             if not self.session.connect():
                 self.cancel("failed connecting to peer")
-            # setting ltp direcory in peer LPAR for 2 host configuration tests
+            # setting ltp directory in peer LPAR for 2 host configuration tests
             destination = "%s:/tmp" % self.peer_public_ip
             output = self.session.copy_files(self.ltpdir, destination,
                                              recursive=True)

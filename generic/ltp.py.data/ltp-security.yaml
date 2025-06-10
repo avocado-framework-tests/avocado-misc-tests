@@ -1,7 +1,5 @@
 runltp: !mux
     script: 'runltp'
-    cap_bounds:
-        args: '-f cap_bounds'
     crashme:
         args: '-f crashme'
     crypto:
@@ -10,7 +8,5 @@ runltp: !mux
         args: '-f cve'
     ima:
         args: '-f ima'
-    securebits:
-        args: '-f securebits'
     tpm_tools:
         args: '-f tpm_tools'

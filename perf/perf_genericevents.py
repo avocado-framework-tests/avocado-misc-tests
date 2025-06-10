@@ -20,7 +20,7 @@
 import os
 import configparser
 from avocado import Test
-from avocado.utils import genio, cpu
+from avocado.utils import cpu, process
 
 
 class test_generic_events(Test):
@@ -36,18 +36,20 @@ class test_generic_events(Test):
         parser = configparser.ConfigParser()
         parser.optionxform = str
         parser.read(self.get_data('raw_code.cfg'))
-        cpu_info = genio.read_file("/proc/cpuinfo")
-        for line in cpu_info.splitlines():
-            if 'revision' in line:
-                self.rev = (line.split(':')[1])
-                if '004b' in self.rev:
-                    self.generic_events = dict(parser.items('POWER8'))
-                elif '004e' in self.rev:
-                    self.generic_events = dict(parser.items('POWER9'))
-                elif '0080' in self.rev:
-                    self.generic_events = dict(parser.items('POWER10'))
-                else:
-                    self.cancel("Processor is not supported: %s" % cpu_info)
+        # Equivalent Python code for bash command
+        # "journalctl -k|grep -i performance"
+        pmu_registered = process.get_command_output_matching("journalctl -k",
+                                                             "performance")
+        pmu_event_mapping = {'generic_compat': 'GENERIC_COMPAT_PMU',
+                             'isav3': 'GENERIC_COMPAT_PMU', 'power8': 'POWER8',
+                             'power9': 'POWER9', 'power10': 'POWER10',
+                             'power11': 'POWER10'}
+        for pmu, event_type in pmu_event_mapping.items():
+            if pmu in pmu_registered[0].lower():
+                self.generic_events = dict(parser.items(event_type))
+                return
+        self.cancel("Processor is not supported: %s" % pmu_registered)
+
         self.arch = cpu.get_arch()
         self.vendor = cpu.get_vendor()
         if 'amd' in self.vendor:

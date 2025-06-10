@@ -4,23 +4,19 @@ disk_mnt: '/mnt/loop-device'
 
 loop_type: !mux
     type: 'loop'
-    loop_size: '5GiB'
+    loop_size: '12GiB'
     # Option to provide disk for loop device creation,
     # Uses '/' by default for file creation
     disk: "null"
+
 fs_type: !mux
     fs_ext4_64k:
         fs: 'ext4'
-        args: '-R xunit generic/001'
+        args: '-R xunit -e ext4/048 -L 10 -g quick'
         mkfs_opt: '-b 65536'
         mount_opt: '-o block_validity'
-    fs_xfs_64k:
-        fs: 'xfs'
-        args: '-R xunit generic/001'
-        mkfs_opt: '-f -b size=65536'
-        mount_opt: ''
-    fs_btrfs_64k:
-        fs: 'btrfs'
-        args: '-R xunit generic/001'
-        mkfs_opt: '-f -s 65536 -n 65536'
-        mount_opt: ''
+
+run_type: !mux
+    upstream:
+        run_type: 'upstream'
+        e2fsprogs_url: 'https://git.kernel.org/pub/scm/fs/ext2/e2fsprogs.git'

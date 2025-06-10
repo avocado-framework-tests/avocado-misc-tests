@@ -54,7 +54,7 @@ class NStress(Test):
                           ignore_status=True, sudo=True, shell=True):
             self.fail("%s test failed " % self.test)
 
-        ''' ncpu retrun code is 1 even after successful completion'''
+        ''' ncpu return code is 1 even after successful completion'''
 
         if process.system("./ncpu -p %s -s %s" %
                           (self.procs, self.duration),

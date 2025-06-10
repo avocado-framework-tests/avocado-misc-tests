@@ -64,7 +64,7 @@ class Glibc(Test):
                     if 'Summary' in line:
                         failures = file_buff[index + 1].split()[3]
                         if failures.isdigit() and int(failures) != 0:
-                            self.fail("No of Failures occured %s"
+                            self.fail("No of Failures occurred %s"
                                       "\nCheck logs for more info" %
                                       failures)
         else:

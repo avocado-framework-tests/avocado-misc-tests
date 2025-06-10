@@ -13,9 +13,14 @@
 # Author: Samir A Mulani <samir@linux.vnet.ibm.com>
 
 from avocado import Test
-from avocado.utils import process, distro
+from avocado.utils import process, distro, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 import os
+import time
+
+
+def collect_dmesg(object):
+    return process.system_output("dmesg").decode()
 
 
 class smt(Test):
@@ -48,17 +53,42 @@ class smt(Test):
                 self.cancel("smtstate tool is supported only after SLES15 SP3")
         else:
             self.cancel("Test case is supported only on RHEL and SLES")
+        self.runtime = self.params.get('runtime', default='')
+
+    def dmesg_validater(self):
+        """
+        This function is responsible to validate the dmesg
+        for any errors after smt workload run.
+        """
+        ERROR = []
+        pattern = ['WARNING: CPU:', 'Oops', 'Segfault', 'soft lockup',
+                   'Unable to handle', 'ard LOCKUP']
+        for fail_pattern in pattern:
+            for log in collect_dmesg(self).splitlines():
+                if fail_pattern in log:
+                    ERROR.append(log)
+        if ERROR:
+            self.fail("Test failed with following errors in dmesg :  %s " %
+                      "\n".join(ERROR))
+        smt = self.logdir + "/smt"
+        os.makedirs(smt, exist_ok=True)
+        cmd = "mv /tmp/smt.log %s " % (smt)
+        process.run(cmd)
 
     def test_smt_start(self):
         """
         Start the SMT Workload
         """
+        dmesg.clear_dmesg()
         relative_path = 'smt.py.data/smt.sh'
         absolute_path = os.path.abspath(relative_path)
         smt_workload = "bash " + absolute_path + " &> /tmp/smt.log &"
         process.run(
             smt_workload, ignore_status=True, sudo=True, shell=True)
         self.log.info("SMT Workload started--!!")
+        if self.runtime != "":
+            runtime = self.runtime * 60
+            time.sleep(runtime)
 
     def test_smt_stop(self):
         """
@@ -66,7 +96,10 @@ class smt(Test):
         """
         grep_cmd = "grep -i {}".format("smt.sh")
         awk_cmd = "awk '{print $2}'"
-        process_kill = "ps aux | {} | {} | head -1 | xargs kill".format(grep_cmd, awk_cmd)
+        process_kill = "ps aux | {} | {} | head -1 | xargs kill".format(
+            grep_cmd, awk_cmd)
         process.run(process_kill, ignore_status=True,
                     sudo=True, shell=True)
         self.log.info("SMT Workload killed successfully--!!")
+        # Validate the dmesg for any error
+        self.dmesg_validater()

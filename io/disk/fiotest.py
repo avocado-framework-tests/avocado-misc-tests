@@ -48,7 +48,7 @@ class FioTest(Test):
 
     :see: http://freecode.com/projects/fio
 
-    :param fio_tarbal: name of the tarbal of fio suite located in deps path
+    :param fio_tarbal: name of the tarball of fio suite located in deps path
     :param fio_job: config defining set of executed tests located in deps path
     """
 
@@ -72,6 +72,7 @@ class FioTest(Test):
         self.devdax_file = None
         self.disk_type = self.params.get('disk_type', default='')
         device = self.params.get('disk', default=None)
+        detected_distro = distro.detect()
         if device and not self.disk_type:
             self.disk = disk.get_absolute_disk_path(device)
             if self.disk not in disk.get_all_disk_paths():
@@ -82,29 +83,34 @@ class FioTest(Test):
             self.cancel("Please Provide valid disk")
 
         if fstype == 'btrfs':
-            ver = int(distro.detect().version)
-            rel = int(distro.detect().release)
-            if distro.detect().name == 'rhel':
+            if detected_distro.name == 'Ubuntu':
+                ver = int(detected_distro.version.split('.')[0])
+            else:
+                ver = int(detected_distro.version)
+            rel = int(detected_distro.release)
+            if detected_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with \
                                 RHEL 7.4 onwards")
 
-        if distro.detect().name in ['Ubuntu', 'debian']:
-            pkg_list = ['libaio-dev']
+        pkg_list = ['cmake']
+        if detected_distro.name in ['Ubuntu', 'debian', 'uos']:
+            pkg_list.extend(['libaio-dev', 'g++'])
             if fstype == 'btrfs':
                 pkg_list.append('btrfs-progs')
-        elif distro.detect().name is 'SuSE':
-            pkg_list = ['libaio1', 'libaio-devel']
+        elif detected_distro.name is 'SuSE':
+            pkg_list.extend(['libaio1', 'gcc-c++'])
         else:
-            pkg_list = ['libaio', 'libaio-devel']
-            if self.disk_type == 'nvdimm':
-                pkg_list.extend(['autoconf', 'pkg-config'])
-                if distro.detect().name == 'SuSE':
-                    pkg_list.extend(['ndctl', 'libnuma-devel',
-                                     'libndctl-devel'])
-                else:
-                    pkg_list.extend(['ndctl', 'daxctl', 'numactl-devel',
-                                     'ndctl-devel', 'daxctl-devel'])
+            pkg_list.extend(['libaio', 'gcc-c++'])
+
+        if self.disk_type == 'nvdimm':
+            pkg_list.extend(['autoconf', 'pkg-config'])
+            if detected_distro.name == 'SuSE':
+                pkg_list.extend(['ndctl', 'libnuma-devel',
+                                 'libndctl-devel'])
+            else:
+                pkg_list.extend(['ndctl', 'daxctl', 'numactl-devel',
+                                 'ndctl-devel', 'daxctl-devel'])
         if raid_needed:
             pkg_list.append('mdadm')
 
@@ -204,23 +210,23 @@ class FioTest(Test):
         """
         cleanup the disk and directory before test starts on it
         """
-        self.log.info("Pre_cleaning of disk and diretories...")
+        self.log.info("Pre_cleaning of disk and directories...")
         disk_list = ['/dev/mapper/avocado_vg-avocado_lv', self.raid_name,
                      self.disk]
         for disk in disk_list:
             self.delete_fs(disk)
-        self.log.info("checking ...lv/vg existance...")
+        self.log.info("checking ...lv/vg existence...")
         if lv_utils.lv_check(self.vgname, self.lvname):
-            self.log.info("found lv existance... deleting it")
+            self.log.info("found lv existence... deleting it")
             self.delete_lv()
         elif lv_utils.vg_check(self.vgname):
-            self.log.info("found vg existance ... deleting it")
+            self.log.info("found vg existence ... deleting it")
             lv_utils.vg_remove(self.vgname)
         else:
             self.log.info("No VG/LV detected")
-        self.log.info("checking for sraid existance...")
+        self.log.info("checking for sraid existence...")
         if self.sraid.exists():
-            self.log.info("found sraid existance... deleting it")
+            self.log.info("found sraid existence... deleting it")
             self.delete_raid()
         else:
             self.log.info("No softwareraid detected ")
@@ -316,7 +322,7 @@ class FioTest(Test):
             self.log.info("lv %s deleted" % self.lvname)
         else:
             self.err_mesg.append("lv %s not deleted" % self.lvname)
-        # checking and deleteing if lvm_meta_data exists after lv removed
+        # checking and deleting if lvm_meta_data exists after lv removed
         cmd = 'blkid -o value -s TYPE %s' % self.lv_disk
         out = process.system_output(cmd, shell=True,
                                     ignore_status=True).decode("utf-8")
@@ -327,7 +333,7 @@ class FioTest(Test):
     def delete_fs(self, l_disk):
         """
         checks for disk/dir mount, unmount if mounted and checks for
-        filesystem exitance and wipe it off after dir/disk unmount.
+        filesystem existence and wipe it off after dir/disk unmount.
 
         :param l_disk: disk name for which you want to check the mount status
         :return: None
@@ -429,4 +435,4 @@ class FioTest(Test):
             self.delete_raid()
         dmesg.clear_dmesg()
         if self.err_mesg:
-            self.log.warn("test failed due to following errors %s" % self.err_mesg)
+            self.log.warn("test failed with errors: %s" % self.err_mesg)

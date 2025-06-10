@@ -100,7 +100,7 @@ class Avago3008(Test):
 
     def extensivetest(self):
         """
-        Lists all the LSI adapters attached to the mahcine
+        Lists all the LSI adapters attached to the machine
         :return:
         """
 
@@ -135,7 +135,7 @@ class Avago3008(Test):
 
     def adapterlist(self):
         """
-        Lists all the LSI adapters attached to the mahcine
+        Lists all the LSI adapters attached to the machine
         :return:
         """
         cmd = "%s list" % self.tool_location

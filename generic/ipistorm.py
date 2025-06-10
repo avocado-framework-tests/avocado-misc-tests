@@ -41,8 +41,8 @@ class DBLIPIStrom(Test):
         """
         Install necessary packages to build the linux module
         """
-        if 'power' not in cpu.get_family():
-            self.cancel('Test Only supported on Power')
+        if 'ppc64' not in cpu.get_arch:
+            self.cancel("Test is supported only on ppc64le architecture")
 
         pkgs = ['gcc', 'make']
         smm = SoftwareManager()

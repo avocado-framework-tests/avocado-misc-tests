@@ -54,7 +54,7 @@ class Blkdiscard(Test):
     @avocado.fail_on
     def test(self):
         """
-        Sectors are dicarded for the different values of OFFSET and LENGTH.
+        Sectors are discarded for the different values of OFFSET and LENGTH.
         """
         size = lv_utils.get_device_total_space(self.disk)
         cmd = "blkdiscard %s -o 0 -v -l %d -f" % (self.disk, size)

@@ -22,8 +22,6 @@ Following is a list of testcase currently supported.
  - lock2
  - lseek1
  - lseek2
- - malloc1
- - malloc2
  - mmap1
  - mmap2
  - open1

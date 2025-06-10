@@ -177,7 +177,7 @@ class LPM(Test):
 
     def is_RMC_active(self, server):
         '''
-        Get the state of the RMC connection for the given parition
+        Get the state of the RMC connection for the given partition
         '''
         cmd = "diagrmc -m %s --ip %s -p %s --autocorrect" % (
             server, self.lpar_ip, self.lpar)

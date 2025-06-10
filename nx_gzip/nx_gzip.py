@@ -16,13 +16,10 @@
 
 import os
 import shutil
-from avocado import Test, skipUnless
+from avocado import Test
 from avocado.utils import build, process, distro, git, archive, memory
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.partition import Partition
-
-IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
-IS_POWER10 = 'POWER10' in open('/proc/cpuinfo', 'r').read()
 
 
 class NXGZipTests(Test):
@@ -82,13 +79,14 @@ class NXGZipTests(Test):
         if failed_tests:
             self.fail("%s" % failed_tests)
 
-    @skipUnless(IS_POWER_NV | IS_POWER10,
-                "NX-GZIP tests are supported only on PowerNV(POWER9) or "
-                "POWER10 platform.")
     def setUp(self):
         """
         Install pre-requisite packages
         """
+
+        if not os.path.exists('/dev/crypto/nx-gzip'):
+            self.cancel("NX-GZIP tests are supported only on PowerNV(POWER9)"
+                        ", POWER10 and onwards.")
         smg = SoftwareManager()
         self.dist = distro.detect()
         if self.dist.name not in ['rhel', 'SuSE']:
@@ -109,8 +107,7 @@ class NXGZipTests(Test):
         self.branch = self.params.get('git_branch', default='master')
         git.get_repo(self.url, branch=self.branch,
                      destination_dir=self.teststmpdir)
-        if self.branch == 'develop':
-            process.run('./configure', sudo=True, shell=True)
+        process.run('./configure', sudo=True, shell=True)
         os.chdir(self.teststmpdir)
         build.make(self.teststmpdir)
 
@@ -232,7 +229,7 @@ class NXGZipTests(Test):
 
     def test_zpipe_repeat(self):
         '''
-        Running NX-GZIP: Run zpipe repeates tests
+        Running NX-GZIP: Run zpipe repeats tests
         '''
         self.cancel("NX-GZIP:Intentionally Cancelled test_zpipe_repeat tests,\
                     due to test case issues.")

@@ -129,7 +129,7 @@ class ModuleLoadUnload(Test):
 
     def test(self):
         """
-        Begining the test here
+        Beginning the test here
         """
         pci_addrs = []
         if self.module:

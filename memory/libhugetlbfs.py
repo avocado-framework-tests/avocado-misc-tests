@@ -35,7 +35,7 @@ from avocado.utils.software_manager.manager import SoftwareManager
 class LibHugetlbfs(Test):
     '''
     libhugetlbfs: libhugetlbfs is a library which provides easy
-    access to huge pages of memory. test to excersize libhugetlbfs library
+    access to huge pages of memory. test to exercise libhugetlbfs library
 
     :avocado: tags=memory,privileged,hugepage
     '''
@@ -129,7 +129,8 @@ class LibHugetlbfs(Test):
         os.chdir(self.workdir)
         patch = self.params.get('patch', default='elflink.patch')
         process.run('patch -p1 < %s' % self.get_data(patch), shell=True)
-
+        process.run('./autogen.sh', shell=True)
+        process.run('./configure', shell=True)
         build.make(self.workdir, extra_args='BUILDTYPE=NATIVEONLY')
 
     @staticmethod

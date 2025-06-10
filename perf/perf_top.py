@@ -64,7 +64,7 @@ class perf_top(Test):
         # Clear the dmesg by that we can capture delta at the end of the test
         dmesg.clear_dmesg()
 
-        # Creating a temprory file
+        # Creating a temporary file
         self.temp_file = tempfile.NamedTemporaryFile().name
 
     def test_top(self):

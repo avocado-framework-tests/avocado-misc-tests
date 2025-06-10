@@ -17,7 +17,7 @@
 import os
 from avocado import Test
 from avocado.utils import process, distro
-from avocado.utils import build, distro, git
+from avocado.utils import build, distro, git, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -61,19 +61,22 @@ class lockstorm_benchmark(Test):
         :param smt_state: Here we are passing the smt state that we are
         going to change.
         """
-        cmd = "dmesg | tail -n 1"
+        cmd = "dmesg | grep 'lockstorm: spinlock iterations'"
         self.log.info(f"=================Dump data for \
                 SMT Mode: {smt_state} benchmark======================\n\n")
         dump_data = process.run(cmd, shell=True)
+        return dump_data
 
     def test(self):
         """
-        In this funtion basically we are changing the SMT states
+        In this function basically we are changing the SMT states
         and running the lockstorm benchmark.
         1.changing the SMT modes.
         2.Running the lockstorm benchmark.
         3. Capturing the benchmark stats.
         """
+        lockstorm_dir = self.logdir + "/lockstorm_benc"
+        os.makedirs(lockstorm_dir, exist_ok=True)
         process.run('ppc64_cpu --cores-on=all', shell=True)
         process.run('ppc64_cpu --smt=on', shell=True)
         cpu_controller = ["2", "4", "6", "on", "off"]
@@ -85,12 +88,28 @@ class lockstorm_benchmark(Test):
                 process.run(cmd, shell=True)
                 cmd = "insmod ./lockstorm.ko" + " cpulist=%s" % \
                     (self.cpu_list)
-
+                dmesg.clear_dmesg()
                 if self.cpu_list == 0:
                     cmd = "insmod ./lockstorm.ko"
-                process.system(cmd,
-                               ignore_status=True, shell=False, sudo=True)
-                self.capture_dmesg_dump(smt_mode)
+                result = process.run(cmd, ignore_status=True, shell=False,
+                                     sudo=True)
+                if 'Key was rejected by service' in result.stderr.decode():
+                    self.cancel("Inserting module was rejected by kernel.")
+                lockstorm_data = self.capture_dmesg_dump(smt_mode)
+                stdout_output = lockstorm_data.stdout
+                lockstorm_log = lockstorm_dir + "/lockstorm.log"
+                with open(lockstorm_log, "a") as payload:
+                    payload.write(
+                        "==================Iteration {}=============\
+                                    \n".format(str(test_run)))
+                    payload.write("============SMT mode: {}============= \
+                            \n".format(smt_mode))
+                    lines = stdout_output.splitlines()
+                    for line in lines:
+                        decoded_string = line.decode('utf-8')
+                        cleaned_string = decoded_string.lstrip('\t')
+                        payload.write(cleaned_string + '\n')
+                    payload.write("\n")
 
     def tearDown(self):
         """

@@ -91,7 +91,7 @@ class Memcached(Test):
         process.run(self.memcached_cmd, shell=True, ignore_status=True,
                     verbose=True, ignore_bg_processes=True)
 
-        # Givin some time for server to start properly
+        # Giving some time for server to start properly
         self.log.info('Sleeping for 5 seconds for server startup')
         time.sleep(5)
 

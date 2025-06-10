@@ -16,7 +16,7 @@
 
 import platform
 from avocado import Test
-from avocado.utils import distro, process
+from avocado.utils import distro, process, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -55,7 +55,7 @@ class perf_bench(Test):
         self.option = self.params.get('option', default='')
 
         # Clear the dmesg, by that we can capture the delta at the end of the test.
-        process.run("dmesg -C", sudo=True)
+        dmesg.clear_dmesg()
 
     def verify_dmesg(self):
         self.whiteboard = process.system_output("dmesg").decode("utf-8")

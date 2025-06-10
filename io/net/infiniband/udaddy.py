@@ -121,7 +121,7 @@ class Udaddy(Test):
         elif detected_distro.name in ['rhel', 'fedora', 'redhat']:
             cmd = "systemctl stop firewalld"
         elif detected_distro.name == "SuSE":
-            if detected_distro.version == 15:
+            if detected_distro.version >= 15:
                 cmd = "systemctl stop firewalld"
             else:
                 cmd = "rcSuSEfirewall2 stop"

@@ -129,8 +129,8 @@ class NetworkVirtualization(Test):
         self.host_user = self.params.get('user_name', default=None)
         self.host_password = self.params.get('host_password', default=None)
         self.is_mlx_driver = self.params.get('is_mlx_driver', default=True)
-        self.transmit_tx = self.params.get('transmit_tx', default=10)
-        self.receive_rx = self.params.get('receive_rx', default=10)
+        self.tx_channel = self.params.get('tx_channel', default=10)
+        self.rx_channel = self.params.get('rx_channel', default=10)
         dmesg.clear_dmesg()
         self.session_hmc.cmd("uname -a")
         cmd = 'lssyscfg -m ' + self.server + \
@@ -166,7 +166,7 @@ class NetworkVirtualization(Test):
             if result.exit_status:
                 self.fail("failed to enable debug mode")
         else:
-            self.log("failed to enable debug mode")
+            self.log.info("Continue test with debug mode disabled")
 
     @staticmethod
     def get_mcp_component(component):
@@ -258,12 +258,12 @@ class NetworkVirtualization(Test):
         self.remotehost = RemoteHost(self.peer_ip[0], self.peer_user,
                                      password=self.peer_password)
         peer_interface = self.remotehost.get_interface_by_ipaddr(self.peer_ip[0]).name
-        cmd = "ethtool -L %s rx %s tx %s" % (peer_interface, self.transmit_tx, self.receive_rx)
+        cmd = "ethtool -L %s rx %s tx %s" % (peer_interface, self.rx_channel, self.tx_channel)
         output = self.session_peer.cmd(cmd)
         if not output:
             self.cancel("Unable to tune RX and TX queue in peer")
         device = self.find_device(self.mac_id[0])
-        cmd = "ethtool -L %s rx %s tx %s" % (device, self.transmit_tx, self.receive_rx)
+        cmd = "ethtool -L %s rx %s tx %s" % (device, self.rx_channel, self.tx_channel)
         result = process.run(cmd)
         if result.exit_status:
             self.cancel("Unable to tune RX and TX queue in host")
@@ -278,11 +278,11 @@ class NetworkVirtualization(Test):
         output = self.session_peer.cmd(cmd_status).stdout_text.splitlines()
         for line in output:
             if re.search("Active: active (running)", line):
-                self.log("irqbalance service is active in peer")
+                self.log.info("irqbalance service is active in peer")
         process.system(cmd_start)
         for line in process.system_output(cmd_status).decode("utf-8").splitlines():
             if re.search("Active: active (running)", line):
-                self.log("irqbalance service is active in host")
+                self.log.info("irqbalance service is active in host")
 
     def test_add(self):
         '''
@@ -615,7 +615,7 @@ class NetworkVirtualization(Test):
             device_name = self.find_device(mac)
             networkinterface = NetworkInterface(device_name, self.local)
             count = 0
-            self.log.info("Preforming DLPAR on %s" % device_name)
+            self.log.info("Performing DLPAR on %s" % device_name)
             for _ in range(self.num_of_dlpar):
                 self.log.info("DLPAR iteration #%d" % count)
                 num_backingdevs = self.backing_dev_count_w_slot_num(slot_no)

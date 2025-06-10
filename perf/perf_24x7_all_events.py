@@ -17,7 +17,7 @@
 import os
 import platform
 from avocado import Test
-from avocado.utils import cpu, distro, process
+from avocado.utils import cpu, distro, process, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -62,12 +62,12 @@ class hv_24x7_all_events(Test):
             perf_stat = "%s hv_24x7/HPM_0THRD_NON_IDLE_CCYC" % perf_args
         elif self.rev == '004e':
             perf_stat = "%s hv_24x7/CPM_TLBIE" % perf_args
-        elif self.rev == '0080':
+        elif self.rev in ['0080', '0082']:
             perf_stat = "%s hv_24x7/CPM_TLBIE_FIN" % perf_args
         event_sysfs = "/sys/bus/event_source/devices/hv_24x7"
 
         # Check if this is a guest
-        # 24x7 is not suported on guest
+        # 24x7 is not supported on guest
         if "emulated by" in cpu._get_info():
             self.cancel("This test is not supported on guest")
 
@@ -93,12 +93,15 @@ class hv_24x7_all_events(Test):
 
         # Collect all hv_24x7 events
         self.list_of_hv_24x7_events = []
-        for lne in process.get_command_output_matching('perf list', 'hv_24x7'):
-            lne = lne.split(',')[0].split('/')[1]
-            self.list_of_hv_24x7_events.append(lne)
+        # Equivalent Python code for bash command
+        # "perf list | grep 'hv_24x7' | grep -v 'descriptor'
+        for lne in process.get_command_output_matching("perf list", 'hv_24x7'):
+            if 'descriptor' not in lne:
+                lne = lne.split(',')[0].split('/')[1]
+                self.list_of_hv_24x7_events.append(lne)
 
         # Clear the dmesg to capture the delta at the end of the test.
-        process.run("dmesg -C", sudo=True)
+        dmesg.clear_dmesg()
 
     def test_all_events(self):
         perf_args = "-v -e"

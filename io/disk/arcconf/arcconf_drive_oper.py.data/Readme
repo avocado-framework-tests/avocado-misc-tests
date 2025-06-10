@@ -6,7 +6,7 @@ specific to physical and logical drive settings.
  
 Note:
     1. supported controllers pci_ids can be entered 
-       seperated by ",".
+       separated by ",".
     2. TODO: IMAGEUPDATE, SETPOWER, UNINIT 
     3. Irrepsective of number of disks specified at yaml,
        Script picks only the first two disks for test 

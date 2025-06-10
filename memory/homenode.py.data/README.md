@@ -5,6 +5,6 @@ The homenode test, tests the new sys_set_mempolicy_home_node introduced by c6018
 
 Parameters
 -----------
-* h_page: if you want to allocate hugepages set this paramter to True otherwise False
+* h_page: if you want to allocate hugepages set this parameter to True otherwise False
 
 * nr_pages: no. of pages you want to allocate. Make sure you don't try to allocate more pages than what the system can handle.

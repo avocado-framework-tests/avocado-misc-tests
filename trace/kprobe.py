@@ -22,6 +22,8 @@ from avocado.utils import build
 from avocado.utils import distro
 from avocado.utils import process
 from avocado.utils import linux_modules
+from avocado.utils import dmesg
+from avocado.utils import linux
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -45,9 +47,6 @@ class Kprobe(Test):
     def run_cmd_out(cmd):
         return process.system_output(cmd, shell=True, ignore_status=True,
                                      sudo=True).decode("utf-8")
-
-    def clear_dmesg(self):
-        process.run("dmesg -C ", sudo=True)
 
     def check_kernel_support(self):
         if linux_modules.check_kernel_config("CONFIG_OPTPROBES") == linux_modules.ModuleConfig.NOT_SET:
@@ -78,9 +77,7 @@ class Kprobe(Test):
         for package in deps:
             if not smg.check_installed(package) and not smg.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        cmd = "lsprop  /proc/device-tree/ibm,secure-boot"
-        output = process.system_output(cmd, ignore_status=True).decode()
-        if '00000002' in output:
+        if not linux.is_os_secureboot_enabled():
             self.cancel("Secure boot is enabled.")
 
     def build_module(self):
@@ -116,7 +113,7 @@ class Kprobe(Test):
 
     def execute_test(self):
         self.log.info("============== Testing kprobe =================")
-        self.clear_dmesg()
+        dmesg.clear_dmesg()
         self.run_cmd("insmod ./kprobe_example.ko")
         if self.is_fail >= 1:
             self.fail("insmod kprobe_example.ko failed")

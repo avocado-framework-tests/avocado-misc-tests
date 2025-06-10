@@ -56,7 +56,7 @@ class NetworkSriovDevice(Test):
         self.session = Session(self.hmc_ip, user=self.hmc_username,
                                password=self.hmc_pwd)
         if not self.session.connect():
-            self.cancel("failed connetion to HMC")
+            self.cancel("failed connection to HMC")
         cmd = 'lssyscfg -r sys  -F name'
         output = self.session.cmd(cmd)
         self.server = ''
@@ -202,7 +202,7 @@ class NetworkSriovDevice(Test):
                     "failed to list Migratable logical device after add operation")
             bond_device = self.get_hnv_bond(mac)
             if bond_device:
-                ret = process.run('nmcli c mod id %s ipv4.method manual ipv4.addres %s/%s' %
+                ret = process.run('nmcli c mod id %s ipv4.method manual ipv4.address %s/%s' %
                                   (bond_device, ipaddr, self.prefix), ignore_status=True)
                 if ret.exit_status:
                     self.fail("nmcli ip configuration for hnv bond fail with %s"
@@ -317,7 +317,7 @@ class NetworkSriovDevice(Test):
 
     def get_logical_port_id(self, mac):
         """
-        findout logical device port id
+        find out logical device port id
         """
         if not self.sriov_roce:
             cmd = "lshwres -r sriov --rsubtype logport -m  %s \

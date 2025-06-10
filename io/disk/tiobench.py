@@ -60,7 +60,7 @@ class Tiobench(Test):
         self.raid_create = False
         device = self.params.get('disk', default=None)
         self.dir = self.params.get('dir', default=None)
-
+        detected_distro = distro.detect()
         if device is not None:
             self.disk = disk.get_absolute_disk_path(device)
             if self.disk not in disk.get_all_disk_paths():
@@ -78,13 +78,16 @@ class Tiobench(Test):
         smm = SoftwareManager()
         packages = ['gcc', 'mdadm']
         if self.fstype == 'btrfs':
-            ver = int(distro.detect().version)
-            rel = int(distro.detect().release)
-            if distro.detect().name == 'rhel':
+            if detected_distro.name == 'Ubuntu':
+                ver = int(detected_distro.version.split('.')[0])
+            else:
+                ver = int(detected_distro.version)
+            rel = int(detected_distro.release)
+            if detected_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with RHEL 7.4 onwards")
-            if distro.detect().name == 'Ubuntu':
-                packages.extend(['btrfs-tools'])
+            if detected_distro.name == 'Ubuntu':
+                packages.extend(['btrfs-progs'])
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("%s package required for this test." % package)
@@ -165,21 +168,21 @@ class Tiobench(Test):
         """
         cleanup the disk and directory before test starts on it
         """
-        self.log.info("Pre_cleaning of disk and diretories...")
+        self.log.info("Pre_cleaning of disk and directories...")
         disk_list = ['/dev/mapper/avocado_vg-avocado_lv', self.raid_name,
                      self.disk]
         for disk in disk_list:
             self.delete_fs(disk)
-        self.log.info("checking ...lv/vg existance...")
+        self.log.info("checking ...lv/vg existence...")
         if lv_utils.lv_check(self.vgname, self.lvname):
-            self.log.info("found lv existance... deleting it")
+            self.log.info("found lv existence... deleting it")
             self.delete_lv()
         elif lv_utils.vg_check(self.vgname):
-            self.log.info("found vg existance ... deleting it")
+            self.log.info("found vg existence ... deleting it")
             lv_utils.vg_remove(self.vgname)
-        self.log.info("checking for softwareraid existance...")
+        self.log.info("checking for softwareraid existence...")
         if self.sw_raid.exists():
-            self.log.info("found softwareraid existance... deleting it")
+            self.log.info("found softwareraid existence... deleting it")
             self.delete_raid()
         else:
             self.log.info("No softwareraid detected ")
@@ -228,7 +231,7 @@ class Tiobench(Test):
             self.log.info("lv %s deleted" % self.lvname)
         else:
             self.err_mesg.append("failed to delete lv %s" % self.lvname)
-        # checking and deleteing if lvm_meta_data exists after lv removed
+        # checking and deleting if lvm_meta_data exists after lv removed
         cmd = 'blkid -o value -s TYPE %s' % self.lv_disk
         out = process.system_output(cmd, shell=True,
                                     ignore_status=True).decode("utf-8")
@@ -239,7 +242,7 @@ class Tiobench(Test):
     def delete_fs(self, l_disk):
         """
         checks for disk/dir mount, unmount if mounted and checks for
-        filesystem exitance and wipe it off after dir/disk unmount.
+        filesystem existence and wipe it off after dir/disk unmount.
 
         :param l_disk: disk name for which you want to check the mount status
         :return: None

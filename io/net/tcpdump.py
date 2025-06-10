@@ -78,7 +78,7 @@ class TcpdumpTest(Test):
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
-        self.timeout = self.params.get("TIMEOUT", default="600")
+        self.timeout = self.params.get("TIMEOUT", default=600)
         self.mtu = self.params.get("mtu", default=1500)
         self.mtu_timeout = self.params.get("mtu_timeout", default=30)
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
@@ -100,14 +100,16 @@ class TcpdumpTest(Test):
         smm = SoftwareManager()
         detected_distro = distro.detect()
         pkgs = ['tcpdump', 'flex', 'bison', 'gcc', 'gcc-c++', 'nmap']
+        if detected_distro.name == "SuSE" and detected_distro.version == 16:
+            pkgs.extend(["pcre2-devel"])
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.cancel("%s package Can not install" % pkg)
+                self.cancel("Cannot install package: %s" % pkg)
         if detected_distro.name == "SuSE":
             self.nmap = os.path.join(self.teststmpdir, 'nmap')
             nmap_download = self.params.get("nmap_download", default="https:"
                                             "//nmap.org/dist/"
-                                            "nmap-7.80.tar.bz2")
+                                            "nmap-7.95.tar.bz2")
             tarball = self.fetch_asset(nmap_download)
             self.version = os.path.basename(tarball.split('.tar')[0])
             self.n_map = os.path.join(self.nmap, self.version)
@@ -183,8 +185,6 @@ class TcpdumpTest(Test):
             except Exception:
                 self.networkinterface.remove_cfg_file()
                 self.log.info(
-                    "backup file not availbale, could not restore file.")
-            if self.hbond:
-                self.networkinterface.restore_slave_cfg_file()
+                    "backup file not available, could not restore file.")
             self.remotehost.remote_session.quit()
             self.remotehost_public.remote_session.quit()

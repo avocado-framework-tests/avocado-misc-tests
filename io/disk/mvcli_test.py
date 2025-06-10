@@ -22,7 +22,7 @@ import re
 import platform
 import shutil
 from avocado import Test
-from avocado.utils import process
+from avocado.utils import process, dmesg
 from avocado.utils.process import CmdError
 
 
@@ -59,7 +59,7 @@ class MvcliTest(Test):
         self.run_command("chmod +x %s" % mvcli_path)
         self.base = "%s %s" % (mvcli_path, self.adapter_id)
         self.base_force = "echo y | %s %s" % (mvcli_path, self.adapter_id)
-        self.run_command("dmesg -C")
+        dmesg.clear_dmesg()
         if self.fw_upgrade == "yes":
             path = self.fetch_asset("fw", locations=[self.fw_url],
                                     expire="7d")

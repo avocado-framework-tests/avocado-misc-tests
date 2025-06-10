@@ -23,7 +23,7 @@
 # Author: Plamen Dimitrov (plamen.dimitrov@intra2net.com)
 
 """
-Test that automatically takes shapshots from created logical volumes
+Test that automatically takes snapshots from created logical volumes
 using a given policy.
 
 For details about the policy see README.
@@ -52,6 +52,7 @@ class Lvsetup(Test):
         pkgs = []
         self.disks = []
         smm = SoftwareManager()
+        detected_distro = distro.detect()
         devices = self.params.get('lv_disks', default=None).split()
         if devices:
             for dev in devices:
@@ -63,16 +64,19 @@ class Lvsetup(Test):
         if self.fs_name == 'xfs':
             pkgs = ['xfsprogs']
         if self.fs_name == 'btrfs':
-            ver = int(distro.detect().version)
-            rel = int(distro.detect().release)
-            if distro.detect().name == 'rhel':
+            if detected_distro.name == 'Ubuntu':
+                ver = int(detected_distro.version.split('.')[0])
+            else:
+                ver = int(detected_distro.version)
+            rel = int(detected_distro.release)
+            if detected_distro.name == 'rhel':
                 if (ver == 7 and rel >= 4) or ver > 7:
                     self.cancel("btrfs is not supported with RHEL 7.4 onwards")
-            if distro.detect().name == 'SuSE':
+            if detected_distro.name == 'SuSE':
                 pkgs = ['btrfsprogs']
             else:
                 pkgs = ['btrfs-progs']
-        if distro.detect().name in ['Ubuntu', 'debian']:
+        if detected_distro.name in ['Ubuntu', 'debian']:
             pkgs.extend(['lvm2'])
 
         for pkg in pkgs:
@@ -126,7 +130,7 @@ class Lvsetup(Test):
             # converting bytes to megabytes
             self.lv_size = self.lv_size / (1024 * 1024)
 
-        # Using only 45% of lv size, to accomodate lv snapshot also.
+        # Using only 45% of lv size, to accommodate lv snapshot also.
         self.lv_size = (self.lv_size * 45) / 100
 
         self.lv_snapshot_size = self.params.get('lv_snapshot_size',

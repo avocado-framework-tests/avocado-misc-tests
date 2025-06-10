@@ -56,7 +56,7 @@ class perf_c2c(Test):
                 self.cancel('%s is needed for the test to be run' % package)
 
         # Check for c2c is available in the system.
-        output = process.run('perf mem record -e list').stderr.decode("utf-8")
+        output = process.run('perf mem record -e list', ignore_status=True).stderr.decode("utf-8")
         if 'ldlat-stores' in output or 'ldlat-loads' in output:
             self.log.info("perf c2c is available")
         else:

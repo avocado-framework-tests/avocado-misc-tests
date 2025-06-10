@@ -18,6 +18,8 @@
 
 import os
 import re
+import pexpect
+import sys
 from avocado import Test
 from avocado.utils import process, distro, build, archive, disk
 from avocado import skipIf, skipUnless
@@ -63,6 +65,15 @@ class RASToolsPpcutils(Test):
                     self.sm.install(package):
                 self.cancel("Fail to install %s required for this test." %
                             package)
+        # get the disk name
+        self.disk_name = ''
+        output = process.system_output("df -h", shell=True).decode().splitlines()
+        filtered_lines = [line for line in output
+                          if re.search(r'(s|v)d[a-z][1-8]', line)]
+        if filtered_lines:
+            self.disk_name = filtered_lines[-1].split()[0].strip("12345")
+        if not self.disk_name:
+            self.cancel("Couldn't get Disk name.")
 
     @staticmethod
     def run_cmd_out(cmd):
@@ -148,9 +159,10 @@ class RASToolsPpcutils(Test):
                       "==")
         self.run_cmd("drmgr -h")
         self.run_cmd("drmgr -C")
-        lcpu_count = self.run_cmd_out("lparstat -i | "
-                                      "grep \"Online Virtual CPUs\" | "
-                                      "cut -d':' -f2")
+        output = self.run_cmd_out("lparstat -i").splitlines()
+        for line in output:
+            if 'Online Virtual CPUs' in line:
+                lcpu_count = line.split(':')[1].strip()
         if lcpu_count:
             lcpu_count = int(lcpu_count)
             if lcpu_count >= 2:
@@ -183,8 +195,11 @@ class RASToolsPpcutils(Test):
         if not IS_KVM_GUEST:
             self.run_cmd("lsslot -c cpu -b")
         self.run_cmd("lsslot -c pci -o")
-        slot = self.run_cmd_out("lsslot | cut -d' ' -f1 | head -2"
-                                " | tail -1")
+        slot = ''
+        output = self.run_cmd_out("lsslot").splitlines()
+        fields = [line.split()[0] for line in output if line]
+        if len(fields) > 1:
+            slot = fields[1]
         if slot:
             self.run_cmd("lsslot -s %s" % slot)
         self.error_check()
@@ -211,12 +226,10 @@ class RASToolsPpcutils(Test):
                       "=====")
         self.run_cmd("ofpathname -h")
         self.run_cmd("ofpathname -V")
-        disk_name = self.run_cmd_out("df -h | egrep '(s|v)da[1-8]' | "
-                                     "tail -1 | cut -d' ' -f1")
-        if disk_name:
-            self.run_cmd("ofpathname %s" % disk_name)
+        if self.disk_name:
+            self.run_cmd("ofpathname %s" % self.disk_name)
             of_name = self.run_cmd_out("ofpathname %s"
-                                       % disk_name).split(':')[0]
+                                       % self.disk_name).split(':')[0]
             self.run_cmd("ofpathname -l %s" % of_name)
         self.error_check()
 
@@ -302,7 +315,18 @@ class RASToolsPpcutils(Test):
             '--surveillance', '--reboot-policy', '--remote-pon', '-d --force']
         for list_item in list:
             cmd = "serv_config %s" % list_item
-            self.run_cmd(cmd)
+            child = pexpect.spawn(cmd, encoding='utf-8')
+            child.logfile = sys.stdout  # Log output for debugging
+            if list_item == '-b':
+                try:
+                    child.expect("Reboot Policy Settings:", timeout=5)
+                    child.expect(r"Auto Restart Partition \(1=Yes, 0=No\) \[1\]:", timeout=5)
+                    child.sendline("1")
+                    child.expect(r"Are you certain you wish to update the system configuration\s*to the specified values\? \(yes/no\) \[no\]:", timeout=5)
+                    child.sendline("yes")
+                except pexpect.TIMEOUT:
+                    self.fail("Timeout waiting for expected prompt")
+            child.wait()
         self.error_check()
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST,
@@ -365,12 +389,20 @@ class RASToolsPpcutils(Test):
         for list_item in list:
             cmd = "lsdevinfo %s" % list_item
             self.run_cmd(cmd)
-        interface = self.run_cmd_out(
-            "ifconfig | head -1 | cut -d':' -f1")
+        output = process.system_output("ip link ls up", shell=True).decode().strip()
+        interface = ""
+        for line in output.splitlines():
+            # check if the line doesn't contain 'lo' or 'vir' and doesn't start
+            # with a non-digit character
+            if not re.search(r'lo|vir|^[^0-9]', line):
+                fields = line.split(':')
+                if fields[1]:
+                    interface = fields[1]
+            # For this test case we need only one active interface
+            if interface:
+                break
         self.run_cmd("lsdevinfo -q name=%s" % interface)
-        disk_name = self.run_cmd_out("df -h | egrep '(s|v)d[a-z][1-8]' | "
-                                     "tail -1 | cut -d' ' -f1").strip("12345")
-        self.run_cmd("lsdevinfo -q name=%s" % disk_name)
+        self.run_cmd("lsdevinfo -q name=%s" % self.disk_name)
         self.error_check()
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST,
@@ -400,13 +432,13 @@ class RASToolsPpcutils(Test):
         for list_item in list:
             cmd = "bootlist %s" % list_item
             self.run_cmd(cmd)
-        interface = self.run_cmd_out(
-            "lsvio -e | cut -d' ' -f2")
-        disk_name = self.run_cmd_out("df -h | egrep '(s|v)d[a-z][1-8]' | "
-                                     "tail -1 | cut -d' ' -f1").strip("12345")
+        output = self.run_cmd_out("lsvio -e").splitlines()
+        for line in output:
+            if len(line.split()) > 1:
+                interface = line.split()[1]
         file_path = os.path.join(self.workdir, 'file')
         process.run("echo %s > %s" %
-                    (disk_name, file_path), ignore_status=True,
+                    (self.disk_name, file_path), ignore_status=True,
                     sudo=True, shell=True)
         process.run("echo %s >> %s" %
                     (interface, file_path), ignore_status=True,
@@ -441,18 +473,22 @@ class RASToolsPpcutils(Test):
         output = process.system_output("grep security /proc/powerpc/lparcfg"
                                        ).decode("utf-8")
         security_flavor = output.split("=")[1]
+        '''Multiple tests are there for lparstat, to continue the execution
+        of whole code we can capture the error message and use that for fail
+        condition at the end of code.'''
+        error_messages = []
         if value == security_flavor:
             self.log.info("Lpar security flavor is correct")
         else:
-            self.fail("Lpar security flavor is incorrect")
+            error_messages.append("Lpar security flavor is incorrect")
         lists = self.params.get('lparstat_nlist',
                                 default=['--nonexistingoption'])
         for list_item in lists:
             cmd = "lparstat %s" % list_item
             if not process.system(cmd, ignore_status=True, sudo=True):
                 self.log.info("%s command passed" % cmd)
-                self.fail("lparstat: Expected failure, %s command exeucted \
-                          successfully." % cmd)
+                error_messages.append("lparstat: Expected failure, %s command \
+                                      executed successfully." % cmd)
         output = process.system_output("lparstat -E 1 1").decode("utf-8")
         for line in output.splitlines():
             if 'GHz' in line:
@@ -471,13 +507,15 @@ class RASToolsPpcutils(Test):
         if (actual_busy > 0) and (actual_idle < 100):
             self.log.info("Busy and idle actual values are correct")
         else:
-            self.fail("Busy and idle actual values are incorrect")
+            error_messages.append("Busy and idle actual values are incorrect")
+
         if normal == freq_percentile:
             self.log.info("Normalised busy plus idle value match with \
                           Frequency percentage")
         else:
-            self.fail("Normalised busy plus idle value does not match \
-                        with Frequency percentage")
+            error_messages.append("Normalised busy plus idle value \
+                                  does not match with Frequency percentage")
+
         list_physc = []
         for i in [2, 4, 8, "off"]:
             self.run_cmd("ppc64_cpu --smt=%s" % i)
@@ -492,12 +530,18 @@ class RASToolsPpcutils(Test):
                     matches = re.findall(pattern, last_line)
                     physc_val = float(matches[4])
                     list_physc.append(physc_val)
+
         if len(set(list_physc)) == 1:
             self.log.info("Correctly displaying the number of physical \
                           processors consumed")
         else:
-            self.fail("number of physical processors consumed are not \
-                      displaying correct")
+            error_messages.append("number of physical processors consumed \
+                                  are not displaying correct")
+
+        if len(error_messages) != 0:
+            self.fail(error_messages)
+        else:
+            self.log.info("no failures in lparstat command")
 
     @skipIf(IS_POWER_NV or IS_KVM_GUEST,
             "This test is not supported on KVM guest or PowerNV platform")

@@ -24,7 +24,7 @@ hmc_pwd: 123456
 hmc_username: hscroot
 lpar_2: ltcalpine-lp8-venkat
 pci_devices: "0017:01:00.0 0012:01:00.0"
-Multiple pci_devices can be given in the input file separeted by space. DLPAR operation will be performed on each pci device
+Multiple pci_devices can be given in the input file separated by space. DLPAR operation will be performed on each pci device
 User need to pass the pci_device of drc to do the action of DLPAR
 lpar_2 is the name of lpar where DLPAR move operation will be done
 num_of_dlpar: Dlpar operations runs number of times specified here

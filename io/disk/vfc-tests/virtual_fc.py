@@ -36,7 +36,7 @@ IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
 
 class VirtualFC(Test):
     '''
-    Removing and Adding and Fibre Chanel Virtualized devices from the HMC
+    Removing and Adding and Fibre Channel Virtualized devices from the HMC
     '''
     @skipUnless("ppc" in distro.detect().arch,
                 "supported only on Power platform")
@@ -62,7 +62,7 @@ class VirtualFC(Test):
         self.vfchost_count = int(self.params.get("vfc_count", default=1))
         # Since the command in each layer doesn't take same time to complete
         # there is delay observed in status reflect (like host and multipath).
-        # even though we have used the wait.wait_for funtion, this is not
+        # even though we have used the wait.wait_for function, this is not
         # enough to handle the case. since the operation flow reflect in 3
         # stages (lpar, HMC, vios), giving a short sleep time helps the flow
         # to happen smoother. Hence adding the sleep time after each major
@@ -167,7 +167,7 @@ class VirtualFC(Test):
                 # sleeping between the operation. can be enhanced in future.
                 time.sleep(self.opp_sleep_time)
         if self.err_mesg:
-            self.fail("test failed due to folowing reasons:%s" % self.err_mesg)
+            self.fail("test failed due to following reasons:%s" % self.err_mesg)
 
     def get_vfchost(self, vios_name):
         '''
@@ -313,7 +313,7 @@ class VirtualFC(Test):
                 return False
 
         if not wait.wait_for(status_check, timeout=10):
-            self.err_mesg.append("after %s %s staus change failed \
+            self.err_mesg.append("after %s %s status change failed \
                                   " % (operation, vfchost))
         else:
             self.log.info("%s status change success \
@@ -381,7 +381,7 @@ class VirtualFC(Test):
                 # sleep time between operations, can be enhanced in future.
                 time.sleep(self.opp_sleep_time)
         if self.err_mesg:
-            self.fail("test failed due to folowing reasons:%s" % self.err_mesg)
+            self.fail("test failed due to following reasons:%s" % self.err_mesg)
 
     def vfchost_remove_add(self, operation, vfc_dic):
         '''
@@ -398,7 +398,7 @@ class VirtualFC(Test):
             self.log.debug(output.stderr)
             self.fail("vfchost %s operation failed" % operation)
         else:
-            self.log.info("%s of %s succes" % (operation, vfc_dic["vfchost"]))
+            self.log.info("%s of %s success" % (operation, vfc_dic["vfchost"]))
         time.sleep(5)
         self.log.info("verifying %s status after %s operation.... \
                        " % (vfc_dic["vfchost"], operation))
@@ -440,7 +440,7 @@ class VirtualFC(Test):
                     return True
                 return False
         if not wait.wait_for(is_removed, timeout=30):
-            self.err_mesg.append("after %s %s staus change \
+            self.err_mesg.append("after %s %s status change \
                                   failed" % (operation, vfchost))
         else:
             self.log.info("%s status change success \
@@ -476,7 +476,7 @@ class VirtualFC(Test):
             for lpar in vfc_id[v_id]:
                 self.log.info("deleting vfchost ID=%s lpar=%s" % (v_id, lpar))
                 if self.delete_vfchost(v_id, lpar) is True:
-                    self.log.info("vfchost deleted sucesfully: %s" % v_id)
+                    self.log.info("vfchost deleted successfully: %s" % v_id)
                 else:
                     self.err_mesg.append("vfc_id=%s delete failed:" % v_id)
         if self.err_mesg:

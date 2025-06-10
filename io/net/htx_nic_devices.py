@@ -68,6 +68,19 @@ class HtxNicTest(Test):
             self.cancel("failed connecting to peer")
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
                                      password=self.peer_password)
+        # Disable firewall on the host and peer
+        if self.host_distro_name in ['rhel', 'fedora', 'redhat']:
+            cmd = "systemctl stop firewalld"
+        elif self.host_distro_name == "SuSE":
+            if self.host_distro_version >= 15:
+                cmd = "systemctl stop firewalld"
+            else:
+                cmd = "rcSuSEfirewall2 stop"
+        if process.system(cmd, ignore_status=True, shell=True) != 0:
+            self.cancel("Unable to disable firewall on host")
+        output = self.session.cmd(cmd)
+        if not output.exit_status == 0:
+            self.cancel("Unable to disable firewall on peer")
 
         if 'start' in str(self.name.name):
             # Flush out the ip addresses on host before starting the test
@@ -188,7 +201,7 @@ class HtxNicTest(Test):
             # only one time. This check is to avoid multiple times installation
             if host_distro_pattern == peer_distro_pattern:
                 if process.system(cmd, shell=True, ignore_status=True):
-                    self.cancel("Installion of rpm failed")
+                    self.cancel("Installation of rpm failed")
                 output = self.session.cmd(cmd)
                 if not output.exit_status == 0:
                     self.cancel("Unable to install the package %s %s"
@@ -197,7 +210,7 @@ class HtxNicTest(Test):
                 break
             if pattern == host_distro_pattern:
                 if process.system(cmd, shell=True, ignore_status=True):
-                    self.cancel("Installion of rpm failed")
+                    self.cancel("Installation of rpm failed")
 
             if pattern == peer_distro_pattern:
                 output = self.session.cmd(cmd)
@@ -255,10 +268,10 @@ class HtxNicTest(Test):
         The function is to setup network topology for htx run
         on both host and peer.
         The build_net multisystem <hostname/IP> command
-        configures the netwrok interfaces on both host and peer Lpars with
+        configures the network interfaces on both host and peer Lpars with
         some random net_ids and check pingum and also
-        starts the htx deamon for net.mdt
-        There is no need to explicitly start the htx deamon, create/select
+        starts the htx daemon for net.mdt
+        There is no need to explicitly start the htx daemon, create/select
         nd activate for net.mdt
         """
         self.log.info("Setting up the Network configuration on Host and Peer")
@@ -286,12 +299,12 @@ class HtxNicTest(Test):
 
     def start_htx_run(self):
         self.log.info("Running the HTX for %s on Host", self.mdt_file)
-        # Kill existing HTXD process if running
-        htxd_pid = process.getoutput("pgrep -f htxd")
-        if htxd_pid:
-            self.log.info("HTXD is already running with PID: %s. Killing it.", htxd_pid)
-            process.run("pkill -f htxd", ignore_status=True)
-            time.sleep(10)
+        # Find and Kill existing HXE process if running
+        hxe_pid = process.getoutput("pgrep -f hxe")
+        if hxe_pid:
+            self.log.info("HXE is already running with PID: %s. Killing it.", hxe_pid)
+            process.run("hcl -shutdown", ignore_status=True)
+            time.sleep(20)
         cmd = "htxcmdline -run -mdt %s" % self.mdt_file
         process.run(cmd, shell=True, sudo=True)
 

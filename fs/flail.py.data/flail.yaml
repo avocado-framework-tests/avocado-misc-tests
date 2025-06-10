@@ -1,5 +1,5 @@
+# flail takes 3 parameters namely name, seed and duration.
+# you can pass these parameters as -n, -s and -d as per requirement.
 run : !mux
- xfs:
-  fstype :  'xfs'
- ext4:
-  fstype :  'ext4'
+  params:
+    args: '-n read -s 2 -d 1000'

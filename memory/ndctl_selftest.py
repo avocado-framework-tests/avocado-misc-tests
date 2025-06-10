@@ -97,7 +97,7 @@ class NdctlTest(Test):
 
     def setUp(self):
         """
-        Prequisite for ndctl selftest on non-NFIT devices
+        Prerequisite for ndctl selftest on non-NFIT devices
         """
 
         nstype_file = "/sys/bus/nd/devices/region0/nstype"

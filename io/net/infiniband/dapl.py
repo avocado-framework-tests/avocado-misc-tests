@@ -117,7 +117,7 @@ class dapl(Test):
         elif detected_distro.name in ['rhel', 'fedora', 'redhat']:
             cmd = "systemctl stop firewalld"
         elif detected_distro.name == "SuSE":
-            if detected_distro.version == 15:
+            if detected_distro.version >= 15:
                 cmd = "systemctl stop firewalld"
             else:
                 cmd = "rcSuSEfirewall2 stop"
@@ -173,7 +173,7 @@ class dapl(Test):
         try:
             self.networkinterface.restore_from_backup()
         except Exception:
-            self.log.info("backup file not availbale, could not restore file.")
+            self.log.info("backup file not available, could not restore file.")
         self.remotehost.remote_session.quit()
         self.remotehost_public.remote_session.quit()
         self.session.quit()

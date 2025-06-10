@@ -156,7 +156,7 @@ class Rcutorture(Test):
         self.results = str(res).splitlines()
 
         """
-        Runs log ananlysis on the dmesg logs
+        Runs log analysis on the dmesg logs
         Checks for know bugs
         """
         pipe1 = [r for r in self.results if "!!! Reader Pipe:" in r]

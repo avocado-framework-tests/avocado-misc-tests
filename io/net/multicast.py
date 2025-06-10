@@ -111,11 +111,11 @@ class ReceiveMulticastTest(Test):
         cmd = "ip link set %s allmulticast on" % self.iface
         if process.system(cmd, shell=True, verbose=True,
                           ignore_status=True) != 0:
-            self.fail("unable to set all mulicast option to test interface")
+            self.fail("unable to set all multicast option to test interface")
         cmd = "ip route add 224.0.0.0/4 dev %s" % self.peerif
         output = self.session.cmd(cmd)
         if not output.exit_status == 0:
-            self.fail("Unable to add route for Peer interafce")
+            self.fail("Unable to add route for Peer interface")
         cmd = "timeout 600 ping -I %s 224.0.0.1 -c %s -f" % (self.peerif,
                                                              self.count)
         output = self.session.cmd(cmd)
@@ -134,17 +134,15 @@ class ReceiveMulticastTest(Test):
             cmd = "echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts"
             if process.system(cmd, shell=True, verbose=True,
                               ignore_status=True) != 0:
-                self.log.info("unable to unset all mulicast option")
+                self.log.info("unable to unset all multicast option")
             cmd = "ip link set %s allmulticast off" % self.iface
             if process.system(cmd, shell=True, verbose=True,
                               ignore_status=True) != 0:
-                self.log.info("unable to unset all mulicast option")
+                self.log.info("unable to unset all multicast option")
             self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
             try:
                 self.networkinterface.restore_from_backup()
             except Exception:
                 self.networkinterface.remove_cfg_file()
-                self.log.info("backup file not availbale, could not restore file.")
-            if self.hbond:
-                self.networkinterface.restore_slave_cfg_file()
+                self.log.info("backup file not available, could not restore file.")
             self.session.quit()

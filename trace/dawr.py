@@ -19,6 +19,7 @@ import os
 import shutil
 import pexpect
 from avocado import Test
+
 from avocado.utils import build, distro, cpu, process
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -60,6 +61,9 @@ class Dawr(Test):
         time.sleep(0.3)
         child.logfile = sys.stdout
         child.expect('(gdb)')
+        if self.distro_name in ['fedora', 'SuSE']:
+            child.sendline('set debuginfod enabled on')
+            child.expect_exact([pexpect.TIMEOUT, ''])
         return_value = []
         return child, return_value
 

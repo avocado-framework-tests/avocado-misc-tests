@@ -11,7 +11,7 @@ Input Parameters:
 ------------------
     --base_time    : 
         - Specifies the time (in seconds) to run each stressor
-        - Deafult is 300 seconds or 5 minutes.
+        - Default is 300 seconds or 5 minutes.
 
     --time_per_gig :
         - This specifies the time (in seconds) given to SOME stressors per GB

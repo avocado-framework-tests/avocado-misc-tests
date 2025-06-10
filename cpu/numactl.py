@@ -11,7 +11,6 @@
 #
 # See LICENSE for more details.
 #
-# Copyright: 2017 IBM
 # Copyright: 2022 IBM
 # Author:Praveen K Pandey <praveen@linux.vnet.ibm.com>
 #        :Shaik Abdulla <shaik.abdulla1@ibm.com>
@@ -136,13 +135,13 @@ class Numactl(Test):
 
     def check_numa_nodes(self):
         '''
-        :return: True when atleast two NUMA nodes with assigned CPU's
+        :return: True when at least two NUMA nodes with assigned CPU's
                  are available on system
         :return: False if the above condition has not met.
         :rtype: bool
         '''
         if len(cpu.get_numa_node_has_cpus()) < 2:
-            self.cancel("Required atleast two NUMA nodes with CPU"
+            self.cancel("Required at least two NUMA nodes with CPU"
                         " assigned for this test case!")
         else:
             return True
@@ -180,7 +179,7 @@ class Numactl(Test):
         To check memory interleave on NUMA nodes.
         '''
         if not self.interface and not self.disk:
-            self.cancel("Network inferface or disk/device input missing")
+            self.cancel("Network interface or disk/device input missing")
         if self.interface:
             cmd = "numactl --interleave=all ping -I %s %s -c %s -f"\
                 % (self.interface, self.peer, self.ping_count)
@@ -200,7 +199,7 @@ class Numactl(Test):
         Test memory allocation on the current node
         '''
         if not self.interface and not self.disk:
-            self.cancel("Network inferface or disk/device input missing")
+            self.cancel("Network interface or disk/device input missing")
         if self.interface:
             cmd = "numactl --localalloc ping -I %s %s -c %s -f"\
                 % (self.interface, self.peer, self.ping_count)
@@ -220,7 +219,7 @@ class Numactl(Test):
         Test Preferably allocate memory on node
         '''
         if not self.interface and not self.disk:
-            self.cancel("Network inferface or disk/device input missing")
+            self.cancel("Network interface or disk/device input missing")
 
         if self.check_numa_nodes():
 
@@ -249,7 +248,7 @@ class Numactl(Test):
         Test CPU and memory bind
         '''
         if not self.interface and not self.disk:
-            self.cancel("Network inferface or disk/device input missing")
+            self.cancel("Network interface or disk/device input missing")
         if self.check_numa_nodes():
             self.first_cpu_node_number = [key
                                           for key
@@ -285,10 +284,10 @@ class Numactl(Test):
 
     def test_physical_cpu_bind(self):
         '''
-        Test physcial  CPU binds
+        Test physical  CPU binds
         '''
         if not self.interface and not self.disk:
-            self.cancel("Network inferface or disk/device input missing")
+            self.cancel("Network interface or disk/device input missing")
         if self.check_numa_nodes():
             self.cpu_number = [value
                                for value
@@ -310,7 +309,7 @@ class Numactl(Test):
 
     def test_numa_pci_bind(self):
         '''
-        Test PCI binding to diferrent NUMA nodes
+        Test PCI binding to different NUMA nodes
         '''
         if self.check_numa_nodes():
             nodes = [node for node in self.numa_dict.keys()]
@@ -333,5 +332,5 @@ class Numactl(Test):
                     self.networkinterface.restore_from_backup()
                 except Exception:
                     self.networkinterface.remove_cfg_file()
-                    self.log.info("backup file not availbale,"
+                    self.log.info("backup file not available,"
                                   "could not restore file.")
