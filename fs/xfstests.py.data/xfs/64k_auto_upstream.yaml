@@ -1,0 +1,22 @@
+scratch_mnt: '/mnt/scratch'
+test_mnt: '/mnt/test'
+disk_mnt: '/mnt/loop-device'
+
+loop_type: !mux
+    type: 'loop'
+    loop_size: '12GiB'
+    # Option to provide disk for loop device creation,
+    # Uses '/' by default for file creation
+    disk: "null"
+
+fs_type: !mux
+    fs_xfs_64k_auto:
+        fs: 'xfs'
+        args: '-R xunit -L 10 -g auto'
+        mkfs_opt: '-f -b size=65536'
+        mount_opt: ''
+
+run_type: !mux
+    upstream:
+        run_type: 'upstream'
+        xfsprogs_url: 'https://git.kernel.org/pub/scm/fs/xfs/xfsprogs-dev.git'
