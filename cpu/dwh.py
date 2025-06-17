@@ -65,11 +65,13 @@ class Dwh(Test):
         for file_name in ['dwh.cpp', 'Makefile']:
             self.copyutil(file_name)
         if dist.name in ['fedora', 'rhel']:
-            cmd = 'patch -p0 < %s' % os.path.abspath(self.get_data('fofd.patch'))
+            cmd = 'patch -p0 < %s' % os.path.abspath(
+                self.get_data('fofd.patch'))
         elif dist.name in ['Ubuntu', 'debian']:
             cmd = "sed -i 's/g++.*/& -lrt/' Makefile"
         os.chdir(self.teststmpdir)
-        process.run(cmd, shell=True)
+        if dist.name != 'SuSE':
+            process.run(cmd, shell=True)
 
         build.make(self.teststmpdir)
 
