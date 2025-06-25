@@ -35,8 +35,7 @@ class Perffuzzer(Test):
 
     @staticmethod
     def run_cmd_out(cmd):
-        return process.system_output(cmd, shell=True, ignore_status=True,
-                                     sudo=True)
+        return process.run(cmd, shell=True, ignore_status=True, sudo=True)
 
     def setUp(self):
         '''
@@ -72,8 +71,8 @@ class Perffuzzer(Test):
         Building the perf event test suite
         """
         self.sourcedir = os.path.join(self.workdir, 'perf_event_tests-master')
-        if build.make(self.sourcedir, extra_args="-s -S") > 0:
-            self.cancel("Building perf event test suite failed")
+        if build.make(self.sourcedir, extra_args="-s -S") != 0:
+            self.fail("Building perf event test suite failed")
 
     def execute_perf_fuzzer(self):
         os.chdir(self.sourcedir)
@@ -84,7 +83,9 @@ class Perffuzzer(Test):
         self.perf_fuzzer = os.path.join(self.sourcedir, "fuzzer/perf_fuzzer")
         if not os.path.exists(self.perf_fuzzer):
             self.cancel("fuzzer not found at %s" % self.perf_fuzzer)
-        self.output = self.run_cmd_out(self.perf_fuzzer).decode("utf-8")
+        output = self.run_cmd_out(self.perf_fuzzer)
+        if output.exit_status != 0:
+            self.fail(f'perf fuzzer failed with exit code {output.exit_status}')
 
     def test(self):
         '''
