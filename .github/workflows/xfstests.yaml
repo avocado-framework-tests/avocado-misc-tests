@@ -79,7 +79,7 @@ jobs:
           echo "ARTIFACT_NAME_CONTAINER=$ARTIFACT_NAME_CONTAINER" >> $GITHUB_ENV
 
       - name: Upload results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: "xfstests_${{ env.ARTIFACT_NAME_CONFIG }}_${{ env.ARTIFACT_NAME_CONTAINER }}"
           path: ./avocado-results/
