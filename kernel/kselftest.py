@@ -83,12 +83,15 @@ class kselftest(Test):
             deps.extend(['glibc', 'glibc-devel', 'popt-devel', 'sudo',
                          'libcap2', 'libcap-devel', 'libcap-ng-devel',
                          'fuse', 'fuse-devel', 'glibc-devel-static',
-                         'traceroute', 'iproute2', 'socat', 'clang7',
-                         'libnuma-devel'])
+                         'traceroute', 'iproute2', 'socat', 'libnuma-devel'])
             if self.distro_ver >= 15:
                 deps.extend(['libhugetlbfs-devel'])
             else:
                 deps.extend(['libhugetlbfs-libhugetlb-devel'])
+            if self.distro_ver >= 16:
+                deps.extend(['libclang13'])
+            else:
+                deps.extend(['clang7'])
         elif self.detected_distro.name in ['centos', 'fedora', 'rhel']:
             deps.extend(['popt', 'glibc', 'glibc-devel', 'glibc-static',
                          'libcap-ng', 'libcap', 'libcap-devel',
