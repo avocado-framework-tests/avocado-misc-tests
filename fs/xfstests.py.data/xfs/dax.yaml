@@ -4,7 +4,7 @@ test_mnt: '/mnt/test_pmem'
 fs_type: !mux
     fs_xfs_dax:
         fs: 'xfs'
-        args: '-R xunit -L 10 -g quick'
+        args: '-R xunit -L 10 -g auto'
         mkfs_opt: '-b size=65536 -s size=512 -m reflink=0'
         mount_opt: '-o dax'
 

@@ -159,8 +159,8 @@ class Xfstests(Test):
                  'libattr1-dev', 'libacl1-dev', 'libgdbm-dev',
                  'uuid-runtime', 'libaio-dev', 'fio', 'dbench',
                  'gettext', 'libinih-dev', 'liburcu-dev', 'libblkid-dev',
-                 'liblzo2-dev', 'zlib1g-dev', 'e2fslibs-dev', 'asciidoc',
-                 'xmlto', 'libzstd-dev', 'libudev-dev', 'bc', 'dump', 'acl',
+                 'liblzo2-dev', 'zlib1g-dev', 'e2fslibs-dev',
+                 'libzstd-dev', 'libudev-dev', 'bc', 'dump', 'acl',
                  'lvm2', 'sed'])
             if self.detected_distro.version in ['14']:
                 packages.extend(['libtool'])
@@ -178,8 +178,8 @@ class Xfstests(Test):
                              'xfsdump', 'psmisc', 'sed', 'libacl-devel',
                              'libattr-devel', 'libaio-devel', 'libuuid-devel',
                              'libblkid-devel', 'lzo-devel', 'zlib-devel',
-                             'e2fsprogs-devel', 'asciidoc', 'xmlto',
-                             'libzstd-devel', 'systemd-devel', 'meson',
+                             'e2fsprogs-devel', 'libzstd-devel',
+                             'systemd-devel', 'meson',
                              'xfsprogs-devel', 'gcc-c++'])
             if self.detected_distro.name == 'rhel' and (
                     self.detected_distro.version.startswith('9')):
