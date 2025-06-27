@@ -142,7 +142,9 @@ class Lshwrun(Test):
                 mac = line.split()[1]
         if not mac:
             self.cancel("Couldn't get mac address from the active interface.")
-        if mac not in self.lshw_output:
+
+        x = re.search(mac, self.lshw_output)
+        if not x:
             self.fail("lshw failed to show correct mac address")
 
         # verify network
