@@ -38,10 +38,11 @@ class Hwinfo(Test):
         dmesg.clear_dmesg()
         self.disk_name = ''
         output = process.system_output("df -h", shell=True).decode().splitlines()
-        filtered_lines = [line for line in output
-                          if re.search(r'(s|v)d[a-z][1-8]', line)]
+        filtered_lines = [line for line in output if re.search(r'\b(sd[a-z]\d+|vd[a-z]\d+|nvme\d+n\d+p\d+)\b', line)]
         if filtered_lines:
-            self.disk_name = filtered_lines[-1].split()[0].strip("12345")
+            disk_entry = filtered_lines[-1].split()[0]
+            # Strip partition number: for sdX or vdX it’s trailing digits, for nvme it’s after 'p'
+            self.disk_name = re.sub(r'(\d+$|p\d+$)', '', disk_entry)
         if not self.disk_name:
             self.cancel("Couldn't get Disk name.")
         self.Unique_Id = ''
