@@ -187,6 +187,7 @@ class NdctlTest(Test):
         self.package = self.params.get('package', default='upstream')
         self.preserve_setup = self.params.get('preserve_change', default=False)
         self.mode_to_use = self.params.get('modes', default='fsdax')
+        self.size_1g_align = self.params.get('size_1g_align', default='2g')
         location = self.params.get('location', default='.')
 
         ndctl_project_version = self.params.get(
@@ -645,7 +646,7 @@ class NdctlTest(Test):
                     self.fail('Numa mismatch between ndctl and sys interface')
 
     @avocado.fail_on(pmem.PMemException)
-    def test_label_read_write(self):
+    def test_label_read_write(self, align='2M'):
         region = self.get_default_region()
         if (self.plib.is_region_legacy(region)):
             self.cancel("Legacy config skipping the test")
@@ -659,7 +660,7 @@ class NdctlTest(Test):
             self.fail("Label zero-fill failed")
 
         self.plib.enable_region(name=region)
-        self.plib.create_namespace(region=region)
+        self.plib.create_namespace(region=region, align=align)
         self.log.info("Storing labels with a namespace")
         old_op = process.system_output(
             '%s check-labels %s' % (self.ndctl, nmem), shell=True)
@@ -747,7 +748,7 @@ class NdctlTest(Test):
                 self.plib.destroy_namespace(region=reg_name, force=True)
 
     @avocado.fail_on(pmem.PMemException)
-    def test_daxctl_memhotplug_unplug(self):
+    def test_daxctl_memhotplug_unplug(self, align='2M'):
         """
         Test devdax memory hotplug/unplug
         """
@@ -757,7 +758,7 @@ class NdctlTest(Test):
         region = self.get_default_region()
         self.plib.disable_namespace(region=region)
         self.plib.destroy_namespace(region=region)
-        self.plib.create_namespace(region=region, mode='devdax')
+        self.plib.create_namespace(region=region, mode='devdax', align=align)
         daxdev = self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'chardev')
         old_mem = memory.meminfo.MemTotal.b
@@ -796,7 +797,7 @@ class NdctlTest(Test):
         return read_out[0]
 
     @avocado.fail_on(pmem.PMemException)
-    def test_write_infoblock_supported_align(self):
+    def test_write_infoblock_supported_align(self, align='2M'):
         """
         Test write_infoblock with align size
         """
@@ -805,7 +806,7 @@ class NdctlTest(Test):
         region = self.get_default_region()
         self.plib.disable_namespace(region=region)
         self.plib.destroy_namespace(region=region)
-        self.plib.create_namespace(region=region, mode='devdax')
+        self.plib.create_namespace(region=region, mode='devdax', align=align)
         ns_name = self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
         self.plib.disable_namespace(namespace=ns_name)
@@ -814,7 +815,7 @@ class NdctlTest(Test):
         self.plib.enable_namespace(namespace=ns_name)
 
     @avocado.fail_on(pmem.PMemException)
-    def test_write_infoblock_unalign(self):
+    def test_write_infoblock_unalign(self, align='2M'):
         """
         Test write_infoblock with unsupported align size
         """
@@ -823,7 +824,7 @@ class NdctlTest(Test):
         region = self.get_default_region()
         self.plib.disable_namespace(region=region)
         self.plib.destroy_namespace(region=region)
-        self.plib.create_namespace(region=region, mode='devdax')
+        self.plib.create_namespace(region=region, mode='devdax', align=align)
         ns_name = self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
         self.plib.disable_namespace(namespace=ns_name)
@@ -853,7 +854,7 @@ class NdctlTest(Test):
         self.plib.destroy_namespace(namespace=ns_name, force=True)
 
     @avocado.fail_on(pmem.PMemException)
-    def test_write_infoblock_align_default(self):
+    def test_write_infoblock_align_default(self, align='2M'):
         """
         Test write_infoblock with align size
         """
@@ -862,7 +863,7 @@ class NdctlTest(Test):
         region = self.get_default_region()
         self.plib.disable_namespace(region=region)
         self.plib.destroy_namespace(region=region)
-        self.plib.create_namespace(region=region, mode='devdax')
+        self.plib.create_namespace(region=region, mode='devdax', align=align)
         ns_name = self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
         align = self.plib.run_ndctl_list_val(
@@ -873,7 +874,7 @@ class NdctlTest(Test):
             self.fail("Alignment is not same as default alignment")
 
     @avocado.fail_on(pmem.PMemException)
-    def test_write_infoblock_size(self):
+    def test_write_infoblock_size(self, align='2M'):
         """
         Test write_infoblock with align size
         """
@@ -882,7 +883,7 @@ class NdctlTest(Test):
         region = self.get_default_region()
         self.plib.disable_namespace(region=region)
         self.plib.destroy_namespace(region=region)
-        self.plib.create_namespace(region=region, mode='devdax')
+        self.plib.create_namespace(region=region, mode='devdax', align=align)
         ns_name = self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
         size = self.plib.run_ndctl_list_val(
@@ -894,7 +895,7 @@ class NdctlTest(Test):
         self.plib.enable_namespace(namespace=ns_name)
 
     @avocado.fail_on(pmem.PMemException)
-    def test_write_infoblock_size_unaligned(self):
+    def test_write_infoblock_size_unaligned(self, align='2M'):
         """
         Test write_infoblock with align size
         """
@@ -903,7 +904,7 @@ class NdctlTest(Test):
         region = self.get_default_region()
         self.plib.disable_namespace(region=region)
         self.plib.destroy_namespace(region=region)
-        self.plib.create_namespace(region=region, mode='devdax')
+        self.plib.create_namespace(region=region, mode='devdax', align=align)
         ns_name = self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
         size = self.plib.run_ndctl_list_val(
@@ -949,12 +950,12 @@ class NdctlTest(Test):
             self.fail("FIO mmap workload on fsdax failed")
 
     @avocado.fail_on(pmem.PMemException)
-    def test_fsdax_write(self):
+    def test_fsdax_write(self, align='2M'):
         """
         Test filesystem DAX with a FIO workload
         """
         region = self.get_default_region()
-        self.plib.create_namespace(region=region, mode='fsdax')
+        self.plib.create_namespace(region=region, mode='fsdax', align=align)
         self.disk = '/dev/%s' % self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'blockdev')
         size = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
@@ -1001,18 +1002,124 @@ class NdctlTest(Test):
             self.fail('Write with MAP_SYNC flag failed')
 
     @avocado.fail_on(pmem.PMemException)
-    def test_devdax_write(self):
+    def test_devdax_write(self, align='2M'):
         """
         Test device DAX with a daxio binary
         """
         region = self.get_default_region()
-        self.plib.create_namespace(region=region, mode='devdax')
+        self.plib.create_namespace(region=region, mode='devdax', align=align)
         daxdev = "/dev/%s" % self.plib.run_ndctl_list_val(
             self.plib.run_ndctl_list("-N -r %s" % region)[0], 'chardev')
         if process.system(
                 "%s -b no -i /dev/urandom -o %s"
                 % (self.get_data("daxio.static"), daxdev), ignore_status=True):
             self.fail("DAXIO write on devdax failed")
+
+    @avocado.fail_on(pmem.PMemException)
+    def test_namespace_1gb_alignment(self):
+        """
+        Test namespace with 1GB alignment
+        """
+        region = self.get_default_region()
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
+        try:
+            self.plib.create_namespace(
+                region=region, size=self.size_1g_align, align='1073741824')
+            self.check_namespace_align(region)
+            ns_json = self.plib.run_ndctl_list('-r %s -N' % region)[0]
+            created_align = self.plib.run_ndctl_list_val(ns_json, 'align')
+            if created_align != 1073741824:
+                self.fail("Expected alignment 1073741824, Got %s" %
+                          created_align)
+            else:
+                self.log.info("Namespace with 1GB alignment: %s", ns_json)
+        except pmem.PMemException:
+            self.fail("Namespace creation with 1GB alignment"
+                      "must have failed!")
+        ns_name = self.plib.run_ndctl_list_val(
+            self.plib.run_ndctl_list("-N -r %s" % region)[0], 'dev')
+        self.plib.disable_namespace(namespace=ns_name)
+        self.plib.destroy_namespace(region=region)
+
+    def test_namespace_1gb_alignment_enable_disable(self):
+        """
+        Test enabling and disabling a 1GB alignment namespace
+        """
+        region = self.get_default_region()
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
+        try:
+            self.plib.create_namespace(
+                region=region, size=self.size_1g_align, align='1073741824')
+            ns_name = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
+                '-r %s -N' % region)[0], 'dev')
+            self.plib.disable_namespace(namespace=ns_name, region=region)
+            self.plib.enable_namespace(namespace=ns_name, region=region)
+            self.check_namespace_align(region)
+        except pmem.PMemException:
+            self.fail("Namespace creation or enable/disable with"
+                      "1GB alignment must have failed!")
+
+    def test_modes_1gb_alignment_namespaces(self):
+        """
+        Test creating and destroying 1GB alignment namespaces in 2 modes
+        """
+        region = self.get_default_region()
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
+        modes = ['fsdax', 'devdax']
+        for mode in modes:
+            try:
+                self.plib.create_namespace(region=region,
+                                           size=self.size_1g_align,
+                                           align='1073741824', mode=mode)
+                ns_name = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list
+                                                       ('-r %s -N' % region)[0], 'dev')
+                self.log.info("Created namespace with mode %s and 1GB alignment:"
+                              " %s", mode, ns_name)
+            except pmem.PMemException:
+                self.fail("Namespace creation with mode %s and 1GB alignment"
+                          " must have failed!" % mode)
+        process.system('ndctl destroy-namespace all -f')
+
+    @avocado.fail_on(pmem.PMemException)
+    def test_daxctl_1gb_alignment_memhotplug_unplug(self):
+        """
+        Test devdax memory hotplug/unplug with 1GB alignment
+        """
+        self.test_daxctl_memhotplug_unplug(align='1073741824')
+
+    @avocado.fail_on(pmem.PMemException)
+    def test_fsdax_write_1gb_alignment(self):
+        """
+        Test filesystem DAX with a FIO workload
+        """
+        self.test_fsdax_write(align='1073741824')
+
+    @avocado.fail_on(pmem.PMemException)
+    def test_devdax_write_1gb_alignment(self):
+        """
+        Test device DAX with a daxio binary
+        """
+        self.test_devdax_write(align='1073741824')
+
+    @avocado.fail_on(pmem.PMemException)
+    def test_label_read_write_1gb_alignment(self):
+        """
+        Test devdax memory hotplug/unplug
+        """
+        self.test_label_read_write(align='1073741824')
+
+    @avocado.fail_on(pmem.PMemException)
+    def test_write_infoblock_1gb_alignment(self):
+        """
+        Test write_infoblock with different alignment
+        """
+        self.test_write_infoblock_supported_align(align='1073741824')
+        self.test_write_infoblock_unalign(align='1073741824')
+        self.test_write_infoblock_size(align='1073741824')
+        self.test_write_infoblock_size_unaligned(align='1073741824')
 
     @avocado.fail_on(pmem.PMemException)
     def tearDown(self):
