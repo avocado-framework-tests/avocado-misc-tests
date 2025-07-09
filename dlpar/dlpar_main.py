@@ -15,6 +15,7 @@
 # Author: Kalpana Shetty <kalshett@in.ibm.com>
 # Author(Modified): Samir A Mulani <samir@linux.vnet.ibm.com>
 
+import subprocess
 import os
 import random
 
@@ -454,3 +455,70 @@ class DlparTests(Test):
         rvalue_move = Mem_obj.mem_move()
         if rvalue_move == 1:
             self.fail("Memory move Command failed please check the logs")
+    
+    def test_check_smt_state(self):
+       """
+        Test SMT state before and after DLPAR CPU add/remove operations.
+       """
+       smt_state = self._execute_command('ppc64_cpu --smt')
+       lscpu_smt_state = self._execute_command('lscpu | grep -i thread').strip()
+       lparstat_cmd_smt_state = self._execute_command('lparstat | grep -i smt').strip()
+       if self.lpar_mode == 'dedicated':
+            Ded_obj = DedicatedCpu(self.sorted_payload,
+                                   log='dedicated_cpu.log')
+            rvalue=''
+            for operation_type in ['add', 'remove']:
+                if operation_type == 'add':
+                   rvalue=Ded_obj.add_ded_cpu(1)
+                else:
+                   rvalue=Ded_obj.rem_ded_cpu(1)
+
+                if rvalue != 0:
+                   self.log.error("CPU operation failed. Please check the logs.")
+                   return
+
+                new_smt_state = self._execute_command('ppc64_cpu --smt').strip()
+                new_lscpu_smt_state = self._execute_command('lscpu | grep -i thread').strip()
+                new_lparstat_smt_state = self._execute_command('lparstat | grep -i smt').strip()
+
+                if (smt_state != new_smt_state and lscpu_smt_state != new_lscpu_smt_state and lparstat_cmd_smt_state != new_lparstat_smt_state):
+                    self.log.error("SMT state did not match after CPU operations. Test failed.")
+                    return
+
+                self.log.info("SMT state remained consistent. Test passed.")
+       elif self.lpar_mode == 'shared':
+            Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
+            rvalue=''
+            rvalue1=''
+            for operation_type in ['add', 'remove']:
+               if operation_type == 'add':
+                  rvalue = Sha_obj.add_proc(1, '--procs')
+                  ravlue1 = Sha_obj.add_proc(1, '--procunits')
+               else:
+                  rvalue = Sha_obj.remove_proc(1, '--procs')
+                  ravlue1 = Sha_obj.remove_proc(1, '--procunits')
+
+               if rvalue != 0 and rvalue1 != 0:
+                   self.log.error("CPU operation failed. Please check the logs.")
+                   return
+
+               new_smt_state = self._execute_command('ppc64_cpu --smt').strip()
+               new_lscpu_smt_state = self._execute_command('lscpu | grep -i thread').strip()
+               new_lparstat_smt_state = self._execute_command('lparstat | grep -i smt').strip()
+
+               if (smt_state != new_smt_state and lscpu_smt_state != new_lscpu_smt_state and lparstat_cmd_smt_state != new_lparstat_smt_state):
+                 self.log.error("SMT state did not match after CPU operations. Test failed.")
+                 return
+               self.log.info("SMT state remained consistent. Test passed.")
+
+
+    def _execute_command(self, cmd):
+        """
+        Execute shell commands and return the output.
+        """
+        try:
+          output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, universal_newlines=True)
+          return output.strip()
+        except subprocess.CalledProcessError as e:
+         self.log.error(f"Command '{cmd}' failed with error: {e.output}")
+         return None
