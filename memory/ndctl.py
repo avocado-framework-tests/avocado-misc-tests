@@ -1122,6 +1122,34 @@ class NdctlTest(Test):
         self.test_write_infoblock_size_unaligned(align='1073741824')
 
     @avocado.fail_on(pmem.PMemException)
+    def test_devmap_Optimisation(self):
+        """
+        Test to verify Device memory kernel mapping optimization feature.
+        """
+        region = self.get_default_region()
+        self.plib.disable_namespace(region=region)
+        self.plib.destroy_namespace(region=region)
+        process.run('echo \"file arch/powerpc/mm/book3s64/radix_pgtable.c +p\"'
+                    ' > /sys/kernel/debug/dynamic_debug/control', sudo=True, shell=True)
+        init_count = process.system_output('dmesg'
+                                           ' | grep -Eai "Tail page reuse" | wc -l',
+                                           shell=True)
+        try:
+            self.plib.create_namespace(
+                region=region, size=self.size_1g_align, align='1073741824',
+                memmap='mem', mode='devdax')
+            final_count = process.system_output('dmesg'
+                                                ' | grep -Eai "Tail page reuse" | wc -l',
+                                                shell=True)
+            if (int(final_count) - int(init_count)) > 0:
+                self.log.info("Device memory kernel mapping optimization feature is working")
+            else:
+                self.fail("Device memory kernel mapping optimization feature verification failed")
+        except pmem.PMemException:
+            self.fail("Namespace creation with 1GB alignment"
+                      "must have failed!")
+
+    @avocado.fail_on(pmem.PMemException)
     def tearDown(self):
         if hasattr(self, 'part') and self.part:
             self.part.unmount()
