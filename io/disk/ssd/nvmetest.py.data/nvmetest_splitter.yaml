@@ -1,6 +1,5 @@
 namespace_count:
-#Set shared_namespaces as True if want to work with nvme multipath
-shared_namespaces: False
+shared_namespaces: True
 package: !mux
     upstream-nvme-cli:
         package: upstream

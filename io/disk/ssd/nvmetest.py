@@ -46,6 +46,10 @@ class NVMeTest(Test):
         nvme_node = self.params.get('device', default=None)
         if not nvme_node:
             self.cancel("Please provide valid nvme node name")
+        elif "subsys" in nvme_node:
+            nvme_node = nvme.get_controllers_with_subsys(nvme_node)[0]
+        elif nvme_node.startswith("nqn."):
+            nvme_node = nvme.get_controllers_with_nqn(nvme_node)[0]
         self.device = disk.get_absolute_disk_path(nvme_node)
         cmd = 'ls %s' % self.device
         if process.system(cmd, ignore_status=True):
@@ -73,8 +77,10 @@ class NVMeTest(Test):
                     smm.install("nvme-cli"):
                 self.cancel('nvme-cli is needed for the test to be run')
             self.binary = 'nvme'
+
         self.format_size = self.get_block_size()
         self.namespace = self.params.get('namespace', default='1')
+        self.shared = self.params.get("shared_namespaces", default=False)
         self.id_ns = "%sn%s" % (self.device, self.namespace)
         self.firmware_url = self.params.get('firmware_url', default='')
         if 'firmware_upgrade' in str(self.name) and not self.firmware_url:
@@ -345,9 +351,10 @@ class NVMeTest(Test):
         """
         Test to create namespace with full capacity
         """
-        self.delete_all_ns()
-        self.create_full_capacity_ns()
-        self.list_ns()
+        device = self.device.split("/")[-1]
+        nvme.delete_all_ns(device)
+        nvme.create_full_capacity_ns(device,
+                                     shared_ns=self.shared)
 
     def testformatnamespace(self):
         """
@@ -446,7 +453,9 @@ class NVMeTest(Test):
         """
         ns_count = self.params.get('namespace_count', default=1)
         device = self.device.split("/")[-1]
-        nvme.create_namespaces(device, ns_count)
+        nvme.create_namespaces(device,
+                               ns_count,
+                               shared_ns=self.shared)
 
     def test_delete_all_ns(self):
         """
