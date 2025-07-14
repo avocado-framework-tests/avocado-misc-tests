@@ -1,8 +1,6 @@
-runargs: !mux
-  default:
-    num_groups: 10
-  threshold:
-    time_val: '0.183'
-  stress:
-    num_groups: 50
-    iterations: 16
+workload_iter: 4
+ltp_url:
+data_op:
+num_groups:
+test_type:
+loops:
