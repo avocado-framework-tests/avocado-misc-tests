@@ -1,4 +1,5 @@
 namespace_count:
+shared_namespaces: False
 package: !mux
     upstream-nvme-cli:
         package: upstream
