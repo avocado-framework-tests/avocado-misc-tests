@@ -44,7 +44,7 @@ class Uperf(Test):
         To check and install dependencies for the test
         """
         local = LocalHost()
-        self.uperf_run = '0'
+        self.uperf_run = False
         self.networkinterface = None
         interfaces = os.listdir('/sys/class/net')
         self.peer_ip = self.params.get("peer_ip", default="")
@@ -139,7 +139,7 @@ class Uperf(Test):
         if not output.exit_status == 0:
             self.cancel("Unable to compile Uperf into peer machine")
         self.uperf_run = str(self.params.get("UPERF_SERVER_RUN", default=False))
-        if self.uperf_run == True:
+        if self.uperf_run:
             cmd = "/tmp/uperf-master/src/uperf -s &"
             cmd = self.session.get_raw_ssh_command(cmd)
             self.obj = SubProcess(cmd)
@@ -201,7 +201,7 @@ class Uperf(Test):
         Killing Uperf process in peer machine
         """
         if self.networkinterface:
-            if self.uperf_run == True:
+            if self.uperf_run:
                 self.obj.stop()
             cmd = "pkill uperf; rm -rf /tmp/uperf-master"
             output = self.session.cmd(cmd)
