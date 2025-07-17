@@ -15,12 +15,14 @@
 # Author: Kalpana Shetty <kalshett@in.ibm.com>
 # Author(Modified): Samir A Mulani <samir@linux.vnet.ibm.com>
 
+import re
 import os
 import random
 
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import wait
+from avocado.utils.software_manager.manager import SoftwareManager
 from dlpar_api.api import DedicatedCpu, CpuUnit, Memory
 list_payload = ["cfg_cpu_per_proc", "hmc_manageSystem", "hmc_user",
                 "hmc_passwd", "target_lpar_hostname", "target_partition",
@@ -166,7 +168,8 @@ class DlparTests(Test):
         index_value = lmb
         cmd = 'htxcmdline -query  -mdt mdt.*'
         if max_value == 0:
-            cmd_output = process.system_output(cmd, ignore_status=True).decode()
+            cmd_output = process.system_output(
+                cmd, ignore_status=True).decode()
             if 'IDLE' not in cmd_output:
                 max_value = curr_mem * 0.4
             else:
@@ -454,3 +457,256 @@ class DlparTests(Test):
         rvalue_move = Mem_obj.mem_move()
         if rvalue_move == 1:
             self.fail("Memory move Command failed please check the logs")
+
+    def test_check_smt_state(self):
+        """
+        Test SMT state before and after DLPAR CPU add/remove operations.
+
+        """
+        # Check for basic utilities
+        smm = SoftwareManager()
+        deps = ['powerpc-utils', 'util-linux']
+        for package in deps:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel(package + ' is needed for the test to be run')
+        # set smt=8
+        set_smt_value = process.system_output(
+            'ppc64_cpu --smt=8', shell=True, ignore_status=False)
+        smt_state = process.system_output(
+            'ppc64_cpu --smt', shell=True, ignore_status=False)
+        lscpu_smt_state = \
+            process.system_output('lscpu | grep -i thread',
+                                  shell=True, ignore_status=False)
+        lparstat_cmd_smt_state = \
+            process.system_output('lparstat | grep -i smt',
+                                  shell=True, ignore_status=False)
+        if self.lpar_mode == 'dedicated':
+            Ded_obj = DedicatedCpu(self.sorted_payload,
+                                   log='dedicated_cpu.log')
+            rvalue = ''
+            for operation_type in ['add', 'remove']:
+                if operation_type == 'add':
+                    rvalue = Ded_obj.add_ded_cpu(1)
+                else:
+                    rvalue = Ded_obj.rem_ded_cpu(1)
+
+                if rvalue != 0:
+                    self.log.error("CPU operation failed,\
+                            Please check the logs")
+                new_smt_state = process.system_output(
+                    'ppc64_cpu --smt', shell=True, ignore_status=False
+                )
+                new_lscpu_smt_state = process.system_output(
+                    'lscpu | grep -i thread', shell=True,
+                    ignore_status=False
+                )
+                new_lparstat_smt_state = process.system_output(
+                    'lparstat | grep -i smt',
+                    shell=True,
+                    ignore_status=False
+                )
+
+                if (
+                   smt_state != new_smt_state or
+                   lscpu_smt_state != new_lscpu_smt_state or
+                   lparstat_cmd_smt_state != new_lparstat_smt_state):
+                    self.log.error(
+                        "SMT state did not match after "
+                        "CPU operations.Test failed."
+                    )
+                else:
+                    self.log.info(
+                        "SMT state remained consistent,Test passed.")
+
+        elif self.lpar_mode == 'shared':
+            Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
+            rvalue = ''
+            rvalue1 = ''
+            for operation_type in ['add', 'remove']:
+                if operation_type == 'add':
+                    rvalue = Sha_obj.add_proc(1, '--procs')
+                    rvalue1 = Sha_obj.add_proc(1, '--procunits')
+                else:
+                    rvalue = Sha_obj.remove_proc(1, '--procs')
+                    rvalue1 = Sha_obj.remove_proc(1, '--procunits')
+
+                if (rvalue != 0 and rvalue1 != 0):
+                    self.log.error("CPU operation failed.\
+                            Please check the logs.")
+                new_smt_state = process.system_output(
+                    'ppc64_cpu --smt', shell=True, ignore_status=False
+                )
+                new_lscpu_smt_state = process.system_output(
+                    'lscpu | grep -i thread', shell=True,
+                    ignore_status=False
+                )
+                new_lparstat_smt_state = process.system_output(
+                    'lparstat | grep -i smt',
+                    shell=True,
+                    ignore_status=False
+                )
+                if (smt_state != new_smt_state or
+                   lscpu_smt_state != new_lscpu_smt_state or
+                   lparstat_cmd_smt_state != new_lparstat_smt_state):
+                    self.log.error(
+                        "SMT state did not match after"
+                        "CPU operations. Test failed.")
+                else:
+                    self.log.info("SMT state remained consistent,Test passed.")
+
+    def test_offline_cpu_persistence(self):
+        '''
+        Keep at least 1 cpu offline(can be more than 1 too, based on
+        system config)before dlpar, do a dlpar proc add and
+        check if the offline CPU is still in the offline state
+        after adding new core
+        '''
+        smm = SoftwareManager()
+        deps = ['powerpc-utils', 'util-linux']
+        for package in deps:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel(package + ' is needed for the test to be run')
+
+        set_cpu1_offline = process.system_output(
+            'echo 0 > /sys/devices/system/cpu/cpu1/online',
+            shell=True, ignore_status=False)
+
+        before_cpu1_state = process.system_output(
+            'cat /sys/devices/system/cpu/cpu1/online',
+            shell=True, ignore_status=False)
+
+        if self.lpar_mode == 'dedicated':
+            Ded_obj = DedicatedCpu(self.sorted_payload,
+                                   log='dedicated_cpu.log')
+            rvalue = ''
+            for operation_type in ['add', 'remove']:
+                if operation_type == 'add':
+                    rvalue = Ded_obj.add_ded_cpu(1)
+                else:
+                    rvalue = Ded_obj.rem_ded_cpu(1)
+
+                if rvalue != 0:
+                    self.log.error("CPU operation failed,"
+                                   "Please check the logs")
+                after_cpu1_state = process.system_output(
+                    'cat /sys/devices/system/cpu/cpu1/online',
+                    shell=True, ignore_status=False)
+
+                if (before_cpu1_state != after_cpu1_state):
+                    self.log.error(
+                        "Failed since CPU state."
+                        "changed after dlpar operation"
+                    )
+                else:
+                    self.log.info(
+                        "CPU is still offline even after"
+                        "proc operation,Test passed.")
+        else:
+            Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
+            rvalue = ''
+            rvalue1 = ''
+            for operation_type in ['add', 'remove']:
+                if operation_type == 'add':
+                    rvalue = Sha_obj.add_proc(1, '--procs')
+                    rvalue1 = Sha_obj.add_proc(1, '--procunits')
+                else:
+                    rvalue = Sha_obj.remove_proc(1, '--procs')
+                    rvalue1 = Sha_obj.remove_proc(1, '--procunits')
+
+                if (rvalue != 0 and rvalue1 != 0):
+                    self.log.error("CPU operation failed."
+                                   "Please check the logs."
+                                   )
+                after_cpu1_state = process.system_output(
+                    'cat /sys/devices/system/cpu/cpu1/online',
+                    shell=True, ignore_status=False)
+
+                if (before_cpu1_state != after_cpu1_state):
+                    self.log.error(
+                        "Failed since CPU state."
+                        "changed after dlpar operation"
+                    )
+                else:
+                    self.log.info(
+                        "CPU is still offline even after"
+                        "proc operation,Test passed.")
+
+    def test_offline_proc_persistence(self):
+        '''
+        Keep SMT less than 8 and at least 1 core offline, do a dlpar proc
+        add and then check if the added core gets the correct dlpar state.
+        '''
+        # check software
+        smm = SoftwareManager()
+        deps = ['powerpc-utils', 'util-linux']
+        for package in deps:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel(package + ' is needed for the test to be run')
+
+        set_smt_value = process.system_output(
+            'ppc64_cpu --smt=6', shell=True, ignore_status=False)
+
+        online_cores = process.run('ppc64_cpu --cores-on').stdout.decode()
+        before_online_cores = int(
+            re.search(r'=\s*(\d+)', online_cores).group(1))
+
+        before_smt_state = process.system_output(
+            'ppc64_cpu --smt', shell=True, ignore_status=False)
+
+        set_core1_value = process.system_output(
+            'ppc64_cpu --offline-cores=1', shell=True, ignore_status=False)
+
+        if self.lpar_mode == 'dedicated':
+            Ded_obj = DedicatedCpu(self.sorted_payload,
+                                   log='dedicated_cpu.log')
+            rvalue = ''
+            for operation_type in ['add', 'remove']:
+                if operation_type == 'add':
+                    rvalue = Ded_obj.add_ded_cpu(1)
+                else:
+                    rvalue = Ded_obj.rem_ded_cpu(1)
+
+                if rvalue != 0:
+                    self.log.error(
+                        "CPU operation failed,"
+                        "Please check the logs"
+                    )
+                after_smt_state = process.system_output(
+                    'ppc64_cpu --smt', shell=True, ignore_status=False)
+
+                if (before_smt_state != after_smt_state):
+                    self.log.error(
+                        "Failed since SMT state."
+                        "changed after dlpar operation"
+                    )
+                else:
+                    self.log.info("SMT is unchanged,Test passed.")
+
+        else:
+            Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
+            rvalue = ''
+            rvalue1 = ''
+            for operation_type in ['add', 'remove']:
+                if operation_type == 'add':
+                    rvalue = Sha_obj.add_proc(1, '--procs')
+                    rvalue1 = Sha_obj.add_proc(1, '--procunits')
+                else:
+                    rvalue = Sha_obj.remove_proc(1, '--procs')
+                    rvalue1 = Sha_obj.remove_proc(1, '--procunits')
+
+                if (rvalue != 0 and rvalue1 != 0):
+                    self.log.error(
+                        "CPU operation failed."
+                        "Please check the logs."
+                    )
+
+                after_smt_state = process.system_output(
+                    'ppc64_cpu --smt', shell=True, ignore_status=False)
+
+                if (before_smt_state != after_smt_state):
+                    self.log.error(
+                        "Failed since SMT state."
+                        "changed after dlpar operation"
+                    )
+                else:
+                    self.log.info("SMT is unchanged ,Test passed.")
