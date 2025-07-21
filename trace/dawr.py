@@ -52,6 +52,29 @@ class Dawr(Test):
             shutil.copyfile(self.get_data('dawr_v%d.c' % value),
                             os.path.join(self.teststmpdir,
                                          'dawr_v%d.c' % value))
+        for fname in ['boundary_check.c', 'Makefile']:
+            shutil.copyfile(self.get_data(fname),
+                        os.path.join(self.teststmpdir, fname))
+        build.make(self.teststmpdir)
+        os.chdir(self.teststmpdir)
+        self.output_file = "perf.data"
+
+    def run_cmd(self, bin_var):
+        child = pexpect.spawn('gdb ./%s' % bin_var, encoding='utf-8')
+        time.sleep(0.3)
+        child.logfile = sys.stdout
+        child.expect('(gdb)')
+        if self.distro_name in ['fedora', 'SuSE']:
+            child.sendline('set debuginfod enabled on')
+            child.expect_exact([pexpect.TIMEOUT, ''])
+        return_value = []
+        return child, return_value
+
+    def run_test(self, cmd):
+        return process.run(cmd, shell=True)
+
+    def perf_cmd(self, perf_record):
+        process.run(perf_record, shell=True, ignore_status=True,
         shutil.copyfile(self.get_data('Makefile'),
                         os.path.join(self.teststmpdir, 'Makefile'))
         build.make(self.teststmpdir)
@@ -170,6 +193,20 @@ class Dawr(Test):
         perf_record = 'perf record -o %s -e mem:%s -e mem:%s ./dawr_v2' % (
             self.output_file, data[0], data[1][1:11])
         self.perf_cmd(perf_record)
+
+    def test_dawr_boundary_check(self):
+        """
+        Run test_dawr_boundary_check to check unaligned 512-byte 
+        DAWR boundary condition
+        """
+        output = self.run_test('./boundary_check')
+        data = output.stdout.decode("utf-8")
+        expected_msg = "TEST Boundary check PASSED: unaligned_512bytes"
+        if expected_msg not in data:
+            self.fail(f"TEST Boundary check FAILED: 
+                      unaligned_512bytes.\nOutput was:\n{data}")
+        else:
+            self.log.info(expected_msg)
 
     def tearDown(self):
         # Delete the temporary file
