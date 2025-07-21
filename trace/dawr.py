@@ -52,8 +52,9 @@ class Dawr(Test):
             shutil.copyfile(self.get_data('dawr_v%d.c' % value),
                             os.path.join(self.teststmpdir,
                                          'dawr_v%d.c' % value))
-        shutil.copyfile(self.get_data('Makefile'),
-                        os.path.join(self.teststmpdir, 'Makefile'))
+        for fname in ['boundary_check.c', 'Makefile']:
+            shutil.copyfile(self.get_data(fname),
+                            os.path.join(self.teststmpdir, fname))
         build.make(self.teststmpdir)
         os.chdir(self.teststmpdir)
         self.output_file = "perf.data"
@@ -151,8 +152,9 @@ class Dawr(Test):
                                                     'watchpoint %s: %s'
                                                     % (i, value)]))
         child.sendline('r')
-        return_value.append(child.expect_exact([pexpect.TIMEOUT,
-                                                'not enough available hardware']))
+        return_value.append(
+            child.expect_exact([pexpect.TIMEOUT,
+                               'not enough available hardware']))
         for i in return_value:
             if i == 0:
                 self.fail('Test case failed for 3 variables')
@@ -170,6 +172,22 @@ class Dawr(Test):
         perf_record = 'perf record -o %s -e mem:%s -e mem:%s ./dawr_v2' % (
             self.output_file, data[0], data[1][1:11])
         self.perf_cmd(perf_record)
+
+    def test_dawr_boundary_check(self):
+        """
+        Run dawr_boundary_check to check
+        unaligned 512-byte DAWR boundary condition
+        """
+        output = self.run_test('./boundary_check')
+        data = output.stdout.decode("utf-8")
+
+        expected_msg = "TEST Boundary check PASSED: unaligned_512bytes"
+        if expected_msg not in data:
+            self.fail(
+                f"TEST Boundary check FAILED: unaligned_512bytes.\n"
+                f"Output was:\n{data}")
+        else:
+            self.log.info(expected_msg)
 
     def tearDown(self):
         # Delete the temporary file
