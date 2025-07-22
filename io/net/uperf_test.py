@@ -44,6 +44,7 @@ class Uperf(Test):
         To check and install dependencies for the test
         """
         local = LocalHost()
+        self.uperf_run = False
         self.networkinterface = None
         interfaces = os.listdir('/sys/class/net')
         self.peer_ip = self.params.get("peer_ip", default="")
@@ -83,11 +84,12 @@ class Uperf(Test):
             pkgs.extend(["lksctp-tools", "lksctp-tools-devel"])
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.cancel("%s package is need to test" % pkg)
+                self.cancel("Unable to install the package %s on host machine"
+                            % pkg)
             cmd = "%s install %s" % (smm.backend.base_command, pkg)
             output = self.session.cmd(cmd)
             if not output.exit_status == 0:
-                self.cancel("unable to install the package %s on peer machine "
+                self.cancel("Unable to install the package %s on peer machine "
                             % pkg)
         if detected_distro.name == "SuSE":
             self.nmap = os.path.join(self.teststmpdir, 'nmap')
@@ -136,8 +138,8 @@ class Uperf(Test):
         output = self.session.cmd(cmd)
         if not output.exit_status == 0:
             self.cancel("Unable to compile Uperf into peer machine")
-        self.uperf_run = str(self.params.get("UPERF_SERVER_RUN", default=0))
-        if self.uperf_run == '1':
+        self.uperf_run = str(self.params.get("UPERF_SERVER_RUN", default=False))
+        if self.uperf_run:
             cmd = "/tmp/uperf-master/src/uperf -s &"
             cmd = self.session.get_raw_ssh_command(cmd)
             self.obj = SubProcess(cmd)
@@ -199,7 +201,8 @@ class Uperf(Test):
         Killing Uperf process in peer machine
         """
         if self.networkinterface:
-            self.obj.stop()
+            if self.uperf_run:
+                self.obj.stop()
             cmd = "pkill uperf; rm -rf /tmp/uperf-master"
             output = self.session.cmd(cmd)
             if not output.exit_status == 0:
