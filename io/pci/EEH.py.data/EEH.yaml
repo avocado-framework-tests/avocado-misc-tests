@@ -2,3 +2,6 @@ max_freeze: 1
 function: 4
 err: 
 pci_device:
+host_ip:
+peer_ip:
+netmask:
