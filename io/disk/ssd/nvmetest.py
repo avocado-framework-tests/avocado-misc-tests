@@ -190,7 +190,8 @@ class NVMeTest(Test):
         cmd = "%s list-ns %s" % (self.binary, self.device)
         namespaces = []
         for line in self.run_cmd_return_output_list(cmd):
-            namespaces.append(int(line.split()[1].split(']')[0]) + 1)
+            if line.startswith('['):
+                namespaces.append(int(line.split()[1].split(']')[0]) + 1)
         return namespaces
 
     def list_ns(self):
