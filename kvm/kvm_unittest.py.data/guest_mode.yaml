@@ -1,0 +1,27 @@
+# configure_args: [Optional] Additional flags for the './configure' script, such as setting architecture, compiler, or cross-prefix for cross-compilation.
+configure_args:
+
+# qemu_binary: [Optional] Path to a custom or locally built QEMU binary (e.g., /usr/local/bin/qemu-system-x86_64).
+qemu_binary:
+
+# accelerator: Specifies the CPU accelerator (e.g., kvm, hvf, or tcg) by setting the ACCEL environment variable before running the test.
+accelerator:
+
+# kvm_module_param: [Optional] Specific KVM module parameters to test (e.g., nested, avic).
+kvm_module_param:
+
+# test: Specify the KVM unit tests to run. If not provided, all tests will be executed by default.
+# mode: [Optional] Specifies whether to run tests in accelerated (hardware-assisted) or non-accelerated mode.
+test: !mux
+  x2apic:
+    test: x2apic
+    mode: non-accelerated
+  apic:
+    test: xapic
+    mode: non-accelerated
+  x2avic:
+    test: x2apic
+    mode: accelerated
+  avic:
+    test: xapic
+    mode: accelerated
