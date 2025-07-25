@@ -29,6 +29,8 @@ from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost, RemoteHost
 from avocado.utils.ssh import Session
+from avocado.utils.download import url_download
+from avocado.utils.software_manager.backends.rpm import RpmBackend
 
 
 class HtxNicTest(Test):
@@ -186,29 +188,25 @@ class HtxNicTest(Test):
             distro_specific_htx_versions.sort(reverse=True)
             self.latest_htx_rpm = distro_specific_htx_versions[0]
 
-            cmd = ('wget %s%s --no-check-certificate ' %
-                   (self.htx_rpm_link, self.latest_htx_rpm))
-            if process.system(cmd, shell=True, ignore_status=True):
-                self.cancel("wget of rpm failed")
+            cmd = (' %s%s ' % (self.htx_rpm_link, self.latest_htx_rpm))
+            url_download(cmd, self.latest_htx_rpm)
 
-            cmd = ('rpm -ivh --nodeps %s%s '
-                   '--force' % (self.latest_htx_rpm))
             # If host and peer distro is same then perform installation
             # only one time. This check is to avoid multiple times installation
             if host_distro_pattern == peer_distro_pattern:
-                if process.system(cmd, shell=True, ignore_status=True):
+                if not RpmBackend.rpm_install(self.latest_htx_rpm, no_dependencies=True, replace=False):
                     self.cancel("Installation of rpm failed")
 
-                cmd = ('wget %s%s --no-check-certificate ' %
-                       (self.htx_rpm_link, self.latest_htx_rpm))
-                output = self.session.cmd(cmd)
-                if not output.exit_status == 0:
-                    self.cancel("Unable to wget the htx rpm package %s %s"
+                destination = "%s:/tmp" % self.peer_ip
+                output = self.session.copy_files(self.latest_htx_rpm, destination, recursive=True)
+
+                if not output:
+                    self.cancel("Unable to copy the htx rpm package %s %s"
                                 " on peer machine" % (self.htx_rpm_link,
                                                       self.latest_htx_rpm))
 
-                cmd = ('rpm -ivh --nodeps %s '
-                       '--force' % (self.latest_htx_rpm))
+                cmd = ('rpm -ivh --nodeps %s%s '
+                       '--force' % ("/tmp/", self.latest_htx_rpm))
 
                 output = self.session.cmd(cmd)
                 if not output.exit_status == 0:
@@ -393,9 +391,9 @@ class HtxNicTest(Test):
                 elif detected_distro.version == "8":
                     networkinterface.flush_ipaddr()
             elif detected_distro.name == "SuSE":
-                if detected_distro.version >= "16":
+                if detected_distro.version >= 16:
                     networkinterface.nm_flush_ipaddr()
-                elif detected_distro.version <= "15":
+                elif detected_distro.version <= 15:
                     networkinterface.flush_ipaddr()
             networkinterface.bring_up()
 
@@ -413,9 +411,9 @@ class HtxNicTest(Test):
                 elif detected_distro.version == "8":
                     peer_networkinterface.flush_ipaddr()
             elif detected_distro.name == "SuSE":
-                if detected_distro.version >= "16":
+                if detected_distro.version >= 16:
                     peer_networkinterface.nm_flush_ipaddr()
-                elif detected_distro.version <= "15":
+                elif detected_distro.version <= 15:
                     peer_networkinterface.flush_ipaddr()
             peer_networkinterface.bring_up()
 
