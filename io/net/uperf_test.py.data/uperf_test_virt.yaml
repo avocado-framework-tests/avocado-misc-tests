@@ -6,7 +6,7 @@ netmask: ""
 peer_user: "root"
 peer_password: "********"
 EXPECTED_THROUGHPUT : 80
-UPERF_SERVER_RUN : True
+PERF_SERVER_RUN : True
 mtu: !mux
     1500:
         mtu: "1500"
