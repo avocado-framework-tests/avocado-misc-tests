@@ -52,11 +52,16 @@ class Dawr(Test):
             shutil.copyfile(self.get_data('dawr_v%d.c' % value),
                             os.path.join(self.teststmpdir,
                                          'dawr_v%d.c' % value))
-        for name in ['dawr_local.c', 'dawr_pointer.c', 'dawr_struct.c', 'dawr_array.c']:
-            shutil.copyfile(self.get_data(name),
-                            os.path.join(self.teststmpdir, name))
-        shutil.copyfile(self.get_data('Makefile'),
-                        os.path.join(self.teststmpdir, 'Makefile'))
+        for fname in [
+            'boundary_check.c', 
+            'dawr_local.c', 
+            'dawr_pointer.c', 
+            'dawr_struct.c', 
+            'dawr_array.c', 
+            'Makefile'
+        ]:
+            shutil.copyfile(self.get_data(fname),
+                            os.path.join(self.teststmpdir, fname))
         build.make(self.teststmpdir)
         os.chdir(self.teststmpdir)
         self.output_file = "perf.data"
@@ -82,6 +87,11 @@ class Dawr(Test):
         self.run_test(report)
         if not os.stat(self.output_file).st_size:
             self.fail("%s sample not captured" % self.output_file)
+
+    def get_address(self, binary):
+        output = self.run_test('./%s' % binary)
+        data = output.stdout.decode("utf-8").strip().split(',')
+        return [addr.strip() for addr in data]
 
     def address_v1(self):
         # Get memory address of single variable
@@ -154,8 +164,9 @@ class Dawr(Test):
                                                     'watchpoint %s: %s'
                                                     % (i, value)]))
         child.sendline('r')
-        return_value.append(child.expect_exact([pexpect.TIMEOUT,
-                                                'not enough available hardware']))
+        return_value.append(
+            child.expect_exact([pexpect.TIMEOUT,
+                               'not enough available hardware']))
         for i in return_value:
             if i == 0:
                 self.fail('Test case failed for 3 variables')
@@ -197,6 +208,22 @@ class Dawr(Test):
         perf_record = 'perf record -o %s -e mem:%s ./dawr_array' % (
             self.output_file, data[0])
         self.perf_cmd(perf_record)
+
+    def test_dawr_boundary_check(self):
+        """
+        Run dawr_boundary_check to check
+        unaligned 512-byte DAWR boundary condition
+        """
+        output = self.run_test('./boundary_check')
+        data = output.stdout.decode("utf-8")
+
+        expected_msg = "TEST Boundary check PASSED: unaligned_512bytes"
+        if expected_msg not in data:
+            self.fail(
+                f"TEST Boundary check FAILED: unaligned_512bytes.\n"
+                f"Output was:\n{data}")
+        else:
+            self.log.info(expected_msg)
 
     def tearDown(self):
         # Delete the temporary file
