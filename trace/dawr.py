@@ -52,6 +52,9 @@ class Dawr(Test):
             shutil.copyfile(self.get_data('dawr_v%d.c' % value),
                             os.path.join(self.teststmpdir,
                                          'dawr_v%d.c' % value))
+        for name in ['dawr_local.c', 'dawr_pointer.c', 'dawr_struct.c', 'dawr_array.c']:
+            shutil.copyfile(self.get_data(name),
+                            os.path.join(self.teststmpdir, name))
         shutil.copyfile(self.get_data('Makefile'),
                         os.path.join(self.teststmpdir, 'Makefile'))
         build.make(self.teststmpdir)
@@ -169,6 +172,30 @@ class Dawr(Test):
         data = self.address_v2()
         perf_record = 'perf record -o %s -e mem:%s -e mem:%s ./dawr_v2' % (
             self.output_file, data[0], data[1][1:11])
+        self.perf_cmd(perf_record)
+
+    def test_read_dawr_local_perf(self):
+        data = self.get_address('dawr_local')
+        perf_record = 'perf record -o %s -e mem:%s ./dawr_local' % (
+            self.output_file, data[0])
+        self.perf_cmd(perf_record)
+
+    def test_read_dawr_pointer_perf(self):
+        data = self.get_address('dawr_pointer')
+        perf_record = 'perf record -o %s -e mem:%s ./dawr_pointer' % (
+            self.output_file, data[0])
+        self.perf_cmd(perf_record)
+
+    def test_read_dawr_struct_perf(self):
+        data = self.get_address('dawr_struct')
+        perf_record = 'perf record -o %s -e mem:%s ./dawr_struct' % (
+            self.output_file, data[0])
+        self.perf_cmd(perf_record)
+
+    def test_read_dawr_array_perf(self):
+        data = self.get_address('dawr_array')
+        perf_record = 'perf record -o %s -e mem:%s ./dawr_array' % (
+            self.output_file, data[0])
         self.perf_cmd(perf_record)
 
     def tearDown(self):
