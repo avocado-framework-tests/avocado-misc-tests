@@ -100,7 +100,7 @@ class Rping(Test):
                 self.networkinterface.save(self.ipaddr, self.netmask)
         self.networkinterface.bring_up()
         process.system("ifup %s" % self.iface)
-        self.timeout = "2m"
+        self.timeout = 120
         self.local_ip = netifaces.ifaddresses(self.iface)[AF_INET][0]['addr']
         self.option = self.option.replace("peer_ipv6", self.ipv6_peer)
         self.option = self.option.replace("peer_ip", self.peer_ip)
