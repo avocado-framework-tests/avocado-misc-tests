@@ -12,7 +12,7 @@ loop_type: !mux
 fs_type: !mux
     fs_btrfs_4k_auto:
         fs: 'btrfs'
-        args: '-e btrfs/063,btrfs/132 -R xunit -L 10 -g auto'
+        args: '-e btrfs/063, btrfs/068, btrfs/132 -R xunit -L 10 -g auto'
         mkfs_opt: '-f -s 4096'
         mount_opt: ''
 
