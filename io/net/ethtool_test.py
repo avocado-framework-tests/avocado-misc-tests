@@ -212,6 +212,14 @@ class Ethtool(Test):
                                       ignore_status=True)
                     if ret.exit_status != 0:
                         self.fail("%s %s" % (self.args, ret.stderr_text))
+            elif self.args == "-e":
+                cmd = "ethtool %s %s >> /tmp/eeprom.log 2>&1" % (self.args, self.interface)
+                ret = process.run(cmd, shell=True, verbose=True, ignore_status=True)
+                if ret.exit_status != 0:
+                    if "Operation not supported" in ret.stderr_text:
+                        self.cancel("%s failed" % self.args)
+                    else:
+                        self.fail("%s failed" % self.args)
             else:
                 cmd = "ethtool %s %s %s" % (
                     self.args, self.interface, self.elapse)
@@ -219,7 +227,7 @@ class Ethtool(Test):
                                   ignore_status=True)
                 if ret.exit_status != 0:
                     if "Operation not supported" in ret.stderr_text:
-                        self.log.warn("%s failed" % self.args)
+                        self.cancel("%s failed" % self.args)
                     else:
                         self.fail("%s failed" % self.args)
         if not wait.wait_for(lambda: self.networkinterface.are_packets_lost(
