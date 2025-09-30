@@ -123,10 +123,13 @@ class IommuTest(Test):
         for pci_addr in self.pci_devices.split(" "):
             driver, _ = self.get_params(pci_addr)
             self.log.info("PCI_ID = %s", pci_addr)
-            # unbinding the driver
-            pci.unbind(driver, pci_addr)
-            # binding the driver
-            pci.bind(driver, pci_addr)
+            try:
+                # unbinding the driver
+                pci.unbind(driver, pci_addr)
+                # binding the driver
+                pci.bind(driver, pci_addr)
+            except Exception as e:
+                self.fail(f"{e}")
         self.check_dmesg()
 
     def test_unbind_changedomain_bind(self):
@@ -142,21 +145,24 @@ class IommuTest(Test):
                 pivot_dom = self.domains[j]
                 i = j + 1
                 while i < len(self.domains):
-                    # unbinding the driver
-                    pci.unbind(driver, pci_addr)
-                    # Changing domain of iommu group
-                    pci.change_domain(self.domains[i], def_dom, pci_addr)
-                    # binding the driver
-                    pci.bind(driver, pci_addr)
-                    # unbinding the driver
-                    pci.unbind(driver, pci_addr)
-                    # Changing domain of iommu group
-                    pci.change_domain(pivot_dom, def_dom, pci_addr)
-                    if i == len(self.domains)-1:
-                        pci.change_domain(self.domains[j+1], def_dom,
-                                           pci_addr)
-                    # binding the driver
-                    pci.bind(driver, pci_addr)
+                    try:
+                        # unbinding the driver
+                        pci.unbind(driver, pci_addr)
+                        # Changing domain of iommu group
+                        pci.change_domain(self.domains[i], def_dom, pci_addr)
+                        # binding the driver
+                        pci.bind(driver, pci_addr)
+                        # unbinding the driver
+                        pci.unbind(driver, pci_addr)
+                        # Changing domain of iommu group
+                        pci.change_domain(pivot_dom, def_dom, pci_addr)
+                        if i == len(self.domains)-1:
+                            pci.change_domain(self.domains[j+1], def_dom,
+                                              pci_addr)
+                        # binding the driver
+                        pci.bind(driver, pci_addr)
+                    except Exception as e:
+                        self.fail(f"{e}")
                     i = i + 1
             # check the device for default state
             self.check(def_dom, pci_addr, driver)
@@ -176,21 +182,24 @@ class IommuTest(Test):
                     pivot_dom = self.domains[j]
                     i = j + 1
                     while i < len(self.domains):
-                        # unbinding the driver
-                        pci.unbind(driver, pci_addr)
-                        # Changing domain type of iommu group
-                        pci.change_domain(self.domains[i], def_dom, pci_addr)
-                        # binding the driver
-                        pci.bind(driver, pci_addr)
-                        # unbinding the driver
-                        pci.unbind(driver, pci_addr)
-                        # Changing domain type of iommu group
-                        pci.change_domain(pivot_dom, def_dom, pci_addr)
-                        if i == len(self.domains)-1:
-                            pci.change_domain(self.domains[j+1], def_dom,
-                                               pci_addr)
-                        # binding the driver
-                        pci.bind(driver, pci_addr)
+                        try:
+                            # unbinding the driver
+                            pci.unbind(driver, pci_addr)
+                            # Changing domain type of iommu group
+                            pci.change_domain(self.domains[i], def_dom, pci_addr)
+                            # binding the driver
+                            pci.bind(driver, pci_addr)
+                            # unbinding the driver
+                            pci.unbind(driver, pci_addr)
+                            # Changing domain type of iommu group
+                            pci.change_domain(pivot_dom, def_dom, pci_addr)
+                            if i == len(self.domains)-1:
+                                pci.change_domain(self.domains[j+1], def_dom,
+                                                  pci_addr)
+                            # binding the driver
+                            pci.bind(driver, pci_addr)
+                        except Exception as e:
+                            self.fail(f"{e}")
                         i = i + 1
             # check the device for default state
             self.check(def_dom, pci_addr, driver)
@@ -203,14 +212,17 @@ class IommuTest(Test):
         for pci_addr in self.pci_devices.split(" "):
             driver, def_dom = self.get_params(pci_addr)
             self.log.info("PCI_ID = %s", pci_addr)
-            # unbinding the driver
-            pci.unbind(driver, pci_addr)
-            # binding the driver
-            pci.bind(driver, pci_addr)
-            # rescan
-            pci.rescan(pci_addr)
-            # check the device for default state
-            self.check(def_dom, pci_addr, driver)
+            try:
+                # unbinding the driver
+                pci.unbind(driver, pci_addr)
+                # binding the driver
+                pci.bind(driver, pci_addr)
+                # rescan
+                pci.rescan(pci_addr)
+                # check the device for default state
+                self.check(def_dom, pci_addr, driver)
+            except Exception as e:
+                self.fail(f"{e}")
         self.check_dmesg()
 
     def test_unbind_changedomain_bind_rescan(self):
@@ -226,23 +238,26 @@ class IommuTest(Test):
                 pivot_dom = self.domains[j]
                 i = j + 1
                 while i < len(self.domains):
-                    # unbinding the driver
-                    pci.unbind(driver, pci_addr)
-                    # Changing domain type of iommu group
-                    pci.change_domain(self.domains[i], def_dom, pci_addr)
-                    # binding the driver
-                    pci.bind(driver, pci_addr)
-                    # rescan
-                    pci.rescan(pci_addr)
-                    # (second) unbinding the driver
-                    pci.unbind(driver, pci_addr)
-                    # Changing domain type of iommu group
-                    pci.change_domain(pivot_dom, def_dom, pci_addr)
-                    if i == len(self.domains)-1:
-                        pci.change_domain(self.domains[j+1], def_dom,
-                                           pci_addr)
-                    # binding the driver
-                    pci.bind(driver, pci_addr)
+                    try:
+                        # unbinding the driver
+                        pci.unbind(driver, pci_addr)
+                        # Changing domain type of iommu group
+                        pci.change_domain(self.domains[i], def_dom, pci_addr)
+                        # binding the driver
+                        pci.bind(driver, pci_addr)
+                        # rescan
+                        pci.rescan(pci_addr)
+                        # (second) unbinding the driver
+                        pci.unbind(driver, pci_addr)
+                        # Changing domain type of iommu group
+                        pci.change_domain(pivot_dom, def_dom, pci_addr)
+                        if i == len(self.domains)-1:
+                            pci.change_domain(self.domains[j+1], def_dom,
+                                              pci_addr)
+                        # binding the driver
+                        pci.bind(driver, pci_addr)
+                    except Exception as e:
+                        self.fail(f"{e}")
                     i = i + 1
             # check the device for default state
             self.check(def_dom, pci_addr, driver)
@@ -255,10 +270,13 @@ class IommuTest(Test):
         for pci_addr in self.pci_devices.split(" "):
             driver, def_dom = self.get_params(pci_addr)
             self.log.info("PCI_ID = %s", pci_addr)
-            # reset/rescan
-            pci.reset(pci_addr)
-            pci.rescan(pci_addr)
-            # check the device for default state
+            try:
+                # reset/rescan
+                pci.reset(pci_addr)
+                pci.rescan(pci_addr)
+                # check the device for default state
+            except Exception as e:
+                self.fail(f"{e}")
             self.check(def_dom, pci_addr, driver)
         self.check_dmesg()
 
