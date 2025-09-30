@@ -24,54 +24,6 @@ from avocado import Test
 from avocado.utils import process
 from avocado.utils import pci, genio
 from avocado.utils.software_manager.manager import SoftwareManager
-from avocado.utils import wait
-
-
-def change_domain_check(dom, pci_addr, def_dom):
-    """
-    Check if the domain changed successfully to "dom" for "pci_addr"
-
-    :param dom: domain type
-    :param def_dom: default domain of pci address (pci_addr)
-    :param pci_addr: full pci address including domain (0000:03:00.0)
-    return: bool
-    """
-    output = genio.read_one_line(
-            f"/sys/bus/pci/devices/{pci_addr}/iommu_group/type")
-    out = output.rsplit(None, 1)[-1]
-    if (dom not in ("auto", out)) or (dom == "auto" and out != def_dom):
-        return False
-    return True
-
-
-# TODO: Need to push this to avocado utils later
-def reset_check(pci_addr):
-    """
-    Check if reset for "pci_addr" is successful
-
-    :param pci_addr: full pci address including domain (0000:03:00.0)
-    return: bool
-    """
-    cmd = f"lspci -vvs {pci_addr}"
-    output = process.run(cmd, ignore_status=True, shell=True).stdout_text
-    if output != "":
-        return False
-    return True
-
-
-# TODO: Need to push this to avocado utils later
-def rescan_check(pci_addr):
-    """
-    Check if rescan for pci_addr is successful
-
-    :param pci_addr: full pci address including domain (0000:03:00.0)
-    return: bool
-    """
-    cmd = f"lspci -vvs {pci_addr}"
-    output = process.run(cmd, ignore_status=True, shell=True).stdout_text
-    if output == "":
-        return False
-    return True
 
 
 class IommuTest(Test):
@@ -125,85 +77,6 @@ class IommuTest(Test):
         cmd = "dmesg -T --level=alert,crit,err,warn > dmesg_initial.txt"
         process.run(cmd, ignore_status=True, shell=True, sudo=True)
 
-    # TODO: Need to push this to avocado utils later
-    def unbind(self, driver, pci_addr):
-        """
-        Unbind the device
-
-        :param driver: driver of the pci address (pci_addr)
-        :param pci_addr: full pci address including domain (0000:03:00.0)
-        return: None
-        """
-        genio.write_file(f'/sys/bus/pci/drivers/{driver}/unbind', pci_addr)
-        self.log.info(os.listdir(f'/sys/bus/pci/drivers/{driver}'))
-        if wait.wait_for(lambda: os.path.exists(f"/sys/bus/pci/drivers/\
-{driver}/{pci_addr}"), timeout=5):
-            self.fail(f'Not able to unbind {pci_addr} from {driver}')
-        else:
-            self.log.info("successfully unbinded %s", pci_addr)
-
-    def change_domain(self, dom, def_dom, pci_addr):
-        """
-        Change the domain of device to dom
-
-        :param dom: domain type
-        :param def_dom: default domain of pci address (pci_addr)
-        :param pci_addr: full pci address including domain (0000:03:00.0)
-        return: None
-        """
-        genio.write_file(f'/sys/bus/pci/devices/{pci_addr}/iommu_group/type',
-                         dom)
-        if not wait.wait_for(lambda: change_domain_check(dom,
-                             pci_addr, def_dom), timeout=5):
-            self.fail(f'Domain type change failed for {pci_addr}')
-        else:
-            self.log.info("successfully changed iommu group domain to %s", dom)
-
-    # TODO: Need to push this to avocado utils later
-    def bind(self, driver, pci_addr):
-        """
-        Bind the device to driver
-
-        :param driver: driver of the pci address (pci_addr)
-        :param pci_addr: full pci address including domain (0000:03:00.0)
-        return: None
-        """
-        genio.write_file(f"/sys/bus/pci/drivers/{driver}/bind", pci_addr)
-        self.log.info(os.listdir(f'/sys/bus/pci/drivers/{driver}'))
-        if not wait.wait_for(lambda: os.path.exists(f"/sys/bus/pci/drivers/\
-{driver}/{pci_addr}"), timeout=5):
-            self.fail(f'Not able to bind {pci_addr} to {driver}')
-        else:
-            self.log.info("successfully binded %s", pci_addr)
-
-    # TODO: Need to push this to avocado utils later
-    def reset(self, pci_addr):
-        """
-        Remove the device
-
-        :param pci_addr: full pci address including domain (0000:03:00.0)
-        return: None
-        """
-        genio.write_file(f'/sys/bus/pci/devices/{pci_addr}/remove', '1')
-        if not wait.wait_for(lambda: reset_check(pci_addr), timeout=5):
-            self.fail(f'Unsuccessful to remove {pci_addr}')
-        else:
-            self.log.info("successfully removed the device %s", pci_addr)
-
-    # TODO: Need to push this to avocado utils later
-    def rescan(self, pci_addr):
-        """
-        Rescan the system
-
-        :param pci_addr: full pci address including domain (0000:03:00.0)
-        return: None
-        """
-        genio.write_file('/sys/bus/pci/rescan', '1')
-        if not wait.wait_for(lambda: rescan_check(pci_addr), timeout=5):
-            self.fail(f'Unsuccessful to rescan for {pci_addr}')
-        else:
-            self.log.info("successfully rescanned for the device %s", pci_addr)
-
     def get_params(self, pci_addr):
         """
         Get device parameter-driver, group, default domain(def_dom)
@@ -236,9 +109,9 @@ class IommuTest(Test):
                 f"/sys/bus/pci/devices/{pci_addr}/iommu_group/type")
         out = output.rsplit(None, 1)[-1]
         if out != def_dom:
-            self.unbind(driver, pci_addr)
-            self.change_domain(def_dom, def_dom, pci_addr)
-            self.bind(driver, pci_addr)
+            pci.unbind(driver, pci_addr)
+            pci.change_domain(def_dom, def_dom, pci_addr)
+            pci.bind(driver, pci_addr)
             self.fail(f'{pci_addr} is not in default domain')
         else:
             self.log.info("Device is in default domain")
@@ -251,9 +124,9 @@ class IommuTest(Test):
             driver, _ = self.get_params(pci_addr)
             self.log.info("PCI_ID = %s", pci_addr)
             # unbinding the driver
-            self.unbind(driver, pci_addr)
+            pci.unbind(driver, pci_addr)
             # binding the driver
-            self.bind(driver, pci_addr)
+            pci.bind(driver, pci_addr)
         self.check_dmesg()
 
     def test_unbind_changedomain_bind(self):
@@ -270,20 +143,20 @@ class IommuTest(Test):
                 i = j + 1
                 while i < len(self.domains):
                     # unbinding the driver
-                    self.unbind(driver, pci_addr)
+                    pci.unbind(driver, pci_addr)
                     # Changing domain of iommu group
-                    self.change_domain(self.domains[i], def_dom, pci_addr)
+                    pci.change_domain(self.domains[i], def_dom, pci_addr)
                     # binding the driver
-                    self.bind(driver, pci_addr)
+                    pci.bind(driver, pci_addr)
                     # unbinding the driver
-                    self.unbind(driver, pci_addr)
+                    pci.unbind(driver, pci_addr)
                     # Changing domain of iommu group
-                    self.change_domain(pivot_dom, def_dom, pci_addr)
+                    pci.change_domain(pivot_dom, def_dom, pci_addr)
                     if i == len(self.domains)-1:
-                        self.change_domain(self.domains[j+1], def_dom,
+                        pci.change_domain(self.domains[j+1], def_dom,
                                            pci_addr)
                     # binding the driver
-                    self.bind(driver, pci_addr)
+                    pci.bind(driver, pci_addr)
                     i = i + 1
             # check the device for default state
             self.check(def_dom, pci_addr, driver)
@@ -304,20 +177,20 @@ class IommuTest(Test):
                     i = j + 1
                     while i < len(self.domains):
                         # unbinding the driver
-                        self.unbind(driver, pci_addr)
+                        pci.unbind(driver, pci_addr)
                         # Changing domain type of iommu group
-                        self.change_domain(self.domains[i], def_dom, pci_addr)
+                        pci.change_domain(self.domains[i], def_dom, pci_addr)
                         # binding the driver
-                        self.bind(driver, pci_addr)
+                        pci.bind(driver, pci_addr)
                         # unbinding the driver
-                        self.unbind(driver, pci_addr)
+                        pci.unbind(driver, pci_addr)
                         # Changing domain type of iommu group
-                        self.change_domain(pivot_dom, def_dom, pci_addr)
+                        pci.change_domain(pivot_dom, def_dom, pci_addr)
                         if i == len(self.domains)-1:
-                            self.change_domain(self.domains[j+1], def_dom,
+                            pci.change_domain(self.domains[j+1], def_dom,
                                                pci_addr)
                         # binding the driver
-                        self.bind(driver, pci_addr)
+                        pci.bind(driver, pci_addr)
                         i = i + 1
             # check the device for default state
             self.check(def_dom, pci_addr, driver)
@@ -331,11 +204,11 @@ class IommuTest(Test):
             driver, def_dom = self.get_params(pci_addr)
             self.log.info("PCI_ID = %s", pci_addr)
             # unbinding the driver
-            self.unbind(driver, pci_addr)
+            pci.unbind(driver, pci_addr)
             # binding the driver
-            self.bind(driver, pci_addr)
+            pci.bind(driver, pci_addr)
             # rescan
-            self.rescan(pci_addr)
+            pci.rescan(pci_addr)
             # check the device for default state
             self.check(def_dom, pci_addr, driver)
         self.check_dmesg()
@@ -354,22 +227,22 @@ class IommuTest(Test):
                 i = j + 1
                 while i < len(self.domains):
                     # unbinding the driver
-                    self.unbind(driver, pci_addr)
+                    pci.unbind(driver, pci_addr)
                     # Changing domain type of iommu group
-                    self.change_domain(self.domains[i], def_dom, pci_addr)
+                    pci.change_domain(self.domains[i], def_dom, pci_addr)
                     # binding the driver
-                    self.bind(driver, pci_addr)
+                    pci.bind(driver, pci_addr)
                     # rescan
-                    self.rescan(pci_addr)
+                    pci.rescan(pci_addr)
                     # (second) unbinding the driver
-                    self.unbind(driver, pci_addr)
+                    pci.unbind(driver, pci_addr)
                     # Changing domain type of iommu group
-                    self.change_domain(pivot_dom, def_dom, pci_addr)
+                    pci.change_domain(pivot_dom, def_dom, pci_addr)
                     if i == len(self.domains)-1:
-                        self.change_domain(self.domains[j+1], def_dom,
+                        pci.change_domain(self.domains[j+1], def_dom,
                                            pci_addr)
                     # binding the driver
-                    self.bind(driver, pci_addr)
+                    pci.bind(driver, pci_addr)
                     i = i + 1
             # check the device for default state
             self.check(def_dom, pci_addr, driver)
@@ -383,8 +256,8 @@ class IommuTest(Test):
             driver, def_dom = self.get_params(pci_addr)
             self.log.info("PCI_ID = %s", pci_addr)
             # reset/rescan
-            self.reset(pci_addr)
-            self.rescan(pci_addr)
+            pci.reset(pci_addr)
+            pci.rescan(pci_addr)
             # check the device for default state
             self.check(def_dom, pci_addr, driver)
         self.check_dmesg()
