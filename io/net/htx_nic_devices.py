@@ -178,6 +178,9 @@ class HtxNicTest(Test):
         if self.host_distro_name and self.peer_distro == "SuSE":
             self.host_distro_name = self.peer_distro = "sles"
 
+        if self.host_distro_name == "SuSE":
+            self.host_distro_name = "sles"
+
         host_distro_pattern = "%s%s" % (
             self.host_distro_name,
             self.host_distro_version)
@@ -228,10 +231,20 @@ class HtxNicTest(Test):
                                                       self.latest_htx_rpm))
                 break
             if pattern == host_distro_pattern:
-                if process.system(cmd, shell=True, ignore_status=True):
+                if not RpmBackend.rpm_install(self.latest_htx_rpm, no_dependencies=True, replace=False):
                     self.cancel("Installation of rpm failed")
 
             if pattern == peer_distro_pattern:
+                destination = "%s:/tmp" % self.peer_ip
+                output = self.session.copy_files(self.latest_htx_rpm, destination, recursive=True)
+                if not output:
+                    self.cancel("Unable to copy the htx rpm package %s %s"
+                                " on peer machine" % (self.htx_rpm_link,
+                                                      self.latest_htx_rpm))
+
+                cmd = ('rpm -ivh --nodeps %s%s '
+                       '--force' % ("/tmp/", self.latest_htx_rpm))
+
                 output = self.session.cmd(cmd)
                 if not output.exit_status == 0:
                     self.cancel("Unable to install the package %s %s"
