@@ -138,7 +138,7 @@ class Uperf(Test):
         output = self.session.cmd(cmd)
         if not output.exit_status == 0:
             self.cancel("Unable to compile Uperf into peer machine")
-        self.uperf_run = str(self.params.get("UPERF_SERVER_RUN", default=False))
+        self.uperf_run = str(self.params.get("PERF_SERVER_RUN", default=False))
         if self.uperf_run:
             cmd = "/tmp/uperf-master/src/uperf -s &"
             cmd = self.session.get_raw_ssh_command(cmd)

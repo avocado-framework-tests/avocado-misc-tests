@@ -311,7 +311,7 @@ void write_read_pattern_numa_migration()
 	mask |= 1UL << nodes_to_use[0];
 
         /* Allocate in Node1 via mbind*/
-        mbind_status = mbind(mmap_pointer, memory_to_use, MPOL_BIND, &mask, nodes_to_use[0] + 2, NULL);
+        mbind_status = mbind(mmap_pointer, memory_to_use, MPOL_BIND, &mask, nodes_to_use[0] + 2, MPOL_MF_STRICT);
         if(mbind_status){
                 perror("mbind() fails");
                 exit(-1);

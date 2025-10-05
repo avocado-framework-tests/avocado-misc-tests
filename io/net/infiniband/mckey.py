@@ -103,7 +103,7 @@ class Mckey(Test):
             self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
             self.cancel("%s peer machine is not available" % self.peer_ip)
-        self.timeout = "2m"
+        self.timeout = 120
         self.local_ip = netifaces.ifaddresses(self.iface)[AF_INET][0]['addr']
         self.ip_val = self.local_ip.split(".")[-1]
         self.mtu = self.params.get("mtu", default=1500)
