@@ -178,6 +178,11 @@ class NdctlTest(Test):
         self.ndctl = os.path.abspath('/usr/bin/ndctl')
         self.daxctl = os.path.abspath('/usr/bin/daxctl')
 
+    def get_shutdown_state(self, region):
+        self.output = process.system_output('ndctl list -DH -r %s | grep shutdown_state'
+                                            % region, sudo=True, shell=True)
+        return(str(self.output).split("\"")[3])
+
     def setUp(self):
         """
         Build 'ndctl' and setup the binary.
@@ -1148,6 +1153,30 @@ class NdctlTest(Test):
         except pmem.PMemException:
             self.fail("Namespace creation with 1GB alignment"
                       "must have failed!")
+
+    @avocado.fail_on(pmem.PMemException)
+    def test_inject_SMART_errors(self):
+        """
+        Test to verify the error injection feature of ndctl inject-smart
+        for a pmem device
+        """
+        region = self.get_default_region()
+        if self.get_shutdown_state(region) == "clean":
+            self.log.info("shutdown state is clean")
+        self.output = process.system_output('ndctl list -DH -r %s | grep dev'
+                                            % region, sudo=True, shell=True)
+        process.system('ndctl inject-smart %s -U' % str(self.output).split("\"")[3],
+                       sudo=True, shell=True)
+        if self.get_shutdown_state(region) == "dirty":
+            self.log.info("shutdown state is dirty Error injection is successful.")
+        else:
+            self.fail("Error injection failed")
+        self.output = process.system_output('ndctl list -DH -r %s | grep dev'
+                                            % region, sudo=True, shell=True)
+        process.system('ndctl inject-smart %s -N' % str(self.output).split("\"")[3],
+                       sudo=True, shell=True)
+        if self.get_shutdown_state(region) == "clean":
+            self.log.info("shutdown state is clean")
 
     @avocado.fail_on(pmem.PMemException)
     def tearDown(self):
