@@ -35,7 +35,7 @@ def install_dependencies():
     detected_distro = distro.detect()
     sm = SoftwareManager()
     if detected_distro.name == "SuSE":
-        net_tools = ("net-tools", "traceroute")
+        net_tools = ("net-tools", "traceroute", "net-tools-deprecated")
     else:
         net_tools = ("net-tools", "hostname", "traceroute")
     for pkg in net_tools:
