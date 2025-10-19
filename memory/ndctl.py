@@ -178,6 +178,14 @@ class NdctlTest(Test):
         self.ndctl = os.path.abspath('/usr/bin/ndctl')
         self.daxctl = os.path.abspath('/usr/bin/daxctl')
 
+    def get_shutdown_state(self, region):
+        """
+        The method returns the shutdown state as a string, which can be either "clean" or "dirty".
+        """
+        cmd = 'ndctl list -DH -r %s | grep shutdown_state' % region
+        self.output = process.system_output(cmd, sudo=True, shell=True)
+        return(str(self.output).split("\"")[3])
+
     def setUp(self):
         """
         Build 'ndctl' and setup the binary.
@@ -1148,6 +1156,30 @@ class NdctlTest(Test):
         except pmem.PMemException:
             self.fail("Namespace creation with 1GB alignment"
                       "must have failed!")
+
+    @avocado.fail_on(pmem.PMemException)
+    def test_inject_SMART_errors(self):
+        """
+        Test to verify the error injection feature of ndctl inject-smart
+        for a pmem device
+        """
+        region = self.get_default_region()
+        if self.get_shutdown_state(region) == "clean":
+            self.log.info("shutdown state is clean")
+        cmd = 'ndctl list -DH -r %s | grep dev' % region
+        self.output = process.system_output(cmd, sudo=True, shell=True)
+        cmd = 'ndctl inject-smart %s -U' % str(self.output).split("\"")[3]
+        self.output = process.system_output(cmd, sudo=True, shell=True)
+        if self.get_shutdown_state(region) == "dirty":
+            self.log.info("shutdown state is dirty Error injection is successful.")
+        else:
+            self.fail("Error injection failed")
+        cmd = 'ndctl list -DH -r %s | grep dev' % region
+        self.output = process.system_output(cmd, sudo=True, shell=True)
+        cmd = 'ndctl inject-smart %s -N' % str(self.output).split("\"")[3]
+        self.output = process.system_output(cmd, sudo=True, shell=True)
+        if self.get_shutdown_state(region) == "clean":
+            self.log.info("shutdown state is clean")
 
     @avocado.fail_on(pmem.PMemException)
     def tearDown(self):
