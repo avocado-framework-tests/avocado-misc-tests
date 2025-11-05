@@ -23,16 +23,13 @@
 import os
 import re
 import shutil
-
 from avocado import Test
 from avocado.utils import process, build, git, distro, partition
-from avocado.utils import disk, pmem
-from avocado.utils import genio
+from avocado.utils import disk, pmem, genio
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class Xfstests(Test):
-
     """
     xfstests - AKA FSQA SUITE, is set of filesystem tests
 
@@ -44,10 +41,8 @@ class Xfstests(Test):
         Return the size align restriction based on platform
         """
         if 'Hash' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
-            def_align = 16 * 1024 * 1024
-        else:
-            def_align = 2 * 1024 * 1024
-        return def_align
+            return 16 * 1024 * 1024
+        return 2 * 1024 * 1024
 
     def get_half_region_size(self, region):
         size_align = self.get_size_alignval()
