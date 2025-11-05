@@ -143,60 +143,58 @@ class Xfstests(Test):
 
     def __setUp_packages(self):
         sm = SoftwareManager()
-
         self.detected_distro = distro.detect()
+        dver = self.detected_distro.version
 
-        packages = ['e2fsprogs', 'automake', 'gcc', 'quota', 'attr',
-                    'make', 'xfsprogs', 'gawk', 'git']
+        packages = ['e2fsprogs', 'automake', 'gcc', 'quota', 'attr', 'make',
+                    'xfsprogs', 'gawk', 'git', 'sed', 'acl', 'bc', 'dbench',
+                    'dump', 'fio', 'xfsdump', 'indent', 'lvm2', 'psmisc']
         if self.detected_distro.name in ['Ubuntu', 'debian']:
             packages.extend(
-                ['xfslibs-dev', 'uuid-dev', 'libuuid1',
-                 'libattr1-dev', 'libacl1-dev', 'libgdbm-dev',
-                 'uuid-runtime', 'libaio-dev', 'fio', 'dbench',
+                ['xfslibs-dev', 'uuid-dev', 'libuuid1', 'libattr1-dev',
+                 'libacl1-dev', 'libgdbm-dev', 'uuid-runtime', 'libaio-dev',
                  'gettext', 'libinih-dev', 'liburcu-dev', 'libblkid-dev',
-                 'liblzo2-dev', 'zlib1g-dev', 'e2fslibs-dev',
-                 'libzstd-dev', 'libudev-dev', 'bc', 'dump', 'acl',
-                 'lvm2', 'sed'])
+                 'liblzo2-dev', 'zlib1g-dev', 'e2fslibs-dev', 'libzstd-dev',
+                 'libudev-dev', 'libcap-dev', 'liburing-dev', 'sqlite3',
+                 f'linux-headers-{os.uname().release}', 'gettext'])
             if self.detected_distro.version in ['14']:
-                packages.extend(['libtool'])
-            elif self.detected_distro.version in ['18', '20']:
-                packages.extend(['libtool-bin', 'libgdbm-compat-dev'])
+                packages.append('libtool')
             else:
-                packages.extend(['libtool-bin'])
+                packages.extend(['libtool-bin', 'libgdbm-compat-dev'])
 
         elif self.detected_distro.name in ['centos', 'fedora', 'rhel', 'SuSE']:
             if self.dev_type == 'nvdimm':
                 packages.extend(['ndctl', 'parted'])
                 if self.detected_distro.name == 'rhel':
-                    packages.extend(['daxctl'])
-            packages.extend(['acl', 'bc', 'indent', 'libtool', 'lvm2',
-                             'xfsdump', 'psmisc', 'sed', 'libacl-devel',
-                             'libattr-devel', 'libaio-devel', 'libuuid-devel',
-                             'libblkid-devel', 'lzo-devel', 'zlib-devel',
-                             'e2fsprogs-devel', 'libzstd-devel',
-                             'systemd-devel', 'meson',
-                             'xfsprogs-devel', 'gcc-c++'])
-            if self.detected_distro.name == 'rhel' and (
-                    self.detected_distro.version.startswith('9')):
-                packages.extend(['inih-devel'])
+                    packages.append('daxctl')
+            packages.extend([
+                'libtool', 'libacl-devel', 'libattr-devel', 'libaio-devel',
+                'libuuid-devel', 'libblkid-devel', 'lzo-devel', 'zlib-devel',
+                'e2fsprogs-devel', 'libzstd-devel', 'systemd-devel', 'meson',
+                'xfsprogs-devel', 'gcc-c++', 'gdbm-devel', 'kernel-devel',
+                'libcap-devel', 'liburing-devel', 'sqlite'])
+            if self.detected_distro.name == 'rhel' and dver.startswith('9'):
+                packages.append('inih-devel')
 
             if self.detected_distro.name == 'SuSE':
-                packages.extend(['libbtrfs-devel', 'libcap-progs',
-                                'liburcu-devel', 'libinih-devel',
-                                 'libopenssl-devel', 'gettext-tools'])
+                packages.extend([
+                    'libbtrfs-devel', 'libcap-progs', 'liburcu-devel',
+                    'libinih-devel', 'libopenssl-devel', 'gettext-tools',
+                    'btrfsprogs', 'fsverity-utils', 'libfsverity0',
+                    'fsverity-utils-devel', 'duperemove', 'sqlite3',
+                    'checkbashisms', 'kernel-default-extra'])
+                if int(str(dver).split('.')[0]) < 16:
+                    packages.append('acct')
             else:
-                packages.extend(['btrfs-progs-devel', 'userspace-rcu-devel',
-                                 'openssl-devel', 'gettext'])
+                packages.extend(['userspace-rcu-devel', 'openssl-devel', 'gettext'])
 
-            packages_remove = ['indent', 'btrfs-progs-devel']
-            if self.detected_distro.name == 'rhel' and (
-                    self.detected_distro.version.startswith('8') or
-                    self.detected_distro.version.startswith('9') or
-                    self.detected_distro.version.startswith('10')):
-                packages = list(set(packages)-set(packages_remove))
+            packages_remove = ['indent', 'dbench', 'dump']
+            if 'rhel' in self.detected_distro.name and any(dver.startswith(x)
+                                                           for x in ['8', '9', '10']):
+                packages = [p for p in packages if p not in packages_remove]
 
             if self.detected_distro.name in ['centos', 'fedora']:
-                packages.extend(['fio', 'dbench'])
+                packages.append('btrfs-progs-devel')
         else:
             self.cancel("test not supported in %s" % self.detected_distro.name)
 
