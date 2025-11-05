@@ -211,7 +211,6 @@ class Xfstests(Test):
         self.use_dd = False
         root_fs = process.system_output(
             "df -T / | awk 'END {print $2}'", shell=True).decode("utf-8")
-
         if root_fs in ['ext2', 'ext3']:
             self.use_dd = True
 
@@ -219,7 +218,6 @@ class Xfstests(Test):
         self.logflag = self.params.get('logdev', default=False)
         self.fs_to_test = self.params.get('fs', default='ext4')
         self.args = self.params.get('args', default='-g quick')
-        self.log.debug(f"FS: {self.fs_to_test}, args: {self.args}")
         self.base_disk = self.params.get('disk', default=None)
         self.scratch_mnt = self.params.get(
             'scratch_mnt', default='/mnt/scratch')
@@ -234,15 +232,15 @@ class Xfstests(Test):
         self.mount_opt = self.params.get('mount_opt', default='')
         self.logdev_opt = self.params.get('logdev_opt', default='')
 
-        # If there is an existing results directory then just clean that up before running the test
-        if os.path.exists(f"{self.teststmpdir}/results"):
-            shutil.rmtree(f"{self.teststmpdir}/results")
+        self.devices = []
+        self.log_devices = []
+        self.part = None
+
+        for path in [self.scratch_mnt, self.test_mnt, self.disk_mnt]:
+            os.makedirs(path, exist_ok=True)
 
         shutil.copyfile(self.get_data('local.config'),
                         os.path.join(self.teststmpdir, 'local.config'))
-
-        self.devices = []
-        self.part = None
 
         self.__setUp_packages()
 
@@ -340,25 +338,17 @@ class Xfstests(Test):
         if process.system('which mkfs.%s' % self.fs_to_test,
                           ignore_status=True):
             self.cancel('Unknown filesystem %s' % self.fs_to_test)
+        # Device setup
+        self.num_loop_dev = 5 if self.fs_to_test == "btrfs" else 2
         mount = True
-        self.log_devices = []
-
-        # For btrfs we need minimum of 5 loop devices for SCRATCH_DEV_POOL
-        self.num_loop_dev = 2
-        if self.fs_to_test == "btrfs":
-            self.num_loop_dev = 5
-
         if self.dev_type == 'loop':
             loop_size = self.params.get('loop_size', default='7GiB')
             if not self.base_disk:
-                # Using root for file creation by default
-                check = (int(loop_size.split('GiB')[
-                         0]) * self.num_loop_dev) + 1
-                if disk.freespace('/') / 1073741824 > check:
-                    self.disk_mnt = ''
-                    mount = False
-                else:
+                check = (int(loop_size.split('GiB')[0]) * self.num_loop_dev) + 1
+                if disk.freespace('/') / 1073741824 < check:
                     self.cancel('Need %s GB to create loop devices' % check)
+                else:
+                    mount = False
             self._create_loop_device(loop_size, mount)
         elif self.dev_type == 'nvdimm':
             self.setup_nvdimm()
