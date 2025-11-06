@@ -403,7 +403,6 @@ class Xfstests(Test):
             build.make(src_dir, extra_args='install')
 
     def test(self):
-        failures = False
         os.chdir(self.teststmpdir)
         if self.args:
             cmd = f"./check {self.args}"
@@ -411,9 +410,7 @@ class Xfstests(Test):
             if result.exit_status == 0:
                 self.log.info("OK: All tests passed")
             else:
-                msg = self._parse_error_message(result.stdout)
-                self.log.info("FAIL: Test(s) failed %s" % msg)
-                self.fail('One or more tests failed. Please check the logs.')
+                self.fail(self._parse_error_message(result.stdout))
 
     def tearDown(self):
         srcdir = os.path.join(self.teststmpdir, "results")
@@ -489,24 +486,9 @@ class Xfstests(Test):
 
     @staticmethod
     def _parse_error_message(output):
-        na_re = re.compile(r'Passed all 0 tests')
-        na_detail_re = re.compile(r'(\d{3})\s*(\[not run\])\s*(.*)')
+        lines = output.decode("ISO-8859-1").splitlines()
         failed_re = re.compile(r'Failed \d+ of \d+ tests')
-
-        lines = output.decode("ISO-8859-1").split('\n')
-        result_line = lines[-3]
-
-        error_msg = None
-        if na_re.match(result_line):
-            detail_line = lines[-3]
-            match = na_detail_re.match(detail_line)
-            if match is not None:
-                error_msg = match.groups()[2]
-            else:
-                error_msg = 'Test dependency failed, test will not run.'
-        elif failed_re.match(result_line):
-            error_msg = 'Test error. %s.' % result_line
-        else:
-            error_msg = 'Could not verify test result. Please check the logs.'
-
-        return error_msg
+        for line in reversed(lines):
+            if failed_re.match(line.strip()):
+                return line.strip()
+        return 'Could not verify test result. Please check the logs.'
