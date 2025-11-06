@@ -312,63 +312,58 @@ class Xfstests(Test):
             self.setup_nvdimm()
         else:
             self.devices.extend([self.test_dev, self.scratch_dev])
-        # mkfs for devices
-        if self.devices:
-            cfg_file = os.path.join(self.teststmpdir, 'local.config')
-            with open(cfg_file, "r") as sources:
-                lines = sources.readlines()
-            with open(cfg_file, "w") as sources:
-                for line in lines:
-                    if line.startswith('export TEST_DEV'):
-                        sources.write(
-                            re.sub(r'export TEST_DEV=.*', 'export TEST_DEV=%s'
-                                   % self.devices[0], line))
-                    elif line.startswith('export TEST_DIR'):
-                        sources.write(
-                            re.sub(r'export TEST_DIR=.*', 'export TEST_DIR=%s'
-                                   % self.test_mnt, line))
-                    elif line.startswith('export SCRATCH_DEV'):
-                        if self.fs_to_test == "btrfs":
-                            scratch_dev_pool = ' '.join(
-                                [(self.devices[i]) for i in range(1, self.num_loop_dev)])
-                            sources.write(re.sub(r'export SCRATCH_DEV=.*',
-                                                 'export SCRATCH_DEV_POOL="%s"'
-                                                 % scratch_dev_pool, line))
-                        else:
-                            sources.write(re.sub(
-                                r'export SCRATCH_DEV=.*', 'export SCRATCH_DEV=%s'
-                                % self.devices[1], line))
-                    elif line.startswith('export SCRATCH_MNT'):
-                        sources.write(
-                            re.sub(
-                                r'export SCRATCH_MNT=.*',
-                                'export SCRATCH_MNT=%s' %
-                                self.scratch_mnt,
-                                line))
-                        break
-            with open(cfg_file, "a") as sources:
-                if self.log_test:
-                    sources.write('export USE_EXTERNAL=yes\n')
-                    sources.write('export TEST_LOGDEV="%s"\n' % self.log_test)
-                    self.log_devices.append(self.log_test)
-                if self.log_scratch:
-                    sources.write('export SCRATCH_LOGDEV="%s"\n' %
-                                  self.log_scratch)
-                    self.log_devices.append(self.log_scratch)
-                if self.mkfs_opt:
-                    sources.write('MKFS_OPTIONS="%s"\n' % self.mkfs_opt)
-                if self.mount_opt:
-                    sources.write('MOUNT_OPTIONS="%s"\n' % self.mount_opt)
-            for dev in self.log_devices:
-                dev_obj = partition.Partition(dev)
-                dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
-            for ite, dev in enumerate(self.devices):
-                dev_obj = partition.Partition(dev)
-                if self.logdev_opt:
-                    dev_obj.mkfs(fstype=self.fs_to_test, args='%s %s=%s' % (
-                        self.mkfs_opt, self.logdev_opt, self.log_devices[ite]))
+
+        # Update local.config with device info
+        cfg_file = os.path.join(self.teststmpdir, 'local.config')
+        with open(cfg_file, "r") as f:
+            lines = f.readlines()
+
+        new_lines = []
+        for line in lines:
+            if line.startswith('export TEST_DEV='):
+                new_lines.append(f'export TEST_DEV={self.devices[0]}\n')
+            elif line.startswith('export TEST_DIR='):
+                new_lines.append(f'export TEST_DIR={self.test_mnt}\n')
+            elif line.startswith('export SCRATCH_DEV='):
+                if self.fs_to_test == 'btrfs':
+                    pool = ' '.join(self.devices[1:self.num_loop_dev])
+                    new_lines.append(f'export SCRATCH_DEV_POOL="{pool}"\n')
                 else:
-                    dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
+                    new_lines.append(f'export SCRATCH_DEV={self.devices[1]}\n')
+            elif line.startswith('export SCRATCH_MNT='):
+                new_lines.append(f'export SCRATCH_MNT={self.scratch_mnt}\n')
+            else:
+                new_lines.append(line)
+
+        if self.log_test:
+            new_lines.append('export USE_EXTERNAL=yes\n')
+            new_lines.append(f'export TEST_LOGDEV="{self.log_test}"\n')
+            self.log_devices.append(self.log_test)
+        if self.log_scratch:
+            new_lines.append(f'export SCRATCH_LOGDEV="{self.log_scratch}"\n')
+            self.log_devices.append(self.log_scratch)
+        if self.mkfs_opt:
+            new_lines.append(f'MKFS_OPTIONS="{self.mkfs_opt}"\n')
+        if self.mount_opt:
+            new_lines.append(f'MOUNT_OPTIONS="{self.mount_opt}"\n')
+
+        with open(cfg_file, 'w') as f:
+            f.writelines(new_lines)
+
+        self.log.info("Final local.config content:\n%s", ''.join(new_lines))
+
+        # Create logdev filesystems
+        for dev in self.log_devices:
+            partition.Partition(dev).mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
+
+        # Create mkfs on test and scratch devices
+        for i, dev in enumerate(self.devices):
+            dev_obj = partition.Partition(dev)
+            if self.logdev_opt:
+                dev_obj.mkfs(fstype=self.fs_to_test,
+                             args=f'{self.mkfs_opt} {self.logdev_opt}={self.log_devices[i]}')
+            else:
+                dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
 
         # Clone & build xfstests
         git.get_repo('https://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
