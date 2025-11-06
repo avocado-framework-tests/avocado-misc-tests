@@ -368,21 +368,13 @@ class Xfstests(Test):
         # Clone & build xfstests
         git.get_repo('https://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
                      destination_dir=self.teststmpdir)
-        if self.detected_distro.name is not 'SuSE':
-            if process.system('useradd 123456-fsgqa', sudo=True, ignore_status=True):
-                self.log.warn('useradd 123456-fsgqa failed')
-            if process.system('useradd fsgqa', sudo=True, ignore_status=True):
-                self.log.warn('useradd fsgqa failed')
-        else:
-            if process.system('useradd -m -U fsgqa', sudo=True, ignore_status=True):
-                self.log.warn('useradd fsgqa failed')
-            if process.system('groupadd sys', sudo=True, ignore_status=True):
-                self.log.warn('groupadd sys failed')
-        if not os.path.exists(self.scratch_mnt):
-            os.makedirs(self.scratch_mnt)
-        if not os.path.exists(self.test_mnt):
-            os.makedirs(self.test_mnt)
         build.make(self.teststmpdir, extra_args=f"-j{os.cpu_count()}")
+
+        # Ensure test users exist
+        for user in ['fsgqa', 'fsgqa2', '123456-fsgqa']:
+            if process.system(f'id {user}', ignore_status=True):
+                cmd = f'useradd -m {"-U " if user == "fsgqa" else ""}{user}'
+                process.system(cmd, sudo=True)
 
     def _git_build(self, fs_type, repo_url, dirname, prefix, bin_prefix):
         # Generic helper to clone, configure and build a repo
@@ -424,8 +416,7 @@ class Xfstests(Test):
                 self.fail('One or more tests failed. Please check the logs.')
 
     def tearDown(self):
-
-        srcdir = f"{self.teststmpdir}/results"
+        srcdir = os.path.join(self.teststmpdir, "results")
         if (os.path.exists(srcdir) and os.path.exists(self.outputdir)):
             new_outputdir = os.path.join(self.outputdir,
                                          os.path.basename(srcdir))
@@ -436,16 +427,13 @@ class Xfstests(Test):
         self.log.debug(" Job ID: %s, logdir: %s, srcdir: %s, outputdir: %s: " %
                        (self.job_id, self.logdir, srcdir, self.outputdir))
 
-        user_exits = 0
-        if not (process.system('id fsgqa', sudo=True, ignore_status=True)):
-            process.system('userdel -r -f fsgqa', sudo=True)
-            user_exits = 1
-        if self.detected_distro.name is not 'SuSE':
-            if not (process.system('id 123456-fsgqa', sudo=True, ignore_status=True)):
-                process.system('userdel -f 123456-fsgqa', sudo=True)
-        if user_exits and self.detected_distro.name is 'SuSE':
-            process.system('groupdel fsgqa', sudo=True)
-            process.system('groupdel sys', sudo=True)
+        # Delete created users and groups
+        for user in ['fsgqa', '123456-fsgqa', 'fsgqa2']:
+            if not process.system(f'id {user}', ignore_status=True):
+                process.system(f'userdel -r -f {user}', sudo=True, ignore_status=True)
+        if not process.system('getent group fsgqa', ignore_status=True):
+            process.system('groupdel fsgqa', sudo=True, ignore_status=True)
+
         # In case if any test has been interrupted
         process.system('umount %s %s' % (self.scratch_mnt, self.test_mnt),
                        sudo=True, ignore_status=True)
