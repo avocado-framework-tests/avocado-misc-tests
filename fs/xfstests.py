@@ -244,100 +244,58 @@ class Xfstests(Test):
 
         self.__setUp_packages()
 
+        # Build upstream fs tools if requested
         if self.run_type == 'upstream':
             prefix = "/usr/local"
-            bin_prefix = "/usr/local/bin"
+            bin_prefix = "/sbin" if self.detected_distro.name == 'SuSE' else "/usr/local/bin"
 
+            # Build fsverity if requested
             if 'verity' in self.args:
+                fsverity_url = self.params.get('fsverity_url')
                 fsverity_dir = os.path.join(self.teststmpdir, 'fsverity-utils')
                 if not os.path.exists(fsverity_dir):
                     os.makedirs(fsverity_dir)
-                fsverity_url = self.params.get('fsverity_url')
                 git.get_repo(fsverity_url, destination_dir=fsverity_dir)
                 os.chdir(fsverity_dir)
                 build.make(fsverity_dir)
                 build.make(fsverity_dir, extra_args='install')
 
-            if self.detected_distro.name == 'SuSE':
-                # SuSE has /sbin at a higher priority than /usr/local/bin
-                # in $PATH, so install all the binaries in /sbin to make
-                # sure they are picked up correctly by xfstests.
-                #
-                # We still install in /usr/local but binaries are kept in
-                # /sbin
-                bin_prefix = "/sbin"
+            if self.fs_to_test == "xfs" and self.detected_distro.name in ['centos', 'fedora', 'rhel']:
+                libini_path = process.run("ldconfig -p | grep libini",
+                                          verbose=True, ignore_status=True)
+                if not libini_path:
+                    # Build libini.h as it is needed for xfsprogs
+                    libini_dir = os.path.join(self.teststmpdir, 'libini')
+                    os.makedirs(libini_dir, exist_ok=True)
+                    git.get_repo('https://github.com/benhoyt/inih', destination_dir=libini_dir)
+                    os.chdir(libini_dir)
+                    process.run("meson build", verbose=True)
+                    libini_build_dir = os.path.join(libini_dir, 'build')
+                    if os.path.exists(libini_build_dir):
+                        os.chdir(libini_build_dir)
+                        process.run("meson install", verbose=True)
+                    else:
+                        self.fail('libini build failed. Please check the logs.')
 
-            if self.fs_to_test == "ext4":
-                # Build e2fs progs
-                e2fsprogs_dir = os.path.join(self.teststmpdir, 'e2fsprogs')
-                if not os.path.exists(e2fsprogs_dir):
-                    os.makedirs(e2fsprogs_dir)
-                e2fsprogs_url = self.params.get('e2fsprogs_url')
-                git.get_repo(e2fsprogs_url, destination_dir=e2fsprogs_dir)
-                e2fsprogs_build_dir = os.path.join(e2fsprogs_dir, 'build')
-                if not os.path.exists(e2fsprogs_build_dir):
-                    os.makedirs(e2fsprogs_build_dir)
-                os.chdir(e2fsprogs_build_dir)
-                process.run("../configure --prefix=%s --bindir=%s --sbindir=%s"
-                            % (prefix, bin_prefix, bin_prefix), verbose=True)
-                build.make(e2fsprogs_build_dir)
-                build.make(e2fsprogs_build_dir, extra_args='install')
-
-            if self.fs_to_test == "xfs":
-                if self.detected_distro.name in ['centos', 'fedora', 'rhel']:
-                    libini_path = process.run("ldconfig -p | grep libini",
-                                              verbose=True, ignore_status=True)
-                    if not libini_path:
-                        # Build libini.h as it is needed for xfsprogs
-                        libini_dir = os.path.join(self.teststmpdir, 'libini')
-                        if not os.path.exists(libini_dir):
-                            os.makedirs(libini_dir)
-                        git.get_repo('https://github.com/benhoyt/inih',
-                                     destination_dir=libini_dir)
-                        os.chdir(libini_dir)
-                        process.run("meson build", verbose=True)
-                        libini_build_dir = os.path.join(libini_dir, 'build')
-                        if os.path.exists(libini_build_dir):
-                            os.chdir(libini_build_dir)
-                            process.run("meson install", verbose=True)
-                        else:
-                            self.fail('Something went wrong while building \
-                                      libini. Please check the logs.')
-                # Build xfs progs
-                xfsprogs_dir = os.path.join(self.teststmpdir, 'xfsprogs')
-                if not os.path.exists(xfsprogs_dir):
-                    os.makedirs(xfsprogs_dir)
-                xfsprogs_url = self.params.get('xfsprogs_url')
-                git.get_repo(xfsprogs_url, destination_dir=xfsprogs_dir)
-                os.chdir(xfsprogs_dir)
-                build.make(xfsprogs_dir)
-                process.run("./configure --prefix=%s --bindir=%s --sbindir=%s"
-                            % (prefix, bin_prefix, bin_prefix), verbose=True)
-                build.make(xfsprogs_dir, extra_args='install')
-
-            if self.fs_to_test == "btrfs":
-                # Build btrfs progs
-                btrfsprogs_dir = os.path.join(self.teststmpdir, 'btrfsprogs')
-                if not os.path.exists(btrfsprogs_dir):
-                    os.makedirs(btrfsprogs_dir)
-                btrfsprogs_url = self.params.get('btrfsprogs_url')
-                git.get_repo(btrfsprogs_url, destination_dir=btrfsprogs_dir)
-                os.chdir(btrfsprogs_dir)
-                process.run("./autogen.sh", verbose=True)
-                process.run("./configure --prefix=%s --bindir=%s --sbindir=%s --disable-documentation"
-                            % (prefix, bin_prefix, bin_prefix), verbose=True)
-                build.make(btrfsprogs_dir)
-                build.make(btrfsprogs_dir, extra_args='install')
+            # Build filesystem-specific tools
+            fs_build_map = {
+                    'ext4': ('e2fsprogs_url', 'e2fsprogs'),
+                    'xfs': ('xfsprogs_url', 'xfsprogs'),
+                    'btrfs': ('btrfsprogs_url', 'btrfsprogs')}
+            if self.fs_to_test in fs_build_map:
+                url_param, dir_name = fs_build_map[self.fs_to_test]
+                self._git_build(self.fs_to_test, self.params.get(url_param),
+                                dir_name, prefix, bin_prefix)
 
         # Check versions of fsprogs
+        if process.system('which mkfs.%s' % self.fs_to_test,
+                          ignore_status=True):
+            self.cancel('Unknown filesystem %s' % self.fs_to_test)
         fsprogs_ver = process.system_output("mkfs.%s -V" % self.fs_to_test,
                                             ignore_status=True,
                                             shell=True).decode("utf-8")
         self.log.info(fsprogs_ver)
 
-        if process.system('which mkfs.%s' % self.fs_to_test,
-                          ignore_status=True):
-            self.cancel('Unknown filesystem %s' % self.fs_to_test)
         # Device setup
         self.num_loop_dev = 5 if self.fs_to_test == "btrfs" else 2
         mount = True
@@ -412,12 +370,9 @@ class Xfstests(Test):
                 else:
                     dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
 
+        # Clone & build xfstests
         git.get_repo('https://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
                      destination_dir=self.teststmpdir)
-
-        extra_args = f"-j{os.cpu_count()}"
-        build.make(self.teststmpdir, extra_args=extra_args)
-
         if self.detected_distro.name is not 'SuSE':
             if process.system('useradd 123456-fsgqa', sudo=True, ignore_status=True):
                 self.log.warn('useradd 123456-fsgqa failed')
@@ -432,6 +387,33 @@ class Xfstests(Test):
             os.makedirs(self.scratch_mnt)
         if not os.path.exists(self.test_mnt):
             os.makedirs(self.test_mnt)
+        build.make(self.teststmpdir, extra_args=f"-j{os.cpu_count()}")
+
+    def _git_build(self, fs_type, repo_url, dirname, prefix, bin_prefix):
+        # Generic helper to clone, configure and build a repo
+        src_dir = os.path.join(self.teststmpdir, dirname)
+        os.makedirs(src_dir, exist_ok=True)
+        git.get_repo(repo_url, destination_dir=src_dir)
+        os.chdir(src_dir)
+
+        if fs_type == "btrfs":
+            process.run("./autogen.sh", verbose=True)
+            process.run(f"./configure --prefix={prefix} --bindir={bin_prefix} --sbindir={bin_prefix} --disable-documentation",
+                        verbose=True, ignore_status=True)
+            build.make(src_dir)
+            build.make(src_dir, extra_args='install')
+
+        elif fs_type == "xfs":
+            build.make(src_dir)
+            process.run(f"./configure --prefix={prefix} --bindir={bin_prefix} --sbindir={bin_prefix}",
+                        verbose=True, ignore_status=True)
+            build.make(src_dir, extra_args='install')
+
+        if fs_type == "ext4":
+            process.run(f"./configure --prefix={prefix} --bindir={bin_prefix} --sbindir={bin_prefix}",
+                        verbose=True, ignore_status=True)
+            build.make(src_dir)
+            build.make(src_dir, extra_args='install')
 
     def test(self):
         failures = False
