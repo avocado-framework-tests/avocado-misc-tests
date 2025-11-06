@@ -463,17 +463,6 @@ class Xfstests(Test):
                             process.system('losetup -d %s' % dev, shell=True,
                                            sudo=True, ignore_status=True)
 
-    def _create_fsimages(self, loop_size, i):
-        dd_count = int(loop_size.split('GiB')[0])
-        if self.use_dd:
-            process.run('dd if=/dev/zero of=%s/file-%s.img bs=1G count=%s'
-                        % (self.disk_mnt, i, dd_count), shell=True,
-                        sudo=True)
-        else:
-            process.run('fallocate -o 0 -l %s %s/file-%s.img' %
-                        (loop_size, self.disk_mnt, i), shell=True,
-                        sudo=True)
-
     def _create_loop_device(self, loop_size, mount=True):
         if mount:
             self.part = partition.Partition(
@@ -482,11 +471,15 @@ class Xfstests(Test):
 
         # Creating [0 - num_loop_dev) loop devices
         for i in range(self.num_loop_dev):
-            self._create_fsimages(loop_size, i)
+            img_file = os.path.join(self.disk_mnt, f"file-{i}.img")
+            dd_count = int(re.findall(r'\d+', loop_size)[0])
+            if self.use_dd:
+                process.run(f'dd if=/dev/zero of={img_file} bs=1G count={dd_count}', shell=True, sudo=True)
+            else:
+                process.run(f'fallocate -o 0 -l {loop_size} {img_file}', shell=True, sudo=True)
             dev = process.system_output('losetup -f').decode("utf-8").strip()
+            process.run(f'losetup {dev} {img_file}', shell=True, sudo=True)
             self.devices.append(dev)
-            process.run('losetup %s %s/file-%s.img' %
-                        (dev, self.disk_mnt, i), shell=True, sudo=True)
 
     @staticmethod
     def _parse_error_message(output):
