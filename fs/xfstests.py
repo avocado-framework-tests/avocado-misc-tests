@@ -432,14 +432,18 @@ class Xfstests(Test):
             process.system('groupdel fsgqa', sudo=True, ignore_status=True)
 
         # In case if any test has been interrupted
-        process.system('umount %s %s' % (self.scratch_mnt, self.test_mnt),
+        process.system(f'umount {self.scratch_mnt} {self.test_mnt} {self.disk_mnt}',
                        sudo=True, ignore_status=True)
-        if os.path.exists(self.scratch_mnt):
-            shutil.rmtree(self.scratch_mnt)
-        if os.path.exists(self.test_mnt):
-            shutil.rmtree(self.test_mnt)
-        if os.path.exists(self.teststmpdir + "/libini"):
-            shutil.rmtree(self.teststmpdir + "/libini")
+        for path in [self.scratch_mnt, self.test_mnt, self.disk_mnt]:
+            if os.path.exists(path):
+                shutil.rmtree(path)
+
+        # Clean libini build dir
+        libini_dir = os.path.join(self.teststmpdir, "libini")
+        if os.path.exists(libini_dir):
+            shutil.rmtree(libini_dir)
+
+        # Destroy loop/nvdimm devices
         if self.dev_type == 'loop':
             for dev in self.devices:
                 process.system('losetup -d %s' % dev, shell=True,
