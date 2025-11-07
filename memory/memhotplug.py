@@ -99,7 +99,7 @@ class MemStress(Test):
         for package in ['automake', 'make', 'autoconf']:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        default_url = 'https://fossies.org/linux/privat/old/stress-1.0.5.tar.gz'
+        default_url = 'https://fossies.org/linux/privat/stress-1.0.7.tar.gz'
         stress_tar_url = self.params.get('stress_tar_url', default=default_url)
         if not smm.check_installed('stress') and not smm.install('stress'):
             tarball = self.fetch_asset(stress_tar_url)
