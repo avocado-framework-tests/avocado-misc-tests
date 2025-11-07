@@ -110,7 +110,8 @@ class MemStress(Test):
             os.chdir(self.sourcedir)
             for package in ['automake', 'make', 'autoconf']:
                 if not smm.check_installed(package) and not smm.install(package):
-                    self.cancel('%s is needed for the test to be run' % package)
+                    self.cancel(
+                        '%s is needed for the test to be run' % package)
             process.run('./autogen.sh', shell=True)
             process.run('[ -x configure ] && ./configure', shell=True)
             build.make(self.sourcedir)
@@ -163,7 +164,9 @@ class MemStress(Test):
         mem_free = memory.meminfo.MemFree.m // 4
         cpu_count = int(multiprocessing.cpu_count()) // 2
         process.run("stress --cpu %s --io %s --vm %s --vm-bytes %sM --timeout %ss" %
-                    (cpu_count, self.iocount, self.vmcount, mem_free, self.stresstime), ignore_status=True, sudo=True, shell=True)
+                    (cpu_count, self.iocount, self.vmcount,
+                     mem_free, self.stresstime), ignore_status=True,
+                    sudo=True, shell=True)
 
     def test_hotplug_loop(self):
         self.log.info("\nTEST: hotunplug and hotplug in a loop\n")
@@ -192,11 +195,13 @@ class MemStress(Test):
 
     def test_dlpar_mem_hotplug(self):
         if 'power' in cpu.get_arch() and 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
-            if b"mem_dlpar=yes" in process.system_output("drmgr -C", ignore_status=True, shell=True):
+            if b"mem_dlpar=yes" in process.system_output("drmgr -C",
+                                                         ignore_status=True, shell=True):
                 self.log.info("\nDLPAR remove memory operation\n")
                 for _ in range(len(self.blocks_hotpluggable) // 2):
                     process.run(
-                        "drmgr -c mem -d 5 -w 30 -r", shell=True, ignore_status=True, sudo=True)
+                        "drmgr -c mem -d 5 -w 30 -r", shell=True,
+                        ignore_status=True, sudo=True)
                 self.run_stress()
                 self.log.info("\nDLPAR add memory operation\n")
                 for _ in range(len(self.blocks_hotpluggable) // 2):
