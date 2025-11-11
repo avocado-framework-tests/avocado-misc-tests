@@ -23,16 +23,13 @@
 import os
 import re
 import shutil
-
 from avocado import Test
 from avocado.utils import process, build, git, distro, partition
-from avocado.utils import disk, pmem
-from avocado.utils import genio
+from avocado.utils import disk, pmem, genio
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class Xfstests(Test):
-
     """
     xfstests - AKA FSQA SUITE, is set of filesystem tests
 
@@ -44,10 +41,8 @@ class Xfstests(Test):
         Return the size align restriction based on platform
         """
         if 'Hash' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
-            def_align = 16 * 1024 * 1024
-        else:
-            def_align = 2 * 1024 * 1024
-        return def_align
+            return 16 * 1024 * 1024
+        return 2 * 1024 * 1024
 
     def get_half_region_size(self, region):
         size_align = self.get_size_alignval()
@@ -148,60 +143,58 @@ class Xfstests(Test):
 
     def __setUp_packages(self):
         sm = SoftwareManager()
-
         self.detected_distro = distro.detect()
+        dver = self.detected_distro.version
 
-        packages = ['e2fsprogs', 'automake', 'gcc', 'quota', 'attr',
-                    'make', 'xfsprogs', 'gawk', 'git']
+        packages = ['e2fsprogs', 'automake', 'gcc', 'quota', 'attr', 'make',
+                    'xfsprogs', 'gawk', 'git', 'sed', 'acl', 'bc', 'dbench',
+                    'dump', 'fio', 'xfsdump', 'indent', 'lvm2', 'psmisc']
         if self.detected_distro.name in ['Ubuntu', 'debian']:
             packages.extend(
-                ['xfslibs-dev', 'uuid-dev', 'libuuid1',
-                 'libattr1-dev', 'libacl1-dev', 'libgdbm-dev',
-                 'uuid-runtime', 'libaio-dev', 'fio', 'dbench',
+                ['xfslibs-dev', 'uuid-dev', 'libuuid1', 'libattr1-dev',
+                 'libacl1-dev', 'libgdbm-dev', 'uuid-runtime', 'libaio-dev',
                  'gettext', 'libinih-dev', 'liburcu-dev', 'libblkid-dev',
-                 'liblzo2-dev', 'zlib1g-dev', 'e2fslibs-dev',
-                 'libzstd-dev', 'libudev-dev', 'bc', 'dump', 'acl',
-                 'lvm2', 'sed'])
+                 'liblzo2-dev', 'zlib1g-dev', 'e2fslibs-dev', 'libzstd-dev',
+                 'libudev-dev', 'libcap-dev', 'liburing-dev', 'sqlite3',
+                 f'linux-headers-{os.uname().release}', 'gettext'])
             if self.detected_distro.version in ['14']:
-                packages.extend(['libtool'])
-            elif self.detected_distro.version in ['18', '20']:
-                packages.extend(['libtool-bin', 'libgdbm-compat-dev'])
+                packages.append('libtool')
             else:
-                packages.extend(['libtool-bin'])
+                packages.extend(['libtool-bin', 'libgdbm-compat-dev'])
 
         elif self.detected_distro.name in ['centos', 'fedora', 'rhel', 'SuSE']:
             if self.dev_type == 'nvdimm':
                 packages.extend(['ndctl', 'parted'])
                 if self.detected_distro.name == 'rhel':
-                    packages.extend(['daxctl'])
-            packages.extend(['acl', 'bc', 'indent', 'libtool', 'lvm2',
-                             'xfsdump', 'psmisc', 'sed', 'libacl-devel',
-                             'libattr-devel', 'libaio-devel', 'libuuid-devel',
-                             'libblkid-devel', 'lzo-devel', 'zlib-devel',
-                             'e2fsprogs-devel', 'libzstd-devel',
-                             'systemd-devel', 'meson',
-                             'xfsprogs-devel', 'gcc-c++'])
-            if self.detected_distro.name == 'rhel' and (
-                    self.detected_distro.version.startswith('9')):
-                packages.extend(['inih-devel'])
+                    packages.append('daxctl')
+            packages.extend([
+                'libtool', 'libacl-devel', 'libattr-devel', 'libaio-devel',
+                'libuuid-devel', 'libblkid-devel', 'lzo-devel', 'zlib-devel',
+                'e2fsprogs-devel', 'libzstd-devel', 'systemd-devel', 'meson',
+                'xfsprogs-devel', 'gcc-c++', 'gdbm-devel', 'kernel-devel',
+                'libcap-devel', 'liburing-devel', 'sqlite'])
+            if self.detected_distro.name == 'rhel' and dver.startswith('9'):
+                packages.append('inih-devel')
 
             if self.detected_distro.name == 'SuSE':
-                packages.extend(['libbtrfs-devel', 'libcap-progs',
-                                'liburcu-devel', 'libinih-devel',
-                                 'libopenssl-devel', 'gettext-tools'])
+                packages.extend([
+                    'libbtrfs-devel', 'libcap-progs', 'liburcu-devel',
+                    'libinih-devel', 'libopenssl-devel', 'gettext-tools',
+                    'btrfsprogs', 'fsverity-utils', 'libfsverity0',
+                    'fsverity-utils-devel', 'duperemove', 'sqlite3',
+                    'checkbashisms', 'kernel-default-extra'])
+                if int(str(dver).split('.')[0]) < 16:
+                    packages.append('acct')
             else:
-                packages.extend(['btrfs-progs-devel', 'userspace-rcu-devel',
-                                 'openssl-devel', 'gettext'])
+                packages.extend(['userspace-rcu-devel', 'openssl-devel', 'gettext'])
 
-            packages_remove = ['indent', 'btrfs-progs-devel']
-            if self.detected_distro.name == 'rhel' and (
-                    self.detected_distro.version.startswith('8') or
-                    self.detected_distro.version.startswith('9') or
-                    self.detected_distro.version.startswith('10')):
-                packages = list(set(packages)-set(packages_remove))
+            packages_remove = ['indent', 'dbench', 'dump']
+            if 'rhel' in self.detected_distro.name and any(dver.startswith(x)
+                                                           for x in ['8', '9', '10']):
+                packages = [p for p in packages if p not in packages_remove]
 
             if self.detected_distro.name in ['centos', 'fedora']:
-                packages.extend(['fio', 'dbench'])
+                packages.append('btrfs-progs-devel')
         else:
             self.cancel("test not supported in %s" % self.detected_distro.name)
 
@@ -218,7 +211,6 @@ class Xfstests(Test):
         self.use_dd = False
         root_fs = process.system_output(
             "df -T / | awk 'END {print $2}'", shell=True).decode("utf-8")
-
         if root_fs in ['ext2', 'ext3']:
             self.use_dd = True
 
@@ -226,7 +218,6 @@ class Xfstests(Test):
         self.logflag = self.params.get('logdev', default=False)
         self.fs_to_test = self.params.get('fs', default='ext4')
         self.args = self.params.get('args', default='-g quick')
-        self.log.debug(f"FS: {self.fs_to_test}, args: {self.args}")
         self.base_disk = self.params.get('disk', default=None)
         self.scratch_mnt = self.params.get(
             'scratch_mnt', default='/mnt/scratch')
@@ -241,217 +232,177 @@ class Xfstests(Test):
         self.mount_opt = self.params.get('mount_opt', default='')
         self.logdev_opt = self.params.get('logdev_opt', default='')
 
-        # If there is an existing results directory then just clean that up before running the test
-        if os.path.exists(f"{self.teststmpdir}/results"):
-            shutil.rmtree(f"{self.teststmpdir}/results")
+        self.devices = []
+        self.log_devices = []
+        self.part = None
+
+        for path in [self.scratch_mnt, self.test_mnt, self.disk_mnt]:
+            os.makedirs(path, exist_ok=True)
 
         shutil.copyfile(self.get_data('local.config'),
                         os.path.join(self.teststmpdir, 'local.config'))
 
-        self.devices = []
-        self.part = None
-
         self.__setUp_packages()
 
+        # Build upstream fs tools if requested
         if self.run_type == 'upstream':
             prefix = "/usr/local"
-            bin_prefix = "/usr/local/bin"
+            bin_prefix = "/sbin" if self.detected_distro.name == 'SuSE' else "/usr/local/bin"
 
+            # Build fsverity if requested
             if 'verity' in self.args:
+                fsverity_url = self.params.get('fsverity_url')
                 fsverity_dir = os.path.join(self.teststmpdir, 'fsverity-utils')
                 if not os.path.exists(fsverity_dir):
                     os.makedirs(fsverity_dir)
-                fsverity_url = self.params.get('fsverity_url')
                 git.get_repo(fsverity_url, destination_dir=fsverity_dir)
                 os.chdir(fsverity_dir)
                 build.make(fsverity_dir)
                 build.make(fsverity_dir, extra_args='install')
 
-            if self.detected_distro.name == 'SuSE':
-                # SuSE has /sbin at a higher priority than /usr/local/bin
-                # in $PATH, so install all the binaries in /sbin to make
-                # sure they are picked up correctly by xfstests.
-                #
-                # We still install in /usr/local but binaries are kept in
-                # /sbin
-                bin_prefix = "/sbin"
+            if self.fs_to_test == "xfs" and self.detected_distro.name in ['centos', 'fedora', 'rhel']:
+                libini_path = process.run("ldconfig -p | grep libini",
+                                          verbose=True, ignore_status=True)
+                if not libini_path:
+                    # Build libini.h as it is needed for xfsprogs
+                    libini_dir = os.path.join(self.teststmpdir, 'libini')
+                    os.makedirs(libini_dir, exist_ok=True)
+                    git.get_repo('https://github.com/benhoyt/inih', destination_dir=libini_dir)
+                    os.chdir(libini_dir)
+                    process.run("meson build", verbose=True)
+                    libini_build_dir = os.path.join(libini_dir, 'build')
+                    if os.path.exists(libini_build_dir):
+                        os.chdir(libini_build_dir)
+                        process.run("meson install", verbose=True)
+                    else:
+                        self.fail('libini build failed. Please check the logs.')
 
-            if self.fs_to_test == "ext4":
-                # Build e2fs progs
-                e2fsprogs_dir = os.path.join(self.teststmpdir, 'e2fsprogs')
-                if not os.path.exists(e2fsprogs_dir):
-                    os.makedirs(e2fsprogs_dir)
-                e2fsprogs_url = self.params.get('e2fsprogs_url')
-                git.get_repo(e2fsprogs_url, destination_dir=e2fsprogs_dir)
-                e2fsprogs_build_dir = os.path.join(e2fsprogs_dir, 'build')
-                if not os.path.exists(e2fsprogs_build_dir):
-                    os.makedirs(e2fsprogs_build_dir)
-                os.chdir(e2fsprogs_build_dir)
-                process.run("../configure --prefix=%s --bindir=%s --sbindir=%s"
-                            % (prefix, bin_prefix, bin_prefix), verbose=True)
-                build.make(e2fsprogs_build_dir)
-                build.make(e2fsprogs_build_dir, extra_args='install')
-
-            if self.fs_to_test == "xfs":
-                if self.detected_distro.name in ['centos', 'fedora', 'rhel']:
-                    libini_path = process.run("ldconfig -p | grep libini",
-                                              verbose=True, ignore_status=True)
-                    if not libini_path:
-                        # Build libini.h as it is needed for xfsprogs
-                        libini_dir = os.path.join(self.teststmpdir, 'libini')
-                        if not os.path.exists(libini_dir):
-                            os.makedirs(libini_dir)
-                        git.get_repo('https://github.com/benhoyt/inih',
-                                     destination_dir=libini_dir)
-                        os.chdir(libini_dir)
-                        process.run("meson build", verbose=True)
-                        libini_build_dir = os.path.join(libini_dir, 'build')
-                        if os.path.exists(libini_build_dir):
-                            os.chdir(libini_build_dir)
-                            process.run("meson install", verbose=True)
-                        else:
-                            self.fail('Something went wrong while building \
-                                      libini. Please check the logs.')
-                # Build xfs progs
-                xfsprogs_dir = os.path.join(self.teststmpdir, 'xfsprogs')
-                if not os.path.exists(xfsprogs_dir):
-                    os.makedirs(xfsprogs_dir)
-                xfsprogs_url = self.params.get('xfsprogs_url')
-                git.get_repo(xfsprogs_url, destination_dir=xfsprogs_dir)
-                os.chdir(xfsprogs_dir)
-                build.make(xfsprogs_dir)
-                process.run("./configure --prefix=%s --bindir=%s --sbindir=%s"
-                            % (prefix, bin_prefix, bin_prefix), verbose=True)
-                build.make(xfsprogs_dir, extra_args='install')
-
-            if self.fs_to_test == "btrfs":
-                # Build btrfs progs
-                btrfsprogs_dir = os.path.join(self.teststmpdir, 'btrfsprogs')
-                if not os.path.exists(btrfsprogs_dir):
-                    os.makedirs(btrfsprogs_dir)
-                btrfsprogs_url = self.params.get('btrfsprogs_url')
-                git.get_repo(btrfsprogs_url, destination_dir=btrfsprogs_dir)
-                os.chdir(btrfsprogs_dir)
-                process.run("./autogen.sh", verbose=True)
-                process.run("./configure --prefix=%s --bindir=%s --sbindir=%s --disable-documentation"
-                            % (prefix, bin_prefix, bin_prefix), verbose=True)
-                build.make(btrfsprogs_dir)
-                build.make(btrfsprogs_dir, extra_args='install')
+            # Build filesystem-specific tools
+            fs_build_map = {
+                    'ext4': ('e2fsprogs_url', 'e2fsprogs'),
+                    'xfs': ('xfsprogs_url', 'xfsprogs'),
+                    'btrfs': ('btrfsprogs_url', 'btrfsprogs')}
+            if self.fs_to_test in fs_build_map:
+                url_param, dir_name = fs_build_map[self.fs_to_test]
+                self._git_build(self.fs_to_test, self.params.get(url_param),
+                                dir_name, prefix, bin_prefix)
 
         # Check versions of fsprogs
+        if process.system('which mkfs.%s' % self.fs_to_test,
+                          ignore_status=True):
+            self.cancel('Unknown filesystem %s' % self.fs_to_test)
         fsprogs_ver = process.system_output("mkfs.%s -V" % self.fs_to_test,
                                             ignore_status=True,
                                             shell=True).decode("utf-8")
         self.log.info(fsprogs_ver)
 
-        if process.system('which mkfs.%s' % self.fs_to_test,
-                          ignore_status=True):
-            self.cancel('Unknown filesystem %s' % self.fs_to_test)
+        # Device setup
+        self.num_loop_dev = 5 if self.fs_to_test == "btrfs" else 2
         mount = True
-        self.log_devices = []
-
-        # For btrfs we need minimum of 5 loop devices for SCRATCH_DEV_POOL
-        self.num_loop_dev = 2
-        if self.fs_to_test == "btrfs":
-            self.num_loop_dev = 5
-
         if self.dev_type == 'loop':
             loop_size = self.params.get('loop_size', default='7GiB')
             if not self.base_disk:
-                # Using root for file creation by default
-                check = (int(loop_size.split('GiB')[
-                         0]) * self.num_loop_dev) + 1
-                if disk.freespace('/') / 1073741824 > check:
-                    self.disk_mnt = ''
-                    mount = False
-                else:
+                check = (int(loop_size.split('GiB')[0]) * self.num_loop_dev) + 1
+                if disk.freespace('/') / 1073741824 < check:
                     self.cancel('Need %s GB to create loop devices' % check)
+                else:
+                    mount = False
             self._create_loop_device(loop_size, mount)
         elif self.dev_type == 'nvdimm':
             self.setup_nvdimm()
         else:
             self.devices.extend([self.test_dev, self.scratch_dev])
-        # mkfs for devices
-        if self.devices:
-            cfg_file = os.path.join(self.teststmpdir, 'local.config')
-            with open(cfg_file, "r") as sources:
-                lines = sources.readlines()
-            with open(cfg_file, "w") as sources:
-                for line in lines:
-                    if line.startswith('export TEST_DEV'):
-                        sources.write(
-                            re.sub(r'export TEST_DEV=.*', 'export TEST_DEV=%s'
-                                   % self.devices[0], line))
-                    elif line.startswith('export TEST_DIR'):
-                        sources.write(
-                            re.sub(r'export TEST_DIR=.*', 'export TEST_DIR=%s'
-                                   % self.test_mnt, line))
-                    elif line.startswith('export SCRATCH_DEV'):
-                        if self.fs_to_test == "btrfs":
-                            scratch_dev_pool = ' '.join(
-                                [(self.devices[i]) for i in range(1, self.num_loop_dev)])
-                            sources.write(re.sub(r'export SCRATCH_DEV=.*',
-                                                 'export SCRATCH_DEV_POOL="%s"'
-                                                 % scratch_dev_pool, line))
-                        else:
-                            sources.write(re.sub(
-                                r'export SCRATCH_DEV=.*', 'export SCRATCH_DEV=%s'
-                                % self.devices[1], line))
-                    elif line.startswith('export SCRATCH_MNT'):
-                        sources.write(
-                            re.sub(
-                                r'export SCRATCH_MNT=.*',
-                                'export SCRATCH_MNT=%s' %
-                                self.scratch_mnt,
-                                line))
-                        break
-            with open(cfg_file, "a") as sources:
-                if self.log_test:
-                    sources.write('export USE_EXTERNAL=yes\n')
-                    sources.write('export TEST_LOGDEV="%s"\n' % self.log_test)
-                    self.log_devices.append(self.log_test)
-                if self.log_scratch:
-                    sources.write('export SCRATCH_LOGDEV="%s"\n' %
-                                  self.log_scratch)
-                    self.log_devices.append(self.log_scratch)
-                if self.mkfs_opt:
-                    sources.write('MKFS_OPTIONS="%s"\n' % self.mkfs_opt)
-                if self.mount_opt:
-                    sources.write('MOUNT_OPTIONS="%s"\n' % self.mount_opt)
-            for dev in self.log_devices:
-                dev_obj = partition.Partition(dev)
-                dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
-            for ite, dev in enumerate(self.devices):
-                dev_obj = partition.Partition(dev)
-                if self.logdev_opt:
-                    dev_obj.mkfs(fstype=self.fs_to_test, args='%s %s=%s' % (
-                        self.mkfs_opt, self.logdev_opt, self.log_devices[ite]))
-                else:
-                    dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
 
+        # Update local.config with device info
+        cfg_file = os.path.join(self.teststmpdir, 'local.config')
+        with open(cfg_file, "r") as f:
+            lines = f.readlines()
+
+        new_lines = []
+        for line in lines:
+            if line.startswith('export TEST_DEV='):
+                new_lines.append(f'export TEST_DEV={self.devices[0]}\n')
+            elif line.startswith('export TEST_DIR='):
+                new_lines.append(f'export TEST_DIR={self.test_mnt}\n')
+            elif line.startswith('export SCRATCH_DEV='):
+                if self.fs_to_test == 'btrfs':
+                    pool = ' '.join(self.devices[1:self.num_loop_dev])
+                    new_lines.append(f'export SCRATCH_DEV_POOL="{pool}"\n')
+                else:
+                    new_lines.append(f'export SCRATCH_DEV={self.devices[1]}\n')
+            elif line.startswith('export SCRATCH_MNT='):
+                new_lines.append(f'export SCRATCH_MNT={self.scratch_mnt}\n')
+            else:
+                new_lines.append(line)
+
+        if self.log_test:
+            new_lines.append('export USE_EXTERNAL=yes\n')
+            new_lines.append(f'export TEST_LOGDEV="{self.log_test}"\n')
+            self.log_devices.append(self.log_test)
+        if self.log_scratch:
+            new_lines.append(f'export SCRATCH_LOGDEV="{self.log_scratch}"\n')
+            self.log_devices.append(self.log_scratch)
+        if self.mkfs_opt:
+            new_lines.append(f'MKFS_OPTIONS="{self.mkfs_opt}"\n')
+        if self.mount_opt:
+            new_lines.append(f'MOUNT_OPTIONS="{self.mount_opt}"\n')
+
+        with open(cfg_file, 'w') as f:
+            f.writelines(new_lines)
+
+        self.log.info("Final local.config content:\n%s", ''.join(new_lines))
+
+        # Create logdev filesystems
+        for dev in self.log_devices:
+            partition.Partition(dev).mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
+
+        # Create mkfs on test and scratch devices
+        for i, dev in enumerate(self.devices):
+            dev_obj = partition.Partition(dev)
+            if self.logdev_opt:
+                dev_obj.mkfs(fstype=self.fs_to_test,
+                             args=f'{self.mkfs_opt} {self.logdev_opt}={self.log_devices[i]}')
+            else:
+                dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
+
+        # Clone & build xfstests
         git.get_repo('https://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
                      destination_dir=self.teststmpdir)
+        build.make(self.teststmpdir, extra_args=f"-j{os.cpu_count()}")
 
-        extra_args = f"-j{os.cpu_count()}"
-        build.make(self.teststmpdir, extra_args=extra_args)
+        # Ensure test users exist
+        for user in ['fsgqa', 'fsgqa2', '123456-fsgqa']:
+            if process.system(f'id {user}', ignore_status=True):
+                cmd = f'useradd -m {"-U " if user == "fsgqa" else ""}{user}'
+                process.system(cmd, sudo=True)
 
-        if self.detected_distro.name is not 'SuSE':
-            if process.system('useradd 123456-fsgqa', sudo=True, ignore_status=True):
-                self.log.warn('useradd 123456-fsgqa failed')
-            if process.system('useradd fsgqa', sudo=True, ignore_status=True):
-                self.log.warn('useradd fsgqa failed')
-        else:
-            if process.system('useradd -m -U fsgqa', sudo=True, ignore_status=True):
-                self.log.warn('useradd fsgqa failed')
-            if process.system('groupadd sys', sudo=True, ignore_status=True):
-                self.log.warn('groupadd sys failed')
-        if not os.path.exists(self.scratch_mnt):
-            os.makedirs(self.scratch_mnt)
-        if not os.path.exists(self.test_mnt):
-            os.makedirs(self.test_mnt)
+    def _git_build(self, fs_type, repo_url, dirname, prefix, bin_prefix):
+        # Generic helper to clone, configure and build a repo
+        src_dir = os.path.join(self.teststmpdir, dirname)
+        os.makedirs(src_dir, exist_ok=True)
+        git.get_repo(repo_url, destination_dir=src_dir)
+        os.chdir(src_dir)
+
+        if fs_type == "btrfs":
+            process.run("./autogen.sh", verbose=True)
+            process.run(f"./configure --prefix={prefix} --bindir={bin_prefix} --sbindir={bin_prefix} --disable-documentation",
+                        verbose=True, ignore_status=True)
+            build.make(src_dir)
+            build.make(src_dir, extra_args='install')
+
+        elif fs_type == "xfs":
+            build.make(src_dir)
+            process.run(f"./configure --prefix={prefix} --bindir={bin_prefix} --sbindir={bin_prefix}",
+                        verbose=True, ignore_status=True)
+            build.make(src_dir, extra_args='install')
+
+        if fs_type == "ext4":
+            process.run(f"./configure --prefix={prefix} --bindir={bin_prefix} --sbindir={bin_prefix}",
+                        verbose=True, ignore_status=True)
+            build.make(src_dir)
+            build.make(src_dir, extra_args='install')
 
     def test(self):
-        failures = False
         os.chdir(self.teststmpdir)
         if self.args:
             cmd = f"./check {self.args}"
@@ -459,13 +410,10 @@ class Xfstests(Test):
             if result.exit_status == 0:
                 self.log.info("OK: All tests passed")
             else:
-                msg = self._parse_error_message(result.stdout)
-                self.log.info("FAIL: Test(s) failed %s" % msg)
-                self.fail('One or more tests failed. Please check the logs.')
+                self.fail(self._parse_error_message(result.stdout))
 
     def tearDown(self):
-
-        srcdir = f"{self.teststmpdir}/results"
+        srcdir = os.path.join(self.teststmpdir, "results")
         if (os.path.exists(srcdir) and os.path.exists(self.outputdir)):
             new_outputdir = os.path.join(self.outputdir,
                                          os.path.basename(srcdir))
@@ -476,25 +424,26 @@ class Xfstests(Test):
         self.log.debug(" Job ID: %s, logdir: %s, srcdir: %s, outputdir: %s: " %
                        (self.job_id, self.logdir, srcdir, self.outputdir))
 
-        user_exits = 0
-        if not (process.system('id fsgqa', sudo=True, ignore_status=True)):
-            process.system('userdel -r -f fsgqa', sudo=True)
-            user_exits = 1
-        if self.detected_distro.name is not 'SuSE':
-            if not (process.system('id 123456-fsgqa', sudo=True, ignore_status=True)):
-                process.system('userdel -f 123456-fsgqa', sudo=True)
-        if user_exits and self.detected_distro.name is 'SuSE':
-            process.system('groupdel fsgqa', sudo=True)
-            process.system('groupdel sys', sudo=True)
+        # Delete created users and groups
+        for user in ['fsgqa', '123456-fsgqa', 'fsgqa2']:
+            if not process.system(f'id {user}', ignore_status=True):
+                process.system(f'userdel -r -f {user}', sudo=True, ignore_status=True)
+        if not process.system('getent group fsgqa', ignore_status=True):
+            process.system('groupdel fsgqa', sudo=True, ignore_status=True)
+
         # In case if any test has been interrupted
-        process.system('umount %s %s' % (self.scratch_mnt, self.test_mnt),
+        process.system(f'umount {self.scratch_mnt} {self.test_mnt} {self.disk_mnt}',
                        sudo=True, ignore_status=True)
-        if os.path.exists(self.scratch_mnt):
-            shutil.rmtree(self.scratch_mnt)
-        if os.path.exists(self.test_mnt):
-            shutil.rmtree(self.test_mnt)
-        if os.path.exists(self.teststmpdir + "/libini"):
-            shutil.rmtree(self.teststmpdir + "/libini")
+        for path in [self.scratch_mnt, self.test_mnt, self.disk_mnt]:
+            if os.path.exists(path):
+                shutil.rmtree(path)
+
+        # Clean libini build dir
+        libini_dir = os.path.join(self.teststmpdir, "libini")
+        if os.path.exists(libini_dir):
+            shutil.rmtree(libini_dir)
+
+        # Destroy loop/nvdimm devices
         if self.dev_type == 'loop':
             for dev in self.devices:
                 process.system('losetup -d %s' % dev, shell=True,
@@ -514,17 +463,6 @@ class Xfstests(Test):
                             process.system('losetup -d %s' % dev, shell=True,
                                            sudo=True, ignore_status=True)
 
-    def _create_fsimages(self, loop_size, i):
-        dd_count = int(loop_size.split('GiB')[0])
-        if self.use_dd:
-            process.run('dd if=/dev/zero of=%s/file-%s.img bs=1G count=%s'
-                        % (self.disk_mnt, i, dd_count), shell=True,
-                        sudo=True)
-        else:
-            process.run('fallocate -o 0 -l %s %s/file-%s.img' %
-                        (loop_size, self.disk_mnt, i), shell=True,
-                        sudo=True)
-
     def _create_loop_device(self, loop_size, mount=True):
         if mount:
             self.part = partition.Partition(
@@ -533,32 +471,21 @@ class Xfstests(Test):
 
         # Creating [0 - num_loop_dev) loop devices
         for i in range(self.num_loop_dev):
-            self._create_fsimages(loop_size, i)
+            img_file = os.path.join(self.disk_mnt, f"file-{i}.img")
+            dd_count = int(re.findall(r'\d+', loop_size)[0])
+            if self.use_dd:
+                process.run(f'dd if=/dev/zero of={img_file} bs=1G count={dd_count}', shell=True, sudo=True)
+            else:
+                process.run(f'fallocate -o 0 -l {loop_size} {img_file}', shell=True, sudo=True)
             dev = process.system_output('losetup -f').decode("utf-8").strip()
+            process.run(f'losetup {dev} {img_file}', shell=True, sudo=True)
             self.devices.append(dev)
-            process.run('losetup %s %s/file-%s.img' %
-                        (dev, self.disk_mnt, i), shell=True, sudo=True)
 
     @staticmethod
     def _parse_error_message(output):
-        na_re = re.compile(r'Passed all 0 tests')
-        na_detail_re = re.compile(r'(\d{3})\s*(\[not run\])\s*(.*)')
+        lines = output.decode("ISO-8859-1").splitlines()
         failed_re = re.compile(r'Failed \d+ of \d+ tests')
-
-        lines = output.decode("ISO-8859-1").split('\n')
-        result_line = lines[-3]
-
-        error_msg = None
-        if na_re.match(result_line):
-            detail_line = lines[-3]
-            match = na_detail_re.match(detail_line)
-            if match is not None:
-                error_msg = match.groups()[2]
-            else:
-                error_msg = 'Test dependency failed, test will not run.'
-        elif failed_re.match(result_line):
-            error_msg = 'Test error. %s.' % result_line
-        else:
-            error_msg = 'Could not verify test result. Please check the logs.'
-
-        return error_msg
+        for line in reversed(lines):
+            if failed_re.match(line.strip()):
+                return line.strip()
+        return 'Could not verify test result. Please check the logs.'
