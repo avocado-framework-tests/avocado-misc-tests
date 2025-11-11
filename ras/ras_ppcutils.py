@@ -193,6 +193,8 @@ class RASToolsPpcutils(Test):
         self.run_cmd("lsslot -c mem")
         if self.run_cmd_out("lspci"):
             self.run_cmd_out("lsslot -ac pci")
+       	    result = self.run_cmd("lsslot -ac pci", ignore_status=True)
+	    self.assertEqual(result.exit_status, 0, "lsslot -ac pci failed")
         if not IS_KVM_GUEST:
             self.run_cmd("lsslot -c cpu -b")
         self.run_cmd("lsslot -c pci -o")
@@ -561,4 +563,5 @@ class RASToolsPpcutils(Test):
                                 default=['-c cpu', '-c mem'])
         for list_item in lists:
             self.run_cmd('lparnumascore %s' % list_item)
+
         self.error_check()
