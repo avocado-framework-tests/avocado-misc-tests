@@ -26,6 +26,7 @@ except ImportError:
 from avocado.utils import genio, process
 from avocado.utils.software_manager.manager import SoftwareManager
 
+
 def remote_session_logger(log_file, message):
     """
     :param log_file: Specify the file path to write the session output logs.
@@ -59,6 +60,36 @@ class KDUMP(Test):
             .strip()
         )
 
+    def wait_for_reboot(self, log_file, timeout, interval=10):
+        """
+        :param log_file: Path to the session log file.
+        :type log_file: str
+        :param timeout: Maximum wait time for reboot in seconds.
+        :type timeout: int
+        :param interval: Retry interval in seconds. Defaults to 10.
+        :type interval: int
+
+        :raises: RuntimeError if the host is unreachable within the timeout.
+
+        :return: SSH session object upon successful login.
+        :rtype: remote.RemoteRunner
+        """
+        time.sleep(interval)
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                session = remote.RemoteRunner(
+                    "ssh", self.ip, 22, self.user_name, self.password,
+                    self.prompt, "\n", log_file, 30, 5, None,
+                    "password", remote_session_logger
+                )
+                return session
+            except Exception as e:
+                self.log.debug(f"Still waiting for host: {e}")
+                time.sleep(interval)
+
+        raise RuntimeError("Timeout Expired or system is unreachable.")
+
     def setUp(self):
         sm = SoftwareManager()
         if not sm.check_installed("openssh*") and not sm.install("openssh*"):
@@ -71,6 +102,7 @@ class KDUMP(Test):
         self.user_name = self.params.get('user_name')
         self.password = self.params.get('password')
         self.prompt = self.params.get('prompt', default='')
+        self.timeout = self.params.get('reboot_timeout', default=600)
         self.sessions = []
 
     def test(self):
@@ -94,7 +126,11 @@ class KDUMP(Test):
             )
             self.sessions.append(session_reboot)
             session_reboot.sendline('reboot;')
-            time.sleep(600)
+            try:
+                session_status = self.wait_for_reboot(log_file, self.timeout)
+                self.sessions.append(session_status)
+            except RuntimeError as e:
+                self.fail(f"Reboot after kdump setup failed: {e}")
             self.log.info("Connecting after reboot")
             session_status = remote.RemoteRunner(
                 "ssh", self.ip, 22, self.user_name, self.password, self.prompt, "\n",
@@ -119,7 +155,11 @@ class KDUMP(Test):
         self.sessions.append(session_crash)
         session_crash.sendline('echo 1 > /proc/sys/kernel/sysrq;')
         session_crash.sendline('echo "c" > /proc/sysrq-trigger;')
-        time.sleep(600)
+        try:
+            session_check = self.wait_for_reboot(log_file, self.timeout)
+            self.sessions.append(session_check)
+        except RuntimeError as e:
+            self.fail(f"Reboot after crash trigger failed: {e}")
         self.log.info("Connecting after reboot")
         session_check = remote.RemoteRunner(
             "ssh", self.ip, 22, self.user_name, self.password, self.prompt, "\n",
