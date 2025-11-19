@@ -14,7 +14,6 @@
 # Copyright: 2022 IBM
 # Author: Disha Goel <disgoel@linux.vnet.ibm.com>
 
-import sys
 import time
 import platform
 import threading
@@ -43,7 +42,7 @@ class perf_top(Test):
         detected_distro = distro.detect()
         self.distro_name = detected_distro.name
 
-        deps = ['gcc', 'make']
+        deps = ['gcc', 'make', 'ebizzy']
         if 'Ubuntu' in self.distro_name:
             deps.extend(['linux-tools-common', 'linux-tools-%s' %
                          platform.uname()[2]])
@@ -66,6 +65,9 @@ class perf_top(Test):
 
         # Creating a temporary file
         self.temp_file = tempfile.NamedTemporaryFile().name
+
+    def run_ebizzy(self):
+        process.run("ebizzy -S 30", ignore_status=True, shell=True)
 
     def test_top(self):
         if self.option in ["-k", "--vmlinux", "--kallsyms"]:
@@ -105,7 +107,11 @@ class perf_top(Test):
                                     'soft lockup', 'Unable to handle'])
 
     def test_workload_output(self):
-        process.getoutput("perf top -a > %s " % self.temp_file, timeout=10)
+        workload_thread = threading.Thread(target=self.run_ebizzy)
+        workload_thread.start()
+
+        process.getoutput("perf top -a > %s " % self.temp_file, timeout=35)
+        workload_thread.join(timeout=5)
         perf_top_output = genio.read_file(self.temp_file).splitlines()
         flag = False
         for lines in perf_top_output:
