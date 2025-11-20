@@ -631,6 +631,11 @@ class DlparTests(Test):
                         "CPU is still offline even after"
                         "proc operation,Test passed.")
 
+        # Setting cpu online back after TC complete
+        cmd = 'echo 1 > /sys/devices/system/cpu/cpu1/online'
+        process.system_output(
+            cmd, shell=True, ignore_status=False)
+
     def test_offline_proc_persistence(self):
         '''
         Keep SMT less than 8 and at least 1 core offline, do a dlpar proc
