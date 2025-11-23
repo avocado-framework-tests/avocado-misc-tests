@@ -24,7 +24,6 @@ import sys
 import time
 
 from avocado import Test
-from avocado.utils import disk
 from avocado.utils import nvme
 from avocado.utils import process
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -120,6 +119,17 @@ class NVMeSEDTest(Test):
         """
         lockdown_attr = self.get_nvme_sed_discover_parameters(namespace)
         return lockdown_attr.get("Locked").lower() == "yes"
+
+    def dd_read_records_device(self, disk, read_records="1", out_file="/tmp/data"):
+        """
+        Reads mentioned number of blocks from device to destination
+        :param disk: disk absolute path
+        :param read_records: Numbers of blocks to read from disk
+        :param out_file: Destination file
+        :rtype: boolean
+        """
+        cmd = f"dd count={read_records} if={disk} of={out_file}"
+        return not process.system(cmd, ignore_status=True, sudo=True)
 
     def initialize_sed_locking(self, namespace, password):
         """
@@ -256,10 +266,10 @@ class NVMeSEDTest(Test):
         Perform lock and unlock of nvme drive
         """
         self.lock_drive(self.namespace)
-        if disk.dd_read_records_device(self.namespace):
+        if self.dd_read_records_device(self.namespace):
             self.log.fail(f"dd read command on {self.namespace} is successful, dd should fail when drive is locked")
         self.unlock_drive(self.namespace)
-        if not disk.dd_read_records_device(self.namespace):
+        if not self.dd_read_records_device(self.namespace):
             self.log.fail(f"dd read command on {self.namespace} is failed, dd should success when drive is unlocked")
 
     def lock_unlock_with_key(self, password):
@@ -267,10 +277,10 @@ class NVMeSEDTest(Test):
         Perform lock and unlock with provided key
         """
         self.lock_drive(self.namespace, with_pass_key=password)
-        if disk.dd_read_records_device(self.namespace):
+        if self.dd_read_records_device(self.namespace):
             self.log.fail(f"dd read command on {self.namespace} is successful, dd should fail when drive is locked")
         self.unlock_drive(self.namespace, with_pass_key=password)
-        if not disk.dd_read_records_device(self.namespace):
+        if not self.dd_read_records_device(self.namespace):
             self.log.fail(f"dd read command on {self.namespace} is failed, dd should success when drive is unlocked")
 
     def test_initialize_locking(self):
