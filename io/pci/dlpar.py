@@ -206,6 +206,7 @@ class DlparPci(Test):
             for _ in range(self.num_of_dlpar):
                 self.dlpar_remove()
                 self.dlpar_add()
+                self.set_adapter_details(pci)
                 self.validation_in_os(pci)
                 self.dlpar_move()
 
@@ -220,9 +221,11 @@ class DlparPci(Test):
             for _ in range(self.num_of_dlpar):
                 self.do_drmgr_pci('r')
                 self.do_drmgr_pci('a')
+                self.set_adapter_details(pci)
                 self.validation_in_os(pci)
             for _ in range(self.num_of_dlpar):
                 self.do_drmgr_pci('R')
+                self.set_adapter_details(pci)
                 self.validation_in_os(pci)
 
     def test_drmgr_phb(self):
@@ -234,6 +237,7 @@ class DlparPci(Test):
             for _ in range(self.num_of_dlpar):
                 self.do_drmgr_phb('r')
                 self.do_drmgr_phb('a')
+                self.set_adapter_details(pci)
                 self.validation_in_os(pci)
 
     def do_drmgr_pci(self, operation):
@@ -270,7 +274,7 @@ class DlparPci(Test):
             self.changehwres(self.server, 'r', self.lpar_id, self.lpar_1,
                              self.drc_index, 'remove')
             output = self.listhwres(self.server, self.lpar_1, self.drc_index)
-            if output:
+            if output and ",drc_index="+self.drc_index in output:
                 self.log.debug(output)
                 self.fail("lshwres still lists the drc after dlpar remove")
 
