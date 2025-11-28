@@ -63,7 +63,7 @@ class Sosreport(Test):
                 match = re.match(r"^(\w+)\s+(.*)$", plugins.strip())
                 if match:
                     matched_plugin = match.group(1)
-                break
+            break
 
         return matched_plugin
 
