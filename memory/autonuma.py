@@ -33,8 +33,8 @@ class AutoNuma(Test):
         from /proc/vmstat and returns it as an integer.
         """
         cmd = 'cat /proc/vmstat  | grep numa_pte_updates'
-        output = process.system_output(cmd, shell=True)
-        return(int(str(output).split()[1].strip('\'')))
+        output = process.run(cmd, shell=True).stdout_text
+        return int(output.split()[-1])
 
     def count_numa_hint_faults(self):
         """
@@ -42,8 +42,8 @@ class AutoNuma(Test):
         /proc/vmstat and returns it as an integer.
         """
         cmd = 'cat /proc/vmstat  | grep numa_hint_faults | head -1'
-        output = process.system_output(cmd, shell=True)
-        return(int(str(output).split()[1].strip('\'')))
+        output = process.run(cmd, shell=True).stdout_text
+        return int(output.split()[-1])
 
     def setUp(self):
         """
@@ -53,14 +53,14 @@ class AutoNuma(Test):
         smm = SoftwareManager()
 
         detected_distro = distro.detect()
-        deps = ['gcc', 'make']
+        deps = ['gcc', 'make', 'time']
         if detected_distro.name == "rhel":
             deps.extend(['numactl-devel'])
         for packages in deps:
             if not smm.check_installed(packages) and not smm.install(packages):
                 self.cancel('%s is needed for the test to be run' % packages)
-
-        self.url = 'https://sourceforge.net/projects/ebizzy/files/ebizzy/0.3/ebizzy-0.3.tar.gz'
+        self.url = self.params.get('ebizzy_url',
+                                   default='https://sourceforge.net/projects/ebizzy/files/ebizzy/0.3/ebizzy-0.3.tar.gz')
         tarball = self.fetch_asset("ebizzy-0.3.tar.gz", locations=[self.url], expire='7d')
         archive.extract(tarball, self.workdir)
         version = os.path.basename(tarball.split('.tar.')[0])
@@ -105,7 +105,8 @@ class AutoNuma(Test):
         This test case runs downloading, extracting, and running the autonuma-benchmark tests,
         Test results need to be verified manually.
         """
-        url_autonuma = 'https://github.com/pholasek/autonuma-benchmark/archive/refs/heads/master.zip'
+        url_autonuma = self.params.get('url_autonuma',
+                                       default='https://github.com/pholasek/autonuma-benchmark/archive/refs/heads/master.zip')
         tarball = self.fetch_asset("master.zip", locations=[url_autonuma], expire='7d')
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(self.workdir, "autonuma-benchmark-master")
