@@ -86,11 +86,6 @@ class EEH(Test):
             self.peer_ip = self.params.get("peer_ip", default=None)
             self.interface = pci.get_nics_in_pci_address(self.pci_device)[0]
             self.localhost = LocalHost()
-            device = self.interface
-            if self.localhost.validate_mac_addr(device) and device in self.localhost.get_all_hwaddr():
-                self.interface = self.localhost.get_interface_by_hwaddr(device).name
-            else:
-                self.cancel("Please check the network device")
             self.networkinterface = NetworkInterface(self.interface,
                                                      self.localhost)
             if not self.networkinterface.validate_ipv4_format(self.ipaddr):
