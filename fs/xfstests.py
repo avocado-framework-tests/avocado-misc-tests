@@ -23,6 +23,7 @@
 import os
 import re
 import shutil
+import subprocess
 from avocado import Test
 from avocado.utils import process, build, git, distro, partition
 from avocado.utils import disk, pmem, genio
@@ -369,6 +370,8 @@ class Xfstests(Test):
         git.get_repo('https://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
                      destination_dir=self.teststmpdir)
         build.make(self.teststmpdir, extra_args=f"-j{os.cpu_count()}")
+        os.chmod(self.workdir, 0o755)
+        subprocess.check_call(["chmod", "-R", "a+rX", self.teststmpdir])
 
         # Ensure test users exist
         for user in ['fsgqa', 'fsgqa2', '123456-fsgqa']:
