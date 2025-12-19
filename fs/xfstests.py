@@ -148,7 +148,7 @@ class Xfstests(Test):
         dver = self.detected_distro.version
 
         packages = ['e2fsprogs', 'automake', 'gcc', 'quota', 'attr', 'make',
-                    'xfsprogs', 'gawk', 'git', 'sed', 'acl', 'bc', 'dbench',
+                    'xfsprogs', 'gawk', 'git', 'sed', 'acl', 'bc',
                     'dump', 'fio', 'xfsdump', 'indent', 'lvm2', 'psmisc']
         if self.detected_distro.name in ['Ubuntu', 'debian']:
             packages.extend(
@@ -157,7 +157,7 @@ class Xfstests(Test):
                  'gettext', 'libinih-dev', 'liburcu-dev', 'libblkid-dev',
                  'liblzo2-dev', 'zlib1g-dev', 'e2fslibs-dev', 'libzstd-dev',
                  'libudev-dev', 'libcap-dev', 'liburing-dev', 'sqlite3',
-                 f'linux-headers-{os.uname().release}', 'gettext'])
+                 f'linux-headers-{os.uname().release}', 'dbench'])
             if self.detected_distro.version in ['14']:
                 packages.append('libtool')
             else:
@@ -172,8 +172,7 @@ class Xfstests(Test):
                 'libtool', 'libacl-devel', 'libattr-devel', 'libaio-devel',
                 'libuuid-devel', 'libblkid-devel', 'lzo-devel', 'zlib-devel',
                 'e2fsprogs-devel', 'libzstd-devel', 'systemd-devel', 'meson',
-                'xfsprogs-devel', 'gcc-c++', 'gdbm-devel', 'kernel-devel',
-                'libcap-devel', 'liburing-devel', 'sqlite'])
+                'xfsprogs-devel', 'gcc-c++', 'liburing-devel'])
             if self.detected_distro.name == 'rhel' and dver.startswith('9'):
                 packages.append('inih-devel')
 
@@ -182,20 +181,25 @@ class Xfstests(Test):
                     'libbtrfs-devel', 'libcap-progs', 'liburcu-devel',
                     'libinih-devel', 'libopenssl-devel', 'gettext-tools',
                     'btrfsprogs', 'fsverity-utils', 'libfsverity0',
-                    'fsverity-utils-devel', 'duperemove', 'sqlite3',
-                    'checkbashisms', 'kernel-default-extra'])
+                    'duperemove', 'sqlite3'])
                 if int(str(dver).split('.')[0]) < 16:
                     packages.append('acct')
+                elif int(str(dver).split('.')[0]) >= 16:
+                    packages.extend(
+                        ['gdbm-devel', 'libcap-devel', 'fsverity-utils-devel',
+                         'kernel-default-extra'])
             else:
-                packages.extend(['userspace-rcu-devel', 'openssl-devel', 'gettext'])
+                packages.extend(['userspace-rcu-devel', 'openssl-devel', 'gettext',
+                                 'gdbm-devel', 'kernel-devel', 'libcap-devel',
+                                 'sqlite'])
 
-            packages_remove = ['indent', 'dbench', 'dump']
+            packages_remove = ['indent', 'dump']
             if 'rhel' in self.detected_distro.name and any(dver.startswith(x)
                                                            for x in ['8', '9', '10']):
                 packages = [p for p in packages if p not in packages_remove]
 
             if self.detected_distro.name in ['centos', 'fedora']:
-                packages.append('btrfs-progs-devel')
+                packages.extend(['btrfs-progs-devel', 'dbench'])
         else:
             self.cancel("test not supported in %s" % self.detected_distro.name)
 
@@ -344,9 +348,9 @@ class Xfstests(Test):
             new_lines.append(f'export SCRATCH_LOGDEV="{self.log_scratch}"\n')
             self.log_devices.append(self.log_scratch)
         if self.mkfs_opt:
-            new_lines.append(f'MKFS_OPTIONS="{self.mkfs_opt}"\n')
+            new_lines.append(f'export MKFS_OPTIONS="{self.mkfs_opt}"\n')
         if self.mount_opt:
-            new_lines.append(f'MOUNT_OPTIONS="{self.mount_opt}"\n')
+            new_lines.append(f'export MOUNT_OPTIONS="{self.mount_opt}"\n')
 
         with open(cfg_file, 'w') as f:
             f.writelines(new_lines)
@@ -377,7 +381,7 @@ class Xfstests(Test):
         for user in ['fsgqa', 'fsgqa2', '123456-fsgqa']:
             if process.system(f'id {user}', ignore_status=True):
                 cmd = f'useradd -m {"-U " if user == "fsgqa" else ""}{user}'
-                process.system(cmd, sudo=True)
+                process.system(cmd, sudo=True, ignore_status=True)
 
     def _git_build(self, fs_type, repo_url, dirname, prefix, bin_prefix):
         # Generic helper to clone, configure and build a repo
