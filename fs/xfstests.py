@@ -249,6 +249,19 @@ class Xfstests(Test):
 
         self.__setUp_packages()
 
+        # Enable io_uring if disabled
+        knob = "/proc/sys/kernel/io_uring_disabled"
+        if os.path.exists(knob):
+            try:
+                current = int(process.system_output(f"cat {knob}").strip())
+                # 0 = enabled, 1/2 = disabled
+                if current != 0:
+                    process.run(f"echo 0 > {knob}", sudo=True, shell=True)
+            except Exception as ex:
+                self.log.warn(f"Could not update io_uring_disabled: {ex}")
+        else:
+            self.log.info("io_uring_disabled knob not present older kernel")
+
         # Build upstream fs tools if requested
         if self.run_type == 'upstream':
             prefix = "/usr/local"
