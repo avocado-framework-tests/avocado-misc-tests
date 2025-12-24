@@ -49,8 +49,62 @@ class ServiceReport(Test):
         self.sourcedir = os.path.join(self.workdir, 'ServiceReport-master')
         build.make(self.sourcedir)
 
+    def spyrePresent(self):
+        for dev in os.listdir('/sys/bus/pci/devices'):
+            cls = os.path.join('/sys/bus/pci/devices', dev, 'class')
+            try:
+                with open(cls) as f:
+                    if f.read().strip().startswith('0x1200'):
+                        return True
+            except Exception:
+                pass
+        return False
+
     def test(self):
         os.chdir(self.sourcedir)
+
+        if not self.spyrePresent():
+            self.cancel("Spyre Accelerator not present on this system")
+
+        if os.path.exists('/dev/vfio') and os.listdir('/dev/vfio'):
+            self.log.info("/dev/vfio already populated")
+        else:
+            self.log.info("/dev/vfio empty before servicereport")
+
         cmd = "./servicereport %s" % self.options
         if process.system(cmd, ignore_status=True, sudo=True, shell=True):
             self.fail("ServiceReport: Failed command is: %s" % cmd)
+
+        spyreVerboseCmd = "./servicereport -v -p spyre"
+        result = process.run(spyreVerboseCmd, ignore_status=True, sudo=True, shell=True)
+        output = (result.stdout or '') + (result.stderr or '')
+
+        if 'FAIL' in output:
+            self.log.info("FAIL detected in -v -p spyre")
+            spyreRepairCmd = "./servicereport -r -p spyre"
+            process.system(spyreRepairCmd, ignore_status=True, sudo=True, shell=True)
+            
+            self.log.info("Re-running -v -p spyre after repair")
+            result = process.run(spyreVerboseCmd, ignore_status=True, sudo=True, shell=True)
+            output = (result.stdout or '') + (result.stderr or '')
+
+            if 'FAIL' in output:
+                self.fail("FAIL still present after Spyre repair")
+
+        if not os.path.exists('/dev/vfio') or not os.listdir('/dev/vfio'):
+            self.fail("/dev/vfio not populated after servicereport")
+
+        user = 'new_sentient_user'
+        group = 'sentient'
+
+        process.run(f"useradd {user}", ignore_status=True, sudo=True, shell=True)
+        process.run(f"echo '{user}:{user}' | chpasswd", ignore_status=True, sudo=True, shell=True)
+        process.run(f"usermod -aG {group} {user}", ignore_status=True, sudo=True, shell=True)
+
+        userCmd = f"su - {user} -c './servicereport -v -p spyre'"
+        result = process.run(userCmd, ignore_status=True, sudo=True, shell=True)
+        output = (result.stdout or '') + (result.stderr or '')
+
+        if 'FAIL' in output:
+            self.fail("FAIL detected when running -v -p spyre as a non-root user")
+
