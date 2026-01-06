@@ -408,3 +408,34 @@ class Sosreport(Test):
         if is_fail:
             self.fail(
                 "%s command(s) failed in sosreport tool verification" % is_fail)
+
+    def test_spyre_external_plugin(self):
+        self.is_fail = 0
+        directory_name = tempfile.mkdtemp()
+        output = self.run_cmd_out("%s --batch --tmp-dir=%s -o spyre-external" % (self.sos_cmd, directory_name))
+
+        tar_file = None
+        for line in output.splitlines():
+            if 'tar.xz' in line or 'tar.gz' in line:
+                tar_file = line.strip()
+                break
+
+        if not tar_file or not os.path.exists(tar_file):
+            self.is_fail += 1
+            self.log.info("sosreport archive not generated for spyre-external")
+        else:
+            tar_list = self.run_cmd_out("tar -tf %s" % tar_file)
+            found = False
+            if 'spyre' in tar_list:
+                found = True
+
+            if not found:
+                self.is_fail += 1
+                self.log.info("spyre-external did not capture expected files")
+
+            os.remove(tar_file)
+
+        shutil.rmtree(directory_name)
+
+        if self.is_fail >= 1:
+            self.fail("%s command(s) failed in sosreport spyre-external verification" % self.is_fail)
