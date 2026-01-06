@@ -24,6 +24,7 @@ from avocado import Test
 from avocado import skipIf
 from avocado.utils import process, cpu, genio
 from avocado.utils import distro
+from avocado.utils import archive, pci
 from avocado.utils.software_manager.manager import SoftwareManager
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
@@ -408,3 +409,57 @@ class Sosreport(Test):
         if is_fail:
             self.fail(
                 "%s command(s) failed in sosreport tool verification" % is_fail)
+
+    def isAccelerator(self):
+        for dev in os.listdir('/sys/bus/pci/devices'):
+            try:
+                if pci.get_pci_class_name(dev) == "accelerator":
+                    return True
+            except Exception:
+                pass
+        return False
+
+    @skipIf("ppc" not in os.uname()[4], "Skip, Powerpc specific tests")
+    @skipIf(lambda self: not self.isAccelerator(), "Unsupported: PCI adapter is not an accelarator")
+    def test_spyre_external_plugin(self):
+        self.is_fail = 0
+        output = self.run_cmd_out("%s --batch --tmp-dir=%s -o spyre-external" % (self.sos_cmd, self.workdir))
+
+        tar_file = None
+        for line in output.splitlines():
+            if 'tar.xz' in line or 'tar.gz' in line:
+                tar_file = line.strip()
+                break
+
+        if not tar_file or not os.path.exists(tar_file):
+            self.is_fail += 1
+            self.log.info("sosreport archive not generated for spyre-external")
+        else:
+            archive.extract(tar_file, self.workdir)
+            found = False
+
+            extracted_dirs = [d for d in os.listdir(self.workdir) if os.path.isdir(os.path.join(self.workdir, d)) and d.startswith('sosreport-')]
+            if not extracted_dirs:
+                self.is_fail += 1
+                self.log.info("No sos report directory found after extraction")
+
+            extracted_file = os.path.join(self.workdir, extracted_dirs[0], 'sos_reports', 'sos.txt')
+            if not os.path.exists(extracted_file):
+                self.is_fail += 1
+                self.log.info(f"Expected file not found: {extracted_file}")
+
+            with open(extracted_file, 'r') as file:
+                content = file.read()
+                if "spyre" in content and "podman" in content:
+                    found = True
+
+            if not found:
+                self.is_fail += 1
+                self.log.info("spyre-external did not capture expected files")
+
+            os.remove(tar_file)
+
+        shutil.rmtree(self.workdir)
+
+        if self.is_fail >= 1:
+            self.fail("%s command(s) failed in sosreport spyre-external verification" % self.is_fail)
