@@ -58,7 +58,7 @@ class DlparTests(Test):
                 warns += 1
 
         if errors == 0 and warns > 0:
-            self.warn('number of warnings is %s', warns)
+            self.log.warn('number of warnings is %s', warns)
 
         elif errors > 0:
             self.log.warn('number of warnings is %s', warns)
