@@ -1,0 +1,6 @@
+run_type: !mux
+    distro:
+        type: 'distro'
+    upstream:
+        type: 'upstream'
+        perf_path: "/home/upstreamci/linux/tools/perf"
