@@ -235,6 +235,10 @@ class DlparTests(Test):
             for cpu in self.cpu_payload:
                 rvalue = Ded_obj.add_ded_cpu(cpu)
                 if rvalue == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Ded_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("CPU add Command failed please check the logs")
                 self.log.info(
                     "===============> %s cpu got added=======>\n " % cpu)
@@ -273,11 +277,21 @@ class DlparTests(Test):
             self.data_payload_backup(Pu)
             # Add proc_units and  virtual_procs
             for i in range(len(Pu)):
-                if Sha_obj.add_proc(Pu[i], '--procunits') == 1:
+                result = Sha_obj.add_proc(Pu[i], '--procunits')
+                if result == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Sha_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail(
                         "proc_units add Command failed please check the logs")
                 self.log.info("====>%s procunits got added====>\n " % Pu[i])
-                if Sha_obj.add_proc(Vp[i], '--procs') == 1:
+                result = Sha_obj.add_proc(Vp[i], '--procs')
+                if result == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Sha_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("CPU add Command failed please check the logs")
                 self.log.info(
                     "===============>%s cpus got added=======>\n " % Vp[i])
@@ -296,6 +310,10 @@ class DlparTests(Test):
             for cpu in cpupayload:
                 rvalue = Ded_obj.rem_ded_cpu(cpu)
                 if rvalue == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Ded_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("CPU remove Command failed please \
                               check the logs")
                 self.log.info(
@@ -314,11 +332,21 @@ class DlparTests(Test):
 
             # Iterate through the reversed lists
             for vp, pu in zip(Vp_reverse, Pu_reverse):
-                if Sha_obj.remove_proc(vp, '--procs') == 1:
+                result = Sha_obj.remove_proc(Vp, '--procs')
+                if result == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Sha_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("Cpu remove Command failed please \
                               check the logs")
                 self.log.info("====>%s cpu got removed====>\n " % vp)
-                if Sha_obj.remove_proc(pu, '--procunits') == 1:
+                result = Sha_obj.remove_proc(pu, '--procunits')
+                if result == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Sha_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("proc units remove Command failed \
                               please check the logs")
                 self.log.info(
@@ -340,11 +368,19 @@ class DlparTests(Test):
             for cpu in cpu_mix:
                 rvalue = Ded_obj.add_ded_cpu(cpu)
                 if rvalue == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Ded_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("CPU add Command failed please check the logs")
                 self.log.info(
                     "===============>%s cpus got added=======>\n " % cpu)
                 rvalue = Ded_obj.rem_ded_cpu(cpu)
                 if rvalue == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Ded_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("CPU remove Command failed please \
                               check the logs")
                 self.log.info(
@@ -359,20 +395,41 @@ class DlparTests(Test):
             Pu = eval(str(loaded_payload_data[1]))
             # Iterate through the reversed lists
             for pu, vp in zip(Pu, Vp):
-                if Sha_obj.add_proc(vp, '--procs') == 1:
+                result = Sha_obj.add_proc(vp, '--procs')
+                if result == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Sha_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("CPU add Command failed please check the logs")
+
                 self.log.info(
                     "===============>%s cpus got added=======>\n " % vp)
-                if Sha_obj.add_proc(pu, '--procunits') == 1:
+                result = Sha_obj.add_proc(pu, '--procunits')
+                if result == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Sha_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other error = real failure
                     self.fail(
                         "proc_units add Command failed please check the logs")
                 self.log.info("====>%s procunits got added====>\n " % pu)
-                if Sha_obj.remove_proc(pu, '--procunits') == 1:
+                result = Sha_obj.remove_proc(pu, '--procunits')
+                if result == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Sha_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other error = real failure
                     self.fail("proc units remove Command failed \
                               please check the logs")
                 self.log.info(
                     "===============>%s procunits got removed=======>\n " % pu)
-                if Sha_obj.remove_proc(vp, '--procs') == 1:
+                result = Sha_obj.remove_proc(vp, '--procs')
+                if result == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Sha_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("Cpu remove Command failed \
                               please check the logs")
                 self.log.info("====>%s cpu got removed====>\n " % vp)
@@ -390,6 +447,10 @@ class DlparTests(Test):
         for mem in self.mem_payload[:-1]:
             rvalue = Mem_obj.mem_add(mem)
             if rvalue == 1:
+                # gives output printed by the last DLPAR command that ran on the HMC
+                stdout = Mem_obj.cmd_result.stdout_text
+                self._cancel_on_capacity_exceeded(stdout)
+                # Any other failure consider as fail
                 self.fail(
                     "%s Memory add Command failed please check the logs" % mem)
             self.log.info(
@@ -405,6 +466,10 @@ class DlparTests(Test):
         for mem in self.mem_remove[:-1]:
             rvalue = Mem_obj.mem_rem(mem)
             if rvalue == 1:
+                # gives output printed by the last DLPAR command that ran on the HMC
+                stdout = Mem_obj.cmd_result.stdout_text
+                self._cancel_on_capacity_exceeded(stdout)
+                # Any other failure consider as fail
                 self.fail("Memory remove Command failed please check the logs")
             self.log.info(
                 "===============> %s memory got removed=======>\n " % mem)
@@ -428,11 +493,19 @@ class DlparTests(Test):
         for add, rem in zip(mem_add, mem_rem):
             rvalue = Mem_obj.mem_add(add)
             if rvalue == 1:
+                # gives output printed by the last DLPAR command that ran on the HMC
+                stdout = Mem_obj.cmd_result.stdout_text
+                self._cancel_on_capacity_exceeded(stdout)
+                # Any other failure consider as fail
                 self.fail("MEM add Command failed please check the logs")
             self.log.info(
                 "=====>%s memory got added====>\n " % add)
             rvalue = Mem_obj.mem_rem(rem)
             if rvalue == 1:
+                # gives output printed by the last DLPAR command that ran on the HMC
+                stdout = Mem_obj.cmd_result.stdout_text
+                self._cancel_on_capacity_exceeded(stdout)
+                # Any other failure consider as fail
                 self.fail("MEM remove Command failed please check the logs")
             self.log.info(
                 "====>%s memory got removed====>\n " % rem)
@@ -478,7 +551,7 @@ class DlparTests(Test):
             process.system_output('lscpu | grep -i thread',
                                   shell=True, ignore_status=False)
         lparstat_cmd_smt_state = \
-            process.system_output('lparstat | grep -i smt',
+            process.system_output("lparstat | grep -o 'smt=[0-9]*'",
                                   shell=True, ignore_status=False)
         if self.lpar_mode == 'dedicated':
             Ded_obj = DedicatedCpu(self.sorted_payload,
@@ -501,7 +574,7 @@ class DlparTests(Test):
                     ignore_status=False
                 )
                 new_lparstat_smt_state = process.system_output(
-                    'lparstat | grep -i smt',
+                    "lparstat | grep -o 'smt=[0-9]*'",
                     shell=True,
                     ignore_status=False
                 )
@@ -630,6 +703,11 @@ class DlparTests(Test):
                     self.log.info(
                         "CPU is still offline even after"
                         "proc operation,Test passed.")
+        # Setting cpu online back after TC complete
+        self.log.info("Setting cpu online back after TC complete")
+        cmd = 'echo 1 > /sys/devices/system/cpu/cpu1/online'
+        process.system_output(
+            cmd, shell=True, ignore_status=False)
 
     def test_offline_proc_persistence(self):
         '''
@@ -710,3 +788,26 @@ class DlparTests(Test):
                     )
                 else:
                     self.log.info("SMT is unchanged ,Test passed.")
+        # Setting back the value after TC compelte
+        self.log.info("Setting back the value after TC compelte")
+        set_smt_value = process.system_output(
+            'ppc64_cpu --smt=8', shell=True, ignore_status=False)
+
+    def _cancel_on_capacity_exceeded(self, stdout=""):
+        if not stdout:
+            return
+        combined = stdout
+        if (
+            "The operation failed because the ratio of assigned processing units to assigned virtual processors" in combined
+            or
+            "processing units to exceed the maximum capacity allowed with the virtual processor setting" in combined
+            or
+            "The quantity to be added exceeds the available resources." in combined
+            or
+            "Your memory request exceeds the profile's Maximum memory limit." in combined
+            or
+            "Your memory request is below the profile’s Minimum memory limit." in combined
+            or
+            "Not enough memory resources to meet the allocation setting" in combined
+        ):
+            self.cancel(stdout)
