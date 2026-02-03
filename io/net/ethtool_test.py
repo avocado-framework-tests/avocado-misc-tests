@@ -230,7 +230,7 @@ class Ethtool(Test):
                         self.cancel("%s failed" % self.args)
                     else:
                         self.fail("%s failed" % self.args)
-        if not wait.wait_for(lambda: self.networkinterface.are_packets_lost(
+        if wait.wait_for(lambda: self.networkinterface.are_packets_lost(
                 self.peer, options=['-c 10000', '-f']), timeout=30):
             self.cancel("Packet recieved in Ping flood is not 100 percent \
                          after waiting for 30sec")
