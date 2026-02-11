@@ -44,7 +44,24 @@ class BootlisTest(Test):
         interfaces = os.listdir('/sys/class/net')
         disks = self.params.get("disks", default=None)
         ifaces = self.params.get("interfaces", default=None)
-        if ifaces:
+        hbond = self.params.get("hbond", default=False)
+        
+        if hbond and ifaces:
+            for bond in ifaces.split(" "):
+                # Read slave interfaces directly from sysfs
+                slaves_file = "/sys/class/net/%s/bonding/slaves" % bond
+                if os.path.exists(slaves_file):
+                    with open(slaves_file, 'r') as f:
+                        slaves_str = f.read().strip()
+                        if slaves_str:
+                            slaves = slaves_str.split()
+                            self.host_interfaces.extend(slaves)
+                            self.log.info("Bond %s has slaves: %s" % (bond, slaves))
+                        else:
+                            self.cancel("No slave interfaces found for bond %s" % bond)
+                else:
+                    self.cancel("Bond interface %s not found or not a bond" % bond)
+        elif ifaces:
             for device in ifaces.split(" "):
                 if device in interfaces:
                     self.host_interfaces.append(device)
@@ -52,6 +69,8 @@ class BootlisTest(Test):
                     self.host_interfaces.append(local.get_interface_by_hwaddr(device).name)
                 else:
                     self.cancel("Please check the network device")
+            
+        if self.host_interfaces:
             self.names = ' '.join(self.host_interfaces)
         elif disks:
             for dev in disks.split():
