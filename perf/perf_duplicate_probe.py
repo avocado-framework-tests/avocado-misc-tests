@@ -14,10 +14,10 @@
 # Copyright: 2019 IBM
 # Author: Shirisha G <shiganta@in.ibm.com>
 
-import platform
+import os
 from avocado import Test
-from avocado.utils import distro, genio, process
-from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils import process, genio
+from avocado.utils.software_manager.distro_packages import ensure_tool
 
 
 class PerfDuplicateProbe(Test):
@@ -27,21 +27,21 @@ class PerfDuplicateProbe(Test):
         Install the basic packages to support perf and systemtap-sdt-devel
         '''
         # Check for basic utilities
-        smm = SoftwareManager()
-        distro_name = distro.detect().name
-        deps = []
-        run_type = self.params.get('type', default='distro')
-        if 'Ubuntu' in distro_name:
-            deps.extend(['linux-tools-common', 'linux-tools-%s' %
-                         platform.uname()[2]])
-        elif distro_name in ['rhel', 'SuSE', 'fedora', 'centos']:
-            deps.extend(['perf'])
-        else:
-            self.cancel("Install the package for perf supported\
-                      by %s" % distro_name)
-        for package in deps:
-            if not smm.check_installed(package) and not smm.install(package):
-                self.cancel('%s is needed for the test to be run' % package)
+        perf_path = self.params.get('perf_bin', default='')
+        distro_pkg_map = {
+            "Ubuntu": [f"linux-tools-{os.uname()[2]}", "linux-tools-common", "gcc", "make"],
+            "debian": ["linux-perf"],
+            "centos": ["perf"],
+            "fedora": ["perf"],
+            "rhel": ["perf"],
+            "SuSE": ["perf"],
+        }
+        try:
+            perf_version = ensure_tool("perf", custom_path=perf_path, distro_pkg_map=distro_pkg_map)
+            self.log.info(f"Perf version: {perf_version}")
+            self.perf_bin = perf_path if perf_path else "perf"
+        except RuntimeError as e:
+            self.cancel(str(e))
         self.fail_flag = False
 
     def _check_duplicate_probe(self, outpt):
