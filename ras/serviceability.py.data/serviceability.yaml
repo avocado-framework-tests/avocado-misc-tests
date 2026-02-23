@@ -1,0 +1,78 @@
+# Avocado Test Parameters for Serviceability Tests
+# Format: test_name.variant_name: parameters
+
+# Common parameters (inherited by all variants)
+serviceability:
+    CONTAINER_URL: ""
+    CONTAINER_TAG: ""
+    API_KEY: ""
+    VLLM_SPYRE_USE_CB: "1"
+    PRECOMPILED_DECODERS: "1"
+    CACHE_DIR: "/opt/ibm/spyre/models/cache"
+    SENLIB_CONFIG_FILE: "senlib_config_aiusmi.json"
+    TEST_USERNAME: "senuser"
+    TEST_PASSWORD: ""
+    ROOT_PASSWORD: ""
+    VLLM_STARTUP_TIMEOUT: 300
+    LOG_CHECK_INTERVAL: 10
+    # Container runtime parameters
+    DEVICE: "/dev/vfio"                    # Device to mount in container
+    PRIVILEGED: "true"                     # Run in privileged mode for VFIO access
+    PIDS_LIMIT: "0"                        # PIDs limit (0 = unlimited)
+    USERNS: "keep-id"                      # Keep user namespace ID
+    GROUP_ADD: "keep-groups"               # Add user groups to container
+    PORT_MAPPING: "127.0.0.1::8000"        # Format: [host_ip]:[host_port]:container_port
+                                           # :: means random host port
+                                           # Examples: "127.0.0.1:8000:8000", "0.0.0.0::8000", "::8000"
+    # VLLM-specific options
+    ENABLE_PREFIX_CACHING: "true"          # Enable VLLM prefix caching (true/false)
+    ADDITIONAL_VLLM_ARGS: ""               # Additional VLLM args as comma-separated string
+                                           # Example: "--trust-remote-code,--gpu-memory-utilization,0.9"
+
+# Variant 1: RAG Configuration
+serviceability.rag:
+    AIU_PCIE_IDS: "0381:50:00.0 0382:40:00.0 0383:30:00.0 0384:20:00.0"
+    HOST_MODELS_DIR: "/opt/ibm/spyre/models/"
+    VLLM_MODEL_PATH: "/models/granite-3.3-8b-instruct"
+    AIU_WORLD_SIZE: 4
+    MAX_MODEL_LEN: 32768
+    MAX_BATCH_SIZE: 32
+    MEMORY: "200G"
+    SHM_SIZE: "2G"
+
+# Variant 2: Entity Extraction Configuration
+serviceability.entity_extraction:
+    AIU_PCIE_IDS: "0184:80:00.0"
+    HOST_MODELS_DIR: "/opt/ibm/spyre/models/"
+    VLLM_MODEL_PATH: "/models"
+    AIU_WORLD_SIZE: 1
+    MAX_MODEL_LEN: 3072
+    MAX_BATCH_SIZE: 16
+    MEMORY: "100G"
+    SHM_SIZE: "2G"
+
+# Variant 3: Re-Ranker Configuration
+serviceability.reranker:
+    AIU_PCIE_IDS: "0381:50:00.0"
+    HOST_MODELS_DIR: "/opt/ibm/spyre/models/"
+    VLLM_MODEL_PATH: "/models/bge-reranker-large"
+    AIU_WORLD_SIZE: 1
+    MEMORY: "50G"
+    SHM_SIZE: "2G"
+    VLLM_SPYRE_USE_CHUNKED_PREFILL: "0"
+    VLLM_SPYRE_WARMUP_BATCH_SIZES: "4"
+    VLLM_SPYRE_WARMUP_PROMPT_LENS: "512"
+
+# Variant 4: Embedding Configuration
+serviceability.embedding:
+    AIU_PCIE_IDS: "0381:50:00.0"
+    HOST_MODELS_DIR: "/opt/ibm/spyre/models/"
+    VLLM_MODEL_PATH: "/models/granite-embedding-125m-english"
+    AIU_WORLD_SIZE: 1
+    MEMORY: "50G"
+    SHM_SIZE: "2G"
+    VLLM_SPYRE_USE_CHUNKED_PREFILL: "0"
+    VLLM_SPYRE_WARMUP_BATCH_SIZES: "4"
+    VLLM_SPYRE_WARMUP_PROMPT_LENS: "512"
+
+# Made with Bob
