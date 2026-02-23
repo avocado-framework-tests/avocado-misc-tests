@@ -66,6 +66,79 @@ class RASToolsLsvpd(Test):
                                      ignore_status=True,
                                      sudo=True).decode("utf-8").strip()
 
+    def extract_spyre_blocks_from_lsvpd(self, lsvpd_output):
+        """
+        Extract Spyre accelerator blocks from lsvpd output.
+        Captures output from lines starting with '*FC ECSE' until first '*YL' line.
+        Handles multiple occurrences of the same PCI adapters.
+        
+        :param lsvpd_output: Full output from lsvpd command
+        :return: List of spyre device blocks
+        """
+        spyre_blocks = []
+        current_block = []
+        capturing = False
+        
+        for line in lsvpd_output.splitlines():
+            # Check if line starts with *FC ECSE (start of spyre block)
+            if line.strip().startswith('*FC ECSE'):
+                # If we were already capturing, save the previous block
+                if capturing and current_block:
+                    spyre_blocks.append('\n'.join(current_block))
+                # Start new block
+                current_block = [line]
+                capturing = True
+            elif capturing:
+                # Add line to current block
+                current_block.append(line)
+                # Check if line starts with *YL (end of spyre block)
+                if line.strip().startswith('*YL'):
+                    # Save the block and stop capturing
+                    spyre_blocks.append('\n'.join(current_block))
+                    current_block = []
+                    capturing = False
+        
+        return spyre_blocks
+
+    def parse_spyre_device_info(self, spyre_block):
+        """
+        Parse spyre device block and extract key information.
+        
+        :param spyre_block: Single spyre device block text
+        :return: Dictionary with parsed device information
+        """
+        device_info = {
+            'raw_output': spyre_block,
+            'fc_ecse': None,  # Feature Code
+            'yl_location': None,  # Physical Location
+            'device_specific_info': {}
+        }
+        
+        for line in spyre_block.splitlines():
+            line_stripped = line.strip()
+            
+            # Parse *FC line (Feature Code)
+            if line_stripped.startswith('*FC'):
+                parts = line_stripped.split(None, 2)  # Split on whitespace, max 3 parts
+                if len(parts) >= 2:
+                    device_info['fc_ecse'] = parts[1] if len(parts) >= 2 else None
+            
+            # Parse *YL line (Physical Location)
+            elif line_stripped.startswith('*YL'):
+                parts = line_stripped.split(None, 1)  # Split on whitespace
+                if len(parts) >= 2:
+                    device_info['yl_location'] = parts[1]
+            
+            # Parse other fields (format: *XX value)
+            elif line_stripped.startswith('*'):
+                parts = line_stripped.split(None, 1)
+                if len(parts) >= 2:
+                    field_code = parts[0][1:]  # Remove the * prefix
+                    field_value = parts[1]
+                    device_info['device_specific_info'][field_code] = field_value
+        
+        return device_info
+
     def test_build_upstream(self):
         """
         For upstream target download and compile source code
@@ -418,3 +491,177 @@ class RASToolsLsvpd(Test):
                     error.append(pci_addr + " : pci_config_space")
         if error:
             self.fail(f"Errors for above pci addresses: {error}")
+
+    @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
+    def test_spyre_accelerator_lsvpd(self):
+        """
+        Test to extract and validate Spyre accelerator information from lsvpd output.
+        Captures blocks starting with '*FC ECSE' until first '*YL' line.
+        Validates FC, CCIN, EC, YL values against sysfs parameters.
+        """
+        self.log.info("===============Executing Spyre Accelerator lsvpd test===============")
+        
+        # Run vpdupdate to ensure database is current
+        self.run_cmd("vpdupdate")
+        
+        # Get lsvpd output
+        lsvpd_output = self.run_cmd_out("lsvpd")
+        
+        # Extract spyre accelerator blocks
+        spyre_blocks = self.extract_spyre_blocks_from_lsvpd(lsvpd_output)
+        
+        if not spyre_blocks:
+            self.log.info("No Spyre accelerator devices found in lsvpd output")
+            self.cancel("No Spyre accelerators detected on this system")
+        
+        self.log.info("Found %d Spyre accelerator device(s)", len(spyre_blocks))
+        
+        # Get all PCI addresses to match with spyre devices
+        pci_addresses = pci.get_pci_addresses()
+        
+        # Process each spyre block
+        for idx, block in enumerate(spyre_blocks, 1):
+            self.log.info("\n" + "="*60)
+            self.log.info("Spyre Accelerator Device #%d", idx)
+            self.log.info("="*60)
+            self.log.info("Raw lsvpd Output:\n%s", block)
+            
+            # Parse device information from lsvpd
+            device_info = self.parse_spyre_device_info(block)
+            
+            # Extract key fields
+            lsvpd_fc = device_info['fc_ecse']
+            lsvpd_yl = device_info['yl_location']
+            lsvpd_ccin = device_info['device_specific_info'].get('CCIN', None)
+            lsvpd_ec = device_info['device_specific_info'].get('EC', None)
+            
+            self.log.info("\nParsed lsvpd Information:")
+            self.log.info("  Feature Code (FC): %s", lsvpd_fc)
+            self.log.info("  Physical Location (YL): %s", lsvpd_yl)
+            self.log.info("  CCIN: %s", lsvpd_ccin)
+            self.log.info("  EC: %s", lsvpd_ec)
+            
+            # Validate that we have essential information
+            if not lsvpd_fc:
+                self.is_fail += 1
+                self.log.error("Missing Feature Code (FC) for device #%d", idx)
+                continue
+            
+            if not lsvpd_yl:
+                self.is_fail += 1
+                self.log.error("Missing Physical Location (YL) for device #%d", idx)
+                continue
+            
+            # Find matching PCI address by comparing with sysfs data
+            matched_pci_addr = None
+            for pci_addr in pci_addresses:
+                # Get data from lscfg (via get_cfg) and sysfs (via get_pci_info)
+                cfg_output = pci.get_cfg(pci_addr)
+                pci_info_dict = pci.get_pci_info(pci_addr)
+                
+                if cfg_output and 'YL' in cfg_output:
+                    # Compare physical location (YL)
+                    # cfg_output['YL'] might have format like "U78DA.ND0.1234567-P0-C1"
+                    # We need to match with lsvpd_yl
+                    cfg_yl = cfg_output['YL']
+                    # Strip the trailing part after last '-' for comparison
+                    cfg_yl_base = cfg_yl[:cfg_yl.rfind('-')] if '-' in cfg_yl else cfg_yl
+                    lsvpd_yl_base = lsvpd_yl[:lsvpd_yl.rfind('-')] if '-' in lsvpd_yl else lsvpd_yl
+                    
+                    if cfg_yl_base == lsvpd_yl_base or cfg_yl == lsvpd_yl:
+                        matched_pci_addr = pci_addr
+                        self.log.info("\nMatched PCI Address: %s", pci_addr)
+                        break
+            
+            if not matched_pci_addr:
+                self.log.warning("Could not find matching PCI address for device #%d with YL: %s",
+                               idx, lsvpd_yl)
+                self.log.info("Skipping sysfs validation for this device")
+                continue
+            
+            # Get sysfs data for matched PCI address
+            cfg_output = pci.get_cfg(matched_pci_addr)
+            pci_info_dict = pci.get_pci_info(matched_pci_addr)
+            
+            self.log.info("\nSysfs Data (lscfg):")
+            self.log.info(cfg_output)
+            self.log.info("\nSysfs Data (lspci):")
+            self.log.info(pci_info_dict)
+            
+            # Validate FC (Feature Code)
+            if 'FC' in cfg_output:
+                sysfs_fc = cfg_output['FC']
+                self.log.info("\n--- Validating FC (Feature Code) ---")
+                self.log.info("  lsvpd FC: %s", lsvpd_fc)
+                self.log.info("  sysfs FC: %s", sysfs_fc)
+                if lsvpd_fc == sysfs_fc:
+                    self.log.info("  ✓ FC matched successfully")
+                else:
+                    self.is_fail += 1
+                    self.log.error("  ✗ FC mismatch for device #%d", idx)
+            else:
+                self.log.warning("  FC not available in sysfs data")
+            
+            # Validate CCIN
+            if lsvpd_ccin and 'CCIN' in cfg_output:
+                sysfs_ccin = cfg_output['CCIN']
+                self.log.info("\n--- Validating CCIN ---")
+                self.log.info("  lsvpd CCIN: %s", lsvpd_ccin)
+                self.log.info("  sysfs CCIN: %s", sysfs_ccin)
+                if lsvpd_ccin == sysfs_ccin:
+                    self.log.info("  ✓ CCIN matched successfully")
+                else:
+                    self.is_fail += 1
+                    self.log.error("  ✗ CCIN mismatch for device #%d", idx)
+            else:
+                self.log.warning("  CCIN not available for comparison")
+            
+            # Validate EC (Engineering Change)
+            if lsvpd_ec and 'EC' in cfg_output:
+                sysfs_ec = cfg_output['EC']
+                self.log.info("\n--- Validating EC (Engineering Change) ---")
+                self.log.info("  lsvpd EC: %s", lsvpd_ec)
+                self.log.info("  sysfs EC: %s", sysfs_ec)
+                if lsvpd_ec == sysfs_ec:
+                    self.log.info("  ✓ EC matched successfully")
+                else:
+                    self.is_fail += 1
+                    self.log.error("  ✗ EC mismatch for device #%d", idx)
+            else:
+                self.log.warning("  EC not available for comparison")
+            
+            # Validate YL (Physical Location)
+            if 'YL' in cfg_output:
+                sysfs_yl = cfg_output['YL']
+                self.log.info("\n--- Validating YL (Physical Location) ---")
+                self.log.info("  lsvpd YL: %s", lsvpd_yl)
+                self.log.info("  sysfs YL: %s", sysfs_yl)
+                # Compare base location (without trailing port info)
+                sysfs_yl_base = sysfs_yl[:sysfs_yl.rfind('-')] if '-' in sysfs_yl else sysfs_yl
+                lsvpd_yl_base = lsvpd_yl[:lsvpd_yl.rfind('-')] if '-' in lsvpd_yl else lsvpd_yl
+                if sysfs_yl_base == lsvpd_yl_base or sysfs_yl == lsvpd_yl:
+                    self.log.info("  ✓ YL matched successfully")
+                else:
+                    self.is_fail += 1
+                    self.log.error("  ✗ YL mismatch for device #%d", idx)
+            else:
+                self.log.warning("  YL not available in sysfs data")
+            
+            # Additional validation with PhySlot from lspci
+            if pci_info_dict and 'PhySlot' in pci_info_dict:
+                sysfs_physlot = pci_info_dict['PhySlot']
+                self.log.info("\n--- Cross-checking with lspci PhySlot ---")
+                self.log.info("  lspci PhySlot: %s", sysfs_physlot)
+                self.log.info("  lsvpd YL: %s", lsvpd_yl)
+                # PhySlot should match the base part of YL
+                if sysfs_physlot in lsvpd_yl or lsvpd_yl.startswith(sysfs_physlot):
+                    self.log.info("  ✓ PhySlot consistent with YL")
+                else:
+                    self.log.warning("  PhySlot and YL don't match as expected")
+        
+        if self.is_fail >= 1:
+            self.fail("%s validation(s) failed in Spyre accelerator lsvpd test" % self.is_fail)
+        else:
+            self.log.info("\n" + "="*60)
+            self.log.info("All Spyre accelerator devices validated successfully")
+            self.log.info("="*60)

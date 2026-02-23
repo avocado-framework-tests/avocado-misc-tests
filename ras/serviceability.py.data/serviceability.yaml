@@ -1,0 +1,37 @@
+# Avocado Test Parameters for Serviceability Tests
+# Format: test_name.variant_name: parameters and default values
+
+AIU_PCIE_IDS: "0184:80:00.0"
+HOST_MODELS_DIR: "/opt/ibm/spyre/models/"
+VLLM_MODEL_PATH: "/models/granite-3.3-8b-instruct"
+AIU_WORLD_SIZE: 1
+MAX_MODEL_LEN: 3072
+MAX_BATCH_SIZE: 16
+MEMORY: "200G"
+SHM_SIZE: "64M"       # 64M is default and 2G for RAG
+
+CONTAINER_URL: ""
+CONTAINER_TAG: ""
+API_KEY: ""
+VLLM_SPYRE_USE_CB: "1"
+PRECOMPILED_DECODERS: "1"
+VLLM_DT_CHUNK_LEN: "1024"           # 0 for RAG and other usecases
+VLLM_SPYRE_USE_CHUNKED_PREFILL: "1" # 0 for RAG and other usecases
+CACHE_DIR: "/opt/ibm/spyre/models/cache"
+SENLIB_CONFIG_FILE: "senlib_config_aiusmi.json"
+TEST_USERNAME: "user"
+TEST_PASSWORD: ""
+ROOT_PASSWORD: ""
+VLLM_STARTUP_TIMEOUT: 300
+LOG_CHECK_INTERVAL: 10
+
+# Container runtime parameters
+DEVICE: "/dev/vfio"                    # Device to mount in container
+PRIVILEGED: "true"                     # Run in privileged mode for VFIO access
+PIDS_LIMIT: "0"                        # PIDs limit (0 = unlimited)
+USERNS: "keep-id"                      # Keep user namespace ID
+GROUP_ADD: "keep-groups"               # Add user groups to container
+PORT_MAPPING: "127.0.0.1::8000"        # Format: [host_ip]:[host_port]:container_port
+# VLLM-specific options
+ENABLE_PREFIX_CACHING: "true"          # Enable VLLM prefix caching (true/false)
+ADDITIONAL_VLLM_ARGS: ""               # Additional VLLM args as comma-separated string
