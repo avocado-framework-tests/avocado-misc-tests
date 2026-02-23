@@ -418,3 +418,76 @@ class RASToolsLsvpd(Test):
                     error.append(pci_addr + " : pci_config_space")
         if error:
             self.fail(f"Errors for above pci addresses: {error}")
+
+    def test_spyre_lsvpd_validation(self):
+	if process.system("vpdupdate", ignore_status=True, shell=True):
+        	self.fail("vpdupate failed")
+
+	spyre_devices = []
+	for dev in os.listdir('/sys/bus/pci/devices'):
+        cls = f"/sys/bus/pci/devices/{dev}/class"
+        try:
+            with open(cls) as f:
+                if f.read().strip().startswith('0x1200'):
+                    spyre_devices.append(dev)
+        except Exception:
+            pass
+
+	if not spyre_devices:
+            self.cancel("Spyre accelerator not present")
+
+	lsvpd_out = self.run_cmd_out("lsvpd").upper()
+        lscfg_out = self.run_cmd_out("lscfg -VP").upper()
+
+	for dev in spyre_devices:
+	    sysfs_vendor = self.run_cmd_out(
+            	f"cat /sys/bus/pci/devices/{dev}/vendor").strip()
+            sysfs_device = self.run_cmd_out(
+            	f"cat /sys/bus/pci/devices/{dev}/device").strip()
+            sysfs_subvendor = self.run_cmd_out(
+            	f"cat /sys/bus/pci/devices/{dev}/subsystem_vendor").strip()
+            sysfs_subdevice = self.run_cmd_out(
+            	f"cat /sys/bus/pci/devices/{dev}/subsystem_device").strip()
+
+	location_code = None
+        for line in lscfg_out.splitlines():
+            if dev in line:
+                parts = line.split()
+                if len(parts) > 1:
+                    location_code = parts[-1]
+                    break
+
+	if not location_code:
+            self.fail(f"Unable to find location code for Spyre device {dev}")
+
+	spyre_block = []
+        capture = False
+        for line in lsvpd_out.splitlines():
+            if location_code in line:
+                capture = True
+            if capture:
+                if line.strip() == "" and spyre_block:
+                    break
+                spyre_block.append(line)
+
+	if not spyre_block:
+	    self.fail(f"No lsvpd entry found for Spyre device {dev}")
+
+	spyre_lsvpd = "\n".join(spyre_block)
+
+	ccin_vpd = self._extract_vpd_value(spyre_lsvpd, 'CCIN')
+	fc_vpd = self._extract_vpd_value(spyre_lsvpd, 'FC')
+	ec_vpd = self._extract_vpd_value(spyre_lsvpd, 'EC')
+	fw_vpd = self._extract_vpd_value(spyre_lsvpd, 'FW')
+	
+	if not ccin_vpd:
+            self.fail(f"CCIN missing in lsvpd for Spyre device {dev}")
+
+	if not fc_vpd:
+            self.fail(f"Invalid FC value for Spyre device {dev}")
+
+	if not ec_vpd:
+       	    self.fail(f"Invalid EC value for Spyre device {dev}")
+
+	if not fw_vpd:
+	    self.fail(f"Firmware value missing for Spyre device {dev}")
