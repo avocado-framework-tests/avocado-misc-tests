@@ -85,6 +85,52 @@ class Moduleparameter(Test):
             self.cancel("Param %s is not Valid for Module %s" %
                         (self.param_name, self.module))
 
+
+    def get_interface_driver(self):
+        """
+        Get the driver module name for the specified interface using ethtool.
+        Returns the driver name or None if unable to determine.
+        Assisted with AI tool
+        """
+        try:
+            cmd = "ethtool -i %s" % self.ifaces
+            output = process.system_output(cmd, ignore_status=False).decode('utf-8')
+            for line in output.split('\n'):
+                if line.startswith('driver:'):
+                    driver = line.split(':', 1)[1].strip()
+                    self.log.info("Interface %s is using driver: %s" %
+                                (self.ifaces, driver))
+                    return driver
+        except Exception as e:
+            self.log.warning("Failed to get driver info for %s: %s" %
+                           (self.ifaces, str(e)))
+            return None
+        return None
+
+
+    def validate_interface_driver(self):
+        """
+        Validate that the interface belongs to the driver module specified in YAML.
+        Raises an error if there's a mismatch between the YAML-specified module
+        and the interface's actual driver.
+        Assisted with AI tool
+        """
+        actual_driver = self.get_interface_driver()
+
+        if actual_driver is None:
+            self.cancel("Unable to determine driver for interface %s. "
+                       "Please verify the interface exists and ethtool is available."
+                       % self.ifaces)
+
+        if actual_driver != self.module:
+            self.cancel("Driver mismatch detected: Interface %s is using driver '%s' "
+                       "but YAML configuration specifies module '%s'. "
+                       "Please ensure the interface belongs to the correct driver."
+                       % (self.ifaces, actual_driver, self.module))
+
+        self.log.info("Driver validation passed: Interface %s belongs to module %s"
+                     % (self.ifaces, self.module))
+
     def built_in_module(self, module):
         """
         checking whether the given module is built_in module or not
