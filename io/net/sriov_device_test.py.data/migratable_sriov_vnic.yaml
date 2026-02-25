@@ -6,7 +6,7 @@ ipaddr: ""
 netmasks: ""
 peer_ips: ""
 mac_id: ""
-migratable: 1
+migratable: True
 vnic_sriov_adapter: ""
 vnic_port_id: "0"
 max_capacity: ""
