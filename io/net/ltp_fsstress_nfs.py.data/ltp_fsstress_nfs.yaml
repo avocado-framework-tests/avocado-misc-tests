@@ -1,0 +1,18 @@
+host_interface: "eth0"
+host_ip: ""
+peer_interface: ""
+peer_ip: ""
+peer_public_ip: ""
+peer_user: ""
+peer_password: ""
+netmask: ""
+nfs_mount_point: "/mnt/nfs"
+nfs_server_path: "/mnt/nfssrc"
+fsstress_loop: "0"
+n_val: "70"
+p_val: "70"
+fsstress_timeout: "60"
+
+# Made with AI Support
+
+
