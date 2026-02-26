@@ -313,13 +313,15 @@ class RASToolsLsvpd(Test):
 
                 # Device ID match
                 sys_pci_id_output = pci.get_pci_id_from_sysfs(pci_addr)
-                vpd_dev_id = vpd_output['pci_id'][4:]
+                vpd_dev_id = vpd_output['pci_id'][6:10]
+                vpd_sdev_id = vpd_output['pci_id'][19:23]
                 sysfs_dev_id = sys_pci_id_output[5:-10]
                 sysfs_sdev_id = sys_pci_id_output[15:]
                 self.log.info("Device ID from sysfs: %s", sysfs_dev_id)
                 self.log.info("Sub Device ID from sysfs: %s", sysfs_sdev_id)
                 self.log.info("Device ID from vpd: %s", vpd_dev_id)
-                if vpd_dev_id == sysfs_sdev_id or vpd_dev_id == sysfs_dev_id:
+                self.log.info("Sub Device ID from vpd: %s", vpd_sdev_id)
+                if vpd_sdev_id == sysfs_sdev_id and vpd_dev_id == sysfs_dev_id:
                     self.log.info("=======>>Device ID Match Success\n\n")
                 else:
                     self.log.error("----->>Device ID did not Match\n\n")
@@ -327,10 +329,14 @@ class RASToolsLsvpd(Test):
 
                 # Subvendor ID Match
                 sysfs_subvendor_id = sys_pci_id_output[10:-5]
-                vpd_subvendor_id = vpd_output['pci_id'][:4]
-                self.log.info("Subvendor ID frm sysfs: %s", sysfs_subvendor_id)
+                sysfs_vendor_id = sys_pci_id_output[:4]
+                vpd_subvendor_id = vpd_output['pci_id'][14:18]
+                vpd_vendor_id = vpd_output['pci_id'][1:5]
+                self.log.info("Subvendor ID from sysfs: %s", sysfs_subvendor_id)
+                self.log.info("Vendor ID from sysfs: %s", sysfs_vendor_id)
                 self.log.info("Subvendor ID from vpd : %s", vpd_subvendor_id)
-                if sysfs_subvendor_id == vpd_subvendor_id:
+                self.log.info("Vendor ID from vpd: %s", vpd_vendor_id)
+                if sysfs_subvendor_id == vpd_subvendor_id and sysfs_vendor_id == vpd_vendor_id:
                     self.log.info("======>>>Subvendor ID Match Success\n\n")
                 else:
                     self.log.error("---->>Subvendor_id Not Matched\n\n")
