@@ -1,4 +1,4 @@
-runltp:
-    script: 'runltp'
+kirk:
+    script: 'kirk'
     sched:
         args: '-f sched'

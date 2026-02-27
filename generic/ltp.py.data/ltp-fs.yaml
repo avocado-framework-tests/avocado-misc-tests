@@ -1,6 +1,6 @@
 url: 'https://github.com/linux-test-project/ltp/archive/master.zip'
 skipfileurl: "null"
-runltp: !mux
+kirk: !mux
     fs:
         args: '-f fs'
     fs_perms_simple:

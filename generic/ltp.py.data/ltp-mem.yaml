@@ -1,6 +1,5 @@
-mem_leak: 0
 general: !mux
-    runltp: !mux
+    kirk: !mux
         mm:
             args: '-f mm'
             overcommit: True
