@@ -20,7 +20,6 @@
 
 
 import os
-import re
 import shutil
 import time
 from avocado import Test
@@ -37,7 +36,7 @@ class LTP(Test):
 
     """
     LTP (Linux Test Project) testsuite
-    :param args: Extra arguments ("runltp" can use with
+    :param args: Extra arguments ("kirk" can use with
                  "-f $test")
     LTP Network test can run on Single host or Two host
     :param two_host_configuration: must be set to True
@@ -84,7 +83,6 @@ class LTP(Test):
         smg = SoftwareManager()
         dist = distro.detect()
         self.args = self.params.get('args', default='')
-        self.mem_leak = self.params.get('mem_leak', default=0)
         self.peer_public_ip = self.params.get("peer_public_ip", default="")
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", default=None)
@@ -140,6 +138,17 @@ class LTP(Test):
         archive.extract(tarball, self.ltpdir)
         ltp_dir = os.path.join(self.ltpdir, "ltp-master")
         os.chdir(ltp_dir)
+        kirk_dir = f"{ltp_dir}/tools/kirk/kirk-src/"
+        if os.path.exists(kirk_dir):
+            shutil.rmtree(kirk_dir)
+
+        # Initialize and update kirk submodule
+        process.run('git init', shell=True, ignore_status=True)
+        process.run('git submodule add https://github.com/linux-test-project/kirk.git tools/kirk/kirk-src',
+                    shell=True, ignore_status=True)
+        process.run('git submodule update --init --recursive tools/kirk/kirk-src',
+                    shell=True, ignore_status=True)
+
         build.make(ltp_dir, extra_args='autotools')
         if not self.ltpbin_dir:
             self.ltpbin_dir = os.path.join(self.teststmpdir, 'bin')
@@ -202,9 +211,13 @@ class LTP(Test):
         build.make(ltp_dir)
         build.make(ltp_dir, extra_args='install')
 
+        # Verify kirk is installed
+        kirk_path = os.path.join(self.ltpbin_dir, 'kirk')
+        if not os.path.exists(kirk_path):
+            self.cancel("kirk was not installed properly")
+
     def test(self):
         logfile = os.path.join(self.logdir, 'ltp.log')
-        failcmdfile = os.path.join(self.logdir, 'failcmdfile')
         skipfileurl = self.params.get(
             'skipfileurl', default=None)
         if skipfileurl:
@@ -213,30 +226,28 @@ class LTP(Test):
         else:
             skipfilepath = self.get_data('skipfile')
         os.chmod(self.teststmpdir, 0o755)
-        self.args += (" -q -p -l %s -C %s -d %s -S %s"
-                      % (logfile, failcmdfile, self.teststmpdir,
-                         skipfilepath))
-        if self.mem_leak:
-            self.args += " -M %s" % self.mem_leak
-        self.ltpbin_path = os.path.join(self.ltpbin_dir, 'runltp')
-        with open(self.ltpbin_path, 'r') as lfile:
-            data = lfile.read()
-            data = data.replace("    ${LTPROOT}/IDcheck.sh || \\", "    echo -e \"y\" | ${LTPROOT}/IDcheck.sh || \\")
-        with open(self.ltpbin_path, 'w') as ofile:
-            ofile.write(data)
-        cmd = '%s %s' % (self.ltpbin_path, self.args)
-        process.run(cmd, ignore_status=True)
-        # Walk the ltp.log and try detect failed tests from lines like these:
-        # msgctl04                                           FAIL       2
-        with open(logfile, 'r') as file_p:
-            lines = file_p.readlines()
-            for line in lines:
-                if 'FAIL' in line:
-                    value = re.split(r'\s+', line)
-                    self.failed_tests.append(value[0])
-
-        if self.failed_tests:
-            self.fail("LTP tests failed: %s" % self.failed_tests)
+        self.args += (" -v -d %s -S %s"
+                      % (self.teststmpdir, skipfilepath))
+        self.kirkbin_path = os.path.join(self.ltpbin_dir, 'kirk')
+        cmd = '%s %s' % (self.kirkbin_path, self.args)
+        result = process.run(cmd, ignore_status=True)
+        # Walk the stdout and try detect failed tests from lines
+        # like these:
+        # aio01       5  TPASS  :  Test 5: 10 reads and
+        # writes in  0.000022 sec
+        # vhangup02    1  TFAIL  :  vhangup02.c:88:
+        # vhangup() failed, errno:1
+        # and check for fail_status The first part contain test name
+        fail_status = ['TFAIL', 'TBROK', 'TWARN']
+        split_lines = (line.split(None, 3)
+                       for line in result.stdout.splitlines())
+        failed_tests = [items[0] for items in split_lines
+                        if len(items) == 4 and items[2] in fail_status]
+        if failed_tests:
+            self.fail("LTP tests failed: %s" % ", ".join(failed_tests))
+        elif result.exit_status != 0:
+            self.fail("No test failures detected, but LTP finished with %s"
+                      % (result.exit_status))
 
         error = dmesg.collect_errors_dmesg(['WARNING: CPU:', 'Oops', 'Segfault',
                                             'soft lockup', 'Unable to handle'])

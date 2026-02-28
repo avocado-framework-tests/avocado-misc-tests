@@ -2,13 +2,13 @@ disk:
 dir:
 args: !mux
     fs_di:
-        args: '-s fs_di'
+        args: '-f fs -p fs_di'
     fs_inod:
-        args: '-s fs_inod'
+        args: '-f fs -p fs_inod'
     fs_fill:
-        args: '-s fs_fill'
+        args: '-f fs -p fs_fill'
     fs_perm:
-        args: '-s fs_perm'
+        args: '-f fs_perms_simple -p fs_perm'
 fs: !mux
     ext4:
         fs: 'ext4'

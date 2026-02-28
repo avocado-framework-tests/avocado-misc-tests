@@ -1,9 +1,9 @@
-peer_public_ip: 
-peer_password: 
-peer_user: 
-two_host_configuration : 
-runltp: !mux
-    script: 'runltp'
+peer_public_ip:
+peer_password:
+peer_user:
+two_host_configuration :
+kirk: !mux
+    script: 'kirk'
     net.ipv6:
         args: '-f net.ipv6'
     net.ipv6_lib:

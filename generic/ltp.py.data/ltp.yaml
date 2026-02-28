@@ -1,7 +1,7 @@
 mem_leak: 0
 url: 'https://github.com/linux-test-project/ltp/archive/master.zip'
 skipfileurl: "null"
-runltp: !mux
+kirk: !mux
     syscalls:
         args: '-f syscalls'
     mm:
