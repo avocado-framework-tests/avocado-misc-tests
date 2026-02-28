@@ -15,15 +15,13 @@
 # Author:Shriya Kulkarni <shriyak@linux.vnet.ibm.com>
 #
 
-import platform
 import os
 from avocado import Test
-from avocado.utils import archive, build, process, distro, genio
-from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils import archive, build, process, genio
+from avocado.utils.software_manager.distro_packages import ensure_tool
 
 
 class Perf_subsystem(Test):
-
     """
     This series of test is meant to validate
     that the perf_event subsystem is working
@@ -39,24 +37,21 @@ class Perf_subsystem(Test):
         Install the packages
         '''
         # Check for basic utilities
-        smm = SoftwareManager()
-        detected_distro = distro.detect()
-        deps = ['gcc', 'make']
-        if 'Ubuntu' in detected_distro.name:
-            kernel_ver = platform.uname()[2]
-            deps.extend(['linux-tools-common', 'linux-tools-%s'
-                         % kernel_ver])
-        elif 'debian' in detected_distro.name:
-            kernel_ver = platform.uname()[2][3]
-            deps.extend(['linux-tools-%s' % kernel_ver])
-        elif detected_distro.name in ['rhel', 'SuSE', 'fedora']:
-            deps.extend(['perf'])
-        else:
-            self.cancel("Install the package for perf supported by %s"
-                        % detected_distro.name)
-        for package in deps:
-            if not smm.check_installed(package) and not smm.install(package):
-                self.cancel('%s is needed for the test to be run' % package)
+        perf_path = self.params.get('perf_bin', default='')
+        distro_pkg_map = {
+            "Ubuntu": [f"linux-tools-{os.uname()[2]}", "linux-tools-common", "gcc", "make"],
+            "debian": ["linux-perf", "gcc", "make"],
+            "centos": ["perf", "gcc", "make", "gcc-c++"],
+            "fedora": ["perf", "gcc", "make", "gcc-c++"],
+            "rhel": ["perf", "gcc", "make", "gcc-c++"],
+            "SuSE": ["perf", "gcc", "make", "gcc-c++"],
+        }
+        try:
+            perf_version = ensure_tool("perf", custom_path=perf_path, distro_pkg_map=distro_pkg_map)
+            self.log.info(f"Perf version: {perf_version}")
+            self.perf_bin = perf_path if perf_path else "perf"
+        except RuntimeError as e:
+            self.cancel(str(e))
 
     def build_perf_test(self):
         """
