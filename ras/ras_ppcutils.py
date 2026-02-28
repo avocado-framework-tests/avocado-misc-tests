@@ -453,13 +453,28 @@ class RASToolsPpcutils(Test):
         """
         Test case to validate lparstat functionality. lparstat is a tool
         to display logical partition related information and statistics.
-        And also validating lparstat -x output should match with the lpar
-        security flavor
-        And also validates laprstat -E output %busy and %idle
-        should not be < 0 or > 100
-        Normalized %busy + %idle should be equal to percentage under frequency
-        And also checks for number of physical processors consumed
-        on different smt levels
+
+        Test Coverage:
+        - Validates lparstat -x output matches LPAR security flavor
+        - Validates lparstat -E output: %busy and %idle should be 0-100
+        - Normalized %busy + %idle should equal frequency percentage
+        - Checks physical processors consumed on different SMT levels
+        - Validates resource group information (new feature):
+          * resource_group_number from /proc/powerpc/lparcfg
+          * resource_group_active_processors from /proc/powerpc/lparcfg
+          * Ensures lparstat output includes resource group data
+
+        Resource Group Context:
+        Systems can now be partitioned into resource groups. By default all
+        systems are part of the default resource group (ID=0). Once a resource
+        group is created and resources allocated, those resources are removed
+        from the default group. LPARs in a resource group can only use resources
+        within that group. The maximum processors allocatable to an LPAR equals
+        or is less than the resources in its resource group.
+
+        References:
+        - Kernel changes: https://lore.kernel.org/all/20250716104600.59102-1-srikar@linux.ibm.com/t/#u
+        - powerpc-utils changes: https://groups.google.com/g/powerpc-utils-devel/c/8b2Ixk8vk2w
         """
         self.log.info("===============Executing lparstat tool test===="
                       "===========")
@@ -538,6 +553,95 @@ class RASToolsPpcutils(Test):
         else:
             error_messages.append("number of physical processors consumed \
                                   are not displaying correct")
+
+        # Validate resource group information (new feature)
+        self.log.info("====Validating Resource Group Information====")
+        lparcfg_path = "/proc/powerpc/lparcfg"
+
+        # Check if resource group information is available in lparcfg
+        try:
+            lparcfg_content = process.system_output(
+                f"cat {lparcfg_path}", shell=True).decode("utf-8")
+
+            # Extract resource group number
+            rg_number_match = re.search(
+                r'resource_group_number=(\d+)', lparcfg_content)
+            rg_processors_match = re.search(
+                r'resource_group_active_processors=(\d+)', lparcfg_content)
+
+            if rg_number_match and rg_processors_match:
+                rg_number = rg_number_match.group(1)
+                rg_processors = rg_processors_match.group(1)
+
+                self.log.info(f"Resource Group Number: {rg_number}")
+                self.log.info(
+                        f"Resource Group Active Processors: {rg_processors}")
+
+                # Validate resource group number is non-negative
+                if int(rg_number) >= 0:
+                    self.log.info("Resource group number is valid (>= 0)")
+                else:
+                    error_messages.append(
+                        f"Invalid resource group number: {rg_number}")
+
+                # Validate resource group active processors is positive
+                if int(rg_processors) > 0:
+                    self.log.info(
+                        f"Resource group active processors is valid: {rg_processors}")
+                else:
+                    error_messages.append(
+                        f"Invalid resource group active processors: {rg_processors}")
+
+                # Check if lparstat -i output includes resource group info
+                lparstat_i_output = process.system_output(
+                    "lparstat -i", shell=True).decode("utf-8")
+
+                # Verify resource group information is present
+                # in lparstat output
+                if "Resource Group" in lparstat_i_output or \
+                   "resource_group" in lparstat_i_output.lower():
+                    self.log.info(
+                        "lparstat -i correctly displays resource group info")
+
+                    # Additional validation: check if values match
+                    if rg_number in lparstat_i_output:
+                        self.log.info(
+                            f"Found resource group number {rg_number} in o/p")
+                    else:
+                        self.log.warning(
+                            f"Resource group # {rg_number} not found in o/p")
+                        error_messages.append(
+                            f"Resource group # {rg_number} not found in o/p")
+                else:
+                    self.log.info(
+                        "Resource group information not displayed in "
+                        "lparstat -i (may require updated powerpc-utils)")
+                    error_messages.append(
+                        "Resource group information not displayed in "
+                        "lparstat -i (may require updated powerpc-utils)")
+
+                # Log resource group context
+                if int(rg_number) == 0:
+                    self.log.info(
+                        "LPAR is in default resource group (ID=0)")
+                else:
+                    self.log.info(
+                        f"LPAR is in non-default group (ID={rg_number})")
+                    self.log.info(
+                        f"Maximum allocatable procs limited to {rg_processors}")
+
+            else:
+                self.log.info(
+                    "Resource group information not available in lparcfg "
+                    "(kernel may not support this feature)")
+                self.log.info(
+                    "Skipping resource group validation - feature not present")
+
+        except Exception as e:
+            self.log.warning(
+                f"Could not validate resource group information: {str(e)}")
+            self.log.info(
+                "Continuing test execution - resource group validation skipped")
 
         if len(error_messages) != 0:
             self.fail(error_messages)
