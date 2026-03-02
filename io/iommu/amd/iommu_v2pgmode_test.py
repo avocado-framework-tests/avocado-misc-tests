@@ -18,110 +18,111 @@
 Validate 5 level page table support in v2 iommu page table mode
 """
 
-import os
-import platform
-from avocado import Test
-from avocado import skipUnless
-from avocado.utils import cpu, process
+from avocado import Test, skipUnless
+from avocado.utils import cpu, dmesg
 
 
-def check_kernelconf(config_file, config):
+def get_v2_pgtbl_lvl_sup_bits():
     """
-    check if kernel config 'config' is enable on not in 'config_file'
+    Extracts bits 13:12 from the AMD IOMMU extended feature register,
+    which indicates maximum number of translation levels supported for guest
+    address translation.
 
-    :config_file: kernel config file path to check
-    :config: kernel config to check if builtin or not
-    return: bool
+    :return: bits 13:12 value from the AMD IOMMU extended feature register
+    :rtype: int
+    :raise: raise exception if sysfs entry for IOMMU extended feature register/2
+            is not present or not readable.
     """
-    with open(config_file, "r") as kernel_config:
-        for line in kernel_config:
-            line = line.split("=")
-            if len(line) != 2:
-                continue
-            if line[0].strip() == f"{config}":
-                if line[1].strip() == 'y':
-                    return True
-    return False
+
+    feature_regs = "/sys/class/iommu/ivhd0/amd-iommu/features"
+
+    try:
+        with open(feature_regs, "r", encoding="utf-8") as feature_file:
+            features = feature_file.read().strip()
+    except FileNotFoundError as err:
+        raise ValueError(
+            f"{feature_regs} not found. Is AMD IOMMU enabled on this system?"
+        ) from err
+
+    if ":" not in features:
+        raise ValueError(f"Unexpected format in {feature_regs}: {features}")
+
+    part1, part2 = features.split(":")
+    ext1 = part1 if len(part1) > len(part2) else part2
+
+    reg_val = int(ext1, 16)
+    return (reg_val >> 12) & 0b11
 
 
-def check_dmesg(string):
+def get_v2pgtbl_mode():
     """
-    Check dmesg for 'string' in dmesg
+    Parse dmesg to get the current v2 page table paging mode.
     """
-    cmd = f'dmesg | grep -i "{string}"'
-    output = process.run(cmd, ignore_status=True, shell=True).stdout_text
-    if output == "":
-        cmd = f'journalctl -k -b | grep -i "{string}"'
-        output = process.run(cmd, ignore_status=True, shell=True).stdout_text
-        if output != "":
-            return True
-    else:
-        return True
-    return False
-
-
-def check_v2pgtbl_mode(mode):
-    '''
-    Check if v2 page table is enabled in "mode" level of paging
-    '''
-    return check_dmesg(f'V2 page table enabled (Paging mode : {mode} level)')
+    for mode in ["4", "5"]:
+        if dmesg.check_kernel_logs(
+            f"V2 page table enabled (Paging mode : {mode} level)"
+        ):
+            return mode
+    return None
 
 
 class IommuPageTable(Test):
-    '''
+    """
     Test v2 page table -
-    1. Checks if host page table mode matches with iommu v2 page table mode
-    '''
-    @skipUnless('x86_64' in cpu.get_arch(),
-                "This test runs on x86-64 platform.\
+    1. Checks whether IOMMU in v2 page table boots with expected paging level.
+       If both IOMMU and cpu supports 5-level page table, then IOMMU should boot with
+       5-level v2 page table. Else IOMMU should boot with 4-level v2 page table.
+    """
+
+    @skipUnless(
+        "x86_64" in cpu.get_arch(),
+        "This test runs on x86-64 platform.\
         If 5-level page table supported on other platform then\
-        this condition can be removed")
+        this condition can be removed",
+    )
     def setUp(self):
-        '''
-        Few checks and initialisation before test
-        '''
-        self.bits_to_pgmode = {'57': '5', '48': '4', '39': '3', '30': '2', '21': '1'}
+        """
+        Few checks before test
+        """
 
         # Check if iommu is in translation
-        if check_dmesg('AMD-Vi'):
-            if not check_dmesg('iommu: Default domain type: Translated'):
+        if dmesg.check_kernel_logs("AMD-Vi"):
+            if not dmesg.check_kernel_logs("iommu: Default domain type: Translated"):
                 self.cancel("IOMMU is not in Translation mode")
         else:
             self.cancel("IOMMU is not enabled")
 
-    def check_kernelconf_5lvl(self):
-        """
-        Check if kernel config 'CONFIG_X86_5LEVEL' enabled or not
-        return: bool
-        """
+        if not dmesg.check_kernel_logs("V2 page table enabled"):
+            self.cancel("IOMMU is in v1 page table")
 
-        kernel_version = platform.uname()[2]
-        config_file = "/boot/config-" + kernel_version
-        if os.path.exists(config_file):
-            return check_kernelconf(config_file, "CONFIG_X86_5LEVEL")
-
-        config_file = "/lib/modules/" + kernel_version + "/build/.config"
-        if os.path.exists(config_file):
-            return check_kernelconf(config_file, "CONFIG_X86_5LEVEL")
-
-        self.log.info("Kernel config not found in '/boot/' and '/lib/modules/<uname -r>/build/'."
-                      "Using VA bits in /proc/cpuinfo to derive cpu page table level")
-        return False
+        self.v2pgtbl_mode = get_v2pgtbl_mode()
+        if self.v2pgtbl_mode is None:
+            self.cancel(
+                "Current v2 page table mode could not be determined via dmesg. "
+                "This may be due to dmesg or journalctl logs being cleaned, "
+                "deleted, or unavailable."
+            )
 
     def test(self):
-        '''
+        """
         Test if host page table mode matches with iommu v2 page table mode
-        '''
-        if check_dmesg('V2 page table enabled'):
-            if (cpu.cpu_has_flags(["la57"]) and self.check_kernelconf_5lvl()):
-                if check_v2pgtbl_mode("5"):
-                    self.log.info("Host page table mode (5lvl) match with IOMMU V2 Page mode")
-                else:
-                    self.fail("Host page table mode (5lvl) does not match with IOMMU V2 Paging mode")
+        """
+        try:
+            if cpu.cpu_has_flags(["la57"]) and get_v2_pgtbl_lvl_sup_bits() == 1:
+                expected_v2pgtbl_mode = "5"
             else:
-                if check_v2pgtbl_mode(self.bits_to_pgmode[cpu.get_va_bits()]):
-                    self.log.info("Host page table mode match with IOMMU V2 Page mode")
-                else:
-                    self.fail("Host page table mode does does not match with IOMMU V2 Paging mode")
-        else:
-            self.cancel("IOMMU is in v1 page table")
+                expected_v2pgtbl_mode = "4"
+
+            if not self.v2pgtbl_mode == expected_v2pgtbl_mode:
+                self.fail(
+                    f"IOMMU expected {expected_v2pgtbl_mode}-level v2 page table, "
+                    f"but current IOMMU v2 page table level is "
+                    f"{self.v2pgtbl_mode if self.v2pgtbl_mode else 'unknown'}."
+                )
+            self.log.info(
+                "IOMMU booted with expected %s-level v2 page table.",
+                expected_v2pgtbl_mode,
+            )
+
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            self.fail(f"{err}")
