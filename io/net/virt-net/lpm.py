@@ -227,7 +227,7 @@ class LPM(Test):
         params specified.
         '''
         if not self.is_RMC_active(server):
-            self.warn("RMC service is inactive..!")
+            self.log.warn("RMC service is inactive..!")
             self.rmc_service_start(server)
         cmd = "migrlpar -o m -m %s -t %s -p %s %s" % (server,
                                                       remote_server,
