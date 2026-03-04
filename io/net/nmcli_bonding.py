@@ -41,13 +41,31 @@ class Bonding(Test):
     '''
 
     def setUp(self):
+        # Track bond creation state for tearDown cleanup
+        self.bond_created = False
+        self.peer_bond_created = False
+        self.err = []
+
+        # Verify NetworkManager is the active network service
+        nm_check = process.system(
+            "systemctl is-active NetworkManager",
+            shell=True, ignore_status=True)
+        if nm_check != 0:
+            self.cancel(
+                "NetworkManager is not active. This test requires "
+                "NetworkManager (nmcli). Please enable it with: "
+                "systemctl enable --now NetworkManager")
+
         self.ipaddr = self.params.get("host_ips", default="").split(" ")
         self.netmask = self.params.get("netmask", default="")
         self.localhost = LocalHost()
-        self.host_interfaces = self.params.get("bond_interfaces", default="").split(" ")
+        self.host_interfaces = self.params.get(
+            "bond_interfaces", default="").split(" ")
         self.bond_name = self.params.get("bond_name", default="tempbond")
-        if not self.host_interfaces:
+        if not self.host_interfaces or self.host_interfaces == ['']:
             self.cancel("user should specify host interfaces")
+        if not self.netmask:
+            self.cancel("netmask parameter is required")
         if 'setup' in str(self.name):
             interface = self.host_interfaces[0]
         else:
@@ -58,19 +76,23 @@ class Bonding(Test):
                 try:
                     networkinterface.add_ipaddr(ipaddr, self.netmask)
                 except Exception as e:
-                    self.log.info("IP address already configured")
+                    self.log.info("IP address already configured: %s", e)
         self.detected_distro = distro.detect()
         smm = SoftwareManager()
         depends = []
-        if self.detected_distro.name == "Ubuntu":
-            depends.extend(["openssh-client", "iputils-ping"])
-        elif self.detected_distro.name in ["rhel", "fedora", "centos", "redhat"]:
-            depends.extend(["openssh-clients", "iputils"])
+        distro_name = self.detected_distro.name.lower()
+        if distro_name == "ubuntu":
+            depends.extend(
+                ["openssh-client", "iputils-ping", "network-manager"])
+        elif distro_name in ["rhel", "fedora", "centos", "redhat"]:
+            depends.extend(["openssh-clients", "iputils", "NetworkManager"])
+        elif distro_name in ["sles", "suse", "opensuse"]:
+            depends.extend(["openssh", "iputils", "NetworkManager"])
         else:
-            depends.extend(["openssh", "iputils"])
+            depends.extend(["openssh", "iputils", "NetworkManager"])
         for pkg in depends:
             if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.cancel("%s package is need to test" % pkg)
+                self.cancel("%s package is needed to test" % pkg)
         self.mode = self.params.get("bonding_mode", default="")
         if 'setup' in str(self.name) or 'run' in str(self.name):
             if not self.mode:
@@ -87,8 +109,10 @@ class Bonding(Test):
                 self.cancel("interface is not available")
         self.peer_first_ipinterface = self.params.get(
             "peer_ips", default="").split(" ")
-        if not self.peer_interfaces or self.peer_first_ipinterface == "":
-            self.cancel("peer machine should available")
+        if not self.peer_interfaces or self.peer_interfaces == [''] \
+                or not self.peer_first_ipinterface \
+                or self.peer_first_ipinterface == ['']:
+            self.cancel("peer machine should be available")
         self.peer_bond_needed = self.params.get("peer_bond_needed",
                                                 default=False)
         if 'setup' in str(self.name.name):
@@ -98,43 +122,50 @@ class Bonding(Test):
                     self.remotehost = RemoteHost(
                         self.peer_public_ip,
                         self.user, password=self.password)
-                    peer_networkinterface = NetworkInterface(ifc,
-                                                             self.remotehost)
+                    peer_networkinterface = NetworkInterface(
+                        ifc, self.remotehost)
                     try:
-                        peer_networkinterface.add_ipaddr(ipaddr, self.netmask)
+                        peer_networkinterface.add_ipaddr(
+                            ipaddr, self.netmask)
                     except Exception as e:
-                        self.log.info("IP addresss on peer already configured")
+                        self.log.info(
+                            "IP address on peer already configured: %s", e)
         self.miimon = self.params.get("miimon", default="100")
-        self.fail_over_mac = self.params.get("fail_over_mac",
-                                             default="2")
+        self.fail_over_mac = self.params.get("fail_over_mac", default="2")
         self.downdelay = self.params.get("downdelay", default="0")
         self.net_path = "/sys/class/net/"
         self.bond_status = "/proc/net/bonding/%s" % self.bond_name
         self.bond_dir = os.path.join(self.net_path, self.bond_name)
         self.bonding_slave_file = "%s/bonding/slaves" % self.bond_dir
         self.bonding_masters_file = "%s/bonding_masters" % self.net_path
-        self.peer_bond_needed = self.params.get("peer_bond_needed",
-                                                default=False)
-        self.peer_wait_time = self.params.get("peer_wait_time", default=20)
+        self.peer_wait_time = int(
+            self.params.get("peer_wait_time", default=20))
         self.sleep_time = int(self.params.get("sleep_time", default=10))
-        self.peer_wait_time = self.params.get("peer_wait_time", default=5)
         self.mtu = self.params.get("mtu", default=1500)
         self.ib = False
-        if self.host_interface[0:2] == 'ib':
+        if self.host_interfaces[0][0:2] == 'ib':
             self.ib = True
         self.log.info("Bond Test on IB Interface? = %s", self.ib)
-        self.local_ip = netifaces.ifaddresses(interface)[2][0]['addr']
+        try:
+            iface_addrs = netifaces.ifaddresses(interface)
+            if (netifaces.AF_INET not in iface_addrs
+                    or not iface_addrs[netifaces.AF_INET]):
+                self.cancel(
+                    "Interface %s does not have an IPv4 address "
+                    "configured" % interface)
+            self.local_ip = iface_addrs[netifaces.AF_INET][0]['addr']
+        except (KeyError, ValueError, IndexError) as e:
+            self.cancel(
+                "Failed to get IP address for interface %s: %s"
+                % (interface, e))
 
-        dir = os.listdir('/sys/class/net')
-        self.session = Session(self.peer_public_ip, user=self.user, password=self.password)
-
+        self.session = Session(self.peer_public_ip, user=self.user,
+                               password=self.password)
         self.session.cleanup_master()
         if not self.session.connect():
-            '''
-            LACP bond interface takes some time to get it to ping peer after it
-            is setup. This code block tries at most 5 times to get it to connect
-            to the peer.
-            '''
+            # LACP bond interface takes some time to get it to ping peer
+            # after it is setup. This code block tries at most 5 times
+            # to get it to connect to the peer.
             if self.mode == "4":
                 connect = False
                 for _ in range(5):
@@ -151,8 +182,9 @@ class Bonding(Test):
             self.remotehost = RemoteHost(self.peer_public_ip, self.user,
                                          password=self.password)
         else:
-            self.remotehost = RemoteHost(self.peer_first_ipinterface[0], self.user,
-                                         password=self.password)
+            self.remotehost = RemoteHost(
+                self.peer_first_ipinterface[0], self.user,
+                password=self.password)
 
     def nmcli_bond_setup(self, arg1, arg2):
         '''
@@ -162,104 +194,154 @@ class Bonding(Test):
             self.log.info("Configuring Bonding on Local machine")
             self.log.info("--------------------------------------")
             linux_modules.load_module("bonding")
-            bond_options_str = f"mode={self.mode},miimon={self.miimon},downdelay={self.downdelay}"
+            bond_options_str = (
+                "mode=%s,miimon=%s,downdelay=%s"
+                % (self.mode, self.miimon, self.downdelay))
             # Select different bonding parameters based on mode
-            bond_param = {'0': ['packets_per_slave', 'resend_igmp'],
-                          '1': ['num_unsol_na', 'primary', 'primary_reselect',
-                                'resend_igmp'],
-                          '2': ['xmit_hash_policy'],
-                          '4': ['lacp_rate', 'xmit_hash_policy'],
-                          '5': ['tlb_dynamic_lb', 'primary', 'primary_reselect',
-                                'resend_igmp', 'xmit_hash_policy', 'lp_interval'],
-                          '6': ['primary', 'primary_reselect', 'resend_igmp',
-                                'lp_interval']}
-            if self.mode in bond_param.keys():
+            bond_param = {
+                '0': ['packets_per_slave', 'resend_igmp'],
+                '1': ['num_unsol_na', 'primary', 'primary_reselect',
+                      'resend_igmp'],
+                '2': ['xmit_hash_policy'],
+                '4': ['lacp_rate', 'xmit_hash_policy'],
+                '5': ['tlb_dynamic_lb', 'primary', 'primary_reselect',
+                      'resend_igmp', 'xmit_hash_policy', 'lp_interval'],
+                '6': ['primary', 'primary_reselect', 'resend_igmp',
+                      'lp_interval']}
+            if self.mode in bond_param:
+                additional_params = []
                 for param in bond_param[self.mode]:
                     param_value = self.params.get(param, default='')
                     if param_value:
-                        bond_param.append(f"{param}={param_value}")
-                        bond_options_str += "," + ",".join(bond_param)
+                        additional_params.append(
+                            "%s=%s" % (param, param_value))
+                if additional_params:
+                    bond_options_str += "," + ",".join(additional_params)
 
-        # Create bond interface
-            cmd = f"nmcli con add type bond ifname {self.bond_name} con-name {self.bond_name} bond.options {bond_options_str}"
+            # Create bond interface
+            cmd = ("nmcli con add type bond ifname %s con-name %s "
+                   "bond.options \"%s\""
+                   % (self.bond_name, self.bond_name, bond_options_str))
             try:
                 process.system(cmd, shell=True, ignore_status=True)
             except Exception as e:
-                self.log.error(f"Failed to create bond interface: {e}")
+                self.log.error("Failed to create bond interface: %s", e)
                 return
 
-        # Add slave interface to the bond
+            # Add slave interface to the bond
             for interface in self.host_interfaces:
                 try:
-                    slave_down = f"nmcli -t -f NAME,UUID con show | awk -F: '/^{interface}/{{print $2}}' | xargs -r -n1 nmcli con down uuid"
-                    process.system(slave_down, shell=True, ignore_status=True)
+                    slave_down = (
+                        "nmcli -t -f NAME,UUID con show | "
+                        "awk -F: '/^%s/{print $2}' | "
+                        "xargs -r -n1 nmcli con down uuid" % interface)
+                    process.system(slave_down, shell=True,
+                                   ignore_status=True)
                 except Exception as e:
-                    self.log.error(f"Failed to link down the interface {interface}")
+                    self.log.error(
+                        "Failed to link down the interface %s: %s",
+                        interface, e)
                 time.sleep(10)
                 try:
-                    slave_cmd = f"nmcli con add type ethernet ifname {interface} con-name slave-{interface} master {self.bond_name}"
-                    process.system(slave_cmd, shell=True, ignore_status=True)
+                    slave_cmd = (
+                        "nmcli con add type ethernet ifname %s "
+                        "con-name slave-%s master %s"
+                        % (interface, interface, self.bond_name))
+                    process.system(slave_cmd, shell=True,
+                                   ignore_status=True)
                 except Exception as e:
-                    self.log.error(f"Failed to add {interface} as slave interface: {e}")
+                    self.log.error(
+                        "Failed to add %s as slave interface: %s",
+                        interface, e)
 
-        # Bring-up bond interface
+            # Bring-up bond interface
             time.sleep(5)
-            cmd = f"nmcli con up {self.bond_name}"
+            cmd = "nmcli con up %s" % self.bond_name
             try:
                 process.system(cmd, shell=True, ignore_status=True)
             except Exception as e:
-                self.log.error(f"Failed to bring up the bond interface: {e}")
+                self.log.error(
+                    "Failed to bring up the bond interface: %s", e)
                 return
 
-        # Check for successful bond creation
-            verify_bond = f"nmcli device status | grep -w {self.bond_name}"
-            if process.system(verify_bond, shell=True, ignore_status=True) != 0:
-                self.log.error(f"Bond interface {self.bond_name} not found in list.")
-            cmd = f"cat /proc/net/bonding/{self.bond_name}"
-            output = process.system_output(cmd, shell=True).decode("utf-8")
+            # Check for successful bond creation
+            verify_bond = ("nmcli device status | grep -w %s"
+                           % self.bond_name)
+            if process.system(verify_bond, shell=True,
+                              ignore_status=True) != 0:
+                self.fail("Bond interface %s not found after creation."
+                          % self.bond_name)
 
-        # Configure bond interface with IP
-            cidr = sum([bin(int(bits)).count("1") for bits in self.netmask.split(".")])
-            ip_with_mask = f"{self.local_ip}/{cidr}"
-            cmd_ip_set = f"nmcli con modify {self.bond_name} ipv4.addresses {ip_with_mask} ipv4.method manual"
+            # Configure bond interface with IP
+            cidr = sum(
+                [bin(int(b)).count("1") for b in self.netmask.split(".")])
+            ip_with_mask = "%s/%s" % (self.local_ip, cidr)
+            cmd_ip_set = (
+                "nmcli con modify %s ipv4.addresses %s ipv4.method manual"
+                % (self.bond_name, ip_with_mask))
             process.system(cmd_ip_set, shell=True, ignore_status=True)
-            cmd_bond_up = f"nmcli con up {self.bond_name}"
-            if process.system(cmd_bond_up, shell=True, ignore_status=True) != 0:
-                self.log.error(f"Failed to set IP address {ip_with_mask} for bond {self.bond_name}")
-        # Check for bond link-up
-            cmd = f"cat /proc/net/bonding/{self.bond_name}"
-            try:
-                output = process.system_output(cmd, shell=True).decode("utf-8")
-                if "Slave Interface" in output and "MII Status: up" in output:
-                    self.log.info(f"Bond {self.bond_name} is active and link is up.")
-                else:
-                    self.log.error(f"Bond {self.bond_name} exists but bond link is not up. Check link of the slave interfaces.")
-            except Exception as e:
-                self.log.error(f"Bond creation on host machine has FAILED: {e}")
+            cmd_bond_up = "nmcli con up %s" % self.bond_name
+            if process.system(cmd_bond_up, shell=True,
+                              ignore_status=True) != 0:
+                self.log.error(
+                    "Failed to set IP address %s for bond %s",
+                    ip_with_mask, self.bond_name)
 
-        # Set networkinterface object to bond
+            # Check for bond link-up
+            cmd = "cat /proc/net/bonding/%s" % self.bond_name
+            try:
+                output = process.system_output(
+                    cmd, shell=True).decode("utf-8")
+                if ("Slave Interface" in output
+                        and "MII Status: up" in output):
+                    self.log.info(
+                        "Bond %s is active and link is up.",
+                        self.bond_name)
+                else:
+                    self.log.error(
+                        "Bond %s exists but bond link is not up. "
+                        "Check link of the slave interfaces.",
+                        self.bond_name)
+            except Exception as e:
+                self.log.error(
+                    "Bond creation on host machine has FAILED: %s", e)
+
+            # Set networkinterface object to bond
             self.networkinterface = NetworkInterface(
-                                self.bond_name, self.localhost)
+                self.bond_name, self.localhost)
+            self.bond_created = True
 
         else:
             self.log.info("Configuring Mode0 bond on Peer machine")
             self.log.info("------------------------------------------")
-            cidr = sum([bin(int(bits)).count("1") for bits in self.netmask.split(".")])
-            bond_cmd = 'modprobe bonding;'
-            bond_cmd += f"nmcli con add type bond ifname {self.bond_name} con-name {self.bond_name} mode {self.mode} miimon {self.miimon}; "
+            cidr = sum(
+                [bin(int(b)).count("1") for b in self.netmask.split(".")])
+            bond_cmd = 'modprobe bonding; '
+            bond_cmd += (
+                "nmcli con add type bond ifname %s con-name %s "
+                "mode %s miimon %s; "
+                % (self.bond_name, self.bond_name,
+                   self.mode, self.miimon))
 
             for interface in self.peer_interfaces:
-                #bond_cmd += f"nmcli -t -f NAME,UUID con show | awk -F: '/^{interface}/{{print $2}}' | xargs -r -n1 nmcli con down uuid; sleep 10; "
-                bond_cmd += f"nmcli c down {interface}; "
-                bond_cmd += f"nmcli con add type ethernet ifname {interface} con-name slave-{interface} master {self.bond_name}; "
+                bond_cmd += "nmcli c down %s; " % interface
+                bond_cmd += (
+                    "nmcli con add type ethernet ifname %s "
+                    "con-name slave-%s master %s; "
+                    % (interface, interface, self.bond_name))
 
-            ip_with_mask = f"{self.peer_first_ipinterface[0]}/{cidr}"
-            bond_cmd += f"nmcli con modify {self.bond_name} ipv4.addresses {ip_with_mask} ipv4.method manual; "
-            bond_cmd += f"nmcli con up {self.bond_name}"
+            ip_with_mask = "%s/%s" % (self.peer_first_ipinterface[0], cidr)
+            bond_cmd += (
+                "nmcli con modify %s ipv4.addresses %s "
+                "ipv4.method manual; "
+                % (self.bond_name, ip_with_mask))
+            bond_cmd += "nmcli con up %s" % self.bond_name
 
             output = self.session.cmd(bond_cmd)
             if not output.exit_status == 0:
                 self.fail("Bond setup failed in peer machine")
+            else:
+                self.peer_bond_created = True
 
     def test_bond_setup(self):
         '''
@@ -268,7 +350,8 @@ class Bonding(Test):
         if self.peer_bond_needed:
             self.nmcli_bond_setup("peer", "")
         self.nmcli_bond_setup("local", self.mode)
-        if self.networkinterface.ping_check(self.peer_first_ipinterface[0], count=20) is not None:
+        if self.networkinterface.ping_check(
+                self.peer_first_ipinterface[0], count=20) is not None:
             self.fail("Ping test from bond to peer FAILED")
 
     def get_bond_status(self):
@@ -276,13 +359,15 @@ class Bonding(Test):
         Get the status of the bond from /proc fs
         '''
         try:
-            output = process.system_output(f"cat /proc/net/bonding/{self.bond_name}", shell=True).decode("utf-8")
+            output = process.system_output(
+                "cat /proc/net/bonding/%s" % self.bond_name,
+                shell=True).decode("utf-8")
             if "MII Status: up" in output:
                 self.log.info("Bond is UP")
             else:
                 self.log.info("Bond is DOWN")
         except Exception as e:
-            self.log.error("Failed to get Bond status")
+            self.log.error("Failed to get Bond status: %s", e)
 
     def is_vnic(self):
         '''
@@ -290,46 +375,86 @@ class Bonding(Test):
         '''
         for interface in self.host_interfaces:
             cmd = "lsdevinfo -q name=%s" % interface
-            if 'type="IBM,vnic"' in process.system_output(cmd, shell=True).decode("utf-8"):
-                return True
+            try:
+                output = process.system_output(
+                    cmd, shell=True,
+                    ignore_status=True).decode("utf-8")
+                if 'type="IBM,vnic"' in output:
+                    return True
+            except Exception as e:
+                self.log.debug(
+                    "lsdevinfo check failed for %s: %s", interface, e)
         return False
 
     def ping_check(self):
-        cmd = "ping -I %s %s -c 5"\
-                % (self.bond_name, self.peer_first_ipinterface[0])
+        '''
+        Ping the peer from the bond interface
+        '''
+        cmd = ("ping -I %s %s -c 5"
+               % (self.bond_name, self.peer_first_ipinterface[0]))
         if process.system(cmd, shell=True, ignore_status=True) != 0:
             return False
         return True
+
+    def error_check(self):
+        '''
+        Report any accumulated non-fatal errors from failover tests
+        '''
+        if self.err:
+            self.fail("Tests failed. Details:\n%s" % "\n".join(self.err))
 
     def test_bond_failover(self):
         '''
         Test scenarios for slave failover
         '''
-        self.log.info(f"Starting bond failover test for {self.bond_name}")
+        self.log.info("Starting bond failover test for %s", self.bond_name)
+        if len(self.host_interfaces) > 1:
+            for interface in self.host_interfaces:
+                self.log.info(
+                    "Bringing down slave interface: %s", interface)
+                down_cmd = "ip link set %s down" % interface
+                process.system(down_cmd, shell=True, ignore_status=True)
+                time.sleep(self.sleep_time)  # Wait for failover to trigger
+                self.networkinterface = NetworkInterface(
+                    self.bond_name, self.localhost)
+                self.get_bond_status()
+                if self.ping_check():
+                    self.log.info(
+                        "Ping passed for mode %s", self.mode)
+                else:
+                    error_str = (
+                        "Ping fail in mode %s when interface %s down"
+                        % (self.mode, interface))
+                    self.log.debug(error_str)
+                    self.err.append(error_str)
+                up_cmd = "ip link set %s up" % interface
+                process.system(up_cmd, shell=True, ignore_status=True)
+                time.sleep(self.sleep_time)
+        else:
+            self.log.debug(
+                "Need a min of 2 host interfaces to test "
+                "slave failover in Bonding")
+
+        self.log.info("----------------------------------------")
+        self.log.info(
+            "Failing all interfaces for mode %s", self.mode)
+        self.log.info("----------------------------------------")
         for interface in self.host_interfaces:
-            self.log.info(f"Bringing down slave interface: {interface}")
-            down_cmd = f"ip link set {interface} down"
+            down_cmd = "ip link set %s down" % interface
             process.system(down_cmd, shell=True, ignore_status=True)
-            time.sleep(5)  # Wait for failover to trigger
-            self.networkinterface = NetworkInterface(self.bond_name, self.localhost)
-            self.get_bond_status()
-            if self.ping_check():
-                self.log.info("Ping passed for Mode")
-            up_cmd = f"ip link set {interface} up"
-            process.system(up_cmd, shell=True, ignore_status=True)
+            time.sleep(self.sleep_time)
+        if not self.ping_check():
+            self.log.info(
+                "Ping to Bond interface failed when all slave "
+                "interfaces are down. This is expected")
+        self.get_bond_status()
         for interface in self.host_interfaces:
-            self.log.info(f"Bringing down both the slave interfaces")
-            down_cmd = f"ip link set {interface} down"
-            process.system(down_cmd, shell=True, ignore_status=True)
-            self.ping_check()
-            self.get_bond_status()
-            self.log.info("Ping to Bond interface failed when all slave interfaces\
-                           are down. This is expected")
-        for interface in self.host_interfaces:
-            up_cmd = f"ip link set {interface} up"
+            up_cmd = "ip link set %s up" % interface
             process.system(up_cmd, shell=True, ignore_status=True)
+            time.sleep(self.sleep_time)
 
         self.bond_mtu_test()
+        self.error_check()
 
     def bond_mtu_test(self):
         '''
@@ -350,11 +475,13 @@ class Bonding(Test):
                 if peer_networkinterface.set_mtu(mtu) is not None:
                     self.cancel("Failed to set mtu in peer")
             if not self.ping_check():
-                self.fail(f"Ping fail in mode {self.mode} after MTU change to {mtu}")
+                self.fail("Ping fail in mode %s after MTU change to %s"
+                          % (self.mode, mtu))
             else:
                 self.log.info(
-                    f"Ping success for mode {self.mode} bond with MTU {mtu}")
-            if self.networkinterface.set_mtu('1500'):
+                    "Ping success for mode %s bond with MTU %s",
+                    self.mode, mtu)
+            if self.networkinterface.set_mtu('1500') is not None:
                 self.cancel("Failed to set mtu back to 1500 in host")
             for interface in self.peer_interfaces:
                 peer_networkinterface = NetworkInterface(interface,
@@ -367,26 +494,31 @@ class Bonding(Test):
         Clear the bond interface and clean up the interface config
         '''
         if arg1 == "local":
-            self.log.info(f"Removing Bond interface {self.bond_name} on local machine")
+            self.log.info("Removing Bond interface %s on local machine",
+                          self.bond_name)
             self.log.info("------------------------------------------------")
             for interface in self.host_interfaces:
-                del_cmd = f"nmcli con del slave-{interface}"
-                if process.system(del_cmd, shell=True, ignore_status=True) != 0:
-                    self.log.error(f"Failed to delete slave connection {interface}")
-            del_cmd = f"nmcli con delete {self.bond_name}"
+                del_cmd = "nmcli con del slave-%s" % interface
+                if process.system(del_cmd, shell=True,
+                                  ignore_status=True) != 0:
+                    self.fail(
+                        "Failed to delete slave connection %s", interface)
+            del_cmd = "nmcli con delete %s" % self.bond_name
             if process.system(del_cmd, shell=True, ignore_status=True) != 0:
-                self.log.error(f"Failed to delete bond interface {self.bond_name}")
+                self.fail("Failed to delete bond interface %s",
+                               self.bond_name)
             else:
-                self.log.info(f"Bond interface {self.bond_name} removed successfully.")
+                self.log.info("Bond interface %s removed successfully.",
+                              self.bond_name)
             linux_modules.unload_module("bonding")
             time.sleep(self.sleep_time)
         else:
             self.log.info("Removing Bonding configuration on Peer machine")
             self.log.info("------------------------------------------------")
-            del_cmd = f"nmcli con delete {self.bond_name}; "
+            del_cmd = "nmcli con delete %s; " % self.bond_name
             del_cmd += "rmmod bonding; "
             for interface in self.peer_interfaces:
-                del_cmd += f"nmcli con del slave-{interface}; "
+                del_cmd += "nmcli con del slave-%s; " % interface
 
             output = self.session.cmd(del_cmd)
             if not output.exit_status == 0:
@@ -399,26 +531,138 @@ class Bonding(Test):
         self.nmcli_bond_cleanup("local")
         for ipaddr, host_interface in zip(self.ipaddr, self.host_interfaces):
             try:
-                networkinterface = NetworkInterface(host_interface, self.localhost)
+                networkinterface = NetworkInterface(host_interface,
+                                                    self.localhost)
                 networkinterface.add_ipaddr(ipaddr, self.netmask)
                 networkinterface.bring_up()
             except Exception:
                 self.fail("Interface is taking long time to link up")
         if self.peer_bond_needed:
             self.nmcli_bond_cleanup("peer")
-            for ipaddr, interface in zip(self.peer_first_ipinterface, self.peer_interfaces):
+            for ipaddr, interface in zip(self.peer_first_ipinterface,
+                                         self.peer_interfaces):
                 self.remotehost = RemoteHost(
                     self.peer_public_ip, self.user, password=self.password)
-                peer_networkinterface = NetworkInterface(interface, self.remotehost)
+                peer_networkinterface = NetworkInterface(interface,
+                                                         self.remotehost)
                 try:
                     peer_networkinterface.add_ipaddr(ipaddr, self.netmask)
                     peer_networkinterface.bring_up()
                     time.sleep(self.sleep_time)
                     peer_networkinterface.set_mtu("1500")
                 except Exception:
-                    self.fail("Peer interface fail to link up after bond test")
+                    self.fail(
+                        "Peer interface fail to link up after bond test")
                 time.sleep(self.sleep_time)
             self.remotehost.remote_session.quit()
 
+    def _cleanup_local_bond(self):
+        '''
+        Remove local bond interface and restore host interfaces.
+        Called from tearDown to cleanup on any exit path.
+        '''
+        # Check if bond interface exists in the system before cleanup
+        bond_exists = os.path.exists(
+            "/proc/net/bonding/%s" % self.bond_name)
+        if not bond_exists and not self.bond_created:
+            return
+
+        self.log.info(
+            "tearDown: Removing local bond %s and restoring interfaces",
+            self.bond_name)
+        for interface in self.host_interfaces:
+            del_cmd = "nmcli con del slave-%s" % interface
+            if process.system(del_cmd, shell=True, ignore_status=True) != 0:
+                self.log.warning(
+                    "tearDown: Could not delete slave connection for %s",
+                    interface)
+        del_cmd = "nmcli con delete %s" % self.bond_name
+        if process.system(del_cmd, shell=True, ignore_status=True) != 0:
+            self.log.warning(
+                "tearDown: Could not delete bond connection %s",
+                self.bond_name)
+        else:
+            self.log.info("tearDown: Bond %s deleted.", self.bond_name)
+        linux_modules.unload_module("bonding")
+
+        # Restore original IP addresses on host interfaces
+        for ipaddr, ifc in zip(self.ipaddr, self.host_interfaces):
+            if not ipaddr:
+                continue
+            try:
+                networkinterface = NetworkInterface(ifc, self.localhost)
+                networkinterface.add_ipaddr(ipaddr, self.netmask)
+                networkinterface.bring_up()
+                self.log.info(
+                    "tearDown: Restored %s with IP %s", ifc, ipaddr)
+            except Exception as e:
+                self.log.warning(
+                    "tearDown: Could not restore %s with IP %s: %s",
+                    ifc, ipaddr, e)
+
+    def _cleanup_peer_bond(self):
+        '''
+        Remove peer bond interface and restore peer interfaces.
+        Called from tearDown to guarantee cleanup on any exit path.
+        '''
+        if not self.peer_bond_created:
+            return
+
+        self.log.info(
+            "tearDown: Removing peer bond and restoring peer interfaces")
+        del_cmd = "nmcli con delete %s; " % self.bond_name
+        del_cmd += "rmmod bonding; "
+        for interface in self.peer_interfaces:
+            del_cmd += "nmcli con del slave-%s; " % interface
+        try:
+            output = self.session.cmd(del_cmd)
+            if output.exit_status != 0:
+                self.log.warning(
+                    "tearDown: Peer bond cleanup command returned non-zero")
+        except Exception as e:
+            self.log.warning(
+                "tearDown: Peer bond cleanup failed: %s", e)
+
+        # Restore original IP addresses on peer interfaces
+        for ipaddr, interface in zip(self.peer_first_ipinterface,
+                                     self.peer_interfaces):
+            if not ipaddr:
+                continue
+            try:
+                remotehost = RemoteHost(self.peer_public_ip, self.user,
+                                        password=self.password)
+                peer_networkinterface = NetworkInterface(interface,
+                                                         remotehost)
+                peer_networkinterface.add_ipaddr(ipaddr, self.netmask)
+                peer_networkinterface.bring_up()
+                peer_networkinterface.set_mtu("1500")
+                self.log.info(
+                    "tearDown: Restored peer %s with IP %s",
+                    interface, ipaddr)
+            except Exception as e:
+                self.log.warning(
+                    "tearDown: Could not restore peer %s with IP %s: %s",
+                    interface, ipaddr, e)
+
     def tearDown(self):
-        self.session.quit()
+        '''
+        Guaranteed cleanup: runs after every test regardless of
+        pass/fail/cancel/error. Removes bond interface and restores
+        host (and peer) interfaces to original state.
+        '''
+        self._cleanup_local_bond()
+        if hasattr(self, 'peer_bond_needed') and self.peer_bond_needed:
+            self._cleanup_peer_bond()
+        if hasattr(self, 'remotehost'):
+            try:
+                self.remotehost.remote_session.quit()
+            except Exception:
+                pass
+        if hasattr(self, 'session'):
+            try:
+                self.session.quit()
+            except Exception:
+                pass
+
+# Made with AI Assitance
+
