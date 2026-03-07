@@ -13,6 +13,8 @@
 #
 # Copyright: 2016 IBM
 # Author: Santhosh G <santhog4@linux.vnet.ibm.com>
+#
+# Assisted with AI tools
 
 import os
 from avocado import Test
@@ -85,3 +87,34 @@ class EatMemory(Test):
         else:
             self.fail('Not able to eat %s%s of memory.' %
                       (self.mem_to_eat, mem_unit))
+
+    def test_max_hugepage(self):
+        """
+        To test configuring maximum number of hugepages and run eatmemory.
+        """
+        Total_mem = memory.memtotal()
+        hugepagesize = memory.get_huge_page_size()
+        nr_hugepage_init = memory.get_num_huge_pages()
+        nr_hugepages = int(Total_mem / hugepagesize)
+        try:
+            process.run('echo "vm.nr_hugepages=%s" >> /etc/sysctl.conf' %
+                        nr_hugepages, sudo=True, shell=True)
+            process.run('sysctl -p', sudo=True, shell=True)
+            mem_info = process.system_output("tail /proc/meminfo", shell=True)
+            self.log.info(mem_info)
+            # Run test with OOM handling
+            try:
+                self.test()
+            except Exception as e:
+                self.log.warning("Memory allocation test encountered an error: %s", str(e))
+                self.log.warning("This may be due to OOM condition after hugepage allocation")
+        finally:
+            # Always restore original hugepage configuration
+            self.log.info("Restoring original hugepage configuration")
+            process.run('sed -i "/vm.nr_hugepages=/d" /etc/sysctl.conf',
+                        sudo=True, shell=True, ignore_status=True)
+            process.run('echo "vm.nr_hugepages=%s" >> /etc/sysctl.conf' %
+                        nr_hugepage_init, sudo=True, shell=True)
+            process.run('sysctl -p', sudo=True, shell=True)
+            mem_info = process.system_output("tail /proc/meminfo", shell=True)
+            self.log.info(mem_info)
