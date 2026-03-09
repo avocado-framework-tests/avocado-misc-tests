@@ -20,6 +20,7 @@ Tests for Sriov logical device
 '''
 
 import netifaces
+import time
 from avocado import Test
 from avocado.utils import process
 from avocado.utils.ssh import Session
@@ -82,14 +83,19 @@ class NetworkSriovDevice(Test):
         self.mac_id = self.params.get('mac_id',
                                       default="02:03:03:03:03:01").split(' ')
         self.mac_id = [mac.replace(':', '') for mac in self.mac_id]
-        self.migratable = self.params.get('migratable', default=0)
+        self.migratable = self.params.get('migratable', default=False)
+        # Convert boolean to integer for HMC command compatibility
+        # HMC requires integer values (0 or 1), not boolean (True/False)
+        if isinstance(self.migratable, bool):
+            self.migratable = 1 if self.migratable else 0
 
         self.backup_veth_vnetwork = self.params.get(
             'backup_veth_vnetwork', default="")
         self.vnic_sriov_adapter = self.params.get(
             'vnic_sriov_adapter', default="")
 
-        if not self.backup_veth_vnetwork and not self.vnic_sriov_adapter and self.sriov_adapter:
+        if (not self.backup_veth_vnetwork and
+                not self.vnic_sriov_adapter and self.sriov_adapter):
             self.local = LocalHost()
         else:
             self.backup_device_type = "veth"
@@ -108,21 +114,25 @@ class NetworkSriovDevice(Test):
                     'max_capacity', default='10')
                 self.capacity = self.params.get('capacity', default='2')
                 self.vios_name = self.params.get('vios_name', default=None)
-                cmd = 'lssyscfg -m %s -r lpar --filter lpar_names=%s -F lpar_id' % (
-                    self.server, self.vios_name)
+                cmd = ('lssyscfg -m %s -r lpar --filter '
+                       'lpar_names=%s -F lpar_id' % (
+                           self.server, self.vios_name))
                 self.vios_id = self.session.cmd(cmd).stdout_text.split()[0]
-                self.backup_vnic_backing_device = 'sriov/%s/%s/%s/%s/%s/%s/%s' % \
-                    (self.vios_name, self.vios_id, self.vnic_adapter_id, self.vnic_port_id,
-                     self.capacity, self.priority, self.max_capacity)
+                self.backup_vnic_backing_device = (
+                    'sriov/%s/%s/%s/%s/%s/%s/%s' % (
+                        self.vios_name, self.vios_id,
+                        self.vnic_adapter_id, self.vnic_port_id,
+                        self.capacity, self.priority, self.max_capacity))
         self.local = LocalHost()
 
     @staticmethod
     def netmask_to_cidr(netmask):
-        return (sum([bin(int(bits)).count("1") for bits in netmask.split(".")]))
+        return sum([bin(int(bits)).count("1")
+                    for bits in netmask.split(".")])
 
     def get_adapter_id(self, slot):
-        cmd = "lshwres -m %s -r sriov --rsubtype adapter -F phys_loc:adapter_id" \
-              % (self.server)
+        cmd = ("lshwres -m %s -r sriov --rsubtype adapter "
+               "-F phys_loc:adapter_id" % (self.server))
         output = self.session.cmd(cmd)
         for line in output.stdout_text.splitlines():
             if slot in line:
@@ -164,12 +174,9 @@ class NetworkSriovDevice(Test):
             self.cancel("Test unsupported")
         if self.max_sriov_port:
             self.cancel("Test unsupported")
-        for slot, port, mac, ipaddr, netmask, peer_ip in zip(self.sriov_adapter,
-                                                             self.sriov_port,
-                                                             self.mac_id,
-                                                             self.ipaddr,
-                                                             self.netmask,
-                                                             self.peer_ip):
+        for slot, port, mac, ipaddr, netmask, peer_ip in zip(
+                self.sriov_adapter, self.sriov_port, self.mac_id,
+                self.ipaddr, self.netmask, self.peer_ip):
             self.device_add_remove(slot, port, mac, '', 'add')
             if not self.list_device(mac):
                 self.fail("failed to list logical device after add operation")
@@ -189,34 +196,49 @@ class NetworkSriovDevice(Test):
         if not self.migratable:
             self.cancel("Test unsupported")
 
-        for slot, port, mac, ipaddr, netmask, peer_ip in zip(self.sriov_adapter,
-                                                             self.sriov_port,
-                                                             self.mac_id,
-                                                             self.ipaddr,
-                                                             self.netmask,
-                                                             self.peer_ip):
-
+        for slot, port, mac, ipaddr, netmask, peer_ip in zip(
+                self.sriov_adapter, self.sriov_port, self.mac_id,
+                self.ipaddr, self.netmask, self.peer_ip):
             self.device_add_remove(slot, port, mac, '', 'add')
             if not self.list_device(mac):
-                self.fail(
-                    "failed to list Migratable logical device after add operation")
-            bond_device = self.get_hnv_bond(mac)
-            if bond_device:
-                ret = process.run('nmcli c mod id %s ipv4.method manual ipv4.address %s/%s' %
-                                  (bond_device, ipaddr, self.prefix), ignore_status=True)
+                self.fail("failed to list Migratable logical device "
+                          "after add operation")
+            try:
+                bond_device = self.get_hnv_bond(mac)
+                if not bond_device:
+                    self.fail("failed to create hnv bond device")
+
+                ret = process.run(
+                    'nmcli c mod id %s ipv4.method manual '
+                    'ipv4.address %s/%s' % (
+                        bond_device, ipaddr, self.prefix),
+                    ignore_status=True)
                 if ret.exit_status:
-                    self.fail("nmcli ip configuration for hnv bond fail with %s"
-                              % (ret.exit_status))
+                    self.fail(
+                        "nmcli ip configuration for hnv bond fail "
+                        "with %s" % (ret.exit_status))
                 ret = process.run('nmcli c up %s' %
                                   bond_device, ignore_status=True)
                 if ret.exit_status:
                     self.fail("hnv bond ip bring up fail with %s"
                               % (ret.exit_status))
+                time.sleep(10)
                 networkinterface = NetworkInterface(bond_device, self.local)
-                if networkinterface.ping_check(peer_ip, count=5) is not None:
+                if networkinterface.ping_check(
+                        peer_ip, count=5) is not None:
                     self.fail("ping check failed for hnv bond device")
-            else:
-                self.fail("failed to create hnv bond device")
+            except Exception:
+                # Cleanup: Remove the created SR-IOV device before
+                # failing
+                try:
+                    logical_port_id = self.get_logical_port_id(mac)
+                    self.device_add_remove(
+                        slot, '', '', logical_port_id, 'remove')
+                except Exception as cleanup_error:
+                    self.log.warning(
+                        "Failed to cleanup device during exception: %s",
+                        cleanup_error)
+                raise
 
     def test_remove_migratable_sriov(self):
         '''
@@ -226,21 +248,23 @@ class NetworkSriovDevice(Test):
             self.cancel("Test unsupported")
         for mac, slot in zip(self.mac_id, self.sriov_adapter):
             bond_device = self.get_hnv_bond(mac)
-            if bond_device:
-                ret = process.run('nmcli c down %s' %
-                                  bond_device, ignore_status=True)
-                if ret.exit_status:
-                    self.fail("hnv bond ip bring down fail with %s"
-                              % (ret.exit_status))
-                ret = process.run('nmcli c del %s' %
-                                  bond_device, ignore_status=True)
-                if ret.exit_status:
-                    self.fail("hnv bond delete fail with %s"
-                              % (ret.exit_status))
-                logical_port_id = self.get_logical_port_id(mac)
-                self.device_add_remove(slot, '', '', logical_port_id, 'remove')
-                if self.list_device(mac):
-                    self.fail("fail to remove migratable logical device")
+            if not bond_device:
+                self.fail(
+                    "failed to find hnv bond device for MAC %s" % mac)
+            ret = process.run('nmcli c down %s' %
+                              bond_device, ignore_status=True)
+            if ret.exit_status:
+                self.fail("hnv bond ip bring down fail with %s"
+                          % (ret.exit_status))
+            ret = process.run('nmcli c del %s' %
+                              bond_device, ignore_status=True)
+            if ret.exit_status:
+                self.fail("hnv bond delete fail with %s"
+                          % (ret.exit_status))
+            logical_port_id = self.get_logical_port_id(mac)
+            self.device_add_remove(slot, '', '', logical_port_id, 'remove')
+            if self.list_device(mac):
+                self.fail("fail to remove migratable logical device")
 
     def test_remove_logical_device(self):
         """
@@ -256,16 +280,32 @@ class NetworkSriovDevice(Test):
             logical_port_id = self.get_logical_port_id(mac)
             self.device_add_remove(slot, '', '', logical_port_id, 'remove')
             if self.list_device(mac):
-                self.fail("still list logical device after remove operation")
+                self.fail(
+                    "still list logical device after remove operation")
 
     def device_add_remove(self, slot, port, mac, logical_id, operation):
         """
-        add and remove operation of logical devices
+        Add and remove operation of logical devices (SR-IOV and HNV)
+
+        For HNV (Hybrid Network Virtualization):
+        - Requires migratable=True
+        - Requires backup device (veth or vnic)
+        - Creates bonded interface automatically
+
+        Args:
+            slot: Physical slot location of SR-IOV adapter
+            port: Physical port ID on the adapter
+            mac: MAC address for the logical port
+            logical_id: Logical port ID (for remove operation)
+            operation: 'add' or 'remove'
         """
+
         adapter_id = self.get_adapter_id(slot)
         backup_device = ''
 
-        if not self.backup_veth_vnetwork and not self.vnic_sriov_adapter and self.sriov_adapter:
+        # Non-migratable SR-IOV (standard SR-IOV without backup)
+        if (not self.backup_veth_vnetwork and
+                not self.vnic_sriov_adapter and self.sriov_adapter):
             if operation == 'add':
                 if mac is None:
                     cmd = 'chhwres -r sriov -m %s --rsubtype logport \
@@ -290,16 +330,41 @@ class NetworkSriovDevice(Test):
                 cmd = 'chhwres -r sriov -m %s --rsubtype logport \
                       -o r -p %s -a \"adapter_id=%s,logical_port_id=%s\" ' \
                       % (self.server, self.lpar, adapter_id, logical_id)
+
+        # Migratable SR-IOV / HNV (with veth or vnic backup)
         else:
+            if not self.migratable:
+                self.fail("Migratable must be set to True for HNV "
+                          "configuration")
+
             if self.backup_device_type:
                 if 'veth' in self.backup_device_type:
-                    backup_device = ',backup_device_type=%s,backup_veth_vnetwork=%s' % (
-                        self.backup_device_type, self.backup_veth_vnetwork)
+                    if not self.backup_veth_vnetwork:
+                        self.fail("backup_veth_vnetwork required for "
+                                  "veth backup device")
+                    backup_device = (
+                        ',backup_device_type=%s,backup_veth_vnetwork=%s' % (
+                            self.backup_device_type,
+                            self.backup_veth_vnetwork))
+                    self.log.info(
+                        "Configuring HNV with veth backup on network: %s",
+                        self.backup_veth_vnetwork)
                 else:
-                    backup_device = ',backup_device_type=%s,backup_vnic_backing_device=%s' % (
-                        self.backup_device_type, self.backup_vnic_backing_device)
+                    if not self.backup_vnic_backing_device:
+                        self.fail("backup_vnic_backing_device required "
+                                  "for vnic backup device")
+                    backup_device = (
+                        ',backup_device_type=%s,'
+                        'backup_vnic_backing_device=%s' % (
+                            self.backup_device_type,
+                            self.backup_vnic_backing_device))
+                    self.log.info(
+                        "Configuring HNV with vnic backup: %s",
+                        self.backup_vnic_backing_device)
 
             if operation == 'add':
+                if not mac:
+                    self.fail("MAC address required for HNV add operation")
                 cmd = 'chhwres -r sriov -m %s --rsubtype logport \
                       -o a -p %s -a \"adapter_id=%s,phys_port_id=%s, \
                       logical_port_type=eth,mac_addr=%s,migratable=%s%s\" ' \
@@ -309,24 +374,37 @@ class NetworkSriovDevice(Test):
                 cmd = 'chhwres -r sriov -m %s --rsubtype logport \
                       -o r -p %s -a \"adapter_id=%s,logical_port_id=%s\" ' \
                       % (self.server, self.lpar, adapter_id, logical_id)
-        cmd = self.session.cmd(cmd)
-        if cmd.exit_status != 0:
-            self.log.debug(cmd.stderr)
-            self.fail("sriov logical device %s operation \
-                       failed" % operation)
+
+        # Execute command
+        self.log.info("Executing HMC command for %s operation",
+                      operation)
+        self.log.debug("Command: %s", cmd)
+        result = self.session.cmd(cmd)
+
+        if result.exit_status != 0:
+            self.log.error("HMC command failed with exit status: %s",
+                           result.exit_status)
+            self.log.error("stderr: %s", result.stderr)
+            self.log.error("stdout: %s", result.stdout_text)
+            self.fail(
+                f"SR-IOV logical device {operation} operation failed "
+                f"with error: {result.stdout_text}")
+
+        self.log.info("SR-IOV logical device %s operation completed "
+                      "successfully", operation)
 
     def get_logical_port_id(self, mac):
         """
         find out logical device port id
         """
         if not self.sriov_roce:
-            cmd = "lshwres -r sriov --rsubtype logport -m  %s \
-                   --level eth | grep %s | grep %s" \
-                   % (self.server, self.lpar, mac)
+            cmd = ("lshwres -r sriov --rsubtype logport -m  %s "
+                   "--level eth | grep %s | grep %s" % (
+                       self.server, self.lpar, mac))
         else:
-            cmd = "lshwres -r sriov --rsubtype logport -m  %s \
-                   --level roce | grep %s | grep %s" \
-                   % (self.server, self.lpar, mac)
+            cmd = ("lshwres -r sriov --rsubtype logport -m  %s "
+                   "--level roce | grep %s | grep %s" % (
+                       self.server, self.lpar, mac))
         output = self.session.cmd(cmd)
         logical_port_id = output.stdout_text.split(',')[6].split('=')[-1]
         return logical_port_id
@@ -337,7 +415,8 @@ class NetworkSriovDevice(Test):
         """
         output = genio.read_one_line("/sys/class/net/bonding_masters").split()
         for bond in output:
-            if mac in netifaces.ifaddresses(bond)[17][0]['addr'].replace(':', ''):
+            if mac in netifaces.ifaddresses(
+                    bond)[17][0]['addr'].replace(':', ''):
                 return bond
         self.fail("Test fail due to mac address mismatch")
 
@@ -358,11 +437,13 @@ class NetworkSriovDevice(Test):
         list the sriov logical device
         """
         if not self.sriov_roce:
-            cmd = 'lshwres -r sriov --rsubtype logport -m %s \
-                  --level eth --filter \"lpar_names=%s\" ' % (self.server, self.lpar)
+            cmd = ('lshwres -r sriov --rsubtype logport -m %s '
+                   '--level eth --filter \"lpar_names=%s\" ' % (
+                       self.server, self.lpar))
         else:
-            cmd = 'lshwres -r sriov --rsubtype logport -m %s \
-                  --level roce --filter \"lpar_names=%s\" ' % (self.server, self.lpar)
+            cmd = ('lshwres -r sriov --rsubtype logport -m %s '
+                   '--level roce --filter \"lpar_names=%s\" ' % (
+                       self.server, self.lpar))
         output = self.session.cmd(cmd)
         if mac in output.stdout_text:
             return True
