@@ -332,7 +332,7 @@ class DlparTests(Test):
 
             # Iterate through the reversed lists
             for vp, pu in zip(Vp_reverse, Pu_reverse):
-                result = Sha_obj.remove_proc(Vp, '--procs')
+                result = Sha_obj.remove_proc(vp, '--procs')
                 if result == 1:
                     # gives output printed by the last DLPAR command that ran on the HMC
                     stdout = Sha_obj.cmd_result.stdout_text
@@ -809,5 +809,9 @@ class DlparTests(Test):
             "Your memory request is below the profile’s Minimum memory limit." in combined
             or
             "Not enough memory resources to meet the allocation setting" in combined
+           or
+            "There is an insufficient amount of unallocated processing units to execute the operation." in combined
+           or
+            "The new total number of processing units for this partition" in combined
         ):
             self.cancel(stdout)
