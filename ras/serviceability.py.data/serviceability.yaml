@@ -1,0 +1,38 @@
+# Avocado Test Parameters for Serviceability Tests
+# Format: test_name.variant_name: parameters and default values
+
+SPYRE_GROUP: ""                        # Group name for VFIO device access
+AIU_PCIE_IDS: ""                       # AIU PCIe device IDs
+HOST_MODELS_DIR: ""                    # Host directory containing models
+VLLM_MODEL_PATH: ""                    # Path to VLLM model inside container
+AIU_WORLD_SIZE: ""                     # Number of AIU devices
+MAX_MODEL_LEN: ""                      # Maximum model length
+MAX_BATCH_SIZE: ""                     # Maximum batch size
+MEMORY: ""                             # Container memory limit
+SHM_SIZE: ""                           # Shared memory size
+
+CONTAINER_URL: ""                      # Container registry URL 
+CONTAINER_TAG: ""                      # Container image tag 
+API_KEY: ""                            # API key for container registry 
+VLLM_SPYRE_USE_CB: ""                  # Use control blocks 
+PRECOMPILED_DECODERS: ""               # Use precompiled decoders
+VLLM_DT_CHUNK_LEN: ""                  # Chunk length for data transfer
+VLLM_SPYRE_USE_CHUNKED_PREFILL: ""     # Use chunked prefill
+CACHE_DIR: ""                          # Cache directory
+SENLIB_CONFIG_FILE: ""                 # Senlib configuration file
+TEST_USERNAME: ""                      # Test username for non-root tests
+TEST_PASSWORD: ""                      # Test user password
+ROOT_PASSWORD: ""                      # Root password
+VLLM_STARTUP_TIMEOUT: ""               # VLLM startup timeout in seconds
+LOG_CHECK_INTERVAL: ""                 # Log check interval in seconds
+
+# Container runtime parameters
+DEVICE: ""                             # Device to mount in container
+PRIVILEGED: ""                         # Run in privileged mode for VFIO access
+PIDS_LIMIT: ""                         # PIDs limit (0 = unlimited)
+USERNS: ""                             # User namespace mode
+GROUP_ADD: ""                          # Add user groups to container
+PORT_MAPPING: ""                       # Port mapping format: [host_ip]:[host_port]:container_port
+# VLLM-specific options
+ENABLE_PREFIX_CACHING: ""              # Enable VLLM prefix caching (true/false)
+ADDITIONAL_VLLM_ARGS: ""               # Additional VLLM args as comma-separated string
