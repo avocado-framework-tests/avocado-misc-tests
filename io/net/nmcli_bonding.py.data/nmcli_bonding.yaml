@@ -1,0 +1,34 @@
+Test: !mux
+    round-robin:
+        bonding_mode: "0"
+    active-backup:
+        bonding_mode: "1"
+    balance-xor:
+        bonding_mode: "2"
+    broadcast:
+        bonding_mode: "3"
+    802.3ad:
+        bonding_mode: "4"
+    balance-tlb:
+        bonding_mode: "5"
+    balance-alb:
+        bonding_mode: "6"
+bond_interfaces: ""
+host_ips: ""
+netmask: ""
+peer_ips: ""
+peer_interfaces: ""
+peer_public_ip: ""
+peer_password: "********"
+bond_name: "bondtest"
+user_name: "root"
+peer_bond_needed: False
+peer_wait_time: "20"
+sleep_time: "10"
+miimon: "100"
+downdelay: "0"
+fail_over_mac: "2"
+mtu: "1500"
+
+# Made with AI Assistance 
+
