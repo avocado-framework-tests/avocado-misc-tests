@@ -18,8 +18,8 @@
 import os
 
 from avocado import Test
-from avocado.utils import process, build, git, distro
-from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils import process, build, git
+from avocado.utils.software_manager.distro_packages import ensure_tool
 
 
 class Perfmon(Test):
@@ -32,18 +32,24 @@ class Perfmon(Test):
     def setUp(self):
 
         # Check for basic utilities
-        smm = SoftwareManager()
-        dist = distro.detect()
+        perf_path = self.params.get('perf_bin', default='')
 
-        deps = ["gcc", "make"]
-        if dist.name in ['Ubuntu', 'debian']:
-            deps.extend(['libncurses-dev'])
-        elif dist.name in ['rhel', 'SuSE']:
-            deps.extend(['ncurses-devel'])
-        for package in deps:
-            if not smm.check_installed(package) and not smm.install(package):
-                self.cancel(
-                    "Fail to install %s required for this test." % package)
+        # Define distro-aware package map for build deps
+        distro_pkg_map = {
+            "Ubuntu": ["libncurses-dev", "gcc", "make"],
+            "debian": ["libncurses-dev", "gcc", "make"],
+            "centos": ["ncurses-devel", "gcc", "make"],
+            "fedora": ["ncurses-devel", "gcc", "make"],
+            "rhel": ["ncurses-devel", "gcc", "make"],
+            "SuSE": ["ncurses-devel", "gcc", "make"],
+        }
+
+        try:
+            # Ensure toolchain and ncurses dev packages are present
+            ensure_tool("gcc", distro_pkg_map=distro_pkg_map)
+            ensure_tool("make", distro_pkg_map=distro_pkg_map)
+        except RuntimeError as e:
+            self.cancel(str(e))
 
         git.get_repo('https://git.code.sf.net/p/perfmon2/libpfm4',
                      destination_dir=self.workdir)
