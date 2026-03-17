@@ -50,7 +50,8 @@ class LivePatching(Test):
                 'libpulp-tools', 'libpulp0', 'automake', 'autoconf',
                 'autoconf-archive', 'gcc-c++', 'libjson-c-devel',
                 'python3-pexpect', 'psutils', 'libunwind-devel',
-                'git-core', 'elfutils', 'libseccomp-devel', 'libelf-devel']
+                'git-core', 'elfutils', 'libseccomp-devel', 'libelf-devel',
+                'python*-psutil']
         for packages in deps:
             if not smm.check_installed(packages) and not smm.install(packages):
                 self.cancel('%s is needed for the test to be run' % packages)
