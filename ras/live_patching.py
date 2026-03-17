@@ -29,7 +29,8 @@ from avocado.utils.software_manager.manager import SoftwareManager
 class LivePatching(Test):
     """
     Test case to verify livepatching feature by livepatching malloc function.
-    Ref: https://documentation.suse.com/smart/systems-management/html/ulp-livepatching/index.html
+    Ref: https://documentation.suse.com/smart/systems-management/html/
+    ulp-livepatching/index.html
     """
 
     def copyutil(self, file_name):
@@ -38,25 +39,27 @@ class LivePatching(Test):
 
     def setUp(self):
         """
-        function sets up the test environment by installing necessary software packages
-        and copying required files.
+        Function sets up the test environment by installing necessary
+        software packages and copying required files.
         """
         self.dist = distro.detect()
         if self.dist.name != 'SuSE':
             self.cancel("Test is currently supported only on SLES")
         smm = SoftwareManager()
-        deps = ['gcc', 'make', 'libpulp-load-default',
-                'libpulp-tools', 'libpulp0', 'libtool', 'automake', 'autoconf',
-                'autoconf-archive', 'gcc-c++', 'libjson-c-devel', 'python3-pexpect',
-                'psutils', 'libunwind-devel', 'git-core', 'elfutils',
-                'libseccomp-devel', 'libelf-devel']
+        deps = ['gcc', 'make', 'libpulp-load-default', 'libtool',
+                'libpulp-tools', 'libpulp0', 'automake', 'autoconf',
+                'autoconf-archive', 'gcc-c++', 'libjson-c-devel',
+                'python3-pexpect', 'psutils', 'libunwind-devel',
+                'git-core', 'elfutils', 'libseccomp-devel', 'libelf-devel']
         for packages in deps:
             if not smm.check_installed(packages) and not smm.install(packages):
                 self.cancel('%s is needed for the test to be run' % packages)
         for file_name in ['test.c', 'libc_livepatch1.c', 'libc_livepatch1.dsc',
-                          'test_2func.c', 'libc_livepatch_2func.c', 'libc_livepatch_2func.dsc',
-                          'libc_livepatch_nested.c', 'libc_livepatch_nested.dsc', 'Makefile',
-                          'live_patch_nested.tar.gz', 'test_long.c']:
+                          'test_2func.c', 'libc_livepatch_2func.c',
+                          'libc_livepatch_2func.dsc', 'Makefile',
+                          'libc_livepatch_nested.c', 'test_long.c',
+                          'libc_livepatch_nested.dsc',
+                          'live_patch_nested.tar.gz']:
             self.copyutil(file_name)
 
     def start_test(self, test='test'):
@@ -64,7 +67,8 @@ class LivePatching(Test):
         function starts running test program
         """
         self.test_process = process.SubProcess(
-            'LD_PRELOAD=/usr/lib64/libpulp.so.0 ./%s' % test, shell=True, sudo=True)
+            'LD_PRELOAD=/usr/lib64/libpulp.so.0 ./%s' % test, shell=True,
+            sudo=True)
         self.pid = self.test_process.start()
         time.sleep(10)
 
@@ -73,18 +77,20 @@ class LivePatching(Test):
         function applies a live patch to the running test program and returns
         the stderr output
         """
-        patch_process = process.SubProcess(
-            'ulp trigger -p %s %s' % (self.pid, livepatch), shell=True, sudo=True)
+        patch_process = process.SubProcess('ulp trigger -p %s %s' %
+                                           (self.pid, livepatch), shell=True,
+                                           sudo=True)
         patch_process.start()
         time.sleep(20)
-        return(self.test_process.get_stderr())
+        return (self.test_process.get_stderr())
 
     def revert_livepatch(self, livepatch='libc_livepatch1.so'):
         """
         function reverts the applied live patch and returns the stderr output
         """
         revert_process = process.SubProcess(
-            'ulp trigger --revert -p %s %s' % (self.pid, livepatch), shell=True, sudo=True)
+            'ulp trigger --revert -p %s %s' % (self.pid, livepatch),
+            shell=True, sudo=True)
         revert_process.start()
         self.test_process.wait()
         return (self.test_process.get_stderr())
@@ -98,12 +104,14 @@ class LivePatching(Test):
     def test_basic(self):
         """
         1. Changes the working directory to the test temporary directory.
-        2. Compiles the test program (test.c) and the live patch library (libc_livepatch1.so).
+        2. Compiles the test program (test.c) and the live patch library
+           (libc_livepatch1.so).
         3. Packages the live patch using ulp packer.
-        4. Applies the live patch and checks if at least 10 "glibc-livepatch" messages are
-           observed in the output.
-        5. Reverts the live patch and verifies that the reversion was successful by checking
-           the difference in "glibc-livepatch" messages before and after reversion.
+        4. Applies the live patch and checks if at least 10 "glibc-livepatch"
+           messages are observed in the output.
+        5. Reverts the live patch and verifies that the reversion was
+           successful by checking the difference in "glibc-livepatch"
+           messages before and after reversion.
         """
         os.chdir(self.teststmpdir)
         process.system('make', shell=True)
@@ -114,17 +122,16 @@ class LivePatching(Test):
         if apply_count < 10:
             self.fail("Livepatch test failed")
         else:
-            self.log.info(
-                "Livepatching is successful %s glibc-livepatch messages observed"
-                % apply_count)
+            self.log.info("Livepatching is successful %s glibc-livepatch \
+                          messages observed" % apply_count)
         revert_output = self.revert_livepatch()
         if self.count_string(revert_output) - apply_count > 1:
             self.fail("Reverting patch is not successful")
 
     def test_selftest(self):
         """
-        This test case ensures that live patching does not introduce any regressions
-        in the self-tests of the `libpulp` repository.
+        This test case ensures that live patching does not introduce
+        any regressions in the self-tests of the `libpulp` repository.
         """
         self.url = self.params.get(
             'url', default="https://github.com/SUSE/libpulp.git")
@@ -146,13 +153,15 @@ class LivePatching(Test):
     def test_multiple_process_livepatching(self):
         """
         This test case ensures that live patching can successfully
-        applied to multiple running processes and prints number of processes patched.
+        applied to multiple running processes and prints number of
+        processes patched.
         """
         os.chdir(self.teststmpdir)
         process.system('ulp packer libc_livepatch1.dsc', shell=True)
         self.log.info("Patching all running process")
         output = process.system_output('ulp trigger libc_livepatch1.so',
-                                       sudo=True, shell=True, ignore_status=True)
+                                       sudo=True, shell=True,
+                                       ignore_status=True)
         string_output = output.decode()
         match = re.search(r"Processes patched:\s*(\d+)", string_output)
         if match:
@@ -161,21 +170,25 @@ class LivePatching(Test):
             self.log.info("%s process are livepatched" % patch_number)
         else:
             self.log.info("Multiple process livepatching failed")
-        output = process.system_output('ulp trigger --revert libc_livepatch1.so',
-                                       sudo=True, shell=True, ignore_status=True)
+        output = process.system_output(
+                    'ulp trigger --revert libc_livepatch1.so',
+                    sudo=True, shell=True, ignore_status=True)
         string_output = output.decode()
         match = re.search(r"Processes patched:\s*(\d+)", string_output)
         if match:
             patch_revert_number = int(match.group(1))
         if patch_revert_number == patch_number:
-            self.log.info("livepatch revert successful for %s processes" % patch_revert_number)
+            self.log.info("livepatch revert successful for %s processes" %
+                          patch_revert_number)
         else:
-            self.fail("Livepatch revert failed for %s processes" % (patch_number - patch_revert_number))
+            self.fail("Livepatch revert failed for %s processes" %
+                      (patch_number - patch_revert_number))
 
     def test_two_function_livepatching(self):
         """
-        This test function ensures that a livepatch with two functions is successfully applied,
-        both functions are live-patched, and the livepatch can be correctly reverted.
+        This test function ensures that a livepatch with two functions
+        is successfully applied, both functions are live-patched, and
+        the livepatch can be correctly reverted.
         """
         os.chdir(self.teststmpdir)
         process.system('make', shell=True)
@@ -196,8 +209,8 @@ class LivePatching(Test):
 
     def test_nested_function_livepatching(self):
         """
-        This test function ensures that both a primary livepatch and a nested livepatch
-        are successfully applied and later reverted.
+        This test function ensures that both a primary livepatch and a
+        nested livepatch are successfully applied and later reverted.
         """
         os.chdir(self.teststmpdir)
         process.system('make', shell=True)
@@ -217,14 +230,17 @@ class LivePatching(Test):
             self.fail("Applying nested livepatch failed.")
         else:
             self.log.info("Successfully applied nested livepatch")
-        process.system_output('ulp trigger --revert -p %s libc_livepatch_nested.so' % self.pid, shell=True)
+        process.system_output('ulp trigger --revert -p %s \
+                libc_livepatch_nested.so' % self.pid, shell=True)
         time.sleep(10)
-        process.system_output('ulp trigger --revert -p %s libc_livepatch1.so' % self.pid, shell=True)
+        process.system_output('ulp trigger --revert -p %s \
+                libc_livepatch1.so' % self.pid, shell=True)
 
     def test_nested_function_livepatching_multiple(self):
         """
-        This test function ensures that 12 nested livepatches are successfully applied and
-        later reverted, with each iteration checked for proper application.
+        This test function ensures that 12 nested livepatches are
+        successfully applied and later reverted, with each iteration
+        checked for proper application.
         """
         os.chdir(self.teststmpdir)
         process.system('tar -xf live_patch_nested.tar.gz', shell=True)
@@ -232,25 +248,35 @@ class LivePatching(Test):
         self.start_test('test_long')
         os.chdir('live_patch_nested')
         for i in range(1, 13):
-            process.system('gcc -fPIC -fpatchable-function-entry=16,14 -shared -o libc_livepatch%s.so'
-                           ' libc_livepatch%s.c -msplit-patch-nops' % (i, i), shell=True)
-            process.system('ulp packer %s/live_patch_nested/libc_livepatch%s.dsc' % (self.teststmpdir, i), shell=True)
+            process.system('gcc -fPIC -fpatchable-function-entry=16,14 '
+                           '-shared -o libc_livepatch%s.so'
+                           ' libc_livepatch%s.c -msplit-patch-nops' % (i, i),
+                           shell=True)
+            process.system('ulp packer '
+                           '%s/live_patch_nested/libc_livepatch%s.dsc'
+                           % (self.teststmpdir, i), shell=True)
             livepatch_output = self.apply_livepatch('libc_livepatch%s.so' % i)
         for i in range(2, 13):
-            apply_count = livepatch_output.count(('glibc-livepatch' + str(i)).encode('utf-8'))
+            apply_count = livepatch_output.count(('glibc-livepatch' +
+                                                 str(i)).encode('utf-8'))
             if apply_count < 10:
                 self.fail("Applying livepatch failed for %s iteration." % i)
             else:
-                self.log.info("Successfully applied livepatch for %s iteration" % i)
+                self.log.info("Successfully applied livepatch for %s \
+                              iteration" % i)
         for i in range(1, 13):
-            process.system_output('ulp trigger --revert -p %s libc_livepatch%s.so' % (self.pid, i), shell=True)
+            process.system_output('ulp trigger --revert -p %s \
+                    libc_livepatch%s.so' % (self.pid, i), shell=True)
             time.sleep(2)
 
     def test_nested_function_livepatching_multiple2(self):
         """
-        This test function ensures that 12 nested livepatches are successfully applied and later reverted,
-        with each iteration checked for proper application. The main difference between this test function and
-        the previous one is the order of reverting livepatches, which happens in reverse order (from 12 to 1) in this version.
+        This test function ensures that 12 nested livepatches are
+        successfully applied and later reverted, with each iteration
+        checked for proper application. The main difference between
+        this test function and the previous one is the order of
+        reverting livepatches, which happens in reverse order
+        (from 12 to 1) in this version.
         """
         os.chdir(self.teststmpdir)
         process.system('tar -xf live_patch_nested.tar.gz', shell=True)
@@ -258,16 +284,24 @@ class LivePatching(Test):
         self.start_test('test_long')
         os.chdir('live_patch_nested')
         for i in range(1, 13):
-            process.system('gcc -fPIC -fpatchable-function-entry=16,14 -shared -o libc_livepatch%s.so'
-                           ' libc_livepatch%s.c -msplit-patch-nops' % (i, i), shell=True)
-            process.system('ulp packer %s/live_patch_nested/libc_livepatch%s.dsc' % (self.teststmpdir, i), shell=True)
+            process.system('gcc -fPIC -fpatchable-function-entry=16,14 '
+                           '-shared -o libc_livepatch%s.so'
+                           ' libc_livepatch%s.c -msplit-patch-nops' % (i, i),
+                           shell=True)
+            process.system('ulp packer '
+                           '%s/live_patch_nested/libc_livepatch%s.dsc'
+                           % (self.teststmpdir, i), shell=True)
             livepatch_output = self.apply_livepatch('libc_livepatch%s.so' % i)
         for i in range(2, 13):
-            apply_count = livepatch_output.count(('glibc-livepatch' + str(i)).encode('utf-8'))
+            apply_count = livepatch_output.count(('glibc-livepatch' +
+                                                  str(i)).encode('utf-8'))
             if apply_count < 10:
                 self.fail("Applying livepatch failed for %s iteration." % i)
             else:
-                self.log.info("Successfully applied livepatch for %s iteration" % i)
+                self.log.info("Successfully applied livepatch for %s \
+                              iteration" % i)
         for i in range(12, 0, -1):
-            process.system_output('ulp trigger --revert -p %s libc_livepatch%s.so' % (self.pid, i), shell=True)
+            process.system_output('ulp trigger --revert -p %s \
+                                  libc_livepatch%s.so' % (self.pid, i),
+                                  shell=True)
             time.sleep(2)
