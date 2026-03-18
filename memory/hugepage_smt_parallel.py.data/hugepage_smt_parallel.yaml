@@ -1,0 +1,39 @@
+# Configuration for hugepage_smt_parallel test
+# This test runs hugepage allocation/deallocation in parallel with SMT switching
+
+test_config: !mux
+    quick:
+        # Quick test - 5 minutes, 10 SMT iterations
+        test_duration: 300
+        smt_iterations: 10
+        hugepage_2mb_count: 2000
+        hugepage_1gb_count: 200
+        hugepage_sleep: 3
+        smt_sleep: 2
+
+    medium:
+        # Medium test - 15 minutes, 50 SMT iterations
+        test_duration: 900
+        smt_iterations: 50
+        hugepage_2mb_count: 2000
+        hugepage_1gb_count: 200
+        hugepage_sleep: 3
+        smt_sleep: 2
+
+    long:
+        # Long stress test - 1 hour, 200 SMT iterations
+        test_duration: 3600
+        smt_iterations: 200
+        hugepage_2mb_count: 2000
+        hugepage_1gb_count: 200
+        hugepage_sleep: 3
+        smt_sleep: 2
+
+    stress:
+        # Aggressive stress test - 2 hours, 500 SMT iterations
+        test_duration: 7200
+        smt_iterations: 500
+        hugepage_2mb_count: 3000
+        hugepage_1gb_count: 300
+        hugepage_sleep: 2
+        smt_sleep: 1
