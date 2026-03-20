@@ -1,0 +1,28 @@
+run: !mux
+  # Quick test (for development/debugging)
+  quick_test:
+    smt_iterations: 10
+    smt_sleep: 1
+    kernel_repo: 'https://github.com/torvalds/linux.git'
+    kernel_branch: 'master'
+
+  # Standard test (default - 1000 iterations)
+  standard_test:
+    smt_iterations: 1000
+    smt_sleep: 2
+    kernel_repo: 'https://github.com/torvalds/linux.git'
+    kernel_branch: 'master'
+
+  # Extended stress test (5000 iterations)
+  stress_test:
+    smt_iterations: 5000
+    smt_sleep: 1
+    kernel_repo: 'https://github.com/torvalds/linux.git'
+    kernel_branch: 'master'
+
+  # Custom kernel branch test
+  custom_kernel:
+    smt_iterations: 500
+    smt_sleep: 2
+    kernel_repo: 'https://github.com/torvalds/linux.git'
+    kernel_branch: 'v6.8'
