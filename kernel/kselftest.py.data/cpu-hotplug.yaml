@@ -1,0 +1,8 @@
+component: !mux
+    cpu_hotplug:
+        comp: 'cpu-hotplug'
+
+run_type: !mux
+    upstream:
+        type: 'upstream'
+        location: "https://github.com/torvalds/linux/archive/master.zip" 
