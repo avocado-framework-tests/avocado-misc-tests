@@ -42,8 +42,12 @@ class kselftest(Test):
         match = re.search(match_str, line)
         if match:
             self.error = True
-            self.log.info("Testcase failed. Log from debug: %s" %
-                          match.group(0))
+            failed_test = match.group(0)
+            # Clean up the test name for better readability
+            failed_test = failed_test.strip()
+            if failed_test not in self.failed_tests:
+                self.failed_tests.append(failed_test)
+            self.log.info("Testcase failed. Log from debug: %s" % failed_test)
 
     def setUp(self):
         """
@@ -83,7 +87,8 @@ class kselftest(Test):
             deps.extend(['glibc', 'glibc-devel', 'popt-devel', 'sudo',
                          'libcap2', 'libcap-devel', 'libcap-ng-devel',
                          'fuse', 'fuse-devel', 'glibc-devel-static',
-                         'traceroute', 'iproute2', 'socat', 'libnuma-devel'])
+                         'traceroute', 'iproute2', 'socat', 'libnuma-devel',
+                         'coreutils'])
             if self.distro_ver >= 15:
                 deps.extend(['libhugetlbfs-devel'])
             else:
@@ -194,6 +199,9 @@ class kselftest(Test):
             process.system("sed -i 's/^.*cmsg_time.sh/#&/g' %s" % make_path,
                            shell=True, sudo=True)
         if (self.comp != "cpufreq" and self.comp != "bpf"):
+            # Run make headers before building
+            process.system("make headers -C %s" % self.buldir, shell=True,
+                           sudo=True)
             if self.comp:
                 build_str = '-C %s' % self.comp
             if build.make(self.sourcedir, extra_args='%s' % build_str):
@@ -204,6 +212,7 @@ class kselftest(Test):
         Execute the kernel selftest
         """
         self.error = False
+        self.failed_tests = []
         kself_args = self.params.get("kself_args", default='')
         if self.comp == "bpf":
             self.bpf()
@@ -227,16 +236,41 @@ class kselftest(Test):
             r_file.write(log_output)
         for line in open(results_path).readlines():
             if self.run_type == 'upstream':
+                # Match both overall test failures and individual test failures
                 self.find_match(r'not ok (.*) selftests:(.*)', line)
+                self.find_match(r'# not ok \d+ .* # exit=\d+', line)
             elif self.run_type == 'distro':
                 if self.detected_distro.name == 'SuSE' and\
                         self.distro_ver == 12:
                     self.find_match(r'selftests:(.*)\[FAIL\]', line)
                 else:
+                    # Match both overall test failures and individual test failures
                     self.find_match(r'not ok (.*) selftests:(.*)', line)
+                    self.find_match(r'# not ok \d+ .* # exit=\d+', line)
 
         if self.error:
-            self.fail("Testcase failed during selftests")
+            # Build the summary message
+            summary_lines = [
+                "",
+                "="*70,
+                "FAILED SELFTESTS SUMMARY:",
+                "="*70
+            ]
+            for idx, failed_test in enumerate(self.failed_tests, 1):
+                summary_lines.append(f"{idx}. {failed_test}")
+            summary_lines.extend([
+                "="*70,
+                f"Total failed tests: {len(self.failed_tests)}",
+                "="*70,
+                ""
+            ])
+
+            # Log the summary once in error log
+            summary_msg = "\n".join(summary_lines)
+            self.log.error(summary_msg)
+
+            # Fail with a concise message (detailed summary already logged above)
+            self.fail(f"Testcase failed during selftests. Total failed tests: {len(self.failed_tests)}")
 
     def run_cmd(self, cmd):
         """
