@@ -19,11 +19,13 @@ import re
 import glob
 import shutil
 
-from avocado import Test
-from avocado.utils import build, process
+from avocado import Test, skipIf
+from avocado.utils import build, cpu, process
 from avocado.utils import distro
 from avocado.utils import archive, git
 from avocado.utils.software_manager.manager import SoftwareManager
+
+OLD_POWER = cpu.get_cpu_arch() in ['power7', 'power6']
 
 
 class kselftest(Test):
@@ -45,6 +47,7 @@ class kselftest(Test):
             self.log.info("Testcase failed. Log from debug: %s" %
                           match.group(0))
 
+    @skipIf(OLD_POWER, "skip the test on old hardware !")
     def setUp(self):
         """
         Resolve the packages dependencies and download the source.
@@ -205,6 +208,8 @@ class kselftest(Test):
         """
         self.error = False
         kself_args = self.params.get("kself_args", default='')
+        if self.comp == "ftrace" and self.run_type == "distro":
+           self.ftrace()
         if self.comp == "bpf":
             self.bpf()
         if self.comp == "cpufreq":
@@ -220,7 +225,7 @@ class kselftest(Test):
                 make_cmd = 'make -C %s %s -C %s run_tests' % (
                     self.sourcedir, kself_args, test_comp)
                 self.result = process.run(
-                    make_cmd, shell=True, ignore_status=True)
+                    make_cmd, shell=True, ignore_status=True, timeout=300)
         log_output = self.result.stdout.decode('utf-8')
         results_path = os.path.join(self.outputdir, 'raw_output')
         with open(results_path, 'w') as r_file:
@@ -273,14 +278,75 @@ class kselftest(Test):
             self.cancel("Invalid ksm_tests build path:- {}"
                         .format(ksm_test_dir))
 
+
     def bpf(self):
         """
-        Execute the kernel bpf selftests
+        Execute kernel bpf selftests (distro + upstream support)
         """
+        self.log.info("execute kernel bpf selftests (distro + upstream support)")
         self.sourcedir = os.path.join(self.buldir, self.testdir)
-        os.chdir(self.sourcedir)
-        build.make(self.sourcedir)
-        build.make(self.sourcedir, extra_args='run_tests')
+        if self.run_type == "distro":
+            # Go to kernel build root
+            self.log.info("Go to kernel build root")
+            kernel_root = self.buldir
+            os.chdir(kernel_root)
+            # Step 1: Copy correct Module.symvers
+            self.log.info("Copy correct Module.symvers")
+            uname = process.run("uname -r", shell=True).stdout.decode().strip()
+            symvers_found = False
+            # 1. Check in kernel build tree
+            if os.path.exists(os.path.join(kernel_root, "Module.symvers")):
+                self.log.info("Using Module.symvers from build tree")
+                symvers_found = True
+            # 2. Check /boot
+            elif os.path.exists(f"/boot/symvers-{uname}.gz"):
+                process.run(f"cp /boot/symvers-{uname}.gz .", shell=True)
+                process.run(f"gunzip -d symvers-{uname}.gz", shell=True)
+                process.run(f"mv symvers-{uname} Module.symvers", shell=True)
+                symvers_found = True
+            elif os.path.exists(f"/boot/symvers-{uname}"):
+                process.run(f"cp /boot/symvers-{uname} Module.symvers", shell=True)
+                symvers_found = True
+            # Step 2: Prepare kernel build environment
+            self.log.info("Prepare kernel build environment")
+            process.run("make oldconfig", shell=True)
+            process.run("make prepare", shell=True)
+            process.run("make modules_prepare", shell=True)
+            # Step 3: Copy BTF
+            self.log.info("Copy BTF")
+            process.run("cp /sys/kernel/btf/vmlinux .", shell=True)
+            # Step 4: Run BPF tests
+            self.log.info("Run BPF tests")
+            bpf_dir = os.path.join(kernel_root, "tools/testing/selftests/bpf")
+            cmd = f"make -C {bpf_dir} test_progs"
+            self.result = process.run(cmd, shell=True, ignore_status=True)
+        else:
+            # Upstream (existing behavior)
+            os.chdir(self.sourcedir)
+            cmd = f"make -C {self.sourcedir} run_tests"
+            self.result = process.run(cmd, shell=True, ignore_status=True)
+
+    def ftrace(self):
+        """
+        Execute kernel ftrace selftests
+        """
+        self.log.info("Run Ftrace tests")
+        kernel_root = self.buldir
+        os.chdir(kernel_root)
+        # Debug (optional)
+        self.log.info(f"Running in: {kernel_root}")
+        # Prepare kernel
+        self.log.info(f"Prepare kernel")
+        process.run("make oldconfig", shell=True)
+        process.run("make prepare", shell=True)
+        process.run("make modules_prepare", shell=True)
+        process.run("make scripts", shell=True)
+        # Dynamic path (no hardcoding)
+        self.log.info(f"Dynamic path (no hardcoding)")
+        ftrace_dir = os.path.join(kernel_root, "tools/testing/selftests/ftrace")
+        # Run tests
+        cmd = f"cd {ftrace_dir} && ./ftracetests"
+        self.result = process.run(cmd, shell=True, ignore_status=True)
 
     def cpufreq(self):
         """
@@ -294,3 +360,5 @@ class kselftest(Test):
         self.log.info('Cleaning up')
         if os.path.exists(self.workdir):
             shutil.rmtree(self.workdir)
+
+
