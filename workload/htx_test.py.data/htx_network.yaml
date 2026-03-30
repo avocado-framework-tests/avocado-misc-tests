@@ -1,0 +1,15 @@
+mdt_file: 'net.mdt'
+host_public_ip: x.xx.xxx.xx
+peer_public_ip: x.xx.xxx.xy
+peer_password: "*******"
+peer_user: "root"
+htx_host_interfaces: ""
+peer_interfaces: ""
+# time limit in minutes
+time_limit: 2
+htx_rpm_link: ""
+onesys_test: 'n'
+walk_zero: 'n'
+force_defaults: 'y'
+use_automation: 'y'
+seed: '1234'
