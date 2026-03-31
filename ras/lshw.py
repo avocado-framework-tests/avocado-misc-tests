@@ -14,12 +14,14 @@
 # Author: Ramya BS <ramya@linux.vnet.ibm.com>
 
 import re
+import os
 from avocado import Test
 from avocado import skipIf
 from avocado.utils import process, cpu
 from avocado.utils import genio
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import distro
+from avocado.utils import pci
 
 
 class Lshwrun(Test):
@@ -265,4 +267,69 @@ class Lshwrun(Test):
         self.log.info("===============Verifying -notime option ==============")
         if "modified" in self.run_cmd_out("lshw -notime | grep modified"):
             self.fail("modified time stamp is present evev with -notime")
+        self.error_check()
+
+    def isAccelerator(self):
+        for dev in os.listdir('/sys/bus/pci/devices'):
+            try:
+                if pci.get_pci_class_name(dev) == "accelerator":
+                    return True
+            except Exception:
+                pass
+        return False
+
+    @skipIf("ppc" not in os.uname()[4], "Skip, Powerpc specific tests")
+    @skipIf(lambda self: not self.isAccelerator(), "Unsupported: PCI adapter is not an accelerator")
+    def test_accelerator(self):
+        lshw_accelerator_output = self.run_cmd_out("lshw -class accelerator")
+        if not lshw_accelerator_output:
+            self.is_fail += 1
+            self.fail_cmd_append(f"lshw -class accelerator returned empty output")
+            self.error_check()
+            return
+
+        lspci_output = self.run_cmd_out("lspci")
+        accelerator_pci_ids = []
+        entries = []
+        current_entry = {}
+
+        for line in lshw_accelerator_output.splitlines():
+            line = line.strip()
+            if line.startswith("*-accelerator"):
+                if current_entry:
+                    entries.append(current_entry)
+                current_entry = {}
+            elif line:
+                if ":" in line:
+                    key, value = line.split(":", 1)
+                    current_entry[key.strip()] = value.strip()
+        if current_entry:
+            entries.append(current_entry)
+
+        self.log.info(f"Found {len(entries)} accelerator device(s).")
+
+        required_fields = ['description', 'product', 'vendor', 'physical id', 'bus info', 'version', 'slot']
+
+        for i, entry in enumerate(entries):
+            self.log.info(f"Validating accelerator device {i}")
+
+            for field in required_fields:
+                if field not in entry:
+                    self.is_fail += 1
+                    self.fail_cmd.append(f"Accelerator {i}: Missing '{field}' field")
+
+            if 'processing accelerators' not in entry['description'].lower():
+                self.is_fail += 1
+                self.fail_cmd.append(f"Accelerator {i}: Invalid description")
+
+            if 'Spyre Accelerator' not in entry['product']:
+                self.is_fail += 1
+                self.fail_cmd.append(f"Accelerator {i}: Invalid product")
+
+            bus_info = entry['bus info']
+            pci_addr = bus_info.replace('pci@', '')
+            if pci_addr not in lspci_output:
+                self.is_fail += 1
+                self.fail_cmd.append(f"Accelerator {i}: PCI address {pci_addr} incorrect")
+
         self.error_check()
