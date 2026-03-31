@@ -31,7 +31,7 @@ class podman(Test):
             if not smg.check_installed(package) and not smg.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
-        url = ("http://sourceforge.net/projects/ebizzy/files/ebizzy"
+        url = ("https://downloads.sourceforge.net/projects/ebizzy/files/ebizzy"
                "/0.3/ebizzy-0.3.tar.gz")
 
         tarball = self.fetch_asset(self.params.get("ebizy_url", default=url))
