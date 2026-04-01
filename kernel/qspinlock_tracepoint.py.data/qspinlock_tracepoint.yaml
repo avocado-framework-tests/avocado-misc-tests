@@ -1,0 +1,9 @@
+functional:
+    test_type: functional
+    cpu_list: 0
+    lockstorm_timeout: 10
+
+stress:
+    test_type: stress
+    cpu_list: 0
+    lockstorm_timeout: 20
