@@ -419,75 +419,184 @@ class RASToolsLsvpd(Test):
         if error:
             self.fail(f"Errors for above pci addresses: {error}")
 
-    def test_spyre_lsvpd_validation(self):
-	if process.system("vpdupdate", ignore_status=True, shell=True):
-        	self.fail("vpdupate failed")
+    def isAccelerator(self):
+        for dev in os.listdir('/sys/bus/pci/devices'):
+            try:
+                if pci.get_pci_class_name(dev) == "accelerator":
+                    return True
+            except Exception:
+                pass
+        return False
 
-	spyre_devices = []
-	for dev in os.listdir('/sys/bus/pci/devices'):
-        cls = f"/sys/bus/pci/devices/{dev}/class"
-        try:
-            with open(cls) as f:
-                if f.read().strip().startswith('0x1200'):
-                    spyre_devices.append(dev)
-        except Exception:
-            pass
-
-	if not spyre_devices:
-            self.cancel("Spyre accelerator not present")
-
-	lsvpd_out = self.run_cmd_out("lsvpd").upper()
-        lscfg_out = self.run_cmd_out("lscfg -VP").upper()
-
-	for dev in spyre_devices:
-	    sysfs_vendor = self.run_cmd_out(
-            	f"cat /sys/bus/pci/devices/{dev}/vendor").strip()
-            sysfs_device = self.run_cmd_out(
-            	f"cat /sys/bus/pci/devices/{dev}/device").strip()
-            sysfs_subvendor = self.run_cmd_out(
-            	f"cat /sys/bus/pci/devices/{dev}/subsystem_vendor").strip()
-            sysfs_subdevice = self.run_cmd_out(
-            	f"cat /sys/bus/pci/devices/{dev}/subsystem_device").strip()
-
-	location_code = None
-        for line in lscfg_out.splitlines():
-            if dev in line:
-                parts = line.split()
-                if len(parts) > 1:
-                    location_code = parts[-1]
-                    break
-
-	if not location_code:
-            self.fail(f"Unable to find location code for Spyre device {dev}")
-
-	spyre_block = []
-        capture = False
+    def extract_spyre_block(self, lsvpd_out, location_codes):
+        spyre_blocks = {}
+        current_block = []
+        address = ""
         for line in lsvpd_out.splitlines():
-            if location_code in line:
-                capture = True
-            if capture:
-                if line.strip() == "" and spyre_block:
-                    break
-                spyre_block.append(line)
+            if '*FC' in line:
+                if current_block and address:
+                    for block_line in current_block:
+                        if '*YL' in block_line:
+                            yl_value = block_line.split()[-1]
+                            if yl_value in location_codes:
+                                spyre_blocks[address] = current_block
+                                break
+                current_block = []
+                address = ""
+            current_block.append(line)
 
-	if not spyre_block:
-	    self.fail(f"No lsvpd entry found for Spyre device {dev}")
+            if '*AX' in line and not address:
+                ax_value = line.split()[-1]
+                if ':' in ax_value and '.' in ax_value:
+                    address = ax_value
 
-	spyre_lsvpd = "\n".join(spyre_block)
+        if current_block and address:
+            for block_line in current_block:
+                if '*YL' in block_line:
+                    yl_value = block_line.split()[-1]
+                    if yl_value in location_codes:
+                        spyre_blocks[address] = current_block
+                        break
 
-	ccin_vpd = self._extract_vpd_value(spyre_lsvpd, 'CCIN')
-	fc_vpd = self._extract_vpd_value(spyre_lsvpd, 'FC')
-	ec_vpd = self._extract_vpd_value(spyre_lsvpd, 'EC')
-	fw_vpd = self._extract_vpd_value(spyre_lsvpd, 'FW')
-	
-	if not ccin_vpd:
-            self.fail(f"CCIN missing in lsvpd for Spyre device {dev}")
+        return spyre_blocks
 
-	if not fc_vpd:
-            self.fail(f"Invalid FC value for Spyre device {dev}")
+    def parse_lscfg_output(self, lscfg_out):
+        data = {}
+        current_key = None
 
-	if not ec_vpd:
-       	    self.fail(f"Invalid EC value for Spyre device {dev}")
+        for line in lscfg_out.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
 
-	if not fw_vpd:
-	    self.fail(f"Firmware value missing for Spyre device {dev}")
+            if stripped[0] == '.':
+                value = stripped.lstrip('.')
+                if current_key and value:
+                    data[current_key] = value
+                    current_key = None
+                continue
+
+            key_chars = []
+            value_chars = []
+            in_value = False
+            dot_count = 0
+
+            for char in stripped:
+                if not in_value:
+                    if char == '.':
+                        dot_count += 1
+                        if dot_count >= 2:
+                            in_value = True
+                    else:
+                        if dot_count > 0:
+                            key_chars.extend(['.'] * dot_count)
+                            dot_count = 0
+                        key_chars.append(char)
+                else:
+                    value_chars.append(char)
+
+            key = ''.join(key_chars).strip()
+            value = ''.join(value_chars).lstrip('.')
+
+            if key:
+                if key.endswith(')') and '(' in key:
+                    paren_idx = key.rfind('(')
+                    short_key = key[paren_idx+1:-1]
+                    if value:
+                        data[short_key] = value
+                        current_key = None
+                    else:
+                        current_key = short_key
+                else:
+                    if value:
+                        data[key] = value
+                        current_key = None
+                    else:
+                        current_key = key
+
+        return data
+
+    def parse_lsvpd_block(self, block):
+        data = {}
+        missing_values = []
+
+        for line in block:
+            if line.strip().startswith('*'):
+                parts = line.split(None, 1)
+                key = parts[0].lstrip('*')
+
+                if len(parts) < 2:
+                    missing_values.append(key)
+                    data[key] = None
+                else:
+                    value = parts[1].strip()
+                    if key in data:
+                        if isinstance(data[key], list):
+                            data[key].append(value)
+                        else:
+                            data[key] = [data[key], value]
+                    else:
+                        data[key] = value
+
+        if missing_values:
+            data['missing_fields'] = missing_values
+
+        return data
+
+    @skipIf("ppc" not in os.uname()[4], "Skip, Powerpc specific tests")
+    @skipIf(lambda self: not self.isAccelerator(), "Unsupported: PCI adapter is not an accelerator")
+    def test_spyre_lsvpd_validation(self):
+        self.run_cmd("vpdupdate")
+
+        lsvpd_out = self.run_cmd_out("lsvpd")
+        location_codes = []
+        pci_addresses = []
+
+        for dev in pci.get_pci_addresses():
+            try:
+                class_name = pci.get_pci_class_name(dev)
+                if class_name == "accelerator":
+                    lscfg_out = self.run_cmd_out(f"lscfg -vl {dev}")
+                    cfg_output = self.parse_lscfg_output(lscfg_out)
+                    if 'YL' in cfg_output:
+                        location_codes.append(cfg_output['YL'])
+                        pci_addresses.append(dev)
+            except Exception as e:
+                self.log.warning(f"Failed to get config for {dev}: {e}")
+                continue
+
+        spyre_blocks = self.extract_spyre_block(lsvpd_out, location_codes)
+        if not spyre_blocks:
+            self.fail("No lsvpd entry found for the Spyre card(s).")
+
+        for dev in pci_addresses:
+            spyre_block = spyre_blocks[dev]
+            lsvpd_data = self.parse_lsvpd_block(spyre_block)
+
+            if 'missing_fields' in lsvpd_data:
+                missing = ', '.join(lsvpd_data['missing_fields'])
+                self.fail(f"{dev}: lsvpd fields missing values: {missing}")
+
+            lscfg_out = self.run_cmd_out(f"lscfg -vl {dev}")
+            lscfg_data = self.parse_lscfg_output(lscfg_out)
+
+            validations = {
+                'TM': 'Machine Type-Model',
+                'MF': 'Manufacturer Name',
+                'PN': 'Part Number of assembly',
+                'SN': 'Serial Number',
+                'FN': 'Field Replaceable Unit Number',
+                'EC': 'Engineering Change Level',
+                'RL': 'Non-alterable ROM level',
+                'CC': 'CC',
+                'YC': 'YC',
+                'YL': 'YL'
+            }
+
+            for lsvpd_key, lscfg_key in validations.items():
+                if lsvpd_key in lsvpd_data and lscfg_key in lscfg_data:
+                    lsvpd_val = lsvpd_data[lsvpd_key]
+                    if isinstance(lsvpd_val, list):
+                        lsvpd_val = lsvpd_val[0]
+                    if lsvpd_val.strip() != lscfg_data[lscfg_key].strip():
+                        self.fail(f"{dev}: {lsvpd_key} mismatch - lsvpd: {lsvpd_val}, lscfg: {lscfg_data[lscfg_key]}")
