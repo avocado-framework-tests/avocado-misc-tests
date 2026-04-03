@@ -137,6 +137,6 @@ class WillItScaleTest(Test):
         if self.postprocess:
             cmd = './postprocess.py'
             if process.system(cmd, shell=True, ignore_status=True) != 0:
-                self.warn('Post processing failed, graph may not be generated')
+                self.log.warn('Post processing failed, graph may not be generated')
         if self.testcase not in 'All':
             shutil.copy(f"{self.testcase}.html", self.logdir)
