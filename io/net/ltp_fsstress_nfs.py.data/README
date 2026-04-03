@@ -1,0 +1,302 @@
+# LTP fsstress NFS Test Configuration
+
+## Overview
+
+This test validates filesystem operations over NFS (Network File System) by running the LTP (Linux Test Project) fsstress tool on an NFS-mounted filesystem. The test stresses the NFS mount with concurrent filesystem operations to verify stability and correctness.
+
+## Test Purpose
+
+The test validates:
+- NFS mount stability under stress conditions
+- Filesystem operations (create, read, write, delete, rename, etc.) over NFS
+- Network reliability during intensive filesystem I/O
+- NFS server and client interaction under load
+- System stability with multiple concurrent processes performing filesystem operations
+
+## Prerequisites
+
+### Hardware Requirements
+- **Two machines** (host and peer/NFS server)
+- Network connectivity between the machines
+- Sufficient disk space on both machines
+
+### Network Requirements
+- Two network interfaces (one on each machine) for the test network
+- A separate management/public network for SSH access to the peer
+- Network connectivity between host and peer on the test network
+
+### Software Requirements
+- Root/sudo access on both machines
+- NFS utilities (nfs-utils, nfs-kernel-server)
+- SSH access to peer machine
+- LTP fsstress tool (automatically downloaded and built)
+- Standard build tools (gcc, make, automake, autoconf)
+
+## Configuration Parameters
+
+### Network Parameters
+
+#### `host_interface`
+- **Type**: String
+- **Default**: `"eth0"`
+- **Description**: Network interface name on the host machine that will be used for NFS traffic
+- **Example**: `"eth0"`, `"ens3"`, `"enp0s1"`
+
+#### `host_ip`
+- **Type**: String (IP address)
+- **Required**: Yes
+- **Description**: Private IP address to assign to the host's test interface. This IP is used for NFS communication.
+- **Example**: `"192.168.1.100"`
+
+#### `peer_interface`
+- **Type**: String
+- **Default**: `"eth0"`
+- **Description**: Network interface name on the peer machine (NFS server). Can be auto-detected if not specified.
+- **Example**: `"eth0"`, `"ens3"`, `"enp0s1"`
+
+#### `peer_ip`
+- **Type**: String (IP address)
+- **Required**: Yes
+- **Description**: Private IP address to assign to the peer's test interface. This is the IP used for NFS traffic (NOT the public/management IP).
+- **Example**: `"192.168.1.101"`
+
+#### `peer_public_ip`
+- **Type**: String (IP address)
+- **Required**: Yes
+- **Description**: Public or management IP address used to SSH into the peer machine. This is different from `peer_ip`.
+- **Example**: `"10.10.10.101"`
+
+#### `peer_user`
+- **Type**: String
+- **Default**: `"root"`
+- **Description**: SSH username for connecting to the peer machine
+- **Example**: `"root"`, `"admin"`
+
+#### `peer_password`
+- **Type**: String
+- **Required**: Yes
+- **Description**: SSH password for the peer machine
+- **Example**: `"password"`
+
+#### `netmask`
+- **Type**: String (netmask)
+- **Default**: `"255.255.255.0"`
+- **Description**: Network mask for the private test network
+- **Example**: `"255.255.255.0"` (Class C), `"255.255.0.0"` (Class B)
+
+### NFS Parameters
+
+#### `nfs_mount_point`
+- **Type**: String (path)
+- **Default**: `"/mnt/nfs"`
+- **Description**: Directory path on the host where the NFS filesystem will be mounted
+- **Example**: `"/mnt/nfs"`, `"/mnt/test_nfs"`
+
+#### `nfs_server_path`
+- **Type**: String (path)
+- **Default**: `"/mnt/nfssrc"`
+- **Description**: Directory path on the peer (NFS server) that will be exported and shared via NFS
+- **Example**: `"/mnt/nfssrc"`, `"/export/nfs"`
+
+### fsstress Parameters
+
+#### `fsstress_loop`
+- **Type**: String (integer)
+- **Default**: `"0"`
+- **Description**: Number of loops for fsstress to run. Use `"0"` for infinite loops (controlled by timeout).
+- **Example**: `"0"` (infinite), `"10"` (10 loops), `"100"` (100 loops)
+
+#### `n_val`
+- **Type**: String (integer)
+- **Default**: `"200"`
+- **Description**: Number of operations per process. Higher values increase the workload per process.
+- **Example**: `"200"`, `"500"`, `"999999"`
+
+#### `p_val`
+- **Type**: String (integer)
+- **Default**: `"200"`
+- **Description**: Number of concurrent processes. Higher values increase system load and stress.
+- **Example**: `"50"`, `"200"`, `"500"`
+
+#### `fsstress_timeout`
+- **Type**: String (integer, seconds)
+- **Default**: `"60"`
+- **Description**: Maximum duration for the fsstress test in seconds. The test will be terminated after this time.
+- **Example**: `"60"` (1 minute), `"600"` (10 minutes), `"3600"` (1 hour)
+
+## Important Notes
+
+### peer_ip vs peer_public_ip Distinction
+
+This is a critical configuration aspect:
+
+- **`peer_public_ip`**: Used ONLY for SSH connection to the peer machine. This is typically the machine's management or public IP address that is already configured and accessible.
+
+- **`peer_ip`**: The private IP address that will be assigned to the peer's test interface during the test. This is used for NFS traffic between host and peer.
+
+**Example Scenario**:
+```
+Peer machine has:
+- Management IP: 10.10.10.101 (already configured, used for SSH)
+- Test interface eth0: Will be configured with 192.168.1.101 during test
+
+Configuration:
+peer_public_ip: "10.10.10.101"  # For SSH access
+peer_ip: "192.168.1.101"         # For NFS traffic
+```
+
+### Network Configuration
+
+The test will:
+1. Configure `host_interface` with `host_ip`
+2. SSH to peer using `peer_public_ip`
+3. Configure peer's `peer_interface` with `peer_ip`
+4. Set up NFS server on peer
+5. Mount NFS on host using `peer_ip`
+
+## Example Configurations
+
+### Short Test (1 minute)
+Quick validation test suitable for CI/CD pipelines:
+```yaml
+fsstress_loop: "0"
+n_val: "200"
+p_val: "50"
+fsstress_timeout: "60"
+```
+
+### Medium Stress Test (10 minutes)
+Moderate stress test for regular testing:
+```yaml
+fsstress_loop: "0"
+n_val: "500"
+p_val: "200"
+fsstress_timeout: "600"
+```
+
+### Long Stress Test (1 hour)
+Extended stress test for thorough validation:
+```yaml
+fsstress_loop: "0"
+n_val: "999999"
+p_val: "500"
+fsstress_timeout: "3600"
+```
+
+### Extended Stress Test (12 hours)
+Overnight or weekend stress test for stability validation:
+```yaml
+fsstress_loop: "0"
+n_val: "999999"
+p_val: "500"
+fsstress_timeout: "43200"
+```
+
+### Finite Loop Test
+Test with specific number of loops (no timeout needed):
+```yaml
+fsstress_loop: "10"
+n_val: "100"
+p_val: "50"
+fsstress_timeout: "600"
+```
+Note: Timeout acts as a safety mechanism in case loops take too long.
+
+## Running the Test
+
+Execute the test using Avocado with the YAML configuration:
+
+```bash
+avocado run --max-parallel-tasks=1 io/net/ltp_fsstress_nfs.py -m io/net/ltp_fsstress_nfs.py.data/ltp_fsstress_nfs.yaml
+```
+
+**Important**: Use `--max-parallel-tasks=1` for serial execution as required by most tests in this repository.
+
+## Pass/Fail Criteria
+
+### Test Passes When:
+- NFS mount is successfully established
+- fsstress runs for the specified duration or completes all loops (exit status 0 or 124)
+- No NFS-related errors appear in dmesg (no 'nfs' or 'rpc' keywords in error-level messages)
+- All fsstress processes terminate properly
+
+### Test Fails When:
+- NFS mount fails during setup (test is cancelled)
+- NFS-related errors appear in dmesg at error level or higher (checked for 'nfs' or 'rpc' keywords in err/crit/alert/emerg levels)
+
+### Important Notes:
+- The test explicitly checks only for NFS/RPC-related errors in dmesg
+- Exit statuses other than 0 or 124 are logged as warnings but do not fail the test
+- Setup failures (network configuration, SSH connection, NFS mount) will cancel the test, not fail it
+- The test uses `ignore_status=True` for fsstress execution, so non-zero exit codes (except NFS errors in dmesg) won't fail the test
+
+## Timeout Behavior
+
+The test uses the `timeout` command to control fsstress execution:
+
+- **Exit Status 0**: fsstress completed all operations before the timeout (normal completion)
+- **Exit Status 124**: fsstress was terminated by timeout after running for the specified duration (expected behavior for infinite loops)
+- **Other Exit Status**: Indicates an error condition
+
+When `fsstress_loop` is set to `"0"` (infinite), the test is expected to run until the timeout and exit with status 124. This is normal and indicates the test ran for the full duration without errors.
+
+## Test Workflow
+
+1. **Setup Phase**:
+   - Validate parameters
+   - Install required packages on both machines
+   - Configure network interfaces with specified IPs
+   - Verify network connectivity (ping test)
+   - Set up NFS server on peer
+   - Mount NFS on host
+   - Download and build LTP fsstress
+
+2. **Test Phase**:
+   - Clear dmesg
+   - Run fsstress with specified parameters
+   - Monitor for timeout or completion
+   - Verify all processes terminate
+
+3. **Validation Phase**:
+   - Check dmesg for NFS-related errors
+   - Check system logs for issues
+   - Verify NFS mount integrity
+
+4. **Cleanup Phase**:
+   - Kill any remaining fsstress processes
+   - Unmount NFS on host
+   - Unexport NFS directory on peer
+   - Remove temporary directories
+   - Close SSH sessions
+
+## Troubleshooting
+
+### Common Issues
+
+**NFS mount fails**:
+- Verify network connectivity between host and peer
+- Check firewall settings (test disables firewalld on peer)
+- Verify NFS server is running on peer
+- Check export permissions
+
+**SSH connection fails**:
+- Verify `peer_public_ip` is correct and accessible
+- Check SSH credentials (`peer_user` and `peer_password`)
+- Ensure SSH service is running on peer
+
+**Interface configuration fails**:
+- Verify interface names are correct
+- Check if interfaces are already in use
+- Ensure no IP conflicts on the network
+
+**Test timeout issues**:
+- Adjust `fsstress_timeout` based on system performance
+- Reduce `p_val` (number of processes) for slower systems
+- Monitor system resources during test
+
+## Tags
+
+This test uses the following Avocado tags:
+- `net`: Network-related test
+- `fs`: Filesystem-related test
+- `privileged`: Requires root/sudo access
