@@ -16,14 +16,12 @@
 #       :Sachin Sant <sachinp@linux.ibm.com>
 
 import os
-import platform
 from avocado import Test
-from avocado.utils import archive, build, distro
-from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils import archive, build
+from avocado.utils.software_manager.distro_packages import ensure_tool
 
 
 class Perftool(Test):
-
     """
     perftool-testsuite
     :avocado: tags=perf,testsuite
@@ -35,23 +33,26 @@ class Perftool(Test):
         '''
 
         # Check for basic utilities
-        smm = SoftwareManager()
-        detected_distro = distro.detect()
-        deps = ['gcc', 'make']
-        if 'Ubuntu' in detected_distro.name:
-            deps.extend(['linux-tools-common', 'linux-tools-%s' %
-                         platform.uname()[2]])
-        elif 'debian' in detected_distro.name:
-            deps.extend(['linux-tools-%s' % platform.uname()[2][3]])
-        elif detected_distro.name in ['rhel', 'SuSE', 'fedora',
-                                      'centos']:
-            deps.extend(['perf', 'gcc-c++'])
-        else:
-            self.cancel("Install the package for perf supported\
-                      by %s" % detected_distro.name)
-        for package in deps:
-            if not smm.check_installed(package) and not smm.install(package):
-                self.cancel('%s is needed for the test to be run' % package)
+        perf_path = self.params.get('perf_bin', default='')
+
+        # Define distro-aware package map for perf and build deps
+        distro_pkg_map = {
+            "Ubuntu": [f"linux-tools-{os.uname()[2]}", "linux-tools-common", "gcc", "make"],
+            "debian": [f"linux-tools-{os.uname()[2][3]}", "gcc", "make"],
+            "centos": ["perf", "gcc", "make", "gcc-c++"],
+            "fedora": ["perf", "gcc", "make", "gcc-c++"],
+            "rhel": ["perf", "gcc", "make", "gcc-c++"],
+            "SuSE": ["perf", "gcc", "make", "gcc-c++"],
+        }
+
+        try:
+            perf_version = ensure_tool("perf",
+                                       custom_path=perf_path,
+                                       distro_pkg_map=distro_pkg_map)
+            self.log.info(f"Perf version: {perf_version}")
+            self.perf_bin = perf_path if perf_path else "perf"
+        except RuntimeError as e:
+            self.cancel(str(e))
 
         locations = ["https://github.com/rfmvh/perftool-testsuite/archive/"
                      "master.zip"]
