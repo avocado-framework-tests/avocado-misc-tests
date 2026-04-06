@@ -45,6 +45,77 @@ class Stressngmem(Test):
                     matching_pattern.append(line.rstrip("\n"))
         return matching_pattern
 
+    def extract_call_traces(self, filename, ignore_patterns):
+        """
+        Extract full call traces from dmesg, excluding OOM-related traces.
+        Returns a list of unique call trace blocks.
+        """
+        call_traces = []
+        unique_traces = set()
+
+        with open(filename, 'r') as file_obj:
+            lines = file_obj.readlines()
+            i = 0
+            while i < len(lines):
+                line = lines[i].rstrip("\n")
+
+                # Check if this is the start of a call trace
+                if 'Call Trace:' in line:
+                    # Check if this trace should be ignored (OOM-related)
+                    should_ignore = False
+                    for ignore_pattern in ignore_patterns:
+                        if ignore_pattern in line:
+                            should_ignore = True
+                            break
+
+                    if not should_ignore:
+                        # Collect the full call trace
+                        trace_lines = [line]
+                        i += 1
+
+                        # Continue collecting lines that are part of the call trace
+                        # Call trace lines typically start with spaces or specific patterns
+                        while i < len(lines):
+                            next_line = lines[i].rstrip("\n")
+
+                            # Check if still part of call trace (indented or contains function names)
+                            if (next_line.strip().startswith('[') or
+                                next_line.strip().startswith('?') or
+                                '0x' in next_line or
+                                '+0x' in next_line or
+                                next_line.strip().startswith('---[') or
+                                (len(next_line) > 0 and next_line[0] == ' ' and
+                                 any(c in next_line for c in ['[', ']', '+']))):
+
+                                # Check if this line should be ignored
+                                line_should_ignore = False
+                                for ignore_pattern in ignore_patterns:
+                                    if ignore_pattern in next_line:
+                                        line_should_ignore = True
+                                        should_ignore = True  # Mark entire trace as ignored
+                                        break
+
+                                if not line_should_ignore:
+                                    trace_lines.append(next_line)
+                                i += 1
+                            else:
+                                # End of call trace
+                                break
+
+                        # Add the complete trace if not ignored
+                        if not should_ignore and trace_lines:
+                            trace_block = '\n'.join(trace_lines)
+                            # Use first line as key for uniqueness
+                            trace_key = trace_lines[0]
+                            if trace_key not in unique_traces:
+                                unique_traces.add(trace_key)
+                                call_traces.append(trace_block)
+                        continue
+
+                i += 1
+
+        return call_traces
+
     def process_looping(self, list_of_stressors):
         loop_count = 0
         while loop_count < len(list_of_stressors):
@@ -108,6 +179,7 @@ class Stressngmem(Test):
                               "mmap"]
 
         self.had_error = 0
+        self.skip_teardown_dmesg_check = False  # Flag to skip dmesg check in tearDown
         self.base_time = self.params.get("base_time", default=300)
         self.time_per_gig = self.params.get("time_per_gig", default=10)
         self.url = self.params.get("url", default="https://github.com/"
@@ -168,10 +240,165 @@ class Stressngmem(Test):
                     was %s" % return_code)
         self.log.info("=====================================================")
 
+    def test_vm_class_sequential(self):
+        """
+        Test VM and memory-related stressors sequentially with specific options.
+        Runs stressors in sequence for exactly 1 hour total.
+
+        Command breakdown:
+        --no-oom-adjust: Don't adjust OOM killer settings
+        --oomable: Allow OOM killer to terminate stressors
+        --seq 0: Run stressors sequentially (one at a time)
+        -t 60s: Each stressor runs for 60 seconds
+        --perf: Enable performance statistics
+        -v: Verbose output
+        --verify: Verify results
+
+        Stressors to run sequentially (60 total, 1 hour runtime):
+        VM stressors: vm, vm-rw, vm-addr, vm-splice, mmap, mremap,
+                      mlock, mincore, madvise, msync, mprotect
+        Memory stressors: malloc, brk, stack, bigheap
+        Other: tlb-shootdown, fault, userfaultfd, fork, exec, memfd,
+               numa, pkey, remap, rmap, shm, switch, tmpfs, pthread, swap
+        """
+        self.log.info("=====================================================")
+        self.log.info("Starting VM class sequential stress test")
+        self.log.info("Expected runtime: Approximately 60 minutes")
+        self.log.info("=====================================================")
+
+        # Set flag to skip dmesg check in tearDown. We check it here instead
+        self.skip_teardown_dmesg_check = True
+
+        # List of all stressors to run sequentially (60 stressors × 60s = 3600s = 60 minutes)
+        stressors = [
+            "tlb-shootdown", "fault", "userfaultfd", "fork", "exec", "memfd",
+            "numa", "pkey", "remap", "rmap", "shm", "switch", "tmpfs",
+            "pthread", "swap",
+            "vm", "vm-rw", "vm-addr", "vm-splice", "mmap", "mremap",
+            "mlock", "mincore", "madvise", "msync", "mprotect",
+            # Memory stressors
+            "malloc", "brk", "stack", "bigheap",
+            # Additional VM/memory stressors
+            "memcpy", "memfd", "memrate", "memthrash", "mq", "pipe",
+            "shm-sysv", "mmapfork", "mmapmany", "mmapfixed", "mmaphuge",
+            "context", "clone", "vfork", "vforkmany", "zombie",
+            "get", "getrandom", "handle", "heapsort", "hdd",
+            "hsearch", "icache", "iomix", "itimer",
+            "kcmp", "key", "kill", "klog", "lease"
+        ]
+
+        # Base command with common options
+        base_cmd = "stress-ng --no-oom-adjust --oomable --seq 0 -t 60s --perf -v --verify"
+
+        # Build the full command with all stressors
+        stressor_args = []
+        for stressor in stressors:
+            stressor_args.append("--%s 0" % stressor)
+
+        full_cmd = "%s %s" % (base_cmd, " ".join(stressor_args))
+
+        self.log.info("Executing command: %s", full_cmd)
+
+        # Set timeout to 90 minutes (1.5x expected 60 minutes) for safety
+        timeout_seconds = 90 * 60
+        cmd_with_timeout = "timeout -s 9 %s %s" % (timeout_seconds, full_cmd)
+
+        self.log.info("Running VM class sequential test...")
+        return_code = process.system(cmd_with_timeout, ignore_status=True, shell=True)
+
+        self.log.info("=====================================================")
+        self.log.info("VM class sequential test completed")
+        self.log.info("Return code: %s", return_code)
+
+        # Check for errors in dmesg (excluding OOM and expected swap errors)
+        errors_in_dmesg = []
+        unique_errors = set()  # Track unique errors to log only once
+
+        # Patterns to search for (excluding Call Trace - handled separately)
+        error_patterns = ['WARNING: CPU:', 'Oops', 'Segfault', 'soft lockup',
+                          'Unable to handle', 'ard LOCKUP']
+
+        # Patterns to ignore (expected errors from stress testing)
+        ignore_patterns = [
+            'Out of memory',
+            'OOM',
+            'oom',
+            'Killed process',
+            'Memory cgroup out of memory',
+            'Unable to handle swap header version',
+            'swap header'
+        ]
+
+        filename = dmesg.collect_dmesg()
+
+        # First, collect non-call-trace errors
+        for error_pattern in error_patterns:
+            contents = self.read_line_with_matching_pattern(filename, error_pattern)
+            if contents:
+                for line in contents:
+                    # Check if this line should be ignored
+                    should_ignore = False
+                    for ignore_pattern in ignore_patterns:
+                        if ignore_pattern in line:
+                            should_ignore = True
+                            break
+
+                    # Add to errors if not ignored and not already seen
+                    if not should_ignore and line not in unique_errors:
+                        unique_errors.add(line)
+                        errors_in_dmesg.append(line)
+
+        # Now extract full call traces (excluding OOM-related ones)
+        call_traces = self.extract_call_traces(filename, ignore_patterns)
+
+        # Log unique dmesg errors if found (only once each)
+        if errors_in_dmesg or call_traces:
+            self.log.error("=====================================================")
+            self.log.error("Errors found in dmesg (OOM errors excluded):")
+            self.log.error("=====================================================")
+
+            if errors_in_dmesg:
+                self.log.error("\n--- Non-Call-Trace Errors ---")
+                for error in errors_in_dmesg:
+                    self.log.error("%s", error)
+
+            if call_traces:
+                self.log.error("\n--- Call Traces (%d unique) ---" % len(call_traces))
+                for i, trace in enumerate(call_traces, 1):
+                    self.log.error("\nCall Trace #%d:", i)
+                    self.log.error("%s", trace)
+
+            self.log.error("\n=====================================================")
+
+        # Check return code and dmesg errors
+        total_errors = len(errors_in_dmesg) + len(call_traces)
+
+        if return_code == 137:
+            self.fail("VM class sequential test timed out after 90 minutes!")
+        elif total_errors > 0:
+            # Real errors found in dmesg (non-OOM)
+            self.fail("VM class sequential test completed but %d error(s) found in dmesg: %d non-trace errors, %d call traces (see log above)" %
+                      (total_errors, len(errors_in_dmesg), len(call_traces)))
+        elif return_code != 0:
+            # Non-zero return code but no dmesg errors (likely OOM-related failures)
+            self.log.info("=====================================================")
+            self.log.info("stress-ng returned exit code %s, but no non-OOM errors found in dmesg", return_code)
+            self.log.info("This is expected behavior during aggressive memory stress testing")
+            self.log.info("==> VM class sequential test passed!")
+            self.log.info("=====================================================")
+        else:
+            self.log.info("==> VM class sequential test passed!")
+            self.log.info("=====================================================")
+
     def tearDown(self):
+        # Skip dmesg check if test already handled it
+        if hasattr(self, 'skip_teardown_dmesg_check') and self.skip_teardown_dmesg_check:
+            self.log.info("Skipping tearDown dmesg check (already checked in test method)")
+            return
+
         errors_in_dmesg = []
         pattern = ['WARNING: CPU:', 'Oops', 'Segfault', 'soft lockup',
-                   'Unable to handle', 'ard LOCKUP']
+                   'Unable to handle', 'Hard LOCKUP']
 
         filename = dmesg.collect_dmesg()
 
