@@ -1,0 +1,18 @@
+# Configuration for mremap_selftest.py
+# Kernel source repository settings
+kernel_url: "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git"
+kernel_branch: "master"
+
+# Optional: Custom test parameters
+# Uncomment and modify as needed
+# test_size: "1048576"  # Test size in bytes
+# test_iterations: "100"  # Number of test iterations
+
+# Alternative kernel sources (uncomment to use)
+# For stable kernel:
+# kernel_url: "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git"
+# kernel_branch: "linux-6.6.y"
+
+# For specific kernel version:
+# kernel_url: "https://github.com/torvalds/linux.git"
+# kernel_branch: "v6.7"
