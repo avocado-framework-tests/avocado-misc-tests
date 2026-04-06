@@ -243,6 +243,20 @@ class RASToolsLsvpd(Test):
         list = ['-A', '-v', '-D']
         for list_item in list:
             self.run_cmd('lsmcode %s' % list_item)
+
+        if self.isAccelerator():
+            self.log.info("Accelerator detected, verifying Spyre card details")
+            lsmcode_output = self.run_cmd_out('lsmcode -A')
+            spyre_devices = self.run_cmd_out("lspci | grep -i spyre | awk '{print $1}'").strip().split('\n')
+            if not spyre_devices or spyre_devices == ['']:
+                self.fail("No Spyre devices found in the system")
+
+            for device in spyre_devices:
+                if device and device not in lsmcode_output:
+                    self.fail(f"Spyre device {device} not found in lsmcode -A output")
+
+            self.log.info("Spyre card details verified.")
+
         self._find_vpd_db_and_execute(self.var_lib_lsvpd_dir, "lsmcode --path")
         self._find_vpd_gzip_and_execute(self.var_lib_lsvpd_dir, "lsmcode")
 
