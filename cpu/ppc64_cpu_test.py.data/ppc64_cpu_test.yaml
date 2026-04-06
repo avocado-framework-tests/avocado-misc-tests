@@ -1,7 +1,51 @@
-test_loop : 10
+# Configuration file for ppc64_cpu test suite
+# All parameters are optional and have sensible defaults
+
+# Original ppc64_cpu_test.py parameters
+test_loop: 10
+
+# Number of iterations for basic tests
+iteration: 5
+
+# Number of iterations for stress tests
+stress_iterations: 20
+
+# Number of iterations for parallel operations
+parallel_iterations: 3
+
+# Number of random stress test iterations
+random_iterations: 50
+
+# Number of parallel threads for stress testing
+num_parallel_threads: 4
+
+# Test execution options (set to false to skip specific test categories)
+run_all_smt_operations: true
+run_dynamic_core_operations: true
+run_smt_core_interaction: true
+run_random_stress: true
+run_parallel_operations: true
+run_progressive_core_online: true
+run_specific_cores_offline: true
+
+# Verification options
+enable_comprehensive_verification: true
+verify_after_each_operation: true
+
+# Timing options (in seconds)
+sleep_after_smt_change: 1
+sleep_after_core_change: 1
+sleep_between_operations: 0.3
+
+# Logging options
+verbose_logging: true
+log_dmesg: true
+
+# Build type configuration (original ppc64_cpu_test.py feature)
 run_type: !mux
     upstream:
         ppcutils_url: 'https://github.com/ibm-power-utilities/powerpc-utils/archive/refs/heads/master.zip'
         type: 'upstream'
     distro:
         type: 'distro'
+
