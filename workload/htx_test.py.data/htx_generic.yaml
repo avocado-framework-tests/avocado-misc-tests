@@ -1,0 +1,21 @@
+# Generic HTX Test Configuration
+# This configuration runs HTX with a generic MDT file for overall system stress testing
+
+# Test type (optional - will be auto-detected)
+test_type: generic
+
+# MDT file to use for testing
+# Common options: mdt.mem (memory), mdt.cpu (CPU), mdt.all (all devices)
+mdt_file: mdt.mem
+
+# How long to run the test
+time_limit: 2
+
+# Time unit: 'm' for minutes, 'h' for hours
+time_unit: h
+
+# Installation type: 'rpm' or 'git'
+run_type: rpm
+
+# URL to HTX RPM repository (required for RPM installation)
+htx_rpm_link: ''
