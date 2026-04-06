@@ -1,0 +1,55 @@
+# Reranker/Scoring Use Case Configuration
+# Model: BGE Reranker v2-m3
+# Batch size: 4
+# Maximum input/output context size: 8192
+# Number of cards per container: 1
+
+TEST_NAME: "Reranker_BGE_M3"
+
+# Container Configuration
+CONTAINER_URL: ""
+CONTAINER_TAG: ""
+CONTAINER_REGISTRY: "icr.io"
+
+# AIU Configuration
+AIU_PCIE_IDS: "0381:50:00.0"
+AIU_WORLD_SIZE: 1
+
+# Model Configuration
+HOST_MODELS_DIR: "/opt/ibm/spyre/models"
+VLLM_MODEL_PATH: "/models/bge-reranker"
+
+# VLLM Parameters
+MAX_MODEL_LEN: 8192
+MAX_BATCH_SIZE: 4
+
+# Container Runtime Parameters
+MEMORY: "1500G"
+# SHM_SIZE: ""  # Not used for Reranker
+DEVICE: "/dev/vfio"
+PRIVILEGED: "true"
+PIDS_LIMIT: "0"
+USERNS: "keep-id"
+GROUP_ADD: "keep-groups"
+PORT_MAPPING: "127.0.0.1::8000"
+
+# VLLM Environment Variables
+VLLM_SPYRE_USE_CB: "1"
+VLLM_DT_CHUNK_LEN: 0
+VLLM_SPYRE_USE_CHUNKED_PREFILL: 0
+
+# VLLM Options
+ENABLE_PREFIX_CACHING: "false"
+# ADDITIONAL_VLLM_ARGS: ""  # Optional comma-separated additional arguments
+
+# Test Configuration
+STARTUP_TIMEOUT: 600
+
+# API Key (set via environment or command line)
+API_KEY: "your-api-key-here"
+
+# Model Download Configuration
+# Set DOWNLOAD_MODEL to "true" to enable automatic model downloading
+DOWNLOAD_MODEL: "true"
+HF_MODEL_ID: "BAAI/bge-reranker-v2-m3"
+MODEL_NAME: "bge-reranker-v2-m3"
