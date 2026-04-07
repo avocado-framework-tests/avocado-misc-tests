@@ -6,7 +6,7 @@ netmask: ""
 peer_user: "root"
 peer_password: "********"
 EXPECTED_THROUGHPUT : 90
-IPERF_SERVER_RUN : 1
+PERF_SERVER_RUN : True
 iperf_download: "https://sourceforge.net/projects/iperf2/files/iperf-2.1.9.tar.gz"
 hbond:
 mtu: !mux

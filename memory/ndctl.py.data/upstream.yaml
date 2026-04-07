@@ -1,0 +1,14 @@
+region: 'region0'
+size: "null"
+git_branch: 'pending'
+ndctl_project_version: '73'
+preserve_change: True
+mnt_point: '/mnt/pmem'
+version: !mux
+    upstream:
+        package : 'upstream'
+mode_types: !mux
+    fsdax:
+        modes: 'fsdax'
+    sector:
+        modes: 'sector'

@@ -143,7 +143,7 @@ class HtxTest(Test):
         """
         distro_pattern = f"{self.dist_name}{self.dist_version}"
         temp_string = process.getoutput(
-            f"curl --silent {self.rpm_link}",
+            f"curl --silent -k {self.rpm_link}",
             verbose=False, shell=True, ignore_status=True)
         matching_htx_versions = re.findall(
             r"(?<=\>)htx\w*[-]\d*[-]\w*[.]\w*[.]\w*", str(temp_string))
@@ -152,8 +152,13 @@ class HtxTest(Test):
             if distro_pattern in htx_rpm]
         distro_specific_htx_versions.sort(reverse=True)
         self.latest_htx_rpm = distro_specific_htx_versions[0]
-
-        if process.system(f"rpm -ivh --nodeps {self.rpm_link}{self.latest_htx_rpm} --force",
+        tmp_dir_rpm = "/tmp/" + self.latest_htx_rpm
+        cmd = "curl -k %s/%s -o %s" % (self.rpm_link,
+                                       self.latest_htx_rpm,
+                                       tmp_dir_rpm)
+        if process.system(cmd, shell=True, ignore_status=True):
+            self.cancel(f"Dowload of htx rpm {self.latest_htx_rpm} failed from rpm link {self.rpm_link}")
+        if process.system(f"rpm -ivh --nodeps {tmp_dir_rpm} --force",
                           shell=True, ignore_status=True):
             self.cancel("Installation of htx rpm failed")
 
@@ -172,7 +177,9 @@ class HtxTest(Test):
         process.run("htxcmdline -createmdt")
 
         if not os.path.exists(f"/usr/lpp/htx/mdt/{self.mdt_file}"):
-            self.fail(f"MDT file {self.mdt_file} not found")
+            process.run(f"htxcmdline -createmdt -mdt {self.mdt_file}")
+            if not os.path.exists(f"/usr/lpp/htx/mdt/{self.mdt_file}"):
+                self.fail(f"MDT file {self.mdt_file} creation failed")
 
         self.log.info("selecting the mdt file ")
         cmd = f"htxcmdline -select -mdt {self.mdt_file}"

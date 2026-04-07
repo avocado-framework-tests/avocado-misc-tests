@@ -106,7 +106,7 @@ class Ping6(Test):
             self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
             self.cancel("%s peer machine is not available" % self.peer_ip)
-        self.timeout = "2m"
+        self.timeout = 120
         self.local_ip = netifaces.ifaddresses(self.iface)[AF_INET][0]['addr']
         if 10 in netifaces.ifaddresses(self.iface):
             self.l_v6 = netifaces.ifaddresses(self.iface)[AF_INET6][0]['addr']

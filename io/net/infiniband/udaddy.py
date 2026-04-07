@@ -103,7 +103,7 @@ class Udaddy(Test):
             self.cancel("%s interface is not available" % self.iface)
         if self.peer_ip == "":
             self.cancel("%s peer machine is not available" % self.peer_ip)
-        self.timeout = "2m"
+        self.timeout = 120
         self.local_ip = netifaces.ifaddresses(self.iface)[AF_INET][0]['addr']
         self.mtu = self.params.get("mtu", default=1500)
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,

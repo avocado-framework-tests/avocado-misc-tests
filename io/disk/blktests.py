@@ -38,28 +38,44 @@ class Blktests(Test):
         self.disk = self.disk.split(' ')
         smm = SoftwareManager()
         dist = distro.detect()
+
+        packages = ['gcc', 'make', 'util-linux', 'fio']
         if dist.name in ['Ubuntu', 'debian']:
-            packages = ['gcc', 'make', 'util-linux',
-                        'fio', 'libdevmapper-dev', 'g++']
+            packages += ['libdevmapper-dev', 'g++']
+        elif dist.name in ['rhel', 'CentOS', 'fedora']:
+            packages += ['device-mapper', 'gcc-c++', 'blktrace',
+                         'ktls-utils', 'device-mapper-multipath']
+        elif dist.name in ['SuSE']:
+            packages += ['device-mapper', 'gcc-c++', 'blktrace',
+                         'ktls-utils', 'multipath-tools']
+
+        # Enable io_uring if disabled
+        knob = "/proc/sys/kernel/io_uring_disabled"
+        if os.path.exists(knob):
+            try:
+                current = int(process.system_output(f"cat {knob}").strip())
+                # 0 = enabled, 1/2 = disabled
+                if current != 0:
+                    process.run(f"echo 0 > {knob}", sudo=True, shell=True)
+            except Exception as ex:
+                self.log.warn(f"Could not update io_uring_disabled: {ex}")
         else:
-            packages = ['gcc', 'make', 'util-linux',
-                        'fio', 'device-mapper', 'gcc-c++']
+            self.log.info("io_uring_disabled knob not present older kernel")
 
         for package in packages:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel(package + ' is needed for the test to be run')
 
+        # Download/build blktests
         locations = ["https://github.com/osandov/blktests/archive/"
                      "master.zip"]
         tarball = self.fetch_asset("blktests.zip", locations=locations,
                                    expire='7d')
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(self.workdir, 'blktests-master')
-
         build.make(self.sourcedir)
 
     def test(self):
-
         self.clear_dmesg()
         os.chdir(self.sourcedir)
 
@@ -68,12 +84,23 @@ class Blktests(Test):
             os.environ['TEST_DEVS'] = ' '.join(self.disk)
         cmd = './check %s' % self.dev_type
         result = process.run(cmd, ignore_status=True, verbose=True)
-        if result.exit_status != 0:
-            self.fail("test failed")
+
+        stdout = result.stdout.decode(errors="ignore")
+        fail_pattern = re.compile(r'^(\S+/\S+).*?\[failed\]', re.MULTILINE)
+        failed_tests = [m.group(1).strip() for m in fail_pattern.finditer(stdout)]
+
+        if result.exit_status != 0 or failed_tests:
+            if failed_tests:
+                failed_list = ", ".join(failed_tests)
+                summary = f"{len(failed_tests)} test(s) failed: {failed_list}"
+            else:
+                summary = f"blktests exited with code {result.exit_status}"
+            self.fail(summary)
+
         dmesg = process.system_output('dmesg')
         match = re.search(br'Call Trace:', dmesg, re.M | re.I)
         if match:
             self.fail("some call traces seen please check")
 
     def clear_dmesg(self):
-        process.run("dmesg -c ", sudo=True)
+        process.run("dmesg -C", sudo=True)

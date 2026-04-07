@@ -69,9 +69,9 @@ int set_alt_hugepage()
 	int size = get_hugepage_mbytes();
         if( size == 16384 )
                 return MAP_HUGETLB | MAP_HUGE_16MB;
-        else if ( size == 1024 )
-                return MAP_HUGETLB | MAP_HUGE_2MB;
         else if ( size == 2 )
+                return MAP_HUGETLB | MAP_HUGE_2MB;
+        else if ( size == 1024 )
                 return MAP_HUGETLB | MAP_HUGE_1GB;
         else
                 return MAP_HUGETLB | MAP_HUGE_16GB;

@@ -17,12 +17,8 @@
 import os
 from avocado import Test
 from avocado.utils import process, distro
-from avocado.utils import build, distro, git
+from avocado.utils import build, distro, git, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
-
-
-def clear_dmesg():
-    process.run("dmesg -C ", sudo=True)
 
 
 class lockstorm_benchmark(Test):
@@ -92,11 +88,13 @@ class lockstorm_benchmark(Test):
                 process.run(cmd, shell=True)
                 cmd = "insmod ./lockstorm.ko" + " cpulist=%s" % \
                     (self.cpu_list)
-                clear_dmesg()
+                dmesg.clear_dmesg()
                 if self.cpu_list == 0:
                     cmd = "insmod ./lockstorm.ko"
-                process.system(cmd,
-                               ignore_status=True, shell=False, sudo=True)
+                result = process.run(cmd, ignore_status=True, shell=False,
+                                     sudo=True)
+                if 'Key was rejected by service' in result.stderr.decode():
+                    self.cancel("Inserting module was rejected by kernel.")
                 lockstorm_data = self.capture_dmesg_dump(smt_mode)
                 stdout_output = lockstorm_data.stdout
                 lockstorm_log = lockstorm_dir + "/lockstorm.log"

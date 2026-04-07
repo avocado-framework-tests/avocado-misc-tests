@@ -34,14 +34,14 @@ class PerfSDT(Test):
     """
 
     def run_cmd(self, cmd):
-        if process.system(cmd, ignore_status=True, sudo=True, shell=True):
+        if process.system(cmd, sudo=True, shell=True):
             self.is_fail += 1
         return
 
     @staticmethod
     def run_cmd_out(cmd):
         return process.system_output(cmd, shell=True,
-                                     ignore_status=True, sudo=True).decode("utf-8")
+                                     sudo=True).decode("utf-8")
 
     def add_library(self):
         """
@@ -73,14 +73,14 @@ class PerfSDT(Test):
         self.run_cmd(perf_add)
         if self.is_fail:
             self.fail("Unable to add %s to builid-cache" % self.libpthread)
-        time.sleep(10)
+        time.sleep(30)
         # Add the libc.so.6 to perf
         perf_libc_add = "perf buildid-cache -v --add %s" % self.libc
         self.is_fail = 0
         self.run_cmd(perf_libc_add)
         if self.is_fail:
             self.fail("Unable to add %s to builid-cache" % self.libc)
-        time.sleep(10)
+        time.sleep(30)
         # Check if libpthread has valid SDT markers
         new_val = 0
         result = self.run_cmd_out("perf list")
@@ -98,15 +98,21 @@ class PerfSDT(Test):
             self.fail("Unable to remove %s from builid-cache" % param)
 
     def enable_sdt_marker_probe(self):
-        self.sdt_marker = "sdt_libc:memory_mallopt_mmap_max"
-        if self.sdt_marker not in self.run_cmd_out("perf list"):
-            self.fail("SDT marker %s not available" % self.sdt_marker)
-
-        enable_sdt_probe = "perf  probe --add %s" % self.sdt_marker
-        self.is_fail = 0
-        self.run_cmd(enable_sdt_probe)
-        if self.is_fail:
-            self.fail("Unable to probe SDT marker event %s" % self.sdt_marker)
+        self.sdt_events = process.system_output(
+            "perf list --raw-dump sdt", shell=True).decode().split()
+        for self.event in self.sdt_events:
+            self.event = self.event.split('@')[0].strip()
+            try:
+                self.run_cmd("perf probe --add %s" % self.event)
+            except Exception as e:
+                error_message = str(e)
+                if ('File exists' in error_message or
+                        'already exists' in error_message):
+                    self.log.info(
+                        f"Event {self.event} already exists, skipping.")
+                else:
+                    self.fail(
+                        f"Failed to add event {self.event}: {error_message}")
 
     def disable_sdt_marker_probe(self):
         disable_sdt_probe = "perf probe -d \\*"
@@ -118,13 +124,13 @@ class PerfSDT(Test):
 
     def record_sdt_marker_probe(self):
         record_sdt_probe = "perf record -o %s -e %s -aR sleep 1" % (
-            self.temp_file, self.sdt_marker)
+            self.temp_file, self.event)
         self.is_fail = 0
         self.run_cmd(record_sdt_probe)
         if self.is_fail or not os.path.exists(self.temp_file):
             self.disable_sdt_marker_probe()
             self.fail("Perf record of SDT marker event %s failed"
-                      % self.sdt_marker)
+                      % self.event)
 
     def setUp(self):
         """

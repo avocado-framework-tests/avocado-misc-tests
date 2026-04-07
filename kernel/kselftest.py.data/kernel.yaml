@@ -1,0 +1,61 @@
+run_type: !mux
+    upstream:
+        type: 'upstream'
+        location: 'https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git'
+component: !mux
+    alignment:
+        comp: 'powerpc'
+        kself_args: 'summary=1'
+        subtest: 'alignment'
+    benchmarks:
+        comp: 'powerpc'
+        kself_args: 'summary=1'
+        subtest: 'benchmarks'
+    dscr:
+        comp: 'powerpc'
+        kself_args: 'summary=1'
+        subtest: 'dscr'
+    eeh:
+        comp: 'powerpc'
+        kself_args: 'summary=1'
+        subtest: 'eeh'
+    math:
+        comp: 'powerpc'
+        kself_args: 'summary=1'
+        subtest: 'math'
+    primitives:
+        comp: 'powerpc'
+        kself_args: 'summary=1'
+        subtest: 'primitives'
+    signal:
+        comp: 'powerpc'
+        kself_args: 'summary=1'
+        subtest: 'signal'
+    switch_endian:
+        comp: 'powerpc'
+        kself_args: 'summary=1'
+        subtest: 'switch_endian'
+    syscalls:
+        comp: 'powerpc'
+        kself_args: 'summary=1'
+        subtest: 'syscalls'
+    tm:
+        comp: 'powerpc'
+        kself_args: 'summary=1'
+        subtest: 'tm'
+    dexcr:
+        comp: 'powerpc'
+        kself_args: 'summary=1'
+        subtest: 'dexcr'
+    mce:
+        comp: 'powerpc'
+        kself_args: 'summary=1'
+        subtest: 'mce'
+    papr_vpd:
+        comp: 'powerpc'
+        kself_args: 'summary=1'
+        subtest: 'papr_vpd'
+    papr_sysparm:
+        comp: 'powerpc'
+        kself_args: 'summary=1'
+        subtest: 'papr_sysparm'

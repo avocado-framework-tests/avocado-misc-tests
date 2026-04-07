@@ -88,6 +88,9 @@ class PCIHotPlugTest(Test):
             self.contr_name = nvme.get_controller_name(self.device[0])
             self.ns_list = nvme.get_current_ns_ids(self.contr_name)
 
+        if not os.path.isdir('/sys/bus/pci/slots/%s' % slot):
+            self.cancel("%s is not present in sysfs path" % slot)
+
     def test(self):
         """
         Removes and adds back a PCI adapter based on pci_adress.

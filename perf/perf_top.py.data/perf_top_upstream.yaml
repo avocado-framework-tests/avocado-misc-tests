@@ -1,0 +1,115 @@
+variants: !mux
+    all_cpus:
+        option: -a
+    count_full:
+        option: --count 5
+    cpu:
+        option: -C 0
+    delay_full:
+        option: --delay 5
+    event:
+        option: -e L1-dcache-load-misses
+    entries_full:
+        option: --entries 5
+    count-filter:
+        option: -f 5
+    group:
+        option: --group
+    group-sort-idx:
+        option: --group-sort-idx 1
+    freq_full:
+        option: --freq 5
+    inherit_full:
+        option: --inherit
+    vmlinux:
+        option: -k
+    ignore-vmlinux:
+        option: --ignore-vmlinux
+    kallsyms:
+        option: --kallsyms
+    mmap-pages:
+        option: -m 8
+    pid_full:
+        option: --pid 10
+    tid:
+        option: -t 10
+    uid_full:
+        option: --uid 1
+    realtime:
+        option: -r 5
+    sym-annotate:
+        option: --sym-annotate k
+    hide_kernel_symbols:
+        option: -K
+    hide_user_symbols_full:
+        option: --hide_user_symbols
+    demangle-kernel:
+        option: --demangle-kernel
+    dump-symtab:
+        option: -D
+    verbose:
+        option: -v
+    zero:
+        option: -z
+    sort_full:
+        option: --sort comm,dso,symbol,cpu
+    fields:
+        option: --fields overhead
+    timehist:
+        option: -n
+    show-nr-samples:
+        option: --show-nr-samples
+    show-total-period:
+        option: --show-total-period
+    dsos:
+        option: --dsos dso
+    comms:
+        option: --comms comm
+    symbols:
+        option: --symbols symbol
+    disassembler-style:
+        option: -M powerpc
+    disassembler-style:
+        option: --disassembler-style powerpc
+    prefix:
+        option: --prefix=PREFIX
+    source:
+        option: --source
+    asm-raw:
+        option: --asm-raw
+    call-graph:
+        option: -g
+    children:
+        option: --children
+    max-stack:
+        option: --max-stack 127
+    percentage:
+        option: --percentage relative
+    column-widths:
+        option: -w 10
+    proc-map-timeout:
+        option: --proc-map-timeout 500
+    branch-any_full:
+        option: --branch-any
+    branch-filter:
+        option: -j any
+    raw-trace:
+        option: --raw-trace
+    hierarchy:
+        option: --hierarchy
+    overwrite:
+        option: --overwrite
+    force:
+        option: --force
+    num-thread-synthesize:
+        option: --num-thread-synthesize 1
+    namespaces:
+        option: --namespaces
+    all-cgroups:
+        option: --all-cgroups
+    switch-on:
+        option: --switch-on cycles
+    switch-off:
+        option: --switch-off cycles
+    show-on-off-events:
+        option: --show-on-off-events

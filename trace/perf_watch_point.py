@@ -18,7 +18,7 @@ import os
 import platform
 from avocado import Test
 from avocado import skipIf
-from avocado.utils import archive, linux_modules
+from avocado.utils import archive, linux_modules, linux
 from avocado.utils import cpu, build, distro, process, genio
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -51,9 +51,7 @@ class PerfWatchPoint(Test):
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        cmd = "lsprop  /proc/device-tree/ibm,secure-boot"
-        output = process.system_output(cmd, ignore_status=True).decode()
-        if '00000002' in output:
+        if not linux.is_os_secureboot_enabled():
             self.cancel("Secure boot is enabled.")
         archive.extract(self.get_data("wptest-master.tar.gz"), self.workdir)
         self.build_dir = os.path.join(self.workdir, 'wptest-master')

@@ -19,7 +19,8 @@ import os
 import shutil
 import pexpect
 from avocado import Test
-from avocado.utils import build, distro, genio
+from avocado.utils import build, distro, genio, process
+
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -33,7 +34,7 @@ class Dawr(Test):
 
     def setUp(self):
         '''
-        Install the basic packages to support gdb
+        Install the basic packages to support gdb and perf
         '''
         val = genio.read_file("/proc/cpuinfo")
         power_ver = ['POWER10', 'Power11']
@@ -43,7 +44,7 @@ class Dawr(Test):
         smm = SoftwareManager()
         self.detected_distro = distro.detect()
         self.distro_name = self.detected_distro.name
-        deps = ['gcc', 'make', 'gdb']
+        deps = ['gcc', 'make', 'gdb', 'perf']
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
@@ -51,10 +52,12 @@ class Dawr(Test):
             shutil.copyfile(self.get_data('dawr_v%d.c' % value),
                             os.path.join(self.teststmpdir,
                                          'dawr_v%d.c' % value))
-        shutil.copyfile(self.get_data('Makefile'),
-                        os.path.join(self.teststmpdir, 'Makefile'))
+        for fname in ['boundary_check.c', 'Makefile']:
+            shutil.copyfile(self.get_data(fname),
+                            os.path.join(self.teststmpdir, fname))
         build.make(self.teststmpdir)
         os.chdir(self.teststmpdir)
+        self.output_file = "perf.data"
 
     def run_cmd(self, bin_var):
         child = pexpect.spawn('gdb ./%s' % bin_var, encoding='utf-8')
@@ -67,7 +70,30 @@ class Dawr(Test):
         return_value = []
         return child, return_value
 
-    def test_read_dawr_v1(self):
+    def run_test(self, cmd):
+        return process.run(cmd, shell=True)
+
+    def perf_cmd(self, perf_record):
+        process.run(perf_record, shell=True, ignore_status=True,
+                    verbose=True, ignore_bg_processes=True)
+        report = "perf report --input=%s" % self.output_file
+        self.run_test(report)
+        if not os.stat(self.output_file).st_size:
+            self.fail("%s sample not captured" % self.output_file)
+
+    def address_v1(self):
+        # Get memory address of single variable
+        output = self.run_test('./dawr_v1')
+        data = output.stdout.decode("utf-8")
+        return data
+
+    def address_v2(self):
+        # Get memory address of two variables
+        output = self.run_test('./dawr_v2')
+        data = output.stdout.decode("utf-8").split(',')
+        return data
+
+    def test_read_dawr_v1_gdb(self):
         """
         Setting Read/Write watchpoint on single variable using awatch and
         executing the program
@@ -87,7 +113,7 @@ class Dawr(Test):
             if i != 0:
                 self.fail('Test case failed for 1 variable')
 
-    def test_read_dawr_v2(self):
+    def test_read_dawr_v2_gdb(self):
         """
         Setting Read/Write watchpoints on two variables using awatch and
         executing the program
@@ -112,7 +138,7 @@ class Dawr(Test):
             if i == 0:
                 self.fail('Test case failed for 2 variables')
 
-    def test_read_dawr_v3(self):
+    def test_read_dawr_v3_gdb(self):
         """
         Setting Read/Write watchpoints on three variables using awatch and
         executing the program
@@ -126,8 +152,44 @@ class Dawr(Test):
                                                     'watchpoint %s: %s'
                                                     % (i, value)]))
         child.sendline('r')
-        return_value.append(child.expect_exact([pexpect.TIMEOUT,
-                                                'not enough available hardware']))
+        return_value.append(
+            child.expect_exact([pexpect.TIMEOUT,
+                               'not enough available hardware']))
         for i in return_value:
             if i == 0:
                 self.fail('Test case failed for 3 variables')
+
+    def test_read_dawr_v1_perf(self):
+        # Read single dawr register with perf interface
+        data = self.address_v1()
+        perf_record = 'perf record -o %s -e mem:%s ./dawr_v1' % (
+            self.output_file, data)
+        self.perf_cmd(perf_record)
+
+    def test_read_dawr_v2_perf(self):
+        # Read two dawr registers with perf interface
+        data = self.address_v2()
+        perf_record = 'perf record -o %s -e mem:%s -e mem:%s ./dawr_v2' % (
+            self.output_file, data[0], data[1][1:11])
+        self.perf_cmd(perf_record)
+
+    def test_dawr_boundary_check(self):
+        """
+        Run dawr_boundary_check to check
+        unaligned 512-byte DAWR boundary condition
+        """
+        output = self.run_test('./boundary_check')
+        data = output.stdout.decode("utf-8")
+
+        expected_msg = "TEST Boundary check PASSED: unaligned_512bytes"
+        if expected_msg not in data:
+            self.fail(
+                f"TEST Boundary check FAILED: unaligned_512bytes.\n"
+                f"Output was:\n{data}")
+        else:
+            self.log.info(expected_msg)
+
+    def tearDown(self):
+        # Delete the temporary file
+        if os.path.isfile("perf.data"):
+            process.run('rm -f perf.data')

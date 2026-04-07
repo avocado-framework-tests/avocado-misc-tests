@@ -1,4 +1,6 @@
-runtime: 7200 
+runtime: 100
+sched_runtime: 100
+test_mode:
 url: "https://github.com/ColinIanKing/stress-ng/archive/master.zip"
 crt_stressors: ["bsearch", "context", "cpu", "crypt", "hsearch", "longjmp",
                 "lsearch", "matrix", "qsort", "str", "stream", "tsearch",

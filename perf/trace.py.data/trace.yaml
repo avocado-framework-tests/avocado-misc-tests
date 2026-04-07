@@ -1,0 +1,24 @@
+config:
+    version: !mux
+        upstream:
+            type: 'upstream'
+            location: "https://github.com/torvalds/linux/archive/master.zip"
+    ftest_types: !mux
+        direct:
+            args: 'direct'
+        dynevent:
+            args: 'dynevent'
+        event:
+            args: 'event'
+        ftrace:
+            args: 'ftrace'
+        instances:
+            args: 'instances'
+        kprobe:
+            args: 'kprobe'
+        preemptirq:
+            args: 'preemptirq'
+        tracer:
+            args: 'tracer'
+        trigger:
+            args: 'trigger'

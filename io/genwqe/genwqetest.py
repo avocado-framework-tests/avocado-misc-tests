@@ -24,6 +24,7 @@ import time
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import download
+from avocado.utils import dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -146,8 +147,7 @@ class GenWQETest(Test):
         """
         Tests genwqe_poke on the device.
         """
-        cmd = "dmesg -C"
-        process.system(cmd, shell=True)
+        dmesg.clear_dmesg()
         cmd = "genwqe_poke -A GENWQE -C %s 0x00000008 0x001" % self.card
         if process.system(cmd, shell=True, ignore_status=True):
             self.fail("genwqe_poke fails")

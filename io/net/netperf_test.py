@@ -107,7 +107,7 @@ class Netperf(Test):
             self.cancel("Failed to set mtu in peer")
         if self.networkinterface.set_mtu(self.mtu) is not None:
             self.cancel("Failed to set mtu in host")
-        self.netperf_run = str(self.params.get("NETSERVER_RUN", default=0))
+        self.netperf_run = str(self.params.get("PERF_SERVER_RUN", default=False))
         self.netperf = os.path.join(self.teststmpdir, 'netperf')
         netperf_download = self.params.get("netperf_download", default="https:"
                                            "//github.com/HewlettPackard/"
@@ -157,7 +157,7 @@ class Netperf(Test):
         """
         netperf test
         """
-        if self.netperf_run == '1':
+        if self.netperf_run:
             cmd = "chmod 777 /tmp/%s/src" % self.version
             output = self.session.cmd(cmd)
             if not output.exit_status == 0:

@@ -166,7 +166,7 @@ class NetworkVirtualization(Test):
             if result.exit_status:
                 self.fail("failed to enable debug mode")
         else:
-            self.log("failed to enable debug mode")
+            self.log.info("Continue test with debug mode disabled")
 
     @staticmethod
     def get_mcp_component(component):
@@ -278,11 +278,11 @@ class NetworkVirtualization(Test):
         output = self.session_peer.cmd(cmd_status).stdout_text.splitlines()
         for line in output:
             if re.search("Active: active (running)", line):
-                self.log("irqbalance service is active in peer")
+                self.log.info("irqbalance service is active in peer")
         process.system(cmd_start)
         for line in process.system_output(cmd_status).decode("utf-8").splitlines():
             if re.search("Active: active (running)", line):
-                self.log("irqbalance service is active in host")
+                self.log.info("irqbalance service is active in host")
 
     def test_add(self):
         '''

@@ -13,7 +13,7 @@
 # Author: Samir A Mulani <samir@linux.vnet.ibm.com>
 
 from avocado import Test
-from avocado.utils import process, distro
+from avocado.utils import process, distro, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 import os
 import time
@@ -79,6 +79,7 @@ class smt(Test):
         """
         Start the SMT Workload
         """
+        dmesg.clear_dmesg()
         relative_path = 'smt.py.data/smt.sh'
         absolute_path = os.path.abspath(relative_path)
         smt_workload = "bash " + absolute_path + " &> /tmp/smt.log &"

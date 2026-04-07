@@ -1,0 +1,10 @@
+disk:
+sed_password:
+change_sed_password:
+Devices:
+    device:
+#device parameter accepts values as follows
+#NQN: nqn.1994-11.com.vendor:nvme:modela:2.5-inch:SERIALNUM
+#Subsystem: nvme-subsysX
+#controller: nvmeX 
+

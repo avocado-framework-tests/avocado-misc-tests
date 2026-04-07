@@ -126,7 +126,8 @@ class LTP(Test):
 
         dmesg.clear_dmesg()
         url = self.params.get(
-            'url', default='https://github.com/linux-test-project/ltp/archive/master.zip')
+            'url',
+            default='https://github.com/linux-test-project/ltp/archive/master.zip')
         match = next((ext for ext in [".zip", ".tar"] if ext in url), None)
         tarball = ''
         if match:

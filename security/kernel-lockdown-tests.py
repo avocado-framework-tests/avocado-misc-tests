@@ -14,9 +14,12 @@
 # Author: Nageswara R Sastry <rnsastry@linux.ibm.com>
 
 import os
+import fcntl
+import struct
 from avocado import Test
-from avocado.utils import distro, genio, linux_modules, process
+from avocado.utils import distro, genio, linux_modules, process, linux
 from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils import dmesg
 
 
 class kernelLockdown(Test):
@@ -53,9 +56,7 @@ class kernelLockdown(Test):
         index2 = int(lockdown.index(']'))
         sys_lockdown = lockdown[index1:index2]
         # Checking the Guest Secure Boot enabled or not.
-        cmd = "lsprop  /proc/device-tree/ibm,secure-boot"
-        output = process.system_output(cmd, ignore_status=True).decode()
-        if '00000002' not in output:
+        if not linux.is_os_secureboot_enabled():
             self.cancel("Secure boot is not enabled.")
         # List required for kernel configuration check.
         self.no_config = []
@@ -97,13 +98,11 @@ class kernelLockdown(Test):
                 self.fail("'/dev/mem' file access permitted.")
 
     def test_lockdown_debugfs(self):
-        if self.distro_version.name == "SuSE":
-            self.cancel("This test not supported on SuSE")
         # Try read the values from sysfs file
         output = process.system_output('mount', ignore_status=True).decode()
         if 'debugfs' not in output:
             self.cancel("Skip this test as 'debugfs' not mounted.")
-        dbg_file = "/sys/kernel/debug/powerpc/xive"
+        dbg_file = "/sys/kernel/debug/powerpc/xive/store-eoi"
         if os.path.exists(dbg_file):
             try:
                 genio.read_file(dbg_file)
@@ -112,3 +111,50 @@ class kernelLockdown(Test):
                     self.fail("Access to %s permitted." % dbg_file)
         else:
             self.cancel("%s file not exist." % dbg_file)
+
+    def test_lockdown_ioctl(self):
+        # Clear dmesg log
+        dmesg.clear_dmesg()
+        # open file descriptor of /dev/ttyS0
+        fd = os.open("/dev/ttyS0", os.O_RDWR)
+        if fd == -1:
+            self.cancel("Failed to open /dev/ttyS0")
+        try:
+            # Define the ioctl command and argument for configuring serial
+            # port settings
+            # TIOCSSERIAL is the ioctl command for setting serial port
+            # parameters
+            # The argument is a packed structure containing the desired
+            # settings
+            # The value 0x1002 is an example setting for the serial port
+            # configuration
+            TIOCSSERIAL = 0x541F
+            arg = struct.pack('I', 0x1002)
+            fcntl.ioctl(fd, TIOCSSERIAL, arg)
+        except PermissionError as err:
+            if 'Operation not permitted' not in str(err):
+                self.fail("'/dev/ttyS0' file access permitted.")
+        finally:
+            os.close(fd)
+        # Collect the dmesg messages
+        dfile = dmesg.collect_dmesg()
+        text = "Lockdown: avocado-runner-: reconfiguration of serial port IO is restricted; see man kernel_lockdown.7"
+        try:
+            # Check if the dmesg log contains the expected message
+            # The dmesg log is read using the genio module
+            # The log is split into lines for easier searching
+            # The expected message is searched for in the log lines
+            # If the message is not found, the test fails
+            # The dmesg log file is removed after checking
+            dmesg_output = genio.read_file(dfile).splitlines()
+            counter = False
+            for lines in dmesg_output:
+                if text in lines:
+                    counter = True
+                    break
+            if not counter:
+                self.fail("Lockdown message not found in dmesg log.")
+        except Exception as e:
+            self.fail("Failed to read dmesg log: %s" % str(e))
+        finally:
+            os.remove(dfile)

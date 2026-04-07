@@ -1,6 +1,6 @@
 run_type: !mux
     upstream:
-        location:
+        location: 'https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git'
+        branch: 'master'
+        usegit: 1
         type: 'upstream'
-    distro:
-        type: 'distro'

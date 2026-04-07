@@ -1,0 +1,4 @@
+run_type: !mux
+    upstream:
+        lsvpd_url: 'https://github.com/power-ras/lsvpd/archive/refs/heads/master.zip'
+        type: 'upstream'

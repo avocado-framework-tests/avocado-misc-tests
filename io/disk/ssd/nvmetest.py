@@ -46,6 +46,10 @@ class NVMeTest(Test):
         nvme_node = self.params.get('device', default=None)
         if not nvme_node:
             self.cancel("Please provide valid nvme node name")
+        elif "subsys" in nvme_node:
+            nvme_node = nvme.get_controllers_with_subsys(nvme_node)[0]
+        elif nvme_node.startswith("nqn."):
+            nvme_node = nvme.get_controllers_with_nqn(nvme_node)[0]
         self.device = disk.get_absolute_disk_path(nvme_node)
         cmd = 'ls %s' % self.device
         if process.system(cmd, ignore_status=True):
@@ -73,8 +77,10 @@ class NVMeTest(Test):
                     smm.install("nvme-cli"):
                 self.cancel('nvme-cli is needed for the test to be run')
             self.binary = 'nvme'
+
         self.format_size = self.get_block_size()
         self.namespace = self.params.get('namespace', default='1')
+        self.shared = self.params.get("shared_namespaces", default=False)
         self.id_ns = "%sn%s" % (self.device, self.namespace)
         self.firmware_url = self.params.get('firmware_url', default='')
         if 'firmware_upgrade' in str(self.name) and not self.firmware_url:
@@ -82,8 +88,6 @@ class NVMeTest(Test):
 
         cmd = "%s id-ctrl %s -H" % (self.binary, self.device)
         self.id_ctrl = process.system_output(cmd, shell=True).decode("utf-8")
-        cmd = "%s show-regs %s -H" % (self.binary, self.device)
-        regs = process.system_output(cmd, shell=True).decode("utf-8")
 
         test_dic = {'compare': 'Compare', 'formatnamespace': 'Format NVM',
                     'dsm': 'Data Set Management',
@@ -92,11 +96,20 @@ class NVMeTest(Test):
                     'writeuncorrectable': 'Write Uncorrectable',
                     'subsystemreset': 'NVM Subsystem Reset'}
         for key, value in list(test_dic.items()):
+            if key in str(self.name) and key == 'subsystemreset':
+                cmd = "cat /sys/kernel/security/lockdown"
+                lockdown = process.system_output(cmd, shell=True).decode("utf-8")
+                if '[none]' not in lockdown:
+                    self.log.info("lockdown is enabled,\
+                                  cannot run nvme show-regs command")
+                    continue
+                else:
+                    cmd = "%s show-regs %s -H" % (self.binary, self.device)
+                    regs = process.system_output(cmd, shell=True).decode("utf-8")
+                    if "%s Supported   (NSSRS): No" % value in regs:
+                        self.cancel("%s is not supported" % value)
             if key in str(self.name):
                 if "%s Supported" % value not in self.id_ctrl:
-                    self.cancel("%s is not supported" % value)
-                # NVM Subsystem Reset Supported  (NSSRS): No
-                if "%s Supported   (NSSRS): No" % value in regs:
                     self.cancel("%s is not supported" % value)
 
     @staticmethod
@@ -184,7 +197,8 @@ class NVMeTest(Test):
         cmd = "%s list-ns %s" % (self.binary, self.device)
         namespaces = []
         for line in self.run_cmd_return_output_list(cmd):
-            namespaces.append(int(line.split()[1].split(']')[0]) + 1)
+            if line.startswith('['):
+                namespaces.append(int(line.split()[1].split(']')[0]) + 1)
         return namespaces
 
     def list_ns(self):
@@ -345,9 +359,10 @@ class NVMeTest(Test):
         """
         Test to create namespace with full capacity
         """
-        self.delete_all_ns()
-        self.create_full_capacity_ns()
-        self.list_ns()
+        device = self.device.split("/")[-1]
+        nvme.delete_all_ns(device)
+        nvme.create_full_capacity_ns(device,
+                                     shared_ns=self.shared)
 
     def testformatnamespace(self):
         """
@@ -446,7 +461,9 @@ class NVMeTest(Test):
         """
         ns_count = self.params.get('namespace_count', default=1)
         device = self.device.split("/")[-1]
-        nvme.create_namespaces(device, ns_count)
+        nvme.create_namespaces(device,
+                               ns_count,
+                               shared_ns=self.shared)
 
     def test_delete_all_ns(self):
         """

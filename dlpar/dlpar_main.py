@@ -15,12 +15,14 @@
 # Author: Kalpana Shetty <kalshett@in.ibm.com>
 # Author(Modified): Samir A Mulani <samir@linux.vnet.ibm.com>
 
+import re
 import os
 import random
 
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import wait
+from avocado.utils.software_manager.manager import SoftwareManager
 from dlpar_api.api import DedicatedCpu, CpuUnit, Memory
 list_payload = ["cfg_cpu_per_proc", "hmc_manageSystem", "hmc_user",
                 "hmc_passwd", "target_lpar_hostname", "target_partition",
@@ -166,7 +168,8 @@ class DlparTests(Test):
         index_value = lmb
         cmd = 'htxcmdline -query  -mdt mdt.*'
         if max_value == 0:
-            cmd_output = process.system_output(cmd, ignore_status=True).decode()
+            cmd_output = process.system_output(
+                cmd, ignore_status=True).decode()
             if 'IDLE' not in cmd_output:
                 max_value = curr_mem * 0.4
             else:
@@ -232,6 +235,10 @@ class DlparTests(Test):
             for cpu in self.cpu_payload:
                 rvalue = Ded_obj.add_ded_cpu(cpu)
                 if rvalue == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Ded_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("CPU add Command failed please check the logs")
                 self.log.info(
                     "===============> %s cpu got added=======>\n " % cpu)
@@ -270,11 +277,21 @@ class DlparTests(Test):
             self.data_payload_backup(Pu)
             # Add proc_units and  virtual_procs
             for i in range(len(Pu)):
-                if Sha_obj.add_proc(Pu[i], '--procunits') == 1:
+                result = Sha_obj.add_proc(Pu[i], '--procunits')
+                if result == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Sha_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail(
                         "proc_units add Command failed please check the logs")
                 self.log.info("====>%s procunits got added====>\n " % Pu[i])
-                if Sha_obj.add_proc(Vp[i], '--procs') == 1:
+                result = Sha_obj.add_proc(Vp[i], '--procs')
+                if result == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Sha_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("CPU add Command failed please check the logs")
                 self.log.info(
                     "===============>%s cpus got added=======>\n " % Vp[i])
@@ -293,6 +310,10 @@ class DlparTests(Test):
             for cpu in cpupayload:
                 rvalue = Ded_obj.rem_ded_cpu(cpu)
                 if rvalue == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Ded_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("CPU remove Command failed please \
                               check the logs")
                 self.log.info(
@@ -311,11 +332,21 @@ class DlparTests(Test):
 
             # Iterate through the reversed lists
             for vp, pu in zip(Vp_reverse, Pu_reverse):
-                if Sha_obj.remove_proc(vp, '--procs') == 1:
+                result = Sha_obj.remove_proc(Vp, '--procs')
+                if result == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Sha_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("Cpu remove Command failed please \
                               check the logs")
                 self.log.info("====>%s cpu got removed====>\n " % vp)
-                if Sha_obj.remove_proc(pu, '--procunits') == 1:
+                result = Sha_obj.remove_proc(pu, '--procunits')
+                if result == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Sha_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("proc units remove Command failed \
                               please check the logs")
                 self.log.info(
@@ -337,11 +368,19 @@ class DlparTests(Test):
             for cpu in cpu_mix:
                 rvalue = Ded_obj.add_ded_cpu(cpu)
                 if rvalue == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Ded_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("CPU add Command failed please check the logs")
                 self.log.info(
                     "===============>%s cpus got added=======>\n " % cpu)
                 rvalue = Ded_obj.rem_ded_cpu(cpu)
                 if rvalue == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Ded_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("CPU remove Command failed please \
                               check the logs")
                 self.log.info(
@@ -356,20 +395,41 @@ class DlparTests(Test):
             Pu = eval(str(loaded_payload_data[1]))
             # Iterate through the reversed lists
             for pu, vp in zip(Pu, Vp):
-                if Sha_obj.add_proc(vp, '--procs') == 1:
+                result = Sha_obj.add_proc(vp, '--procs')
+                if result == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Sha_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("CPU add Command failed please check the logs")
+
                 self.log.info(
                     "===============>%s cpus got added=======>\n " % vp)
-                if Sha_obj.add_proc(pu, '--procunits') == 1:
+                result = Sha_obj.add_proc(pu, '--procunits')
+                if result == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Sha_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other error = real failure
                     self.fail(
                         "proc_units add Command failed please check the logs")
                 self.log.info("====>%s procunits got added====>\n " % pu)
-                if Sha_obj.remove_proc(pu, '--procunits') == 1:
+                result = Sha_obj.remove_proc(pu, '--procunits')
+                if result == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Sha_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other error = real failure
                     self.fail("proc units remove Command failed \
                               please check the logs")
                 self.log.info(
                     "===============>%s procunits got removed=======>\n " % pu)
-                if Sha_obj.remove_proc(vp, '--procs') == 1:
+                result = Sha_obj.remove_proc(vp, '--procs')
+                if result == 1:
+                    # gives output printed by the last DLPAR command that ran on the HMC
+                    stdout = Sha_obj.cmd_result.stdout_text
+                    self._cancel_on_capacity_exceeded(stdout)
+                    # Any other failure consider as fail
                     self.fail("Cpu remove Command failed \
                               please check the logs")
                 self.log.info("====>%s cpu got removed====>\n " % vp)
@@ -387,6 +447,10 @@ class DlparTests(Test):
         for mem in self.mem_payload[:-1]:
             rvalue = Mem_obj.mem_add(mem)
             if rvalue == 1:
+                # gives output printed by the last DLPAR command that ran on the HMC
+                stdout = Mem_obj.cmd_result.stdout_text
+                self._cancel_on_capacity_exceeded(stdout)
+                # Any other failure consider as fail
                 self.fail(
                     "%s Memory add Command failed please check the logs" % mem)
             self.log.info(
@@ -402,6 +466,10 @@ class DlparTests(Test):
         for mem in self.mem_remove[:-1]:
             rvalue = Mem_obj.mem_rem(mem)
             if rvalue == 1:
+                # gives output printed by the last DLPAR command that ran on the HMC
+                stdout = Mem_obj.cmd_result.stdout_text
+                self._cancel_on_capacity_exceeded(stdout)
+                # Any other failure consider as fail
                 self.fail("Memory remove Command failed please check the logs")
             self.log.info(
                 "===============> %s memory got removed=======>\n " % mem)
@@ -425,11 +493,19 @@ class DlparTests(Test):
         for add, rem in zip(mem_add, mem_rem):
             rvalue = Mem_obj.mem_add(add)
             if rvalue == 1:
+                # gives output printed by the last DLPAR command that ran on the HMC
+                stdout = Mem_obj.cmd_result.stdout_text
+                self._cancel_on_capacity_exceeded(stdout)
+                # Any other failure consider as fail
                 self.fail("MEM add Command failed please check the logs")
             self.log.info(
                 "=====>%s memory got added====>\n " % add)
             rvalue = Mem_obj.mem_rem(rem)
             if rvalue == 1:
+                # gives output printed by the last DLPAR command that ran on the HMC
+                stdout = Mem_obj.cmd_result.stdout_text
+                self._cancel_on_capacity_exceeded(stdout)
+                # Any other failure consider as fail
                 self.fail("MEM remove Command failed please check the logs")
             self.log.info(
                 "====>%s memory got removed====>\n " % rem)
@@ -454,3 +530,284 @@ class DlparTests(Test):
         rvalue_move = Mem_obj.mem_move()
         if rvalue_move == 1:
             self.fail("Memory move Command failed please check the logs")
+
+    def test_check_smt_state(self):
+        """
+        Test SMT state before and after DLPAR CPU add/remove operations.
+
+        """
+        # Check for basic utilities
+        smm = SoftwareManager()
+        deps = ['powerpc-utils', 'util-linux']
+        for package in deps:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel(package + ' is needed for the test to be run')
+        # set smt=8
+        set_smt_value = process.system_output(
+            'ppc64_cpu --smt=8', shell=True, ignore_status=False)
+        smt_state = process.system_output(
+            'ppc64_cpu --smt', shell=True, ignore_status=False)
+        lscpu_smt_state = \
+            process.system_output('lscpu | grep -i thread',
+                                  shell=True, ignore_status=False)
+        lparstat_cmd_smt_state = \
+            process.system_output("lparstat | grep -o 'smt=[0-9]*'",
+                                  shell=True, ignore_status=False)
+        if self.lpar_mode == 'dedicated':
+            Ded_obj = DedicatedCpu(self.sorted_payload,
+                                   log='dedicated_cpu.log')
+            rvalue = ''
+            for operation_type in ['add', 'remove']:
+                if operation_type == 'add':
+                    rvalue = Ded_obj.add_ded_cpu(1)
+                else:
+                    rvalue = Ded_obj.rem_ded_cpu(1)
+
+                if rvalue != 0:
+                    self.log.error("CPU operation failed,\
+                            Please check the logs")
+                new_smt_state = process.system_output(
+                    'ppc64_cpu --smt', shell=True, ignore_status=False
+                )
+                new_lscpu_smt_state = process.system_output(
+                    'lscpu | grep -i thread', shell=True,
+                    ignore_status=False
+                )
+                new_lparstat_smt_state = process.system_output(
+                    "lparstat | grep -o 'smt=[0-9]*'",
+                    shell=True,
+                    ignore_status=False
+                )
+
+                if (
+                   smt_state != new_smt_state or
+                   lscpu_smt_state != new_lscpu_smt_state or
+                   lparstat_cmd_smt_state != new_lparstat_smt_state):
+                    self.log.error(
+                        "SMT state did not match after "
+                        "CPU operations.Test failed."
+                    )
+                else:
+                    self.log.info(
+                        "SMT state remained consistent,Test passed.")
+
+        elif self.lpar_mode == 'shared':
+            Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
+            rvalue = ''
+            rvalue1 = ''
+            for operation_type in ['add', 'remove']:
+                if operation_type == 'add':
+                    rvalue = Sha_obj.add_proc(1, '--procs')
+                    rvalue1 = Sha_obj.add_proc(1, '--procunits')
+                else:
+                    rvalue = Sha_obj.remove_proc(1, '--procs')
+                    rvalue1 = Sha_obj.remove_proc(1, '--procunits')
+
+                if (rvalue != 0 and rvalue1 != 0):
+                    self.log.error("CPU operation failed.\
+                            Please check the logs.")
+                new_smt_state = process.system_output(
+                    'ppc64_cpu --smt', shell=True, ignore_status=False
+                )
+                new_lscpu_smt_state = process.system_output(
+                    'lscpu | grep -i thread', shell=True,
+                    ignore_status=False
+                )
+                new_lparstat_smt_state = process.system_output(
+                    'lparstat | grep -i smt',
+                    shell=True,
+                    ignore_status=False
+                )
+                if (smt_state != new_smt_state or
+                   lscpu_smt_state != new_lscpu_smt_state or
+                   lparstat_cmd_smt_state != new_lparstat_smt_state):
+                    self.log.error(
+                        "SMT state did not match after"
+                        "CPU operations. Test failed.")
+                else:
+                    self.log.info("SMT state remained consistent,Test passed.")
+
+    def test_offline_cpu_persistence(self):
+        '''
+        Keep at least 1 cpu offline(can be more than 1 too, based on
+        system config)before dlpar, do a dlpar proc add and
+        check if the offline CPU is still in the offline state
+        after adding new core
+        '''
+        smm = SoftwareManager()
+        deps = ['powerpc-utils', 'util-linux']
+        for package in deps:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel(package + ' is needed for the test to be run')
+
+        set_cpu1_offline = process.system_output(
+            'echo 0 > /sys/devices/system/cpu/cpu1/online',
+            shell=True, ignore_status=False)
+
+        before_cpu1_state = process.system_output(
+            'cat /sys/devices/system/cpu/cpu1/online',
+            shell=True, ignore_status=False)
+
+        if self.lpar_mode == 'dedicated':
+            Ded_obj = DedicatedCpu(self.sorted_payload,
+                                   log='dedicated_cpu.log')
+            rvalue = ''
+            for operation_type in ['add', 'remove']:
+                if operation_type == 'add':
+                    rvalue = Ded_obj.add_ded_cpu(1)
+                else:
+                    rvalue = Ded_obj.rem_ded_cpu(1)
+
+                if rvalue != 0:
+                    self.log.error("CPU operation failed,"
+                                   "Please check the logs")
+                after_cpu1_state = process.system_output(
+                    'cat /sys/devices/system/cpu/cpu1/online',
+                    shell=True, ignore_status=False)
+
+                if (before_cpu1_state != after_cpu1_state):
+                    self.log.error(
+                        "Failed since CPU state."
+                        "changed after dlpar operation"
+                    )
+                else:
+                    self.log.info(
+                        "CPU is still offline even after"
+                        "proc operation,Test passed.")
+        else:
+            Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
+            rvalue = ''
+            rvalue1 = ''
+            for operation_type in ['add', 'remove']:
+                if operation_type == 'add':
+                    rvalue = Sha_obj.add_proc(1, '--procs')
+                    rvalue1 = Sha_obj.add_proc(1, '--procunits')
+                else:
+                    rvalue = Sha_obj.remove_proc(1, '--procs')
+                    rvalue1 = Sha_obj.remove_proc(1, '--procunits')
+
+                if (rvalue != 0 and rvalue1 != 0):
+                    self.log.error("CPU operation failed."
+                                   "Please check the logs."
+                                   )
+                after_cpu1_state = process.system_output(
+                    'cat /sys/devices/system/cpu/cpu1/online',
+                    shell=True, ignore_status=False)
+
+                if (before_cpu1_state != after_cpu1_state):
+                    self.log.error(
+                        "Failed since CPU state."
+                        "changed after dlpar operation"
+                    )
+                else:
+                    self.log.info(
+                        "CPU is still offline even after"
+                        "proc operation,Test passed.")
+        # Setting cpu online back after TC complete
+        self.log.info("Setting cpu online back after TC complete")
+        cmd = 'echo 1 > /sys/devices/system/cpu/cpu1/online'
+        process.system_output(
+            cmd, shell=True, ignore_status=False)
+
+    def test_offline_proc_persistence(self):
+        '''
+        Keep SMT less than 8 and at least 1 core offline, do a dlpar proc
+        add and then check if the added core gets the correct dlpar state.
+        '''
+        # check software
+        smm = SoftwareManager()
+        deps = ['powerpc-utils', 'util-linux']
+        for package in deps:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel(package + ' is needed for the test to be run')
+
+        set_smt_value = process.system_output(
+            'ppc64_cpu --smt=6', shell=True, ignore_status=False)
+
+        online_cores = process.run('ppc64_cpu --cores-on').stdout.decode()
+        before_online_cores = int(
+            re.search(r'=\s*(\d+)', online_cores).group(1))
+
+        before_smt_state = process.system_output(
+            'ppc64_cpu --smt', shell=True, ignore_status=False)
+
+        set_core1_value = process.system_output(
+            'ppc64_cpu --offline-cores=1', shell=True, ignore_status=False)
+
+        if self.lpar_mode == 'dedicated':
+            Ded_obj = DedicatedCpu(self.sorted_payload,
+                                   log='dedicated_cpu.log')
+            rvalue = ''
+            for operation_type in ['add', 'remove']:
+                if operation_type == 'add':
+                    rvalue = Ded_obj.add_ded_cpu(1)
+                else:
+                    rvalue = Ded_obj.rem_ded_cpu(1)
+
+                if rvalue != 0:
+                    self.log.error(
+                        "CPU operation failed,"
+                        "Please check the logs"
+                    )
+                after_smt_state = process.system_output(
+                    'ppc64_cpu --smt', shell=True, ignore_status=False)
+
+                if (before_smt_state != after_smt_state):
+                    self.log.error(
+                        "Failed since SMT state."
+                        "changed after dlpar operation"
+                    )
+                else:
+                    self.log.info("SMT is unchanged,Test passed.")
+
+        else:
+            Sha_obj = CpuUnit(self.sorted_payload, log='cpu_unit.log')
+            rvalue = ''
+            rvalue1 = ''
+            for operation_type in ['add', 'remove']:
+                if operation_type == 'add':
+                    rvalue = Sha_obj.add_proc(1, '--procs')
+                    rvalue1 = Sha_obj.add_proc(1, '--procunits')
+                else:
+                    rvalue = Sha_obj.remove_proc(1, '--procs')
+                    rvalue1 = Sha_obj.remove_proc(1, '--procunits')
+
+                if (rvalue != 0 and rvalue1 != 0):
+                    self.log.error(
+                        "CPU operation failed."
+                        "Please check the logs."
+                    )
+
+                after_smt_state = process.system_output(
+                    'ppc64_cpu --smt', shell=True, ignore_status=False)
+
+                if (before_smt_state != after_smt_state):
+                    self.log.error(
+                        "Failed since SMT state."
+                        "changed after dlpar operation"
+                    )
+                else:
+                    self.log.info("SMT is unchanged ,Test passed.")
+        # Setting back the value after TC compelte
+        self.log.info("Setting back the value after TC compelte")
+        set_smt_value = process.system_output(
+            'ppc64_cpu --smt=8', shell=True, ignore_status=False)
+
+    def _cancel_on_capacity_exceeded(self, stdout=""):
+        if not stdout:
+            return
+        combined = stdout
+        if (
+            "The operation failed because the ratio of assigned processing units to assigned virtual processors" in combined
+            or
+            "processing units to exceed the maximum capacity allowed with the virtual processor setting" in combined
+            or
+            "The quantity to be added exceeds the available resources." in combined
+            or
+            "Your memory request exceeds the profile's Maximum memory limit." in combined
+            or
+            "Your memory request is below the profile’s Minimum memory limit." in combined
+            or
+            "Not enough memory resources to meet the allocation setting" in combined
+        ):
+            self.cancel(stdout)

@@ -4,4 +4,4 @@ component: !mux
 run_type: !mux
     upstream:
         type: 'upstream'
-        location: ''
+        location: '/home/upstreamci/linux'

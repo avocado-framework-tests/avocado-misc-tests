@@ -5,7 +5,7 @@ host_ip: ""
 netmask: ""
 peer_user: "root"
 peer_password: "********"
-NETSERVER_RUN: 1
+PERF_SERVER_RUN: True
 EXPECTED_THROUGHPUT: 90
 duration: 120
 minimum_iterations: 1

@@ -1,0 +1,10 @@
+component: !mux
+    vm:
+        comp: "vm"
+    power:
+        comp: "powerpc"
+        kself_args: "summary=1"
+run_type: !mux
+    upstream:
+        type: 'upstream'
+        location: "https://github.com/torvalds/linux/archive/master.zip"

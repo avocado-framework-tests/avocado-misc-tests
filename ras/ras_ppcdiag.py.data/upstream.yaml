@@ -1,0 +1,8 @@
+nvsetenv_list: ['load-base', 'load-base 7000']
+usysattn_list: ['-h', '-V', '-P']
+usysfault_list: ['-h', '-V', '-P']
+usysident_list: ['-h', '-V', '-P']
+run_type: !mux
+    upstream:
+        ppcdiag_url: 'https://github.com/power-ras/ppc64-diag/archive/refs/heads/master.zip'
+        type: 'upstream'

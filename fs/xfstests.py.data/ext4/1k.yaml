@@ -15,3 +15,8 @@ fs_type: !mux
         args: '-R xunit -L 10 -g quick'
         mkfs_opt: '-b 1024'
         mount_opt: '-o block_validity'
+
+run_type: !mux
+    upstream:
+        run_type: 'upstream'
+        e2fsprogs_url: 'https://git.kernel.org/pub/scm/fs/ext2/e2fsprogs.git'

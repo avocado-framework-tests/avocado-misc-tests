@@ -1,4 +1,12 @@
+run_type: !mux
+    upstream:
+        type: 'upstream'
+        location: 'https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git'
 component: !mux
+    security:
+        comp: 'powerpc'
+        kself_args: 'summary=1'
+        subtest: 'security'
     kexec:
         comp: 'kexec'
         kself_args: 'summary=1'
@@ -11,15 +19,6 @@ component: !mux
     seccomp:
         comp: 'seccomp'
         kself_args: 'summary=1'
-    security:
-       comp: 'powerpc'
-       subtest: 'security'
     dexcr:
        comp: 'powerpc'
        subtest: 'dexcr'
-run_type: !mux
-    distro:
-        type: 'distro'
-    upstream:
-        type: 'upstream'
-        location: 'https://github.com/torvalds/linux/archive/master.zip'
