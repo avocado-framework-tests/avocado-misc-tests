@@ -15,3 +15,8 @@ fs_type: !mux
         args: '-R xunit -L 10 -g quick'
         mkfs_opt: '-f -b size=65536'
         mount_opt: ''
+
+run_type: !mux
+    upstream:
+        run_type: 'upstream'
+        xfsprogs_url: 'https://git.kernel.org/pub/scm/fs/xfs/xfsprogs-dev.git/'

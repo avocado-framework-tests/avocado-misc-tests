@@ -18,7 +18,7 @@
 import platform
 import os
 from avocado import Test
-from avocado.utils import distro, process, archive, build
+from avocado.utils import distro, process, archive, build, git
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -32,12 +32,24 @@ class Perftest(Test):
     def buildPerf(self):
         """Build perf binary using upstream source code."""
 
-        self.location = self.params.get('location', default='https://github.c'
-                                        'om/torvalds/linux/archive/master.zip')
-        self.tarball = self.fetch_asset("perfcode.zip",
-                                        locations=[self.location], expire='1d')
-        archive.extract(self.tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'linux-master')
+        self.usegit = self.params.get('usegit', default='0')
+        if self.usegit == 1:
+            self.location = self.params.get('location', default='https://git'
+                                            '.kernel.org/pub/scm/linux/kernel/'
+                                            'git/acme/linux.git')
+            self.branch = self.params.get('branch', default='main')
+            git.get_repo(self.location, branch=self.branch,
+                         destination_dir=self.workdir)
+            self.sourcedir = self.workdir
+        else:
+            self.location = self.params.get('location', default='https://githu'
+                                            'b.com/torvalds/linux/archive/mast'
+                                            'er.zip')
+            self.tarball = self.fetch_asset("perfcode.zip",
+                                            locations=[self.location],
+                                            expire='1d')
+            archive.extract(self.tarball, self.workdir)
+            self.sourcedir = os.path.join(self.workdir, 'linux-master')
         self.sourcedir = self.sourcedir + f"/tools/perf/"
         os.chdir(self.sourcedir)
         if build.make(self.sourcedir, extra_args='DESTDIR=/usr'):

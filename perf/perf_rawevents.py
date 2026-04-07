@@ -18,7 +18,7 @@ import os
 import platform
 import shutil
 from avocado import Test
-from avocado.utils import distro, process, genio, cpu
+from avocado.utils import distro, process, genio, cpu, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -67,8 +67,9 @@ class PerfRawevents(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
-        output = process.system_output("perf list --raw-dump pmu|grep pm_*",
-                                       shell=True, ignore_status=True)
+        # Equivalent Python code for bash command
+        # "perf list --raw-dump pmu|grep pm_*"
+        output = process.get_command_output_matching("perf list --raw-dump pmu", "pm_")
         if not output:
             self.cancel("No PMU events found. Skipping the test")
 
@@ -82,7 +83,7 @@ class PerfRawevents(Test):
 
         os.chdir(self.teststmpdir)
         # Clear the dmesg to capture the delta at the end of the test.
-        process.run("dmesg -C")
+        dmesg.clear_dmesg()
 
     def run_event(self, filename, perf_flags):
         for line in genio.read_all_lines(filename):

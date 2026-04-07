@@ -21,6 +21,7 @@ from avocado.utils import memory
 from avocado.utils import process
 from avocado.utils import git
 from avocado.utils import distro
+from avocado.utils import dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -30,10 +31,6 @@ class MmSubsystemTest(Test):
 
     :avocado: tags=memory
     '''
-    @staticmethod
-    def clear_dmesg():
-        process.run("dmesg -C", sudo=True)
-
     @staticmethod
     def check_dmesg():
         errorlog = ['WARNING: CPU:', 'Oops', 'Segfault', 'soft lockup',
@@ -103,7 +100,7 @@ class MmSubsystemTest(Test):
         fail_msg = []
         self.log.info("Tests to be run are %s", self.test_dic)
         for cnt in list(self.test_dic.keys()):
-            self.clear_dmesg()
+            dmesg.clear_dmesg()
             if process.system("./random %s" % cnt, ignore_status=True):
                 failed.append(cnt)
 

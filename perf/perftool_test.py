@@ -18,7 +18,7 @@
 import os
 import platform
 from avocado import Test
-from avocado.utils import archive, build, distro
+from avocado.utils import archive, build, distro, process
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -35,6 +35,7 @@ class Perftool(Test):
         '''
 
         # Check for basic utilities
+        self.run_type = self.params.get('type', default='distro')
         smm = SoftwareManager()
         detected_distro = distro.detect()
         deps = ['gcc', 'make']
@@ -53,6 +54,18 @@ class Perftool(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
+        if self.run_type == "upstream":
+            perf_path = self.params.get("perf_path", default=None)
+            try:
+                build.run_make(perf_path)
+            except Exception as err:
+                self.fail(
+                    f"Failed to build perf in {perf_path}. "
+                    f"Make sure dependencies are installed. Error: {err}"
+                )
+            os.environ["PATH"] = f"{perf_path}:{os.environ['PATH']}"
+
+        process.run("perf --version", shell=True, ignore_status=False, timeout=60)
         locations = ["https://github.com/rfmvh/perftool-testsuite/archive/"
                      "master.zip"]
         tarball = self.fetch_asset("perftool.zip", locations=locations,

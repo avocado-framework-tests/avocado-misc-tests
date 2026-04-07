@@ -158,8 +158,8 @@ class Iperf(Test):
         output = self.session.cmd(cmd)
         if not output.exit_status == 0:
             self.cancel("Unable to compile Iperf into peer machine")
-        self.iperf_run = str(self.params.get("IPERF_SERVER_RUN", default=0))
-        if self.iperf_run == '1':
+        self.iperf_run = str(self.params.get("PERF_SERVER_RUN", default=False))
+        if self.iperf_run:
             cmd = "/tmp/%s/src/iperf -s" % self.version
             cmd = self.session.get_raw_ssh_command(cmd)
             self.obj = SubProcess(cmd)

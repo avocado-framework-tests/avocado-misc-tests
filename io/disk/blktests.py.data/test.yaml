@@ -1,0 +1,2 @@
+disk: "/dev/sdb1"
+type: "block"

@@ -1,4 +1,6 @@
 namespace_count:
+#Set shared_namespaces as True if want to work with nvme multipath
+shared_namespaces: False
 package: !mux
     upstream-nvme-cli:
         package: upstream
@@ -6,5 +8,9 @@ package: !mux
         package: distro
 Devices: !mux
     device1:
+#device parameter accepts values as follows
+#NQN: nqn.1994-11.com.vendor:nvme:modela:2.5-inch:SERIALNUM
+#Subsystem: nvme-subsysX
+#controller: nvmeX 
         device: nvme0
         firmware_url:

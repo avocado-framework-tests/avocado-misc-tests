@@ -49,10 +49,10 @@ class TcpdumpTest(Test):
             self.iface = localhost.get_interface_by_hwaddr(device).name
         else:
             self.cancel("%s interface is not available" % device)
-        self.count = self.params.get("count", default="500")
+        self.count = self.params.get("count", default=500)
         self.peer_ip = self.params.get("peer_ip", default="")
         self.peer_public_ip = self.params.get("peer_public_ip", default="")
-        self.drop = self.params.get("drop_accepted", default="10")
+        self.drop = self.params.get("drop_accepted", default=10)
         self.host_ip = self.params.get("host_ip", default="")
         self.option = self.params.get("option", default='')
         self.hbond = self.params.get("hbond", default=False)
@@ -78,7 +78,7 @@ class TcpdumpTest(Test):
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
-        self.timeout = self.params.get("TIMEOUT", default="600")
+        self.timeout = self.params.get("TIMEOUT", default=600)
         self.mtu = self.params.get("mtu", default=1500)
         self.mtu_timeout = self.params.get("mtu_timeout", default=30)
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
@@ -101,15 +101,20 @@ class TcpdumpTest(Test):
         detected_distro = distro.detect()
         pkgs = ['tcpdump', 'flex', 'bison', 'gcc', 'gcc-c++', 'nmap']
         if detected_distro.name == "SuSE" and detected_distro.version == 16:
-            pkgs.extend(["pcre2-devel", "python311-build"])
+            pkgs.extend(["pcre2-devel"])
         for pkg in pkgs:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("Cannot install package: %s" % pkg)
         if detected_distro.name == "SuSE":
             self.nmap = os.path.join(self.teststmpdir, 'nmap')
-            nmap_download = self.params.get("nmap_download", default="https:"
-                                            "//nmap.org/dist/"
-                                            "nmap-7.80.tar.bz2")
+            if detected_distro.version == 16:
+                nmap_download = self.params.get("nmap_download", default="https:"
+                                                "//nmap.org/dist/"
+                                                "nmap-7.95.tar.bz2")
+            else:
+                nmap_download = self.params.get("nmap_download", default="https:"
+                                                "//nmap.org/dist/"
+                                                "nmap-7.80.tar.bz2")
             tarball = self.fetch_asset(nmap_download)
             self.version = os.path.basename(tarball.split('.tar')[0])
             self.n_map = os.path.join(self.nmap, self.version)

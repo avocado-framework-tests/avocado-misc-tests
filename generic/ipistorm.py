@@ -41,7 +41,7 @@ class DBLIPIStrom(Test):
         """
         Install necessary packages to build the linux module
         """
-        if 'ppc64' not in cpu.get_arch:
+        if 'powerpc' not in cpu.get_arch():
             self.cancel("Test is supported only on ppc64le architecture")
 
         pkgs = ['gcc', 'make']

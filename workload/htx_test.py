@@ -92,6 +92,9 @@ class HtxTest(Test):
         else:
             self.cancel(
                 "running time unit is not proper, please pass as 'm' or 'h' ")
+        if not os.path.exists("/usr/lpp/htx/mdt/"):
+            self.log.info("mdt directory is created")
+
         if str(self.name.name).endswith('test_start'):
             # Build HTX only at the start phase of test
             self.setup_htx()
@@ -180,8 +183,12 @@ class HtxTest(Test):
             time.sleep(10)
         process.run('/usr/lpp/htx/etc/scripts/htxd_run')
 
-        self.log.info("Creating the HTX mdt files")
-        process.run('htxcmdline -createmdt')
+        cmd = "hcl -set_htx_env HTX_ON_DEMAND_MDT_CREATION 1"
+        self.log.info("Enabling on demand HTX mdt support")
+        process.run(cmd)
+        self.log.info("Creating the on demand HTX mdt files")
+        cmd = "hcl -createmdt -mdt %s" % (self.mdt_file)
+        process.run(cmd)
 
     def test_start(self):
         """

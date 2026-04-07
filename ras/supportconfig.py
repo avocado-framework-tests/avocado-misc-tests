@@ -11,8 +11,9 @@
 #
 # See LICENSE for more details.
 #
-# Copyright: 2016 IBM
+# Copyright: 2025 IBM
 # Author: Basheer Khadarsabgari <basheer@linux.vnet.ibm.com>
+#         R Nageswara Sastry <rnsastry@linux.ibm.com>
 
 import os
 import re
@@ -113,40 +114,36 @@ class Supportconfig(Test):
         3.output will be in the plugin-plugin_name.txt file
         """
         plugin_dir = "/usr/lib/supportconfig/plugins"
-        plugin_dir_exists = 1
         if not os.path.exists(plugin_dir):
-            plugin_dir_exists = 0
             os.mkdir(plugin_dir)
         # copy the plugin file
         plugin_name = '/usr/bin/pstree'
         shutil.copy(plugin_name, plugin_dir)
-        ret = process.run("supportconfig",
-                          sudo=True,
-                          ignore_status=True)
+        ret = process.run("supportconfig", sudo=True, ignore_status=True)
+        # Expecting supportconfig command exit status as '0'
+        if ret.exit_status:
+            self.fail("Failed to run supportconfig command with plugin enable")
         logfile = re.search(r"Log file tar ball: (\S+)\n",
                             ret.stdout.decode("utf-8")).group(1)
-        res = process.system("tar -tvf %s | grep 'plugin-pstree.txt'"
-                             % logfile,
-                             ignore_status=True,
-                             shell=True)
-        if ret.exit_status or res:
-            self.fail("support failed to execute plugin")
-        # disable a plugin
-        ret = process.run("supportconfig -p",
-                          sudo=True,
-                          ignore_status=True)
+        # Expecting plugin-pstree.txt in the tar file
+        if not process.get_command_output_matching("tar -tvf %s" % logfile,
+                                                   "plugin-pstree.txt"):
+            self.fail("plugin related file not found in the tar ball")
+        # disable plugin
+        ret = process.run("supportconfig -p", sudo=True, ignore_status=True)
+        # Expecting supportconfig command exit status as '0'
+        if ret.exit_status:
+            self.fail("Failed to run supportconfig command with plugin disable")
         logfile = re.search(r"Log file tar ball: (\S+)\n",
                             ret.stdout.decode("utf-8")).group(1)
-        res = process.system("tar -tvf %s | grep 'plugin-pstree.txt'"
-                             % logfile,
-                             ignore_status=True,
-                             shell=True)
-        if ret.exit_status or not res:
-            self.fail("support failed to disable plugin")
+        # Not expecting plugin-pstree.txt in the tar file
+        if process.get_command_output_matching("tar -tvf %s" % logfile,
+                                               "plugin-pstree.txt"):
+            self.fail("plugin related file found in the tar ball")
 
         # cleanup the plugin dir
-        if not plugin_dir_exists:
-            process.system("rm -rf %s" % plugin_dir)
+        if os.path.exists(plugin_dir):
+            shutil.rmtree(plugin_dir)
 
     def test_smtchanges(self):
         """
@@ -175,19 +172,17 @@ class Supportconfig(Test):
         if "cpu_dlpar=yes" in process.system_output("drmgr -C",
                                                     ignore_status=True,
                                                     shell=True).decode("utf-8"):
-            lcpu_count = process.system_output("lparstat -i | "
-                                               "grep \"Online Virtual CPUs\" | "
-                                               "cut -d':' -f2",
-                                               ignore_status=True,
-                                               shell=True).decode("utf-8")
-            if lcpu_count:
-                lcpu_count = int(lcpu_count)
-                if lcpu_count >= 2:
-                    process.run("drmgr -c cpu -r -q 1")
-                    process.run("drmgr -c cpu -a -q 1")
-                    process.run("supportconfig", sudo=True, ignore_status=True)
-                else:
-                    self.is_fail += 1
+            lcpu_count = process.get_command_output_matching("lparstat -i",
+                                                             "Online Virtual CPUs")
+            if not lcpu_count:
+                self.fail("Can't get Online Virtual CPU count")
+            lcpu_count = int(lcpu_count[0].split(":")[1])
+            if lcpu_count and lcpu_count >= 2:
+                process.run("drmgr -c cpu -r -q 1")
+                process.run("drmgr -c cpu -a -q 1")
+                process.run("supportconfig", sudo=True, ignore_status=True)
+            else:
+                self.is_fail += 1
         if self.is_fail >= 1:
             self.fail(
                 "%s command(s) failed in sosreport tool verification" % self.is_fail)
@@ -201,20 +196,17 @@ class Supportconfig(Test):
         if "mem_dlpar=yes" in process.system_output("drmgr -C",
                                                     ignore_status=True,
                                                     shell=True).decode("utf-8"):
-            mem_value = process.system_output("lparstat -i | "
-                                              "grep \"Online Memory\" | "
-                                              "cut -d':' -f2",
-                                              ignore_status=True,
-                                              shell=True).decode("utf-8")
-            mem_count = re.split(r'\s', mem_value)[1]
-            if mem_count:
-                mem_count = int(mem_count)
-                if mem_count > 512000:
-                    process.run("drmgr -c mem -r -q 2")
-                    process.run("drmgr -c mem -a -q 2")
-                    process.run("supportconfig", sudo=True, ignore_status=True)
-                else:
-                    self.is_fail += 1
+            mem_value = process.get_command_output_matching("lparstat -i",
+                                                            "Online Memory")
+            if not mem_value:
+                self.fail("Can't get Online Memory")
+            mem_value = int(mem_value[0].split(":")[1].split()[0].strip())
+            if mem_value > 512000:
+                process.run("drmgr -c mem -r -q 2")
+                process.run("drmgr -c mem -a -q 2")
+                process.run("supportconfig", sudo=True, ignore_status=True)
+            else:
+                self.is_fail += 1
         if self.is_fail >= 1:
             self.fail(
                 "%s command(s) failed in sosreport tool verification" % self.is_fail)

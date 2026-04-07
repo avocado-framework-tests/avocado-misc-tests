@@ -1,0 +1,39 @@
+record: !mux
+        event_load:
+                record_method: -e ldlat-loads
+        event__store_full:
+                record_method: --event ldlat-stores
+        all_kernel:
+                record_method: -k
+        latency_full:
+                record_method: --ldlat 10
+        all_user:
+                record_method: -u
+
+report: !mux
+        coalesce:
+                report_method: -c pid,tid,iaddr,dso
+        display-rmt:
+                report_method: -d rmt
+        display-lcl_full:
+                report_method: --display lcl
+        force:
+                report_method: -f
+        graph_full:
+                report_method: --call-graph
+        input:
+                report_method: -i 
+        vmlinux_full:
+                report_method: --vmlinux
+        node-info:
+                report_method: -N
+        full-symbols:
+                report_method: --full-symbols
+        no-source:
+                report_method: --no-source
+        show-all:
+                report_method: --show-all
+        stats:
+                report_method: --stats
+        stdio:
+                report_method: --stdio

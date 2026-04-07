@@ -20,8 +20,9 @@ This scripts basic EEH tests on all PCI device
 """
 
 import time
+import psutil
 from avocado import Test
-from avocado.utils import process
+from avocado.utils import process, wait
 from avocado.utils import pci
 from avocado.utils import genio
 from avocado.utils import distro
@@ -29,6 +30,8 @@ from avocado.utils import dmesg
 from avocado.utils import multipath
 from avocado.utils import data_structures
 from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.network.hosts import LocalHost
 
 EEH_HIT = 0
 EEH_MISS = 1
@@ -78,6 +81,31 @@ class EEH(Test):
             self.cancel("pciutils package is need to test")
         self.mem_addr = pci.get_memory_address(self.pci_device)
         self.mask = pci.get_mask(self.pci_device)
+        self.ipaddr = self.params.get("host_ip", default=None)
+        if self.ipaddr:
+            self.peer_ip = self.params.get("peer_ip", default=None)
+            self.interface = pci.get_nics_in_pci_address(self.pci_device)[0]
+            self.localhost = LocalHost()
+            device = self.interface
+            if self.localhost.validate_mac_addr(device) and device in self.localhost.get_all_hwaddr():
+                self.interface = self.localhost.get_interface_by_hwaddr(device).name
+            else:
+                self.cancel("Please check the network device")
+            self.networkinterface = NetworkInterface(self.interface,
+                                                     self.localhost)
+            if not self.networkinterface.validate_ipv4_format(self.ipaddr):
+                self.cancel("Please mention the correct host IP address")
+            if not self.networkinterface.validate_ipv4_format(self.peer_ip):
+                self.cancel("Please mention the correct peer IP address")
+            self.netmask = self.params.get("netmask", default="")
+            try:
+                self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+                self.networkinterface.save(self.ipaddr, self.netmask)
+            except Exception:
+                self.networkinterface.save(self.ipaddr, self.netmask)
+            self.networkinterface.bring_up()
+            if not wait.wait_for(self.networkinterface.is_link_up, timeout=60):
+                self.cancel("Link up of host interface taking more than 60s")
         if self.is_baremetal():
             cmd = f"echo {self.max_freeze} > /sys/kernel/debug/powerpc/eeh_max_freezes"
             process.system(cmd, ignore_status=True, shell=True)
@@ -175,6 +203,11 @@ class EEH(Test):
         returns True, if recovery is success, else False
         """
         dmesg.clear_dmesg()
+        # Start network traffic for net pci_class
+        if self.pci_class_name == 'net':
+            self.networkinterface.ping_flood(self.interface,
+                                             self.peer_ip,
+                                             1000000)
         if self.is_baremetal():
             return_code = self.error_inject(func, '', '', self.mem_addr,
                                             self.mask, '', self.addr,
@@ -191,6 +224,10 @@ class EEH(Test):
         else:
             self.log.info(f"PE {self.pci_device} EEH hit success")
             return EEH_HIT
+        # Stop the network traffic after error inject
+        for ps in psutil.process_iter(['name']):
+            if ps.info['name'] == 'ping':
+                ps.kill()
 
     def error_inject(self, func, pci_class_name, pci_interface, pci_mem_addr,
                      pci_mask, add_cmd, addr, err, phb):

@@ -1,10 +1,8 @@
 component: !mux
     net:
-        comp: 'net'
-        kself_args: 'summary=1'
+        comp: "net"
+        kself_args: "summary=1"
 run_type: !mux
-    distro:
-        type: 'distro'
     upstream:
         type: 'upstream'
-        location: 'https://github.com/torvalds/linux/archive/master.zip'
+        location: 'https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git'

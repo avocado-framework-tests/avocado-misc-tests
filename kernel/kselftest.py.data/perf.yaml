@@ -1,0 +1,10 @@
+run_type: !mux
+    upstream:
+        type: 'upstream'
+        location: 'https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git'
+component: !mux
+    pmu:
+        comp: 'powerpc'
+        subtest: 'pmu'
+    perf_events:
+       comp: 'perf_events'
