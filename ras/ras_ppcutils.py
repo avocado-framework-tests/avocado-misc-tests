@@ -24,6 +24,7 @@ from avocado import Test
 from avocado.utils import process, distro, build, archive, disk
 from avocado import skipIf, skipUnless
 from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils import pci
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
@@ -182,6 +183,15 @@ class RASToolsPpcutils(Test):
         self.run_cmd("lsprop")
         self.error_check()
 
+    def isAccelerator(self):
+        for dev in os.listdir('/sys/bus/pci/devices'):
+            try:
+                if pci.get_pci_class_name(dev) == "accelerator":
+                    return True
+            except Exception:
+                pass
+        return False
+
     @skipIf(IS_POWER_NV, "Skipping test in PowerNV platform")
     def test_lsslot(self):
         """
@@ -195,6 +205,24 @@ class RASToolsPpcutils(Test):
             self.run_cmd_out("lsslot -ac pci")
         if not IS_KVM_GUEST:
             self.run_cmd("lsslot -c cpu -b")
+
+        if self.isAccelerator():
+            self.log.info("Accelerator detected, verifying Spyre card details")
+            lsslot_output = self.run_cmd_out("lsslot -c pci")
+            lspci_output = self.run_cmd_out("lspci")
+            spyre_devices = []
+            for line in lspci_output.strip().split('\n'):
+                if 'spyre' in line.lower():
+                    parts = line.split()
+                    if parts:
+                        spyre_devices.append(parts[0])
+            if not spyre_devices or spyre_devices == ['']:
+                self.fail("No Spyre devices found in system")
+            for device in spyre_devices:
+                if device and device not in lsslot_output:
+                    self.fail(f"Spyre device {device} not found in lsslot -c pci output")
+            self.log.info("Spyre card details verified successfully")
+
         self.run_cmd("lsslot -c pci -o")
         slot = ''
         output = self.run_cmd_out("lsslot").splitlines()
