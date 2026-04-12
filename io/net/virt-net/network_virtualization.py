@@ -131,6 +131,11 @@ class NetworkVirtualization(Test):
         self.is_mlx_driver = self.params.get('is_mlx_driver', default=True)
         self.tx_channel = self.params.get('tx_channel', default=10)
         self.rx_channel = self.params.get('rx_channel', default=10)
+        skip_vnic_add = self.params.get('skip_vnic_add', default=False)
+        if isinstance(skip_vnic_add, bool):
+            self.skip_vnic_add = skip_vnic_add
+        else:
+            self.skip_vnic_add = str(skip_vnic_add).strip().lower() == 'true'
         dmesg.clear_dmesg()
         self.session_hmc.cmd("uname -a")
         cmd = 'lssyscfg -m ' + self.server + \
@@ -197,17 +202,20 @@ class NetworkVirtualization(Test):
 
     def check_slot_availability(self, slot_num):
         '''
-        Checks if given slot is available(free) to be used.
-        :return: True if slot available, False otherwise.
+        Checks if the given slot is free to be used.
+        :return: True if slot is available, False otherwise.
         '''
         cmd = 'lshwres -r virtualio -m %s --rsubtype vnic --filter \
            "lpar_names=%s" -F slot_num' % (self.server, self.lpar)
-        for slot in self.session_hmc.cmd(cmd).stdout_text.splitlines():
-            if 'No results were found' in slot:
-                return True
-            if slot_num == slot:
-                self.log.debug("Slot %s already exists" % slot_num)
-                return False
+        output = self.session_hmc.cmd(cmd).stdout_text
+
+        if 'No results were found' in output:
+            return True
+
+        used_slots = [slot.strip() for slot in output.splitlines() if slot.strip()]
+        if str(slot_num) in used_slots:
+            self.log.debug("Slot %s already exists", slot_num)
+            return False
         return True
 
     def rsct_service_start(self):
@@ -284,42 +292,132 @@ class NetworkVirtualization(Test):
             if re.search("Active: active (running)", line):
                 self.log.info("irqbalance service is active in host")
 
-    def test_add(self):
+    def check_vnic_exists(self, slot, mac):
         '''
-        Network virtualized device add operation
+        Check if a vNIC already exists using slot, MAC address and Linux interface.
+        Returns a dictionary with the discovered state.
         '''
-        for slot, mac, sriov_port, adapter_id, device_ip, netmask in zip(self.slot_num, self.mac_id,
-                                                                         self.sriov_port,
-                                                                         self.backing_adapter_id,
-                                                                         self.device_ip, self.netmask):
-            if not self.check_slot_availability(slot):
-                self.fail("Slot does not exist")
-            self.device_add_remove(slot, mac, sriov_port, adapter_id, 'add')
-            # Call interface_naming() if required
-            # self.interface_naming(mac, slot)
+        vnic_info = {
+            'exists': False,
+            'slot_match': False,
+            'mac_match': False,
+            'device_name': '',
+            'device_slot_match': False,
+        }
+
+        try:
             output = self.list_device(slot)
-            if 'slot_num=%s' % slot not in str(output):
-                self.log.debug(output)
-                self.fail("lshwres fails to list Network virtualized device \
-                           after add operation")
-            if mac not in str(output):
-                self.log.debug(output)
-                self.fail("MAC address in HMC differs")
-            if not self.find_device(mac):
-                self.fail("MAC address differs in linux")
-            device = self.find_device(mac)
-            networkinterface = NetworkInterface(device, self.local)
+            vnic_info['slot_match'] = 'slot_num=%s' % slot in output
+            vnic_info['mac_match'] = mac in output
+            vnic_info['device_name'] = self.find_device(mac)
+
+            if vnic_info['device_name']:
+                try:
+                    device_id = self.find_device_id(mac)
+                    device_slot = self.find_virtual_slot(device_id)
+                    if device_slot:
+                        vnic_info['device_slot_match'] = (
+                            str(device_slot) == str(slot))
+                except Exception as err:
+                    self.log.debug(
+                        "Unable to correlate Linux device with slot %s: %s",
+                        slot, str(err))
+
+            vnic_info['exists'] = (
+                vnic_info['slot_match'] or
+                vnic_info['mac_match'] or
+                vnic_info['device_slot_match']
+            )
+
+            self.log.info(
+                "vNIC state for slot %s: exists=%s slot_match=%s mac_match=%s "
+                "device_name=%s device_slot_match=%s",
+                slot, vnic_info['exists'], vnic_info['slot_match'],
+                vnic_info['mac_match'], vnic_info['device_name'],
+                vnic_info['device_slot_match'])
+        except Exception as err:
+            self.log.debug("Error checking vNIC existence for slot %s: %s",
+                           slot, str(err))
+        return vnic_info
+
+    def ensure_vnic_connectivity(self, slot, mac, device_ip, netmask):
+        '''
+        Validate that the vNIC exists, is configured and can ping the peer.
+        Reconfigure the interface if ping fails.
+        '''
+        output = self.list_device(slot)
+        if 'slot_num=%s' % slot not in str(output):
+            self.log.debug(output)
+            self.fail("lshwres fails to list Network virtualized device \
+                       after add operation")
+        if mac not in str(output):
+            self.log.debug(output)
+            self.fail("MAC address in HMC differs")
+
+        device = self.find_device(mac)
+        if not device:
+            self.fail("MAC address differs in linux")
+
+        networkinterface = NetworkInterface(device, self.local)
+
+        def configure_interface():
             try:
                 networkinterface.add_ipaddr(device_ip, netmask)
+            except Exception as err:
+                self.log.debug("add_ipaddr failed for %s: %s", device, str(err))
+            try:
                 networkinterface.save(device_ip, netmask)
-            except Exception:
-                networkinterface.save(device_ip, netmask)
+            except Exception as err:
+                self.log.debug("save failed for %s: %s", device, str(err))
             networkinterface.bring_up()
             if not wait.wait_for(networkinterface.is_link_up, timeout=120):
                 self.fail("Unable to bring up the link on the Network \
                        virtualized device")
+
+        configure_interface()
+        if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
+            self.log.info("Ping failed on existing configuration for device %s. "
+                          "Reconfiguring interface.", device)
+            configure_interface()
             if networkinterface.ping_check(self.peer_ip[0], count=5) is not None:
                 self.fail("Ping failed with active vnic device")
+
+    def test_add(self):
+        '''
+        Network virtualized device add operation
+        '''
+        for slot, mac, sriov_port, adapter_id, device_ip, netmask in zip(
+                self.slot_num, self.mac_id, self.sriov_port,
+                self.backing_adapter_id, self.device_ip, self.netmask):
+            slot_available = self.check_slot_availability(slot)
+
+            vnic_info = self.check_vnic_exists(slot, mac)
+
+            if vnic_info['exists']:
+                if self.skip_vnic_add:
+                    self.log.info(
+                        "vNIC already exists for slot %s and "
+                        "skip_vnic_add=True. Skipping add operation.", slot)
+                    if not vnic_info['device_name']:
+                        self.fail("vNIC exists for slot %s but no Linux device "
+                                  "was found for MAC %s" % (slot, mac))
+                else:
+                    self.log.info(
+                        "vNIC already exists for slot %s and "
+                        "skip_vnic_add=False. Recreating the vNIC with the "
+                        "same slot.", slot)
+                    self.device_add_remove(slot, '', '', '', 'remove')
+                    time.sleep(5)
+                    self.device_add_remove(slot, mac, sriov_port,
+                                           adapter_id, 'add')
+            else:
+                if not slot_available:
+                    self.fail("Slot %s is already in use but no matching vNIC "
+                              "was detected for MAC %s" % (slot, mac))
+                self.log.info("Adding vNIC for slot %s with MAC %s", slot, mac)
+                self.device_add_remove(slot, mac, sriov_port, adapter_id, 'add')
+
+            self.ensure_vnic_connectivity(slot, mac, device_ip, netmask)
         self.session_peer = Session(self.peer_ip[0], user=self.peer_user, password=self.peer_password)
         if not wait.wait_for(self.session_peer.connect, timeout=30):
             self.fail("Failed connecting to peer lpar")
@@ -1171,3 +1269,4 @@ class NetworkVirtualization(Test):
                 self.log.debug("failed to disable debug mode")
         if 'test_add' in str(self.name.name):
             self.session_peer.quit()
+
