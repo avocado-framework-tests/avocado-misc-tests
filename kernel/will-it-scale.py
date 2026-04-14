@@ -23,10 +23,9 @@ from sys import version_info
 
 from avocado import Test
 from avocado import skipIf
-from avocado.utils import process, build, memory, archive, distro
+from avocado.utils import process, build, archive, distro
 from avocado.utils.software_manager.manager import SoftwareManager
 
-SINGLE_NODE = len(memory.numa_nodes_with_memory()) < 2
 VERSION_CHK = version_info[0] < 4 and version_info[1] < 7
 
 
@@ -74,7 +73,6 @@ class WillItScaleTest(Test):
             if self.fail_cmd:
                 self.warn('libhwloc softlink failed, program may not run')
 
-    @skipIf(SINGLE_NODE, "Test requires at least two numa nodes")
     @skipIf(VERSION_CHK, "Test requires Python 3.7+")
     def setUp(self):
         """
@@ -88,7 +86,7 @@ class WillItScaleTest(Test):
         self.distro_rel = distro.detect()
         smm = SoftwareManager()
         deps = ['gcc', 'make']
-        if self.distro_rel.name.lower() in ['fedora', 'redhat']:
+        if self.distro_rel.name.lower() in ['fedora', 'redhat', 'rhel']:
             deps.extend(['hwloc-devel'])
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
