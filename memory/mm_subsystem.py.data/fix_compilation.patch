@@ -1,0 +1,38 @@
+--- a/random.c
++++ b/random.c
+@@ -107,7 +107,7 @@ static int hotplug_memory();
+ static int invalidate_cache(unsigned children, unsigned iteration,
+ 			    unsigned blksz, bool dread, bool dwrite, bool trunc,
+ 			    bool falloc, bool fill);
+-static int invalidate_pagecache_dio();
++static int invalidate_pagecache_dio(void *data);
+ static int invalidate(unsigned child, unsigned iteration, unsigned blksz,
+ 		      int rflag, int wflag);
+ static void kill_children(pid_t *pids, unsigned children);
+@@ -122,7 +122,7 @@ static int migrate_huge_hotplug_memory(void *data);
+ static int migrate_huge_offline(size_t free_size);
+ static int migrate_ksm(void *data);
+ static int mmap_bind_node_huge(int node, size_t length);
+-static int mmap_collision();
++static int mmap_collision(void *data);
+ static int mmap_hugetlbfs(void *data);
+ static int mmap_offline_node_huge(size_t length);
+ static int oom(void *data);
+@@ -2498,7 +2498,7 @@ static int mmap_below_brk_with_guard()
+ 	return 0;
+ }
+ 
+-static int mmap_collision()
++static int mmap_collision(void *data)
+ {
+ 	int fd;
+ 	void *addr;
+@@ -2557,7 +2557,7 @@ static int mmap_collision()
+ 	return 0;
+ }
+ 
+-static int invalidate_pagecache_dio()
++static int invalidate_pagecache_dio(void *data)
+ {
+ 	int fd;
+ 	void *addr;

@@ -259,5 +259,6 @@ class Iperf(Test):
             if self.hbond:
                 self.networkinterface.restore_slave_cfg_file()
             self.remotehost.remote_session.quit()
-            self.remotehost_public.remote_session.quit()
+            if hasattr(self, 'remotehost_public'):
+                self.remotehost_public.remote_session.quit()
             self.session.quit()

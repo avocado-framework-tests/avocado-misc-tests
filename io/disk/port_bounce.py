@@ -19,11 +19,11 @@ import re
 import time
 # import telnetlib
 from avocado import Test
-import paramiko
 from avocado.utils import process
 from avocado.utils import genio
 from avocado.utils import multipath, pci
 from avocado.utils import wait
+from avocado.utils import ssh
 # import shutil
 # try:
 #    import pxssh
@@ -105,23 +105,25 @@ class PortBounceTest(Test):
 
     def switch_login(self, ip, username, password):
         '''
-        Login method for remote fc switch
+        Login method for remote fc switch using avocado.utils.ssh
         '''
-        self.tnc = paramiko.SSHClient()
-        self.tnc.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.tnc.connect(ip, username=username, password=password,
-                         look_for_keys=False, allow_agent=False)
+        self.ssh_session = ssh.Session(host=ip, user=username, password=password)
+        if not self.ssh_session.connect():
+            self.fail("Failed to establish SSH connection to " + ip)
         self.log.info("SSH connection established to " + ip)
-        self.remote_conn = self.tnc.invoke_shell()
-        self.log.info("Interactive SSH session established")
-        assert self.remote_conn
 
-    def _send_only_result(self, command, response):
-        output = response.decode("utf-8").splitlines()
+    def _send_only_result(self, command, result):
+        '''
+        Process the command result from avocado.utils.ssh.Session.cmd()
+        '''
+        output = result.stdout_text.splitlines()
         self.log.info("output in sendonlyresult: %s" % output)
-        if command in output[0]:
+        # Remove command echo if present in first line
+        if output and command in output[0]:
             output.pop(0)
-        output.pop()
+        # Remove empty last line if present
+        if output and not output[-1].strip():
+            output.pop()
         output = [element.lstrip() + '\n' for element in output]
         response = ''.join(output)
         response = response.strip()
@@ -130,16 +132,26 @@ class PortBounceTest(Test):
 
     def run_command(self, command, timeout=300):
         '''
-        Run command method for running commands on fc switch
+        Run command method for running commands on fc switch using avocado.utils.ssh
         '''
         self.log.info("Running the %s command on fc/nic switch", command)
-        if not hasattr(self, 'tnc'):
-            self.fail("telnet connection to the fc/nic switch not yet done")
-        self.remote_conn.send(command + '\n')
-        time.sleep(self.verify_sleep_time)
-        response = self.remote_conn.recv(8192)
-        self.log.info("response before sendonly_output: %s", response)
-        return self._send_only_result(command, response)
+        if not hasattr(self, 'ssh_session'):
+            self.fail("SSH connection to the fc/nic switch not yet established")
+        try:
+            # Execute command without timeout wrapper to avoid interfering with pipes
+            # The timeout parameter in session.cmd() adds 'timeout N' prefix which can break pipes
+            # Instead, we'll use the timeout parameter properly
+            result = self.ssh_session.cmd(command, ignore_status=True, timeout=None)
+
+            # Log both stdout and stderr for debugging
+            self.log.info("response before sendonly_output: %s", result.stdout_text)
+            if result.stderr_text:
+                self.log.debug("stderr output: %s", result.stderr_text)
+
+            # Return stdout even if exit status is non-zero (e.g., grep not finding pattern)
+            return self._send_only_result(command, result)
+        except Exception as e:
+            self.fail("Failed to execute command '%s': %s" % (command, str(e)))
 
     def test(self):
         '''
@@ -314,7 +326,22 @@ class PortBounceTest(Test):
         cmd = 'nodefind %s | grep -i "Port Index"' % wwpn
         switch_info = self.run_command(cmd)
         self.log.info("switchinfo = \n %s\n", switch_info)
-        return switch_info.split(" ")[-1]
+        if not switch_info or not switch_info.strip():
+            self.log.warning("No switch port found for wwpn %s, trying without grep", wwpn)
+            # Try without grep to see full output
+            cmd = 'nodefind %s' % wwpn
+            full_output = self.run_command(cmd)
+            self.log.info("Full nodefind output: %s", full_output)
+            # Try to find Port Index in the output
+            if full_output:
+                for line in full_output.split('\n'):
+                    if 'Port Index' in line or 'port index' in line:
+                        switch_info = line
+                        break
+        if switch_info and switch_info.strip():
+            return switch_info.split()[-1]
+        else:
+            self.fail("Could not find switch port for host %s with wwpn %s" % (host, wwpn))
 
     def tearDown(self):
         '''
@@ -329,3 +356,8 @@ class PortBounceTest(Test):
                                        shell=True, sudo=True)
 
         self.log.debug("Kernel Errors: %s", output)
+
+        # Close SSH session
+        if hasattr(self, 'ssh_session'):
+            self.ssh_session.quit()
+            self.log.info("SSH session closed")
