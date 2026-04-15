@@ -22,6 +22,7 @@
 import os
 import re
 import shutil
+import platform
 import time
 from avocado import Test
 from avocado.utils import build, distro, genio, dmesg
@@ -31,6 +32,9 @@ from avocado.utils.ssh import Session
 from avocado.utils.service import ServiceManager
 
 from avocado.utils.software_manager.manager import SoftwareManager
+
+# Default cache directory for LTP compilation
+LTP_CACHE_BASE = "/var/cache/avocado/ltp"
 
 
 class LTP(Test):
@@ -45,6 +49,65 @@ class LTP(Test):
     """
     failed_tests = list()
     mem_tests = ['-f mm', '-f hugetlb']
+
+    def _get_cache_dir(self):
+        """
+        Get the cache directory path for LTP installation.
+        Uses architecture and LTP version to create unique cache paths.
+        """
+        arch = platform.machine()
+        ltp_version = self.params.get('ltp_version', default='master')
+        cache_base = self.params.get('ltp_cache_dir', default=LTP_CACHE_BASE)
+        cache_dir = os.path.join(cache_base, f"ltp-{ltp_version}-{arch}")
+        return cache_dir
+
+    def _is_cache_valid(self, cache_dir):
+        """
+        Check if the cached LTP installation is valid and not expired.
+        :param cache_dir: Path to the cached LTP installation
+        :return: True if cache is valid, False otherwise
+        """
+        marker_file = os.path.join(cache_dir, '.ltp_build_marker')
+        if not os.path.exists(marker_file):
+            return False
+        # Check if the installation is complete
+        ltpbin_dir = os.path.join(cache_dir, 'bin')
+        if not os.path.exists(ltpbin_dir):
+            return False
+        # Check runner existence based on use_kirk setting
+        if self.use_kirk:
+            runner_path = os.path.join(ltpbin_dir, 'kirk')
+        else:
+            runner_path = os.path.join(ltpbin_dir, 'runltp')
+        if not os.path.exists(runner_path):
+            return False
+        # Check cache age
+        cache_max_age_days = self.params.get('ltp_cache_max_age_days', default=7)
+        try:
+            with open(marker_file, 'r') as f:
+                timestamp = float(f.read().strip())
+            age_seconds = time.time() - timestamp
+            age_days = age_seconds / (24 * 3600)
+            if age_days > cache_max_age_days:
+                self.log.info(f"Cache is {age_days:.1f} days old, exceeds max age of {cache_max_age_days} days")
+                return False
+            self.log.info(f"Using cached LTP installation ({age_days:.1f} days old)")
+            return True
+        except (IOError, ValueError) as e:
+            self.log.warning(f"Failed to read cache marker: {e}")
+            return False
+
+    def _create_cache_marker(self, cache_dir):
+        """
+        Create a marker file with timestamp to track cache age.
+        :param cache_dir: Path to the cached LTP installation
+        """
+        marker_file = os.path.join(cache_dir, '.ltp_build_marker')
+        try:
+            with open(marker_file, 'w') as f:
+                f.write(str(time.time()))
+        except IOError as e:
+            self.log.warning(f"Failed to create cache marker: {e}")
 
     @staticmethod
     def mount_point(mount_dir):
@@ -92,6 +155,8 @@ class LTP(Test):
         self.peer_password = self.params.get("peer_password", default=None)
         self.two_host_configuration = self.params.get("two_host_configuration",
                                                       default=False)
+        self.enable_cache = self.params.get('ltp_enable_cache', default=True)
+        self.force_rebuild = self.params.get('ltp_force_rebuild', default=False)
 
         deps = ['gcc', 'make', 'automake', 'autoconf', 'psmisc']
         if dist.name == "Ubuntu":
@@ -126,6 +191,31 @@ class LTP(Test):
             if not smg.check_installed(package) and not smg.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
 
+        # Check if we can use cached compilation
+        cache_dir = self._get_cache_dir()
+        use_cache = (self.enable_cache and
+                     not self.force_rebuild and
+                     self._is_cache_valid(cache_dir))
+        if use_cache:
+            self.log.info(f"Reusing cached LTP installation from {cache_dir}")
+            self.ltpbin_dir = os.path.join(cache_dir, 'bin')
+            self.ltpdir = os.path.join(cache_dir, 'src')
+            # For two-host configuration, we still need to setup peer
+            if self.two_host_configuration and "-f net" in self.args:
+                ltp_dir = os.path.join(self.ltpdir, "ltp-master")
+                self._setup_two_host_network(ltp_dir)
+            # Setup services
+            self._setup_services(dist)
+            return
+        # If cache is invalid or disabled, proceed with fresh compilation
+        if self.enable_cache:
+            self.log.info(f"Building fresh LTP installation in cache: {cache_dir}")
+            # Ensure cache directory exists
+            os.makedirs(cache_dir, exist_ok=True)
+            self.ltpbin_dir = os.path.join(cache_dir, 'bin')
+        else:
+            self.ltpbin_dir = None
+
         dmesg.clear_dmesg()
         url = self.params.get(
             'url', default='https://github.com/linux-test-project/ltp/archive/master.zip')
@@ -136,11 +226,17 @@ class LTP(Test):
                 "ltp-master%s" % match, locations=[url], expire='7d')
         else:
             self.cancel("Provided LTP Url is not valid")
-        self.ltpdir = '/tmp/ltp'
+        if self.enable_cache:
+            # Store source in cache directory
+            self.ltpdir = os.path.join(cache_dir, 'src')
+        else:
+            self.ltpdir = '/tmp/ltp'
         if not os.path.exists(self.ltpdir):
-            os.mkdir(self.ltpdir)
+            os.makedirs(self.ltpdir, exist_ok=True)
         archive.extract(tarball, self.ltpdir)
         ltp_dir = os.path.join(self.ltpdir, "ltp-master")
+        if not os.path.exists(ltp_dir):
+            self.cancel(f"LTP directory not found after extraction: {ltp_dir}")
         os.chdir(ltp_dir)
 
         # Initialize and update kirk submodule only if use_kirk is True
@@ -162,64 +258,18 @@ class LTP(Test):
         build.make(ltp_dir, extra_args='autotools')
         if not self.ltpbin_dir:
             self.ltpbin_dir = os.path.join(self.teststmpdir, 'bin')
-        if not os.path.exists(self.ltpbin_dir):
-            os.mkdir(self.ltpbin_dir)
+        os.makedirs(self.ltpbin_dir, exist_ok=True)
 
         if self.two_host_configuration and "-f net" in self.args:
-            self.session = Session(self.peer_public_ip, user=self.peer_user,
-                                   password=self.peer_password)
-            if not self.session.connect():
-                self.cancel("failed connecting to peer")
-            # setting ltp directory in peer LPAR for 2 host configuration tests
-            destination = "%s:/tmp" % self.peer_public_ip
-            output = self.session.copy_files(self.ltpdir, destination,
-                                             recursive=True)
-            if not output:
-                self.cancel("unable to copy the ltp into peer machine")
-            time.sleep(10)
-            cmd = "cd %s;make autotools;./configure;make;make install" % ltp_dir
-            output = self.session.cmd(cmd)
-            if not output.exit_status == 0:
-                self.cancel("Unable to compile ltp in peer machine")
-
-            # Adding Rhost name and passwd in tst_net.sh for ltp between 2 host
-            output = self.session.cmd('hostname')
-            if not output.exit_status == 0:
-                self.cancel("Unable to get the hostname of peer machine")
-            ltp_tstnet_dir = os.path.join(ltp_dir, 'testcases/lib/tst_net.sh')
-            if not os.path.exists(ltp_tstnet_dir):
-                self.log.info("File tst_net.sh does not exist")
-
-            ltp_tstnet_dir_copy = os.path.join(ltp_dir,
-                                               'testcases/lib/tst_net_copy.sh')
-            shutil.copy(ltp_tstnet_dir, ltp_tstnet_dir_copy)
-            replacements = [("export RHOST=\"$RHOST\"",
-                            "export RHOST=\"" + str(output.stdout) + "\""),
-                            ("export PASSWD=\"${PASSWD:-}\"",
-                            "export PASSWD=\"" + self.peer_password + "\"")]
-            with open(ltp_tstnet_dir_copy, 'r') as input_file, open(ltp_tstnet_dir, 'w') as output_file:
-                for line in input_file:
-                    if replacements:
-                        for old_string, new_string in replacements:
-                            line = line.replace(old_string, new_string)
-                    output_file.write(line)
-            os.remove(ltp_tstnet_dir_copy)
-
-        # necessary services to be started on the host before test run starts
-        Manageservice = ServiceManager()
-        services = ['vsftpd']
-        if dist.name == "Ubuntu":
-            services.extend(['nfs-kernel-server', 'rpcbind', 'apache2'])
-        elif dist.name in ["centos", "rhel", "fedora"]:
-            services.extend(['nfs-server', 'rpcbind', 'httpd'])
-        elif dist.name == "SuSE":
-            services.extend(['nfs-server', 'apache2'])
-        for service in services:
-            Manageservice.restart(service)
-
+            self._setup_two_host_network(ltp_dir)
+        self._setup_services(dist)
         process.system('./configure --prefix=%s' % self.ltpbin_dir)
         build.make(ltp_dir)
         build.make(ltp_dir, extra_args='install')
+        # Create cache marker after successful installation
+        if self.enable_cache:
+            self._create_cache_marker(cache_dir)
+            self.log.info(f"LTP compiled and cached at {cache_dir}")
 
         # Verify the appropriate runner is installed
         if self.use_kirk:
@@ -230,6 +280,63 @@ class LTP(Test):
             runltp_path = os.path.join(self.ltpbin_dir, 'runltp')
             if not os.path.exists(runltp_path):
                 self.cancel("runltp was not installed properly")
+
+    def _setup_two_host_network(self, ltp_dir):
+        """
+        Setup two-host network configuration for LTP network tests.
+        :param ltp_dir: Path to LTP source directory
+        """
+        self.session = Session(self.peer_public_ip, user=self.peer_user,
+                               password=self.peer_password)
+        if not self.session.connect():
+            self.cancel("failed connecting to peer")
+        # setting ltp directory in peer LPAR for 2 host configuration tests
+        destination = "%s:/tmp" % self.peer_public_ip
+        output = self.session.copy_files(self.ltpdir, destination,
+                                         recursive=True)
+        if not output:
+            self.cancel("unable to copy the ltp into peer machine")
+        time.sleep(10)
+        cmd = "cd %s;make autotools;./configure;make;make install" % ltp_dir
+        output = self.session.cmd(cmd)
+        if not output.exit_status == 0:
+            self.cancel("Unable to compile ltp in peer machine")
+
+        # Adding Rhost name and passwd in tst_net.sh for ltp between 2 host
+        output = self.session.cmd('hostname')
+        if not output.exit_status == 0:
+            self.cancel("Unable to get the hostname of peer machine")
+        ltp_tstnet_dir = os.path.join(ltp_dir, 'testcases/lib/tst_net.sh')
+        if not os.path.exists(ltp_tstnet_dir):
+            self.log.info("File tst_net.sh does not exist")
+
+        ltp_tstnet_dir_copy = os.path.join(ltp_dir,
+                                           'testcases/lib/tst_net_copy.sh')
+        shutil.copy(ltp_tstnet_dir, ltp_tstnet_dir_copy)
+        replacements = [("export RHOST=\"$RHOST\"",
+                        "export RHOST=\"" + str(output.stdout) + "\""),
+                        ("export PASSWD=\"${PASSWD:-}\"",
+                        "export PASSWD=\"" + self.peer_password + "\"")]
+        with open(ltp_tstnet_dir_copy, 'r') as input_file, open(ltp_tstnet_dir, 'w') as output_file:
+            for line in input_file:
+                if replacements:
+                    for old_string, new_string in replacements:
+                        line = line.replace(old_string, new_string)
+                output_file.write(line)
+        os.remove(ltp_tstnet_dir_copy)
+
+    def _setup_services(self, dist):
+        """Setup necessary services for LTP tests."""
+        Manageservice = ServiceManager()
+        services = ['vsftpd']
+        if dist.name == "Ubuntu":
+            services.extend(['nfs-kernel-server', 'rpcbind', 'apache2'])
+        elif dist.name in ["centos", "rhel", "fedora"]:
+            services.extend(['nfs-server', 'rpcbind', 'httpd'])
+        elif dist.name == "SuSE":
+            services.extend(['nfs-server', 'apache2'])
+        for service in services:
+            Manageservice.restart(service)
 
     def test(self):
         logfile = os.path.join(self.logdir, 'ltp.log')
@@ -303,8 +410,12 @@ class LTP(Test):
             self.fail("Issue %s listed in dmesg please check" % error)
 
     def tearDown(self):
-        if os.path.exists(self.ltpdir):
+        # Only cleanup if not using cache or if it's a temporary directory
+        cleanup_ltp = not self.enable_cache or self.ltpdir == '/tmp/ltp'
+        if cleanup_ltp and os.path.exists(self.ltpdir):
             shutil.rmtree(self.ltpdir)
+        elif not cleanup_ltp:
+            self.log.info("LTP directory preserved in cache: %s" % self.ltpdir)
         else:
             self.log.info("Unable to delete ltp from host machine")
         if self.two_host_configuration:
