@@ -69,3 +69,7 @@ class PerfScript(Test):
         process.run(probe_del)
         if output.exit_status == -11:
             self.fail("perf script command segfaulted")
+
+    def tearDown(self):
+        if hasattr(self, 'temp_file') and os.path.isfile(self.temp_file):
+            os.remove(self.temp_file)
