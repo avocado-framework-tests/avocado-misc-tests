@@ -1,0 +1,13 @@
+component: !mux
+    mm:
+        comp: 'mm'
+    mm_powerpc:
+        comp: 'powerpc/mm'
+    cpu_hotplug:
+        comp: 'cpu-hotplug'
+    memory_hotplug:
+        comp: 'memory-hotplug'
+run_type: !mux
+    upstream:
+        type: 'upstream'
+        location: "https://github.com/torvalds/linux/archive/master.zip"
