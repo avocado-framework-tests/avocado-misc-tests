@@ -1,0 +1,16 @@
+host_interface: "eth0"
+host_ip: ""
+peer_interface: ""
+peer_ip: ""
+peer_public_ip: ""
+peer_user: ""
+peer_password: ""
+netmask: ""
+nfs_mount_point: ""
+nfs_server_path: ""
+fsstress_loop: ""
+n_val: ""
+p_val: ""
+fsstress_timeout: ""
+
+
