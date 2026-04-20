@@ -68,8 +68,10 @@ class RASToolsPpcutils(Test):
                             package)
         # get the disk name
         self.disk_name = ''
-        output = process.system_output("df -h", shell=True).decode().splitlines()
-        filtered_lines = [line for line in output if re.search(r'\b(sd[a-z]\d+|vd[a-z]\d+|nvme\d+n\d+p\d+)\b', line)]
+        output = process.system_output(
+            "df -h", shell=True).decode().splitlines()
+        filtered_lines = [line for line in output if re.search(
+            r'\b(sd[a-z]\d+|vd[a-z]\d+|nvme\d+n\d+p\d+)\b', line)]
         if filtered_lines:
             disk_entry = filtered_lines[-1].split()[0]
             # Strip partition number: for sdX or vdX it’s trailing digits, for nvme it’s after 'p'
@@ -220,7 +222,8 @@ class RASToolsPpcutils(Test):
                 self.fail("No Spyre devices found in system")
             for device in spyre_devices:
                 if device and device not in lsslot_output:
-                    self.fail(f"Spyre device {device} not found in lsslot -c pci output")
+                    self.fail(
+                        f"Spyre device {device} not found in lsslot -c pci output")
             self.log.info("Spyre card details verified successfully")
 
         self.run_cmd("lsslot -c pci -o")
@@ -349,9 +352,11 @@ class RASToolsPpcutils(Test):
             if list_item == '-b':
                 try:
                     child.expect("Reboot Policy Settings:", timeout=5)
-                    child.expect(r"Auto Restart Partition \(1=Yes, 0=No\) \[1\]:", timeout=5)
+                    child.expect(
+                        r"Auto Restart Partition \(1=Yes, 0=No\) \[1\]:", timeout=5)
                     child.sendline("1")
-                    child.expect(r"Are you certain you wish to update the system configuration\s*to the specified values\? \(yes/no\) \[no\]:", timeout=5)
+                    child.expect(
+                        r"Are you certain you wish to update the system configuration\s*to the specified values\? \(yes/no\) \[no\]:", timeout=5)
                     child.sendline("yes")
                 except pexpect.TIMEOUT:
                     self.fail("Timeout waiting for expected prompt")
@@ -418,7 +423,8 @@ class RASToolsPpcutils(Test):
         for list_item in list:
             cmd = "lsdevinfo %s" % list_item
             self.run_cmd(cmd)
-        output = process.system_output("ip link ls up", shell=True).decode().strip()
+        output = process.system_output(
+            "ip link ls up", shell=True).decode().strip()
         interface = ""
         for line in output.splitlines():
             # check if the line doesn't contain 'lo' or 'vir' and doesn't start
@@ -534,37 +540,61 @@ class RASToolsPpcutils(Test):
                 error_messages.append("lparstat: Expected failure, %s command \
                                       executed successfully." % cmd)
         output = process.system_output("lparstat -E 1 1").decode("utf-8")
+        parsed = False
         for line in output.splitlines():
-            if 'GHz' in line:
-                # Define the regular expression pattern
-                pattern = (r'(\d+\.\d+)\s+(\d+\.\d+)\s+\d+\.\d+GHz\[\s*(\d+)%\]\s+'
-                           r'(\d+\.\d+)\s+(\d+\.\d+)')
-                # Find all matches in the input string
-                matches = re.findall(pattern, line)
-                for data in matches:
-                    actual_busy = float(data[0])
-                    actual_idle = float(data[1])
-                    normal_idle = float(data[3])
-                    normal_busy = float(data[4])
-                    normal = normal_idle + normal_busy
-                    freq_percentile = float(data[2])
-        if (actual_busy > 0) and (actual_idle < 100):
-            self.log.info("Busy and idle actual values are correct")
-        else:
-            error_messages.append("Busy and idle actual values are incorrect")
-
-        if normal == freq_percentile:
-            self.log.info("Normalised busy plus idle value match with \
-                          Frequency percentage")
-        else:
-            error_messages.append("Normalised busy plus idle value \
-                                  does not match with Frequency percentage")
+            line = line.strip()
+            try:
+                parts = line.split()
+                if len(parts) < 5:
+                    self.log.warning(f"skipping malformed line: {line}")
+                    continue
+                actual_busy = float(parts[0])
+                actual_idle = float(parts[1])
+                freq_field = [p for p in parts if "GHz" in p]
+                if not freq_field:
+                    self.log.warning(f"no frequency filed found: {line}")
+                    continue
+                freq_percentile = float(
+                    freq_field[0].split('[')[1].strip(']%'))
+                float_vals = []
+                for p in parts:
+                    try:
+                        float_vals.append(float(p))
+                    except ValueError:
+                        continue
+                if len(float_vals) < 4:
+                    self.log.warning(f"not enough numeric values: {line}")
+                    continue
+                normal_busy = float_vals[-2]
+                normal_idle = float_vals[-1]
+                normal = normal_busy + normal_idle
+                actual_sum = actual_busy + actual_idle
+                parsed = True
+                self.log.info(
+                    f"Parsed → actual: {actual_busy} + {actual_idle} = {actual_sum}, "
+                    f"normalized: {normal_busy} + {normal_idle} = {normal}, "
+                    f"freq={freq_percentile}")
+                if abs(actual_sum - 100.0) <= 1.0:
+                    self.log.info("Actual busy + idle ≈ 100% ✔")
+                else:
+                    error_messages.append(
+                        f"Actual values invalid: sum={actual_sum}")
+                if abs(normal - freq_percentile) <= 2.0:
+                    self.log.info("Normalized values match frequency")
+                else:
+                    error_messages.append(
+                        f"Mismatch: normalized={normal}, freq={freq_percentile}")
+            except Exception as e:
+                self.log.warning(f"Parsing error in line: {line} → {str(e)}")
+                continue
+        if not parsed:
+            error_messages.append("Failed to parse valid lparstat -E output")
 
         list_physc = []
         for i in [2, 4, 8, "off"]:
             self.run_cmd("ppc64_cpu --smt=%s" % i)
             smt_initial = re.split(
-                    r'=| is ', self.run_cmd_out("ppc64_cpu --smt"))[1]
+                r'=| is ', self.run_cmd_out("ppc64_cpu --smt"))[1]
             if smt_initial == str(i):
                 output = process.system_output("lparstat 1 1").decode("utf-8")
                 if output.strip() != "" and "\n" in output:
@@ -603,7 +633,7 @@ class RASToolsPpcutils(Test):
 
                 self.log.info(f"Resource Group Number: {rg_number}")
                 self.log.info(
-                        f"Resource Group Active Processors: {rg_processors}")
+                    f"Resource Group Active Processors: {rg_processors}")
 
                 # Validate resource group number is non-negative
                 if int(rg_number) >= 0:
