@@ -156,8 +156,11 @@ class kselftest(Test):
             if (self.comp != "cpufreq" and self.comp != "bpf"):
                 process.system("make headers -C %s" % self.buldir, shell=True,
                                sudo=True)
-                process.system("make install -C %s" % self.sourcedir,
-                               shell=True, sudo=True)
+                # Only run 'make install' if no specific component is selected
+                # Component-specific builds will be done later in the build phase
+                if not self.comp:
+                    process.system("make install -C %s" % self.sourcedir,
+                                   shell=True, sudo=True)
             else:
                 self.buldir = self.params.get('location', default='')
         else:
