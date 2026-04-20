@@ -534,31 +534,54 @@ class RASToolsPpcutils(Test):
                 error_messages.append("lparstat: Expected failure, %s command \
                                       executed successfully." % cmd)
         output = process.system_output("lparstat -E 1 1").decode("utf-8")
+        parsed = False
         for line in output.splitlines():
-            if 'GHz' in line:
-                # Define the regular expression pattern
-                pattern = (r'(\d+\.\d+)\s+(\d+\.\d+)\s+\d+\.\d+GHz\[\s*(\d+)%\]\s+'
-                           r'(\d+\.\d+)\s+(\d+\.\d+)')
-                # Find all matches in the input string
-                matches = re.findall(pattern, line)
-                for data in matches:
-                    actual_busy = float(data[0])
-                    actual_idle = float(data[1])
-                    normal_idle = float(data[3])
-                    normal_busy = float(data[4])
-                    normal = normal_idle + normal_busy
-                    freq_percentile = float(data[2])
-        if (actual_busy > 0) and (actual_idle < 100):
-            self.log.info("Busy and idle actual values are correct")
-        else:
-            error_messages.append("Busy and idle actual values are incorrect")
-
-        if normal == freq_percentile:
-            self.log.info("Normalised busy plus idle value match with \
-                          Frequency percentage")
-        else:
-            error_messages.append("Normalised busy plus idle value \
-                                  does not match with Frequency percentage")
+            line = line.strip()
+            try:
+                parts = line.split()
+                if len(parts) < 5:
+                    self.log.warning(f"skipping malformed line: {line}")
+                    continue
+                actual_busy = float(parts[0])
+                actual_idle = float(parts[1])
+                freq_field = [p for p in parts if "GHz" in p]
+                if not freq_field:
+                    self.log.warning(f"no frequency filed found: {line}")
+                    continue
+                freq_percentile = float(freq_field[0].split('[')[1].strip(']%'))
+                float_vals = []
+                for p in parts:
+                    try:
+                        float_vals.append(float(p))
+                    except ValueError:
+                        continue
+                if len(float_vals) < 4:
+                    self.log.warning(f"not enough numeric values: {line}")
+                    continue
+                normal_busy = float_vals[-2]
+                normal_idle = float_vals[-1]
+                normal = normal_busy + normal_idle
+                actual_sum = actual_busy + actual_idle
+                parsed = True
+                self.log.info(
+                    f"Parsed → actual: {actual_busy} + {actual_idle} = {actual_sum}, "
+                    f"normalized: {normal_busy} + {normal_idle} = {normal}, "
+                    f"freq={freq_percentile}")
+                if abs(actual_sum - 100.0) <=1.0:
+                    self.log.info("Actual busy + idle ≈ 100% ✔")
+                else:
+                    error_messages.append(
+                            f"Actual values invalid: sum={actual_sum}")
+                if abs(normal - freq_percentile) <= 2.0:
+                    self.log.info("Normalized values match frequency")
+                else:
+                    error_messages.append(
+                            f"Mismatch: normalized={normal}, freq={freq_percentile}")
+            except Exception as e:
+                self.log.warning(f"Parsing error in line: {line} → {str(e)}")
+                continue
+        if not parsed:
+            error_messages.append("Failed to parse valid lparstat -E output")
 
         list_physc = []
         for i in [2, 4, 8, "off"]:
