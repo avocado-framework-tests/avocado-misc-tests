@@ -203,24 +203,56 @@ class PCIHotPlugTest(Test):
 
         def nvme_recovery_check():
             '''
-            Checks if the nvme adapter functionality like all namespaces are
-            up and running or not after adapter is recovered
+            Checks if the nvme adapter functionality is recovered after hotplug.
+            - If namespaces exist: validates all namespaces are live and optimized
+            - If no namespaces: validates only device presence in system
             '''
+            # Check if namespaces existed before hotplug
+            if not self.ns_list:
+                self.log.warning("No namespaces exist on NVMe device. "
+                                 "Performing device-level validation only, "
+                                 "excluding namespace validation.")
+                # Device-level validation: Check if controller is accessible
+                try:
+                    # Verify controller name can be retrieved (device is present)
+                    current_controller = nvme.get_controller_name(self.device[0])
+                    if current_controller == self.contr_name:
+                        self.log.info(f"NVMe controller {self.contr_name} "
+                                      "recovered successfully in system")
+                        return True
+                    else:
+                        self.log.error(f"Controller name mismatch: expected "
+                                       f"{self.contr_name}, got {current_controller}")
+                        return False
+                except Exception as e:
+                    self.log.error(f"Failed to validate NVMe device: {e}")
+                    return False
+
+            # Namespace validation when namespaces exist
             err_ns = []
             current_namespaces = nvme.get_current_ns_ids(self.contr_name)
+
+            # Check if all original namespaces are back
             if current_namespaces == self.ns_list:
+                # Validate each namespace status
                 for ns_id in current_namespaces:
                     status = nvme.get_ns_status(self.contr_name, ns_id)
-                    if not status[0] == 'live' and status[1] == 'optimized':
+                    # Namespace must be BOTH live AND optimized
+                    if status[0] != 'live' or status[1] != 'optimized':
+                        self.log.error(f"Namespace {ns_id} status: "
+                                       f"state={status[0]}, ana_state={status[1]}")
                         err_ns.append(ns_id)
             else:
+                # Namespace count mismatch
                 diff_ns = self.ns_list - current_namespaces
-                self.log.info(f"ns not listing after hot_plug {diff_ns}")
+                self.log.info(f"Namespaces not listing after hot_plug: {diff_ns}")
                 return False
 
             if err_ns:
-                self.log.info(f"following namespaces not recovered ={err_ns}")
+                self.log.info(f"Following namespaces not recovered: {err_ns}")
                 return False
+
+            self.log.info(f"All {len(current_namespaces)} namespaces recovered successfully")
             return True
 
         if wait.wait_for(is_added, timeout=30):

@@ -305,47 +305,80 @@ class NVMeTest(Test):
                                          os.path.join(self.teststmpdir,
                                                       fw_file))
         # Getting the current FW details
-        self.log.debug("Current FW: %s", self.get_firmware_version())
+        current_fw = self.get_firmware_version()
+        self.log.info("Current FW: %s", current_fw)
         self.get_firmware_log()
 
         # Activating new FW
-        passed_commits = []
-        failed = False
+        passed_commits = {}  # Changed to dict for better tracking
+        failed_commits = {}  # Track failures separately
         d_cmd = "%s fw-download %s --fw=%s" % (self.binary, self.device,
                                                fw_file_path)
+
         for slot in range(1, self.get_firmware_slots() + 1):
             if not self.firmware_slot_write_supported(slot):
+                self.log.info("Slot %d is read-only, skipping", slot)
                 continue
+
             passed_actions = []
+            failed_actions = []
+
             for action in range(0, 3):
                 # Downloading new FW to the device for each slot
-                if process.system(d_cmd, shell=True, ignore_status=True):
+                ret = process.system(d_cmd, shell=True, ignore_status=True)
+                if ret != 0:
+                    self.log.error("FW download failed for slot %d action %d",
+                                   slot, action)
+                    failed_actions.append(action)
                     continue
+
                 cmd = "%s fw-commit %s -s %d -a %d" % (self.binary,
                                                        self.device, slot,
                                                        action)
-                if process.system(cmd, shell=True, ignore_status=True):
-                    failed = True
+                ret = process.system(cmd, shell=True, ignore_status=True)
+                if ret != 0:
+                    self.log.error("FW commit failed for slot %d action %d",
+                                   slot, action)
+                    failed_actions.append(action)
                 else:
                     passed_actions.append(action)
-            passed_commits.append(passed_actions)
 
-        # Reset device if not already taken care
+            # Only track slots that had some activity
+            if passed_actions:
+                passed_commits[slot] = passed_actions
+            if failed_actions:
+                failed_commits[slot] = failed_actions
+
+        # Reset device if action 3 was not used in any successful commit
         reset_needed = False
-        for commit in passed_commits:
-            if 3 not in commit:
+        for slot, actions in passed_commits.items():
+            if 3 not in actions:
                 reset_needed = True
+                break
+
         if reset_needed:
-            if self.reset_controller_sysfs():
+            self.log.info("Performing controller reset to activate firmware")
+            ret = self.reset_controller_sysfs()
+            if ret != 0:  # FIX: Correct condition - 0 means success
                 self.fail("Controller reset after FW update failed")
-        if failed:
-            self.log.debug(passed_commits)
-            self.fail("Passed only for the above slot actions")
+
+        # Fail if any commits failed
+        if failed_commits:
+            self.log.error("Passed commits: %s", passed_commits)
+            self.log.error("Failed commits: %s", failed_commits)
+            self.fail("Firmware commit failed for slots/actions: %s" % failed_commits)
 
         # Getting the current FW details after updating
         self.get_firmware_log()
-        if fw_version != self.get_firmware_version():
-            self.log.warn("New Firmware not reflecting after updating")
+        new_fw = self.get_firmware_version()
+
+        # Validate firmware version was updated
+        if fw_version != new_fw:
+            self.log.warn("Firmware version mismatch: expected %s, got %s" %
+                          (fw_version, new_fw))
+        else:
+            self.log.info("Firmware successfully updated from %s to %s",
+                          current_fw, new_fw)
 
     def test_create_max_ns(self):
         """
