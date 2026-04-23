@@ -1,4 +1,6 @@
 component: !mux
+    sched:
+      comp: 'sched'
     mm:
         comp: 'mm'
     mm_powerpc:
