@@ -18,8 +18,8 @@ import os
 import re
 import tempfile
 from avocado import Test
-from avocado.utils import process, distro, dmesg
-from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils import process, dmesg
+from avocado.utils.software_manager.distro_packages import ensure_tool
 
 
 class PerfBasic(Test):
@@ -59,27 +59,24 @@ class PerfBasic(Test):
                                     'Segmentation fault'])
 
     def setUp(self):
-        smg = SoftwareManager()
-        dist = distro.detect()
-        if dist.name in ['Ubuntu']:
-            linux_tools = "linux-tools-" + os.uname()[2]
-            pkgs = [linux_tools]
-            if dist.name in ['Ubuntu']:
-                pkgs.extend(['linux-tools-common'])
-        elif dist.name in ['debian']:
-            pkgs = ['linux-perf']
-        elif dist.name in ['centos', 'fedora', 'rhel', 'SuSE']:
-            pkgs = ['perf']
-        else:
-            self.cancel("perf is not supported on %s" % dist.name)
+        perf_path = self.params.get('perf_bin', default='')
+        distro_pkg_map = {
+            "Ubuntu": [f"linux-tools-{os.uname()[2]}", "linux-tools-common", "gcc", "make"],
+            "debian": ["linux-perf"],
+            "centos": ["perf"],
+            "fedora": ["perf"],
+            "rhel": ["perf"],
+            "SuSE": ["perf"],
+        }
+        try:
+            perf_version = ensure_tool("perf", custom_path=perf_path, distro_pkg_map=distro_pkg_map)
+            self.log.info(f"Perf version: {perf_version}")
+            self.perf_bin = perf_path if perf_path else "perf"
+        except RuntimeError as e:
+            self.cancel(str(e))
 
         self.temp_file = tempfile.NamedTemporaryFile().name
         dmesg.clear_dmesg()
-
-        for pkg in pkgs:
-            if not smg.check_installed(pkg) and not smg.install(pkg):
-                self.cancel(
-                    "Package %s is missing/could not be installed" % pkg)
 
     def test_perf_help(self):
         self.run_cmd("perf --help", False)

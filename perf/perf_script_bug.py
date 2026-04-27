@@ -15,13 +15,12 @@
 # Author: Shirisha <shiganta@in.ibm.com>
 
 import os
-import platform
 import tempfile
 import shutil
 import configparser
 from avocado import Test
-from avocado.utils import build, distro, process
-from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils import build, process, distro
+from avocado.utils.software_manager.distro_packages import ensure_tool
 
 
 class PerfScript(Test):
@@ -31,24 +30,29 @@ class PerfScript(Test):
         Install the basic packages to support PerfProbe test
         '''
         # Check for basic utilities
-        smm = SoftwareManager()
-        detected_distro = distro.detect()
+        perf_path = self.params.get('perf_bin', default='')
         parser = configparser.ConfigParser()
         parser.read(self.get_data('probe.cfg'))
-        self.perf_probe = parser.get(detected_distro.name, 'probepoint')
-        deps = ['gcc', 'make']
-        if detected_distro.name in ['rhel', 'SuSE', 'fedora', 'centos']:
-            deps.extend(['perf'])
-        elif detected_distro.name in ['Ubuntu']:
-            deps.extend(['linux-tools-common', 'linux-tools-%s' %
-                         platform.uname()[2]])
+        # self.perf_probe = parser.get(detected_distro.name, 'probepoint')
+        distro_pkg_map = {
+            "Ubuntu": [f"linux-tools-{os.uname()[2]}", "linux-tools-common", "gcc", "make"],
+            "debian": ["linux-perf", "gcc", "make"],
+            "centos": ["perf", "gcc", "make", "gcc-c++"],
+            "fedora": ["perf", "gcc", "make", "gcc-c++"],
+            "rhel": ["perf", "gcc", "make", "gcc-c++"],
+            "SuSE": ["perf", "gcc", "make", "gcc-c++"],
+        }
+        try:
+            perf_version = ensure_tool("perf", custom_path=perf_path, distro_pkg_map=distro_pkg_map)
+            self.log.info(f"Perf version: {perf_version}")
+            self.perf_bin = perf_path if perf_path else "perf"
+        except RuntimeError as e:
+            self.cancel(str(e))
+        dist_name = distro.detect().name
+        if parser.has_section(dist_name):
+            self.perf_probe = parser.get(dist_name, 'probepoint')
         else:
-            self.cancel("Install the package perf\
-                      for %s" % detected_distro.name)
-        for package in deps:
-            if not smm.check_installed(package) and not smm.install(package):
-                self.cancel('%s is needed for the test to be run' % package)
-
+            self.perf_probe = parser.get('Ubuntu', 'probepoint')
         shutil.copyfile(self.get_data('perf_test.c'),
                         os.path.join(self.teststmpdir, 'perf_test.c'))
         shutil.copyfile(self.get_data('Makefile'),
