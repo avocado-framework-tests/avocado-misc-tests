@@ -155,7 +155,8 @@ class RASToolsPpcdiag(Test):
         View and manipulate the system attention and fault indicators (LEDs)
         """
         self.log.info("=====Executing usysattn tool test======")
-        if 'not supported' in self.run_cmd_out("usysattn"):
+        output = self.run_cmd_out("usysattn")
+        if 'not supported' in output or 'Could not retrieve data' in output:
             self.cancel(
                 "The identify indicators are not supported on this system")
         value = self.params.get('usysattn_list', default=['-h', '-V', '-P'])
@@ -167,7 +168,8 @@ class RASToolsPpcdiag(Test):
         View and manipulate the system attention and fault indicators (LEDs)
         """
         self.log.info("======Executing usysfault tool test======")
-        if 'not supported' in self.run_cmd_out("usysfault"):
+        output = self.run_cmd_out("usysfault")
+        if 'not supported' in output or 'Could not retrieve data' in output:
             self.cancel(
                 "The identify indicators are not supported on this system")
         value = self.params.get('usysfault_list', default=['-h', '-V', '-P'])
@@ -182,7 +184,8 @@ class RASToolsPpcdiag(Test):
         cmd = "usysident"
         if 'PowerNV' in genio.read_file('/proc/cpuinfo').rstrip('\t\r\n\0'):
             cmd = "usysident -P"
-        if 'not supported' in self.run_cmd_out(cmd):
+        output = self.run_cmd_out(cmd)
+        if 'not supported' in output or 'Could not retrieve data' in output:
             self.cancel(
                 "The identify indicators are not supported on this system")
         value = self.params.get('usysident_list', default=['-h', '-V', '-P'])
