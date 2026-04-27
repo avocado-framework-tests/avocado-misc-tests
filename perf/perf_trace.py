@@ -88,5 +88,5 @@ class perf_trace(Test):
 
     def tearDown(self):
         # Delete the temporary file
-        if os.path.isfile(self.temp_file):
-            process.run('rm -f %s' % self.temp_file)
+        if hasattr(self, 'temp_file') and os.path.isfile(self.temp_file):
+            os.remove(self.temp_file)
