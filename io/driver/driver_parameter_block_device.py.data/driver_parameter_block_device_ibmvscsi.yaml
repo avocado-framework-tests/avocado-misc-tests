@@ -1,0 +1,73 @@
+module: 'ibmvscsi'
+multipath_enabled: False
+disk: '/dev/sda'
+load_unload_sleep_time: 60
+force_cleanup: True
+
+Test: !mux
+
+    client_reserve:
+        module_param_name: "client_reserve"
+        value: !mux
+            client_reserve_0:
+                module_param_value: "0"
+            client_reserve_1:
+                module_param_value: "1"
+
+    fast_fail:
+        module_param_name: "fast_fail"
+        value: !mux
+            fast_fail_0:
+                module_param_value: "0"
+            fast_fail_1:
+                module_param_value: "1"
+
+    init_timeout:
+        module_param_name: "init_timeout"
+        value: !mux
+            init_timeout_0:
+                module_param_value: "0"
+            init_timeout_60:
+                module_param_value: "60"
+            init_timeout_300:
+                module_param_value: "300"
+
+    max_channel:
+        module_param_name: "max_channel"
+        value: !mux
+            max_channel_0:
+                module_param_value: "0"
+            max_channel_1:
+                module_param_value: "1"
+            max_channel_16:
+                module_param_value: "16"
+
+    max_id:
+        module_param_name: "max_id"
+        value: !mux
+            max_id_0:
+                module_param_value: "0"
+            max_id_64:
+                module_param_value: "64"
+            max_id_256:
+                module_param_value: "256"
+
+    max_lun:
+        module_param_name: "max_lun"
+        value: !mux
+            max_lun_0:
+                module_param_value: "0"
+            max_lun_8:
+                module_param_value: "8"
+            max_lun_128:
+                module_param_value: "128"
+
+    max_requests:
+        module_param_name: "max_requests"
+        value: !mux
+            max_requests_0:
+                module_param_value: "0"
+            max_requests_50:
+                module_param_value: "50"
+            max_requests_100:
+                module_param_value: "100"
