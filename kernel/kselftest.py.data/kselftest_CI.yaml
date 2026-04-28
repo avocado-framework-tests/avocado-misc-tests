@@ -9,6 +9,8 @@ component: !mux
         comp: 'cpu-hotplug'
     memory_hotplug:
         comp: 'memory-hotplug'
+    static_keys:
+        comp: 'static_keys'
 run_type: !mux
     upstream:
         type: 'upstream'
