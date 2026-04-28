@@ -19,6 +19,7 @@
 DLPAR operations
 """
 import time
+import os
 
 from avocado import Test
 from avocado.utils import process
@@ -69,6 +70,8 @@ class DlparPci(Test):
         self.lpar_2 = self.params.get("lpar_2", default=None)
         self.pci_device = self.params.get("pci_devices", default=None).split(' ')
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
+        self.lockdown_mode = self.params.get("lockdown_mode", default="integrity")
+        self.original_lockdown_state = None
 
     def set_adapter_details(self, pci_device):
         '''
@@ -235,6 +238,92 @@ class DlparPci(Test):
                 self.do_drmgr_phb('r')
                 self.do_drmgr_phb('a')
                 self.validation_in_os(pci)
+
+    def check_lockdown_support(self):
+        '''
+        Check if kernel lockdown is supported
+        '''
+        lockdown_path = '/sys/kernel/security/lockdown'
+        if not os.path.exists(lockdown_path):
+            self.log.warn("Kernel lockdown not supported on this system")
+            return False
+        return True
+
+    def get_lockdown_state(self):
+        '''
+        Get current lockdown state
+        '''
+        lockdown_path = '/sys/kernel/security/lockdown'
+        try:
+            output = process.system_output(f'cat {lockdown_path}',
+                                           shell=True, sudo=True).decode("utf-8")
+            # Parse output like: "none [integrity] confidentiality"
+            if '[none]' in output:
+                return 'none'
+            elif '[integrity]' in output:
+                return 'integrity'
+            elif '[confidentiality]' in output:
+                return 'confidentiality'
+        except Exception as e:
+            self.log.error(f"Failed to get lockdown state: {e}")
+        return None
+
+    def set_lockdown_mode(self, mode):
+        '''
+        Set kernel lockdown mode
+        mode: 'none', 'integrity', or 'confidentiality'
+        '''
+        lockdown_path = '/sys/kernel/security/lockdown'
+
+        if not self.check_lockdown_support():
+            return False
+
+        current_state = self.get_lockdown_state()
+        self.log.info(f"Current lockdown state: {current_state}")
+
+        if mode == current_state:
+            self.log.info(f"Lockdown already set to {mode}")
+            return True
+
+        try:
+            cmd = f'echo "{mode}" > {lockdown_path}'
+            process.run(cmd, shell=True, sudo=True)
+
+            # Verify the change
+            new_state = self.get_lockdown_state()
+            if new_state == mode:
+                self.log.info(f"Successfully set lockdown to {mode}")
+                return True
+            else:
+                self.log.error(f"Failed to set lockdown to {mode}, current: {new_state}")
+                return False
+        except Exception as e:
+            self.log.error(f"Error setting lockdown mode: {mode}")
+            return False
+
+    def test_dlpar_with_lockdown(self):
+        '''
+        DLPAR operations with kernel lockdown enabled
+        Tests that DLPAR works correctly under lockdown constraints
+        '''
+        if not self.check_lockdown_support():
+            self.cancel("Kernel lockdown not supported")
+
+        # Save original state
+        original_state = self.get_lockdown_state()
+
+        if not self.set_lockdown_mode(self.lockdown_mode):
+            self.fail(f"Failed to set lockdown to {self.lockdown_mode}")
+
+        # Run DLPAR operations
+        self.test_dlpar()
+        self.test_drmgr_pci()
+        self.test_drmgr_phb()
+
+        # Verify lockdown state didn't change
+        current_state = self.get_lockdown_state()
+        if current_state != self.lockdown_mode:
+            self.fail(f"Lockdown state changed during DLPAR: {self.lockdown_mode} -> {current_state}")
 
     def do_drmgr_pci(self, operation):
         '''
