@@ -10,7 +10,7 @@ component: !mux
     memory_hotplug:
         comp: 'memory-hotplug'
     iommu:
-	comp: 'iommu'
+		comp: 'iommu'
 run_type: !mux
     upstream:
         type: 'upstream'
