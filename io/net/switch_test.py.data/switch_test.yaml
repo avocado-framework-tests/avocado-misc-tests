@@ -6,3 +6,5 @@ switch_name:
 userid:
 password:
 port_id:
+switch_profile: juniper_switch
+
