@@ -55,6 +55,7 @@ class kselftest(Test):
         """
         smg = SoftwareManager()
         self.comp = self.params.get('comp', default='')
+        self.kexec_symlink_created = False
         self.subtest = self.params.get('subtest', default='')
         if self.comp == "mm" and self.subtest == "ksm_tests":
             self.test_type = self.params.get('test_type', default='-H')
@@ -209,6 +210,17 @@ class kselftest(Test):
                 build_str = '-C %s' % self.comp
             if build.make(self.sourcedir, extra_args='%s' % build_str):
                 self.fail("Compilation failed, Please check the build logs !!")
+        # Fix for kexec test: Create vmlinuz symlink if only vmlinux exists
+        # This handles SUSE systems that use vmlinux instead of vmlinuz
+        if self.comp == "kexec":
+            kernel_version = platform.uname()[2]
+            vmlinuz_path = f"/boot/vmlinuz-{kernel_version}"
+            vmlinux_path = f"/boot/vmlinux-{kernel_version}"
+            if not os.path.exists(vmlinuz_path) and os.path.exists(vmlinux_path):
+                self.log.info(f"Creating symlink {vmlinuz_path} -> {vmlinux_path} for kexec test")
+                process.system(f"ln -sf {vmlinux_path} {vmlinuz_path}",
+                               shell=True, sudo=True, ignore_status=True)
+                self.kexec_symlink_created = True
 
     def test(self):
         """
@@ -329,5 +341,12 @@ class kselftest(Test):
 
     def tearDown(self):
         self.log.info('Cleaning up')
+        if getattr(self, 'kexec_symlink_created', False) and self.comp == "kexec":
+            kernel_version = platform.uname()[2]
+            vmlinuz_path = f"/boot/vmlinuz-{kernel_version}"
+            if os.path.islink(vmlinuz_path):
+                self.log.info(f"Removing kexec symlink {vmlinuz_path}")
+                process.system(f"rm -f {vmlinuz_path}",
+                               shell=True, sudo=True, ignore_status=True)
         if os.path.exists(self.workdir):
             shutil.rmtree(self.workdir)
