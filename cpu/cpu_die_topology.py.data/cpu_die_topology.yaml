@@ -1,0 +1,5 @@
+test_type: performance
+hackbench_groups: "20"
+hackbench_loops: "2000"
+hackbench_iterations: "4"
+ltp_url: "https://github.com/linux-test-project/ltp/archive/master.zip"
