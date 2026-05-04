@@ -21,6 +21,7 @@ using nvme cli.
 """
 
 import os
+import time
 from avocado import Test
 from avocado.utils import disk
 from avocado.utils import process
@@ -284,16 +285,121 @@ class NVMeTest(Test):
         for ns_id in range(1, self.get_max_ns_count() + 1):
             self.create_one_ns(str(ns_id), per_ns_blocks, ns_controller)
 
-    def create_one_ns(self, ns_id, blocksize, controller):
+    def create_one_ns(self, ns_id, blocksize, controller, flbas=0):
         """
-        Creates one namespace, with the specified id, block size, controller
+        Creates one namespace with the specified id, block size, and controller.
+
+        This method now supports dynamic FLBAS (Formatted LBA Size) selection
+        with intelligent fallback behavior:
+
+        **FLBAS Selection Modes:**
+
+        1. **Default Mode (flbas=0)**: Backward compatible behavior
+           - First attempts namespace creation with FLBAS=0
+           - If FLBAS=0 fails, automatically detects optimal FLBAS and retries
+           - Recommended for most use cases
+
+        2. **Auto-Detect Mode (flbas=-1)**: Skip FLBAS=0 attempt
+           - Immediately detects and uses optimal FLBAS value
+           - Useful for devices known to have non-standard FLBAS configurations
+           - Saves one failed attempt on such devices
+
+        3. **Explicit Mode (flbas=1-15)**: Use specific FLBAS index
+           - Uses the specified FLBAS value without auto-detection
+           - No retry on failure
+           - For advanced users who know their device's FLBAS requirements
+
+        :param ns_id: Namespace ID (typically 1-based)
+        :param blocksize: Size of the namespace in blocks
+        :param controller: Controller ID to attach the namespace to
+        :param flbas: FLBAS index to use:
+                      - 0 (default): Try FLBAS=0, auto-retry on failure
+                      - -1: Skip FLBAS=0, immediately use auto-detected optimal value
+                      - 1-15: Use explicit FLBAS index, no auto-detection
         """
-        cmd = "%s create-ns %s --nsze=%s --ncap=%s --flbas=0 -dps=0" % (
-            self.binary, self.device, int(blocksize), int(blocksize))
-        process.system(cmd, shell=True, ignore_status=True)
+        device_name = self.device.split("/")[-1]
+
+        should_retry_with_auto_detect = (flbas == 0)
+
+        if flbas == -1:
+            try:
+                flbas = nvme.get_optimal_flbas(device_name)
+                self.log.info(f"Auto-detected optimal FLBAS={flbas} for {device_name}")
+            except Exception as e:
+                self.log.error(f"FLBAS auto-detection failed: {e}")
+                self.fail(f"Cannot create namespace: FLBAS auto-detection failed: {e}")
+
+        cmd = "%s create-ns %s --nsze=%s --ncap=%s --flbas=%s -dps=0" % (
+            self.binary, self.device, int(blocksize), int(blocksize), flbas)
+        result = process.system(cmd, shell=True, ignore_status=True)
+
+        if result != 0 and should_retry_with_auto_detect:
+            self.log.warning(f"Namespace creation failed with FLBAS=0 on {device_name}")
+            self.log.info("Attempting auto-detection of optimal FLBAS value...")
+
+            try:
+                optimal_flbas = nvme.get_optimal_flbas(device_name)
+
+                if optimal_flbas != 0:
+                    self.log.info(f"Retrying with auto-detected FLBAS={optimal_flbas}")
+                    cmd = "%s create-ns %s --nsze=%s --ncap=%s --flbas=%s -dps=0" % (
+                        self.binary, self.device, int(blocksize), int(blocksize), optimal_flbas)
+                    result = process.system(cmd, shell=True, ignore_status=True)
+
+                    if result == 0:
+                        self.log.info(f"Namespace creation succeeded with FLBAS={optimal_flbas}")
+                        flbas = optimal_flbas
+                    else:
+                        self.fail(
+                            f"Namespace creation failed with both FLBAS=0 and "
+                            f"auto-detected FLBAS={optimal_flbas}. Command: {cmd}"
+                        )
+                else:
+                    self.fail(
+                        f"Namespace creation failed with FLBAS=0 and auto-detection "
+                        f"also suggests FLBAS=0. Command: {cmd}"
+                    )
+            except Exception as e:
+                self.fail(f"Namespace creation failed: {e}")
+        elif result != 0:
+            self.fail(
+                f"Namespace create command failed with FLBAS={flbas}. "
+                f"Command: {cmd}. Exit code: {result}"
+            )
+
+        rescan_cmd = "%s ns-rescan %s" % (self.binary, self.device)
+        process.system(rescan_cmd, shell=True, ignore_status=True)
+        time.sleep(2)
+
         cmd = "%s attach-ns %s --namespace-id=%s -controllers=%s" % (
             self.binary, self.device, ns_id, controller)
-        process.system(cmd, shell=True, ignore_status=True)
+        result = process.system(cmd, shell=True, ignore_status=True)
+        if result != 0:
+            self.fail(f"Namespace attach command failed: {cmd}. Exit code: {result}")
+
+        process.system(rescan_cmd, shell=True, ignore_status=True)
+        time.sleep(2)
+
+        ns_list_cmd = "%s list-ns %s" % (self.binary, self.device)
+        ns_output = process.system_output(ns_list_cmd, shell=True, ignore_status=True).decode("utf-8")
+
+        ns_found = False
+        ns_id_int = int(ns_id)
+        ns_id_hex = f"0x{ns_id_int:x}"
+
+        for line in ns_output.splitlines():
+            if line.startswith('['):
+                if ':' in line:
+                    ns_part = line.split(':')[-1].strip()
+                    if ns_part == ns_id_hex or ns_part == str(ns_id_int):
+                        ns_found = True
+                        break
+
+        if not ns_found:
+            self.log.warning(
+                f"Namespace {ns_id} (hex: {ns_id_hex}) attached but not found in list-ns output. "
+                f"Output: {ns_output}"
+            )
 
     def test_firmware_upgrade(self):
         """
