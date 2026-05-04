@@ -16,7 +16,11 @@
 import os
 from avocado import Test
 from avocado.utils import archive, process
-from avocado.utils.podman import Podman, PodmanException
+from avocado.utils.podman import (Podman, PodmanException,
+                                  install_huggingface_cli,
+                                  download_model_from_hf,
+                                  validate_model_with_sha,
+                                  setup_user_and_group)
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -237,31 +241,15 @@ class serviceability(Test):
         :param add_to_group: True to add user to spyre group, False to remove
         :return: None
         """
-        if username is None or username == "root":
-            if add_to_group:
-                self.log.info("Add root user to %s group", self.spyre_group)
-                self.run_cmd(f"usermod -aG {self.spyre_group} root")
-            else:
-                self.log.info("Remove root user from %s group",
-                              self.spyre_group)
-                self.run_cmd(f"gpasswd -d root {self.spyre_group}")
+        if add_to_group:
+            setup_user_and_group(username, password, self.spyre_group, self.log)
+            if username and username != "root":
+                self.log.info("Enable lingering for user %s (run as root)", username)
+                self.run_cmd(f"loginctl enable-linger {username}")
         else:
-            user_exists = self.run_cmd_out(f"id -u {username} 2>/dev/null")
-            if not user_exists:
-                self.log.info("Create user: %s", username)
-                self.run_cmd(f"useradd -m {username}")
-                self.run_cmd(f"echo '{username}:{password}' | chpasswd")
-
-            self.log.info("Enable lingering for user %s (run as root)", username)
-            self.run_cmd(f"loginctl enable-linger {username}")
-
-            if add_to_group:
-                self.log.info("Add %s to %s group", username, self.spyre_group)
-                self.run_cmd(f"usermod -aG {self.spyre_group} {username}")
-            else:
-                self.log.info("Remove %s from %s group",
-                              username, self.spyre_group)
-                self.run_cmd(f"gpasswd -d {username} {self.spyre_group}")
+            user_display = username if username else "root"
+            self.log.info("Remove %s from %s group", user_display, self.spyre_group)
+            self.run_cmd(f"gpasswd -d {user_display} {self.spyre_group}")
 
     def _verify_group_membership(self, username, should_be_in_group):
         """
@@ -607,6 +595,60 @@ class serviceability(Test):
         self.max_batch_size = self.params.get("MAX_BATCH_SIZE", default="")
         self.host_models_dir = self.params.get("HOST_MODELS_DIR", default="")
         self.vllm_model_path = self.params.get("VLLM_MODEL_PATH", default="")
+        if self.host_models_dir:
+            if not os.path.exists(self.host_models_dir):
+                self.log.info("HOST_MODELS_DIR does not exist, creating: %s", self.host_models_dir)
+                try:
+                    os.makedirs(self.host_models_dir, exist_ok=True)
+                    self.log.info("Successfully created HOST_MODELS_DIR: %s", self.host_models_dir)
+                except Exception as ex:
+                    self.cancel(f"Failed to create HOST_MODELS_DIR {self.host_models_dir}: {ex}")
+            else:
+                self.log.info("HOST_MODELS_DIR exists: %s", self.host_models_dir)
+        spyre_models_base = self.params.get("SPYRE_MODELS_BASE", default="/opt/ibm/spyre/models")
+        model_name = self.params.get("MODEL_NAME", default="granite-3.3-8b-instruct")
+        hf_model_id = self.params.get("HF_MODEL_ID", default="ibm-granite/granite-3.3-8b-instruct")
+        model_dir = os.path.join(spyre_models_base, model_name)
+        self.log.info("Model configuration:")
+        self.log.info("  Base directory: %s", spyre_models_base)
+        self.log.info("  Model name: %s", model_name)
+        self.log.info("  HuggingFace Model ID: %s", hf_model_id)
+        self.log.info("  Full model path: %s", model_dir)
+        self.log.info("Checking Hugging Face CLI installation...")
+        if not install_huggingface_cli():
+            self.log.warning("Failed to install Hugging Face CLI. Model download may fail.")
+        if not os.path.exists(model_dir) or not os.listdir(model_dir):
+            self.log.info("Downloading model: %s", hf_model_id)
+            download_success = download_model_from_hf(
+                hf_model_id=hf_model_id,
+                local_dir=spyre_models_base,
+                model_name=model_name
+            )
+            if download_success:
+                self.log.info("Model download completed successfully")
+                # Validate the downloaded model with SHA
+                self.log.info("Validating downloaded model...")
+                is_valid, messages = validate_model_with_sha(model_dir)
+                for msg in messages:
+                    self.log.info("  %s", msg)
+                if is_valid:
+                    self.log.info("Model validation PASSED: All checks successful")
+                else:
+                    self.log.warning("Model validation FAILED: Please review validation messages above")
+                    self.log.warning("Consider re-downloading the model")
+            else:
+                self.log.warning("Failed to download model. Please download manually to: %s", model_dir)
+        else:
+            self.log.info("Model directory already exists: %s", model_dir)
+            self.log.info("Validating existing model...")
+            is_valid, messages = validate_model_with_sha(model_dir)
+            for msg in messages:
+                self.log.info("  %s", msg)
+            if is_valid:
+                self.log.info("Existing model validation PASSED: All checks successful")
+            else:
+                self.log.warning("Existing model validation FAILED: Please review validation messages above")
+                self.log.warning("Model may be incomplete or corrupted. Consider re-downloading.")
         self.vllm_spyre_use_cb = self.params.get(
             "VLLM_SPYRE_USE_CB", default="")
         self.memory = self.params.get("MEMORY", default="")
@@ -667,10 +709,25 @@ class serviceability(Test):
                     "Successfully pulled image for root user: %s", image)
             except PodmanException as ex:
                 self.log.warning("Failed to pull image for root user: %s", ex)
-
             test_username = self.params.get("TEST_USERNAME", default="")
             if test_username:
                 try:
+                    user_exists_cmd = f"id -u {test_username} 2>/dev/null"
+                    user_check = process.run(user_exists_cmd, shell=True, sudo=True, ignore_status=True)
+                    if user_check.exit_status != 0:
+                        self.log.info("User %s does not exist, creating user", test_username)
+                        test_password = self.params.get("TEST_PASSWORD", default="testpass123")
+                        create_user_cmd = f"useradd -m {test_username}"
+                        result = process.run(create_user_cmd, shell=True, sudo=True, ignore_status=True)
+                        if result.exit_status == 0:
+                            self.log.info("Successfully created user: %s", test_username)
+                            set_pass_cmd = f"echo '{test_username}:{test_password}' | chpasswd"
+                            process.run(set_pass_cmd, shell=True, sudo=True, ignore_status=True)
+                            self.log.info("Password set for user: %s", test_username)
+                        else:
+                            self.log.warning("Failed to create user %s: %s", test_username, result.stderr_text)
+                    else:
+                        self.log.info("User %s already exists", test_username)
                     self.log.info(
                         "Pulling container image for user %s: %s", test_username, image)
 
