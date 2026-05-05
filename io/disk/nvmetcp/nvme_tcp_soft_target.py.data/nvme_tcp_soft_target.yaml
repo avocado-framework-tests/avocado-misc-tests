@@ -1,0 +1,37 @@
+# NVMe/TCP Soft Target Configuration
+# SSH Connection Parameters
+soft_target_host_ip: ""
+user_name: ""
+password: ""
+
+# Network Configuration - Primary Interface
+network_config_primary_interface: ""
+network_config_primary_ip: ""
+network_config_primary_netmask: ""
+network_config_primary_gateway: ""
+network_config_primary_mtu: 9000
+
+# Network Configuration - Secondary Interface (Optional)
+network_config_secondary_interface: ""
+network_config_secondary_ip: ""
+network_config_secondary_netmask: ""
+network_config_secondary_gateway: ""
+network_config_secondary_mtu: 9000
+
+# Namespace Configuration
+namespace_config_mode: "create"
+namespace_config_nvme_controller: ""
+namespace_config_number_of_namespaces: 4
+namespace_config_namespace_size: null
+
+# For select mode, use this instead:
+# namespace_config_mode: "select"
+# namespace_config_namespaces: ""
+
+# NVMe Target Configuration
+nvmet_config_subsystem_nqn: null
+nvmet_config_port_id_start: 1
+nvmet_config_tcp_port: 4420
+nvmet_config_allow_any_host: true
+
+# Made with Bob
