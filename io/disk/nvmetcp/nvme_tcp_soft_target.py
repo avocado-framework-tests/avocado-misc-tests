@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -475,6 +474,234 @@ class NVMeTCPSoftTarget(Test):
         else:
             return self._select_namespaces()
 
+    def _get_controller_capacity_info(self, controller):
+        """
+        Get controller capacity and detect block size
+
+        :param controller: NVMe controller device path
+        :return: dict with 'unallocated_capacity' and 'block_size'
+        """
+        cmd = f"nvme id-ctrl {controller} | grep unvmcap"
+        _, output, _ = self.run_remote_cmd(cmd)
+        capacity_str = output.split(':')[-1].strip()
+        unallocated_capacity = int(capacity_str)
+
+        block_size = 4096
+        cmd = f"nvme list-ns {controller}"
+        status, ns_list, _ = self.run_remote_cmd(cmd, ignore_status=True)
+
+        if status == 0 and ns_list.strip():
+            first_ns = ns_list.strip().split('\n')[0]
+            if first_ns.startswith('['):
+                first_ns_id = first_ns.split()[1].strip('[]')
+                ns_device = f"{controller}n{first_ns_id}"
+                cmd = f"nvme id-ns {ns_device}"
+                _, ns_output, _ = self.run_remote_cmd(cmd, ignore_status=True)
+                for line in ns_output.split('\n'):
+                    if 'in use' in line:
+                        lbads = int(line.split('lbads:')[1].split()[0])
+                        block_size = 2 ** lbads
+                        self.log.info(
+                            f"Detected block size: {block_size} bytes"
+                        )
+                        break
+
+        if block_size == 4096:
+            self.log.info("Using default block size: 4096 bytes")
+
+        return {
+            'unallocated_capacity': unallocated_capacity,
+            'block_size': block_size
+        }
+
+    def _calculate_namespace_size(
+        self, unallocated_capacity, block_size, ns_count
+    ):
+        """
+        Calculate optimal namespace size
+
+        :param unallocated_capacity: Unallocated capacity in bytes
+        :param block_size: Block size in bytes
+        :param ns_count: Number of namespaces to create
+        :return: Namespace size in blocks
+        """
+        max_ns_blocks = unallocated_capacity // block_size
+        max_ns_blocks_considered = int(60 * max_ns_blocks / 100)
+        ns_size = max_ns_blocks_considered // ns_count
+
+        self.log.info(
+            f"Unallocated capacity: {unallocated_capacity} bytes "
+            f"({max_ns_blocks} blocks of {block_size} bytes)"
+        )
+        self.log.info(
+            f"Using 60% of capacity: {max_ns_blocks_considered} blocks"
+        )
+        self.log.info(
+            f"Creating {ns_count} namespaces, "
+            f"each with {ns_size} blocks ({ns_size * block_size} bytes)"
+        )
+
+        return ns_size
+
+    def _cleanup_existing_namespaces(self, controller):
+        """
+        Delete all existing namespaces on controller
+
+        :param controller: NVMe controller device path
+        """
+        cmd = f"nvme list-ns {controller} --all"
+        status, stdout, _ = self.run_remote_cmd(cmd, ignore_status=True)
+        if status == 0 and stdout.strip():
+            self.log.info("Deleting existing namespaces...")
+            for line in stdout.strip().split('\n'):
+                if line.strip() and line.strip().startswith('['):
+                    ns_id = line.split(']')[0].strip('[').strip()
+                    self.run_remote_cmd(
+                        f"nvme delete-ns {controller} -n {ns_id}",
+                        ignore_status=True
+                    )
+
+    def _get_controller_id(self, controller):
+        """
+        Get controller ID
+
+        :param controller: NVMe controller device path
+        :return: Controller ID string
+        """
+        cmd = f"nvme id-ctrl {controller} | grep cntlid"
+        _, cntlid_output, _ = self.run_remote_cmd(cmd)
+        cont_id = cntlid_output.split(':')[-1].strip()
+        return cont_id
+
+    def _get_existing_namespace_ids(self, controller):
+        """
+        Get set of existing namespace IDs
+
+        :param controller: NVMe controller device path
+        :return: Set of namespace ID strings
+        """
+        cmd = f"nvme list-ns {controller} --all"
+        status, stdout, _ = self.run_remote_cmd(cmd, ignore_status=True)
+        existing_ns_ids = set()
+        if status == 0 and stdout.strip():
+            for line in stdout.strip().split('\n'):
+                if line.strip() and line.strip().startswith('['):
+                    ns_id = line.split(']')[0].strip('[').strip()
+                    existing_ns_ids.add(ns_id)
+        self.log.info(f"Existing namespace IDs: {existing_ns_ids}")
+        return existing_ns_ids
+
+    def _create_single_namespace(self, controller, ns_size, existing_ns_ids):
+        """
+        Create a single namespace with FLBAS detection
+
+        :param controller: NVMe controller device path
+        :param ns_size: Namespace size in blocks
+        :param existing_ns_ids: Set of existing namespace IDs
+        :return: Newly created namespace ID
+        """
+        cmd = (
+            f"nvme create-ns {controller} "
+            f"--nsze={ns_size} --ncap={ns_size} "
+            f"--flbas=0 --dps=0"
+        )
+        status, stdout, stderr = self.run_remote_cmd(cmd, ignore_status=True)
+
+        if status != 0:
+            self.log.warning(
+                f"Namespace creation with FLBAS=0 failed, "
+                f"attempting with FLBAS=1..."
+            )
+            cmd = (
+                f"nvme create-ns {controller} "
+                f"--nsze={ns_size} --ncap={ns_size} --flbas=1 --dps=0"
+            )
+            status, stdout, stderr = self.run_remote_cmd(cmd)
+
+        cmd = f"nvme list-ns {controller} --all"
+        _, stdout, _ = self.run_remote_cmd(cmd)
+        current_ns_ids = set()
+        for line in stdout.strip().split('\n'):
+            if line.strip() and line.strip().startswith('['):
+                ns_id = line.split(']')[0].strip('[').strip()
+                current_ns_ids.add(ns_id)
+
+        new_ns_ids = current_ns_ids - existing_ns_ids
+        if not new_ns_ids:
+            self.fail(
+                f"Failed to identify newly created namespace. "
+                f"Before: {existing_ns_ids}, After: {current_ns_ids}"
+            )
+
+        ns_id = new_ns_ids.pop()
+        self.log.info(f"Created namespace with ID: {ns_id}")
+        return ns_id
+
+    def _attach_namespace(self, controller, ns_id, cont_id):
+        """
+        Attach namespace to controller
+
+        :param controller: NVMe controller device path
+        :param ns_id: Namespace ID
+        :param cont_id: Controller ID
+        """
+        cmd = f"nvme attach-ns {controller} -n {ns_id} -c {cont_id}"
+        self.run_remote_cmd(cmd)
+
+    def _find_namespace_device(self, controller, ns_id, existing_devices):
+        """
+        Find device node for newly created namespace
+
+        :param controller: NVMe controller device path
+        :param ns_id: Namespace ID
+        :param existing_devices: List of already found device paths
+        :return: Device path (e.g., /dev/nvme1n5)
+        """
+        cmd = f"nvme list"
+        status, stdout, _ = self.run_remote_cmd(cmd, ignore_status=True)
+
+        ns_device = None
+        controller_name = controller.split('/')[-1]
+
+        if status == 0:
+            for line in stdout.strip().split('\n'):
+                parts = line.split()
+                if parts and parts[0].startswith('/dev/'):
+                    device_path = parts[0]
+                    if device_path.startswith(f'/dev/{controller_name}n'):
+                        try:
+                            device_ns_num = device_path.split('n')[-1]
+                            if device_path not in existing_devices:
+                                ns_device = device_path
+                                self.log.info(
+                                    f"Found new device: {ns_device} "
+                                    f"(namespace ID from list-ns: {ns_id})"
+                                )
+                                break
+                        except (ValueError, IndexError):
+                            continue
+
+        if not ns_device:
+            cmd = f"ls -1 /dev/{controller_name}n*"
+            status, stdout, _ = self.run_remote_cmd(cmd, ignore_status=True)
+            if status == 0:
+                for device_path in stdout.strip().split('\n'):
+                    if device_path not in existing_devices:
+                        ns_device = device_path
+                        self.log.warning(
+                            f"Using device from ls: {ns_device} "
+                            f"(namespace ID from list-ns: {ns_id})"
+                        )
+                        break
+
+        if not ns_device:
+            self.fail(
+                f"Could not find device node for namespace ID {ns_id}. "
+                f"Controller: {controller}"
+            )
+
+        return ns_device
+
     def _create_namespaces(self):
         """
         Create new namespaces on remote host
@@ -490,7 +717,6 @@ class NVMeTCPSoftTarget(Test):
             self.fail("nvme_controller is required for create mode")
 
         controller_name = controller.split('/')[-1]
-
         self.log.info(
             f"Creating {ns_count} namespaces on {controller_name}..."
         )
@@ -499,168 +725,37 @@ class NVMeTCPSoftTarget(Test):
         if status != 0:
             self.fail(f"Controller {controller} not found on remote host")
 
-        cmd = f"nvme id-ctrl {controller} | grep unvmcap"
-        _, output, _ = self.run_remote_cmd(cmd)
-        capacity_str = output.split(':')[-1].strip()
-        unallocated_capacity_bytes = int(capacity_str)
+        capacity_info = self._get_controller_capacity_info(controller)
 
-        block_size = 4096  # Default
-        cmd = f"nvme list-ns {controller}"
-        status, ns_list, _ = self.run_remote_cmd(cmd, ignore_status=True)
-
-        if status == 0 and ns_list.strip():
-            first_ns = ns_list.strip().split('\n')[0]
-            if first_ns.startswith('['):
-                first_ns_id = first_ns.split()[1].strip('[]')
-                ns_device = f"{controller}n{first_ns_id}"
-                cmd = f"nvme id-ns {ns_device}"
-                _, ns_output, _ = self.run_remote_cmd(cmd, ignore_status=True)
-                for line in ns_output.split('\n'):
-                    if 'in use' in line:
-                        lbads = int(
-                            line.split('lbads:')[1].split()[0]
-                        )
-                        block_size = 2 ** lbads
-                        self.log.info(f"Detected block size: {block_size} bytes")
-                        break
-
-        if block_size == 4096:
-            self.log.info("Using default block size: 4096 bytes")
-
-        max_ns_blocks = unallocated_capacity_bytes // block_size
-        max_ns_blocks_considered = int(60 * max_ns_blocks / 100)
-        ns_size = max_ns_blocks_considered // ns_count
-
-        self.log.info(
-            f"Unallocated capacity: {unallocated_capacity_bytes} bytes "
-            f"({max_ns_blocks} blocks of {block_size} bytes)"
-        )
-        self.log.info(
-            f"Using 60% of capacity: {max_ns_blocks_considered} blocks"
-        )
-        self.log.info(
-            f"Creating {ns_count} namespaces, "
-            f"each with {ns_size} blocks ({ns_size * block_size} bytes)"
+        ns_size = self._calculate_namespace_size(
+            capacity_info['unallocated_capacity'],
+            capacity_info['block_size'],
+            ns_count
         )
 
-        cmd = f"nvme list-ns {controller} --all"
-        status, stdout, _ = self.run_remote_cmd(cmd, ignore_status=True)
-        if status == 0 and stdout.strip():
-            self.log.info("Deleting existing namespaces...")
-            for line in stdout.strip().split('\n'):
-                if line.strip() and line.strip().startswith('['):
-                    ns_id = line.split(']')[0].strip('[').strip()
-                    self.run_remote_cmd(
-                        f"nvme delete-ns {controller} -n {ns_id}",
-                        ignore_status=True
-                    )
+        self._cleanup_existing_namespaces(controller)
 
-        cmd = f"nvme id-ctrl {controller} | grep cntlid"
-        _, cntlid_output, _ = self.run_remote_cmd(cmd)
-        cont_id = cntlid_output.split(':')[-1].strip()
+        cont_id = self._get_controller_id(controller)
 
-        cmd = f"nvme list-ns {controller} --all"
-        status, stdout, _ = self.run_remote_cmd(cmd, ignore_status=True)
-        existing_ns_ids = set()
-        if status == 0 and stdout.strip():
-            for line in stdout.strip().split('\n'):
-                if line.strip() and line.strip().startswith('['):
-                    ns_id = line.split(']')[0].strip('[').strip()
-                    existing_ns_ids.add(ns_id)
-
-        self.log.info(f"Existing namespace IDs: {existing_ns_ids}")
+        existing_ns_ids = self._get_existing_namespace_ids(controller)
 
         namespaces = []
         for i in range(ns_count):
             self.log.info(f"Creating namespace {i + 1} of {ns_count}...")
 
-            cmd = (
-                f"nvme create-ns {controller} "
-                f"--nsze={ns_size} --ncap={ns_size} "
-                f"--flbas=0 --dps=0"
+            ns_id = self._create_single_namespace(
+                controller, ns_size, existing_ns_ids
             )
-            status, stdout, stderr = self.run_remote_cmd(cmd, ignore_status=True)
+            existing_ns_ids.add(ns_id)
 
-            if status != 0:
-                self.log.warning(
-                    f"Namespace creation with FLBAS=0 failed, "
-                    f"attempting with FLBAS=1..."
-                )
-                cmd = (
-                    f"nvme create-ns {controller} "
-                    f"--nsze={ns_size} --ncap={ns_size} --flbas=1 --dps=0"
-                )
-                status, stdout, stderr = self.run_remote_cmd(cmd)
-
-            cmd = f"nvme list-ns {controller} --all"
-            _, stdout, _ = self.run_remote_cmd(cmd)
-            current_ns_ids = set()
-            for line in stdout.strip().split('\n'):
-                if line.strip() and line.strip().startswith('['):
-                    ns_id = line.split(']')[0].strip('[').strip()
-                    current_ns_ids.add(ns_id)
-
-            new_ns_ids = current_ns_ids - existing_ns_ids
-            if not new_ns_ids:
-                self.fail(
-                    f"Failed to identify newly created namespace. "
-                    f"Before: {existing_ns_ids}, After: {current_ns_ids}"
-                )
-
-            ns_id = new_ns_ids.pop()
-            self.log.info(f"Created namespace with ID: {ns_id}")
-            existing_ns_ids.add(ns_id)  # Update for next iteration
-
-            cmd = f"nvme attach-ns {controller} -n {ns_id} -c {cont_id}"
-            self.run_remote_cmd(cmd)
+            self._attach_namespace(controller, ns_id, cont_id)
 
             self.run_remote_cmd(f"nvme ns-rescan {controller}")
             time.sleep(2)
 
-            cmd = f"nvme list"
-            status, stdout, _ = self.run_remote_cmd(cmd, ignore_status=True)
-
-            ns_device = None
-            controller_name = controller.split('/')[-1]  # e.g., "nvme1"
-
-            if status == 0:
-                for line in stdout.strip().split('\n'):
-                    parts = line.split()
-                    if parts and parts[0].startswith('/dev/'):
-                        device_path = parts[0]
-                        if device_path.startswith(f'/dev/{controller_name}n'):
-                            try:
-                                device_ns_num = device_path.split('n')[-1]
-                                if device_path not in namespaces:
-                                    ns_device = device_path
-                                    self.log.info(
-                                        f"Found new device: {ns_device} "
-                                        f"(namespace ID from list-ns: "
-                                        f"{ns_id})"
-                                    )
-                                    break
-                            except (ValueError, IndexError):
-                                continue
-
-            if not ns_device:
-                cmd = f"ls -1 /dev/{controller_name}n*"
-                status, stdout, _ = self.run_remote_cmd(cmd, ignore_status=True)
-                if status == 0:
-                    for device_path in stdout.strip().split('\n'):
-                        if device_path not in namespaces:
-                            ns_device = device_path
-                            self.log.warning(
-                                f"Using device from ls: {ns_device} "
-                                f"(namespace ID from list-ns: "
-                                f"{ns_id})"
-                            )
-                            break
-
-            if not ns_device:
-                self.fail(
-                    f"Could not find device node for namespace ID {ns_id}. "
-                    f"Controller: {controller}"
-                )
+            ns_device = self._find_namespace_device(
+                controller, ns_id, namespaces
+            )
 
             status, _, _ = self.run_remote_cmd(
                 f"test -e {ns_device}", ignore_status=True
@@ -723,17 +818,13 @@ class NVMeTCPSoftTarget(Test):
         else:
             self.log.warning(f"No UUID found for {ns_device}")
 
-    def cleanup_all_nvmet_config(self):
+    def _get_nvmet_subsystems(self):
         """
-        Complete cleanup of ALL NVMe target configuration
+        Get list of all NVMe target subsystems from configfs
 
-        Removes all subsystems, ports, and namespaces from configfs.
-        This ensures a clean state before creating new configuration.
+        :return: List of subsystem NQN strings
         """
-        self.log.info("Performing complete NVMe target cleanup...")
-
         configfs_base = "/sys/kernel/config/nvmet"
-
         subsys_base = f"{configfs_base}/subsystems"
         cmd = f"ls -1 {subsys_base} 2>/dev/null || true"
         status, subsys_list, _ = self.run_remote_cmd(cmd, ignore_status=True)
@@ -744,11 +835,16 @@ class NVMeTCPSoftTarget(Test):
                 s.strip() for s in subsys_list.strip().split('\n')
                 if s.strip()
             ]
+        return subsystems
 
-        if not subsystems:
-            self.log.info("No subsystems found to clean up")
-        else:
-            self.log.info(f"Found {len(subsystems)} subsystem(s) to clean up")
+    def _disable_all_namespaces_in_subsystems(self, subsystems):
+        """
+        Disable all namespaces in all subsystems
+
+        :param subsystems: List of subsystem NQNs
+        """
+        configfs_base = "/sys/kernel/config/nvmet"
+        subsys_base = f"{configfs_base}/subsystems"
 
         for subsys_nqn in subsystems:
             subsys_path = f"{subsys_base}/{subsys_nqn}"
@@ -769,42 +865,78 @@ class NVMeTCPSoftTarget(Test):
                             ignore_status=True
                         )
 
+    def _get_nvmet_ports(self):
+        """
+        Get list of all NVMe target ports from configfs
+
+        :return: List of port ID strings
+        """
+        configfs_base = "/sys/kernel/config/nvmet"
         ports_base = f"{configfs_base}/ports"
         cmd = f"ls -1 {ports_base} 2>/dev/null || true"
         status, ports_list, _ = self.run_remote_cmd(cmd, ignore_status=True)
 
+        ports = []
         if status == 0 and ports_list.strip():
-            for port_id in ports_list.strip().split('\n'):
-                if not port_id.strip():
-                    continue
+            ports = [
+                p.strip() for p in ports_list.strip().split('\n')
+                if p.strip()
+            ]
+        return ports
 
-                port_subsys_path = f"{ports_base}/{port_id}/subsystems"
-                cmd = f"ls -1 {port_subsys_path} 2>/dev/null || true"
-                status, linked_subsys, _ = self.run_remote_cmd(
-                    cmd, ignore_status=True
-                )
+    def _remove_port_subsystem_links(self, ports):
+        """
+        Remove all port-to-subsystem links
 
-                if status == 0 and linked_subsys.strip():
-                    for subsys_nqn in linked_subsys.strip().split('\n'):
-                        if subsys_nqn.strip():
-                            link = f"{port_subsys_path}/{subsys_nqn}"
-                            self.log.info(
-                                f"Removing link: port {port_id} -> {subsys_nqn}"
-                            )
-                            self.run_remote_cmd(
-                                f"rm -f {link} 2>/dev/null || true",
-                                ignore_status=True
-                            )
+        :param ports: List of port IDs
+        """
+        configfs_base = "/sys/kernel/config/nvmet"
+        ports_base = f"{configfs_base}/ports"
 
-        if status == 0 and ports_list.strip():
-            for port_id in ports_list.strip().split('\n'):
-                if port_id.strip():
-                    port_path = f"{ports_base}/{port_id}"
-                    self.log.info(f"Removing port {port_id}")
-                    self.run_remote_cmd(
-                        f"rmdir {port_path} 2>/dev/null || true",
-                        ignore_status=True
-                    )
+        for port_id in ports:
+            port_subsys_path = f"{ports_base}/{port_id}/subsystems"
+            cmd = f"ls -1 {port_subsys_path} 2>/dev/null || true"
+            status, linked_subsys, _ = self.run_remote_cmd(
+                cmd, ignore_status=True
+            )
+
+            if status == 0 and linked_subsys.strip():
+                for subsys_nqn in linked_subsys.strip().split('\n'):
+                    if subsys_nqn.strip():
+                        link = f"{port_subsys_path}/{subsys_nqn}"
+                        self.log.info(
+                            f"Removing link: port {port_id} -> {subsys_nqn}"
+                        )
+                        self.run_remote_cmd(
+                            f"rm -f {link} 2>/dev/null || true",
+                            ignore_status=True
+                        )
+
+    def _remove_all_ports(self, ports):
+        """
+        Remove all port directories
+
+        :param ports: List of port IDs
+        """
+        configfs_base = "/sys/kernel/config/nvmet"
+        ports_base = f"{configfs_base}/ports"
+
+        for port_id in ports:
+            port_path = f"{ports_base}/{port_id}"
+            self.log.info(f"Removing port {port_id}")
+            self.run_remote_cmd(
+                f"rmdir {port_path} 2>/dev/null || true",
+                ignore_status=True
+            )
+
+    def _remove_subsystem_namespaces(self, subsystems):
+        """
+        Remove namespace directories from subsystems
+
+        :param subsystems: List of subsystem NQNs
+        """
+        configfs_base = "/sys/kernel/config/nvmet"
+        subsys_base = f"{configfs_base}/subsystems"
 
         for subsys_nqn in subsystems:
             subsys_path = f"{subsys_base}/{subsys_nqn}"
@@ -826,6 +958,17 @@ class NVMeTCPSoftTarget(Test):
                             ignore_status=True
                         )
 
+    def _remove_subsystem_directories(self, subsystems):
+        """
+        Remove subsystem directories
+
+        :param subsystems: List of subsystem NQNs
+        """
+        configfs_base = "/sys/kernel/config/nvmet"
+        subsys_base = f"{configfs_base}/subsystems"
+
+        for subsys_nqn in subsystems:
+            subsys_path = f"{subsys_base}/{subsys_nqn}"
             self.log.info(f"Removing subsystem: {subsys_nqn}")
             self.run_remote_cmd(
                 f"rmdir {subsys_path}/namespaces 2>/dev/null || true",
@@ -840,46 +983,91 @@ class NVMeTCPSoftTarget(Test):
                 ignore_status=True
             )
 
-        controller = self.ns_config.get('nvme_controller')
-        if controller and self.ns_mode == 'create':
-            self.log.info(f"Deleting all namespaces from {controller}")
+    def _delete_controller_namespaces(self, controller):
+        """
+        Delete all namespaces from NVMe controller
+
+        :param controller: NVMe controller device path
+        """
+        self.log.info(f"Deleting all namespaces from {controller}")
+        cmd = f"nvme list-ns {controller} --all"
+        status, stdout, _ = self.run_remote_cmd(cmd, ignore_status=True)
+
+        deleted_count = 0
+        if status == 0 and stdout.strip():
+            for line in stdout.strip().split('\n'):
+                if line.strip() and line.strip().startswith('['):
+                    ns_id = line.split(']')[0].strip('[').strip()
+                    self.log.info(f"Deleting namespace {ns_id}")
+                    self.run_remote_cmd(
+                        f"nvme delete-ns {controller} -n {ns_id}",
+                        ignore_status=True
+                    )
+                    deleted_count += 1
+
+        if deleted_count > 0:
+            self.log.info(
+                f"Deleted {deleted_count} namespace(s), "
+                f"waiting for cleanup to complete..."
+            )
+            time.sleep(5)
+
             cmd = f"nvme list-ns {controller} --all"
             status, stdout, _ = self.run_remote_cmd(cmd, ignore_status=True)
-
-            deleted_count = 0
             if status == 0 and stdout.strip():
-                for line in stdout.strip().split('\n'):
-                    if line.strip() and line.strip().startswith('['):
-                        ns_id = line.split(']')[0].strip('[').strip()
-                        self.log.info(f"Deleting namespace {ns_id}")
-                        self.run_remote_cmd(
-                            f"nvme delete-ns {controller} -n {ns_id}",
-                            ignore_status=True
-                        )
-                        deleted_count += 1
+                remaining = len([
+                    line for line in stdout.strip().split('\n')
+                    if line.strip() and line.strip().startswith('[')
+                ])
+                if remaining > 0:
+                    self.log.info(
+                        f"{remaining} namespace(s) still present after "
+                        f"deletion. This is normal - they will be cleaned "
+                        f"up by the system."
+                    )
+            else:
+                self.log.info("All namespaces successfully deleted")
 
-            if deleted_count > 0:
-                self.log.info(
-                    f"Deleted {deleted_count} namespace(s), "
-                    f"waiting for cleanup to complete..."
-                )
-                time.sleep(5)  # Wait longer for namespace deletion to complete
+    def test_cleanup_all_nvmet_config(self):
+        """
+        Test: Complete cleanup of ALL NVMe target configuration
 
-                cmd = f"nvme list-ns {controller} --all"
-                status, stdout, _ = self.run_remote_cmd(cmd, ignore_status=True)
-                if status == 0 and stdout.strip():
-                    remaining = len([
-                        line for line in stdout.strip().split('\n')
-                        if line.strip() and line.strip().startswith('[')
-                    ])
-                    if remaining > 0:
-                        self.log.info(
-                            f"{remaining} namespace(s) still present after "
-                            f"deletion. This is normal - they will be cleaned "
-                            f"up by the system."
-                        )
-                else:
-                    self.log.info("All namespaces successfully deleted")
+        Removes all subsystems, ports, and namespaces from configfs.
+        This ensures a clean state before creating new configuration.
+        This test runs before test_nvme_tcp_soft_target (alphabetically).
+        """
+        self.log.info("Performing complete NVMe target cleanup...")
+
+        # Get list of subsystems
+        subsystems = self._get_nvmet_subsystems()
+
+        if not subsystems:
+            self.log.info("No subsystems found to clean up")
+        else:
+            self.log.info(f"Found {len(subsystems)} subsystem(s) to clean up")
+
+        # Disable all namespaces in all subsystems
+        self._disable_all_namespaces_in_subsystems(subsystems)
+
+        # Get list of ports
+        ports_list = self._get_nvmet_ports()
+
+        # Remove port-to-subsystem links
+        self._remove_port_subsystem_links(ports_list)
+
+        # Remove all ports
+        self._remove_all_ports(ports_list)
+
+        # Remove namespace directories from subsystems
+        self._remove_subsystem_namespaces(subsystems)
+
+        # Remove subsystem directories
+        self._remove_subsystem_directories(subsystems)
+
+        # Delete controller namespaces if in create mode
+        controller = self.ns_config.get('nvme_controller')
+        if controller and self.ns_mode == 'create':
+            self._delete_controller_namespaces(controller)
 
         self.log.info("Complete NVMe target cleanup finished")
 
@@ -1168,17 +1356,17 @@ WantedBy=multi-user.target
         Main test execution method
 
         Orchestrates the complete NVMe/TCP soft target configuration:
-        1. Clean up any existing configuration
-        2. Configure network interfaces
-        3. Load kernel modules
-        4. Create or select namespaces
-        5. Configure NVMe target subsystem
-        6. Setup persistence
-        7. Validate configuration
+        1. Configure network interfaces
+        2. Load kernel modules
+        3. Create or select namespaces
+        4. Configure NVMe target subsystem
+        5. Setup persistence
+        6. Validate configuration
+
+        Note: Cleanup is performed by test_cleanup_all_nvmet_config which
+        runs before this test.
         """
         try:
-            self.cleanup_all_nvmet_config()
-
             self.configure_network()
             self.load_kernel_modules()
             namespaces = self.create_or_select_namespaces()
