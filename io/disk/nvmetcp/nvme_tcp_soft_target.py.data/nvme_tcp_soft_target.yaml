@@ -21,7 +21,7 @@ network_config_secondary_mtu: 9000
 # Namespace Configuration
 namespace_config_mode: "create"
 namespace_config_nvme_controller: ""
-namespace_config_number_of_namespaces: ""
+namespace_config_number_of_namespaces: null
 namespace_config_namespace_size: null
 
 # For select mode, use this instead:
@@ -33,5 +33,3 @@ nvmet_config_subsystem_nqn: null
 nvmet_config_port_id_start: 1
 nvmet_config_tcp_port: 4420
 nvmet_config_allow_any_host: true
-
-# Made with Bob
