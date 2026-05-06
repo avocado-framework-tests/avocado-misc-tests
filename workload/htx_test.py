@@ -202,10 +202,17 @@ class HtxTest(Test):
         self.log.info("Activating the %s", self.mdt_file)
         cmd = "htxcmdline -activate -mdt %s" % self.mdt_file
         process.system(cmd, ignore_status=True)
-
+        # cheking this param
+        cmd = "hcl -get_htx_env HTX_DR_TEST"
+        process.system(cmd, ignore_status=True)
+        # set this param
+        cmd = "hcl -set_htx_env HTX_DR_TEST 1"
+        process.system(cmd, ignore_status=True)
+        # cheking this param
+        cmd = "hcl -get_htx_env HTX_DR_TEST"
+        process.system(cmd, ignore_status=True)
         self.log.info("Running the HTX ")
         cmd = "htxcmdline -run  -mdt %s" % self.mdt_file
-
         process.system(cmd, ignore_status=True)
 
     def test_check(self):
