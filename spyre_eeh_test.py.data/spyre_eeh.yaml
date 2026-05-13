@@ -1,0 +1,26 @@
+# Spyre EEH (Enhanced Error Handling) Test Configuration
+#
+# This YAML file configures the EEH test parameters for Spyre AIU adapters.
+# 
+# Usage:
+#   avocado run spyre_eeh_test.py --mux-yaml spyre_eeh_test.py.data/spyre_eeh.yaml
+
+# PCI Addresses Configuration
+# Provide space-separated PCI addresses for AIU cards to test
+# Format: XXXX:XX:XX.X (domain:bus:device.function)
+PCI_ADDRESSES: "0382:60:00.0 0382:70:00.0 0383:60:00.0 0383:70:00.0"
+
+# EEH Max Freeze Count
+# Expected value in /sys/kernel/debug/powerpc/eeh_max_freezes
+# Default: 5
+MAX_FREEZES: 5
+
+# Container Configuration (Optional)
+# If provided, the test will validate container restart after EEH injection
+# Leave empty to skip container validation
+CONTAINER_NAME: ""
+
+# Example with container validation:
+# CONTAINER_NAME: "spyre-vllm-container"
+
+# Made with Bob
