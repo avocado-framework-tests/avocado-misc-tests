@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+!/usr/bin/env python
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# (at yo#ur option) any later version.
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -41,7 +41,8 @@ class Moduleparameter(Test):
         self.mpath_enabled = self.params.get('multipath_enabled',
                                              default=False)
         self.disk = self.params.get('disk', default=None)
-        self.load_unload_sleep_time = 30
+        self.load_unload_sleep_time = self.params.get('load_unload_sleep_time',
+                                                       default=30)
         self.error_modules = []
         self.uname = linux_modules.platform.uname()[2]
         if not self.module:

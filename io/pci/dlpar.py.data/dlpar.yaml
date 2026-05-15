@@ -1,8 +1,10 @@
-manageSystem:
-hmc_pwd: 
-hmc_username: 
-lpar_2: 
-pci_devices:
-num_of_dlpar: 
+manageSystem: "ltcbalco54"
+hmc_pwd: "Pow3rGetsReady4Bob!"
+hmc_username: "hscroot"
+lpar_2:
+pci_devices: "0018:01:00.0"
+num_of_dlpar: 3
 peer_ip:
 sriov: 'no'
+
+# Made with Bob
