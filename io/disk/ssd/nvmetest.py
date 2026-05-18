@@ -21,6 +21,8 @@ using nvme cli.
 """
 
 import os
+import time
+import json
 from avocado import Test
 from avocado.utils import disk
 from avocado.utils import process
@@ -284,16 +286,157 @@ class NVMeTest(Test):
         for ns_id in range(1, self.get_max_ns_count() + 1):
             self.create_one_ns(str(ns_id), per_ns_blocks, ns_controller)
 
+    def get_supported_lba_formats(self):
+        """
+        Query and return supported LBA formats for the NVMe device.
+
+        :return: List of dicts with 'index', 'block_size', 'metadata_size'
+        :rtype: list
+        """
+        namespaces = self.ns_list()
+
+        if namespaces:
+            namespace = f"{self.device}n{namespaces[0]}"
+            cmd = f"{self.binary} id-ns {namespace} -o json"
+            try:
+                result = process.run(cmd, shell=True, ignore_status=False)
+                ns_data = json.loads(result.stdout_text)
+
+                lba_formats = []
+                for idx, lbaf in enumerate(ns_data.get('lbafs', [])):
+                    ds = lbaf.get('ds', 0)
+                    if ds > 0:
+                        lba_formats.append({
+                            'index': idx,
+                            'block_size': 2 ** ds,
+                            'metadata_size': lbaf.get('ms', 0)
+                        })
+
+                if lba_formats:
+                    self.log.debug(f"Found {len(lba_formats)} valid LBA formats")
+                    return lba_formats
+
+            except (process.CmdError, json.JSONDecodeError, KeyError) as e:
+                self.log.warning(f"Failed to query LBA formats: {e}")
+
+        self.log.warning("Using common format assumptions (512B and 4KB)")
+        return [
+            {'index': 0, 'block_size': 512, 'metadata_size': 0},
+            {'index': 1, 'block_size': 4096, 'metadata_size': 0}
+        ]
+
+    def get_optimal_flbas(self):
+        """
+        Determine optimal FLBAS index for namespace creation.
+
+        Strategy:
+        1. Prefer FLBAS index 0 if valid
+        2. Select first format with no metadata
+        3. Prefer common block sizes (512B, 4KB)
+
+        :return: FLBAS index (0-15)
+        :rtype: int
+        """
+        formats = self.get_supported_lba_formats()
+
+        if not formats:
+            self.log.warning("No valid formats found, defaulting to FLBAS=0")
+            return 0
+
+        for fmt in formats:
+            if fmt['index'] == 0:
+                self.log.info(f"Using FLBAS=0 (block_size={fmt['block_size']}B)")
+                return 0
+
+        formats_no_metadata = [f for f in formats if f['metadata_size'] == 0]
+
+        if formats_no_metadata:
+            for preferred_size in [512, 4096]:
+                for fmt in formats_no_metadata:
+                    if fmt['block_size'] == preferred_size:
+                        self.log.info(f"Using FLBAS={fmt['index']} "
+                                      f"(block_size={fmt['block_size']}B)")
+                        return fmt['index']
+
+            selected = formats_no_metadata[0]
+            self.log.info(f"Using FLBAS={selected['index']} "
+                          f"(block_size={selected['block_size']}B)")
+            return selected['index']
+
+        selected = formats[0]
+        self.log.warning(f"Using FLBAS={selected['index']} with metadata "
+                         f"(block_size={selected['block_size']}B)")
+        return selected['index']
+
+    def get_flbas_value(self):
+        """
+        Calculate appropriate FLBAS value for namespace creation.
+
+        :return: FLBAS value to use
+        :rtype: int
+        """
+        try:
+            optimal_flbas = self.get_optimal_flbas()
+            self.log.info(f"Calculated optimal FLBAS={optimal_flbas}")
+            return optimal_flbas
+        except Exception as e:
+            self.log.warning(f"FLBAS calculation failed: {e}, using FLBAS=0")
+            return 0
+
     def create_one_ns(self, ns_id, blocksize, controller):
         """
-        Creates one namespace, with the specified id, block size, controller
+        Creates one namespace with specified id, block size, and controller.
+        FLBAS is automatically calculated based on device capabilities.
+
+        :param ns_id: Namespace ID (typically 1-based)
+        :param blocksize: Size of namespace in blocks
+        :param controller: Controller ID to attach namespace to
         """
-        cmd = "%s create-ns %s --nsze=%s --ncap=%s --flbas=0 -dps=0" % (
-            self.binary, self.device, int(blocksize), int(blocksize))
-        process.system(cmd, shell=True, ignore_status=True)
+        flbas_value = self.get_flbas_value()
+
+        cmd = "%s create-ns %s --nsze=%s --ncap=%s --flbas=%s -dps=0" % (
+            self.binary, self.device, int(blocksize), int(blocksize), flbas_value)
+        result = process.system(cmd, shell=True, ignore_status=True)
+
+        if result != 0:
+            self.fail(
+                f"Namespace create failed with FLBAS={flbas_value}. "
+                f"Command: {cmd}. Exit code: {result}"
+            )
+
+        rescan_cmd = "%s ns-rescan %s" % (self.binary, self.device)
+        process.system(rescan_cmd, shell=True, ignore_status=True)
+        time.sleep(2)
+
         cmd = "%s attach-ns %s --namespace-id=%s -controllers=%s" % (
             self.binary, self.device, ns_id, controller)
-        process.system(cmd, shell=True, ignore_status=True)
+        result = process.system(cmd, shell=True, ignore_status=True)
+        if result != 0:
+            self.fail(f"Namespace attach failed: {cmd}. Exit code: {result}")
+
+        process.system(rescan_cmd, shell=True, ignore_status=True)
+        time.sleep(2)
+
+        ns_list_cmd = "%s list-ns %s" % (self.binary, self.device)
+        ns_output = process.system_output(ns_list_cmd, shell=True,
+                                          ignore_status=True).decode("utf-8")
+
+        ns_found = False
+        ns_id_int = int(ns_id)
+        ns_id_hex = f"0x{ns_id_int:x}"
+
+        for line in ns_output.splitlines():
+            if line.startswith('[') and ':' in line:
+                ns_part = line.split(':')[-1].strip()
+                if ns_part == ns_id_hex or ns_part == str(ns_id_int):
+                    ns_found = True
+                    break
+
+        if not ns_found:
+            self.log.warning(
+                f"Namespace {ns_id} attached but not found in list. "
+                f"Output: {ns_output}"
+            )
 
     def test_firmware_upgrade(self):
         """
@@ -304,11 +447,9 @@ class NVMeTest(Test):
         fw_file_path = download.get_file(self.firmware_url,
                                          os.path.join(self.teststmpdir,
                                                       fw_file))
-        # Getting the current FW details
         self.log.debug("Current FW: %s", self.get_firmware_version())
         self.get_firmware_log()
 
-        # Activating new FW
         passed_commits = []
         failed = False
         d_cmd = "%s fw-download %s --fw=%s" % (self.binary, self.device,
@@ -318,7 +459,6 @@ class NVMeTest(Test):
                 continue
             passed_actions = []
             for action in range(0, 3):
-                # Downloading new FW to the device for each slot
                 if process.system(d_cmd, shell=True, ignore_status=True):
                     continue
                 cmd = "%s fw-commit %s -s %d -a %d" % (self.binary,
@@ -330,7 +470,6 @@ class NVMeTest(Test):
                     passed_actions.append(action)
             passed_commits.append(passed_actions)
 
-        # Reset device if not already taken care
         reset_needed = False
         for commit in passed_commits:
             if 3 not in commit:
@@ -342,7 +481,6 @@ class NVMeTest(Test):
             self.log.debug(passed_commits)
             self.fail("Passed only for the above slot actions")
 
-        # Getting the current FW details after updating
         self.get_firmware_log()
         if fw_version != self.get_firmware_version():
             self.log.warn("New Firmware not reflecting after updating")
