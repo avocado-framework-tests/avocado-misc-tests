@@ -18,38 +18,51 @@
 import os
 
 from avocado import Test
-from avocado.utils import process, build, git
-from avocado.utils.software_manager.distro_packages import ensure_tool
+from avocado.utils import process, build, git, distro
+from avocado.utils.software_manager.manager import SoftwareManager
 
 
 class Perfmon(Test):
 
     """
-    performance monitoring on Linux : test  perf_events on Linux
+    performance monitoring on Linux : test perf_events on Linux
     :avocado: tags=perf,perfmon
     """
 
     def setUp(self):
 
-        # Check for basic utilities
-        perf_path = self.params.get('perf_bin', default='')
+        # libpfm4 build deps only (gcc, make, ncurses) — no linux-tools / perf packages here.
+        smm = SoftwareManager()
+        dist = distro.detect()
 
-        # Define distro-aware package map for build deps
-        distro_pkg_map = {
-            "Ubuntu": ["libncurses-dev", "gcc", "make"],
-            "debian": ["libncurses-dev", "gcc", "make"],
-            "centos": ["ncurses-devel", "gcc", "make"],
-            "fedora": ["ncurses-devel", "gcc", "make"],
-            "rhel": ["ncurses-devel", "gcc", "make"],
-            "SuSE": ["ncurses-devel", "gcc", "make"],
-        }
+        deps = ["gcc", "make"]
+        if dist.name in ['Ubuntu', 'debian']:
+            deps.extend(['libncurses-dev'])
+        elif dist.name in ['rhel', 'SuSE']:
+            deps.extend(['ncurses-devel'])
+        for package in deps:
+            if not smm.check_installed(package) and not smm.install(package):
+                self.cancel(
+                    "Fail to install %s required for this test." % package)
 
-        try:
-            # Ensure toolchain and ncurses dev packages are present
-            ensure_tool("gcc", distro_pkg_map=distro_pkg_map)
-            ensure_tool("make", distro_pkg_map=distro_pkg_map)
-        except RuntimeError as e:
-            self.cancel(str(e))
+        # Optional mux: `perf_bin` in perfmon.py.data/*.yaml — tests/validate uses `perf` from PATH.
+        perf_path = (self.params.get('perf_bin', default='') or '').strip()
+        self._mux_perf_bin = bool(perf_path)
+        self._saved_path = os.environ.get("PATH", "")
+        if perf_path:
+            if not os.path.isfile(perf_path):
+                self.cancel("perf not found at %s" % perf_path)
+            ret = process.run("%s --version" % perf_path, ignore_status=True,
+                              shell=True)
+            if ret.exit_status != 0:
+                self.cancel("perf at %s is not functional" % perf_path)
+            ver = getattr(ret, "stdout_text", ret.stdout.decode()).strip()
+            self.log.info("Perf version: %s", ver)
+            self.perf_bin = perf_path
+            bindir = os.path.dirname(os.path.abspath(perf_path))
+            os.environ["PATH"] = bindir + os.pathsep + self._saved_path
+        else:
+            self.perf_bin = "perf"
 
         git.get_repo('https://git.code.sf.net/p/perfmon2/libpfm4',
                      destination_dir=self.workdir)
@@ -60,7 +73,15 @@ class Perfmon(Test):
 
     def test(self):
 
+        self.log.info("Running tests/validate with perf resolved as: %s",
+                      self.perf_bin)
         out = process.system_output('%s ' % os.path.join(
-            self.workdir, 'tests/validate')).decode("utf-8")
+            self.workdir, 'tests', 'validate'))
+        if isinstance(out, bytes):
+            out = out.decode("utf-8")
         if 'fail' in out:
             self.fail("test failed:check manually")
+
+    def tearDown(self):
+        if getattr(self, "_mux_perf_bin", False):
+            os.environ["PATH"] = self._saved_path

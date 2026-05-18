@@ -33,7 +33,6 @@ class PerfScript(Test):
         perf_path = self.params.get('perf_bin', default='')
         parser = configparser.ConfigParser()
         parser.read(self.get_data('probe.cfg'))
-        # self.perf_probe = parser.get(detected_distro.name, 'probepoint')
         distro_pkg_map = {
             "Ubuntu": [f"linux-tools-{os.uname()[2]}", "linux-tools-common", "gcc", "make"],
             "debian": ["linux-perf", "gcc", "make"],
@@ -63,13 +62,16 @@ class PerfScript(Test):
     def test_script_probe(self):
         # Creating temporary file to collect the perf.data
         self.temp_file = tempfile.NamedTemporaryFile().name
-        probe = "perf probe -x perf_test 'perf_test.c:%s'" % self.perf_probe
+        probe = "%s probe -x perf_test 'perf_test.c:%s'" % (
+            self.perf_bin, self.perf_probe)
         process.run(probe, sudo=True, shell=True)
-        record = "perf record -e \'{cpu/cpu-cycles,period=10000/,probe_perf_test:main}:S\' -o %s ./perf_test" % self.temp_file
+        record = ("%s record -e '{cpu/cpu-cycles,period=10000/,"
+                  "probe_perf_test:main}:S' -o %s ./perf_test" % (
+                      self.perf_bin, self.temp_file))
         process.run(record, sudo=True, shell=True)
-        output = process.run("perf script -i %s" % self.temp_file,
+        output = process.run("%s script -i %s" % (self.perf_bin, self.temp_file),
                              ignore_status=True, sudo=True, shell=True)
-        probe_del = "perf probe -d probe_perf_test:main"
+        probe_del = "%s probe -d probe_perf_test:main" % self.perf_bin
         process.run(probe_del)
         if output.exit_status == -11:
             self.fail("perf script command segfaulted")
