@@ -116,6 +116,21 @@ class IommuTest(Test):
         else:
             self.log.info("Device is in default domain")
 
+    # TODO: Move this function to avocado utility.
+    def verify_snp_host(self):
+        """
+        Verify if SNP feature is enabled on the host
+        """
+        secure_module_path = "/sys/module/kvm_amd/parameters/sev_snp"
+        try:
+            with open(secure_module_path) as f:
+                output = f.read().strip()
+                if output not in ("Y", "y", "1"):
+                    return False
+            return True
+        except IOError:
+            return False
+
     def test_unbind_bind(self):
         """
         Test device for unbind and bind
@@ -136,6 +151,9 @@ class IommuTest(Test):
         """
         Test device for unbind, change domain of device and bind
         """
+        if self.verify_snp_host():
+            self.cancel("IOMMU domain change is not supported on SNP hosts")
+
         for pci_addr in self.pci_devices.split(" "):
             driver, def_dom = self.get_params(pci_addr)
             self.log.info("PCI_ID = %s", pci_addr)
@@ -172,6 +190,9 @@ class IommuTest(Test):
         """
         Test device for unbind, change domain of group(n times) and bind
         """
+        if self.verify_snp_host():
+            self.cancel("IOMMU domain change is not supported on SNP hosts")
+
         for pci_addr in self.pci_devices.split(" "):
             driver, def_dom = self.get_params(pci_addr)
             for _ in range(self.count):
@@ -229,6 +250,9 @@ class IommuTest(Test):
         """
         Test device for unbind, change domain of group, bind and rescan
         """
+        if self.verify_snp_host():
+            self.cancel("IOMMU domain change is not supported on SNP hosts")
+
         for pci_addr in self.pci_devices.split(" "):
             driver, def_dom = self.get_params(pci_addr)
             self.log.info("PCI_ID = %s", pci_addr)
