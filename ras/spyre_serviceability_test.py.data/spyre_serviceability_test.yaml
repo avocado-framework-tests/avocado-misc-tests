@@ -1,6 +1,8 @@
 # Avocado Test Parameters for Serviceability Tests
 # Format: test_name.variant_name: parameters and default values
 
+MODEL_NAME: ""			       # model name"granite-3.3-8b-instruct"
+HF_MODEL_ID: ""			       # Huggingface model id "ibm-granite/granite-3.3-8b-instruct"
 SPYRE_GROUP: ""                        # Group name for VFIO device access
 AIU_PCIE_IDS: ""                       # AIU PCIe device IDs
 HOST_MODELS_DIR: ""                    # Host directory containing models
