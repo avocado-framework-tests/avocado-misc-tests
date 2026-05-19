@@ -43,4 +43,9 @@ Test: !mux
 
     max_id:
         module_param_name: "max_id"
-"driver_parameter_block_device.py.data/driver_parameter_block_device_ibmvscsi.yaml" 62L, 1654B
+        value: !mux
+            max_id_0:
+                module_param_value: "0"
+            max_id_64:
+                module_param_value: "64"
+            max_id_256:
