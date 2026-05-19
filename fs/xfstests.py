@@ -390,7 +390,10 @@ class Xfstests(Test):
         os.chmod(self.workdir, 0o755)
         subprocess.check_call(["chmod", "-R", "a+rX", self.teststmpdir])
 
-        # Ensure test users exist
+        # Ensure test users and groups exist
+        if process.system('getent group sys', ignore_status=True):
+            process.system('groupadd sys', sudo=True)
+
         for user in ['fsgqa', 'fsgqa2', '123456-fsgqa']:
             if process.system(f'id {user}', ignore_status=True):
                 cmd = f'useradd -m {"-U " if user == "fsgqa" else ""}{user}'
@@ -448,8 +451,8 @@ class Xfstests(Test):
         for user in ['fsgqa', '123456-fsgqa', 'fsgqa2']:
             if not process.system(f'id {user}', ignore_status=True):
                 process.system(f'userdel -r -f {user}', sudo=True, ignore_status=True)
-        if not process.system('getent group fsgqa', ignore_status=True):
-            process.system('groupdel fsgqa', sudo=True, ignore_status=True)
+        if not process.system('getent group sys', ignore_status=True):
+            process.system('groupdel sys', sudo=True)
 
         # In case if any test has been interrupted
         process.system(f'umount {self.scratch_mnt} {self.test_mnt} {self.disk_mnt}',
