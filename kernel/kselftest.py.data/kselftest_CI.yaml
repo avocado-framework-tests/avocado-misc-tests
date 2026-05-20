@@ -11,6 +11,8 @@ component: !mux
         comp: 'memory-hotplug'
     vDSO:
         comp: 'vDSO'
+    static_keys:
+        comp: 'static_keys'
 run_type: !mux
     upstream:
         type: 'upstream'
