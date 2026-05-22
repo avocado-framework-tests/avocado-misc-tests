@@ -1,0 +1,19 @@
+# NVMe/TCP Initiator Configuration Test Parameters
+# Provide the actual values for your test environment
+
+# Primary network configuration (required)
+primary_ip: ''
+primary_interface: ''
+primary_subnet: ''
+primary_gateway: ''
+
+# Secondary network configuration (optional, for multipath)
+secondary_ip: ''
+secondary_interface: ''
+secondary_subnet: ''
+secondary_gateway: ''
+
+# Target configuration (required)
+target_ips: ''
+subsystem_nqn: ''
+target_port: 4420
