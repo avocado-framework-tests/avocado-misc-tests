@@ -1,0 +1,31 @@
+# Scheduler Tunables Test Plan - Top 4 Verifiable Tunables
+# This YAML file defines test parameters for scheduler tunable validation
+
+# Test duration in seconds
+test_duration: 10
+
+# Number of stress workers (default: 2x CPU count for overcommit)
+# Set to 0 or omit to use automatic calculation
+stress_workers: 0
+
+# Individual test configurations
+tests:
+  baseline:
+    workload_type: "mixed"
+    
+  low_latency:
+    workload_type: "cpu"
+    tunables:
+      base_slice_ns_factor: 0.25  # 25% of baseline
+      migration_cost_ns_factor: 0.10  # 10% of baseline
+    
+  high_throughput:
+    workload_type: "context-switch"
+    tunables:
+      base_slice_ns_factor: 3.0  # 3x baseline
+      migration_cost_ns_factor: 2.0  # 2x baseline
+    
+  migration_behavior:
+    workload_type: "fork"
+    tunables:
+      nr_migrate_factor: 2.0  # 2x baseline, max 128
