@@ -92,6 +92,7 @@ class MemStress(Test):
     '''
 
     def setUp(self):
+        self.blocks_hotpluggable = []
 
         if not memory.check_hotplug():
             self.cancel("UnSupported : memory hotplug not enabled\n")
@@ -99,7 +100,7 @@ class MemStress(Test):
         for package in ['automake', 'make', 'autoconf']:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        default_url = 'https://fossies.org/linux/privat/stress-1.0.7.tar.gz'
+        default_url = 'https://github.com/resurrecting-open-source-projects/stress/releases/download/1.0.7/stress-1.0.7.tar.gz'
         stress_tar_url = self.params.get('stress_tar_url', default=default_url)
         if not smm.check_installed('stress') and not smm.install('stress'):
             tarball = self.fetch_asset(stress_tar_url)
@@ -232,4 +233,6 @@ class MemStress(Test):
         self.__error_check()
 
     def tearDown(self):
-        self.hotplug_all(self.blocks_hotpluggable)
+        # Only attempt to hotplug if blocks were successfully initialized
+        if hasattr(self, 'blocks_hotpluggable') and self.blocks_hotpluggable:
+            self.hotplug_all(self.blocks_hotpluggable)
