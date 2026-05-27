@@ -1,0 +1,45 @@
+# Spyre Quadlet Test Configuration
+# This YAML file provides configuration for testing Spyre containers using Podman Quadlet
+
+# Container Image (user configurable - set this value before running tests)
+IMAGE: ""
+
+# PCIe IDs (user configurable - space-separated list)
+# For sequential test with 4 IDs: first 3 used individually for EE/Rerank/Embedding, all 4 for RAG
+PCIE_IDS: "0233:70:00.0 0234:80:00.0 0333:70:00.0 0334:80:00.0"
+
+# Entity Extraction Configuration
+EE_MEMORY: "200G"
+EE_MODEL_PATH: "/models/granite-3.3-8b-instruct"
+EE_TENSOR_PARALLEL: 1
+EE_MAX_MODEL_LEN: 3072
+EE_MAX_NUM_SEQS: 16
+EE_MAX_NUM_BATCHED_TOKENS: 512
+
+# Embedding Configuration
+EMB_MEMORY: "1500G"
+EMB_MODEL_PATH: "/models/granite-embedding-125m-english"
+EMB_TENSOR_PARALLEL: 1
+EMB_MAX_MODEL_LEN: 512
+EMB_MAX_NUM_SEQS: 4
+EMB_MAX_NUM_BATCHED_TOKENS: 512
+
+# Reranker Configuration
+RR_MEMORY: "1500G"
+RR_MODEL_PATH: "/models/bge-reranker-v2-m3"
+RR_TENSOR_PARALLEL: 1
+RR_MAX_MODEL_LEN: 1024
+RR_MAX_NUM_SEQS: 4
+RR_MAX_NUM_BATCHED_TOKENS: 512
+
+# RAG Configuration
+RAG_MEMORY: "200G"
+RAG_SHM_SIZE: "2G"
+RAG_MODEL_PATH: "/models/granite-3.3-8b-instruct"
+RAG_TENSOR_PARALLEL: 4
+RAG_MAX_MODEL_LEN: 32768
+RAG_MAX_NUM_SEQS: 32
+RAG_MAX_NUM_BATCHED_TOKENS: 512
+
+# Host models directory
+HOST_MODELS_DIR: "/opt/ibm/spyre/models"
