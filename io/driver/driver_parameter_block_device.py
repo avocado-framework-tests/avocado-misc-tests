@@ -38,8 +38,8 @@ class Moduleparameter(Test):
         self.module = self.params.get('module', default=None)
         self.param_name = self.params.get('module_param_name', default=None)
         self.param_value = self.params.get('module_param_value', default=None)
-        self.mpath_enabled = self.params.get('multipath_enabled',
-                                             default=False)
+        self.mpath_enabled = self.params.get(
+            'multipath_enabled', default=False)
         self.disk = self.params.get('disk', default=None)
         self.load_unload_sleep_time = 30
         self.error_modules = []
