@@ -1,0 +1,17 @@
+# Configuration for DLPAR and PCI Hotplug tests with Lockdown enabled
+# This YAML file combines parameters needed for both DLPAR and PCI hotplug tests
+
+# DLPAR Configuration (from dlpar.yaml)
+manageSystem:
+hmc_pwd: 
+hmc_username: 
+lpar_2: 
+pci_devices:
+num_of_dlpar: 
+peer_ip:
+sriov: 'no'
+
+# PCI Hotplug Configuration (from pci_hotplug.yaml)
+count: 10
+adapter_type: ""
+
