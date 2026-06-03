@@ -1,24 +1,24 @@
 ubuntu_url: 'http://ausgsa.ibm.com/projects/r/rsctdev/builds/muthu/rmuts006a/ppc64le'
 debs: ['src_3.2.0.6-15111_ppc64el.deb', 'rsct.core.utils_3.2.0.6-15111_ppc64el.deb', 'rsct.core.utils_3.2.0.6-15111_ppc64el.deb', 'rsct.core_3.2.0.6-15111_ppc64el.deb', 'rsct.basic_3.2.0.6-15111_ppc64el.deb', 'devices.chrp.base.servicerm_2.5.0.1-15111_ppc64el.deb', 'dynamicrm_2.0.1-3_ppc64el.deb']
-hmc_pwd:
-hmc_username:
-manageSystem:
+hmc_pwd: ""
+hmc_username: ""
+manageSystem: ""
 vios_ip: ""
 vios_username: ""
 vios_pwd: ""
-slot_num:
-vios_names:
-sriov_adapters:
-sriov_ports:
-priority:
-auto_failover:
-bandwidth:
-device_ip:
-netmasks:
-peer_ip:
-count:
-num_of_dlpar:
-mac_id:
+slot_num: ""
+vios_names: ""
+sriov_adapters: "U78DA.ND0.WZS0027-P0-C11 U78DA.ND0.WZS0027-P0-C11"
+sriov_ports: "0 1"
+priority: "1 100"
+auto_failover: 1
+bandwidth: 2
+device_ip: ""
+netmasks: ""
+peer_ip: ""
+count: 2
+num_of_dlpar: 2
+mac_id: "" 
 user_name: ""
 host_public_ip: ""
 host_password: ""
@@ -27,3 +27,7 @@ peer_password: ""
 is_mlx_driver: True
 tx_channel: 
 rx_channel: 
+# skip_vnic_add: If True, skip adding VNIC if it already exists (based on slot/MAC)
+# If False or not set, remove and re-add existing VNIC
+skip_vnic_add: True
+

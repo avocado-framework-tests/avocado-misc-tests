@@ -1,0 +1,16 @@
+component: !mux
+    sched:
+      comp: 'sched'
+    mm:
+        comp: 'mm'
+    mm_powerpc:
+        comp: 'powerpc/mm'
+    cpu_hotplug:
+        comp: 'cpu-hotplug'
+    memory_hotplug:
+        comp: 'memory-hotplug'
+    vDSO:
+        comp: 'vDSO'
+run_type: !mux
+    distro:
+        type: 'distro'

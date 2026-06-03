@@ -1,5 +1,6 @@
-runltp: !mux
-    script: 'runltp'
+use_kirk: True
+kirk: !mux
+    script: 'kirk'
     crashme:
         args: '-f crashme'
     crypto:

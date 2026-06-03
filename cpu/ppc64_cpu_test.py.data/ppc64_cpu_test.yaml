@@ -1,7 +1,52 @@
-test_loop : 10
+# Configuration file for ppc64_cpu test suite
+# All parameters are optional and have sensible defaults
+# Uncomment and modify only the parameters you need to change
+
+# Basic test loop count (default: 10)
+test_loop: 10
+
+# Functional tests - basic SMT and core operations
+functional:
+  iteration: 5  # Number of iterations (default: 5)
+
+# Stress tests - intensive testing with random operations
+stress:
+  iterations: 20  # Number of stress iterations (default: 20)
+
+# Build type configuration
 run_type: !mux
     upstream:
         ppcutils_url: 'https://github.com/ibm-power-utilities/powerpc-utils/archive/refs/heads/master.zip'
         type: 'upstream'
     distro:
         type: 'distro'
+
+# ============================================================================
+# Advanced Configuration (uncomment to customize)
+# ============================================================================
+# functional:
+#   run_all_smt_operations: true
+#   run_dynamic_core_operations: true
+#   run_smt_core_interaction: true
+#
+# stress:
+#   parallel_iterations: 3
+#   random_iterations: 50
+#   num_parallel_threads: 4
+#   run_random_stress: true
+#   run_parallel_operations: true
+#   run_progressive_core_online: true
+#   run_specific_cores_offline: true
+#
+# verification:
+#   enable_comprehensive: true
+#   verify_after_each_operation: true
+#
+# timing:
+#   sleep_after_smt_change: 1
+#   sleep_after_core_change: 1
+#   sleep_between_operations: 0.3
+#
+# logging:
+#   verbose: true
+#   log_dmesg: true

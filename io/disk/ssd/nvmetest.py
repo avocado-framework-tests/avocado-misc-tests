@@ -88,8 +88,6 @@ class NVMeTest(Test):
 
         cmd = "%s id-ctrl %s -H" % (self.binary, self.device)
         self.id_ctrl = process.system_output(cmd, shell=True).decode("utf-8")
-        cmd = "%s show-regs %s -H" % (self.binary, self.device)
-        regs = process.system_output(cmd, shell=True).decode("utf-8")
 
         test_dic = {'compare': 'Compare', 'formatnamespace': 'Format NVM',
                     'dsm': 'Data Set Management',
@@ -98,11 +96,20 @@ class NVMeTest(Test):
                     'writeuncorrectable': 'Write Uncorrectable',
                     'subsystemreset': 'NVM Subsystem Reset'}
         for key, value in list(test_dic.items()):
+            if key in str(self.name) and key == 'subsystemreset':
+                cmd = "cat /sys/kernel/security/lockdown"
+                lockdown = process.system_output(cmd, shell=True).decode("utf-8")
+                if '[none]' not in lockdown:
+                    self.log.info("lockdown is enabled,\
+                                  cannot run nvme show-regs command")
+                    continue
+                else:
+                    cmd = "%s show-regs %s -H" % (self.binary, self.device)
+                    regs = process.system_output(cmd, shell=True).decode("utf-8")
+                    if "%s Supported   (NSSRS): No" % value in regs:
+                        self.cancel("%s is not supported" % value)
             if key in str(self.name):
                 if "%s Supported" % value not in self.id_ctrl:
-                    self.cancel("%s is not supported" % value)
-                # NVM Subsystem Reset Supported  (NSSRS): No
-                if "%s Supported   (NSSRS): No" % value in regs:
                     self.cancel("%s is not supported" % value)
 
     @staticmethod

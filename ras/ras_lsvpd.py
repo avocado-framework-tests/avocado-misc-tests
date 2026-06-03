@@ -17,6 +17,7 @@
 # Author: R Nageswara Sastry <rnsastry@linux.ibm.com>
 
 import os
+import re
 import shutil
 import fnmatch
 from avocado.utils import pci
@@ -243,6 +244,22 @@ class RASToolsLsvpd(Test):
         list = ['-A', '-v', '-D']
         for list_item in list:
             self.run_cmd('lsmcode %s' % list_item)
+
+        if self.isAccelerator():
+            self.log.info("Accelerator detected, verifying Spyre card details")
+            lsmcode_output = self.run_cmd_out('lsmcode -A')
+            spyre_devices = self.run_cmd_out(
+                "lspci | grep -i spyre | awk '{print $1}'").strip().split('\n')
+            if not spyre_devices or spyre_devices == ['']:
+                self.fail("No Spyre devices found in the system")
+
+            for device in spyre_devices:
+                if device and device not in lsmcode_output:
+                    self.fail(
+                        f"Spyre device {device} not found in lsmcode -A output")
+
+            self.log.info("Spyre card details verified.")
+
         self._find_vpd_db_and_execute(self.var_lib_lsvpd_dir, "lsmcode --path")
         self._find_vpd_gzip_and_execute(self.var_lib_lsvpd_dir, "lsmcode")
 
@@ -286,74 +303,177 @@ class RASToolsLsvpd(Test):
         '''
         Verify data from sysfs and lsvpd tool output match correctly.
         '''
-        if process.system("vpdupdate", ignore_status=True, shell=True):
+        if process.system("vpdupdate",
+                          ignore_status=True,
+                          shell=True):
             self.fail("VPD Update fails")
-
         error = []
         for pci_addr in pci.get_pci_addresses():
-            self.log.info("Checking for PCI Address: %s\n\n", pci_addr)
+            self.log.info("================================================")
+            self.log.info("Checking PCI Address: %s", pci_addr)
+            self.log.info("================================================")
+
             vpd_output = pci.get_vpd(pci_addr)
-            if vpd_output:
+            if not vpd_output:
+                self.log.warning("No VPD output available for %s", pci_addr)
+                continue
+            # Slot Validation
+            if 'slot' in vpd_output:
+                sys_slot = pci.get_slot_from_sysfs(pci_addr)
+                if sys_slot:
+                    sys_slot = sys_slot.strip('\0').strip()
+                vpd_slot = vpd_output['slot'].strip()
+                self.log.info("Slot from sysfs : %s", sys_slot)
+                self.log.info("Slot from lsvpd : %s", vpd_slot)
+                # Some systems append suffixes
+                vpd_slot_base = vpd_slot
+                if '-' in vpd_slot:
+                    vpd_slot_base = \
+                        vpd_slot[:vpd_slot.rfind('-')]
 
-                # Slot Match
-                if 'slot' in vpd_output:
-                    sys_slot = pci.get_slot_from_sysfs(pci_addr)
-                    if sys_slot:
-                        sys_slot = sys_slot.strip('\0')
-                    vpd_slot = vpd_output['slot']
-                    self.log.info("Slot from sysfs: %s", sys_slot)
-                    self.log.info("Slot from lsvpd: %s", vpd_slot)
-                    if sys_slot in [sys_slot, vpd_slot[:vpd_slot.rfind('-')]]:
-                        self.log.info("=======>>> slot matches perfectly\n\n")
-                    else:
-                        error.append(pci_addr + "-> slot")
-                        self.log.info("--->>Slot Numbers not Matched\n\n")
+                if sys_slot in [vpd_slot,
+                                vpd_slot_base]:
+                    self.log.info("Slot match successful")
+
                 else:
-                    self.log.error("Slot info not available in vpd output\n")
+                    self.log.error("Slot mismatch")
+                    error.append(pci_addr + "-> slot")
 
-                # Device ID match
-                sys_pci_id_output = pci.get_pci_id_from_sysfs(pci_addr)
-                vpd_dev_id = vpd_output['pci_id'][4:]
-                sysfs_dev_id = sys_pci_id_output[5:-10]
-                sysfs_sdev_id = sys_pci_id_output[15:]
-                self.log.info("Device ID from sysfs: %s", sysfs_dev_id)
-                self.log.info("Sub Device ID from sysfs: %s", sysfs_sdev_id)
-                self.log.info("Device ID from vpd: %s", vpd_dev_id)
-                if vpd_dev_id == sysfs_sdev_id or vpd_dev_id == sysfs_dev_id:
-                    self.log.info("=======>>Device ID Match Success\n\n")
-                else:
-                    self.log.error("----->>Device ID did not Match\n\n")
-                    error.append(pci_addr + "-> Device_id")
+            else:
+                self.log.warning("Slot info not found in VPD output")
 
-                # Subvendor ID Match
-                sysfs_subvendor_id = sys_pci_id_output[10:-5]
-                vpd_subvendor_id = vpd_output['pci_id'][:4]
-                self.log.info("Subvendor ID frm sysfs: %s", sysfs_subvendor_id)
-                self.log.info("Subvendor ID from vpd : %s", vpd_subvendor_id)
-                if sysfs_subvendor_id == vpd_subvendor_id:
-                    self.log.info("======>>>Subvendor ID Match Success\n\n")
-                else:
-                    self.log.error("---->>Subvendor_id Not Matched\n\n")
-                    error.append(pci_addr + "-> Subvendor_id")
+            # Read PCI IDs from sysfs
+            try:
+                sys_vendor_id = process.system_output(
+                    "cat /sys/bus/pci/devices/%s/vendor"
+                    % pci_addr,
+                    shell=True).decode().strip().replace(
+                        "0x", "")
+                sys_dev_id = process.system_output(
+                    "cat /sys/bus/pci/devices/%s/device"
+                    % pci_addr,
+                    shell=True).decode().strip().replace(
+                        "0x", "")
+                sys_subvendor_id = process.system_output(
+                    "cat /sys/bus/pci/devices/%s/subsystem_vendor"
+                    % pci_addr,
+                    shell=True).decode().strip().replace(
+                        "0x", "")
+                sys_subdev_id = process.system_output(
+                    "cat /sys/bus/pci/devices/%s/subsystem_device"
+                    % pci_addr,
+                    shell=True).decode().strip().replace(
+                        "0x", "")
 
-                # PCI ID Match
-                lspci_pci_id = pci.get_pci_id(pci_addr)
-                self.log.info(" PCI ID from Sysfs: %s", sys_pci_id_output)
-                self.log.info("PCI ID from Vpd : %s", lspci_pci_id)
+            except Exception as e:
+                self.log.error("Failed reading PCI IDs from sysfs")
+                self.log.error("Exception: %s", str(e))
+                error.append(pci_addr + "-> pci_sysfs_read")
+                continue
+            # Parse PCI IDs from VPD
 
-                if sys_pci_id_output == lspci_pci_id:
-                    self.log.info("======>>>> All PCI ID match Success\n\n")
-                else:
-                    self.log.error("---->>>PCI info Did not Matches\n\n")
-                    error.append(pci_addr + "-> pci_id")
+            try:
+                vpd_pci_id = \
+                    vpd_output.get('pci_id',
+                                   '').strip()
+                self.log.info(
+                    "Raw PCI ID from VPD : %s",
+                    vpd_pci_id)
+                # Expected format:
+                # (10df,f500), (1014,06c2)
+                matches = re.findall(
+                    r'\(([^,]+),([^)]+)\)',
+                    vpd_pci_id)
 
-                # PCI Config Space Check
-                if process.system("lspci -xxxx -s %s" % pci_addr,
-                                  ignore_status=True, sudo=True):
-                    error.append(pci_addr + "->pci_config_space")
+                if len(matches) < 2:
+                    raise ValueError(
+                        "Unexpected VPD PCI ID format: %s"
+                        % vpd_pci_id)
+                # First tuple = vendor/device
+                vpd_vendor_id = matches[0][0].strip()
+                vpd_dev_id = matches[0][1].strip()
+
+                # Second tuple = subsystem vendor/device
+                vpd_subvendor_id = matches[1][0].strip()
+                vpd_subdev_id = matches[1][1].strip()
+
+            except Exception as e:
+                self.log.error("Failed parsing VPD PCI ID")
+                self.log.error("VPD output: %s", vpd_output)
+                self.log.error("Exception: %s", str(e))
+                error.append(pci_addr + "-> pci_id_parse")
+                continue
+            # Debug Logs
+            self.log.info("sys_vendor_id      = %s", sys_vendor_id)
+            self.log.info("sys_dev_id         = %s", sys_dev_id)
+            self.log.info("sys_subvendor_id   = %s", sys_subvendor_id)
+            self.log.info("sys_subdev_id      = %s", sys_subdev_id)
+            self.log.info("vpd_vendor_id      = %s", vpd_vendor_id)
+            self.log.info("vpd_dev_id         = %s", vpd_dev_id)
+            self.log.info("vpd_subvendor_id   = %s", vpd_subvendor_id)
+            self.log.info("vpd_subdev_id      = %s", vpd_subdev_id)
+            self.log.info("full_vpd_output    = %s", vpd_output)
+
+            # Vendor ID Match
+            self.log.info("Vendor ID from sysfs : %s", sys_vendor_id)
+            self.log.info("Vendor ID from VPD   : %s", vpd_vendor_id)
+
+            if sys_vendor_id == vpd_vendor_id:
+                self.log.info("Vendor ID match successful")
+
+            else:
+                self.log.error("Vendor ID mismatch")
+                error.append(pci_addr + "-> Vendor_id")
+
+            # Device ID Match
+            self.log.info("Device ID from sysfs : %s", sys_dev_id)
+            self.log.info("Device ID from VPD   : %s", vpd_dev_id)
+
+            if sys_dev_id == vpd_dev_id:
+                self.log.info("Device ID match successful")
+
+            else:
+                self.log.error("Device ID mismatch")
+                error.append(pci_addr + "-> Device_id")
+
+            # Subvendor ID Match
+            self.log.info("Subvendor ID from sysfs : %s", sys_subvendor_id)
+            self.log.info("Subvendor ID from VPD   : %s", vpd_subvendor_id)
+            if sys_subvendor_id == vpd_subvendor_id:
+                self.log.info("Subvendor ID match successful")
+
+            else:
+                self.log.error("Subvendor ID mismatch")
+                error.append(pci_addr + "-> Subvendor_id")
+
+            # Subdevice ID Match
+            self.log.info("Subdevice ID from sysfs : %s", sys_subdev_id)
+            self.log.info("Subdevice ID from VPD   : %s", vpd_subdev_id)
+            if sys_subdev_id == vpd_subdev_id:
+                self.log.info("Subdevice ID match successful")
+            else:
+                self.log.error("Subdevice ID mismatch")
+                error.append(pci_addr + "-> Subdevice_id")
+
+            # PCI Config Space Validation
+            cmd = "lspci -xxxx -s %s" % pci_addr
+            self.log.info(
+                "Checking PCI config space using: %s",
+                cmd)
+            if process.system(cmd,
+                              ignore_status=True,
+                              sudo=True):
+                self.log.error("PCI config space read failed")
+                error.append(
+                    pci_addr +
+                    "-> pci_config_space")
 
         if error:
-            self.fail("Errors for above pci addresses: %s" % error)
+            self.fail(
+                "Errors for above pci addresses: %s"
+                % error)
+        self.log.info(
+            "All PCI VPD checks passed successfully")
 
     @skipIf(IS_KVM_GUEST, "This test is not supported on KVM guest platform")
     def test_pci_lscfg(self):
@@ -362,59 +482,327 @@ class RASToolsLsvpd(Test):
         '''
         error = []
         for pci_addr in pci.get_pci_addresses():
-            self.log.info("Checking for PCI Address: %s\n\n", pci_addr)
-            pci_info_dict = pci.get_pci_info(pci_addr)
-            self.log.info(pci_info_dict)
-            cfg_output = pci.get_cfg(pci_addr)
-            self.log.info(cfg_output)
-            if cfg_output and pci_info_dict:
-                if 'YL' in cfg_output and 'PhySlot' in pci_info_dict:
-                    # Physical Slot Match
-                    self.log.info("Physical Slot from lscfg is %s"
-                                  " and lspci is %s",
-                                  cfg_output['YL'], pci_info_dict['PhySlot'])
-                    cfg_output['YL'] = \
-                        cfg_output['YL'][:cfg_output['YL'].rfind('-')]
-                    if (cfg_output['YL'] == pci_info_dict['PhySlot']):
-                        self.log.info("Physical Slot matched")
-                    else:
-                        error.append("Physical slot info didn't match")
-                # Sub Device ID match
-                if ('subvendor_device' in cfg_output and
-                        'SDevice' in pci_info_dict):
-                    self.log.info("Device iD from lscfg is %s"
-                                  " and lspci is %s",
-                                  cfg_output['subvendor_device'][4:],
-                                  pci_info_dict['SDevice'])
-                    if (cfg_output['subvendor_device'][4:]
-                       == pci_info_dict['SDevice']):
-                        self.log.info("Sub Device ID matched")
-                    else:
-                        error.append("Device ID info didn't match")
-                # Subvendor ID Match
-                if ('subvendor_device' in cfg_output and
-                        'SVendor' in pci_info_dict):
-                    self.log.info("Subvendor ID from lscfg is %s"
-                                  "and lspci is %s",
-                                  cfg_output['subvendor_device'],
-                                  pci_info_dict['SVendor'])
-                    if (cfg_output['subvendor_device'][0:4] ==
-                            pci_info_dict['SVendor']):
-                        self.log.info("Sub vendor ID matched")
-                    else:
-                        error.append("Sub vendor ID didn't match")
-                # PCI Slot ID Match
-                if 'pci_id' in cfg_output and 'Slot' in pci_info_dict:
-                    self.log.info("PCI ID from lscfg is %s and lspci is %s",
-                                  cfg_output['pci_id'], pci_info_dict['Slot'])
-                    if (cfg_output['pci_id'] ==
-                       pci_info_dict['Slot']):
-                        self.log.info("PCI Slot ID matched")
-                    else:
-                        error.append("PCI slot ID didn't match")
-                # PCI Config Space Check
-                if process.system(f"lspci -xxxx -s {pci_addr}",
-                                  sudo=True):
-                    error.append(pci_addr + " : pci_config_space")
+            self.log.info("================================================")
+            self.log.info("Checking PCI Address: %s", pci_addr)
+            self.log.info("================================================")
+            try:
+                raw_lscfg = process.run(
+                    "lscfg -vl %s" % pci_addr,
+                    sudo=True,
+                    shell=True).stdout_text
+                self.log.info(
+                    "RAW LSCFG OUTPUT:\n%s",
+                    raw_lscfg)
+            except Exception as e:
+                self.log.error(
+                    "Failed to collect lscfg output "
+                    "for %s", pci_addr)
+                self.log.error(str(e))
+                error.append(pci_addr + "-> raw_lscfg")
+                continue
+
+            try:
+                pci_info_dict = pci.get_pci_info(pci_addr)
+                self.log.info(
+                    "PCI INFO DICT : %s", pci_info_dict)
+            except Exception as e:
+                self.log.error(
+                    "Failed to get pci info for %s", pci_addr)
+                self.log.error(str(e))
+                error.append(pci_addr + "-> pci_info")
+                continue
+
+            try:
+                match = re.search(
+                    r'\(([0-9a-fA-F]{4}),([0-9a-fA-F]{4})\),\s*'
+                    r'\(([0-9a-fA-F]{4}),([0-9a-fA-F]{4})\)',
+                    raw_lscfg)
+                if not match:
+                    self.log.error(
+                        "Failed to parse PCI IDs "
+                        "from lscfg output")
+                    error.append(pci_addr + "-> pci_id_parse")
+                    continue
+
+                vendor_id = match.group(1).lower()
+                device_id = match.group(2).lower()
+                subvendor_id = match.group(3).lower()
+                subdevice_id = match.group(4).lower()
+                self.log.info("vendor_id      = %s", vendor_id)
+                self.log.info("device_id      = %s", device_id)
+                self.log.info("subvendor_id   = %s", subvendor_id)
+                self.log.info("subdevice_id   = %s", subdevice_id)
+            except Exception as e:
+                self.log.error("PCI ID parsing failed for %s", pci_addr)
+                self.log.error(str(e))
+                error.append(pci_addr + "-> pci_parse")
+                continue
+
+            try:
+                yl_match = re.search(
+                    r'Location Code\.\(YL\)\.*([A-Za-z0-9\.\-\:]+)',
+                    raw_lscfg)
+                if yl_match:
+                    yl_value = yl_match.group(1).strip()
+                else:
+                    yl_value = ""
+                self.log.info("YL Value = %s", yl_value)
+            except Exception as e:
+                self.log.error("YL parse failed for %s", pci_addr)
+                self.log.error(str(e))
+                yl_value = ""
+
+            if 'Vendor' in pci_info_dict:
+                self.log.info(
+                    "Vendor ID from lspci : %s",
+                    pci_info_dict['Vendor'])
+                if vendor_id == pci_info_dict['Vendor'].lower():
+                    self.log.info("Vendor ID matched")
+                else:
+                    self.log.error("Vendor ID mismatch")
+                    error.append(pci_addr + "-> vendor_id")
+
+            if 'Device' in pci_info_dict:
+                self.log.info(
+                    "Device ID from lspci : %s",
+                    pci_info_dict['Device'])
+                if device_id == pci_info_dict['Device'].lower():
+                    self.log.info("Device ID matched")
+                else:
+                    self.log.error("Device ID mismatch")
+                    error.append(pci_addr + "-> device_id")
+
+            if 'SVendor' in pci_info_dict:
+                self.log.info(
+                    "Subvendor ID from lspci : %s",
+                    pci_info_dict['SVendor'])
+                if subvendor_id == pci_info_dict['SVendor'].lower():
+                    self.log.info("Subvendor ID matched")
+                else:
+                    self.log.error("Subvendor ID mismatch")
+                    error.append(pci_addr + "-> subvendor_id")
+
+            if 'SDevice' in pci_info_dict:
+                self.log.info(
+                    "Subdevice ID from lspci : %s",
+                    pci_info_dict['SDevice'])
+                if subdevice_id == pci_info_dict['SDevice'].lower():
+                    self.log.info("Subdevice ID matched")
+                else:
+                    self.log.error("Subdevice ID mismatch")
+                    error.append(pci_addr + "-> subdevice_id")
+
+            if ('PhySlot' in pci_info_dict and yl_value):
+                physlot = pci_info_dict['PhySlot']
+                self.log.info("PhySlot from lspci : %s", physlot)
+                if physlot in yl_value:
+                    self.log.info("Physical Slot matched")
+                else:
+                    self.log.error("Physical Slot mismatch")
+                    error.append(pci_addr + "-> physical_slot")
+
+            cmd = "lspci -xxxx -s %s" % pci_addr
+            self.log.info("Running command: %s", cmd)
+            if process.system(
+                    cmd,
+                    sudo=True,
+                    ignore_status=True):
+                self.log.error("PCI config space read failed")
+                error.append(pci_addr + "-> pci_config_space")
+
         if error:
-            self.fail(f"Errors for above pci addresses: {error}")
+            self.fail("Errors for above pci addresses: %s" % error)
+        self.log.info("All PCI lscfg checks passed successfully")
+
+    def isAccelerator(self):
+        for dev in os.listdir('/sys/bus/pci/devices'):
+            try:
+                if pci.get_pci_class_name(dev) == "accelerator":
+                    return True
+            except Exception:
+                pass
+        return False
+
+    def extract_spyre_block(self, lsvpd_out, location_codes):
+        spyre_blocks, current_block, address = {}, [], ""
+        location_codes_set = set(location_codes)
+
+        def process_block():
+            if not (current_block and address):
+                return
+            for line in current_block:
+                if '*YL' in line:
+                    yl_value = line.split()[-1]
+                    if yl_value in location_codes_set:
+                        spyre_blocks[address] = current_block
+                        break
+
+        for line in lsvpd_out.splitlines():
+            if '*FC' in line:
+                process_block()
+                current_block = []
+                address = ""
+            current_block.append(line)
+            if '*AX' in line and not address:
+                ax_value = line.split()[-1]
+                if ':' in ax_value and '.' in ax_value:
+                    address = ax_value
+
+        process_block()
+        return spyre_blocks
+
+    def parse_lscfg_output(self, lscfg_out):
+        data = {}
+        current_key = None
+
+        for line in lscfg_out.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+
+            if stripped[0] == '.':
+                value = stripped.lstrip('.')
+                if current_key and value:
+                    data[current_key] = value
+                    current_key = None
+                continue
+
+            key_chars = []
+            value_chars = []
+            in_value = False
+            dot_count = 0
+
+            for char in stripped:
+                if not in_value:
+                    if char == '.':
+                        dot_count += 1
+                        if dot_count >= 2:
+                            in_value = True
+                    else:
+                        if dot_count > 0:
+                            key_chars.extend(['.'] * dot_count)
+                            dot_count = 0
+                        key_chars.append(char)
+                else:
+                    value_chars.append(char)
+
+            key = ''.join(key_chars).strip()
+            value = ''.join(value_chars).lstrip('.')
+
+            if key:
+                if key.endswith(')') and '(' in key:
+                    paren_idx = key.rfind('(')
+                    short_key = key[paren_idx+1:-1]
+                    if value:
+                        data[short_key] = value
+                        current_key = None
+                    else:
+                        current_key = short_key
+                else:
+                    if value:
+                        data[key] = value
+                        current_key = None
+                    else:
+                        current_key = key
+
+        return data
+
+    def parse_lsvpd_block(self, block):
+        data, missing_values = {}, []
+
+        for line in block:
+            stripped = line.strip()
+            if not stripped.startswith('*'):
+                continue
+
+            parts = stripped.split(None, 1)
+            key = parts[0].lstrip('*')
+
+            if len(parts) < 2:
+                missing_values.append(key)
+                data[key] = None
+                continue
+
+            value = parts[1].strip()
+
+            if key in data:
+                if not isinstance(data[key], list):
+                    data[key] = [data[key]]
+                data[key].append(value)
+            else:
+                data[key] = value
+
+        if missing_values:
+            data['missing_fields'] = missing_values
+
+        return data
+
+    @skipIf("ppc" not in os.uname()[4], "Skip, Powerpc specific tests")
+    @skipIf(lambda self: not self.isAccelerator(), "Unsupported: PCI adapter is not an accelerator")
+    def test_spyre_lsvpd_validation(self):
+        self.run_cmd("vpdupdate")
+
+        lsvpd_out = self.run_cmd_out("lsvpd")
+        location_codes = []
+        pci_addresses = []
+        failures = []
+
+        for dev in pci.get_pci_addresses():
+            try:
+                class_name = pci.get_pci_class_name(dev)
+                if class_name == "accelerator":
+                    lscfg_out = self.run_cmd_out(f"lscfg -vl {dev}")
+                    cfg_output = self.parse_lscfg_output(lscfg_out)
+                    if 'YL' in cfg_output:
+                        location_codes.append(cfg_output['YL'])
+                        pci_addresses.append(dev)
+            except Exception as e:
+                self.log.warning(f"Failed to get config for {dev}: {e}")
+                continue
+
+        spyre_blocks = self.extract_spyre_block(lsvpd_out, location_codes)
+        if not spyre_blocks:
+            failures.append("No lsvpd entry found for the Spyre card(s).")
+
+        for dev in pci_addresses:
+            if dev not in spyre_blocks:
+                failures.append(f"{dev}: No lsvpd block found for this device")
+                continue
+
+            spyre_block = spyre_blocks[dev]
+            lsvpd_data = self.parse_lsvpd_block(spyre_block)
+
+            if 'missing_fields' in lsvpd_data:
+                missing = ', '.join(lsvpd_data['missing_fields'])
+                failures.append(
+                    f"{dev}: lsvpd fields missing values: {missing}")
+
+            lscfg_out = self.run_cmd_out(f"lscfg -vl {dev}")
+            lscfg_data = self.parse_lscfg_output(lscfg_out)
+
+            validations = {
+                'TM': 'Machine Type-Model',
+                'MF': 'Manufacturer Name',
+                'PN': 'Part Number of assembly',
+                'SN': 'Serial Number',
+                'FN': 'Field Replaceable Unit Number',
+                'EC': 'Engineering Change Level',
+                'RL': 'Non-alterable ROM level',
+                'CC': 'CC',
+                'YC': 'YC',
+                'YL': 'YL'
+            }
+
+            for lsvpd_key, lscfg_key in validations.items():
+                if lsvpd_key in lsvpd_data and lscfg_key in lscfg_data:
+                    lsvpd_val = lsvpd_data[lsvpd_key]
+                    if isinstance(lsvpd_val, list):
+                        lsvpd_val = lsvpd_val[0]
+                    if lsvpd_val.strip() != lscfg_data[lscfg_key].strip():
+                        failures.append(
+                            f"{dev}: {lsvpd_key} mismatch - lsvpd: {lsvpd_val}, lscfg: {lscfg_data[lscfg_key]}")
+
+        if failures:
+            fail_msg = "Spyre device validation failed:\n" + \
+                "\n".join(failures)
+            self.fail(fail_msg)

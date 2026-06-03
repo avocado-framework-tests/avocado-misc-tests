@@ -15,8 +15,8 @@
 
 import os
 
-from avocado import Test
-from avocado.utils import process, build
+from avocado import Test, skipIf
+from avocado.utils import process, build, pci
 from avocado.utils import archive
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -49,8 +49,69 @@ class ServiceReport(Test):
         self.sourcedir = os.path.join(self.workdir, 'ServiceReport-master')
         build.make(self.sourcedir)
 
+    def isAccelerator(self):
+        for dev in os.listdir('/sys/bus/pci/devices'):
+            try:
+                if pci.get_pci_class_name(dev) == "accelerator":
+                    return True
+            except Exception:
+                pass
+        return False
+
     def test(self):
         os.chdir(self.sourcedir)
-        cmd = "./servicereport %s" % self.options
+        cmd = "servicereport %s" % self.options
         if process.system(cmd, ignore_status=True, sudo=True, shell=True):
             self.fail("ServiceReport: Failed command is: %s" % cmd)
+
+    @skipIf("ppc" not in os.uname()[4], "Skip, Powerpc specific tests")
+    @skipIf(lambda self: not self.isAccelerator(), "Unsupported: PCI adapter is not an accelarator")
+    def test_accelerator(self):
+        os.chdir(self.sourcedir)
+
+        cmd = "servicereport %s" % self.options
+        if process.system(cmd, ignore_status=True, sudo=True, shell=True):
+            self.fail("ServiceReport: Failed command is: %s" % cmd)
+
+        if os.path.isdir('/dev/vfio') and any(e.isdigit() for e in os.listdir('/dev/vfio')):
+            self.log.info("/dev/vfio already populated")
+        else:
+            self.log.info("/dev/vfio empty before servicereport")
+
+        verboseCmd = "servicereport -v -p spyre"
+        result = process.run(
+            verboseCmd, ignore_status=True, sudo=True, shell=True)
+        output = str(result.stdout + result.stderr, "utf-8")
+
+        if 'FAIL' in output:
+            self.log.info("FAIL detected in -v -p spyre")
+            spyreRepairCmd = "servicereport -r -p spyre"
+            process.run(spyreRepairCmd, ignore_status=True,
+                        sudo=True, shell=True)
+
+            self.log.info("Re-running -v -p spyre after repair")
+            result = process.run(
+                verboseCmd, ignore_status=True, sudo=True, shell=True)
+            output = str(result.stdout + result.stderr, "utf-8")
+
+            if 'FAIL' in output:
+                self.fail("FAIL still present after Spyre repair")
+
+        if not (os.path.isdir('/dev/vfio') and any(e.isdigit() for e in os.listdir('/dev/vfio'))):
+            self.fail("/dev/vfio not populated after servicereport")
+
+        user = 'senuser'
+        group = 'sentient'
+
+        process.run(f"useradd {user}",
+                    ignore_status=True, sudo=True, shell=True)
+        process.run(f"echo '{user}:{user}' | chpasswd", sudo=True, shell=True)
+        process.run(f"usermod -aG {group} {user}", sudo=True, shell=True)
+
+        userCmd = f"su - {user} -c 'servicereport -v -p spyre'"
+        result = process.run(userCmd, ignore_status=True,
+                             sudo=True, shell=True)
+        output = str(result.stdout + result.stderr, "utf-8")
+
+        if 'FAIL' in output:
+            self.fail("FAIL detected when running -v -p spyre as a non-root user")

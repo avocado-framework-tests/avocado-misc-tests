@@ -1,0 +1,19 @@
+component: !mux
+    sched:
+        comp: 'sched'
+    mm:
+        comp: 'mm'
+    mm_powerpc:
+        comp: 'powerpc/mm'
+    cpu_hotplug:
+        comp: 'cpu-hotplug'
+    memory_hotplug:
+        comp: 'memory-hotplug'
+    vDSO:
+        comp: 'vDSO'
+    static_keys:
+        comp: 'static_keys'
+run_type: !mux
+    upstream:
+        type: 'upstream'
+        location: "https://github.com/torvalds/linux/archive/master.zip"

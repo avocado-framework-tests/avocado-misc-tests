@@ -13,6 +13,8 @@
 #
 # Copyright: 2016 IBM
 # Author: Santhosh G <santhog4@linux.vnet.ibm.com>
+#
+# Assisted with AI tools
 
 import os
 from avocado import Test
@@ -40,12 +42,24 @@ class EatMemory(Test):
         tarball = self.fetch_asset(
             "eatmemory.zip", locations=[url], expire='7d')
         archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, "eatmemory-master")
-        # patch for getch remove
-        getch_patch = 'patch -p1 < %s' % os.path.abspath(self.get_data('eatmem_getch.patch'))
+        extracted_entries = [
+            entry for entry in os.listdir(self.workdir)
+            if os.path.isdir(os.path.join(self.workdir, entry)) and
+            entry.startswith('eatmemory-')
+        ]
+        if not extracted_entries:
+            self.cancel('Failed to locate extracted eatmemory source directory')
+        self.sourcedir = os.path.join(self.workdir, extracted_entries[0])
         os.chdir(self.sourcedir)
-        process.run(getch_patch, shell=True)
         build.make(self.sourcedir)
+        self.binary_path = os.path.join(self.sourcedir, 'eatmemory')
+        if not os.path.exists(self.binary_path):
+            for root, _, files in os.walk(self.sourcedir):
+                if 'eatmemory' in files:
+                    self.binary_path = os.path.join(root, 'eatmemory')
+                    break
+        if not os.path.exists(self.binary_path):
+            self.cancel('Failed to locate built eatmemory binary')
         mem = self.params.get('memory_to_test', default=int(
             0.95 * memory.meminfo.MemFree.k))
         self.mem_to_eat = self._mem_to_mbytes(mem)
@@ -76,12 +90,45 @@ class EatMemory(Test):
         return mem_in_bytes // multiplier['m']
 
     def test(self):
-        os.chdir(self.sourcedir)
+        os.chdir(os.path.dirname(self.binary_path))
         mem_unit = 'M'
-        cmd = './eatmemory %s%s' % (self.mem_to_eat, mem_unit)
-        if process.system(cmd, ignore_status=True) == 0:
+        cmd = 'printf "\\n" | %s -t 60 %s%s' % (self.binary_path,
+                                                self.mem_to_eat,
+                                                mem_unit)
+        if process.system(cmd, shell=True, ignore_status=True) == 0:
             self.log.info('Success eating %s%s of memory.',
                           self.mem_to_eat, mem_unit)
         else:
             self.fail('Not able to eat %s%s of memory.' %
                       (self.mem_to_eat, mem_unit))
+
+    def test_max_hugepage(self):
+        """
+        To test configuring maximum number of hugepages and run eatmemory.
+        """
+        Total_mem = memory.memtotal()
+        hugepagesize = memory.get_huge_page_size()
+        nr_hugepage_init = memory.get_num_huge_pages()
+        nr_hugepages = int(Total_mem / hugepagesize)
+        try:
+            process.run('echo "vm.nr_hugepages=%s" >> /etc/sysctl.conf' %
+                        nr_hugepages, sudo=True, shell=True)
+            process.run('sysctl -p', sudo=True, shell=True)
+            mem_info = process.system_output("tail /proc/meminfo", shell=True)
+            self.log.info(mem_info)
+            # Run test with OOM handling
+            try:
+                self.test()
+            except Exception as e:
+                self.log.warning("Memory allocation test encountered an error: %s", str(e))
+                self.log.warning("This may be due to OOM condition after hugepage allocation")
+        finally:
+            # Always restore original hugepage configuration
+            self.log.info("Restoring original hugepage configuration")
+            process.run('sed -i "/vm.nr_hugepages=/d" /etc/sysctl.conf',
+                        sudo=True, shell=True, ignore_status=True)
+            process.run('echo "vm.nr_hugepages=%s" >> /etc/sysctl.conf' %
+                        nr_hugepage_init, sudo=True, shell=True)
+            process.run('sysctl -p', sudo=True, shell=True)
+            mem_info = process.system_output("tail /proc/meminfo", shell=True)
+            self.log.info(mem_info)

@@ -24,6 +24,7 @@ from avocado import Test
 from avocado import skipIf
 from avocado.utils import process, cpu, genio
 from avocado.utils import distro
+from avocado.utils import archive, pci
 from avocado.utils.software_manager.manager import SoftwareManager
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
@@ -48,6 +49,24 @@ class Sosreport(Test):
         for line in reversed(self.output.splitlines()):
             if search_str in line:
                 return line.strip()
+
+    def get_sos_plugin(self):
+        """
+        Here we are trying to fetch the supported numa plugin
+        as per the linux distro.
+        """
+        matched_plugin = ""
+        cmd = "sos report --list-plugins"
+        sos_plugin = self.run_cmd_out(cmd)
+        plain_payload = sos_plugin.split('\n')
+        for plugins in plain_payload:
+            if "numa" in plugins or "numa1" in plugins:
+                match = re.match(r"^(\w+)\s+(.*)$", plugins.strip())
+                if match:
+                    matched_plugin = match.group(1)
+            break
+
+        return matched_plugin
 
     def setUp(self):
         dist = distro.detect()
@@ -184,6 +203,7 @@ class Sosreport(Test):
         """
         self.log.info(
             "===============Executing sosreport tool test (others)===============")
+        sos_supported_plugin = self.get_sos_plugin()
         directory_name = tempfile.mkdtemp()
         self.is_fail = 0
         self.run_cmd("%s --list-profiles" % self.sos_cmd, None)
@@ -199,13 +219,15 @@ class Sosreport(Test):
 
         dir_name = self.run_cmd_search(
             "%s --batch --tmp-dir=%s --build" % (self.sos_cmd, directory_name), directory_name)
+
         if not os.path.isdir(dir_name):
             self.is_fail += 1
             self.log.info("--build option failed")
 
-        if "version" not in self.run_cmd_out("%s --batch --tmp-dir=%s --quiet "
-                                             "--no-report -e ntp,numa1"
-                                             % (self.sos_cmd, directory_name)):
+        if not self.run_cmd_out("%s --batch --tmp-dir=%s --quiet "
+                                "--no-report -e ntp,%s"
+                                % (self.sos_cmd, directory_name,
+                                   sos_supported_plugin)):
             self.is_fail += 1
             self.log.info("--quiet --no-report option failed")
         self.run_cmd("%s --batch --tmp-dir=%s --debug" %
@@ -223,13 +245,13 @@ class Sosreport(Test):
             self.is_fail += 1
             self.log.info("--no-report option failed")
         if 'powerpc' in cpu.get_arch():
-            file_list = self.params.get('file_list', default=['proc/device-tree/'])
+            file_list = self.params.get(
+                'file_list', default=['proc/device-tree/'])
             for files in file_list:
                 file_path = os.path.join(dir_name, files)
                 if not os.path.exists(file_path):
                     self.is_fail += 1
                     self.log.info("%s file/directory not created" % file_path)
-
         self.run_cmd("%s --batch --tmp-dir=%s -s /" %
                      (self.sos_cmd, directory_name))
 
@@ -270,7 +292,8 @@ class Sosreport(Test):
 
         if os.path.exists(file_name):
             md5_sum1 = self.run_cmd_out("cat %s.md5" % file_name).strip()
-            md5_sum2 = self.run_cmd_out("md5sum %s" % file_name).strip().split()[0]
+            md5_sum2 = self.run_cmd_out(
+                "md5sum %s" % file_name).strip().split()[0]
             if md5_sum1 != md5_sum2:
                 self.is_fail += 1
                 self.log.info("md5sum check failed")
@@ -390,7 +413,8 @@ class Sosreport(Test):
         if not mnt:
             mnt = self.workdir
         if 'blockfile' not in self.run_cmd_out("ls /tmp"):
-            blk_dev = process.run("dd if=/dev/zero of=/tmp/blockfile bs=1M count=5120")
+            blk_dev = process.run(
+                "dd if=/dev/zero of=/tmp/blockfile bs=1M count=5120")
             process.run("losetup %s /tmp/blockfile" % loop_dev)
         if fstype == "ext4":
             cmd = "mkfs.%s %s" % (fstype, loop_dev)
@@ -408,3 +432,57 @@ class Sosreport(Test):
         if is_fail:
             self.fail(
                 "%s command(s) failed in sosreport tool verification" % is_fail)
+
+    def isAccelerator(self):
+        for dev in os.listdir('/sys/bus/pci/devices'):
+            try:
+                if pci.get_pci_class_name(dev) == "accelerator":
+                    return True
+            except Exception:
+                pass
+        return False
+
+    @skipIf("ppc" not in os.uname()[4], "Skip, Powerpc specific tests")
+    @skipIf(lambda self: not self.isAccelerator(), "Unsupported: PCI adapter is not an accelarator")
+    def test_spyre_external_plugin(self):
+        self.is_fail = 0
+        output = self.run_cmd_out("%s --batch --tmp-dir=%s -o spyre-external" % (self.sos_cmd, self.workdir))
+
+        tar_file = None
+        for line in output.splitlines():
+            if 'tar.xz' in line or 'tar.gz' in line:
+                tar_file = line.strip()
+                break
+
+        if not tar_file or not os.path.exists(tar_file):
+            self.is_fail += 1
+            self.log.info("sosreport archive not generated for spyre-external")
+        else:
+            archive.extract(tar_file, self.workdir)
+            found = False
+
+            extracted_dirs = [d for d in os.listdir(self.workdir) if os.path.isdir(os.path.join(self.workdir, d)) and d.startswith('sosreport-')]
+            if not extracted_dirs:
+                self.is_fail += 1
+                self.log.info("No sos report directory found after extraction")
+
+            extracted_file = os.path.join(self.workdir, extracted_dirs[0], 'sos_reports', 'sos.txt')
+            if not os.path.exists(extracted_file):
+                self.is_fail += 1
+                self.log.info(f"Expected file not found: {extracted_file}")
+
+            with open(extracted_file, 'r') as file:
+                content = file.read()
+                if "spyre" in content and "podman" in content:
+                    found = True
+
+            if not found:
+                self.is_fail += 1
+                self.log.info("spyre-external did not capture expected files")
+
+            os.remove(tar_file)
+
+        shutil.rmtree(self.workdir)
+
+        if self.is_fail >= 1:
+            self.fail("%s command(s) failed in sosreport spyre-external verification" % self.is_fail)

@@ -31,6 +31,15 @@ class MmSubsystemTest(Test):
 
     :avocado: tags=memory
     '''
+
+    def get_data_path(self, filename):
+        """
+        Get the path to a data file for this test
+        """
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+        data_dir = os.path.join(test_dir, f"{os.path.basename(__file__)}.data")
+        return os.path.join(data_dir, filename)
+
     @staticmethod
     def check_dmesg():
         errorlog = ['WARNING: CPU:', 'Oops', 'Segfault', 'soft lockup',
@@ -57,6 +66,8 @@ class MmSubsystemTest(Test):
             deps.extend(['libpthread-stubs0-dev', 'git'])
         elif detected_distro.name == "SuSE":
             deps.extend(['glibc-devel-static', 'git-core'])
+        elif detected_distro.name == "rhel":
+            deps.extend(['glibc-static', 'git'])
         else:
             deps.extend(['glibc-static', 'git', 'runc'])
         for package in deps:
@@ -65,6 +76,13 @@ class MmSubsystemTest(Test):
         git.get_repo("https://github.com/narasimhan-v/linux-mm",
                      destination_dir=self.logdir)
         os.chdir(self.logdir)
+
+        # Apply patch to fix compilation errors with newer GCC
+        patch_file = self.get_data_path('fix_compilation.patch')
+        if os.path.exists(patch_file):
+            self.log.info("Applying compilation fix patch")
+            process.run(f'patch -p1 < {patch_file}', shell=True)
+
         build.make(self.logdir)
         tst_list = process.system_output('./random -l').decode().splitlines()
         self.test_dic = {}
@@ -84,7 +102,7 @@ class MmSubsystemTest(Test):
                 if 'soft offlin' in val:
                     if key not in rm_list:
                         rm_list.append(key)
-            if detected_distro.name == "SuSE":
+            if detected_distro.name in ["SuSE", "rhel"]:
                 if 'runc' in val:
                     if key not in rm_list:
                         rm_list.append(key)

@@ -1,4 +1,5 @@
-runltp:
-    script: 'runltp'
+use_kirk: True
+kirk:
+    script: 'kirk'
     tracing:
         args: '-f tracing'

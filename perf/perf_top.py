@@ -100,5 +100,5 @@ class perf_top(Test):
             self.fail("ebizzy workload not captured in perf top")
 
     def tearDown(self):
-        if os.path.isfile(self.temp_file):
-            process.system('rm -f %s' % self.temp_file)
+        if hasattr(self, 'temp_file') and os.path.isfile(self.temp_file):
+            os.remove(self.temp_file)

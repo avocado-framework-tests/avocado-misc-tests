@@ -87,8 +87,8 @@ class CpupowerMonitor(Test):
         4. Wait till ebizzy stops.
         5. Check if cpus enters idle states.
         """
-        tarball = self.fetch_asset('http://sourceforge.net/projects/ebizzy/'
-                                   'files/ebizzy/0.3/ebizzy-0.3.tar.gz')
+        tarball = self.fetch_asset('https://downloads.sourceforge.net/project/ebizzy/'
+                                   '/ebizzy/0.3/ebizzy-0.3.tar.gz')
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(self.workdir, 'ebizzy-0.3')
         os.chdir(self.sourcedir)

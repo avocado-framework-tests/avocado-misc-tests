@@ -1,4 +1,4 @@
-ebizy_url: 'http://sourceforge.net/projects/ebizzy/files/ebizzy/0.3/ebizzy-0.3.tar.gz'
+ebizy_url: 'https://downloads.sourceforge.net/project/ebizzy/ebizzy/0.3/ebizzy-0.3.tar.gz'
 iterations: 10
 perf:
     default:

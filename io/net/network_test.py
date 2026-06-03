@@ -346,6 +346,7 @@ class NetworkTest(Test):
                 self.log.info(
                     "backup file not available, could not restore file.")
         self.remotehost.remote_session.quit()
-        self.remotehost_public.remote_session.quit()
+        if hasattr(self, 'remotehost_public'):
+            self.remotehost_public.remote_session.quit()
         if 'scp' or 'ssh' in str(self.name.name):
             self.session.quit()

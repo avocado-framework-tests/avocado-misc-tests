@@ -23,6 +23,7 @@ LTP Filesystem tests
 """
 
 
+import shutil
 import os
 import time
 from avocado import Test
@@ -69,6 +70,7 @@ class LtpFs(Test):
 
         self.fstype = self.params.get('fs', default='ext4')
         self.args = self.params.get('args', default='')
+        self.use_kirk = self.params.get('use_kirk', default=True)
         smm = SoftwareManager()
         detected_distro = distro.detect()
         packages = ['gcc', 'make', 'automake', 'autoconf']
@@ -121,6 +123,23 @@ class LtpFs(Test):
         archive.extract(tarball, self.teststmpdir)
         ltp_dir = os.path.join(self.teststmpdir, "ltp-master")
         os.chdir(ltp_dir)
+
+        # Initialize and update kirk submodule only if use_kirk is True
+        if self.use_kirk:
+            kirk_dir = f"{ltp_dir}/tools/kirk/kirk-src/"
+            if os.path.exists(kirk_dir):
+                shutil.rmtree(kirk_dir)
+
+            # Initialize and update kirk submodule
+            process.system('git init', shell=True, ignore_status=True)
+            process.system('git submodule add \
+                           https://github.com/linux-test-project/kirk.git \
+                           tools/kirk/kirk-src',
+                           shell=True, ignore_status=True)
+            process.system('git submodule update --init \
+                           --recursive tools/kirk/kirk-src',
+                           shell=True, ignore_status=True)
+
         build.make(ltp_dir, extra_args='autotools')
         self.ltpbin_dir = os.path.join(ltp_dir, 'bin')
         if not os.path.isdir(self.ltpbin_dir):
@@ -129,6 +148,16 @@ class LtpFs(Test):
                            self.ltpbin_dir, ignore_status=True)
             build.make(ltp_dir)
             build.make(ltp_dir, extra_args='install')
+
+            # Verify the appropriate runner is installed
+            if self.use_kirk:
+                kirk_path = os.path.join(self.ltpbin_dir, 'kirk')
+                if not os.path.exists(kirk_path):
+                    self.cancel("kirk was not installed properly")
+            else:
+                runltp_path = os.path.join(self.ltpbin_dir, 'runltp')
+                if not os.path.exists(runltp_path):
+                    self.cancel("runltp was not installed properly")
 
     def create_raid(self, l_disk, l_raid_name):
         """
@@ -225,7 +254,8 @@ class LtpFs(Test):
         if wait.wait_for(is_raid_deleted, timeout=10):
             self.log.info("software raid  %s deleted" % self.raid_name)
         else:
-            self.err_mesg.extend(["failed to delete swraid %s" % self.raid_name])
+            self.err_mesg.extend(["failed to delete swraid %s" %
+                                  self.raid_name])
 
     def delete_lv(self):
         """
@@ -317,17 +347,35 @@ class LtpFs(Test):
         '''
         logfile = os.path.join(self.logdir, 'ltp.log')
         failcmdfile = os.path.join(self.logdir, 'failcmdfile')
-        self.args += (" -q -p -l %s -C %s -d %s"
-                      % (logfile, failcmdfile, self.dir))
-        self.log.info("Args = %s", self.args)
-        self.ltpbin_path = os.path.join(self.ltpbin_dir, 'runltp')
-        with open(self.ltpbin_path, 'r') as lfile:
-            data = lfile.read()
-            data = data.replace("    ${LTPROOT}/IDcheck.sh || \\", "    echo -e \"y\" | ${LTPROOT}/IDcheck.sh || \\")
-        with open(self.ltpbin_path, 'w') as ofile:
-            ofile.write(data)
-        cmd = '%s %s' % (self.ltpbin_path, self.args)
-        result = process.run(cmd, ignore_status=True)
+        result = None
+
+        if self.use_kirk:
+            # Kirk runner execution path
+            self.args += (" -v -d %s" % (self.dir))
+            self.log.info("Args = %s", self.args)
+            self.kirkbin_path = os.path.join(self.ltpbin_dir, 'kirk')
+            # Set LTPROOT environment variable to tell kirk where
+            # LTP is installed
+            env_vars = os.environ.copy()
+            env_vars['LTPROOT'] = self.ltpbin_dir
+            cmd = '%s %s' % (self.kirkbin_path, self.args)
+            result = process.run(cmd, ignore_status=True, env=env_vars)
+        else:
+            # Legacy runltp execution path
+            self.args += (" -q -p -l %s -C %s -d %s"
+                          % (logfile, failcmdfile, self.dir))
+            self.log.info("Args = %s", self.args)
+            self.ltpbin_path = os.path.join(self.ltpbin_dir, 'runltp')
+            # Apply IDcheck.sh workaround for runltp
+            with open(self.ltpbin_path, 'r') as lfile:
+                data = lfile.read()
+                data = data.replace("    ${LTPROOT}/IDcheck.sh || \\",
+                                    "    echo -e \"y\" | ${LTPROOT}/IDcheck.sh || \\")
+            with open(self.ltpbin_path, 'w') as ofile:
+                ofile.write(data)
+            cmd = '%s %s' % (self.ltpbin_path, self.args)
+            result = process.run(cmd, ignore_status=True)
+
         # Walk the stdout and try detect failed tests from lines
         # like these:
         # aio01       5  TPASS  :  Test 5: 10 reads and
@@ -358,4 +406,5 @@ class LtpFs(Test):
             self.delete_raid()
         dmesg.clear_dmesg()
         if self.err_mesg:
-            self.log.warning("test failed due to following errors %s" % self.err_mesg)
+            self.log.warning("test failed due to following errors %s" %
+                             self.err_mesg)

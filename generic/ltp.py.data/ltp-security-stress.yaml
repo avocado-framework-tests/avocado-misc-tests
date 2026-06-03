@@ -1,5 +1,6 @@
-runltp: !mux
-    script: 'runltp'
+use_kirk: True
+kirk: !mux
+    script: 'kirk'
     net_stress.ipsec_dccp:
         args: '-f net_stress.ipsec_dccp'
     net_stress.ipsec_icmp:

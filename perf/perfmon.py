@@ -25,13 +25,12 @@ from avocado.utils.software_manager.manager import SoftwareManager
 class Perfmon(Test):
 
     """
-    performance monitoring on Linux : test  perf_events on Linux
+    performance monitoring on Linux : test perf_events on Linux
     :avocado: tags=perf,perfmon
     """
 
     def setUp(self):
 
-        # Check for basic utilities
         smm = SoftwareManager()
         dist = distro.detect()
 
@@ -55,6 +54,8 @@ class Perfmon(Test):
     def test(self):
 
         out = process.system_output('%s ' % os.path.join(
-            self.workdir, 'tests/validate')).decode("utf-8")
+            self.workdir, 'tests', 'validate'))
+        if isinstance(out, bytes):
+            out = out.decode("utf-8")
         if 'fail' in out:
             self.fail("test failed:check manually")

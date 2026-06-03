@@ -57,6 +57,7 @@ class irq_balance(Test):
         Set up
         '''
         self.interface = None
+        self.interface_type = None
         device = self.params.get("interface", default=None)
         self.disk = self.params.get("disk", default=None)
         if device:
@@ -66,8 +67,10 @@ class irq_balance(Test):
             self.localhost = LocalHost()
             if device in interfaces:
                 self.interface = device
-            elif self.localhost.validate_mac_addr(device) and device in self.localhost.get_all_hwaddr():
-                self.interface = self.localhost.get_interface_by_hwaddr(device).name
+            elif (self.localhost.validate_mac_addr(device) and
+                  device in self.localhost.get_all_hwaddr()):
+                self.interface = (self.localhost.
+                                  get_interface_by_hwaddr(device).name)
             else:
                 self.cancel("Please check the network device")
             if not self.peer_ip:
@@ -99,6 +102,12 @@ class irq_balance(Test):
                                                 count=5) is not None:
                 self.cancel("No connection to peer")
             self.interface_type = self.networkinterface.get_device_IPI_name()
+            # Fallback to interface name if get_device_IPI_name returns None
+            if not self.interface_type:
+                self.log.debug(
+                    f"get_device_IPI_name() returned None, "
+                    f"using interface name '{self.interface}' as fallback")
+                self.interface_type = self.interface
 
         if self.disk:
             self.interface_type = self.get_disk_IPI_name()
@@ -162,16 +171,22 @@ class irq_balance(Test):
         :rtype : int
         """
         cmd = (
-            f"ps -ef | grep '[p]ing -I "
-            f"{self.interface} {self.peer_ip} -c {self.ping_count} -f' "
+            f"ps -ef | grep '[p]ing -I {self.interface} {self.peer_ip}' "
+            f"| grep ' -c {self.ping_count}' | grep ' -f' "
             f"| awk '{{print $2}}' | head -1"
         )
-        process_pid = process.system_output(cmd, shell=True,
-                                            ignore_status=True,
-                                            sudo=True).decode("utf-8")
-        if not process_pid:
-            self.cancel(f"No process PID of ping command available")
-        return process_pid
+
+        process_pid = ""
+        for _ in range(10):
+            process_pid = process.system_output(cmd, shell=True,
+                                                ignore_status=True,
+                                                sudo=True).decode(
+                                                    "utf-8").strip()
+            if process_pid:
+                return process_pid
+            time.sleep(1)
+
+        self.cancel("No process PID of ping command available")
 
     def compare_range_strings(self, range_str1, range_str2):
         '''
@@ -297,7 +312,12 @@ class irq_balance(Test):
         self.get_device_interrupts()
         self.get_irq_numbers()
 
-        if len(self.irq_number) == 1:
+        if len(self.irq_number) == 0:
+            self.fail(
+                f"No IRQ numbers found for device '{self.interface_type}'. "
+                f"Check if device is active and has interrupts in "
+                f"/proc/interrupts")
+        elif len(self.irq_number) == 1:
             self.irq_number = self.irq_number[0]
         else:
             self.irq_number = self.irq_number[1]
