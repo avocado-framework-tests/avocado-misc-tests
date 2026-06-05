@@ -146,8 +146,8 @@ class DlparTests(Test):
         to get random values rather than using the same list which is generated
         through cpu_payload_data for performing mix operations
         '''
-        # Calculate the sum of the given list
-        total_sum = sum(values)
+        # Calculate the sum of the given list and convert to int for dedicated CPU
+        total_sum = int(sum(values))
         random_values = []
         remaining_sum = total_sum
 
@@ -233,7 +233,8 @@ class DlparTests(Test):
             self.log.info("======list of cpu's to be added :%s======" %
                           self.cpu_payload)
             for cpu in self.cpu_payload:
-                rvalue = Ded_obj.add_ded_cpu(cpu)
+                # Convert to int for dedicated mode as HMC requires integer values
+                rvalue = Ded_obj.add_ded_cpu(int(cpu))
                 if rvalue == 1:
                     # gives output printed by the last DLPAR command that ran on the HMC
                     stdout = Ded_obj.cmd_result.stdout_text
@@ -308,7 +309,8 @@ class DlparTests(Test):
             cpupayload = eval(str(loaded_payload_data[0]))
             self.log.info("list of cpu's to be removed :%s" % cpupayload)
             for cpu in cpupayload:
-                rvalue = Ded_obj.rem_ded_cpu(cpu)
+                # Convert to int for dedicated mode as HMC requires integer values
+                rvalue = Ded_obj.rem_ded_cpu(int(cpu))
                 if rvalue == 1:
                     # gives output printed by the last DLPAR command that ran on the HMC
                     stdout = Ded_obj.cmd_result.stdout_text
@@ -366,7 +368,8 @@ class DlparTests(Test):
             cpu_mix.append(sum_of_allcpu)
             self.log.info("list of cpu's :%s" % cpu_mix)
             for cpu in cpu_mix:
-                rvalue = Ded_obj.add_ded_cpu(cpu)
+                # Convert to int for dedicated mode as HMC requires integer values
+                rvalue = Ded_obj.add_ded_cpu(int(cpu))
                 if rvalue == 1:
                     # gives output printed by the last DLPAR command that ran on the HMC
                     stdout = Ded_obj.cmd_result.stdout_text
@@ -375,7 +378,8 @@ class DlparTests(Test):
                     self.fail("CPU add Command failed please check the logs")
                 self.log.info(
                     "===============>%s cpus got added=======>\n " % cpu)
-                rvalue = Ded_obj.rem_ded_cpu(cpu)
+                # Convert to int for dedicated mode as HMC requires integer values
+                rvalue = Ded_obj.rem_ded_cpu(int(cpu))
                 if rvalue == 1:
                     # gives output printed by the last DLPAR command that ran on the HMC
                     stdout = Ded_obj.cmd_result.stdout_text
