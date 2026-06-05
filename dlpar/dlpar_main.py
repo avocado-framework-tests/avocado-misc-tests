@@ -123,7 +123,7 @@ class DlparTests(Test):
     def cpu_payload_data(max_value, curr_proc, step=1):
         index_list = []
         current_sum = curr_proc
-        index = 0
+        index = 0.0  # Changed to float to support fractional steps
 
         while True:
             # Calculate the next index value to add
@@ -272,7 +272,7 @@ class DlparTests(Test):
                 result = self.proc_units[i] / self.virtual_procs[i]
                 if 0.05 <= result <= 1:
                     Pu.append(self.proc_units[i])
-                    Vp.append(self.virtual_procs[i])
+                    Vp.append(int(self.virtual_procs[i]))
             self.data_payload_backup(Vp)
             self.data_payload_backup(Pu)
             # Add proc_units and  virtual_procs
@@ -332,7 +332,7 @@ class DlparTests(Test):
 
             # Iterate through the reversed lists
             for vp, pu in zip(Vp_reverse, Pu_reverse):
-                result = Sha_obj.remove_proc(Vp, '--procs')
+                result = Sha_obj.remove_proc(vp, '--procs')
                 if result == 1:
                     # gives output printed by the last DLPAR command that ran on the HMC
                     stdout = Sha_obj.cmd_result.stdout_text
@@ -395,7 +395,7 @@ class DlparTests(Test):
             Pu = eval(str(loaded_payload_data[1]))
             # Iterate through the reversed lists
             for pu, vp in zip(Pu, Vp):
-                result = Sha_obj.add_proc(vp, '--procs')
+                result = Sha_obj.add_proc(int(vp), '--procs')
                 if result == 1:
                     # gives output printed by the last DLPAR command that ran on the HMC
                     stdout = Sha_obj.cmd_result.stdout_text
@@ -424,7 +424,7 @@ class DlparTests(Test):
                               please check the logs")
                 self.log.info(
                     "===============>%s procunits got removed=======>\n " % pu)
-                result = Sha_obj.remove_proc(vp, '--procs')
+                result = Sha_obj.remove_proc(int(vp), '--procs')
                 if result == 1:
                     # gives output printed by the last DLPAR command that ran on the HMC
                     stdout = Sha_obj.cmd_result.stdout_text
