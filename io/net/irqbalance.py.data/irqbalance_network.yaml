@@ -3,3 +3,4 @@ peer_ip: " "
 netmask: " "
 interface: " "
 ping_count: "10000"
+hbond: False
