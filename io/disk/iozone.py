@@ -38,6 +38,7 @@ from avocado.utils import data_structures
 from avocado.utils import astring
 from avocado.utils.partition import PartitionError
 from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils.disk import cleanup_disks
 
 
 _LABELS = ['file_size', 'record_size', 'write', 'rewrite', 'read', 'reread',
@@ -494,10 +495,6 @@ class IOZone(Test):
                                                l_disk.split(), '1.2')
         self.sraid.create()
 
-    def delete_raid(self):
-        self.sraid.stop()
-        self.sraid.clear_superblock()
-
     def create_lv(self, l_disk):
         vgname = 'avocado_vg'
         lvname = 'avocado_lv'
@@ -505,12 +502,6 @@ class IOZone(Test):
         lv_utils.vg_create(vgname, l_disk, force=True)
         lv_utils.lv_create(vgname, lvname, lv_size)
         return '/dev/%s/%s' % (vgname, lvname)
-
-    def delete_lv(self):
-        vgname = 'avocado_vg'
-        lvname = 'avocado_lv'
-        lv_utils.lv_remove(vgname, lvname)
-        lv_utils.vg_remove(vgname)
 
     def create_fs(self, l_disk, mountpoint, fstype):
         self.part_obj = Partition(l_disk, mountpoint=mountpoint)
@@ -521,12 +512,6 @@ class IOZone(Test):
         except PartitionError:
             self.fail("Mounting disk %s on directory %s failed"
                       % (l_disk, mountpoint))
-
-    def delete_fs(self, l_disk):
-        self.part_obj.unmount()
-        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % l_disk
-        if process.system(delete_fs, shell=True, ignore_status=True):
-            self.fail("Failed to delete filesystem on %s" % l_disk)
 
     @staticmethod
     def __get_section_name(desc):
@@ -663,10 +648,8 @@ class IOZone(Test):
         '''
         Cleanup of disk used to perform this test
         '''
-        if self.disk is not None:
-            if self.fs_create:
-                self.delete_fs(self.disk)
-            if self.lv_create:
-                self.delete_lv()
-            if self.raid_create:
-                self.delete_raid()
+        if hasattr(self, 'disk') and self.disk is not None:
+            try:
+                cleanup_disks([self.disk], logger=self.log, mode="full")
+            except Exception as e:
+                self.log.error("Disk cleanup failed for %s: %s", self.disk, e)

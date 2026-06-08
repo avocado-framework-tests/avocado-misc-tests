@@ -33,6 +33,7 @@ from avocado.utils.partition import Partition
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.process import CmdError
 from avocado.utils.partition import PartitionError
+from avocado.utils.disk import cleanup_disks
 
 
 class DiskInfo(Test):
@@ -297,11 +298,16 @@ class DiskInfo(Test):
         '''
         Unmount the directory at the end if in case of test fails in between
         '''
-        if hasattr(self, "part_obj"):
-            if self.disk is not None:
-                self.log.info("Unmounting directory %s" % self.dirs)
-                self.part_obj.unmount()
-        self.log.info("Removing the filesystem created on %s" % self.disk)
-        delete_fs = f"dd if=/dev/zero bs=512 count=512 of={self.disk}"
-        if process.system(delete_fs, shell=True, ignore_status=True):
-            self.fail(f"Failed to delete filesystem on {self.disk}")
+        try:
+            if hasattr(self, "part_obj"):
+                if self.disk is not None:
+                    self.log.info("Unmounting directory %s" % self.dirs)
+                    self.part_obj.unmount()
+        except Exception as e:
+            self.log.warning("Failed to unmount: %s", e)
+
+        if getattr(self, 'disk', None):
+            try:
+                cleanup_disks([self.disk], logger=self.log, mode="full")
+            except Exception as e:
+                self.log.error("Disk cleanup failed for %s: %s", self.disk, e)
