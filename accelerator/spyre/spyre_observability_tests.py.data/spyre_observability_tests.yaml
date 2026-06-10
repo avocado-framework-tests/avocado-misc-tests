@@ -1,0 +1,44 @@
+# Avocado Test Parameters for Observability Tests
+# Fill in the values below based on your system configuration
+
+SPYRE_GROUP: ""                   # Group name for VFIO device access
+AIU_PCIE_IDS: ""                  # AIU PCIe device IDs
+HOST_MODELS_DIR: ""               # Host directory containing models
+VLLM_MODEL_PATH: ""               # Path to VLLM model inside container
+# Number of AIU devices (tensor parallel size)
+AIU_WORD_SIZE: ""
+MAX_MODEL_LEN: ""                 # Maximum model length
+MAX_BATCH_SIZE: ""                # Maximum batch size
+MEMORY: ""                        # Container memory limit
+SHM_SIZE: ""                      # Shared memory size
+
+CONTAINER_URL: ""                 # Container registry URL
+CONTAINER_TAG: ""                 # Container image tag
+API_KEY: ""                       # API key for container registry
+VLLM_SPYRE_USE_CB: ""             # Use control blocks
+VLLM_DT_CHUNK_LEN: ""             # Chunk length for data transfer
+VLLM_SPYRE_USE_CHUNKED_PREFILL: ""  # Use chunked prefill
+VLLM_STARTUP_TIMEOUT: ""          # VLLM startup timeout in seconds
+LOG_CHECK_INTERVAL: ""            # Log check interval in seconds
+
+# Container runtime parameters
+# Device to mount in container (default: /dev/vfio)
+DEVICE: ""
+# Run in privileged mode for VFIO access (default: true)
+PRIVILEGED: ""
+PIDS_LIMIT: ""                    # PIDs limit (0 = unlimited)
+USERNS: ""                        # User namespace mode (default: keep-id)
+# Add user groups to container (default: keep-groups)
+GROUP_ADD: ""
+# Port mapping format: [host_ip]:[host_port]:container_port
+PORT_MAPPING: ""
+
+# VLLM-specific options
+ENABLE_PREFIX_CACHING: ""         # Enable VLLM prefix caching (true/false)
+ADDITIONAL_VLLM_ARGS: ""          # Additional VLLM args (space-separated)
+
+# Observability-specific parameters
+# Duration to capture metrics in seconds (for aiu-smi test)
+METRICS_DURATION: ""
+# Number of inference requests for trace generation (for Acelyzer test)
+TRACE_NUM_REQUESTS: ""
