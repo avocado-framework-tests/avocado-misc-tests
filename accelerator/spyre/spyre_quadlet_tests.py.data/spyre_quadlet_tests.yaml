@@ -1,0 +1,68 @@
+# Avocado Test Parameters for Spyre Quadlet Tests
+# Format: test_name.variant_name: parameters and default values
+
+# Core Parameters
+SPYRE_GROUP: ""                           # Group name for VFIO device access
+TEST_USERNAME: ""                         # Test username for non-root tests
+TEST_PASSWORD: ""                         # Test user password
+ROOT_PASSWORD: ""                         # Root password
+HOST_MODELS_DIR: ""                       # Host directory containing models
+
+# Timeout Parameters
+VLLM_STARTUP_TIMEOUT: ""                  # VLLM startup timeout in seconds
+LOG_CHECK_INTERVAL: ""                    # Log check interval in seconds
+
+# Entity Extraction Use Case Parameters (Single AIU device)
+# AIU PCIe device IDs for entity extraction
+ENTITY_EXTRACT_AIU_IDS: ""
+ENTITY_EXTRACT_MODEL: ""                  # Model path for entity extraction
+ENTITY_EXTRACT_WORLD_SIZE: ""             # Tensor parallel size
+ENTITY_EXTRACT_MAX_MODEL_LEN: ""          # Maximum model length
+ENTITY_EXTRACT_MAX_BATCH_SIZE: ""         # Maximum batch size
+ENTITY_EXTRACT_MEMORY: ""                 # Container memory limit
+
+# RAG Use Case Parameters (Multiple AIU devices)
+# AIU PCIe device IDs for RAG (space-separated)
+RAG_AIU_IDS: ""
+RAG_MODEL: ""                             # Model path for RAG
+RAG_WORLD_SIZE: ""                        # Tensor parallel size
+RAG_MAX_MODEL_LEN: ""                     # Maximum model length
+RAG_MAX_BATCH_SIZE: ""                    # Maximum batch size
+RAG_MEMORY: ""                            # Container memory limit
+RAG_SHM_SIZE: ""                          # Shared memory size
+
+# Embedding Use Case Parameters (Single AIU device)
+EMBEDDING_AIU_IDS: ""                     # AIU PCIe device IDs for embedding
+EMBEDDING_MODEL: ""                       # Model path for embedding
+EMBEDDING_WORLD_SIZE: ""                  # Tensor parallel size
+EMBEDDING_MAX_MODEL_LEN: ""               # Maximum model length
+EMBEDDING_MAX_BATCH_SIZE: ""              # Maximum batch size
+EMBEDDING_MEMORY: ""                      # Container memory limit
+
+# Reranker Use Case Parameters (Single AIU device)
+RERANKER_AIU_IDS: ""                      # AIU PCIe device IDs for reranker
+RERANKER_MODEL: ""                        # Model path for reranker
+RERANKER_WORLD_SIZE: ""                   # Tensor parallel size
+RERANKER_MAX_MODEL_LEN: ""                # Maximum model length
+RERANKER_MAX_BATCH_SIZE: ""               # Maximum batch size
+RERANKER_MEMORY: ""                       # Container memory limit
+
+# Container Configuration
+CONTAINER_IMAGE: ""                       # Container image URL with tag
+CONTAINER_URL: ""                         # Container registry URL
+CONTAINER_TAG: ""                         # Container image tag
+API_KEY: ""                               # API key for container registry
+DEVICE: ""                                # Device to mount in container
+PRIVILEGED: ""                            # Run in privileged mode for VFIO access
+PIDS_LIMIT: ""                            # PIDs limit (0 = unlimited)
+USERNS: ""                                # User namespace mode
+GROUP_ADD: ""                             # Add user groups to container
+# Port mapping format: [host_ip]:[host_port]:container_port
+PORT_MAPPING: ""
+
+# VLLM-specific options
+VLLM_SPYRE_USE_CB: ""                     # Use control blocks
+VLLM_DT_CHUNK_LEN: ""                     # Chunk length for data transfer
+VLLM_SPYRE_USE_CHUNKED_PREFILL: ""        # Use chunked prefill
+ENABLE_PREFIX_CACHING: ""                 # Enable VLLM prefix caching
+ADDITIONAL_VLLM_ARGS: ""                  # Additional VLLM args
