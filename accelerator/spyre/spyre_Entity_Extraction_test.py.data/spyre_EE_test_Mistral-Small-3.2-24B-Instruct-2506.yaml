@@ -1,0 +1,34 @@
+# Avocado Test Parameters for EE Container Tests - Mistral-Small-3.2-24B-Instruct-2506
+
+# EE Version Configuration
+RHAIIS_VERSION: ""
+
+# Environment Variables
+AIU_PCIE_IDS: "0381:50:00.0 0382:40:00.0"
+HOST_MODELS_DIR: "/opt/ibm/spyre/models/src"
+VLLM_MODEL_PATH: "/models/Mistral-Small-3.2-24B-Instruct-2506"
+AIU_WORLD_SIZE: "2"
+MAX_MODEL_LEN: "8192"
+MAX_BATCH_SIZE: "32"
+
+# Container Configuration
+CONTAINER_URL: ""
+CONTAINER_TAG: ""
+API_KEY: ""
+DEVICE: "/dev/vfio"
+USERNS: "keep-id"
+GROUP_ADD: "keep-groups"
+SECURITY_OPT: "label=disable"
+PIDS_LIMIT: "0"
+MEMORY: "200G"
+SHM_SIZE: "2G"
+PORT_MAPPING: "127.0.0.1:8000:8000"
+
+# User Configuration
+USER: ""
+SPYRE_GROUP: ""
+HF_MODEL_NAME: "mistralai/Mistral-Small-3.2-24B-Instruct-2506"
+
+#EE 3.4 Specific Parameters
+VLLM_SPYRE_USE_CB: ""
+ENABLE_PREFIX_CACHING: ""
