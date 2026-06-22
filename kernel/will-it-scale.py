@@ -223,7 +223,7 @@ class WillItScaleTest(Test):
         """
         self.distro_rel = distro.detect()
         smm = SoftwareManager()
-        deps = ['gcc', 'make']
+        deps = ['gcc', 'make', 'patch']
         if self.distro_rel.name.lower() in ['fedora', 'redhat', 'rhel']:
             deps.extend(['hwloc-devel'])
         for package in deps:
@@ -243,6 +243,19 @@ class WillItScaleTest(Test):
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(self.workdir, 'will-it-scale-master')
         os.chdir(self.sourcedir)
+
+        # Apply step optimization patch for large systems
+        # This reduces test time from 24 hours to ~1 hour on 256-core systems
+        step_patch = self.get_data('step_optimization.patch')
+        if os.path.exists(step_patch):
+            self.log.info("Applying step optimization patch for large systems...")
+            patch_cmd = 'patch -p1 < %s' % step_patch
+            result = process.run(patch_cmd, shell=True, ignore_status=True)
+            if result.exit_status == 0:
+                self.log.info("Step optimization patch applied successfully")
+            else:
+                self.log.warning("Step optimization patch failed, continuing with default step=1")
+
         # Modify the makefile to point to installed libhwloc
         if 'suse' in self.distro_rel.name.lower():
             makefile_patch = 'patch -p1 < %s' % self.get_data('makefile.patch')
