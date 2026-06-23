@@ -1,0 +1,13 @@
+# Cisco/Brocade Switch Profile : This profile defines commands for Cisco-style switches
+switch_profile:
+  vendor: "cisco"
+  login_command: "enable"
+  commands:
+    enter_config: "conf t"
+    select_interface: "interface port {port_id}"
+    disable_port: "shutdown"
+    enable_port: "no shutdown"
+    exit_config: "end"
+  wait_time: 5
+  prompt: "#"
+

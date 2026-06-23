@@ -1,0 +1,13 @@
+# Juniper Switch Profile : defines commands for Juniper switches
+switch_profile:
+  vendor: "juniper"
+  login_command: "cli"
+  commands:
+    enter_config: "configure"
+    select_interface: ""
+    disable_port: "set interfaces {port_id} disable"
+    enable_port: "delete interfaces {port_id} disable"
+    exit_config: "commit and-quit"
+  wait_time: 5
+  prompt: ">"
+
