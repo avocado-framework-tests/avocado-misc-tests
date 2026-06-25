@@ -11,6 +11,9 @@ component: !mux
         comp: 'memory-hotplug'
     vDSO:
         comp: 'vDSO'
+    mremap_test:
+        comp: 'mm'
+        subtest: 'mremap_test'
 run_type: !mux
     distro:
         type: 'distro'
