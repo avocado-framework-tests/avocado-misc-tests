@@ -15,12 +15,11 @@
 # Author: Nageswara R Sastry <rnsastry@linux.vnet.ibm.com>
 
 import os
-import platform
 import shutil
 import tempfile
 from avocado import Test
 from avocado.utils import build, distro, process, genio
-from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils.software_manager.distro_packages import ensure_tool
 
 
 class PerfUprobe(Test):
@@ -39,25 +38,24 @@ class PerfUprobe(Test):
         # Check for basic utilities
 
         self.temp_file = tempfile.NamedTemporaryFile().name
-        smm = SoftwareManager()
         self.detected_distro = distro.detect()
         self.distro_name = self.detected_distro.name
-        deps = ['gcc', 'make']
-        if 'Ubuntu' in self.distro_name:
-            deps.extend(['linux-tools-common', 'linux-tools-%s' %
-                         platform.uname()[2]])
-        elif self.distro_name in ['SuSE', 'fedora', 'centos']:
-            deps.extend(['perf'])
-        elif self.distro_name == 'rhel' and int(self.detected_distro.version) < 9:
-            deps.extend(['perf'])
-        elif self.distro_name == 'rhel' and int(self.detected_distro.version) >= 9:
-            deps.extend(['perf', 'perf-debuginfo'])
-        else:
-            self.cancel("Install the package for perf supported\
-                      by %s" % self.detected_distro.name)
-        for package in deps:
-            if not smm.check_installed(package) and not smm.install(package):
-                self.cancel('%s is needed for the test to be run' % package)
+        perf_path = self.params.get('perf_bin', default='')
+        distro_pkg_map = {
+            "Ubuntu": [f"linux-tools-{os.uname()[2]}", "linux-tools-common", "gcc", "make"],
+            "debian": ["linux-perf", "gcc", "make"],
+            "centos": ["perf", "gcc", "make"],
+            "fedora": ["perf", "gcc", "make"],
+            "rhel": ["perf", "gcc", "make"],
+            "SuSE": ["perf", "gcc", "make"],
+        }
+        try:
+            perf_version = ensure_tool("perf", custom_path=perf_path,
+                                       distro_pkg_map=distro_pkg_map)
+            self.log.info(f"Perf version: {perf_version}")
+            self.perf_bin = perf_path if perf_path else "perf"
+        except RuntimeError as e:
+            self.cancel(str(e))
 
         shutil.copyfile(self.get_data('uprobe.c'),
                         os.path.join(self.teststmpdir, 'uprobe.c'))
@@ -67,25 +65,28 @@ class PerfUprobe(Test):
 
         build.make(self.teststmpdir)
         os.chdir(self.teststmpdir)
-        self.cmdProbe = "perf probe -x"
-        self.recProbe = "perf record -o %s -e probe_uprobe_test:doit" % self.temp_file
-        self.report = "perf report --input=%s" % self.temp_file
+        self.cmdProbe = "%s probe -x" % self.perf_bin
+        self.recProbe = "%s record -o %s -e probe_uprobe_test:doit" % (
+            self.perf_bin, self.temp_file)
+        self.report = "%s report --input=%s" % (self.perf_bin, self.temp_file)
 
     def cmd_verify(self, cmd):
         return process.run(cmd, shell=True, ignore_status=True)
 
     def test_uprobe(self):
-        output = self.cmd_verify('%s /usr/bin/perf main' % self.cmdProbe)
+        output = self.cmd_verify('%s ./uprobe_test main' % self.cmdProbe)
         if 'Added new event' not in output.stderr.decode("utf-8"):
-            self.fail("perf: probe of perf main failed")
-        output = self.cmd_verify('perf probe -l')
-        if 'probe_perf:main' not in output.stdout.decode("utf-8"):
-            self.fail("perf: probe of 'perf main' not found in list")
+            self.fail("perf: probe of uprobe_test main failed")
+        output = self.cmd_verify('%s probe -l' % self.perf_bin)
+        if 'probe_uprobe_test:main' not in output.stdout.decode("utf-8"):
+            self.fail("perf: probe of 'main' not found in list")
         sysfsfile = '/sys/kernel/debug/tracing/uprobe_events'
-        if 'probe_perf' not in genio.read_file(sysfsfile).rstrip('\t\r\n\0'):
+        if 'probe_uprobe_test' not in genio.read_file(
+                sysfsfile).rstrip('\t\r\n\0'):
             self.fail("perf: sysfs file didn't reflect uprobe events")
-        output = self.cmd_verify('perf record -o %s -e probe_perf:main -- '
-                                 'perf list' % self.temp_file)
+        output = self.cmd_verify('%s record -o %s -e probe_uprobe_test:main '
+                                 '-- ./uprobe_test'
+                                 % (self.perf_bin, self.temp_file))
         if 'samples' not in output.stderr.decode("utf-8"):
             self.fail("perf: perf.data file not created")
         self.cmd_verify(self.report)
@@ -122,6 +123,6 @@ class PerfUprobe(Test):
         self.cmd_verify(self.report)
 
     def tearDown(self):
-        self.cmd_verify('perf probe -d \\*')
+        self.cmd_verify('%s probe -d \\*' % self.perf_bin)
         if os.path.isfile(self.temp_file):
             process.run('rm -f %s' % self.temp_file)
