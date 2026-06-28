@@ -1,0 +1,8 @@
+disks: ''
+raidname: ''
+spare_disks:
+raid: 
+required_disks: 
+metadata: 1.2
+vg_name: ''
+lv_name:  ''
