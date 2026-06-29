@@ -28,9 +28,4 @@ PORT_MAPPING: "127.0.0.1:8000:8000"
 
 # User Configuration, keep empty if you want to run as root
 USER: ""
-SPYRE_GROUP: ""
 HF_MODEL_NAME: "ibm-granite/granite-embedding-278m-multilingual"
-
-# embedding 3.4 Specific Parameters
-VLLM_SPYRE_USE_CHUNKED_PREFILL: "0"
-
