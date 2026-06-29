@@ -452,24 +452,37 @@ class DlparPci(Test):
 
         def nvme_recovery_check():
             '''
-            Checks if the nvme adapter functionality like all namespaces are
-            up and running or not after adapter is recovered
+            Checks if the nvme adapter functionality is recovered after DLPAR.
+            - If no namespaces: validates device presence via PCI address only
+            - If namespaces exist: validates all are present, live and optimized
             '''
-            err_ns = []
-            current_namespaces = nvme.get_current_ns_ids(self.contr_name)
-            if current_namespaces == self.ns_list:
-                for ns_id in current_namespaces:
-                    status = nvme.get_ns_status(self.contr_name, ns_id)
-                    if not status[0] == 'live' and status[1] == 'optimized':
-                        err_ns.append(ns_id)
-            else:
-                self.log.info("following ns not back listing after hot_plug" %
-                              (self.ns_list - current_namespaces))
+            if not self.ns_list:
+                self.log.info("No namespaces on NVMe device, validating "
+                              "PCI address presence only")
+                if pci_device in pci.get_pci_addresses():
+                    self.log.info("NVMe device %s recovered in system",
+                                  pci_device)
+                    return True
+                self.log.error("NVMe device %s not found after DLPAR",
+                               pci_device)
                 return False
 
-            if err_ns:
-                self.log.info(f"following namespaces not recovered ={err_ns}")
+            current_namespaces = set(nvme.get_current_ns_ids(self.contr_name))
+            missing_ns = set(self.ns_list) - current_namespaces
+            if missing_ns:
+                self.log.info("Namespaces missing after DLPAR: %s", missing_ns)
                 return False
+
+            err_ns = [ns_id for ns_id in current_namespaces
+                      if nvme.get_ns_status(self.contr_name, ns_id)[:2]
+                      != ['live', 'optimized']]
+            if err_ns:
+                self.log.info("Namespaces not recovered (not live/optimized):"
+                              " %s", err_ns)
+                return False
+
+            self.log.info("All %d namespaces recovered successfully",
+                          len(current_namespaces))
             return True
 
         if wait.wait_for(is_added, timeout=30):
