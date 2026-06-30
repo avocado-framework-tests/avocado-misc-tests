@@ -12,7 +12,7 @@
 # See LICENSE for more details.
 # Copyright: 2017 IBM
 # Author: Pridhiviraj Paidipeddi <ppaidipe@linux.vnet.ibm.com>
-# Author: Vaishnavi Bhat <vaishnavi@linux.vnet.ibm.com>
+# Author: Vaishnavi Bhat <vaishnavi@linux.ibm.com>
 # this script run IO stress on nic devices for give time.
 
 import os
@@ -188,68 +188,123 @@ class HtxNicTest(Test):
             self.peer_distro,
             self.peer_distro_version)
         patterns = [host_distro_pattern, peer_distro_pattern]
-        for pattern in patterns:
-            scontext = ssl.SSLContext(ssl.PROTOCOL_TLS)
-            scontext.verify_mode = ssl.VerifyMode.CERT_NONE
-            response = urllib.request.urlopen(
-                self.htx_rpm_link, context=scontext)
-            temp_string = response.read()
 
-            matching_htx_versions = re.findall(
-                r"(?<=\>)htx\w*[-]\d*[-]\w*[.]\w*[.]\w*", str(temp_string))
-            distro_specific_htx_versions = [htx_rpm
-                                            for htx_rpm
-                                            in matching_htx_versions
-                                            if pattern in htx_rpm]
-            distro_specific_htx_versions.sort(reverse=True)
-            self.latest_htx_rpm = distro_specific_htx_versions[0]
+        # Validate htx_rpm_link parameter
+        if not self.htx_rpm_link:
+            self.cancel("htx_rpm_link parameter is required but not provided")
 
-            cmd = (' %s%s ' % (self.htx_rpm_link, self.latest_htx_rpm))
-            url_download(cmd, self.latest_htx_rpm)
+        # Check if htx_rpm_link is a direct RPM file
+        if self.htx_rpm_link.endswith('.rpm'):
+            # Direct RPM link - extract filename and download directly
+            self.latest_htx_rpm = os.path.basename(self.htx_rpm_link)
+            self.log.info("Direct RPM link detected: %s" %
+                          self.latest_htx_rpm)
 
-            # If host and peer distro is same then perform installation
-            # only one time. This check is to avoid multiple times installation
-            if host_distro_pattern == peer_distro_pattern:
-                if not RpmBackend.rpm_install(self.latest_htx_rpm, no_dependencies=True, replace=False):
-                    self.cancel("Installation of rpm failed")
+            # Try url_download first, fall back to wget with
+            # --no-check-certificate if needed
+            try:
+                url_download(self.htx_rpm_link, self.latest_htx_rpm)
+            except Exception as e:
+                self.log.warning("url_download failed: %s. Trying wget with "
+                                 "--no-check-certificate" % str(e))
+                wget_cmd = "wget --no-check-certificate -O %s %s" % (
+                           self.latest_htx_rpm, self.htx_rpm_link)
+                result = process.run(wget_cmd, shell=True, ignore_status=True)
+                if result.exit_status != 0:
+                    self.cancel("Failed to download HTX RPM from %s: %s" %
+                                (self.htx_rpm_link,
+                                 result.stderr.decode('utf-8')))
+        else:
+            # Directory-based HTX RPM link
+            for pattern in patterns:
+                scontext = ssl.SSLContext(ssl.PROTOCOL_TLS)
+                scontext.verify_mode = ssl.VerifyMode.CERT_NONE
+                response = urllib.request.urlopen(
+                    self.htx_rpm_link, context=scontext)
+                temp_string = response.read()
 
-                destination = "%s:/tmp" % self.peer_ip
-                output = self.session.copy_files(self.latest_htx_rpm, destination, recursive=True)
+                matching_htx_versions = re.findall(
+                    r"(?<=\>)htx\w*[-]\d*[-]\w*[.]\w*[.]\w*",
+                    str(temp_string))
+                distro_specific_htx_versions = [htx_rpm
+                                                for htx_rpm
+                                                in matching_htx_versions
+                                                if pattern in htx_rpm]
+                if not distro_specific_htx_versions:
+                    self.log.warning("No HTX RPM found for pattern: %s" %
+                                     pattern)
+                    continue
 
-                if not output:
-                    self.cancel("Unable to copy the htx rpm package %s %s"
-                                " on peer machine" % (self.htx_rpm_link,
-                                                      self.latest_htx_rpm))
+                distro_specific_htx_versions.sort(reverse=True)
+                self.latest_htx_rpm = distro_specific_htx_versions[0]
 
-                cmd = ('rpm -ivh --nodeps %s%s '
-                       '--force' % ("/tmp/", self.latest_htx_rpm))
-
-                output = self.session.cmd(cmd)
-                if not output.exit_status == 0:
-                    self.cancel("Unable to install the package %s %s"
-                                " on peer machine" % (self.htx_rpm_link,
-                                                      self.latest_htx_rpm))
+                cmd = (' %s%s ' % (self.htx_rpm_link, self.latest_htx_rpm))
+                # Try url_download first, fall back to wget with
+                # --no-check-certificate if needed
+                try:
+                    url_download(cmd, self.latest_htx_rpm)
+                except Exception as e:
+                    self.log.warning("url_download failed: %s. Trying wget "
+                                     "with --no-check-certificate" % str(e))
+                    wget_cmd = "wget --no-check-certificate -O %s %s" % (
+                               self.latest_htx_rpm, cmd.strip())
+                    result = process.run(wget_cmd, shell=True,
+                                         ignore_status=True)
+                    if result.exit_status != 0:
+                        self.cancel("Failed to download HTX RPM from %s: %s" %
+                                    (cmd.strip(),
+                                     result.stderr.decode('utf-8')))
                 break
-            if pattern == host_distro_pattern:
-                if not RpmBackend.rpm_install(self.latest_htx_rpm, no_dependencies=True, replace=False):
-                    self.cancel("Installation of rpm failed")
 
-            if pattern == peer_distro_pattern:
-                destination = "%s:/tmp" % self.peer_ip
-                output = self.session.copy_files(self.latest_htx_rpm, destination, recursive=True)
-                if not output:
-                    self.cancel("Unable to copy the htx rpm package %s %s"
-                                " on peer machine" % (self.htx_rpm_link,
-                                                      self.latest_htx_rpm))
+        # If host and peer distro is same then perform installation
+        # only one time. This check is to avoid multiple times installation
+        if host_distro_pattern == peer_distro_pattern:
+            if not RpmBackend.rpm_install(self.latest_htx_rpm,
+                                          no_dependencies=True,
+                                          replace=False):
+                self.cancel("Installation of rpm failed")
 
-                cmd = ('rpm -ivh --nodeps %s%s '
-                       '--force' % ("/tmp/", self.latest_htx_rpm))
+            destination = "%s:/tmp" % self.peer_ip
+            output = self.session.copy_files(self.latest_htx_rpm,
+                                             destination, recursive=True)
 
-                output = self.session.cmd(cmd)
-                if not output.exit_status == 0:
-                    self.cancel("Unable to install the package %s %s"
-                                " on peer machine" % (self.htx_rpm_link,
-                                                      self.latest_htx_rpm))
+            if not output:
+                self.cancel("Unable to copy the htx rpm package %s %s"
+                            " on peer machine" % (self.htx_rpm_link,
+                                                  self.latest_htx_rpm))
+
+            cmd = ('rpm -ivh --nodeps %s%s '
+                   '--force' % ("/tmp/", self.latest_htx_rpm))
+
+            output = self.session.cmd(cmd)
+            if not output.exit_status == 0:
+                self.cancel("Unable to install the package %s %s"
+                            " on peer machine" % (self.htx_rpm_link,
+                                                  self.latest_htx_rpm))
+        else:
+            # Install on host
+            if not RpmBackend.rpm_install(self.latest_htx_rpm,
+                                          no_dependencies=True,
+                                          replace=False):
+                self.cancel("Installation of rpm failed")
+
+            # Install on peer
+            destination = "%s:/tmp" % self.peer_ip
+            output = self.session.copy_files(self.latest_htx_rpm,
+                                             destination, recursive=True)
+            if not output:
+                self.cancel("Unable to copy the htx rpm package %s %s"
+                            " on peer machine" % (self.htx_rpm_link,
+                                                  self.latest_htx_rpm))
+
+            cmd = ('rpm -ivh --nodeps %s%s '
+                   '--force' % ("/tmp/", self.latest_htx_rpm))
+
+            output = self.session.cmd(cmd)
+            if not output.exit_status == 0:
+                self.cancel("Unable to install the package %s %s"
+                            " on peer machine" % (self.htx_rpm_link,
+                                                  self.latest_htx_rpm))
 
     def parameters(self):
         self.host_intfs = []
@@ -276,7 +331,6 @@ class HtxNicTest(Test):
         self.time_limit = int(self.params.get("time_limit",
                                               '*', default=2)) * 60
         self.query_cmd = "htxcmdline -query -mdt %s" % self.mdt_file
-        self.htx_url = self.params.get("htx_rpm", default="")
 
     def test_start(self):
         """
@@ -408,6 +462,11 @@ class HtxNicTest(Test):
         '''
         restoring ip for host
         '''
+        # Check if NetworkManager is active
+        nm_check = process.run("systemctl is-active NetworkManager",
+                               shell=True, ignore_status=True)
+        is_nm_active = (nm_check.exit_status == 0)
+
         for interface in self.host_intfs:
             networkinterface = NetworkInterface(interface, self.localhost)
             detected_distro = distro.detect()
@@ -421,12 +480,22 @@ class HtxNicTest(Test):
                     networkinterface.nm_flush_ipaddr()
                 elif detected_distro.version <= 15:
                     networkinterface.flush_ipaddr()
-            networkinterface.bring_up()
+
+            # Bring up interface based on network manager
+            if is_nm_active:
+                cmd = "nmcli c up %s" % interface
+                process.run(cmd, shell=True, sudo=True, ignore_status=True)
+            else:
+                networkinterface.bring_up()
 
     def ip_restore_peer(self):
         '''
         config ip for peer
         '''
+        # Check if NetworkManager is active on peer
+        nm_check = self.session.cmd("systemctl is-active NetworkManager")
+        is_nm_active = (nm_check.exit_status == 0)
+
         for interface in self.peer_intfs:
             peer_networkinterface = NetworkInterface(
                 interface, self.remotehost)
@@ -441,10 +510,16 @@ class HtxNicTest(Test):
                     peer_networkinterface.nm_flush_ipaddr()
                 elif detected_distro.version <= 15:
                     peer_networkinterface.flush_ipaddr()
-            peer_networkinterface.bring_up()
+
+            # Bring up interface based on network manager
+            if is_nm_active:
+                cmd = "nmcli c up %s" % interface
+                self.session.cmd(cmd)
+            else:
+                peer_networkinterface.bring_up()
 
     def htx_cleanup(self):
         self.shutdown_htx_daemon()
-        self.ip_restore_host()
         self.ip_restore_peer()
+        self.ip_restore_host()
         self.remotehost.remote_session.quit()
