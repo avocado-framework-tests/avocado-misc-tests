@@ -41,13 +41,13 @@ class Blktests(Test):
 
         packages = ['gcc', 'make', 'util-linux', 'fio']
         if dist.name in ['Ubuntu', 'debian']:
-            packages += ['libdevmapper-dev', 'g++']
+            packages += ['libdevmapper-dev', 'g++', 'liburing-dev']
         elif dist.name in ['rhel', 'CentOS', 'fedora']:
             packages += ['device-mapper', 'gcc-c++', 'blktrace',
-                         'ktls-utils', 'device-mapper-multipath']
+                         'ktls-utils', 'device-mapper-multipath', 'liburing-devel']
         elif dist.name in ['SuSE']:
             packages += ['device-mapper', 'gcc-c++', 'blktrace',
-                         'ktls-utils', 'multipath-tools']
+                         'ktls-utils', 'multipath-tools', 'liburing-devel']
 
         # Enable io_uring if disabled
         knob = "/proc/sys/kernel/io_uring_disabled"
