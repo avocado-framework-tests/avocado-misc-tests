@@ -10,3 +10,5 @@ general: !mux
         thp-page-cache:
             args: '-f mm'
             tmpfs_mount_dir: '/mnt/thp/'
+        numa:
+            args: '-f numa'
