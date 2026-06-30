@@ -13,6 +13,8 @@ component: !mux
         comp: 'vDSO'
     static_keys:
         comp: 'static_keys'
+    iommu:
+		comp: 'iommu'
 run_type: !mux
     upstream:
         type: 'upstream'

@@ -11,6 +11,8 @@ component: !mux
         comp: 'memory-hotplug'
     vDSO:
         comp: 'vDSO'
+    iommu:
+		comp: 'iommu'
 run_type: !mux
     distro:
         type: 'distro'

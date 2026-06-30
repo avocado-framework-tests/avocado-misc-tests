@@ -20,13 +20,11 @@ from avocado.utils.podman import (Podman, PodmanException,
                                   install_huggingface_cli,
                                   download_model_from_hf,
                                   validate_model_with_sha,
-                                  get_container_port,
-                                  save_container_logs,
                                   wait_for_vllm_startup)
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
-class RAGusecaseTest(Test):
+class SpyreRAGTest(Test):
     """
     Test RAG (Retrieval-Augmented Generation) container deployments
     with different models on Spyre AIU devices.
@@ -41,9 +39,8 @@ class RAGusecaseTest(Test):
             escaped_cmd = cmd.replace("'", "'\"'\"'")
             cmd = f"su - {user} -c '{escaped_cmd}'"
         if process.system(cmd, sudo=True, shell=True):
-            self.log.info("%s Running command", cmd)
-            return True
-        return False
+            return False
+        return True
 
     @staticmethod
     def run_cmd_out(cmd, user=None):
@@ -72,26 +69,13 @@ class RAGusecaseTest(Test):
         except Exception as ex:
             self.log.warning("OS version error: %s", ex)
 
-        self.log.info("\n3. Image pip list:")
-        try:
-            cmd = f"pip3 list {self.container_url}:{self.container_tag}"
-            out = self.run_cmd_out(cmd, user=self.user)
-            self.log.info(out if out else "Failed to get pip list")
-        except Exception as ex:
-            self.log.warning("pip list error: %s", ex)
-
-        self.log.info("\n3. container and spyre info")
         for num, (desc, command) in enumerate([
             ("podman ps", "podman ps"),
-            ("podman images", "podman images"),
-            ("lspci -nn", "lspci -nn")
-        ], start=4):
+            ("podman images", "podman images")
+        ], start=2):
             self.log.info(f"\n{num}. {desc}:")
             try:
-                if command.startswith("podman"):
-                    output = self.run_cmd_out(command, user=self.user)
-                else:
-                    output = self.run_cmd_out(command)
+                output = self.run_cmd_out(command, user=self.user)
                 self.log.info(output if output else f"No output from {desc}")
             except Exception as ex:
                 self.log.warning(f"{desc} error: %s", ex)
@@ -112,7 +96,7 @@ class RAGusecaseTest(Test):
                     f"Failed to install {package} required for this test.")
 
         self.rhaiis_version = self.params.get("RHAIIS_VERSION", default="")
-        self.aiu_ids = self.params.get("AIU_PCIE_IDS", default="")
+        self.aiu_ids = self.params.get("AIU_PCIE_IDS", default=None)
         self.host_models_dir = self.params.get("HOST_MODELS_DIR", default="")
         self.vllm_model_path = self.params.get("VLLM_MODEL_PATH", default="")
         self.aiu_world_size = self.params.get("AIU_WORLD_SIZE", default="")
@@ -120,22 +104,36 @@ class RAGusecaseTest(Test):
         self.max_batch_size = self.params.get("MAX_BATCH_SIZE", default="")
         self.memory = self.params.get("MEMORY", default="")
         self.shm_size = self.params.get("SHM_SIZE", default="")
-        self.container_url = self.params.get("CONTAINER_URL", default="")
-        self.container_tag = self.params.get("CONTAINER_TAG", default="")
-        self.api_key = self.params.get("API_KEY", default="")
+        self.container_url = self.params.get("CONTAINER_URL", default=None)
+        self.container_tag = self.params.get("CONTAINER_TAG", default=None)
+        self.api_key = self.params.get("API_KEY", default=None)
         self.device = self.params.get("DEVICE", default="/dev/vfio")
         self.userns = self.params.get("USERNS", default="keep-id")
         self.group_add = self.params.get("GROUP_ADD", default="keep-groups")
         self.security_opt = self.params.get(
             "SECURITY_OPT", default="label=disable")
-        self.privileged = self.params.get("PRIVILEGED", default="true")
         self.pids_limit = self.params.get("PIDS_LIMIT", default="0")
         self.port_mapping = self.params.get(
             "PORT_MAPPING", default="127.0.0.1:8000:8000")
         self.user = self.params.get("USER", default="")
-        self.spyre_group = self.params.get("SPYRE_GROUP", default="")
         self.hf_model_name = self.params.get("HF_MODEL_NAME", default="")
 
+        if self.aiu_ids:
+            self.aiu_ids = self.aiu_ids.split()
+        else:
+            self.cancel("Missing required parameters: AIU_PCIE_IDS")
+
+        required_params = {
+            "RHAIIS_VERSION": self.rhaiis_version,
+            "CONTAINER_URL": self.container_url,
+            "CONTAINER_TAG": self.container_tag,
+            "MEMORY": self.memory,
+            "GROUP_ADD": self.group_add,
+            "API_KEY": self.api_key,
+        }
+        missing = [p for p, v in required_params.items() if not v]
+        if missing:
+            self.cancel(f"Missing required parameters: {', '.join(missing)}")
         if self.host_models_dir:
             if not os.path.exists(self.host_models_dir):
                 self.log.info("Creating HOST_MODELS_DIR: %s",
@@ -181,20 +179,20 @@ class RAGusecaseTest(Test):
                     model_name=model_name
                 )
                 if download_success:
-                    self.log.info("✓ Model download completed successfully")
+                    self.log.info("Model download completed successfully")
                     self.log.info("Validating downloaded model...")
                     is_valid, messages = validate_model_with_sha(model_dir)
                     for msg in messages:
                         self.log.info("  %s", msg)
                     if is_valid:
-                        self.log.info("✓ Model validation PASSED")
+                        self.log.info("Model validation PASSED")
                     else:
                         self.log.warning(
-                            "⚠ Model validation FAILED - continuing anyway")
+                            "Model validation FAILED - continuing anyway")
                     if os.path.exists(model_dir):
                         files = os.listdir(model_dir)
                         self.log.info(
-                            "✓ Model directory contains %d files", len(files))
+                            "Model directory contains %d files", len(files))
                         self.log.info("Files: %s", ', '.join(files[:10]))
                     else:
                         self.cancel(
@@ -203,7 +201,7 @@ class RAGusecaseTest(Test):
                     self.cancel(
                         f"Failed to download model {self.hf_model_name}. Cannot proceed without model.")
             else:
-                self.log.info("✓ Model already exists: %s", model_dir)
+                self.log.info("Model already exists: %s", model_dir)
                 files = os.listdir(model_dir)
                 self.log.info("Model directory contains %d files", len(files))
 
@@ -222,7 +220,7 @@ class RAGusecaseTest(Test):
                                   api_key=self.api_key, user=self.user)
                 self.log.info("Successfully logged in to registry")
             except PodmanException as ex:
-                self.cancel("Failed to login to registry: %s", ex)
+                self.cancel(f"Failed to login to registry: {ex}")
 
         # Step 4: Run servicereport commands
         self.log.info("Step 4: Running servicereport -r -p spyre")
@@ -230,7 +228,7 @@ class RAGusecaseTest(Test):
         self.log.info("Running servicereport -v -p spyre")
         res = self.run_cmd_out("servicereport -v -p spyre")
         if "FAIL" in res:
-            self.fail("Servicereport configuration failed !")
+            self.cancel("Servicereport configuration failed !")
 
         # Step 5: Download container image as specified user
         if self.container_url and self.container_tag:
@@ -247,8 +245,8 @@ class RAGusecaseTest(Test):
                     self.log.info(
                         "Successfully pulled container image as user '%s'", self.user)
                 else:
-                    self.log.cancel(
-                        "Failed to pull container image: %s", result.stderr_text)
+                    self.cancel(
+                        f"Failed to pull container image: {result.stderr_text}")
             except Exception as ex:
                 self.log.warning("Failed to pull container image: %s", ex)
 
@@ -269,7 +267,7 @@ class RAGusecaseTest(Test):
 
         self.log.info("  Sample files: %s", ', '.join(model_files[:5]))
 
-        container_name = f"rag-test-{self.rhaiis_version.replace('.', '-')}"
+        container_name = f"spyre-rag-test-{self.rhaiis_version.replace('.', '-')}"
         self.log.info("Cleaning up any existing container: %s", container_name)
         self.run_cmd(f"podman rm -f {container_name} 2>/dev/null || true")
 
@@ -315,7 +313,6 @@ class RAGusecaseTest(Test):
         self.log.info("Container name: %s", container_name)
         self.log.info("Full podman command: podman run %s",
                       " ".join(podman_options))
-
         # Create container using simplified Podman utility
         try:
             returncode, stdout, stderr = self.podman.run(
@@ -333,13 +330,13 @@ class RAGusecaseTest(Test):
                     f"Failed to extract container ID from output: {stdout}")
             self.container_id = container_id
             self.log.info(
-                "✓ Container created successfully as user '%s': %s", self.user, container_id)
+                "Container created successfully as user '%s': %s", self.user, container_id)
         except PodmanException as ex:
             self.fail(f"Failed to create container: {ex}")
 
         self.log.info(
             "Waiting for VLLM to start (checking as user '%s')...", self.user)
-        startup_success = wait_for_vllm_startup(
+        if not wait_for_vllm_startup(
             container_id=container_id,
             success_pattern="Application startup complete.",
             failure_pattern="BACKTRACE",
@@ -350,13 +347,11 @@ class RAGusecaseTest(Test):
             log=self.log,
             show_live_logs=True,
             live_log_lines=10
-        )
-
-        if not startup_success:
+        ):
             self.log.error("VLLM failed to start within timeout")
-            log_file = save_container_logs(
-                container_id, self.workdir, test_name="rag_container_test",
-                user=self.user, log=self.log)
+            log_file = self.podman.save_container_logs(
+                container_id, self.workdir, test_name=container_name,
+                user=self.user)
             if log_file:
                 self.log.info("Container logs saved to: %s", log_file)
             self.fail("VLLM startup failed")
@@ -369,23 +364,28 @@ class RAGusecaseTest(Test):
             container_info = self.podman.get_container_info(
                 container_id, user=self.user)
             status = container_info.get('State', 'unknown')
-            self.log.info("✓ Container status: %s", status)
+            self.log.info("Container status: %s", status)
             if status != 'running':
                 self.log.error("Container is not in running state")
                 self.fail(f"Container status: {status}")
         except PodmanException as ex:
             self.log.warning("Failed to get container info: %s", ex)
-        host_port = get_container_port(
-            container_id, port=8000, user=self.user, log=self.log)
+
+        # Get and display container port (as specified user)
+        host_port = self.podman.get_container_port(
+            container_id, port=8000, user=self.user)
         if host_port:
-            self.log.info("✓ VLLM API available on port: %d", host_port)
+            self.log.info("VLLM API available on port: %d", host_port)
         else:
             self.log.warning("Could not determine container port")
-        log_file = save_container_logs(
-            container_id, self.workdir, test_name="rag_container_test",
-            user=self.user, log=self.log)
+
+        # Save final logs (as specified user)
+        log_file = self.podman.save_container_logs(
+            container_id, self.workdir, test_name=container_name,
+            user=self.user)
         if log_file:
-            self.log.info("✓ Container logs saved to: %s", log_file)
+            self.log.info("Container logs saved to: %s", log_file)
+
         self.log.info("=== RAG Container Test Completed Successfully ===")
 
     def tearDown(self):

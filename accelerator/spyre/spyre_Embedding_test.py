@@ -20,8 +20,6 @@ from avocado.utils.podman import (Podman, PodmanException,
                                   install_huggingface_cli,
                                   download_model_from_hf,
                                   validate_model_with_sha,
-                                  get_container_port,
-                                  save_container_logs,
                                   wait_for_vllm_startup)
 from avocado.utils.software_manager.manager import SoftwareManager
 
@@ -71,25 +69,13 @@ class SpyreEmbeddingTest(Test):
         except Exception as ex:
             self.log.warning("OS version error: %s", ex)
 
-        self.log.info("\n3. host pip list:")
-        try:
-            cmd = f"pip3 list"
-            out = self.run_cmd_out(cmd, user=self.user)
-            self.log.info(out if out else "Failed to get pip list")
-        except Exception as ex:
-            self.log.warning("pip list error: %s", ex)
-
         for num, (desc, command) in enumerate([
             ("podman ps", "podman ps"),
-            ("podman images", "podman images"),
-            ("lspci -nn", "lspci -nn")
-        ], start=4):
+            ("podman images", "podman images")
+        ], start=2):
             self.log.info(f"\n{num}. {desc}:")
             try:
-                if command.startswith("podman"):
-                    output = self.run_cmd_out(command, user=self.user)
-                else:
-                    output = self.run_cmd_out(command)
+                output = self.run_cmd_out(command, user=self.user)
                 self.log.info(output if output else f"No output from {desc}")
             except Exception as ex:
                 self.log.warning(f"{desc} error: %s", ex)
@@ -130,7 +116,6 @@ class SpyreEmbeddingTest(Test):
         self.port_mapping = self.params.get(
             "PORT_MAPPING", default="127.0.0.1:8000:8000")
         self.user = self.params.get("USER", default="")
-        self.spyre_group = self.params.get("SPYRE_GROUP", default="")
         self.hf_model_name = self.params.get("HF_MODEL_NAME", default="")
 
         if self.aiu_ids:
@@ -195,20 +180,20 @@ class SpyreEmbeddingTest(Test):
                     model_name=model_name
                 )
                 if download_success:
-                    self.log.info("✓ Model download completed successfully")
+                    self.log.info("Model download completed successfully")
                     self.log.info("Validating downloaded model...")
                     is_valid, messages = validate_model_with_sha(model_dir)
                     for msg in messages:
                         self.log.info("  %s", msg)
                     if is_valid:
-                        self.log.info("✓ Model validation PASSED")
+                        self.log.info("Model validation PASSED")
                     else:
                         self.log.warning(
-                            "⚠ Model validation FAILED - continuing anyway")
+                            "Model validation FAILED - continuing anyway")
                     if os.path.exists(model_dir):
                         files = os.listdir(model_dir)
                         self.log.info(
-                            "✓ Model directory contains %d files", len(files))
+                            "Model directory contains %d files", len(files))
                         self.log.info("Files: %s", ', '.join(files[:10]))
                     else:
                         self.cancel(
@@ -217,7 +202,7 @@ class SpyreEmbeddingTest(Test):
                     self.cancel(
                         f"Failed to download model {self.hf_model_name}. Cannot proceed without model.")
             else:
-                self.log.info("✓ Model already exists: %s", model_dir)
+                self.log.info("Model already exists: %s", model_dir)
                 files = os.listdir(model_dir)
                 self.log.info("Model directory contains %d files", len(files))
 
@@ -236,7 +221,7 @@ class SpyreEmbeddingTest(Test):
                                   api_key=self.api_key, user=self.user)
                 self.log.info("Successfully logged in to registry")
             except PodmanException as ex:
-                self.cancel("Failed to login to registry: %s", ex)
+                self.cancel(f"Failed to login to registry: {ex}")
 
         # Step 4: Run servicereport commands
         self.log.info("Step 4: Running servicereport -r -p spyre")
@@ -244,7 +229,7 @@ class SpyreEmbeddingTest(Test):
         self.log.info("Running servicereport -v -p spyre")
         res = self.run_cmd_out("servicereport -v -p spyre")
         if "FAIL" in res:
-            self.fail("Servicereport configuration failed !")
+            self.cancel("Servicereport configuration failed !")
 
         # Step 5: Download container image as specified user
         if self.container_url and self.container_tag:
@@ -262,7 +247,7 @@ class SpyreEmbeddingTest(Test):
                         "Successfully pulled container image as user '%s'", self.user)
                 else:
                     self.cancel(
-                        "Failed to pull container image: %s", result.stderr_text)
+                        f"Failed to pull container image: {result.stderr_text}")
             except Exception as ex:
                 self.log.warning("Failed to pull container image: %s", ex)
 
@@ -274,7 +259,6 @@ class SpyreEmbeddingTest(Test):
             1. Container creation with Spyre AIU device access
             2. Wait for vLLM startup and initialization
             3. Validates model availability
-            3. Model loading and validation
             4. API endpoint availability
             5. verifies container health and API endpoint availability
         Raises:
@@ -358,13 +342,13 @@ class SpyreEmbeddingTest(Test):
                     f"Failed to extract container ID from output: {stdout}")
             self.container_id = container_id
             self.log.info(
-                "✓ Container created successfully as user '%s': %s", self.user, container_id)
+                "Container created successfully as user '%s': %s", self.user, container_id)
         except PodmanException as ex:
             self.fail(f"Failed to create container: {ex}")
 
         self.log.info(
             "Waiting for VLLM to start (checking as user '%s')...", self.user)
-        startup_success = wait_for_vllm_startup(
+        if not wait_for_vllm_startup(
             container_id=container_id,
             success_pattern="Application startup complete.",
             failure_pattern="BACKTRACE",
@@ -375,13 +359,11 @@ class SpyreEmbeddingTest(Test):
             log=self.log,
             show_live_logs=True,
             live_log_lines=10
-        )
-
-        if not startup_success:
+        ):
             self.log.error("VLLM failed to start within timeout")
-            log_file = save_container_logs(
-                container_id, self.workdir, test_name=container_name,
-                user=self.user, log=self.log)
+            log_file = self.podman.save_container_logs(
+                 container_id, self.workdir, test_name=container_name,
+                 user=self.user)
             if log_file:
                 self.log.info("Container logs saved to: %s", log_file)
             self.fail("VLLM startup failed")
@@ -394,7 +376,7 @@ class SpyreEmbeddingTest(Test):
             container_info = self.podman.get_container_info(
                 container_id, user=self.user)
             status = container_info.get('State', 'unknown')
-            self.log.info("✓ Container status: %s", status)
+            self.log.info("Container status: %s", status)
             if status != 'running':
                 self.log.error("Container is not in running state")
                 self.fail(f"Container status: {status}")
@@ -402,19 +384,19 @@ class SpyreEmbeddingTest(Test):
             self.log.warning("Failed to get container info: %s", ex)
 
         # Get and display container port (as specified user)
-        host_port = get_container_port(
-            container_id, port=8000, user=self.user, log=self.log)
+        host_port = self.podman.get_container_port(
+            container_id, port=8000, user=self.user)
         if host_port:
-            self.log.info("✓ VLLM API available on port: %d", host_port)
+            self.log.info("VLLM API available on port: %d", host_port)
         else:
             self.log.warning("Could not determine container port")
 
         # Save final logs (as specified user)
-        log_file = save_container_logs(
+        log_file = self.podman.save_container_logs(
             container_id, self.workdir, test_name=container_name,
-            user=self.user, log=self.log)
+            user=self.user)
         if log_file:
-            self.log.info("✓ Container logs saved to: %s", log_file)
+            self.log.info("Container logs saved to: %s", log_file)
 
         self.log.info("=== EE Container Test Completed Successfully ===")
 
