@@ -1,0 +1,11 @@
+# Record durations in seconds for each VPA DTL event.
+all_duration: 20
+cede_duration: 20
+preempt_duration: 60
+fault_duration: 90
+
+# Event policy: open failure after retries always fails; zero records fail only when corresponding require_* is true, otherwise warn.
+require_cede: true
+require_preempt: false
+require_fault: false
+
