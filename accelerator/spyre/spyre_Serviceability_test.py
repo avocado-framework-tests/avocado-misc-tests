@@ -14,36 +14,42 @@
 # Authors: Abdul Haleem (abdhalee@linux.vnet.ibm.com)
 
 import os
+import pwd
+import time
 from avocado import Test
-from avocado.utils import archive, process
+from avocado.utils import process
 from avocado.utils.podman import (Podman, PodmanException,
                                   install_huggingface_cli,
                                   download_model_from_hf,
                                   validate_model_with_sha,
-                                  setup_user_and_group)
+                                  setup_user_and_group,
+                                  wait_for_vllm_startup)
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
-class serviceability(Test):
+class SpyreServiceabilityTest(Test):
 
-    is_fail = 0
     container_id = None
     podman = None
     container_user = None
 
-    def run_cmd(self, cmd):
+    def run_cmd(self, cmd, user=None):
         """Execute a command and track failures."""
-        if process.system(cmd, ignore_status=True, sudo=True, shell=True):
-            self.is_fail += 1
-            self.log.info("%s command failed", cmd)
-        return
+        if user and user != "root":
+            escaped_cmd = cmd.replace("'", "'\"'\"'")
+            cmd = f"su - {user} -c '{escaped_cmd}'"
+        if process.system(cmd, sudo=True, shell=True):
+            return False
+        return True
 
     @staticmethod
-    def run_cmd_out(cmd):
+    def run_cmd_out(cmd, user=None):
         """Execute a command and return output."""
+        if user and user != "root":
+            escaped_cmd = cmd.replace("'", "'\"'\"'")
+            cmd = f"su - {user} -c '{escaped_cmd}'"
         return process.system_output(
-            cmd, shell=True, ignore_status=True,
-            sudo=True).decode("utf-8").strip()
+            cmd, shell=True, sudo=True).decode("utf-8").strip()
 
     def spyre_exists(self):
         """
@@ -76,161 +82,45 @@ class serviceability(Test):
                 return False
         return True
 
-    def run_container(self, container_name="spyre-fvt-test"):
+    def _build_podman_options(self, container_name="spyre-fvt-test"):
         """
-        Run the VLLM container with Spyre AIU support using Podman utility.
+        Build the podman run options list for use with self.podman.run().
 
         :param container_name: Name for the container
-        :return: Container ID
+        :return: List of podman run option strings
         """
-        try:
-            returncode, stdout, stderr = self.podman.run_vllm_container(
-                image=f"{self.container_url}:{self.container_tag}",
-                aiu_ids=self.aiu_pcie_ids,
-                host_models_dir=self.host_models_dir,
-                vllm_model_path=self.vllm_model_path,
-                aiu_world_size=self.aiu_world_size,
-                max_model_len=self.max_model_len,
-                max_batch_size=self.max_batch_size,
-                memory=self.memory,
-                shm_size=self.shm_size,
-                device=self.device,
-                privileged=self.privileged,
-                pids_limit=self.pids_limit,
-                userns=self.userns,
-                group_add=self.group_add,
-                port_mapping=self.port_mapping,
-                vllm_spyre_use_cb=self.vllm_spyre_use_cb,
-                vllm_dt_chunk_len=self.vllm_dt_chunk_len,
-                vllm_spyre_use_chunked_prefill=self.vllm_spyre_use_chunked_prefill,
-                enable_prefix_caching=self.enable_prefix_caching,
-                additional_vllm_args=self.additional_vllm_args,
-                container_name=container_name
-            )
-
-            container_id = stdout.decode().strip()
-            self.log.info("Container created successfully: %s", container_id)
-            self.container_id = container_id
-            return container_id
-
-        except PodmanException as ex:
-            self.fail(f"Failed to run container: {ex}")
-
-    def _build_podman_run_command(self, container_name="spyre-fvt-test"):
-        """
-        Build the podman run command string for manual execution.
-        This is used when we need to run podman in a different session context.
-
-        :param container_name: Name for the container
-        :return: Complete podman run command as string
-        """
-        cmd_parts = [
-            "podman run -d",
-            f"--name {container_name}",
-            f"--device {self.device}",
-            f"--privileged={self.privileged}",
-            f"--pids-limit={self.pids_limit}",
+        podman_options = [
+            "-d",
+            "--name", container_name,
+            f"--device={self.device}",
+            "-v", f"{self.host_models_dir}:/models",
+            "-e", f"AIU_PCIE_IDS={self.aiu_ids}",
+        ]
+        # Add RHAIIS 3.4 specific environment variable
+        if self.rhaiis_version == "3.4":
+            podman_options.extend(["-e", "VLLM_SPYRE_USE_CB=1"])
+        # Continue with podman options in exact order
+        podman_options.extend([
             f"--userns={self.userns}",
             f"--group-add={self.group_add}",
-            f"-p {self.port_mapping}",
-            f"-v {self.host_models_dir}:/models:Z",
+            f"--security-opt={self.security_opt}",
+            f"--pids-limit={self.pids_limit}",
             f"--memory={self.memory}",
             f"--shm-size={self.shm_size}",
-            f"-e VLLM_SPYRE_USE_CB={self.vllm_spyre_use_cb}",
-            f"-e AIU_PCIE_IDS='{self.aiu_pcie_ids}'",
-        ]
+            "-p", self.port_mapping,
+        ])
+        podman_options.append(f"{self.container_url}:{self.container_tag}")
+        podman_options.extend([
+            "--model", self.vllm_model_path,
+            "-tp", str(self.aiu_world_size),
+            f"--max-model-len={self.max_model_len}",
+            f"--max-num-seqs={self.max_batch_size}",
+        ])
+        # Add version-specific VLLM argument for 3.4
+        if self.rhaiis_version == "3.4":
+            podman_options.append("--enable-prefix-caching")
 
-        if self.vllm_dt_chunk_len:
-            cmd_parts.append(f"-e VLLM_DT_CHUNK_LEN={self.vllm_dt_chunk_len}")
-        if self.vllm_spyre_use_chunked_prefill:
-            cmd_parts.append(
-                f"-e VLLM_SPYRE_USE_CHUNKED_PREFILL={self.vllm_spyre_use_chunked_prefill}")
-
-        cmd_parts.append(f"{self.container_url}:{self.container_tag}")
-        cmd_parts.append(f"--model {self.vllm_model_path}")
-        cmd_parts.append(f"--tensor-parallel-size {self.aiu_world_size}")
-        cmd_parts.append(f"--max-model-len {self.max_model_len}")
-        cmd_parts.append(f"--max-num-seqs {self.max_batch_size}")
-
-        if self.enable_prefix_caching:
-            cmd_parts.append("--enable-prefix-caching")
-
-        if self.additional_vllm_args:
-            cmd_parts.extend(self.additional_vllm_args)
-
-        return " ".join(cmd_parts)
-
-    def wait_for_vllm_startup(self, container_id, timeout=300, check_interval=10, user=None):
-        """
-        Wait for VLLM to start by checking container logs for startup message.
-
-        :param container_id: Container ID to monitor
-        :param timeout: Maximum time to wait in seconds
-        :param check_interval: Time between log checks in seconds
-        :param user: Username if container was created by a specific user (for su context)
-        :return: True if startup successful, False otherwise
-        """
-        import time
-        elapsed = 0
-
-        while elapsed < timeout:
-            try:
-                if user:
-                    import tempfile
-                    import pwd
-                    fd, log_file = tempfile.mkstemp(
-                        suffix=".log", prefix=f"podman_logs_{user}_")
-                    os.close(fd)  # Close the file descriptor
-
-                    try:
-                        user_info = pwd.getpwnam(user)
-                        os.chown(log_file, user_info.pw_uid, user_info.pw_gid)
-
-                        write_log_cmd = f"su - {user} -c 'podman logs {container_id} > {log_file} 2>&1'"
-                        process.run(write_log_cmd, shell=True,
-                                    sudo=True, ignore_status=True)
-
-                        with open(log_file, 'r', encoding='utf-8') as f:
-                            log_content = f.read()
-                    except Exception as e:
-                        self.log.warning("Failed to read log file: %s", e)
-                        log_content = ""
-                    finally:
-                        if os.path.exists(log_file):
-                            os.remove(log_file)
-                elif self.podman:
-                    _, logs, _ = self.podman.logs(container_id, tail=200)
-                    log_content = logs.decode()
-                else:
-                    log_content = self.run_cmd_out(
-                        f"podman logs --tail 200 {container_id}")
-
-                if "Application startup complete." in log_content:
-                    self.log.info("VLLM started successfully")
-                    return True
-
-                if "VFIO" in log_content and "fail" in log_content.lower():
-                    self.log.error(
-                        "VFIO device access failure detected in logs")
-                    return False
-
-                self.log.info(
-                    "Waiting for VLLM startup... (%d/%d seconds)", elapsed, timeout)
-                time.sleep(check_interval)
-                elapsed += check_interval
-
-            except PodmanException as ex:
-                self.log.warning(
-                    "Failed to get container logs via API: %s", ex)
-                time.sleep(check_interval)
-                elapsed += check_interval
-            except Exception as ex:
-                self.log.warning("Failed to get container logs: %s", ex)
-                time.sleep(check_interval)
-                elapsed += check_interval
-
-        self.log.error("Timeout waiting for VLLM startup")
-        return False
+        return podman_options
 
     def _setup_user_and_group(self, username, password, add_to_group):
         """
@@ -242,13 +132,16 @@ class serviceability(Test):
         :return: None
         """
         if add_to_group:
-            setup_user_and_group(username, password, self.spyre_group, self.log)
+            setup_user_and_group(username, password,
+                                 self.spyre_group, add_to_group, self.log)
             if username and username != "root":
-                self.log.info("Enable lingering for user %s (run as root)", username)
+                self.log.info(
+                    "Enable lingering for user %s (run as root)", username)
                 self.run_cmd(f"loginctl enable-linger {username}")
         else:
             user_display = username if username else "root"
-            self.log.info("Remove %s from %s group", user_display, self.spyre_group)
+            self.log.info("Remove %s from %s group",
+                          user_display, self.spyre_group)
             self.run_cmd(f"gpasswd -d {user_display} {self.spyre_group}")
 
     def _verify_group_membership(self, username, should_be_in_group):
@@ -295,7 +188,7 @@ class serviceability(Test):
 
     def _start_container_as_user(self, username, container_name):
         """
-        Helper method to start container as specific user.
+        Helper method to start container as specific user using self.podman.run().
 
         :param username: Username to run container as (None or "root" for root)
         :param container_name: Name for the container
@@ -305,34 +198,37 @@ class serviceability(Test):
 
         self.log.info(
             "Cleaning up any existing container named: %s", container_name)
-        if username and username != "root":
-            cleanup_cmd = f"su - {username} -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) podman rm -f {container_name} 2>/dev/null || true'"
-        else:
-            cleanup_cmd = f"su - root -c 'podman rm -f {container_name} 2>/dev/null || true'"
-        process.run(cleanup_cmd, shell=True, sudo=True, ignore_status=True)
+        self.run_cmd(f"podman rm -f {container_name} 2>/dev/null || true",
+                     user=user_display)
 
-        self.log.info("Start container as %s in fresh session", user_display)
-        podman_cmd = self._build_podman_run_command(
+        podman_options = self._build_podman_options(
             container_name=container_name)
-        self.log.info("Podman command to execute: %s", podman_cmd)
+        self.log.info("Starting container as %s", user_display)
+        self.log.info("Full podman command: podman run %s",
+                      " ".join(podman_options))
 
-        if username and username != "root":
-            container_output = self.run_cmd_out(
-                f"su - {username} -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) {podman_cmd}'")
-        else:
-            container_output = self.run_cmd_out(f"su - root -c '{podman_cmd}'")
-
-        self.log.info("Container creation output: %s", container_output)
-
-        container_id = container_output.strip().split(
-            '\n')[-1] if container_output else None
-        if container_id:
+        try:
+            returncode, stdout, stderr = self.podman.run(
+                podman_options=podman_options,
+                user=user_display
+            )
+            if returncode != 0:
+                self.log.error(
+                    "Failed to create container as user '%s'", user_display)
+                self.log.error("stderr: %s", stderr.decode() if stderr else "")
+                return None
+            container_id = stdout.decode().strip() if stdout else None
+            if not container_id or len(container_id) < 12:
+                self.log.warning(
+                    "Could not extract container ID from output: %s", stdout)
+                return None
             self.container_id = container_id
-            self.container_user = username if username else "root"
-            self.log.info("Container ID: %s", container_id)
+            self.container_user = user_display
+            self.log.info("Container created successfully as '%s': %s",
+                          user_display, container_id)
             return container_id
-        else:
-            self.log.warning("Could not extract container ID from output")
+        except PodmanException as ex:
+            self.log.error("Failed to create container: %s", ex)
             return None
 
     def _verify_vfio_access(self, container_id, username, should_succeed, run_inference=False):
@@ -348,9 +244,19 @@ class serviceability(Test):
         user_display = username if username else "root"
 
         self.log.info("Monitor container logs for VLLM startup")
-        timeout = 300 if should_succeed else 120
-        startup_success = self.wait_for_vllm_startup(
-            container_id, timeout=timeout, user=username)
+        timeout = 600 if should_succeed else 120
+        startup_success = wait_for_vllm_startup(
+            container_id=container_id,
+            success_pattern="Application startup complete.",
+            failure_pattern="BACKTRACE",
+            additional_failure_checks=[("VFIO", False), ("fail", False)],
+            timeout=timeout,
+            check_interval=10,
+            user=username,
+            log=self.log,
+            show_live_logs=True,
+            live_log_lines=10
+        )
 
         inference_success = False
         metrics_file = None
@@ -365,13 +271,9 @@ class serviceability(Test):
             )
 
         try:
-            if username and username != "root":
-                log_cmd = f"su - {username} -c 'podman logs --tail 200 {container_id}'"
-                log_content = self.run_cmd_out(log_cmd)
-            else:
-                _, logs, _ = self.podman.logs(container_id, tail=200)
-                log_content = logs.decode()
-
+            _, logs, _ = self.podman.logs(
+                container_id, tail=200, user=username)
+            log_content = logs.decode()
             self.log.info("Container logs:\n%s", log_content)
 
             has_vfio_error = "VFIO" in log_content and (
@@ -415,36 +317,6 @@ class serviceability(Test):
         except PodmanException as ex:
             self.log.warning("Failed to get final logs: %s", ex)
 
-    def _get_container_port(self, container_id, user=None):
-        """
-        Get the actual host port mapped to container port 8000.
-
-        :param container_id: Container ID
-        :param user: Username if container was created by specific user
-        :return: Host port number or None
-        """
-        try:
-            if user and user != "root":
-                port_cmd = f"su - {user} -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) podman port {container_id} 8000'"
-            else:
-                port_cmd = f"su - root -c 'podman port {container_id} 8000'"
-
-            port_output = self.run_cmd_out(port_cmd)
-            self.log.info("Port mapping output: %s", port_output)
-
-            if port_output and ":" in port_output:
-                port = port_output.strip().split(":")[-1]
-                self.log.info(
-                    "Container port 8000 is mapped to host port: %s", port)
-                return int(port)
-            else:
-                self.log.warning(
-                    "Could not parse port from output: %s", port_output)
-                return None
-        except Exception as ex:
-            self.log.error("Failed to get container port: %s", ex)
-            return None
-
     def run_inference_with_metrics(self, container_id, port=None, num_requests=5,
                                    metrics_duration=120, user=None):
         """
@@ -457,31 +329,49 @@ class serviceability(Test):
         :param user: Username if container was created by specific user
         :return: Tuple of (inference_success, metrics_file_path)
         """
-        import time
-        import signal
         self.log.info(
             "=== Starting Inference Test with Metrics Collection ===")
         if port is None:
-            port = self._get_container_port(container_id, user=user)
+            port = self.podman.get_container_port(
+                container_id, port=8000, user=user)
             if port is None:
                 self.log.error(
                     "Could not determine container port, skipping inference tests")
                 return False, None
+
         metrics_dir = os.path.join(self.workdir, "metrics")
         os.makedirs(metrics_dir, exist_ok=True)
         metrics_file = os.path.join(
             metrics_dir, f"{container_id}_aiu_metrics.csv")
-        self.log.info("1 - Starting AIU metrics collection")
-        try:
-            if user and user != "root":
-                metrics_cmd = f"su - {user} -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) nohup podman exec {container_id} bash --login -c \"/aiu-perf-toolkit/bin/aiu-smi --csv\" > {metrics_file} 2>&1 &'"
-            else:
-                metrics_cmd = f"su - root -c 'nohup podman exec {container_id} bash --login -c \"/aiu-perf-toolkit/bin/aiu-smi --csv\" > {metrics_file} 2>&1 &'"
 
-            self.log.info("Starting metrics collection: %s", metrics_cmd)
-            process.run(metrics_cmd, shell=True, sudo=True, ignore_status=True)
+        # When a non-root user runs podman, tee writes the output file under
+        # that user's context. Pre-create the file and grant write permission
+        # so the non-root user can actually write to it (workdir is root-owned).
+        if user and user != "root":
+            try:
+                # create empty file as root
+                open(metrics_file, 'w').close()
+                uid = pwd.getpwnam(user).pw_uid
+                gid = pwd.getpwnam(user).pw_gid
+                # hand ownership to test user
+                os.chown(metrics_file, uid, gid)
+                self.log.info("Pre-created metrics file for user %s: %s",
+                              user, metrics_file)
+            except Exception as ex:
+                self.log.warning("Could not pre-create metrics file: %s", ex)
+
+        self.log.info("1 - Starting AIU metrics collection")
+        metrics_process = None
+        try:
+            metrics_process = self.podman.collect_container_aiu_metrics(
+                container_id=container_id,
+                output_file=metrics_file,
+                stats_command="/aiu-perf-toolkit/bin/aiu-smi --csv",
+                timeout=metrics_duration,
+                user=user
+            )
             self.log.info("AIU metrics collection started in background")
-            time.sleep(2)  # Give metrics collection time to start
+            time.sleep(2)
         except Exception as ex:
             self.log.error("Failed to start AIU metrics collection: %s", ex)
 
@@ -506,7 +396,7 @@ class serviceability(Test):
                     max_tokens=256,
                     temperature=0.7,
                     host="127.0.0.1",
-                    use_jq=False  # Don't use jq for simpler parsing
+                    use_jq=False
                 )
                 if returncode == 0:
                     self.log.info(
@@ -522,17 +412,15 @@ class serviceability(Test):
                 self.log.error(
                     "Failed to send inference request %d: %s", i+1, ex)
                 inference_success = False
-        self.log.info("3 - Waiting for metrics collection to complete")
-        time.sleep(10)
-        try:
-            self.log.info("Stopping metrics collection")
-            if user and user != "root":
-                kill_cmd = f"su - {user} -c 'podman exec {container_id} pkill -f aiu-smi'"
-            else:
-                kill_cmd = f"su - root -c 'podman exec {container_id} pkill -f aiu-smi'"
-            process.run(kill_cmd, shell=True, sudo=True, ignore_status=True)
-        except Exception as ex:
-            self.log.warning("Error stopping metrics process: %s", ex)
+
+        self.log.info("3 - Stopping metrics collection")
+        if metrics_process is not None:
+            try:
+                metrics_process.terminate()
+                self.log.info("AIU metrics collection stopped")
+            except Exception as ex:
+                self.log.warning("Error stopping metrics process: %s", ex)
+
         if os.path.exists(metrics_file):
             file_size = os.path.getsize(metrics_file)
             self.log.info(
@@ -547,6 +435,7 @@ class serviceability(Test):
         else:
             self.log.warning("Metrics file was not created: %s", metrics_file)
             metrics_file = None
+
         self.log.info(
             "=== Inference Test with Metrics Collection Complete ===")
         return inference_success, metrics_file
@@ -556,7 +445,12 @@ class serviceability(Test):
         if "ppc" not in os.uname()[4]:
             self.cancel("supported only on Power platform")
         if 'PowerNV' in open('/proc/cpuinfo', 'r').read():
-            self.cancel("servicelog: is not supported on the PowerNV platform")
+            self.cancel("Test is not supported on the PowerNV platform")
+
+        curr_user = self.run_cmd_out('whoami')
+        if 'root' not in curr_user:
+            self.cancel("Please login as root user and continue")
+
         self.log.info("Checking SELinux status")
         try:
             selinux_status = self.run_cmd_out("getenforce")
@@ -584,60 +478,69 @@ class serviceability(Test):
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel(
                     f"Fail to install {package} required for this test.")
-        tarball = self.fetch_asset('ServiceReport.zip', locations=[
-                                   'https://github.com/linux-ras/ServiceReport'
-                                   '/archive/master.zip'], expire='7d')
-        archive.extract(tarball, self.workdir)
+
+        self.rhaiis_version = self.params.get("RHAIIS_VERSION", default="")
         self.spyre_group = self.params.get("SPYRE_GROUP", default="")
-        self.aiu_pcie_ids = self.params.get("AIU_PCIE_IDS", default="")
+        self.aiu_ids = self.params.get("AIU_PCIE_IDS", default="")
         self.aiu_world_size = self.params.get("AIU_WORLD_SIZE", default="")
         self.max_model_len = self.params.get("MAX_MODEL_LEN", default="")
         self.max_batch_size = self.params.get("MAX_BATCH_SIZE", default="")
         self.host_models_dir = self.params.get("HOST_MODELS_DIR", default="")
         self.vllm_model_path = self.params.get("VLLM_MODEL_PATH", default="")
+
         if self.host_models_dir:
             if not os.path.exists(self.host_models_dir):
-                self.log.info("HOST_MODELS_DIR does not exist, creating: %s", self.host_models_dir)
+                self.log.info(
+                    "HOST_MODELS_DIR does not exist, creating: %s", self.host_models_dir)
                 try:
                     os.makedirs(self.host_models_dir, exist_ok=True)
-                    self.log.info("Successfully created HOST_MODELS_DIR: %s", self.host_models_dir)
+                    self.log.info(
+                        "Successfully created HOST_MODELS_DIR: %s", self.host_models_dir)
                 except Exception as ex:
-                    self.cancel(f"Failed to create HOST_MODELS_DIR {self.host_models_dir}: {ex}")
+                    self.cancel(
+                        f"Failed to create HOST_MODELS_DIR {self.host_models_dir}: {ex}")
             else:
-                self.log.info("HOST_MODELS_DIR exists: %s", self.host_models_dir)
-        spyre_models_base = self.params.get("SPYRE_MODELS_BASE", default="/opt/ibm/spyre/models")
-        model_name = self.params.get("MODEL_NAME", default="granite-3.3-8b-instruct")
-        hf_model_id = self.params.get("HF_MODEL_ID", default="ibm-granite/granite-3.3-8b-instruct")
-        model_dir = os.path.join(spyre_models_base, model_name)
+                self.log.info("HOST_MODELS_DIR exists: %s",
+                              self.host_models_dir)
+
+        model_name = os.path.basename(self.vllm_model_path)
+        hf_model_name = self.params.get(
+            "HF_MODEL_NAME", default="ibm-granite/granite-3.3-8b-instruct")
+        model_dir = os.path.join(self.host_models_dir, model_name)
         self.log.info("Model configuration:")
-        self.log.info("  Base directory: %s", spyre_models_base)
+        self.log.info("  Base directory: %s", self.host_models_dir)
         self.log.info("  Model name: %s", model_name)
-        self.log.info("  HuggingFace Model ID: %s", hf_model_id)
+        self.log.info("  HuggingFace Model Name: %s", hf_model_name)
         self.log.info("  Full model path: %s", model_dir)
+
         self.log.info("Checking Hugging Face CLI installation...")
         if not install_huggingface_cli():
-            self.log.warning("Failed to install Hugging Face CLI. Model download may fail.")
+            self.log.warning(
+                "Failed to install Hugging Face CLI. Model download may fail.")
+
         if not os.path.exists(model_dir) or not os.listdir(model_dir):
-            self.log.info("Downloading model: %s", hf_model_id)
+            self.log.info("Downloading model: %s", hf_model_name)
             download_success = download_model_from_hf(
-                hf_model_id=hf_model_id,
-                local_dir=spyre_models_base,
+                hf_model_id=hf_model_name,
+                local_dir=self.host_models_dir,
                 model_name=model_name
             )
             if download_success:
                 self.log.info("Model download completed successfully")
-                # Validate the downloaded model with SHA
                 self.log.info("Validating downloaded model...")
                 is_valid, messages = validate_model_with_sha(model_dir)
                 for msg in messages:
                     self.log.info("  %s", msg)
                 if is_valid:
-                    self.log.info("Model validation PASSED: All checks successful")
+                    self.log.info(
+                        "Model validation PASSED: All checks successful")
                 else:
-                    self.log.warning("Model validation FAILED: Please review validation messages above")
+                    self.log.warning(
+                        "Model validation FAILED: Please review validation messages above")
                     self.log.warning("Consider re-downloading the model")
             else:
-                self.log.warning("Failed to download model. Please download manually to: %s", model_dir)
+                self.log.warning(
+                    "Failed to download model. Please download manually to: %s", model_dir)
         else:
             self.log.info("Model directory already exists: %s", model_dir)
             self.log.info("Validating existing model...")
@@ -645,59 +548,49 @@ class serviceability(Test):
             for msg in messages:
                 self.log.info("  %s", msg)
             if is_valid:
-                self.log.info("Existing model validation PASSED: All checks successful")
+                self.log.info(
+                    "Existing model validation PASSED: All checks successful")
             else:
-                self.log.warning("Existing model validation FAILED: Please review validation messages above")
-                self.log.warning("Model may be incomplete or corrupted. Consider re-downloading.")
-        self.vllm_spyre_use_cb = self.params.get(
-            "VLLM_SPYRE_USE_CB", default="")
+                self.log.warning(
+                    "Existing model validation FAILED: Please review validation messages above")
+                self.log.warning(
+                    "Model may be incomplete or corrupted. Consider re-downloading.")
+
         self.memory = self.params.get("MEMORY", default="")
         self.shm_size = self.params.get("SHM_SIZE", default="")
         self.container_url = self.params.get("CONTAINER_URL", default="")
         self.container_tag = self.params.get("CONTAINER_TAG", default="")
-        self.image_id = self.params.get("IMAGE_ID", default="")
-        self.clog_file = self.params.get("CLOG_FILE", default="")
-        self.precompiled_decoders = self.params.get(
-            "PRECOMPILED_DECODERS", default="")
-        self.cache_dir = self.params.get("CACHE_DIR", default="")
-        self.senlib_config_file = self.params.get(
-            "SENLIB_CONFIG_FILE", default="")
         self.api_key = self.params.get("API_KEY", default="")
-        self.device = self.params.get("DEVICE", default="")
-        self.privileged = self.params.get("PRIVILEGED", default="")
-        self.pids_limit = self.params.get("PIDS_LIMIT", default="")
-        self.userns = self.params.get("USERNS", default="")
-        self.group_add = self.params.get("GROUP_ADD", default="")
-        self.port_mapping = self.params.get("PORT_MAPPING", default="")
-        self.vllm_dt_chunk_len = self.params.get(
-            "VLLM_DT_CHUNK_LEN", default="")
-        self.vllm_spyre_use_chunked_prefill = self.params.get(
-            "VLLM_SPYRE_USE_CHUNKED_PREFILL", default="")
-        enable_prefix_caching_str = self.params.get(
-            "ENABLE_PREFIX_CACHING", default="")
-        self.enable_prefix_caching = enable_prefix_caching_str.lower() in (
-            "true", "1", "yes") if enable_prefix_caching_str else False
-        additional_vllm_args_str = self.params.get(
-            "ADDITIONAL_VLLM_ARGS", default="")
-        self.additional_vllm_args = [arg.strip() for arg in additional_vllm_args_str.split(
-            ",") if arg.strip()] if additional_vllm_args_str else None
-
+        self.device = self.params.get("DEVICE", default="/dev/vfio")
+        self.userns = self.params.get("USERNS", default="keep-id")
+        self.group_add = self.params.get("GROUP_ADD", default="keep-groups")
+        self.security_opt = self.params.get(
+            "SECURITY_OPT", default="label=disable")
+        self.pids_limit = self.params.get("PIDS_LIMIT", default="0")
+        self.port_mapping = self.params.get(
+            "PORT_MAPPING", default="127.0.0.1:8000:8000")
+        self.username = self.params.get("USER", default=None)
+        if not self.username:
+            self.cancel("USER parameter is required for this test")
+        self.password = self.params.get("PASSWORD", default=None)
+        if not self.password:
+            self.cancel("PASSWORD parameter is required for this test")
+        self.log.info("Step: Initializing Podman utility")
         try:
             self.podman = Podman()
-            print(dir(self.podman))
             self.log.info("Podman utility initialized successfully")
         except PodmanException as ex:
             self.cancel(f"Failed to initialize Podman: {ex}")
 
         if self.api_key and self.container_url:
             try:
-                registry = self.container_url.split(
-                    '/')[0]  # Extract registry from URL
+                registry = self.container_url.split('/')[0]
+                self.log.info("Logging in to registry: %s", registry)
                 self.podman.login(registry=registry, api_key=self.api_key)
                 self.log.info(
                     "Successfully logged in to registry: %s", registry)
             except PodmanException as ex:
-                self.log.warning("Failed to login to registry: %s", ex)
+                self.cancel(f"Failed to login to registry: {ex}")
 
         if self.container_url and self.container_tag:
             image = f"{self.container_url}:{self.container_tag}"
@@ -709,67 +602,80 @@ class serviceability(Test):
                     "Successfully pulled image for root user: %s", image)
             except PodmanException as ex:
                 self.log.warning("Failed to pull image for root user: %s", ex)
-            test_username = self.params.get("TEST_USERNAME", default="")
-            if test_username:
-                try:
-                    user_exists_cmd = f"id -u {test_username} 2>/dev/null"
-                    user_check = process.run(user_exists_cmd, shell=True, sudo=True, ignore_status=True)
-                    if user_check.exit_status != 0:
-                        self.log.info("User %s does not exist, creating user", test_username)
-                        test_password = self.params.get("TEST_PASSWORD", default="testpass123")
-                        create_user_cmd = f"useradd -m {test_username}"
-                        result = process.run(create_user_cmd, shell=True, sudo=True, ignore_status=True)
-                        if result.exit_status == 0:
-                            self.log.info("Successfully created user: %s", test_username)
-                            set_pass_cmd = f"echo '{test_username}:{test_password}' | chpasswd"
-                            process.run(set_pass_cmd, shell=True, sudo=True, ignore_status=True)
-                            self.log.info("Password set for user: %s", test_username)
-                        else:
-                            self.log.warning("Failed to create user %s: %s", test_username, result.stderr_text)
-                    else:
-                        self.log.info("User %s already exists", test_username)
-                    self.log.info(
-                        "Pulling container image for user %s: %s", test_username, image)
 
-                    uid_cmd = f"id -u {test_username}"
+            if self.username:
+                try:
+                    user_exists_cmd = f"id -u {self.username} 2>/dev/null"
+                    user_check = process.run(
+                        user_exists_cmd, shell=True, sudo=True, ignore_status=True)
+                    if user_check.exit_status != 0:
+                        self.log.info(
+                            "User %s does not exist, creating user", self.username)
+                        create_user_cmd = f"useradd -m {self.username}"
+                        result = process.run(
+                            create_user_cmd, shell=True, sudo=True, ignore_status=True)
+                        if result.exit_status == 0:
+                            self.log.info(
+                                "Successfully created user: %s", self.username)
+                            set_pass_cmd = f"echo '{self.username}:{self.password}' | chpasswd"
+                            process.run(set_pass_cmd, shell=True,
+                                        sudo=True, ignore_status=True)
+                            self.log.info(
+                                "Password set for user: %s", self.username)
+                        else:
+                            self.log.warning("Failed to create user %s: %s",
+                                             self.username, result.stderr_text)
+                    else:
+                        self.log.info("User %s already exists", self.username)
+
+                    uid_cmd = f"id -u {self.username}"
                     uid_result = process.run(
                         uid_cmd, shell=True, sudo=True, ignore_status=True)
                     if uid_result.exit_status == 0:
                         user_uid = uid_result.stdout_text.strip()
                         runtime_dir = f"/run/user/{user_uid}"
                         self.log.info(
-                            "Setting up runtime directory for user %s: %s", test_username, runtime_dir)
+                            "Setting up runtime directory for user %s: %s",
+                            self.username, runtime_dir)
                         process.run(
                             f"mkdir -p {runtime_dir}", shell=True, sudo=True, ignore_status=True)
-                        process.run(f"chown {test_username}:{test_username} {runtime_dir}",
+                        process.run(f"chown {self.username}:{self.username} {runtime_dir}",
                                     shell=True, sudo=True, ignore_status=True)
                         process.run(
                             f"chmod 700 {runtime_dir}", shell=True, sudo=True, ignore_status=True)
 
                     if self.api_key:
                         registry = self.container_url.split('/')[0]
-                        login_cmd = f"su - {test_username} -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) echo {self.api_key} | podman login {registry} --username=iamapikey --password-stdin'"
+                        login_cmd = (
+                            f"su - {self.username} -c "
+                            f"'XDG_RUNTIME_DIR=/run/user/$(id -u) echo {self.api_key} | "
+                            f"podman login {registry} --username=iamapikey --password-stdin'"
+                        )
                         result = process.run(
                             login_cmd, shell=True, sudo=True, ignore_status=True)
                         if result.exit_status == 0:
                             self.log.info(
-                                "User %s logged in to registry: %s", test_username, registry)
+                                "User %s logged in to registry: %s", self.username, registry)
                         else:
                             self.log.warning(
-                                "Failed to login user %s to registry", test_username)
+                                "Failed to login user %s to registry", self.username)
 
-                    pull_cmd = f"su - {test_username} -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) podman pull {image}'"
+                    pull_cmd = (
+                        f"su - {self.username} -c "
+                        f"'XDG_RUNTIME_DIR=/run/user/$(id -u) podman pull {image}'"
+                    )
                     result = process.run(
                         pull_cmd, shell=True, sudo=True, ignore_status=True)
                     if result.exit_status == 0:
                         self.log.info(
-                            "Successfully pulled image for user %s: %s", test_username, image)
+                            "Successfully pulled image for user %s: %s", self.username, image)
                     else:
                         self.log.warning(
-                            "Failed to pull image for user %s: %s", test_username, result.stderr_text)
+                            "Failed to pull image for user %s: %s",
+                            self.username, result.stderr_text)
                 except Exception as ex:
                     self.log.warning(
-                        "Failed to pull image for user %s: %s", test_username, ex)
+                        "Failed to pull image for user %s: %s", self.username, ex)
 
     def test_root_in_spyre_group(self):
         """
@@ -777,13 +683,12 @@ class serviceability(Test):
         Expected: Container should successfully access VFIO devices and VLLM should start.
         """
         self.log.info("=== Test: Root user IN spyre_group group ===")
-        curr_user = self.run_cmd_out('whoami')
-        if 'root' not in curr_user:
-            self.cancel("Please login as root user and continue")
         self.log.info("1 - Initiate Spyre device configuration")
         self.run_cmd("servicereport -r -p spyre")
         self.log.info("2 - Validate Spyre device configuration")
-        self.run_cmd("servicereport -v -p spyre")
+        res = self.run_cmd_out("servicereport -v -p spyre")
+        if "FAIL" in res:
+            self.cancel("Servicereport configuration failed!")
         self.log.info("3 - Checking VFIO Spyre device")
         if not self.spyre_exists():
             self.cancel("Please check for spyre configuration")
@@ -821,6 +726,11 @@ class serviceability(Test):
         self._verify_vfio_access(
             container_id, username="root", should_succeed=True, run_inference=True)
 
+        log_file = self.podman.save_container_logs(
+            container_id, self.workdir, test_name="spyre-fvt-test")
+        if log_file:
+            self.log.info("Container logs saved to: %s", log_file)
+
     def test_root_not_in_spyre_group(self):
         """
         Test VFIO Spyre device access when root user is NOT in spyre_group group.
@@ -846,24 +756,26 @@ class serviceability(Test):
         Expected: Container should successfully access VFIO devices and VLLM should start.
         """
         self.log.info("=== Test: Non-root user IN spyre_group group ===")
-        username = self.params.get("TEST_USERNAME", default="")
-        password = self.params.get("TEST_PASSWORD", default=None)
-        if not password:
-            self.cancel("TEST_PASSWORD parameter is required for this test")
         self._setup_user_and_group(
-            username=username, password=password, add_to_group=True)
+            username=self.username, password=self.password, add_to_group=True)
         self._verify_group_membership(
-            username=username, should_be_in_group=True)
+            username=self.username, should_be_in_group=True)
         self.log.info("Check VFIO device permissions")
         if self.spyre_exists():
             vfio_perms = self.run_cmd_out("ls -l /dev/vfio")
             self.log.info("VFIO device permissions:\n%s", vfio_perms)
         container_id = self._start_container_as_user(
-            username=username, container_name=f"spyre-fvt-{username}")
+            username=self.username, container_name=f"spyre-fvt-{self.username}")
         if not container_id:
             self.fail("Failed to create container")
         self._verify_vfio_access(
-            container_id, username=username, should_succeed=True, run_inference=True)
+            container_id, username=self.username, should_succeed=True, run_inference=True)
+
+        log_file = self.podman.save_container_logs(
+            container_id, self.workdir, test_name=f"spyre-fvt-{self.username}",
+            user=self.username)
+        if log_file:
+            self.log.info("Container logs saved to: %s", log_file)
 
     def test_user_not_in_spyre_group(self):
         """
@@ -871,81 +783,59 @@ class serviceability(Test):
         Expected: Container should fail to access VFIO devices.
         """
         self.log.info("=== Test: Non-root user NOT in spyre_group group ===")
-        username = self.params.get("TEST_USERNAME", default="")
-        password = self.params.get("TEST_PASSWORD", default=None)
-        if not password:
-            self.cancel("TEST_PASSWORD parameter is required for this test")
         self._setup_user_and_group(
-            username=username, password=password, add_to_group=False)
+            username=self.username, password=self.password, add_to_group=False)
         self._verify_group_membership(
-            username=username, should_be_in_group=False)
+            username=self.username, should_be_in_group=False)
         self.log.info("Check VFIO device permissions")
         if self.spyre_exists():
             vfio_perms = self.run_cmd_out("ls -l /dev/vfio")
             self.log.info("VFIO device permissions:\n%s", vfio_perms)
         container_id = self._start_container_as_user(
-            username=username, container_name=f"spyre-fvt-{username}-nospyre_group")
+            username=self.username, container_name=f"spyre-fvt-{self.username}-nospyre_group")
         if not container_id:
             self.log.info(
                 "PASS: Container creation failed as expected (no %s group access)", self.spyre_group)
             return
         self._verify_vfio_access(
-            container_id, username=username, should_succeed=False, run_inference=False)
+            container_id, username=self.username, should_succeed=False, run_inference=False)
 
     def tearDown(self):
         """Clean up: stop and remove container if it exists."""
-        if self.container_id:
+        if self.container_id and self.podman:
             try:
-                self.log.info("=== Final Container Logs ===")
+                self.log.info("=== Cleanup: Retrieving Final Container Logs (user: '%s') ===",
+                              self.container_user)
                 try:
-                    if self.container_user and self.container_user != "root":
-                        logs_cmd = f"su - {self.container_user} -c 'podman logs {self.container_id}'"
-                        logs_output = self.run_cmd_out(logs_cmd)
-                        self.log.info("Container logs:\n%s", logs_output)
-                    elif self.podman:
-                        _, logs, _ = self.podman.logs(self.container_id)
-                        self.log.info("Container logs:\n%s", logs.decode())
-                    else:
-                        logs_output = self.run_cmd_out(
-                            f"podman logs {self.container_id}")
-                        self.log.info("Container logs:\n%s", logs_output)
+                    self.podman.logs(self.container_id,
+                                     user=self.container_user)
                 except Exception as log_ex:
                     self.log.warning(
-                        "Failed to retrieve final container logs: %s", log_ex)
-                if self.container_user and self.container_user != "root":
-                    self.log.info("Stopping container %s created by user %s",
-                                  self.container_id, self.container_user)
-                    self.run_cmd(
-                        f"su - {self.container_user} -c 'podman stop {self.container_id}'")
-                    self.log.info("Removing container %s", self.container_id)
-                    self.run_cmd(
-                        f"su - {self.container_user} -c 'podman rm -f {self.container_id}'")
-                    self.log.info(
-                        "Container cleanup completed for user %s", self.container_user)
-                elif self.podman:
-                    self.log.info("Stopping container: %s", self.container_id)
-                    self.podman.stop(self.container_id)
-                    self.log.info("Removing container: %s", self.container_id)
-                    self.podman.remove(self.container_id, force=True)
-                    self.log.info("Container cleanup completed")
-                else:
-                    self.log.info("Attempting cleanup with podman command")
-                    self.run_cmd(f"podman stop {self.container_id}")
-                    self.run_cmd(f"podman rm -f {self.container_id}")
+                        "Failed to retrieve final logs: %s", log_ex)
 
-            except PodmanException as ex:
-                self.log.warning(
-                    "Failed to cleanup container via Podman API: %s", ex)
+                self.log.info("Stopping container '%s': %s",
+                              self.container_user, self.container_id)
                 try:
-                    if self.container_user and self.container_user != "root":
-                        self.run_cmd(
-                            f"su - {self.container_user} -c 'podman rm -f {self.container_id}'")
-                    else:
-                        self.run_cmd(f"podman rm -f {self.container_id}")
+                    self.podman.stop(self.container_id,
+                                     user=self.container_user)
+                except Exception as stop_ex:
+                    self.log.warning(
+                        "Failed to stop via podman utility: %s", stop_ex)
+                    stop_cmd = f"su - {self.container_user} -c 'podman stop {self.container_id}'"
+                    process.run(stop_cmd, shell=True)
+
+                self.log.info("Removing container '%s': %s",
+                              self.container_user, self.container_id)
+                self.podman.remove(self.container_id, user=self.container_user)
+                self.log.info("Container cleanup completed")
+            except Exception as ex:
+                self.log.warning("Failed to cleanup container: %s", ex)
+                try:
+                    self.run_cmd(
+                        f"podman rm -f {self.container_id}",
+                        user=self.container_user)
                     self.log.info(
                         "Container cleanup completed via command line")
                 except Exception as cmd_ex:
                     self.log.warning(
-                        "Failed to cleanup container via command line: %s", cmd_ex)
-            except Exception as ex:
-                self.log.warning("Failed to cleanup container: %s", ex)
+                        "Failed to cleanup via command line: %s", cmd_ex)
