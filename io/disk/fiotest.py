@@ -23,7 +23,6 @@ FIO Test
 """
 
 import os
-import time
 import avocado
 
 from avocado import Test
@@ -32,12 +31,13 @@ from avocado.utils import build
 from avocado.utils import pmem
 from avocado.utils import disk
 from avocado.utils import dmesg
-from avocado.utils import lv_utils, wait
+from avocado.utils import lv_utils
 from avocado.utils import process, distro
 from avocado.utils import softwareraid
 from avocado.utils.partition import Partition
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.partition import PartitionError
+from avocado.utils.disk import cleanup_disks
 
 
 class FioTest(Test):
@@ -211,26 +211,11 @@ class FioTest(Test):
         cleanup the disk and directory before test starts on it
         """
         self.log.info("Pre_cleaning of disk and directories...")
-        disk_list = ['/dev/mapper/avocado_vg-avocado_lv', self.raid_name,
-                     self.disk]
-        for disk in disk_list:
-            self.delete_fs(disk)
-        self.log.info("checking ...lv/vg existence...")
-        if lv_utils.lv_check(self.vgname, self.lvname):
-            self.log.info("found lv existence... deleting it")
-            self.delete_lv()
-        elif lv_utils.vg_check(self.vgname):
-            self.log.info("found vg existence ... deleting it")
-            lv_utils.vg_remove(self.vgname)
-        else:
-            self.log.info("No VG/LV detected")
-        self.log.info("checking for sraid existence...")
-        if self.sraid.exists():
-            self.log.info("found sraid existence... deleting it")
-            self.delete_raid()
-        else:
-            self.log.info("No softwareraid detected ")
-        self.log.info("\n End of pre_cleanup")
+        try:
+            cleanup_disks([self.disk], logger=self.log)
+            self.log.info("Pre-cleanup completed successfully")
+        except Exception as e:
+            self.cancel("Pre-cleanup failed, cannot run on dirty disk: %s" % e)
 
     def create_raid(self, l_disk, l_raid_name):
         """
@@ -279,116 +264,6 @@ class FioTest(Test):
             self.fail("Mounting disk %s on directory %s failed"
                       % (l_disk, mountpoint))
 
-    def delete_raid(self):
-        """
-        it checks for existing of raid and deletes it if exists
-        """
-        self.log.info("deleting Sraid %s" % self.raid_name)
-
-        def is_raid_deleted():
-            self.sraid.stop()
-            self.sraid.clear_superblock()
-            self.log.info("checking for raid metadata")
-            cmd = "wipefs -af %s" % self.disk
-            process.system(cmd, shell=True, ignore_status=True)
-            if self.sraid.exists():
-                return False
-            return True
-        self.log.info("checking lvm_metadata on %s" % self.raid_name)
-        cmd = 'blkid -o value -s TYPE %s' % self.raid_name
-        out = process.system_output(cmd, shell=True,
-                                    ignore_status=True).decode("utf-8")
-        if out == 'LVM2_member':
-            cmd = "wipefs -af %s" % self.raid_name
-            process.system(cmd, shell=True, ignore_status=True)
-        if wait.wait_for(is_raid_deleted, timeout=10):
-            self.log.info("software raid  %s deleted" % self.raid_name)
-        else:
-            self.err_mesg.append("failed to delete raid %s" % self.raid_name)
-
-    def delete_lv(self):
-        """
-        checks if lv/vg exists and delete them along with its metadata
-        if exists.
-        """
-        def is_lv_deleted():
-            lv_utils.lv_remove(self.vgname, self.lvname)
-            time.sleep(5)
-            lv_utils.vg_remove(self.vgname)
-            if lv_utils.lv_check(self.vgname, self.lvname):
-                return False
-            return True
-        if wait.wait_for(is_lv_deleted, timeout=10):
-            self.log.info("lv %s deleted" % self.lvname)
-        else:
-            self.err_mesg.append("lv %s not deleted" % self.lvname)
-        # checking and deleting if lvm_meta_data exists after lv removed
-        cmd = 'blkid -o value -s TYPE %s' % self.lv_disk
-        out = process.system_output(cmd, shell=True,
-                                    ignore_status=True).decode("utf-8")
-        if out == 'LVM2_member':
-            cmd = "wipefs -af %s" % self.lv_disk
-            process.system(cmd, shell=True, ignore_status=True)
-
-    def delete_fs(self, l_disk):
-        """
-        checks for disk/dir mount, unmount if mounted and checks for
-        filesystem existence and wipe it off after dir/disk unmount.
-
-        :param l_disk: disk name for which you want to check the mount status
-        :return: None
-        """
-        def is_fs_deleted():
-            cmd = "wipefs -af %s" % l_disk
-            process.system(cmd, shell=True, ignore_status=True)
-            if disk.fs_exists(l_disk):
-                return False
-            return True
-
-        def is_disk_unmounted():
-            cmd = "umount %s" % l_disk
-            cmd1 = 'umount /dev/mapper/avocado_vg-avocado_lv'
-            process.system(cmd, shell=True, ignore_status=True)
-            process.system(cmd1, shell=True, ignore_status=True)
-            if disk.is_disk_mounted(l_disk):
-                return False
-            return True
-
-        def is_dir_unmounted():
-            cmd = 'umount %s' % self.dir
-            process.system(cmd, shell=True, ignore_status=True)
-            if disk.is_dir_mounted(self.dir):
-                return False
-            return True
-
-        self.log.info("checking if disk is mounted.")
-        if disk.is_disk_mounted(l_disk):
-            self.log.info("%s is mounted, unmounting it ....", l_disk)
-            if wait.wait_for(is_disk_unmounted, timeout=10):
-                self.log.info("%s unmounted successfully" % l_disk)
-            else:
-                self.err_mesg.append("%s unmount failed", l_disk)
-        else:
-            self.log.info("disk %s not mounted." % l_disk)
-        self.log.info("checking if dir %s is mounted." % self.dir)
-        if disk.is_dir_mounted(self.dir):
-            self.log.info("%s is mounted, unmounting it ....", self.dir)
-            if wait.wait_for(is_dir_unmounted, timeout=10):
-                self.log.info("%s unmounted successfully" % self.dir)
-            else:
-                self.err_mesg.append("failed to unount %s", self.dir)
-        else:
-            self.log.info("dir %s not mounted." % self.dir)
-        self.log.info("checking if fs exists in {}" .format(l_disk))
-        if disk.fs_exists(l_disk):
-            self.log.info("found fs on %s, removing it....", l_disk)
-            if wait.wait_for(is_fs_deleted, timeout=10):
-                self.log.info("fs removed successfully..")
-            else:
-                self.err_mesg.append("failed to delete fs on %s", l_disk)
-        else:
-            self.log.info("No fs detected on %s" % self.disk)
-
     def test(self):
         """
         Execute 'fio' with appropriate parameters.
@@ -425,14 +300,21 @@ class FioTest(Test):
         '''
         Cleanup of disk used to perform this test
         '''
-        if os.path.exists(self.fio_file):
-            os.remove(self.fio_file)
-        if self.fs_create:
-            self.delete_fs(self.target)
-        if self.lv_create:
-            self.delete_lv()
-        if self.raid_create:
-            self.delete_raid()
-        dmesg.clear_dmesg()
+        try:
+            if os.path.exists(self.fio_file):
+                os.remove(self.fio_file)
+        except Exception as e:
+            self.log.warning("Failed to remove fio file: %s", e)
+        if getattr(self, 'disk', None):
+            try:
+                cleanup_disks([self.disk], logger=self.log, mode="full")
+            except Exception as e:
+                self.log.error("Disk cleanup failed for %s: %s", self.disk, e)
+
+        try:
+            dmesg.clear_dmesg()
+        except Exception as e:
+            self.log.warning("Failed to clear dmesg: %s", e)
+
         if self.err_mesg:
             self.log.warn("test failed with errors: %s" % self.err_mesg)

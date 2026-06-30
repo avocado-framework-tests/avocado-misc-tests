@@ -34,6 +34,7 @@ from avocado.utils import softwareraid
 from avocado.utils.partition import Partition
 from avocado.utils.partition import PartitionError
 from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils.disk import cleanup_disks
 
 
 class Dbench(Test):
@@ -127,29 +128,27 @@ class Dbench(Test):
                     self.fs_create = True
 
     def pre_cleanup(self):
-        umount_dir = "umount -f %s" % self.mountpoint
-        process.system(umount_dir, shell=True, ignore_status=True)
-        delete_lv = "lvremove -f /dev/mapper/avocado_vg-avocado_lv"
-        process.system(delete_lv, shell=True, ignore_status=True)
-        delete_vg = "vgremove -f avocado_vg"
-        process.system(delete_vg, shell=True, ignore_status=True)
-        delete_rd = 'mdadm --stop /dev/%s' % self.md_name
-        process.system(delete_rd, shell=True, ignore_status=True)
+        """
+        Cleanup disk before test using light mode (default).
 
-    def clear_disk(self, obj, disk):
-        obj.unmount()
-        delete_fs = "dd if=/dev/zero bs=512 count=512 of=%s" % disk
-        if process.system(delete_fs, shell=True, ignore_status=False):
-            self.fail("Failed to delete filesystem on %s", disk)
+        light mode removes LVM/RAID/mounts but keeps the partition table,
+        which is sufficient since a new filesystem is created right after.
+        cleanup_disks() validates that disk_list is non-empty, all entries
+        resolve to existing /dev paths, and mode is one of light/full/auto —
+        raising ValueError for invalid input.
+        Cancels the test on failure to avoid running on a dirty disk.
+        """
+        self.log.info("Pre_cleaning of disk and directories...")
+        try:
+            cleanup_disks([self.disk], logger=self.log)
+            self.log.info("Pre-cleanup completed successfully")
+        except Exception as e:
+            self.cancel("Pre-cleanup failed, cannot run on dirty disk: %s" % e)
 
     def create_raid(self, l_disk, l_raid_name):
         self.sraid = softwareraid.SoftwareRaid(l_raid_name, '0',
                                                l_disk.split(), '1.2')
         self.sraid.create()
-
-    def delete_raid(self):
-        self.sraid.stop()
-        self.sraid.clear_superblock()
 
     def create_lv(self, l_disk):
         vgname = 'avocado_vg'
@@ -158,12 +157,6 @@ class Dbench(Test):
         lv_utils.vg_create(vgname, l_disk, force=True)
         lv_utils.lv_create(vgname, lvname, lv_size)
         return '/dev/mapper/%s-%s' % (vgname, lvname)
-
-    def delete_lv(self):
-        vgname = 'avocado_vg'
-        lvname = 'avocado_lv'
-        lv_utils.lv_remove(vgname, lvname)
-        lv_utils.vg_remove(vgname)
 
     def create_fs(self, l_disk, fstype):
         self.part_obj = Partition(l_disk, mountpoint=self.mountpoint)
@@ -200,9 +193,8 @@ class Dbench(Test):
         '''
         Cleanup of disk used to perform this test
         '''
-        if self.fs_create:
-            self.clear_disk(self.part_obj, self.disk)
-        if self.lv_create:
-            self.delete_lv()
-        if self.raid_create:
-            self.delete_raid()
+        if getattr(self, 'disk', None):
+            try:
+                cleanup_disks([self.disk], logger=self.log, mode="full")
+            except Exception as e:
+                self.log.error("Disk cleanup failed for %s: %s", self.disk, e)

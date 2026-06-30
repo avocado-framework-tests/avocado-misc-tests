@@ -37,6 +37,7 @@ from avocado.utils import lv_utils
 from avocado.utils import distro
 from avocado.utils import disk
 from avocado.utils.disk import DiskError
+from avocado.utils.disk import cleanup_disks
 
 
 class Lvsetup(Test):
@@ -216,3 +217,9 @@ class Lvsetup(Test):
         self.delete_lv()
         if not self.disks:
             disk.delete_loop_device(self.device)
+
+        if hasattr(self, 'disks') and self.disks:
+            try:
+                cleanup_disks(self.disks, logger=self.log, mode="full")
+            except Exception as e:
+                self.log.error("Disk cleanup failed for %s: %s", self.disks, e)
