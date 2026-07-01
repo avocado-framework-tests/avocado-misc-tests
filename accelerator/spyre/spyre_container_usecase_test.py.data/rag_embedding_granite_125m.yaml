@@ -1,0 +1,77 @@
+# RAG Embedding Use Case Configuration
+# Model: Granite Embedding 125M English
+# Batch sizes: 1,2,16,32,64,128,256
+# Prompt lengths: 64,128,256,512
+# Maximum output context size: 768
+# Number of cards per container: 1
+
+TEST_NAME: "RAG_Embedding"
+
+# Container Configuration
+CONTAINER_URL: ""
+CONTAINER_TAG: ""
+CONTAINER_REGISTRY: ""
+
+# AIU Configuration
+AIU_PCIE_IDS: "0333:70:00.0"
+AIU_WORLD_SIZE: 1
+
+# Model Configuration
+HOST_MODELS_DIR: "/opt/ibm/spyre/models"
+VLLM_MODEL_PATH: "/models/granite-embedding"
+
+# VLLM Parameters
+# Note: For embedding tests, you can specify different values
+# Default values shown below, override as needed
+MAX_MODEL_LEN: 512
+MAX_BATCH_SIZE: 4
+
+# Container Runtime Parameters
+MEMORY: "1500G"
+# SHM_SIZE: ""  # Not used for Embedding
+DEVICE: "/dev/vfio"
+PRIVILEGED: "true"
+PIDS_LIMIT: "0"
+USERNS: "keep-id"
+GROUP_ADD: "keep-groups"
+PORT_MAPPING: "127.0.0.1::8000"
+
+# VLLM Environment Variables
+VLLM_SPYRE_USE_CB: "1"
+VLLM_DT_CHUNK_LEN: 0
+VLLM_SPYRE_USE_CHUNKED_PREFILL: 0
+
+# VLLM Options
+ENABLE_PREFIX_CACHING: "false"
+# ADDITIONAL_VLLM_ARGS: ""  # Optional comma-separated additional arguments
+
+# Test Configuration
+STARTUP_TIMEOUT: 600
+
+# API Key (set via environment or command line)
+# API_KEY: "your-api-key-here"
+
+# Supported Configurations for Embedding Tests:
+# You can create multiple YAML files with different combinations:
+#
+# Prompt Length 64:
+#   MAX_MODEL_LEN: 64
+#   MAX_BATCH_SIZE: 1,2,16,32,64,128,256
+#
+# Prompt Length 128:
+#   MAX_MODEL_LEN: 128
+#   MAX_BATCH_SIZE: 1,2,16,32,64,128,256
+#
+# Prompt Length 256:
+#   MAX_MODEL_LEN: 256
+#   MAX_BATCH_SIZE: 1,2,16,32,64,128,256
+#
+# Prompt Length 512:
+#   MAX_MODEL_LEN: 512
+#   MAX_BATCH_SIZE: 1,2,16,32,64,128,256
+
+# Model Download Configuration
+# Set DOWNLOAD_MODEL to "true" to enable automatic model downloading
+DOWNLOAD_MODEL: "true"
+HF_MODEL_ID: "ibm-granite/granite-embedding-125m-english"
+MODEL_NAME: "granite-embedding-125m-english"

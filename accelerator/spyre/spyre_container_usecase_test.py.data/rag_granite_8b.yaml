@@ -1,0 +1,54 @@
+# RAG Use Case Configuration
+# Model: Granite 3.3-8B Instruct
+# Batch size: 32
+# Maximum input/output context size: 32768
+# Number of cards per container: 4
+
+TEST_NAME: "RAG_Granite_8B"
+
+# Container Configuration
+CONTAINER_URL: ""
+CONTAINER_TAG: ""
+CONTAINER_REGISTRY: "icr.io"
+
+# AIU Configuration
+AIU_PCIE_IDS: "0233:70:00.0 0234:80:00.0 0333:70:00.0 0334:80:00.0"
+AIU_WORLD_SIZE: 4
+
+# Model Configuration
+HOST_MODELS_DIR: "/opt/ibm/spyre/models"
+VLLM_MODEL_PATH: "/models/granite-8b"
+
+# VLLM Parameters
+MAX_MODEL_LEN: 32768
+MAX_BATCH_SIZE: 32
+
+# Container Runtime Parameters
+MEMORY: "200G"
+SHM_SIZE: "2G"
+DEVICE: "/dev/vfio"
+PRIVILEGED: "true"
+PIDS_LIMIT: "0"
+USERNS: "keep-id"
+GROUP_ADD: "keep-groups"
+PORT_MAPPING: "127.0.0.1::8000"
+
+# VLLM Environment Variables
+VLLM_SPYRE_USE_CB: "1"
+
+# VLLM Options
+ENABLE_PREFIX_CACHING: "true"
+# ADDITIONAL_VLLM_ARGS: ""  # Optional comma-separated additional arguments
+
+# Test Configuration
+STARTUP_TIMEOUT: 600
+
+# API Key (set via environment or command line)
+API_KEY: "your-api-key-here"
+
+# Model Download Configuration 
+# Set DOWNLOAD_MODEL to "true" to enable automatic model downloading
+DOWNLOAD_MODEL: "true"
+HF_MODEL_ID: "ibm-granite/granite-3.3-8b-instruct"
+MODEL_NAME: "granite-3.3-8b-instruct"
+
