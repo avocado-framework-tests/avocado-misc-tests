@@ -1,0 +1,112 @@
+Software RAID Rebuild + Sync + LVM Extend Test
+
+This test performs comprehensive testing of software RAID rebuild operations,
+synchronization monitoring during rebuild, LVM setup, and logical volume
+extension with automatic filesystem detection and resizing.
+
+Test Flow:
+==========
+1. RAID Creation and Initial Synchronization
+   - Creates a software RAID array with specified level
+   - Monitors and waits for initial synchronization to complete
+   - Verifies RAID array is in clean/active state
+
+2. RAID Rebuild and Sync Monitoring
+   - Removes a disk from the RAID array (simulating disk failure)
+   - Re-adds the disk to trigger rebuild operation
+   - Monitors rebuild/resync progress in real-time
+   - Waits for rebuild synchronization to complete
+
+3. LVM Setup on RAID
+   - Creates Physical Volume (PV) on the RAID device
+   - Creates Volume Group (VG) on the PV
+   - Creates Logical Volume (LV) using 50% of VG space
+   - Automatically detects and creates appropriate filesystem based on OS
+
+4. LVM Extension and Verification
+   - Extends the Logical Volume by 20% of VG space
+   - Resizes the filesystem to use the extended space
+   - Verifies filesystem size has increased correctly
+   - Reports size increase in bytes and MB
+
+Values to be passed in YAML file:
+==================================
+
+* disks: Space-separated list of disk devices for RAID creation
+  Example: "/dev/sdb /dev/sdc /dev/sdd"
+  Note: Minimum disks required depends on RAID level
+
+* raidname: Name for the RAID device (optional)
+  Example: "/dev/md/test_raid"
+  Default: "/dev/md/test_raid"
+
+* spare_disks: Space-separated list of spare disks (optional)
+  Example: "/dev/sde"
+
+* raid: RAID level to create
+  Supported: 1, 5, 6, 10
+  Example: "1"
+  Note: RAID 0 and linear are not supported as they don't support rebuild
+
+* required_disks: Minimum number of disks required for the RAID level
+  RAID 1: 2 disks minimum
+  RAID 5: 3 disks minimum
+  RAID 6: 4 disks minimum
+  RAID 10: 4 disks minimum
+
+* metadata: Metadata version for RAID superblock
+  Supported: 1.0, 1.1, 1.2
+  Default: "1.2"
+
+* vg_name: Name for the Volume Group (optional)
+  Default: "test_vg"
+
+* lv_name: Name for the Logical Volume (optional)
+  Default: "test_lv"
+
+Filesystem Support:
+===================
+The test automatically detects and uses an appropriate filesystem based on
+the operating system and available utilities:
+
+- ext4: Default for most Linux distributions
+- xfs: Preferred on RHEL/CentOS/Fedora systems
+- ext3: Fallback option
+- btrfs: Available on systems with btrfs support
+
+The filesystem is automatically created, mounted, extended, and verified
+without requiring user configuration.
+
+Requirements:
+=============
+* Minimum 3 disks for RAID 1 (2 for array + 1 for rebuild test)
+* Minimum 4 disks for RAID 5 (3 for array + 1 for rebuild test)
+* Minimum 5 disks for RAID 6 (4 for array + 1 for rebuild test)
+* Minimum 5 disks for RAID 10 (4 for array + 1 for rebuild test)
+
+* Required packages:
+  - mdadm (software RAID management)
+  - lvm2 (logical volume management)
+  - Filesystem utilities (e2fsprogs, xfsprogs, btrfs-progs, etc.)
+
+Example YAML Configuration:
+============================
+disks: '/dev/sdb /dev/sdc /dev/sdd'
+raidname: '/dev/md/rebuild_test'
+spare_disks: ''
+raid: '1'
+required_disks: 2
+metadata: '1.2'
+vg_name: 'test_vg'
+lv_name: 'test_lv'
+
+Notes:
+======
+* The test will fail if insufficient disks are provided for the RAID level
+* Rebuild testing is only performed on RAID levels that support redundancy
+* All data on specified disks will be destroyed during the test
+* The test includes comprehensive cleanup in tearDown to remove all created
+  RAID arrays, LVM volumes, and volume groups
+* Synchronization timeout is set to 600 seconds (10 minutes) for initial sync
+  and 900 seconds (15 minutes) for rebuild sync
+* Real-time monitoring of rebuild progress is displayed in the test logs
