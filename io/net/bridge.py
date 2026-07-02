@@ -62,6 +62,7 @@ class Bridging(Test):
                                                 default="br0")
         self.networkinterface = NetworkInterface(self.bridge_interface, local,
                                                  if_type="Bridge")
+        self.bridge_txlen = self.params.get("bridge_txlen", default=False)
 
     def test_bridge_create(self):
         '''
@@ -88,7 +89,60 @@ class Bridging(Test):
         for host_interface in self.host_interfaces:
             self.check_failure('ip link set %s master %s'
                                % (host_interface, self.bridge_interface))
-            self.check_failure('ip addr flush dev %s' % host_interface)
+            self.check_failure('nmcli connection down %s' % host_interface)
+
+        if self.bridge_txlen is True:
+            bridge_txqueuelen = 1
+            member_txqueuelen = 1000
+
+            # Set txqueuelen for bridge interface
+            self.log.info("Setting txqueuelen=%d for bridge interface %s",
+                          bridge_txqueuelen, self.bridge_interface)
+            cmd = 'ip link set %s txqueuelen %d' % (self.bridge_interface,
+                                                    bridge_txqueuelen)
+            if process.system(cmd, sudo=True, shell=True, ignore_status=True):
+                self.fail("Failed to set txqueuelen for bridge interface %s"
+                          % self.bridge_interface)
+
+            # Verify bridge txqueuelen
+            cmd = 'ip link show %s' % self.bridge_interface
+            output = process.system_output(cmd, sudo=True, shell=True,
+                                           ignore_status=True).decode("utf-8")
+            self.log.debug("Bridge interface details:\n%s", output)
+
+            if 'qlen %d' % bridge_txqueuelen not in output:
+                self.fail("Bridge interface %s txqueuelen verification failed. "
+                          "Expected: %d" % (self.bridge_interface,
+                                            bridge_txqueuelen))
+            else:
+                self.log.info("Bridge interface %s txqueuelen set successfully to %d",
+                              self.bridge_interface, bridge_txqueuelen)
+
+            # Set txqueuelen for each member interface
+            for host_interface in self.host_interfaces:
+                self.log.info("Setting txqueuelen=%d for member interface %s",
+                              member_txqueuelen, host_interface)
+                cmd = 'ip link set %s txqueuelen %d' % (host_interface,
+                                                        member_txqueuelen)
+                if process.system(cmd, sudo=True, shell=True, ignore_status=True):
+                    self.fail("Failed to set txqueuelen for interface %s"
+                              % host_interface)
+                    continue
+
+                # Verify member interface txqueuelen
+                cmd = 'ip link show %s' % host_interface
+                output = process.system_output(cmd, sudo=True, shell=True,
+                                               ignore_status=True).decode("utf-8")
+                self.log.debug("Member interface %s details:\n%s",
+                               host_interface, output)
+
+                if 'qlen %d' % member_txqueuelen not in output:
+                    self.fail("Interface %s txqueuelen verification failed. "
+                              "Expected: %d" % (host_interface,
+                                                member_txqueuelen))
+                else:
+                    self.log.info("Interface %s txqueuelen set successfully to %d",
+                                  host_interface, member_txqueuelen)
 
     def test_bridge_run(self):
         '''
@@ -111,8 +165,6 @@ class Bridging(Test):
         peer_networkinterface.bring_up()
         if self.networkinterface.ping_check(self.peer_ip, count=5) is not None:
             self.fail('Ping using bridge failed')
-        self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
-        peer_networkinterface.remove_ipaddr(self.peer_ip, self.netmask)
 
     def test_bridge_delete(self):
         '''
@@ -123,3 +175,6 @@ class Bridging(Test):
             self.networkinterface.restore_from_backup()
         except Exception:
             self.networkinterface.remove_cfg_file()
+
+        for host_interface in self.host_interfaces:
+            self.check_failure('nmcli connection up %s' % host_interface)
