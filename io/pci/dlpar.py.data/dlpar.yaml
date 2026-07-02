@@ -6,3 +6,4 @@ pci_devices:
 num_of_dlpar: 
 peer_ip:
 sriov: 'no'
+lockdown_mode: ""
