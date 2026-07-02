@@ -21,7 +21,7 @@ Irq-balance and CPU affinity test for IO subsystem.
 import re
 import os
 from avocado import Test
-from avocado.utils import process, cpu, wait, dmesg, genio
+from avocado.utils import process, cpu, wait, dmesg, genio, pci
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
 from avocado.utils.process import CmdError
@@ -60,6 +60,8 @@ class irq_balance(Test):
         self.interface_type = None
         device = self.params.get("interface", default=None)
         self.disk = self.params.get("disk", default=None)
+        self.is_hbond = self.params.get("hbond", default=False)
+
         if device:
             self.peer_ip = self.params.get("peer_ip", default=None)
             self.ping_count = self.params.get("ping_count", default=None)
@@ -101,13 +103,20 @@ class irq_balance(Test):
             if self.networkinterface.ping_check(self.peer_ip,
                                                 count=5) is not None:
                 self.cancel("No connection to peer")
-            self.interface_type = self.networkinterface.get_device_IPI_name()
-            # Fallback to interface name if get_device_IPI_name returns None
-            if not self.interface_type:
-                self.log.debug(
-                    f"get_device_IPI_name() returned None, "
-                    f"using interface name '{self.interface}' as fallback")
-                self.interface_type = self.interface
+
+            # Handle HNV bond: get IPI name from active slave
+            if self.is_hbond:
+                self.interface_type = self.get_hbond_ipi_name()
+            else:
+                self.interface_type = (self.networkinterface.
+                                       get_device_IPI_name())
+                # Fallback to interface name if get_device_IPI_name
+                # returns None
+                if not self.interface_type:
+                    self.log.debug(
+                        f"get_device_IPI_name() returned None, using "
+                        f"interface name '{self.interface}' as fallback")
+                    self.interface_type = self.interface
 
         if self.disk:
             self.interface_type = self.get_disk_IPI_name()
@@ -115,6 +124,76 @@ class irq_balance(Test):
         self.check_current_smt()
         self.set_max_smt_values()
         self.cpu_list = cpu.online_list()
+
+    def get_hbond_ipi_name(self):
+        '''
+        Get the IPI name for HNV bond by using its active slave interface.
+        For HNV bonds, we need to get the PCI address of the active
+        slave and format it as it appears in /proc/interrupts
+        (e.g., @pci:4002:01:00.0).
+        :return: IPI name in format @pci:ADDRESS or bond interface
+                 name as fallback
+        '''
+        try:
+            # Read the active slave from bonding sysfs
+            active_slave_file = (f'/sys/class/net/{self.interface}/'
+                                 f'bonding/active_slave')
+            active_slave = None
+
+            if os.path.exists(active_slave_file):
+                with open(active_slave_file, 'r') as f:
+                    active_slave = f.read().strip()
+
+            if not active_slave:
+                self.log.warning(
+                    f"No active slave found for bond {self.interface}, "
+                    f"using bond name as fallback")
+                return self.interface
+
+            self.log.info(
+                f"Active slave for bond {self.interface}: {active_slave}")
+
+            # Get PCI address from the active slave interface using pci utils
+            for pci_address in pci.get_pci_addresses():
+                try:
+                    # Check if this PCI address is a network device
+                    if pci.get_pci_class_name(pci_address) == "net":
+                        # Get interfaces for this PCI address
+                        interfaces = pci.get_interfaces_in_pci_address(
+                            pci_address, "net")
+                        if active_slave in interfaces:
+                            # Format as it appears in /proc/interrupts:
+                            # @pci:ADDRESS
+                            ipi_format = f"@pci:{pci_address}"
+                            self.log.info(
+                                f"Found PCI address {pci_address} for "
+                                f"active slave {active_slave}, using IPI "
+                                f"format: {ipi_format}")
+                            return ipi_format
+                except Exception:
+                    continue
+
+            # Fallback: try to get IPI name using NetworkInterface method
+            slave_interface = NetworkInterface(active_slave,
+                                               self.localhost)
+            ipi_name = slave_interface.get_device_IPI_name()
+
+            if ipi_name:
+                self.log.info(
+                    f"IPI name for active slave {active_slave}: {ipi_name}")
+                return ipi_name
+            else:
+                self.log.warning(
+                    f"Could not get PCI address or IPI name for "
+                    f"active slave {active_slave}, using active slave "
+                    f"name as fallback")
+                return active_slave
+
+        except Exception as e:
+            self.log.warning(
+                f"Failed to get IPI name for HNV bond {self.interface}: {e}, "
+                f"using bond name as fallback")
+            return self.interface
 
     @staticmethod
     def __online_cpus(cores):
@@ -158,9 +237,12 @@ class irq_balance(Test):
         '''
         Function to get all IRQ numbers associated for given device.
         '''
+        # Match only IRQ numbers at the start of lines (before the first colon)
+        # This avoids matching numbers in PCI addresses like @pci:4002:01:00.0
         self.irq_number = [int(x.strip(":"))
-                           for x in re.findall(r'\b(\d+):',
-                                               self.device_interrupts)]
+                           for x in re.findall(r'^\s*(\d+):',
+                                               self.device_interrupts,
+                                               re.MULTILINE)]
         return self.irq_number
 
     def get_ping_process_pid(self):
@@ -407,54 +489,79 @@ class irq_balance(Test):
            CPU2 ---> CPU3, ----> till last available CPU number.
         '''
         if self.interface:
-            for cpu_number in self.cpu_list:
-                if self.networkinterface.ping_flood(self.interface,
-                                                    self.peer_ip,
-                                                    self.ping_count):
-                    cmd = "taskset -cp %s %s" % (
-                        cpu_number,
-                        self.get_ping_process_pid()
-                    )
+            # Start ping process and keep it running
+            cmd = (f"ping -I {self.interface} {self.peer_ip} "
+                   f"-c 1000000 -f")
+            ping_process = subprocess.Popen(
+                cmd,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True
+            )
+
+            # Give the process time to start
+            time.sleep(2)
+
+            # Get the PID of the running ping process
+            ping_pid = self.get_ping_process_pid()
+
+            try:
+                # Iterate through CPUs and change affinity of the same process
+                for cpu_number in self.cpu_list:
+                    cmd = "taskset -cp %s %s" % (cpu_number, ping_pid)
                     output = process.run(cmd, shell=True, ignore_status=True)
                     if output.exit_status != 0:
                         self.fail(f'taskset command failed check logs')
                     if cpu_number != self.taskset_cpu_validation():
                         self.fail(f"CPU number is mismatching after taskset "
                                   "operation, Please check logs.")
-                    try:
-                        process.system(
-                            "kill -9 %s" % int(self.get_ping_process_pid()),
-                            ignore_status=True,
-                            sudo=True
-                        )
-                    except CmdError as ex:
-                        self.log.fail(f"Failed to kill the processes, {ex}")
-                else:
-                    self.fail(f"ping flood failed, Please check the logs")
+            finally:
+                # Kill the ping process after all iterations
+                try:
+                    ping_process.terminate()
+                    ping_process.wait(timeout=5)
+                except Exception:
+                    ping_process.kill()
+                try:
+                    process.system(
+                        "kill -9 %s" % int(ping_pid),
+                        ignore_status=True,
+                        sudo=True
+                    )
+                except CmdError as ex:
+                    self.log.fail(f"Failed to kill the processes, {ex}")
+
         if self.disk:
-            for cpu_number in self.cpu_list:
-                if self.dd_run():
-                    cmd = (
-                        f"taskset -cp {cpu_number} "
-                        f"{self.get_dd_process_pid()}"
-                    )
+            # Start dd once before the loop
+            if not self.dd_run():
+                self.fail(f'dd command failed, Please check logs')
+
+            # Get the PID of the running dd process
+            dd_pid = self.get_dd_process_pid()
+
+            try:
+                # Iterate through CPUs and change affinity of the same process
+                for cpu_number in self.cpu_list:
+                    cmd = f"taskset -cp {cpu_number} {dd_pid}"
                     output = process.run(cmd, shell=True, ignore_status=True)
                     if output.exit_status != 0:
                         self.fail(f'taskset command failed check logs')
                     if cpu_number != self.taskset_cpu_validation():
                         self.fail(f"CPU number is mismatching after taskset "
                                   "operation, Please check logs.")
-                    try:
-                        process.system(
-                            f"kill -9 {int(self.get_dd_process_pid())}",
-                            ignore_status=True,
-                            sudo=True
-                        )
-                    except CmdError as ex:
-                        self.log.fail(f"Failed to kill the processes, {ex}")
-                    time.sleep(2)
-                else:
-                    self.fail(f'dd command failed, Please check logs')
+            finally:
+                # Kill the dd process after all iterations
+                try:
+                    process.system(
+                        f"kill -9 {int(dd_pid)}",
+                        ignore_status=True,
+                        sudo=True
+                    )
+                except CmdError as ex:
+                    self.log.fail(f"Failed to kill the processes, {ex}")
+                time.sleep(2)
+
         dmesg.collect_errors_dmesg(errorlog)
 
     def tearDown(self):
