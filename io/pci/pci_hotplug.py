@@ -91,10 +91,42 @@ class PCIHotPlugTest(Test):
         if not os.path.isdir('/sys/bus/pci/slots/%s' % slot):
             self.cancel("%s is not present in sysfs path" % slot)
 
+        self.lockdown_mode = self.params.get("lockdown_mode", default="integrity")
+        self.lockdown_path = "/sys/kernel/security/lockdown"
+
     def test(self):
         """
         Removes and adds back a PCI adapter based on pci_adress.
         """
+        err_pci = []
+        for pci_addr in self.device:
+            for _ in range(self.count):
+                if not self.hotplug_remove(self.dic[pci_addr], pci_addr):
+                    err_pci.append(pci_addr)
+                else:
+                    self.log.info("%s removed successfully", pci_addr)
+                time.sleep(10)
+                if not self.hotplug_add(self.dic[pci_addr], pci_addr):
+                    err_pci.append(pci_addr)
+                else:
+                    self.log.info("%s added back successfully", pci_addr)
+                time.sleep(10)
+        if err_pci:
+            self.fail("following devices failed: %s" % ", ".join(err_pci))
+
+    def test_pcihotplug_with_lockdown(self):
+        """
+        Removes and adds back a PCI adapter based on pci_adress.
+        """
+
+        if not self.check_lockdown_support():
+            self.cancel("Kernel lockdown not supported")
+
+        original_state = self.get_lockdown_state()
+
+        if not self.set_lockdown_mode(self.lockdown_mode):
+            self.fail(f"Failed to set lockdown to {self.lockdown_mode}")
+
         err_pci = []
         for pci_addr in self.device:
             for _ in range(self.count):
@@ -239,3 +271,61 @@ class PCIHotPlugTest(Test):
                 return False
             return True
         return False
+
+    def check_lockdown_support(self):
+        '''
+        Check if kernel lockdown is supported
+        '''
+        if not os.path.exists(self.lockdown_path):
+            self.log.warn("Kernel lockdown not supported on this system")
+            return False
+        return True
+
+    def get_lockdown_state(self):
+        '''
+        Get current lockdown state
+        '''
+        try:
+            output = process.system_output(f'cat {self.lockdown_path}',
+                                           shell=True, sudo=True).decode("utf-8")
+            # Parse output like: "none [integrity] confidentiality"
+            if '[none]' in output:
+                return 'none'
+            elif '[integrity]' in output:
+                return 'integrity'
+            elif '[confidentiality]' in output:
+                return 'confidentiality'
+        except Exception as e:
+            self.log.error(f"Failed to get lockdown state: {e}")
+        return None
+
+    def set_lockdown_mode(self, mode):
+        '''
+        Set kernel lockdown mode
+        mode: 'none', 'integrity', or 'confidentiality'
+        '''
+        if not self.check_lockdown_support():
+            return False
+
+        current_state = self.get_lockdown_state()
+        self.log.info(f"Current lockdown state: {current_state}")
+
+        if mode == current_state:
+            self.log.info(f"Lockdown already set to {mode}")
+            return True
+
+        try:
+            cmd = f'echo "{mode}" > {self.lockdown_path}'
+            process.run(cmd, shell=True, sudo=True)
+
+            # Verify the change
+            new_state = self.get_lockdown_state()
+            if new_state == mode:
+                self.log.info(f"Successfully set lockdown to {mode}")
+                return True
+            else:
+                self.log.error(f"Failed to set lockdown to {mode}, current: {new_state}")
+                return False
+        except Exception as e:
+            self.log.error(f"Error setting lockdown mode: {e}")
+            return False
