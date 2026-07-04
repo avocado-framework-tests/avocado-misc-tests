@@ -1,6 +1,10 @@
+CFLAGS = -O3 -funroll-loops
+LDFLAGS = -lnuma
+
 all : mem_integrity_test
 
 mem_integrity_test : mem_integrity_test.c
-	gcc mem_integrity_test.c -o $@ -lnuma -w
+	gcc $(CFLAGS) mem_integrity_test.c -o $@ $(LDFLAGS)
+
 clean :
-	rm mem_integrity_test 
+	rm -f mem_integrity_test
