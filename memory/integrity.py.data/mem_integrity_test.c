@@ -27,17 +27,17 @@
 #define PMAP_SIZE	8
 
 #define PATTERN		0xffffffff
+#define CHUNK_SIZE	(4UL * 1024UL * 1024UL)
 
 
 unsigned long total_mem = 0;
 int max_node;
 int nodes_to_use[2];
 
-/* Determines the Free memory in the system */ 
+/* Determines the Free memory in the system */
 void get_total_mem_bytes()
 {
-	unsigned long vm_size = 0;
-        char buff[256];
+	char buff[256];
 	FILE *meminfo = fopen("/proc/meminfo", "r");
 
 	if(meminfo == NULL){
@@ -55,34 +55,58 @@ void get_total_mem_bytes()
 	}
 }
 
-/* Writes pattern at given address for given size*/ 
-void write_memory(void *addr, int pattern, unsigned long size)
+/* Writes pattern at given address for given size using 64-bit operations and larger chunks*/
+void write_memory(void *addr, unsigned long pattern_64, unsigned long size)
 {
+	unsigned long chunk_offset;
+	unsigned long remaining_size = size;
+	unsigned long current_chunk_size;
 	unsigned long iterator;
-	int *temp = (int*)addr;
+	unsigned long *temp;
 
-	for(iterator=0; iterator < (size/(sizeof(int))); iterator++) {
-		*temp = pattern;
-		temp++;
+	/* Process memory in 4MB chunks using 64-bit writes for better performance */
+	for(chunk_offset = 0; chunk_offset < size; chunk_offset += CHUNK_SIZE) {
+		current_chunk_size = (remaining_size > CHUNK_SIZE) ? CHUNK_SIZE : remaining_size;
+		temp = (unsigned long*)(addr + chunk_offset);
+
+		/* Write 8 bytes at a time */
+		for(iterator = 0; iterator < (current_chunk_size / sizeof(unsigned long)); iterator++)
+			*temp++ = pattern_64;
+
+		remaining_size -= current_chunk_size;
 	}
 }
 
-/* Read and verify the pattern from given address for given size */
-void read_memory(void *addr, int pattern, unsigned long size)
+/* Read and verify the pattern from given address for given size using 64-bit operations and larger chunks */
+void read_memory(void *addr, unsigned long pattern_64, unsigned long size)
 {
+	unsigned long chunk_offset;
+	unsigned long remaining_size = size;
+	unsigned long current_chunk_size;
 	unsigned long iterator;
-	unsigned long read = 0;
-	int *temp = (int*)addr;
+	unsigned long global_iterator = 0;
+	unsigned long *temp;
 
-	for(iterator=0; iterator < (size/(sizeof(int))); iterator++){
-		if (*temp != pattern) {
-			printf("Iterator %lu", iterator);
-			printf("Correctness failed at loop read\n"
-                               "PATTERN MISMATCH OCCURRED \n");
-			exit(-1);
+	/* Process memory in 4MB chunks using 64-bit reads for better performance */
+	for(chunk_offset = 0; chunk_offset < size; chunk_offset += CHUNK_SIZE) {
+		current_chunk_size = (remaining_size > CHUNK_SIZE) ? CHUNK_SIZE : remaining_size;
+		temp = (unsigned long*)(addr + chunk_offset);
+
+		/* Read and verify 8 bytes at a time */
+		for(iterator = 0; iterator < (current_chunk_size / sizeof(unsigned long)); iterator++) {
+			if (*temp != pattern_64) {
+				printf("Iterator %lu (chunk offset: %lu, local iterator: %lu)\n",
+					global_iterator, chunk_offset, iterator);
+				printf("Correctness failed at loop read\n"
+					"PATTERN MISMATCH OCCURRED at address %p\n", (void*)temp);
+				printf("Expected: 0x%016lx, Got: 0x%016lx\n", pattern_64, *temp);
+				exit(-1);
+			}
+			global_iterator++;
+			temp++;
 		}
-		read++;
-		temp++;
+
+		remaining_size -= current_chunk_size;
 	}
 }
 
@@ -141,18 +165,22 @@ void verify_page_fault(void *addr, unsigned long memory)
 		offset = ((unsigned long) tmp / psize) * PMAP_SIZE;
 		if (lseek(fd, offset, SEEK_SET) == -1) {
 			perror("lseek() failed");
+			close(fd);
 			exit(-1);
 		}
 		if (read(fd, &pfn, sizeof(pfn)) == -1) {
 			perror("read() failed");
+			close(fd);
 			exit(-1);
 		}
 		if (!((pfn >> 63) & (1UL))) {
 			printf("Pfn bit is not set !! So Some pages are not faulted\n");
+			close(fd);
 			exit(-1);
 		}
-	}	
-}	 
+	}
+	close(fd);
+}
 
 /* Sets the nodes to be used in test which contains at least 10% of total memory*/
 void get_numa_nodes_to_use(unsigned long memory_to_use)
@@ -230,6 +258,7 @@ void write_read_pattern_into_memory()
 {
 	void *mmap_pointer;
 	unsigned long memory_to_use = 0;
+	unsigned long pattern_64 = ((unsigned long)PATTERN << 32) | PATTERN;
 
         printf("\nScenario : Pattern Write Read Scenario:\n\n");
 	/* Compute 80% of memory and use for write and read */
@@ -239,9 +268,9 @@ void write_read_pattern_into_memory()
         printf("Lock all mapped memory \n");
 	lock_mem(mmap_pointer, memory_to_use);
         printf("Write into mapped memory \n");
-        write_memory(mmap_pointer, PATTERN, memory_to_use);
+        write_memory(mmap_pointer, pattern_64, memory_to_use);
         printf("Reading from memory\n");
-        read_memory(mmap_pointer,PATTERN, memory_to_use);
+        read_memory(mmap_pointer, pattern_64, memory_to_use);
         printf("Verifying whether pfn exists for all virtual pages\n");
 	verify_page_fault(mmap_pointer, memory_to_use);
 	printf("Unlocking memory\n");
@@ -255,6 +284,7 @@ void write_read_pattern_softoffline()
 	void *mmap_pointer;
 	int madvise_status;
 	unsigned long memory_to_use = 0;
+	unsigned long pattern_64 = ((unsigned long)PATTERN << 32) | PATTERN;
 
 	/* Compute 10% of memory and use for write and read */
 	memory_to_use = (total_mem * 10 ) / 100;
@@ -263,7 +293,7 @@ void write_read_pattern_softoffline()
         printf("Lock all mapped memory \n");
 	lock_mem(mmap_pointer, memory_to_use);
         printf("Write into mapped memory \n");
-        write_memory(mmap_pointer,PATTERN, memory_to_use);
+        write_memory(mmap_pointer, pattern_64, memory_to_use);
         printf("Soft offline pages \n");
 	madvise_status = madvise(mmap_pointer,memory_to_use, MADV_SOFT_OFFLINE);
 	if (madvise_status){
@@ -271,7 +301,7 @@ void write_read_pattern_softoffline()
 		exit(-1);
 	}
         printf("Reading from memory\n");
-        read_memory(mmap_pointer,PATTERN, memory_to_use);
+        read_memory(mmap_pointer, pattern_64, memory_to_use);
         printf("Verifying whether pfn exists for all virtual pages\n");
 	verify_page_fault(mmap_pointer, memory_to_use);
 	printf("Unlocking memory\n");
@@ -286,7 +316,10 @@ void write_read_pattern_numa_migration()
         unsigned long memory_to_use = 0;
 	unsigned long npages = 0, pages_numa_map = 0;
 	unsigned long mask;
+	unsigned long pattern_64 = ((unsigned long)PATTERN << 32) | PATTERN;
 	int mbind_status;
+	int memory_percentage = 10;  /* Default: 10% of memory */
+	unsigned long memory_threshold_40tb = 40UL * 1024UL * 1024UL * 1024UL * 1024UL;  /* 40TB in bytes */
 
         printf("\nScenario : Numa Migration \n\n");
 	if(numa_available == -1){
@@ -295,8 +328,18 @@ void write_read_pattern_numa_migration()
 	}
 	max_node = numa_max_node();
 
-        /* Compute 10% of memory and use for write and read */
-        memory_to_use = (total_mem * 10 ) / 100;
+        /* Use 5% of memory if system has > 40TB, otherwise use 10% */
+        if (total_mem > memory_threshold_40tb) {
+		memory_percentage = 5;
+		printf("System memory > 40TB, using 5%% of memory for test\n");
+	} else {
+		printf("System memory <= 40TB, using 10%% of memory for test\n");
+	}
+        memory_to_use = (total_mem * memory_percentage) / 100;
+	printf("Total system memory: %lu bytes (%.2f TB)\n", total_mem,
+		(double)total_mem / (1024.0 * 1024.0 * 1024.0 * 1024.0));
+	printf("Memory to use for test: %lu bytes (%.2f GB)\n", memory_to_use,
+		(double)memory_to_use / (1024.0 * 1024.0 * 1024.0));
         mmap_pointer = mmap_memory(memory_to_use);
 
 	/* Determine No of Pages */
@@ -321,8 +364,8 @@ void write_read_pattern_numa_migration()
         printf("Lock all mapped memory \n");
 	lock_mem(mmap_pointer, memory_to_use);
         printf("Write into mapped memory \n");
-        write_memory(mmap_pointer,PATTERN, memory_to_use);
-	pages_numa_map = get_npages_from_numa_maps(mmap_pointer,nodes_to_use[0]);
+        write_memory(mmap_pointer, pattern_64, memory_to_use);
+ pages_numa_map = get_npages_from_numa_maps(mmap_pointer,nodes_to_use[0]);
         printf("Unlock all mapped memory \n");
 	unlock_mem(mmap_pointer, memory_to_use);
 
@@ -351,7 +394,7 @@ void write_read_pattern_numa_migration()
         printf("Lock all mapped memory \n");
 	lock_mem(mmap_pointer, memory_to_use);
         printf("Reading from memory\n");
-        read_memory(mmap_pointer,PATTERN, memory_to_use);
+        read_memory(mmap_pointer, pattern_64, memory_to_use);
 	pages_numa_map = get_npages_from_numa_maps(mmap_pointer, nodes_to_use[1]);
 
 	/* Check all pages are allocated in node we want */
