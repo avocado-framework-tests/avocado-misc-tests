@@ -1,0 +1,46 @@
+--- a/random.c
++++ b/random.c
+@@ -733,6 +733,8 @@ static int hotplug_memory()
+ 	char path[PATH_MAX];
+ 	DIR *dir;
+ 	struct dirent *memory;
++	int count = 0, total_count = 0;
++	int max_blocks = 0, process_every = 10;  /* Process 10% of memory blocks */
+ 	FILE *fp;
+ 	int value;
+ 
+@@ -741,6 +743,23 @@ static int hotplug_memory()
+ 	if (!dir)
+ 		return 1;
+ 
++	/* First pass: count total memory blocks */
++	while ((memory = readdir(dir))) {
++		if (!strcmp(memory->d_name, ".") ||
++		    !strcmp(memory->d_name, "..") ||
++		    memory->d_type != DT_DIR ||
++		    strncmp(memory->d_name, "memory", 6))
++			continue;
++		total_count++;
++	}
++	
++	/* Calculate 10% of total blocks (minimum 10, maximum 100) */
++	max_blocks = (total_count / process_every);
++	if (max_blocks < 10) max_blocks = 10;
++	if (max_blocks > 100) max_blocks = 100;
++	printf("- processing %d of %d memory blocks (10%%)\n", max_blocks, total_count);
++	rewinddir(dir);
++
+ 	while ((memory = readdir(dir))) {
+ 		if (!strcmp(memory->d_name, ".") ||
+ 		    !strcmp(memory->d_name, "..") ||
+@@ -748,6 +767,10 @@ static int hotplug_memory()
+ 		    strncmp(memory->d_name, "memory", 6))
+ 			continue;
+ 
++		/* Limit processing to 10% of memory blocks on large systems */
++		if (count++ >= max_blocks)
++			break;
++
+ 		snprintf(path, sizeof(path), "%s/%s/online", base,
+ 			 memory->d_name);
+ 		value = read_value(path);
