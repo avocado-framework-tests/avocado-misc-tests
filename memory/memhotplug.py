@@ -122,6 +122,10 @@ class MemStress(Test):
         self.vmcount = self.params.get('vmcount', default=4)
         self.iocount = self.params.get('iocount', default=4)
         self.memratio = self.params.get('memratio', default=5)
+        # DLPAR bulk operation parameters
+        self.bulk_dlpar_threshold_gb = self.params.get('bulk_dlpar_threshold_gb', default=4096)
+        self.initial_lmb_count = self.params.get('initial_lmb_count', default=50)
+        self.max_lmb_count = self.params.get('max_lmb_count', default=4096)
         self.blocks_hotpluggable = get_hotpluggable_blocks(
             (os.path.join('%s', 'memory*') % MEM_PATH), self.memratio)
         if os.path.exists("%s/auto_online_blocks" % MEM_PATH):
@@ -169,6 +173,29 @@ class MemStress(Test):
                      mem_free, self.stresstime), ignore_status=True,
                     sudo=True, shell=True)
 
+    def _run_progressive_dlpar(self, blocks_to_process, operation, action):
+        self.log.info("\nDLPAR progressive bulk %s memory operation\n", action)
+        lmb_count = self.initial_lmb_count
+        blocks_processed = 0
+        iteration = 0
+        while blocks_processed < blocks_to_process:
+            current_bulk = min(lmb_count, self.max_lmb_count,
+                               blocks_to_process - blocks_processed)
+            iteration += 1
+            self.log.info("Iteration %d: %s %d LMBs (total processed: %d/%d)",
+                          iteration, action, current_bulk,
+                          blocks_processed + current_bulk, blocks_to_process)
+            result = process.run(
+                "drmgr -c mem -d 5 -w 1 -q %d %s" % (current_bulk, operation),
+                shell=True, ignore_status=True, sudo=True)
+            if result.exit_status != 0:
+                self.log.warning("drmgr %s failed (exit %d) for %d LMBs: %s",
+                                 action.lower(), result.exit_status,
+                                 current_bulk, result.stderr.strip())
+            blocks_processed += current_bulk
+            lmb_count = min(lmb_count * 2, self.max_lmb_count)
+        self.__error_check()
+
     def test_hotplug_loop(self):
         self.log.info("\nTEST: hotunplug and hotplug in a loop\n")
         for _ in range(self.iteration):
@@ -198,16 +225,37 @@ class MemStress(Test):
         if 'power' in cpu.get_arch() and 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
             if b"mem_dlpar=yes" in process.system_output("drmgr -C",
                                                          ignore_status=True, shell=True):
-                self.log.info("\nDLPAR remove memory operation\n")
-                for _ in range(len(self.blocks_hotpluggable) // 2):
-                    process.run(
-                        "drmgr -c mem -d 5 -w 30 -r", shell=True,
-                        ignore_status=True, sudo=True)
-                self.run_stress()
-                self.log.info("\nDLPAR add memory operation\n")
-                for _ in range(len(self.blocks_hotpluggable) // 2):
-                    process.run(
-                        "drmgr -c mem -d 5 -w 30 -a", shell=True, ignore_status=True, sudo=True)
+                total_mem_gb = memory.meminfo.MemTotal.g
+                blocks_to_process = len(self.blocks_hotpluggable)
+                if blocks_to_process < 1:
+                    self.log.info("Insufficient hotpluggable blocks (%d total, %d to process). Skipping DLPAR test.",
+                                  len(self.blocks_hotpluggable), blocks_to_process)
+                    return
+                if total_mem_gb > self.bulk_dlpar_threshold_gb:
+                    self.log.info("\nSystem memory > %d GB, using progressive bulk DLPAR operations\n",
+                                  self.bulk_dlpar_threshold_gb)
+                    self._run_progressive_dlpar(blocks_to_process, '-r', 'Removing')
+                    self.run_stress()
+                    self._run_progressive_dlpar(blocks_to_process, '-a', 'Adding')
+                else:
+                    self.log.info("\nSystem memory <= %d GB, using standard DLPAR operations\n",
+                                  self.bulk_dlpar_threshold_gb)
+                    self.log.info("\nDLPAR remove memory operation\n")
+                    for _ in range(blocks_to_process):
+                        result = process.run(
+                            "drmgr -c mem -d 5 -w 1 -r", shell=True,
+                            ignore_status=True, sudo=True)
+                        if result.exit_status != 0:
+                            self.log.warning("drmgr remove failed (exit %d): %s",
+                                             result.exit_status, result.stderr.strip())
+                    self.run_stress()
+                    self.log.info("\nDLPAR add memory operation\n")
+                    for _ in range(blocks_to_process):
+                        result = process.run(
+                            "drmgr -c mem -d 5 -w 1 -a", shell=True, ignore_status=True, sudo=True)
+                        if result.exit_status != 0:
+                            self.log.warning("drmgr add failed (exit %d): %s",
+                                             result.exit_status, result.stderr.strip())
                 self.__error_check()
             else:
                 self.log.info('UNSUPPORTED: dlpar not configured..')
