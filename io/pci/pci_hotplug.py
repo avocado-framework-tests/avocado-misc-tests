@@ -203,24 +203,32 @@ class PCIHotPlugTest(Test):
 
         def nvme_recovery_check():
             '''
-            Checks if the nvme adapter functionality like all namespaces are
-            up and running or not after adapter is recovered
+            Checks if the NVMe adapter is recovered after hotplug by validating
+            PCI address presence and, if namespaces existed at test start,
+            that every namespace is present and in live/optimized state.
             '''
-            err_ns = []
-            current_namespaces = nvme.get_current_ns_ids(self.contr_name)
-            if current_namespaces == self.ns_list:
-                for ns_id in current_namespaces:
-                    status = nvme.get_ns_status(self.contr_name, ns_id)
-                    if not status[0] == 'live' and status[1] == 'optimized':
-                        err_ns.append(ns_id)
-            else:
-                diff_ns = self.ns_list - current_namespaces
-                self.log.info(f"ns not listing after hot_plug {diff_ns}")
+            if pci_addr not in pci.get_pci_addresses():
+                self.log.error("NVMe device %s not found after hotplug",
+                               pci_addr)
                 return False
 
+            if not self.ns_list:
+                self.log.info("NVMe device %s recovered (no namespaces to "
+                              "check)", pci_addr)
+                return True
+
+            current_namespaces = set(nvme.get_current_ns_ids(self.contr_name))
+            err_ns = [ns_id for ns_id in self.ns_list
+                      if ns_id not in current_namespaces
+                      or nvme.get_ns_status(self.contr_name, ns_id)[:2]
+                      != ['live', 'optimized']]
             if err_ns:
-                self.log.info(f"following namespaces not recovered ={err_ns}")
+                self.log.info("Namespaces missing or not recovered after "
+                              "hotplug: %s", err_ns)
                 return False
+
+            self.log.info("NVMe device %s and all %d namespaces recovered "
+                          "successfully", pci_addr, len(self.ns_list))
             return True
 
         if wait.wait_for(is_added, timeout=30):

@@ -206,6 +206,7 @@ class DlparPci(Test):
             for _ in range(self.num_of_dlpar):
                 self.dlpar_remove()
                 self.dlpar_add()
+                self.set_adapter_details(pci)
                 self.validation_in_os(pci)
                 self.dlpar_move()
 
@@ -220,9 +221,11 @@ class DlparPci(Test):
             for _ in range(self.num_of_dlpar):
                 self.do_drmgr_pci('r')
                 self.do_drmgr_pci('a')
+                self.set_adapter_details(pci)
                 self.validation_in_os(pci)
             for _ in range(self.num_of_dlpar):
                 self.do_drmgr_pci('R')
+                self.set_adapter_details(pci)
                 self.validation_in_os(pci)
 
     def test_drmgr_phb(self):
@@ -234,6 +237,7 @@ class DlparPci(Test):
             for _ in range(self.num_of_dlpar):
                 self.do_drmgr_phb('r')
                 self.do_drmgr_phb('a')
+                self.set_adapter_details(pci)
                 self.validation_in_os(pci)
 
     def do_drmgr_pci(self, operation):
@@ -270,7 +274,7 @@ class DlparPci(Test):
             self.changehwres(self.server, 'r', self.lpar_id, self.lpar_1,
                              self.drc_index, 'remove')
             output = self.listhwres(self.server, self.lpar_1, self.drc_index)
-            if output:
+            if output and ",drc_index=" + self.drc_index in output:
                 self.log.debug(output)
                 self.fail("lshwres still lists the drc after dlpar remove")
 
@@ -452,24 +456,32 @@ class DlparPci(Test):
 
         def nvme_recovery_check():
             '''
-            Checks if the nvme adapter functionality like all namespaces are
-            up and running or not after adapter is recovered
+            Checks if the NVMe adapter is recovered after DLPAR by validating
+            PCI address presence and, if namespaces existed at test start,
+            that every namespace is present and in live/optimized state.
             '''
-            err_ns = []
-            current_namespaces = nvme.get_current_ns_ids(self.contr_name)
-            if current_namespaces == self.ns_list:
-                for ns_id in current_namespaces:
-                    status = nvme.get_ns_status(self.contr_name, ns_id)
-                    if not status[0] == 'live' and status[1] == 'optimized':
-                        err_ns.append(ns_id)
-            else:
-                self.log.info("following ns not back listing after hot_plug" %
-                              (self.ns_list - current_namespaces))
+            if pci_device not in pci.get_pci_addresses():
+                self.log.error("NVMe device %s not found after DLPAR",
+                               pci_device)
                 return False
 
+            if not self.ns_list:
+                self.log.info("NVMe device %s recovered (no namespaces to "
+                              "check)", pci_device)
+                return True
+
+            current_namespaces = set(nvme.get_current_ns_ids(self.contr_name))
+            err_ns = [ns_id for ns_id in self.ns_list
+                      if ns_id not in current_namespaces
+                      or nvme.get_ns_status(self.contr_name, ns_id)[:2]
+                      != ['live', 'optimized']]
             if err_ns:
-                self.log.info(f"following namespaces not recovered ={err_ns}")
+                self.log.info("Namespaces missing or not recovered after "
+                              "DLPAR: %s", err_ns)
                 return False
+
+            self.log.info("NVMe device %s and all %d namespaces recovered "
+                          "successfully", pci_device, len(self.ns_list))
             return True
 
         if wait.wait_for(is_added, timeout=30):
