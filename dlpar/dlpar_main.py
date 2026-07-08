@@ -78,6 +78,24 @@ class DlparTests(Test):
         return ''
 
     @staticmethod
+    def get_hmc_from_mcproxy():
+        '''
+        Fallback: parse 'lssrc -ls mcproxy' for the HMC hostname when
+        'lsrsrc IBM.MCP HMCIPAddr' returns no IP address.
+        Looks for a line of the form:
+            Hostname: ://example.com
+        and returns the hostname string, or '' if not found.
+        '''
+        for line in process.system_output('lssrc -ls mcproxy',
+                                          ignore_status=True, shell=True,
+                                          sudo=True).decode("utf-8") \
+                                                    .splitlines():
+            match = re.match(r'\s*Hostname:\s*(\S+)', line)
+            if match:
+                return match.group(1)
+        return ''
+
+    @staticmethod
     def get_partition_name(component):
         '''
         get partition name from lparstat -i
@@ -208,6 +226,10 @@ class DlparTests(Test):
         # Get HMC IP
         self.hmc_ip = wait.wait_for(
             lambda: self.get_mcp_component("HMCIPAddr"), timeout=30)
+        if not self.hmc_ip:
+            self.log.info("HMCIPAddr not found via lsrsrc IBM.MCP, "
+                          "falling back to lssrc -ls mcproxy for hostname")
+            self.hmc_ip = self.get_hmc_from_mcproxy()
 
         # Primary lpar details
         self.pri_partition = self.get_partition_name("Partition Name")
