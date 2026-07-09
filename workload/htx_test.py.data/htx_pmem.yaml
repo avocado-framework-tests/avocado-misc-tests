@@ -1,11 +1,11 @@
-run_type: 'rpm'
 htx_rpm_link: "null"
-time_limit: 60 # in minutes
+# time_interval is in minutes
+time_interval: 60
 mdt: !mux
     bu:
         mdt_file: 'mdt.bu'
     nvdimm_wrc:
         mdt_file: 'mdt.nvdimm_wrc'
     pmem_all:
-        time_limit: 120
+        time_interval: 120
         mdt_file: 'mdt.pmem_all'

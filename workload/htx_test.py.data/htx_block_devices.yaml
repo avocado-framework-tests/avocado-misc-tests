@@ -1,0 +1,6 @@
+htx_disks: ''
+all: False
+# time_interval is in minutes
+time_interval: 60
+mdt_file: 'mdt.hd'
+htx_rpm_link: ''
