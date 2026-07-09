@@ -80,8 +80,7 @@ class smt(Test):
         Start the SMT Workload
         """
         dmesg.clear_dmesg()
-        relative_path = 'smt.py.data/smt.sh'
-        absolute_path = os.path.abspath(relative_path)
+        absolute_path = self.get_data('smt.sh')
         smt_workload = "bash " + absolute_path + " &> /tmp/smt.log &"
         process.run(
             smt_workload, ignore_status=True, sudo=True, shell=True)
