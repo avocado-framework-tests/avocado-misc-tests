@@ -83,7 +83,7 @@ class DlparTests(Test):
         Fallback: parse 'lssrc -ls mcproxy' for the HMC hostname when
         'lsrsrc IBM.MCP HMCIPAddr' returns no IP address.
         Looks for a line of the form:
-            Hostname: ://example.com
+            Hostname: example.com
         and returns the hostname string, or '' if not found.
         '''
         for line in process.system_output('lssrc -ls mcproxy',
