@@ -1,0 +1,26 @@
+--- output.h	2024-01-01 00:00:00.000000000 +0000
++++ output.h	2024-01-01 00:00:00.000000000 +0000
+@@ -9,11 +9,11 @@
+ void out_initialize();
+
+ void out_test_start();
+-void out_test_setting();
+-void out_test_testing();
++void out_test_setting(unsigned int j);
++void out_test_testing(unsigned int j);
+ void out_test_end();
+
+ void out_wheel_start();
+-void out_wheel_advance();
++void out_wheel_advance(unsigned int i);
+ void out_wheel_end();
+
+--- types.h	2024-01-01 00:00:00.000000000 +0000
++++ types.h	2024-01-01 00:00:00.000000000 +0000
+@@ -22,5 +22,5 @@
+
+ struct test {
+     char *name;
+-    int (*fp)();
++    int (*fp)(ulv *bufa, ulv *bufb, size_t count);
+ };

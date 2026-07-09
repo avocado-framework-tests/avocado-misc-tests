@@ -14,6 +14,8 @@ component: !mux
     mremap_test:
         comp: 'mm'
         subtest: 'mremap_test'
+    signal:
+        comp: 'signal'
 run_type: !mux
     distro:
         type: 'distro'

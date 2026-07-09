@@ -55,6 +55,8 @@ class kselftest(Test):
         """
         smg = SoftwareManager()
         self.comp = self.params.get('comp', default='')
+        self.kexec_symlink_created = False
+        self.kexec_kernel_version = None
         self.subtest = self.params.get('subtest', default='')
         if self.comp == "mm" and self.subtest == "ksm_tests":
             self.test_type = self.params.get('test_type', default='-H')
@@ -209,6 +211,19 @@ class kselftest(Test):
                 build_str = '-C %s' % self.comp
             if build.make(self.sourcedir, extra_args='%s' % build_str):
                 self.fail("Compilation failed, Please check the build logs !!")
+        # Fix for kexec test: Create vmlinuz symlink if only vmlinux exists
+        # This handles SUSE systems that use vmlinux instead of vmlinuz
+        if self.comp == "kexec":
+            kernel_version = platform.uname()[2]
+            vmlinuz_path = f"/boot/vmlinuz-{kernel_version}"
+            vmlinux_path = f"/boot/vmlinux-{kernel_version}"
+            if not os.path.exists(vmlinuz_path) and os.path.exists(vmlinux_path):
+                self.log.info(f"Creating symlink {vmlinuz_path} -> {vmlinux_path} for kexec test")
+                result = process.system(f"ln -sf {vmlinux_path} {vmlinuz_path}", shell=True, sudo=True, ignore_status=True)
+                if result == 0:
+                    self.kexec_symlink_created = True
+                    self.kexec_kernel_version = kernel_version
+                    self.log.info(f"Successfully created symlink for kernel version {kernel_version}")
 
     def test(self):
         """
@@ -219,7 +234,7 @@ class kselftest(Test):
         kself_args = self.params.get("kself_args", default='')
         if self.comp == "bpf":
             self.bpf()
-        if self.comp == "cpufreq":
+        elif self.comp == "cpufreq":
             self.cpufreq()
         else:
             if self.subtest == "ksm_tests":
@@ -440,5 +455,14 @@ class kselftest(Test):
 
     def tearDown(self):
         self.log.info('Cleaning up')
+        # Only remove the symlink if we created it and we have the exact kernel version
+        if (getattr(self, 'kexec_symlink_created', False) and getattr(self, 'kexec_kernel_version', None) and self.comp == "kexec"):
+            vmlinuz_path = f"/boot/vmlinuz-{self.kexec_kernel_version}"
+            if os.path.islink(vmlinuz_path):
+                self.log.info(f"Removing kexec symlink {vmlinuz_path} for kernel version {self.kexec_kernel_version}")
+                process.system(f"rm -f {vmlinuz_path}",
+                               shell=True, sudo=True, ignore_status=True)
+            else:
+                self.log.warning(f"Symlink {vmlinuz_path} no longer exists or is not a symlink, skipping removal")
         if os.path.exists(self.workdir):
             shutil.rmtree(self.workdir)

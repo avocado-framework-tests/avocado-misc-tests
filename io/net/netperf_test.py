@@ -54,7 +54,8 @@ class Netperf(Test):
         device = self.params.get("interface", default=None)
         if device in interfaces:
             self.iface = device
-        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
+        elif (local.validate_mac_addr(device) and
+              device in local.get_all_hwaddr()):
             self.iface = local.get_interface_by_hwaddr(device).name
         else:
             self.iface = None
@@ -99,15 +100,17 @@ class Netperf(Test):
             self.peer_ip).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
                                                       self.remotehost)
-        self.remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
+        self.remotehost_public = RemoteHost(self.peer_public_ip,
+                                            self.peer_user,
                                             password=self.peer_password)
-        self.peer_public_networkinterface = NetworkInterface(self.peer_interface,
-                                                             self.remotehost_public)
+        self.peer_public_networkinterface = NetworkInterface(
+            self.peer_interface, self.remotehost_public)
         if self.peer_networkinterface.set_mtu(self.mtu) is not None:
             self.cancel("Failed to set mtu in peer")
         if self.networkinterface.set_mtu(self.mtu) is not None:
             self.cancel("Failed to set mtu in host")
-        self.netperf_run = str(self.params.get("PERF_SERVER_RUN", default=False))
+        self.netperf_run = str(self.params.get("PERF_SERVER_RUN",
+                                               default=False))
         self.netperf = os.path.join(self.teststmpdir, 'netperf')
         netperf_download = self.params.get("netperf_download", default="https:"
                                            "//github.com/HewlettPackard/"
@@ -123,7 +126,8 @@ class Netperf(Test):
             self.cancel("unable to copy the netperf into peer machine")
         self.netperf_dir_peer = "/tmp/%s" % self.version
         self.netperf_dir = os.path.join(self.netperf, self.version)
-        cmd1 = "unzip -o /tmp/%s -d /tmp;cd %s" % (os.path.basename(tarball), self.netperf_dir_peer)
+        cmd1 = "unzip -o /tmp/%s -d /tmp;cd %s" % (
+            os.path.basename(tarball), self.netperf_dir_peer)
         output = self.session.cmd(cmd1)
         if not output.exit_status == 0:
             self.fail("test failed because command failed in peer machine")
@@ -137,11 +141,15 @@ class Netperf(Test):
                                 recursive=True)
         cmd = "cd %s; patch -p1 < %s; ./configure --build=powerpc64le;make" % (
                self.netperf_dir_peer, peer_patch_name)
-        self.session.cmd(cmd)
-        if not output.exit_status == 0:
-            self.fail("test failed because command failed in peer machine")
-        process.system('./configure --build=powerpc64le', shell=True)
-        build.make(self.netperf_dir)
+        output = self.session.cmd(cmd)
+        if output.exit_status != 0:
+            self.cancel("Netperf compilation failed on peer machine")
+        try:
+            process.system('./configure --build=powerpc64le', shell=True)
+            build.make(self.netperf_dir)
+        except Exception as e:
+            self.cancel("Netperf compilation failed on local machine: %s"
+                        % str(e))
         self.perf = os.path.join(self.netperf_dir, 'src', 'netperf')
         self.expected_tp = self.params.get("EXPECTED_THROUGHPUT", default="90")
         self.duration = self.params.get("duration", default="300")
@@ -173,13 +181,13 @@ class Netperf(Test):
             if "TCP_STREAM" in self.option:
                 socket_size = process.run("cat /proc/sys/net/ipv4/tcp_rmem",
                                           shell=True, ignore_status=True)
-                cmd = "%s %s -m %s" % (cmd, self.option,
-                                       socket_size.stdout.decode("utf-8").split('\t')[1])
+                socket_val = socket_size.stdout.decode("utf-8").split('\t')[1]
+                cmd = "%s %s -m %s" % (cmd, self.option, socket_val)
             elif "UDP_STREAM" in self.option:
                 socket_size = process.run("cat /proc/sys/net/ipv4/udp_mem",
                                           shell=True, ignore_status=True)
-                cmd = "%s %s -m %s" % (cmd, self.option,
-                                       socket_size.stdout.decode("utf-8").split('\t')[1])
+                socket_val = socket_size.stdout.decode("utf-8").split('\t')[1]
+                cmd = "%s %s -m %s" % (cmd, self.option, socket_val)
             else:
                 cmd = "%s -t %s" % (cmd, self.option)
         cmd = "%s -l %s -i %s,%s" % (cmd, self.duration, self.max,
@@ -219,8 +227,8 @@ class Netperf(Test):
             try:
                 self.networkinterface.restore_from_backup()
             except Exception:
-                self.log.info("backup file not available, could not restore file.")
+                self.log.info("backup file not available, could not "
+                              "restore file.")
             self.remotehost.remote_session.quit()
-            if hasattr(self, 'remotehost_public'):
-                self.remotehost_public.remote_session.quit()
+            self.remotehost_public.remote_session.quit()
             self.session.quit()

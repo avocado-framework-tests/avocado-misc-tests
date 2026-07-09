@@ -1,0 +1,111 @@
+# LTP fsstress NFS Test Configuration
+
+## Overview
+
+This test validates filesystem operations over NFS (Network File System) by running the LTP (Linux Test Project) fsstress tool on an NFS-mounted filesystem. The test stresses the NFS mount with concurrent filesystem operations to verify stability and correctness.
+
+## Test Purpose
+
+The test validates:
+- NFS mount stability under stress conditions
+- Filesystem operations (create, read, write, delete, rename, etc.) over NFS
+- Network reliability during intensive filesystem I/O
+- NFS server and client interaction under load
+- System stability with multiple concurrent processes performing filesystem operations
+
+
+### Network Configuration
+
+The test will:
+1. Configure `host_interface` with `host_ip`
+2. SSH to peer using `peer_public_ip`
+3. Configure peer's `peer_interface` with `peer_ip`
+4. Set up NFS server on peer
+5. Mount NFS on host using `peer_ip`
+
+## Example Configurations
+
+### Short Test (1 minute)
+Quick validation test suitable for CI/CD pipelines:
+```yaml
+fsstress_loop: "0"
+n_val: "200"
+p_val: "50"
+fsstress_timeout: "60"
+```
+
+### Medium Stress Test (10 minutes)
+Moderate stress test for regular testing:
+```yaml
+fsstress_loop: "0"
+n_val: "500"
+p_val: "200"
+fsstress_timeout: "600"
+```
+
+### Long Stress Test (1 hour)
+Extended stress test for thorough validation:
+```yaml
+fsstress_loop: "0"
+n_val: "999999"
+p_val: "500"
+fsstress_timeout: "3600"
+```
+
+### Extended Stress Test (12 hours)
+Overnight or weekend stress test for stability validation:
+```yaml
+fsstress_loop: "0"
+n_val: "999999"
+p_val: "500"
+fsstress_timeout: "43200"
+```
+
+### Finite Loop Test
+Test with specific number of loops (no timeout needed):
+```yaml
+fsstress_loop: "10"
+n_val: "100"
+p_val: "50"
+fsstress_timeout: "600"
+```
+Note: Timeout acts as a safety mechanism in case loops take too long.
+
+## Running the Test
+
+Execute the test using Avocado with the YAML configuration:
+
+```bash
+avocado run --max-parallel-tasks=1 io/net/ltp_fsstress_nfs.py -m io/net/ltp_fsstress_nfs.py.data/ltp_fsstress_nfs.yaml
+```
+
+**Important**: Use `--max-parallel-tasks=1` for serial execution as required by most tests in this repository.
+
+## Pass/Fail Criteria
+
+### Test Passes When:
+- NFS mount is successfully established
+- fsstress runs for the specified duration or completes all loops (exit status 0 or 124)
+- No NFS-related errors appear in dmesg (no 'nfs' or 'rpc' keywords in error-level messages)
+- All fsstress processes terminate properly
+
+### Test Fails When:
+- NFS mount fails during setup (test is cancelled)
+- NFS-related errors appear in dmesg at error level or higher (checked for 'nfs' or 'rpc' keywords in err/crit/alert/emerg levels)
+
+### Important Notes:
+- The test explicitly checks only for NFS/RPC-related errors in dmesg
+- Exit statuses other than 0 or 124 are logged as warnings but do not fail the test
+- Setup failures (network configuration, SSH connection, NFS mount) will cancel the test, not fail it
+- The test uses `ignore_status=True` for fsstress execution, so non-zero exit codes (except NFS errors in dmesg) won't fail the test
+
+## Timeout Behavior
+
+The test uses the `timeout` command to control fsstress execution:
+
+- **Exit Status 0**: fsstress completed all operations before the timeout (normal completion)
+- **Exit Status 124**: fsstress was terminated by timeout after running for the specified duration (expected behavior for infinite loops)
+- **Other Exit Status**: Indicates an error condition
+
+When `fsstress_loop` is set to `"0"` (infinite), the test is expected to run until the timeout and exit with status 124. This is normal and indicates the test ran for the full duration without errors.
+

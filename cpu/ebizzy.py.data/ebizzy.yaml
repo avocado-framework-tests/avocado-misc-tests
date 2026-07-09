@@ -1,23 +1,8 @@
-ebizy_url: 'https://downloads.sourceforge.net/project/ebizzy/ebizzy/0.3/ebizzy-0.3.tar.gz'
+ebizy_url: 'http://sourceforge.net/projects/ebizzy/files/ebizzy/0.3/ebizzy-0.3.tar.gz'
 iterations: 10
-perf:
-    default:
-        perfstat: -a
-pin: !mux
-    default:
-        taskset: '0'
-duration: !mux
-    default:
-        seconds: 100
-    quick:
-        seconds: 60
-workers: !mux
-    default:
-        num_chunks: 1000
-threads:
-    default:
-        num_threads: 100
-size: !mux
-    default:
-        chunk_size: 512000
-
+perfstat: -a
+taskset: '0'
+seconds: 100
+num_chunks: 1000
+num_threads: 100
+chunk_size: 512000

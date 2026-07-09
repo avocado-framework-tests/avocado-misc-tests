@@ -1,0 +1,36 @@
+# Avocado Test Parameters for Serviceability Tests
+
+RHAIIS_VERSION: ""
+
+# Model Configuration
+HF_MODEL_NAME: "ibm-granite/granite-3.3-8b-instruct"
+
+# Spyre / AIU Configuration
+SPYRE_GROUP: ""
+AIU_PCIE_IDS: "0233:70:00.0 0234:80:00.0 0333:70:00.0 0334:80:00.0"
+AIU_WORLD_SIZE: "4"
+
+# Model serving parameters
+HOST_MODELS_DIR: "/opt/ibm/spyre/models/src"
+VLLM_MODEL_PATH: "/models/granite-3.3-8b-instruct"
+MAX_MODEL_LEN: "32768"
+MAX_BATCH_SIZE: "32"
+
+# Container image
+CONTAINER_URL: ""
+CONTAINER_TAG: ""
+API_KEY: ""
+
+# Container runtime parameters
+DEVICE: "/dev/vfio"
+USERNS: "keep-id"
+GROUP_ADD: "keep-groups"
+SECURITY_OPT: "label=disable"
+PIDS_LIMIT: "0"
+MEMORY: "200G"
+SHM_SIZE: "2G"
+PORT_MAPPING: "127.0.0.1:8000:8000"
+
+# Test user configuration (for non-root serviceability tests)
+USER: ""
+PASSWORD: "" 

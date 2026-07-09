@@ -1,0 +1,2 @@
+iterations: 10
+kernel_repo: 'https://github.com/torvalds/linux.git'

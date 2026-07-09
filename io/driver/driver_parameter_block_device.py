@@ -38,10 +38,10 @@ class Moduleparameter(Test):
         self.module = self.params.get('module', default=None)
         self.param_name = self.params.get('module_param_name', default=None)
         self.param_value = self.params.get('module_param_value', default=None)
-        self.mpath_enabled = self.params.get('multipath_enabled',
-                                             default=False)
+        self.mpath_enabled = self.params.get(
+            'multipath_enabled', default=False)
+        self.load_unload_sleep_time = self.params.get('load_unload_sleep_time', default=30)
         self.disk = self.params.get('disk', default=None)
-        self.load_unload_sleep_time = 30
         self.error_modules = []
         self.uname = linux_modules.platform.uname()[2]
         if not self.module:

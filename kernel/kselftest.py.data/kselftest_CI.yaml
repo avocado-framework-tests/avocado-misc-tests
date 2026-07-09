@@ -16,6 +16,8 @@ component: !mux
         subtest: 'mremap_test'
     static_keys:
         comp: 'static_keys'
+    signal:
+        comp: 'signal'
 run_type: !mux
     upstream:
         type: 'upstream'

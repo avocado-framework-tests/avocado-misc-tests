@@ -347,3 +347,64 @@ class NXGZipTests(Test):
         zlib_cmd = './zlib-run-series.sh %s/linux-src.tar' % self.workdir
         if process.system(zlib_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_zlib_series: zlib test series failed")
+
+    def test_api_trace(self):
+        '''
+        Running NX-GZIP: API Tracing Feature (NX_API_TRACE)
+        Tests the API tracing functionality by building with NX_API_TRACE flag
+        and verifying API calls are logged correctly
+        '''
+        self.log.info("NX-GZIP: test_api_trace: Testing API tracing feature")
+        os.chdir(self.teststmpdir)
+        process.run('make clean', shell=True, ignore_status=True)
+        configure_cmd = './configure CFLAGS="-DNX_API_TRACE -O3 -Wall -g"'
+        if process.system(configure_cmd, shell=True, ignore_status=True):
+            self.fail("NX-GZIP: test_api_trace: configure with NX_API_TRACE failed")
+        nproc = process.run('nproc', shell=True).stdout.decode().strip()
+        make_cmd = 'make -j%s' % nproc
+        if process.system(make_cmd, shell=True, ignore_status=True):
+            self.fail("NX-GZIP: test_api_trace: make with NX_API_TRACE failed")
+        test_dir = os.path.join(self.teststmpdir, "test")
+        if not os.path.exists(test_dir):
+            self.fail("NX-GZIP: test_api_trace: test directory does not exist at %s" % test_dir)
+        try:
+            os.chdir(test_dir)
+        except OSError as e:
+            self.fail("NX-GZIP: test_api_trace: failed to change to test directory: %s" % str(e))
+        build_cmd = 'make test_deflate test_inflate'
+        if process.system(build_cmd, shell=True, ignore_status=True):
+            self.fail("NX-GZIP: test_api_trace: building test_deflate/test_inflate failed")
+        test_cases = [
+            {'name': 'deflate', 'cmd': './test_deflate', 'log': '/tmp/api_test_deflate.log'},
+            {'name': 'inflate', 'cmd': './test_inflate', 'log': '/tmp/api_test_inflate.log'}
+        ]
+        for test_case in test_cases:
+            if os.path.exists(test_case['log']):
+                os.remove(test_case['log'])
+        for test_case in test_cases:
+            self.log.info("NX-GZIP: test_api_trace: Running test_%s with API tracing" % test_case['name'])
+            env_vars = {
+                'NX_GZIP_VERBOSE': '2',
+                'NX_GZIP_LOGFILE': test_case['log']
+            }
+            try:
+                process.run(test_case['cmd'], shell=True, env=env_vars)
+            except process.CmdError as e:
+                self.fail("NX-GZIP: test_api_trace: test_%s execution failed: %s" % (test_case['name'], str(e)))
+            if not os.path.exists(test_case['log']):
+                self.fail("NX-GZIP: test_api_trace: API log file not created for %s" % test_case['name'])
+            try:
+                with open(test_case['log'], 'r') as log_file:
+                    log_content = log_file.read()
+                    api_traces = [line for line in log_content.splitlines() if 'API' in line]
+            except IOError as e:
+                self.fail("NX-GZIP: test_api_trace: Failed to read log file %s: %s" % (test_case['log'], str(e)))
+            if not api_traces:
+                self.fail("NX-GZIP: test_api_trace: No API traces found in %s log" % test_case['name'])
+            self.log.info("NX-GZIP: test_api_trace: API traces found in %s log:" % test_case['name'])
+            for trace in api_traces:
+                self.log.info(trace)
+        for test_case in test_cases:
+            if os.path.exists(test_case['log']):
+                os.remove(test_case['log'])
+        self.log.info("NX-GZIP: test_api_trace: API tracing feature verified successfully")

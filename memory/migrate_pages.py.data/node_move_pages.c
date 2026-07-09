@@ -209,7 +209,7 @@ void write_read_pattern_numa_migration(unsigned long unit_memory, unsigned long 
 
         	if (thp){
 			/* Block for THP */
-	        	posix_memalign(mmap_pointer[i], memory_to_use, page_size);
+	        	posix_memalign((void **)&mmap_pointer[i], page_size, memory_to_use);
 			if( madvise(mmap_pointer[i], memory_to_use, MADV_HUGEPAGE) ){
                 		perror("madvise");
                 		exit(1);
@@ -220,7 +220,7 @@ void write_read_pattern_numa_migration(unsigned long unit_memory, unsigned long 
 		mask |= 1UL << nodes_to_use[0];
         	/* Allocate in Node1 via mbind*/
 	        printf("\nMapped memory at %p %lu \n", mmap_pointer[i], memory_to_use);
-	        mbind_status = mbind(mmap_pointer[i], memory_to_use, MPOL_BIND, &mask, nodes_to_use[0] + 2, NULL);
+	        mbind_status = mbind(mmap_pointer[i], memory_to_use, MPOL_BIND, &mask, nodes_to_use[0] + 2, 0);
         	if(mbind_status){
                 	perror("mbind() fails");
 	                exit(-1);

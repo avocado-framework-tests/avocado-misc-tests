@@ -39,9 +39,16 @@ class Memtester(Test):
         '''
         smm = SoftwareManager()
 
-        for pkg in ['gcc', 'make']:
+        for pkg in ['gcc', 'make', 'patch']:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel('%s is needed for the test to be run' % pkg)
+        try:
+            gcc_version_output = process.run('gcc --version', shell=True).stdout_text
+            gcc_major_version = int(gcc_version_output.split()[2].split('.')[0])
+            self.log.info(f"Detected GCC version: {gcc_major_version}")
+        except Exception as e:
+            self.log.warning(f"Could not detect GCC version: {e}. Assuming patch is needed.")
+            gcc_major_version = 15
         tarball = self.fetch_asset('memtester.zip',
                                    locations=['https://github.com/jnavila/'
                                               'memtester/archive/master.zip'],
@@ -49,6 +56,18 @@ class Memtester(Test):
         archive.extract(tarball, self.workdir)
         sourcedir = os.path.join(self.workdir, 'memtester-master')
         os.chdir(sourcedir)
+        if gcc_major_version >= 15:
+            memtester_patch = 'patch -p0 < %s' % os.path.abspath(
+                self.get_data('memtester_gcc15.patch'))
+            try:
+                process.run(memtester_patch, shell=True)
+                self.log.info("Applied memtester patch to fix GCC 15+ compilation issues")
+            except Exception as e:
+                self.cancel(f"Failed to apply required GCC 15+ patch: {e}. "
+                            f"This patch is mandatory for GCC {gcc_major_version} to avoid "
+                            f"implicit function declaration errors during compilation.")
+        else:
+            self.log.info(f"GCC version {gcc_major_version} detected. Patch not required.")
         process.system('chmod 755 extra-libs.sh', shell=True, sudo=True,
                        ignore_status=True)
         build.make(sourcedir)

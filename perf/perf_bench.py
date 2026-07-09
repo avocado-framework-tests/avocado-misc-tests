@@ -14,10 +14,10 @@
 # Copyright: 2019 IBM
 # Author: Nageswara R Sastry <rnsastry@linux.vnet.ibm.com>
 
-import platform
+import os
 from avocado import Test
-from avocado.utils import distro, process, dmesg
-from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils import process, dmesg
+from avocado.utils.software_manager.distro_packages import ensure_tool
 
 
 class perf_bench(Test):
@@ -33,22 +33,22 @@ class perf_bench(Test):
         '''
 
         # Check for basic utilities
-        smm = SoftwareManager()
-        detected_distro = distro.detect()
-        self.distro_name = detected_distro.name
-
-        deps = ['gcc', 'make']
-        if 'Ubuntu' in self.distro_name:
-            deps.extend(['linux-tools-common', 'linux-tools-%s' %
-                         platform.uname()[2]])
-        elif self.distro_name in ['rhel', 'SuSE', 'fedora', 'centos']:
-            deps.extend(['perf'])
-        else:
-            self.cancel("Install the package for perf supported \
-                         by %s" % detected_distro.name)
-        for package in deps:
-            if not smm.check_installed(package) and not smm.install(package):
-                self.cancel('%s is needed for the test to be run' % package)
+        perf_path = self.params.get('perf_bin', default='')
+        distro_pkg_map = {
+            "Ubuntu": [f"linux-tools-{os.uname()[2]}", "linux-tools-common"],
+            "debian": ["linux-perf"],
+            "centos": ["perf"],
+            "fedora": ["perf"],
+            "rhel": ["perf"],
+            "SuSE": ["perf"],
+        }
+        try:
+            perf_version = ensure_tool("perf", custom_path=perf_path,
+                                       distro_pkg_map=distro_pkg_map)
+            self.log.info(f"Perf version: {perf_version}")
+            self.perf_bin = perf_path if perf_path else "perf"
+        except RuntimeError as e:
+            self.cancel(str(e))
 
         # Getting the parameters from yaml file
         self.optname = self.params.get('name', default='all')
@@ -77,6 +77,6 @@ class perf_bench(Test):
 
     def test_bench(self):
         # perf bench command
-        bench_cmd = "perf bench %s %s" % (self.optname, self.option)
+        bench_cmd = "%s bench %s %s" % (self.perf_bin, self.optname, self.option)
         self.run_cmd(bench_cmd)
         self.verify_dmesg()
