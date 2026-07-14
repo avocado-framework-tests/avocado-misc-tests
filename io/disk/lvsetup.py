@@ -16,6 +16,7 @@
 # Author: Narasimhan V <sim@linux.vnet.ibm.com>
 # Copyright: 2016 Red Hat, Inc.
 # Author: Lukas Doktor <ldoktor@redhat.com>
+# Author: Priyanka Behera <Priyanka.Behera2@ibm.com>
 #
 # Based on the code by:
 #
@@ -24,7 +25,7 @@
 
 """
 Test that automatically takes snapshots from created logical volumes
-using a given policy.
+using a given policy. Also validates LV/VG extend operations.
 
 For details about the policy see README.
 """
@@ -36,6 +37,7 @@ from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import lv_utils
 from avocado.utils import distro
 from avocado.utils import disk
+from avocado.utils import process
 from avocado.utils.disk import DiskError
 
 
@@ -61,6 +63,7 @@ class Lvsetup(Test):
         self.lv_name = self.params.get('lv_name', default='avocado_lv')
         self.fs_name = self.params.get('fs', default='ext4').lower()
         self.lv_size = self.params.get('lv_size', default='0')
+        self.lv_extend_size = self.params.get('lv_extend_size', default='0')
         if self.fs_name == 'xfs':
             pkgs = ['xfsprogs']
         if self.fs_name == 'btrfs':
@@ -136,6 +139,20 @@ class Lvsetup(Test):
         self.lv_snapshot_size = self.params.get('lv_snapshot_size',
                                                 default=self.lv_size)
 
+        # Parse lv_extend_size (supports G/M suffix, same as lv_size)
+        if self.lv_extend_size:
+            if str(self.lv_extend_size).endswith('G'):
+                self.lv_extend_size = int(
+                    str(self.lv_extend_size).strip('G')) * 1024
+            elif str(self.lv_extend_size).endswith('M'):
+                self.lv_extend_size = int(
+                    str(self.lv_extend_size).strip('M'))
+            else:
+                self.lv_extend_size = int(self.lv_extend_size)
+        # Default extend size: 10% of the original lv_size
+        if not self.lv_extend_size:
+            self.lv_extend_size = int(self.lv_size * 10 / 100) or 1
+
     @avocado.fail_on(lv_utils.LVException)
     def create_lv(self):
         """
@@ -191,6 +208,36 @@ class Lvsetup(Test):
                           create_filesystem=self.fs_name)
         lv_utils.lv_umount(self.vg_name, self.lv_name)
         lv_utils.vg_reactivate(self.vg_name, export=True)
+        self.mount_unmount_lv()
+
+    @avocado.fail_on(lv_utils.LVException)
+    def test_lv_extend(self):
+        """
+        Creates a logical volume, extends it by lv_extend_size, and verifies
+        the new size is larger than the original size.
+        Uses lvextend command directly as lv_utils.lv_extend is not available
+        in this version of avocado.
+        """
+        self.create_lv()
+        lv_utils.lv_mount(self.vg_name, self.lv_name, self.mount_loc,
+                          create_filesystem=self.fs_name)
+        lv_utils.lv_umount(self.vg_name, self.lv_name)
+
+        size_before = lv_utils.lv_list()[self.lv_name]['LSize']
+        lv_path = '/dev/%s/%s' % (self.vg_name, self.lv_name)
+        cmd = 'lvextend -L +%sM %s' % (self.lv_extend_size, lv_path)
+        result = process.run(cmd, ignore_status=True)
+        if result.exit_status != 0:
+            self.fail('lvextend failed for LV %s: %s' % (self.lv_name,
+                                                         result.stderr_text))
+        size_after = lv_utils.lv_list()[self.lv_name]['LSize']
+
+        if size_after == size_before:
+            self.fail(
+                'Logical Volume %s was not extended: size before=%s, '
+                'size after=%s' % (self.lv_name, size_before, size_after))
+        self.log.info('LV %s extended from %s to %s successfully',
+                      self.lv_name, size_before, size_after)
         self.mount_unmount_lv()
 
     @avocado.fail_on(lv_utils.LVException)
