@@ -1,4 +1,3 @@
-time_limit: 2
-time_unit: 'm' # m-minutes h-hours
+# time_interval is in minutes
+time_interval: 2
 mdt_file: 'mdt.all'
-run_type: 'git'
