@@ -31,6 +31,7 @@ import json
 from avocado import Test
 from avocado.utils import process, distro, disk
 from avocado.utils import partition as partition_lib
+from avocado.utils.disk import cleanup_disks
 
 
 class ParallelDd(Test):
@@ -212,9 +213,15 @@ class ParallelDd(Test):
 
     def tearDown(self):
         """
-        Formatting the disk.
+        Cleanup disk used in test
         """
         try:
             self.fsys.unmount()
         except process.CmdError:
             pass
+
+        if hasattr(self, 'disk') and self.disk:
+            try:
+                cleanup_disks([self.disk], logger=self.log, mode="full")
+            except Exception as e:
+                self.log.error("Disk cleanup failed for %s: %s", self.disk, e)

@@ -29,6 +29,7 @@ from avocado import Test
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils import disk
 from avocado.utils import softwareraid
+from avocado.utils.disk import cleanup_disks
 
 
 class SoftwareRaid(Test):
@@ -97,3 +98,9 @@ class SoftwareRaid(Test):
         if hasattr(self, "sraid"):
             self.sraid.stop()
             self.sraid.clear_superblock()
+
+        if hasattr(self, 'disks') and self.disks:
+            try:
+                cleanup_disks(self.disks, logger=self.log, mode="full")
+            except Exception as e:
+                self.log.error("Disk cleanup failed for %s: %s", self.disks, e)
