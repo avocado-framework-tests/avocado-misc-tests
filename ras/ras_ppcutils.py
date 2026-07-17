@@ -401,7 +401,13 @@ class RASToolsPpcutils(Test):
         self.run_cmd("ls-vdev")
         self.run_cmd("ls-vdev -h")
         self.run_cmd("ls-vdev -V")
-        dev_name = self.run_cmd_out("ls-vdev").split()[1]
+        output = self.run_cmd_out("ls-vdev").strip()
+        if not output:
+            self.cancel("No virtual SCSI devices found on this system")
+        try:
+            dev_name = output.split()[1]
+        except IndexError:
+            self.fail("Unable to parse ls-vdev output:\n%s" % output)
         lsblk_disks = disk.get_disks()
         lsblk_dev_name = [i.replace('/dev/', '') for i in lsblk_disks]
         if dev_name.strip() not in lsblk_dev_name:
@@ -467,10 +473,15 @@ class RASToolsPpcutils(Test):
         for list_item in list:
             cmd = "bootlist %s" % list_item
             self.run_cmd(cmd)
-        output = self.run_cmd_out("lsvio -e").splitlines()
-        for line in output:
-            if len(line.split()) > 1:
-                interface = line.split()[1]
+        output = self.run_cmd_out("lsvio -e").strip()
+        if not output:
+            self.cancel("No virtual I/O devices found (lsvio -e returned no output)")
+        interface = None
+        for line in output.splitlines():
+            fields = line.split()
+            if len(fields) > 1:
+                interface = fields[1]
+                break
         file_path = os.path.join(self.workdir, 'file')
         process.run("echo %s > %s" %
                     (self.disk_name, file_path), ignore_status=True,
