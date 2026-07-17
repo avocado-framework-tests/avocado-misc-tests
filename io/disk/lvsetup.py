@@ -16,7 +16,6 @@
 # Author: Narasimhan V <sim@linux.vnet.ibm.com>
 # Copyright: 2016 Red Hat, Inc.
 # Author: Lukas Doktor <ldoktor@redhat.com>
-# Author: Priyanka Behera <Priyanka.Behera2@ibm.com>
 #
 # Based on the code by:
 #
@@ -226,10 +225,8 @@ class Lvsetup(Test):
         size_before = lv_utils.lv_list()[self.lv_name]['LSize']
         lv_path = '/dev/%s/%s' % (self.vg_name, self.lv_name)
         cmd = 'lvextend -L +%sM %s' % (self.lv_extend_size, lv_path)
-        result = process.run(cmd, ignore_status=True)
-        if result.exit_status != 0:
-            self.fail('lvextend failed for LV %s: %s' % (self.lv_name,
-                                                         result.stderr_text))
+        if process.system(cmd, ignore_status=True):
+            self.fail('lvextend failed for LV %s' % self.lv_name)
         size_after = lv_utils.lv_list()[self.lv_name]['LSize']
 
         if size_after == size_before:
