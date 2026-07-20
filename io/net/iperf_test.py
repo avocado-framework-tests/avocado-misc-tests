@@ -52,7 +52,8 @@ class Iperf(Test):
         device = self.params.get("interface", default="")
         if device in interfaces:
             self.iface = device
-        elif localhost.validate_mac_addr(device) and device in localhost.get_all_hwaddr():
+        elif (localhost.validate_mac_addr(device) and
+              device in localhost.get_all_hwaddr()):
             self.iface = localhost.get_interface_by_hwaddr(device).name
         else:
             self.iface = None
@@ -76,7 +77,8 @@ class Iperf(Test):
         if not self.session.connect():
             self.cancel("failed connecting to peer")
         smm = SoftwareManager()
-        for pkg in ["gcc", "autoconf", "perl", "m4", "libtool", "gcc-c++", "flex", "bison"]:
+        for pkg in ["gcc", "autoconf", "perl", "m4", "libtool", "gcc-c++",
+                    "flex", "bison"]:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel("%s package is need to test" % pkg)
             cmd = "%s install %s" % (smm.backend.base_command, pkg)
@@ -157,7 +159,8 @@ class Iperf(Test):
         cmd = "cd /tmp/%s;./configure ppc64le;make" % self.version
         output = self.session.cmd(cmd)
         if not output.exit_status == 0:
-            self.cancel("Unable to compile Iperf into peer machine")
+            self.cancel(
+                "Unable to compile Iperf into peer machine")
         self.iperf_run = str(self.params.get("PERF_SERVER_RUN", default=False))
         if self.iperf_run:
             cmd = "/tmp/%s/src/iperf -s" % self.version
@@ -190,20 +193,30 @@ class Iperf(Test):
         messages using multiple threads or processes.
         """
         speed = int(read_file("/sys/class/net/%s/speed" % self.iface))
+        iperf_pthread = 1
         if speed == 100000:
             iperf_pthread = 10
         elif speed == 25000:
             iperf_pthread = 4
+
+        # Check if interface is vNIC
+        is_vnic = False
+        try:
+            is_vnic = self.networkinterface.is_vnic()
+        except Exception as e:
+            self.log.warn("Unable to determine if interface is vNIC: %s", e)
+
         os.chdir(self.iperf)
-        if self.networkinterface.is_vnic() or self.hbond:
-            cmd = "iperf -c %s -P %s -t 20 -i 5" % (self.peer_ip, iperf_pthread)
+        if is_vnic or self.hbond:
+            cmd = "./iperf -c %s -P %s -t 20 -i 5" % (
+                self.peer_ip, iperf_pthread)
         else:
             cmd = "./iperf -c %s" % self.peer_ip
         result = process.run(cmd, shell=True, ignore_status=True)
         nping_result = self.nping()
         if result.exit_status:
             self.fail("FAIL: Iperf Run failed")
-        if self.networkinterface.is_vnic() or self.hbond:
+        if is_vnic or self.hbond:
             for line in result.stdout.decode("utf-8").splitlines():
                 if 'SUM' in line and 'Mbits/sec' in line:
                     tput = int(line.split()[5])
@@ -255,9 +268,8 @@ class Iperf(Test):
                 self.networkinterface.restore_from_backup()
             except Exception:
                 self.networkinterface.remove_cfg_file()
-                self.log.info("backup file not available, could not restore file.")
-            if self.hbond:
-                self.networkinterface.restore_slave_cfg_file()
+                self.log.info(
+                    "backup file not available, could not restore file.")
             self.remotehost.remote_session.quit()
             if hasattr(self, 'remotehost_public'):
                 self.remotehost_public.remote_session.quit()
