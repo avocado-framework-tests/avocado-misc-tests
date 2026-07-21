@@ -1,0 +1,28 @@
+# RAG Embedding - Prompt Length 512, Batch Size 256
+TEST_NAME: "Embedding_PL512_BS256"
+CONTAINER_URL: ""
+CONTAINER_TAG: ""
+CONTAINER_REGISTRY: ""
+AIU_PCIE_IDS: "0333:70:00.0"
+AIU_WORLD_SIZE: 1
+HOST_MODELS_DIR: "/opt/ibm/spyre/models"
+VLLM_MODEL_PATH: "/models/granite-embedding"
+MAX_MODEL_LEN: 512
+MAX_BATCH_SIZE: 256
+MEMORY: "1500G"
+# SHM_SIZE: ""  # Not used for Embedding
+DEVICE: "/dev/vfio"
+PRIVILEGED: "true"
+PIDS_LIMIT: "0"
+USERNS: "keep-id"
+GROUP_ADD: "keep-groups"
+PORT_MAPPING: "127.0.0.1::8000"
+VLLM_SPYRE_USE_CB: "1"
+VLLM_DT_CHUNK_LEN: 0
+VLLM_SPYRE_USE_CHUNKED_PREFILL: 0
+ENABLE_PREFIX_CACHING: "false"
+STARTUP_TIMEOUT: 600
+API_KEY: "your-api-key-here"
+DOWNLOAD_MODEL: "true"
+HF_MODEL_ID: "ibm-granite/granite-embedding-125m-english"
+MODEL_NAME: "granite-embedding-125m-english"
