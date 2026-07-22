@@ -14,10 +14,9 @@
 # Copyright: 2022 IBM
 # Author: Disha Goel <disgoel@linux.vnet.ibm.com>
 
-import sys
 import time
 import platform
-import pexpect
+import threading
 import tempfile
 import os
 from avocado import Test
@@ -43,7 +42,7 @@ class perf_top(Test):
         detected_distro = distro.detect()
         self.distro_name = detected_distro.name
 
-        deps = ['gcc', 'make']
+        deps = ['gcc', 'make', 'ebizzy']
         if 'Ubuntu' in self.distro_name:
             deps.extend(['linux-tools-common', 'linux-tools-%s' %
                          platform.uname()[2]])
@@ -67,6 +66,9 @@ class perf_top(Test):
         # Creating a temporary file
         self.temp_file = tempfile.NamedTemporaryFile().name
 
+    def run_ebizzy(self):
+        process.run("ebizzy -S 30", ignore_status=True, shell=True)
+
     def test_top(self):
         if self.option in ["-k", "--vmlinux", "--kallsyms"]:
             if self.distro_name in ['rhel', 'fedora', 'centos']:
@@ -76,20 +78,40 @@ class perf_top(Test):
                 self.option = self.option + " /boot/vmlinux-" + \
                         platform.uname()[2]
 
-        child = pexpect.spawn("perf top %s" % self.option, encoding='utf-8')
-        time.sleep(10)
-        child.logfile = sys.stdout
-        err = child.expect_exact(
-            ['Error: ', 'perf: Segmentation fault', pexpect.TIMEOUT])
-        child.send('q')
-        exit_status = child.wait()
-        if exit_status != 0 or err == 0:
-            self.fail("Unknown option %s" % self.option)
+        cmd = f"perf top {self.option}"
+        self.log.info(f"Running command: {cmd}")
+
+        proc = process.SubProcess(cmd)
+        proc.start()
+        time.sleep(10)  # let perf top run for a short while
+
+        # Try to stop gracefully (like pressing 'q')
+        if proc.poll() is None:
+            process.run(f"pkill -SIGINT -f '{cmd}'", ignore_status=True)
+            time.sleep(1)
+
+        proc.wait()
+
+        # Check for dmesg errors
+        dmesg.collect_errors_dmesg([
+            'WARNING: CPU:', 'Oops', 'Segfault',
+            'soft lockup', 'Unable to handle'
+        ])
+
+        # Check exit code and stderr for issues
+        if proc.result.exit_status != 0:
+            self.fail(f"perf top failed with option {self.option}: "
+                      f"{proc.result.stderr.decode('utf-8', 'ignore')}")
+
         dmesg.collect_errors_dmesg(['WARNING: CPU:', 'Oops', 'Segfault',
                                     'soft lockup', 'Unable to handle'])
 
     def test_workload_output(self):
-        process.getoutput("perf top -a > %s " % self.temp_file, timeout=10)
+        workload_thread = threading.Thread(target=self.run_ebizzy)
+        workload_thread.start()
+
+        process.getoutput("perf top -a > %s " % self.temp_file, timeout=35)
+        workload_thread.join(timeout=5)
         perf_top_output = genio.read_file(self.temp_file).splitlines()
         flag = False
         for lines in perf_top_output:
