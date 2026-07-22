@@ -9,6 +9,8 @@ component: !mux
     cpufreq:
         comp: "cpufreq"
         test_mode: "basic"
+    zram:
+        comp: "zram"
 run_type: !mux
     distro:
         type: 'distro'

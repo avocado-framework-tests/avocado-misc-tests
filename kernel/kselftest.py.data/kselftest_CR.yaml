@@ -13,6 +13,8 @@ component: !mux
         comp: 'vDSO'
     signal:
         comp: 'signal'
+    zram:
+        comp: "zram"
 run_type: !mux
     distro:
         type: 'distro'
