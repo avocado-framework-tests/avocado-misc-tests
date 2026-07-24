@@ -1,0 +1,25 @@
+# Avocado test timeout (seconds). Also used as the per-step timeout for the
+# lkp install/run helpers, so it must comfortably exceed the benchmark runtime.
+timeout: 3600
+
+# lkp-tests source. Override lkp_repo_url for a local mirror if github.com is
+# unreachable from the test box.
+lkp_repo_url: "https://github.com/intel/lkp-tests.git"
+lkp_repo_branch: master
+
+# Extra args appended to the base "lkp install" run in setUp only (it does
+# not affect the per sub-job "lkp install" performed by install_job, which is
+# always run).
+lkp_install_extra: ""
+
+# Fail the test when the measured maximum instruction jitter exceeds this many
+# cycles. 0 disables the assertion (measure-and-report only).
+jitter_threshold_cycles: 0
+
+# LKP jitter job definition (read individually, assembled by the test).
+suite: jitter
+testcase: jitter
+core_id: 2
+rate: 1000
+loops: 10000
+samples: 20

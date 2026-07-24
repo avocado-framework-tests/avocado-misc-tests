@@ -1,0 +1,29 @@
+# Avocado test timeout (seconds). Also used as the per-step timeout for the
+# lkp install/run helpers, so it must comfortably exceed "testtime" below.
+# When invoking avocado, pass a coherent job timeout, e.g.
+#   avocado run --job-timeout=600 cpu/stress_ng_cpu.py
+timeout: 3600
+
+# lkp-tests source. Override lkp_repo_url for a local mirror if github.com is
+# unreachable from the test box.
+lkp_repo_url: "https://github.com/intel/lkp-tests.git"
+lkp_repo_branch: master
+
+# Extra args appended to the base "lkp install" run in setUp only (it does
+# not affect the per sub-job "lkp install" performed by install_job, which is
+# always run).
+lkp_install_extra: ""
+
+# Target busy percentage every CPU must reach (busy = 100 - %idle).
+cpu_saturation_pct: 95
+
+# Fail when full-CPU saturation takes longer than this many seconds.
+# 0 disables the assertion (measure-and-report only).
+cpu_saturation_max_seconds: 0
+
+# LKP stress-ng job definition (read individually, assembled by the test).
+suite: stress-ng
+testcase: stress-ng
+nr_threads: "100%"
+testtime: 60
+mpstat_interval: 1
