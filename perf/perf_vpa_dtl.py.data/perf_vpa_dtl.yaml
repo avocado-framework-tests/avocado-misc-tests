@@ -1,0 +1,26 @@
+# Record durations in seconds for each VPA DTL event.
+all_duration: 20
+cede_duration: 20
+preempt_duration: 60
+fault_duration: 90
+
+# Workload tuning for dtl_preempt: stress-ng cpu workers = online_cpus * preempt_cpu_factor.
+preempt_cpu_factor: 4
+
+# Workload tuning for dtl_fault: cpu workers = online_cpus * fault_cpu_factor, vm_workers = number of vm stressors, vm_bytes = memory pressure per stressor.
+fault_cpu_factor: 2
+fault_vm_workers: 8
+fault_vm_bytes: "90%"
+
+# Retry handling for transient PMU open/report failures.
+record_retries: 3
+retry_sleep: 2
+
+# Delay in seconds between sequential event runs.
+inter_event_sleep: 2
+
+# Event policy: open failure after retries always fails; zero records fail only when corresponding require_* is true, otherwise warn.
+require_cede: true
+require_preempt: false
+require_fault: false
+
