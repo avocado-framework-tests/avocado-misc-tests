@@ -4,3 +4,7 @@ stresstime: 10
 vmcount: 4
 iocount: 4
 memratio: 5
+# DLPAR bulk operation parameters
+bulk_dlpar_threshold_gb: 4096  # Memory threshold (GB) to trigger progressive bulk operations
+initial_bulk_count: 50  # Starting number of blocks for progressive bulk operations
+max_bulk_count: 4096  # Maximum blocks per operation for system stability
