@@ -1,4 +1,4 @@
-url: "https://github.com/ColinIanKing/stress-ng/archive/master.zip"
+url: "https://github.com/ColinIanKing/stress-ng/archive/V0.21.04.zip"
 base_time: 300 
 time_per_gig: 10
 crt_stressors: ["bsearch", "context", "hsearch", "lsearch", "matrix", "memcpy", 

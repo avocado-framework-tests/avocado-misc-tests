@@ -18,6 +18,7 @@ import os
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import memory
+from avocado.utils import cpu
 from avocado.utils import build
 from avocado.utils import archive
 from avocado.utils import dmesg
@@ -117,11 +118,92 @@ class Stressngmem(Test):
         return call_traces
 
     def process_looping(self, list_of_stressors):
-        loop_count = 0
-        while loop_count < len(list_of_stressors):
-            return_code = self.execute_stressor(list_of_stressors[loop_count])
-            loop_count = loop_count + 1
-        return return_code
+        for stressor in list_of_stressors:
+            return_code = self.execute_stressor(stressor)
+            if return_code == 0:
+                self.passed_stressors.append(stressor)
+            else:
+                self.failed_stressors.append((stressor, return_code))
+
+    def calculate_workers_for_memory(self, stressor):
+        """
+        Calculate optimal worker count for memory-intensive stressors on max config systems.
+
+        For systems >4TB, scales workers based on memory size rather than CPU count
+        to achieve better memory utilization (target: 50-70% memory usage).
+
+        :param stressor: Name of the stressor
+        :return: Number of workers, or None to let stress-ng auto-scale to CPU count
+        """
+        if self.stressor_flag == "vrt" and self.is_max_config:
+            optimal_workers = int(self.total_memory_in_GiB / self.mem_per_worker)
+            max_workers = self.online_cpus * 2
+            calculated_workers = min(optimal_workers, max_workers)
+            self.log.info("Max config memory-based worker calculation for %s:", stressor)
+            self.log.info("  Total memory: %s GiB", self.total_memory_in_GiB)
+            self.log.info("  Target per worker: %s GiB", self.mem_per_worker)
+            self.log.info("  Optimal workers: %s", optimal_workers)
+            self.log.info("  CPU count: %s (max workers cap: %s)",
+                          self.online_cpus, max_workers)
+            self.log.info("  Using %s workers (vs %s CPUs with auto-scale)",
+                          calculated_workers, self.online_cpus)
+            return calculated_workers if calculated_workers > 0 else None
+        return None
+
+    def get_memory_option_for_stressor(self, stressor, workers):
+        """
+        Get memory size option for stressor to target specified memory utilization.
+        Uses stress-ng's percentage-based sizing (e.g., --vm-bytes 70%)
+
+        :param stressor: Name of the stressor
+        :param workers: Number of workers, or None if stress-ng is auto-scaling
+        :return: String with memory option or empty string
+        """
+        if not self.is_max_config or workers is None:
+            return ""
+
+        target_percent = self.memory_target_percent
+        if stressor in ['vm', 'mmap']:
+            options = {
+                'vm': f'--vm-bytes {target_percent}%',
+                'mmap': f'--mmap-bytes {target_percent}%',
+            }
+            return options.get(stressor, "")
+        if stressor in ['malloc', 'bigheap', 'brk']:
+            # Calculate total target memory in bytes
+            total_memory_bytes = self.total_memory_in_GiB * 1024 * 1024 * 1024
+            target_memory_bytes = int(total_memory_bytes * (target_percent / 100.0))
+            per_worker_bytes = target_memory_bytes // workers
+            per_worker_gb = per_worker_bytes / (1024 * 1024 * 1024)
+            self.log.info(
+                "  Calculated per-worker memory for %s: %.2f GB "
+                "(%d workers × %.2f GB = %.2f GB total, %d%% of %d GB)",
+                stressor, per_worker_gb, workers, per_worker_gb,
+                workers * per_worker_gb, target_percent, self.total_memory_in_GiB
+            )
+
+            if stressor == 'malloc':
+                alloc_size_mb = 512
+                alloc_size_bytes = alloc_size_mb * 1024 * 1024
+                allocations_needed = int(per_worker_bytes / alloc_size_bytes)
+                allocations_per_worker = allocations_needed * 100
+                allocations_per_worker = min(allocations_per_worker, 2000)
+                allocations_per_worker = max(100, allocations_per_worker)
+                self.log.info(
+                    "  malloc strategy: %d MB allocation size, %d max allocations per worker (100× multiplier)",
+                    alloc_size_mb, allocations_per_worker
+                )
+                return f'--malloc-bytes {alloc_size_bytes} --malloc-max {allocations_per_worker} --malloc-touch'
+            bigheap_growth_bytes = 32 * 1024 * 1024
+            options = {
+                'bigheap': f'--bigheap-bytes {per_worker_bytes} --bigheap-growth {bigheap_growth_bytes}',
+                'brk': f'--brk-bytes {per_worker_bytes}',
+            }
+            return options.get(stressor, "")
+        if stressor == 'mincore':
+            return '--mincore-random'
+
+        return ""
 
     def execute_stressor(self, stressor):
         if self.stressor_flag == "crt":
@@ -130,14 +212,19 @@ class Stressngmem(Test):
             run_time = self.variable_time
 
         end_time = ((run_time)*(15/10))
+        workers = self.calculate_workers_for_memory(stressor)
+        memory_option = self.get_memory_option_for_stressor(stressor, workers)
+        workers_arg = workers if workers is not None else 0
         self.log.info(
-            "Running stress-ng : %s stressor for %s seconds",
-            stressor, run_time)
+            "Running stress-ng : %s stressor for %s seconds with %s workers",
+            stressor, run_time, workers if workers is not None else f"auto-scale ({self.online_cpus} CPUs)")
+        if memory_option:
+            self.log.info("  Memory target: %s", memory_option)
 
         # Use "timeout" command to launch stress-ng, in order catch it;
         # should it go into la-la land
         cmd = "timeout -s 9 %s stress-ng --aggressive --verify \
-                --timeout %s --%s 0" % (end_time, run_time, stressor)
+                --timeout %s --%s %s %s" % (end_time, run_time, stressor, workers_arg, memory_option)
         return_code = process.system(cmd, ignore_status=True)
         self.log.info("Return code is %s", return_code)
 
@@ -161,8 +248,18 @@ class Stressngmem(Test):
         self.log.info("Total Memory on the system : %s GiB",
                       self.total_memory_in_GiB)
 
+        self.is_max_config = self.total_memory_in_GiB > 4096
         extra_time = (self.time_per_gig * self.total_memory_in_GiB)
-        self.variable_time = (self.base_time + extra_time)
+        calculated_time = (self.base_time + extra_time)
+        if self.max_vrt_time is not None:
+            self.variable_time = min(calculated_time, self.max_vrt_time)
+            if calculated_time > self.max_vrt_time:
+                self.log.info("Max config system detected (%s GiB > 4TB)",
+                              self.total_memory_in_GiB)
+                self.log.info("VRT runtime capped from %s to %s seconds",
+                              calculated_time, self.variable_time)
+        else:
+            self.variable_time = calculated_time
         self.log.info("Time limit set for constant_run_time stressors is %s "
                       "seconds per stressor.", self.base_time)
         self.log.info("Time limit set for variable_run_time stressors is %s "
@@ -179,11 +276,18 @@ class Stressngmem(Test):
                               "mmap"]
 
         self.had_error = 0
-        self.skip_teardown_dmesg_check = False  # Flag to skip dmesg check in tearDown
+        self.is_max_config = False
+        self.skip_teardown_dmesg_check = False
+        self.passed_stressors = []
+        self.failed_stressors = []
         self.base_time = self.params.get("base_time", default=300)
         self.time_per_gig = self.params.get("time_per_gig", default=10)
+        self.max_vrt_time = self.params.get("max_vrt_time", default=7200)
+        self.mem_per_worker = self.params.get("mem_per_worker", default=20)
+        self.memory_target_percent = self.params.get("memory_target_percent", default=70)
+        self.online_cpus = cpu.online_count()
         self.url = self.params.get("url", default="https://github.com/"
-                                   "ColinIanKing/stress-ng/archive/master.zip")
+                                   "ColinIanKing/stress-ng/archive/V0.21.04.zip")
         self.crt_stressors = self.params.get(
             "crt_stressors", default=crt_stressors_list)
         self.vrt_stressors = self.params.get(
@@ -197,7 +301,8 @@ class Stressngmem(Test):
         tarball = self.fetch_asset(
             'stressng.zip', locations=self.url, expire='7d')
         archive.extract(tarball, self.workdir)
-        sourcedir = os.path.join(self.workdir, 'stress-ng-master')
+        version = os.path.splitext(os.path.basename(self.url))[0].lstrip('Vv')
+        sourcedir = os.path.join(self.workdir, 'stress-ng-' + version)
         os.chdir(sourcedir)
         result = build.run_make(sourcedir, process_kwargs={
                                 'ignore_status': True})
@@ -226,18 +331,35 @@ class Stressngmem(Test):
 
         # Loop through each constant_run_time stressors
         self.stressor_flag = "crt"
-        return_code = self.process_looping(self.crt_stressors)
+        self.process_looping(self.crt_stressors)
 
         # Loop through each variable_run_time stressors
         self.stressor_flag = "vrt"
-        return_code = self.process_looping(self.vrt_stressors)
+        self.process_looping(self.vrt_stressors)
 
+        self.log.info("=====================================================")
+        self.log.info("==> Test Summary:")
+        self.log.info("=====================================================")
+        self.log.info("Total stressors executed: %s",
+                      len(self.passed_stressors) + len(self.failed_stressors))
+        self.log.info("Passed: %s", len(self.passed_stressors))
+        self.log.info("Failed: %s", len(self.failed_stressors))
+        self.log.info("=====================================================")
+        if self.passed_stressors:
+            self.log.info("==> Passed Stressors (%s):", len(self.passed_stressors))
+            for stressor in self.passed_stressors:
+                self.log.info("  ✓ %s", stressor)
+        if self.failed_stressors:
+            self.log.info("==> Failed Stressors (%s):", len(self.failed_stressors))
+            for stressor, code in self.failed_stressors:
+                self.log.info("  ✗ %s (return code: %s)", stressor, code)
         self.log.info("=====================================================")
         if self.had_error == 0:
             self.log.info("==> stress-ng memory test passed!")
         else:
-            self.fail("==> stress-ng memory test failed; most recent error \
-                    was %s" % return_code)
+            failed_info = ', '.join(
+                "%s(rc=%s)" % (s, rc) for s, rc in self.failed_stressors)
+            self.fail("stress-ng memory test failed: %s" % failed_info)
         self.log.info("=====================================================")
 
     def test_vm_class_sequential(self):

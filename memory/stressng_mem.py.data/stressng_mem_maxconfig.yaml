@@ -1,0 +1,18 @@
+# Optimized configuration for large memory systems (>4TB)
+url: "https://github.com/ColinIanKing/stress-ng/archive/V0.21.04.zip"
+# base_time: Runtime in seconds for Constant Runtime (CRT) stressors
+base_time: 300
+# time_per_gig: Additional time in seconds per GiB of memory for Variable Runtime (VRT) stressors
+time_per_gig: 10
+# max_vrt_time: Maximum runtime cap in seconds for VRT stressors on large memory systems (>4TB)
+max_vrt_time: 7200
+# mem_per_worker: Target memory in GiB per worker for max config systems (>4TB)
+# Controls worker count scaling: workers = memory_GiB / mem_per_worker
+mem_per_worker: 20
+# memory_target_percent: Target memory percentage for VRT stressors on max config systems
+memory_target_percent: 70
+crt_stressors: ["bsearch", "context", "hsearch", "lsearch", "matrix", "memcpy", 
+                "null", "pipe", "qsort", "stack", "str", "stream", "tsearch", "vm-rw", 
+                "wcs", "zero", "mlock", "mmapfork", "mmapmany", "mremap", "shm-sysv", 
+                "vm-splice"]
+vrt_stressors: ["malloc", "mincore", "vm", "bigheap", "brk", "mmap"]
