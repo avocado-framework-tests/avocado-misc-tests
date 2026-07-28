@@ -1,5 +1,7 @@
-runtime: 100
-sched_runtime: 100
+policy_change_runtime: 120
+policy_change_workers: 4
+runtime: 900
+sched_runtime: 900
 test_mode:
 url: "https://github.com/ColinIanKing/stress-ng/archive/master.zip"
 crt_stressors: ["bsearch", "context", "cpu", "crypt", "hsearch", "longjmp",
