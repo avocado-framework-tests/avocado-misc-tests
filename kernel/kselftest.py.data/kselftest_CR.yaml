@@ -3,6 +3,9 @@ component: !mux
     comp: "sched"
   mm:
     comp: "mm"
+  mm_mremap_test:
+    comp: "mm"
+    subtest: "mremap_test"
   mm_powerpc:
     comp: "powerpc/mm"
   cpu_hotplug:
