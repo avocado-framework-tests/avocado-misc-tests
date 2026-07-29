@@ -19,8 +19,9 @@
 
 import os
 import configparser
+from pathlib import Path
 from avocado import Test
-from avocado.utils import cpu, process
+from avocado.utils import cpu
 
 
 class test_generic_events(Test):
@@ -36,46 +37,62 @@ class test_generic_events(Test):
         parser = configparser.ConfigParser()
         parser.optionxform = str
         parser.read(self.get_data('raw_code.cfg'))
-        # Equivalent Python code for bash command
-        # "journalctl -k|grep -i performance"
-        pmu_registered = process.get_command_output_matching("journalctl -k",
-                                                             "performance")
+        self.arch = cpu.get_arch()
+        self.vendor = cpu.get_vendor()
+        # The core PMU is "cpu" on POWER and most x86, but Intel hybrid
+        # parts expose "cpu_core"/"cpu_atom".
+        pmu_base = Path("/sys/bus/event_source/devices")
+        self.cpu_pmu = None
+        for name in ("cpu", "cpu_core", "cpu_atom"):
+            if (pmu_base / name).is_dir():
+                self.cpu_pmu = name
+                break
+        if self.cpu_pmu is None:
+            self.cancel("No core PMU registered under %s" % pmu_base)
         pmu_event_mapping = {'generic_compat': 'GENERIC_COMPAT_PMU',
                              'isav3': 'GENERIC_COMPAT_PMU', 'power8': 'POWER8',
                              'power9': 'POWER9', 'power10': 'POWER10',
                              'power11': 'POWER10'}
+        pmu_name = ""
+        pmu_name_path = pmu_base / self.cpu_pmu / "caps" / "pmu_name"
+        if pmu_name_path.is_file():
+            pmu_name = pmu_name_path.read_text().strip().lower()
+        self.log.info("Registered core PMU dir=%s caps pmu_name=%s"
+                      % (self.cpu_pmu, pmu_name))
         for pmu, event_type in pmu_event_mapping.items():
-            if pmu in pmu_registered[0].lower():
+            if pmu in pmu_name:
                 self.generic_events = dict(parser.items(event_type))
                 return
-        self.cancel("Processor is not supported: %s" % pmu_registered)
-
-        self.arch = cpu.get_arch()
-        self.vendor = cpu.get_vendor()
-        if 'amd' in self.vendor:
+        if self.arch == 'x86_64' and 'amd' in self.vendor:
             self.family = cpu.get_family()
             if self.family == 0x16:
                 self.log.info("AMD Family: 16h")
                 self.generic_events = dict(parser.items('AMD16h'))
+                return
             elif self.family >= 0x17:
                 self.amd_zen = cpu.get_x86_amd_zen()
                 if self.amd_zen is None:
                     self.cancel("Unsupported AMD ZEN")
                 self.log.info(f"AMD Family: {self.family} ZEN{self.amd_zen}")
-                if f'AMDZEN{self.amd_zen}' in parser.keys() is not None:
-                    self.generic_events = dict(parser.items(f'AMDZEN{self.amd_zen}'))
-                else:
-                    self.cancel(f"AMD ZEN{self.amd_zen} raw_code cfg not found")
+                if parser.has_section(f'AMDZEN{self.amd_zen}'):
+                    self.generic_events = dict(
+                        parser.items(f'AMDZEN{self.amd_zen}'))
+                    return
+                self.cancel(
+                    f"AMD ZEN{self.amd_zen} raw_code cfg not found")
             else:
                 self.cancel("Unsupported AMD Family")
+        self.cancel("Processor is not supported: arch=%s vendor=%s pmu_dir=%s "
+                    "pmu_name=%s"
+                    % (self.arch, self.vendor, self.cpu_pmu, pmu_name))
 
     def hex_to_int(self, input):
         return int(input, 0)
 
     def test(self):
         nfail = 0
-        dir = "/sys/bus/event_source/devices/cpu/events"
         self.read_generic_events()
+        dir = "/sys/bus/event_source/devices/%s/events" % self.cpu_pmu
         os.chdir(dir)
         for file in os.listdir(dir):
             events_file = open(file, "r")
