@@ -49,3 +49,34 @@ Method descriptions:
       runtime stressors & the variable runtime stressors.
     - The calculations required for these estimates are explained above in
       the "How is the estimated execution time calculated?" section.
+
+Additional Parameters (Max Config Support):
+--------------------------------------------
+    --max_vrt_time (default: 7200):
+        - Caps the variable runtime (in seconds) for VRT stressors.
+        - Prevents excessively long runs on large memory systems (> 4 TiB).
+        - Set to null to disable the cap.
+
+    --mem_per_worker (default: 20):
+        - Target GiB of memory per worker on max config systems (> 4 TiB).
+        - Worker count is scaled as: workers = total_GiB / mem_per_worker
+          capped at online_cpus * 2.
+
+    --memory_target_percent (default: 70):
+        - Target memory utilisation (%) for VRT stressors on max config
+          systems. Passed to stress-ng via --vm-bytes, --mmap-bytes, or
+          calculated per-worker for malloc/bigheap/brk stressors.
+
+    --max_cpu_load (default: null):
+        - Optional CPU load cap (%) for VRT stressors on max config systems.
+        - Passed to stress-ng as --cpu-load <N>. Omit or set null to disable.
+
+Max Config Behaviour (systems with > 4 TiB RAM):
+--------------------------------------------------
+    - is_max_config is set to True automatically when total RAM > 4096 GiB.
+    - VRT stressor runtime is capped at max_vrt_time seconds.
+    - Worker count for VRT stressors is scaled by memory rather than CPU
+      count, targeting the specified memory_target_percent utilisation.
+    - Use stressng_mem_maxconfig.yaml for a ready-made configuration tuned
+      for large memory systems.
+
