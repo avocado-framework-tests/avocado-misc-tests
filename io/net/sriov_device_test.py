@@ -494,6 +494,23 @@ class NetworkSriovDevice(Test):
                     self.fail(
                         "still list logical device after remove operation")
 
+    def test_hnv_dlpar_loop(self):
+        '''
+        test to add and remove migratable HNV device in a loop.
+        Reuses test_add_migratable_sriov and test_remove_migratable_sriov
+        logic. Loop count is driven by num_of_dlpar from YAML.
+        '''
+        if not self.migratable:
+            self.cancel("Test unsupported")
+        num_of_dlpar = int(self.params.get('num_of_dlpar', default=1))
+        for iteration in range(num_of_dlpar):
+            self.log.info("HNV DLPAR iteration %d of %d",
+                          iteration + 1, num_of_dlpar)
+            self.test_add_migratable_sriov()
+            self.test_remove_migratable_sriov()
+            self.log.info("HNV DLPAR iteration %d completed",
+                          iteration + 1)
+
     def tearDown(self):
         if hasattr(self, 'session'):
             self.session.quit()
