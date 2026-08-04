@@ -1,0 +1,40 @@
+# Spyre Host Configuration Test Parameters
+#
+# This YAML file configures the Spyre host setup test parameters.
+#
+# Usage:
+#   avocado run spyre_host_config.py --mux-yaml spyre_host_config.py.data/spyre_host_config.yaml
+
+# User Configuration
+# Username for container operations (default: senuser)
+username: ''
+
+# User Password
+# Password for the user account
+# Leave empty to create user without password
+# Example: password: "abc"
+password: ""
+
+# Spyre Group Configuration
+# Group name for Spyre device access 
+spyre_group: ""
+
+# Model Directory Configuration
+# Base directory for storing AI models (default: /opt/ibm/spyre/models)
+models_dir: /opt/ibm/spyre/models
+
+# Container Registry Configuration
+# Registry URL for podman login 
+registry: 
+
+# API Key for Registry Login
+# Leave empty to skip podman login
+# Example: api_key: "your_api_key_here"
+api_key: ""
+
+# IBM Tools Repository URL
+# Custom IBM Power repository URL (optional)
+# If not provided, uses default IBM public repository
+# Example: ibm_repo_url: "https://custom.repo.url/ibm-power-repo.rpm"
+ibm_repo_url: ""
+
