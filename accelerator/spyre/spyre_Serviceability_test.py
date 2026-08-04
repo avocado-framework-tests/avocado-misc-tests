@@ -804,14 +804,12 @@ class SpyreServiceabilityTest(Test):
 
                 self.log.info("Stopping container '%s': %s",
                               self.container_user, self.container_id)
-                try:
-                    self.podman.stop(self.container_id,
-                                     user=self.container_user)
-                except Exception as stop_ex:
-                    self.log.warning(
-                        "Failed to stop via podman utility: %s", stop_ex)
-                    stop_cmd = f"su - {self.container_user} -c 'podman stop {self.container_id}'"
-                    process.run(stop_cmd, shell=True)
+                stop_cmd = (
+                    f"su - {self.container_user} -c 'podman stop -t 10 {self.container_id}'"
+                    if self.container_user
+                    else f"podman stop -t 10 {self.container_id}"
+                )
+                process.run(stop_cmd, shell=True)
 
                 self.log.info("Removing container '%s': %s",
                               self.container_user, self.container_id)
