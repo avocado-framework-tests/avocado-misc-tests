@@ -59,7 +59,11 @@ class Ethtool(Test):
         if device in interfaces:
             self.interface = device
         elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
-            self.interface = local.get_interface_by_hwaddr(device).name
+            if self.hbond:
+                self.interface = local.get_interface_by_hwaddr(device).name
+                self.interface = self.interface._get_bondingmaster()
+            else:
+                self.interface = local.get_interface_by_hwaddr(device).name
         else:
             self.interface = None
             self.cancel("Please check the network device")
