@@ -1,0 +1,51 @@
+# -----------------------------------------------------------------------
+# tcp_mss_gso_test.py – parameter file
+# -----------------------------------------------------------------------
+# The mss_sweep !mux block creates one Avocado variant per MSS value.
+# Each variant carries its own ``mss`` param plus the shared settings.
+#
+# To run only specific MSS values: remove or comment out the unwanted
+# child blocks under mss_sweep.  For example, to test only the GSO
+# threshold boundary (224 vs 223), keep only mss_224 and mss_223.
+#
+# Full run  → 7 variants, 7 test entries (one per mss_sweep child).
+# 2-variant → 2 variants, 2 test entries.
+# -----------------------------------------------------------------------
+
+# --- shared settings (inherited by every variant) ---
+peer_ip: "xx.xx.xx.xx"
+peer_user: "xxx"
+peer_password: "xxx"
+tcp_port: 9999
+iterations: 5
+enable_http_load: True
+enable_iperf: True
+iperf_duration: 30
+gso_threshold: 224
+data_size: 65536
+socket_timeout: 30
+
+# --- VIOS errpt monitoring (optional) ---
+# Leave vios_ip empty ("") to disable.
+vios_ip: "xx.xx.xx.xx"
+vios_user: "xxx"
+vios_password: "xxx"
+
+# --- per-MSS variants ---
+# Each child sets the ``mss`` param for its variant.
+# Remove a child block to exclude that MSS value from the run entirely.
+mss_sweep: !mux
+    mss_1460:
+        mss: 1460
+    mss_224:
+        mss: 224
+    mss_223:
+        mss: 223
+    mss_128:
+        mss: 128
+    mss_64:
+        mss: 64
+    mss_36:
+        mss: 36
+    mss_1:
+        mss: 1
