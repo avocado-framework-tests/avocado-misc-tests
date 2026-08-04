@@ -1,0 +1,25 @@
+# Avocado Test Parameters for Spyre Host Configuration
+
+# Test User Configuration
+USER: ""
+PASSWORD: ""
+SPYRE_GROUP: ""
+
+# Directory Configuration
+HOST_MODELS_DIR: "/opt/ibm/spyre/models/src"
+
+# Registry Configuration
+REGISTRY: ""
+API_KEY: ""
+
+# IBM Repository Configuration
+SERVICEREPORT_URL: ""
+GSA_USER: ""
+GSA_PASSWORD: ""
+
+# Red Hat Network Registration
+REDHAT_USER: ""
+REDHAT_PASSWORD: ""
+
+# HuggingFace Configuration
+HF_TOKEN: ""
