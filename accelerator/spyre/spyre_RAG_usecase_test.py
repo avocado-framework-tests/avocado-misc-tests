@@ -119,7 +119,7 @@ class SpyreRAGTest(Test):
         self.hf_model_name = self.params.get("HF_MODEL_NAME", default="")
 
         if self.aiu_ids:
-            self.aiu_ids = self.aiu_ids.split()
+            self.aiu_ids = self.aiu_ids.strip()
         else:
             self.cancel("Missing required parameters: AIU_PCIE_IDS")
 
