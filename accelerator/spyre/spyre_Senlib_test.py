@@ -485,7 +485,8 @@ class SenlibTests(Test):
                     self.log.warning("Failed to save final logs: %s", log_ex)
 
                 self.log.info("Stopping container: %s", self.container_id)
-                self.podman.stop(self.container_id)
+                process.run(f"podman stop -t 10 {self.container_id}",
+                            shell=True)
 
                 self.log.info("Removing container: %s", self.container_id)
                 self.podman.remove(self.container_id, force=True)
