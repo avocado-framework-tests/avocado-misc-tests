@@ -29,6 +29,7 @@ from avocado.utils import distro
 from avocado.utils import dmesg
 from avocado.utils import multipath
 from avocado.utils import data_structures
+from avocado.utils import linux
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
@@ -67,6 +68,8 @@ class EEH(Test):
         """
         if 'ppc' not in distro.detect().arch:
             self.cancel("Processor is not ppc64")
+        if linux.is_os_secureboot_enabled():
+            self.cancel("EEH is not supported when Secure boot is enabled.")
         eeh_enable_file = "/sys/kernel/debug/powerpc/eeh_enable"
         if '0x1' not in genio.read_file(eeh_enable_file).strip():
             self.cancel("EEH is not enabled, please enable via FSP")
@@ -81,6 +84,7 @@ class EEH(Test):
             self.cancel("pciutils package is need to test")
         self.mem_addr = pci.get_memory_address(self.pci_device)
         self.mask = pci.get_mask(self.pci_device)
+        self.sriov = self.params.get("sriov", default="no")
         self.ipaddr = self.params.get("host_ip", default=None)
         if self.ipaddr:
             self.peer_ip = self.params.get("peer_ip", default=None)
@@ -143,6 +147,9 @@ class EEH(Test):
         enter_loop = True
         num_of_miss = 0
         num_of_hit = 0
+        if self.sriov == "yes":
+            self.cancel("EEH basic error injection on PE"
+                        "is not supported for SRIOV VF adapter ports")
         while num_of_hit < self.max_freeze:
             for func in self.function:
                 self.log.info("Running error inject on pe %s function %s",
@@ -219,89 +226,123 @@ class EEH(Test):
         """
         Test to execute EEH error injection on SR-IOV devices
         """
-        # Get the bus address from the PCI device
-        bus_id = self.pci_device.split(':')[0]
-
-        # Get interface name from PCI address
-        interface_list = pci.get_nics_in_pci_address(self.pci_device)
-        if not interface_list:
-            self.fail(
-                f"No network interface found for PCI device "
-                f"{self.pci_device}")
-        interface_name = interface_list[0]
-        self.log.info(
-            f"Interface name for {self.pci_device}: {interface_name}")
-
-        # Get bus address from journalctl
-        bus_address = self.get_bus_address_from_journalctl(bus_id)
-        if not bus_address:
-            self.fail(
-                f"Failed to get bus address for {self.pci_device} "
-                f"from journalctl")
-        self.log.info(f"Bus address from journalctl: {bus_address}")
-
-        # Start network traffic on the SR-IOV interface
-        self.log.info(
-            f"Starting traffic on SR-IOV interface: {interface_name}")
-
-        # Start ping flood on the interface
-        if self.peer_ip:
-            networkinterface = NetworkInterface(interface_name,
-                                                self.localhost)
-            networkinterface.ping_flood(interface_name, self.peer_ip,
-                                        1000000)
-
-        # Clear dmesg before error injection
-        dmesg.clear_dmesg()
-
-        # Trigger EEH with the specified command for each function
-        mask = "0xffffffffffc00000"
-        for func in self.function:
-            cmd = (f"errinjct ioa-bus-error-64 -v -f {func}"
-                   f" -s net/{interface_name} ")
-            cmd += f"-a {bus_address} -m {mask}"
-            self.log.info(f"Triggering EEH with command: {cmd}")
-            try:
-                result = process.run(cmd, ignore_status=True, shell=True)
-                output = result.stdout.decode('utf-8')
-                self.log.info(f"EEH injection command output: {output}")
-            except Exception as e:
-                self.log.error(f"Error during EEH injection: {str(e)}")
-
-        # Stop the network traffic after error inject
-        for ps in psutil.process_iter(['name']):
-            if ps.info['name'] == 'ping':
-                ps.kill()
-
-        # Check if EEH was hit
-        if not self.check_eeh_hit():
-            self.fail(
-                f"EEH hit failed for SR-IOV device {self.pci_device}")
-        else:
+        if self.sriov == "yes":
+            # Get the bus address from the PCI device
+            bus_id = self.pci_device.split(':')[0]
+            # Get interface name from PCI address
+            interface_list = pci.get_nics_in_pci_address(self.pci_device)
+            if not interface_list:
+                self.fail(
+                    f"No network interface found for PCI device "
+                    f"{self.pci_device}")
+            interface_name = interface_list[0]
             self.log.info(
-                f"EEH hit successful for SR-IOV device {self.pci_device}")
-
-        # Check for PE recovery
-        if not self.check_eeh_pe_recovery():
-            self.fail(
-                f"SR-IOV device {self.pci_device} recovery failed "
-                f"after EEH")
+                f"Interface name for {self.pci_device}: {interface_name}")
+            # Get bus address from journalctl
+            bus_address = self.get_bus_address_from_journalctl(bus_id)
+            if not bus_address:
+                self.fail(
+                    f"Failed to get bus address for {self.pci_device} "
+                    f"from journalctl")
+                self.log.info(f"Bus address from journalctl: {bus_address}")
+            enter_loop = True
+            num_of_miss = 0
+            num_of_hit = 0
+            mask = "0xffffffffffc00000"
+            while num_of_hit < self.max_freeze:
+                for func in self.function:
+                    self.log.info(
+                        "Running SR-IOV EEH inject on %s function %s",
+                        self.pci_device, func)
+                    if num_of_miss < 5:
+                        # Start network traffic on the SR-IOV interface
+                        self.log.info(f"Starting traffic on SR-IOV interface:"
+                                      "{interface_name}")
+                        # Start ping flood on the interface
+                        if self.peer_ip:
+                            networkinterface = NetworkInterface(interface_name,
+                                                                self.localhost)
+                            networkinterface.ping_flood(interface_name,
+                                                        self.peer_ip, 1000000)
+                        # Clear dmesg before error injection
+                        dmesg.clear_dmesg()
+                        cmd = (f"errinjct ioa-bus-error-64 -v -f {func}"
+                               f" -s net/{interface_name} ")
+                        cmd += f"-a {bus_address} -m {mask}"
+                        self.log.info(f"Triggering EEH with command: {cmd}")
+                        try:
+                            result = process.run(cmd, ignore_status=True,
+                                                 shell=True)
+                            output = result.stdout.decode('utf-8')
+                            self.log.info(
+                                f"EEH injection command output: {output}")
+                        except Exception as e:
+                            self.log.error(
+                                f"Error during EEH injection: {str(e)}")
+                        # Stop the network traffic after error inject
+                        for ps in psutil.process_iter(['name']):
+                            if ps.info['name'] == 'ping':
+                                ps.kill()
+                        # Check if EEH was hit
+                        if not self.check_eeh_hit():
+                            num_of_miss += 1
+                            self.log.info("number of miss is %d", num_of_miss)
+                            continue
+                        else:
+                            num_of_hit += 1
+                            self.log.info("number of hit is %d", num_of_hit)
+                            if num_of_hit <= self.max_freeze:
+                                # Check for PE recovery
+                                if not self.check_eeh_pe_recovery():
+                                    self.fail(
+                                        f"SR-IOV device {self.pci_device} "
+                                        f"recovery failed after "
+                                        f"{num_of_hit} EEH")
+                                    break
+                                else:
+                                    self.log.info(
+                                        f"SR-IOV device {self.pci_device} "
+                                        f"recovered successfully")
+                                    time.sleep(10)
+                                    net_interface = NetworkInterface(
+                                        interface_name, self.localhost)
+                                    if not wait.wait_for(
+                                        net_interface.is_link_up,
+                                            timeout=60):
+                                        self.fail(
+                                            f"Interface {interface_name} "
+                                            f"failed to come up after EEH")
+                                    self.log.info(
+                                        f"Interface {interface_name} "
+                                        f"is up after EEH recovery")
+                                    net_ok = (not self.peer_ip or
+                                              self.net_recovery_check(
+                                                  interface_name))
+                                    if not net_ok:
+                                        self.fail(
+                                            "Network adapter failed to "
+                                            "ping after EEH recovery")
+                    else:
+                        self.log.warning(
+                            "EEH inject failed for 5 times with "
+                            "function %s", func)
+                        enter_loop = False
+                        break
+                if not enter_loop:
+                    break
+            else:
+                if self.check_eeh_removed():
+                    self.log.info(
+                        "SR-IOV device %s removed successfully",
+                        self.pci_device)
+                else:
+                    self.fail(
+                        f"SR-IOV device {self.pci_device} not removed "
+                        f"after max hit")
         else:
-            self.log.info(
-                f"SR-IOV device {self.pci_device} recovered successfully")
-
-        # Additional validation for network interface
-        time.sleep(10)
-        net_interface = NetworkInterface(interface_name, self.localhost)
-        if not wait.wait_for(net_interface.is_link_up, timeout=60):
-            self.fail(
-                f"Interface {interface_name} failed to come up after EEH")
-        self.log.info(
-            f"Interface {interface_name} is up after EEH recovery")
-
-        # Verify network connectivity with ping check
-        if self.peer_ip and not self.net_recovery_check(interface_name):
-            self.fail("Network adapter failed to ping after EEH recovery")
+            self.cancel(
+                f"EEH SRIOV injection is not supported when sriov "
+                f"is set to no for these dedicated adapter pci slots")
 
     def net_recovery_check(self, interface_name):
         """
