@@ -368,6 +368,24 @@ WantedBy=default.target
         if user_check.exit_status != 0:
             self.cancel(f"Test user {self.test_user} does not exist")
 
+        # Add test user to spyre group
+        self.log.info("Adding %s to group %s",
+                      self.test_user, self.spyre_group)
+        process.run(
+            f"usermod -aG {self.spyre_group} {self.test_user}",
+            sudo=True, shell=True)
+
+        self.log.info(
+            "Restarting lingering user session for %s to pick up new group",
+            self.test_user)
+        process.run(
+            f"loginctl terminate-user {self.test_user}",
+            sudo=True, shell=True, ignore_status=True)
+        time.sleep(2)
+        process.run(
+            f"loginctl enable-linger {self.test_user}",
+            sudo=True, shell=True)
+
         # Verify user is in spyre group
         groups_output = self.run_cmd_out(f"groups {self.test_user}")
         if self.spyre_group not in groups_output:
