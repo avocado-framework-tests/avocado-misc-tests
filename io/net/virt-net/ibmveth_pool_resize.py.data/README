@@ -1,0 +1,35 @@
+ibmveth_pool_resize.py
+======================
+
+Description
+-----------
+Validates that the IBM Virtual Ethernet (ibmveth) driver correctly handles
+resizing each receive-buffer pool (pool0 through pool4) to 65536 bytes while
+background flood-ping traffic is running, with no kernel call traces or OOM
+events.
+
+The ibmveth driver exposes five receive-buffer pools via sysfs:
+
+  /sys/class/net/<iface>/device/pool<N>/size    - buffer size in bytes (r/w)
+
+This test writes a target value (default 65536) to each pool's size knob one
+at a time, scans dmesg for call traces or OOM events, then restores the
+original value before moving on to the next pool.
+
+
+Parameters
+----------
+See ibmveth_pool_resize.yaml for full parameter documentation.
+
+Key parameters:
+
+  interface       ibmveth interface name or MAC address  (REQUIRED)
+  host_ip         IP address to assign to the interface   (REQUIRED)
+  netmask         Netmask for host_ip                     (REQUIRED)
+  peer_ip         Peer machine IP address                 (REQUIRED)
+  peer_user       SSH username on the peer                (default: root)
+  peer_password   SSH password on the peer                (REQUIRED)
+  ping_count      Total packets for background flood-ping (default: 1000000)
+  pool_size       Buffer size in bytes written to each
+                  pool's size knob                        (default: 65536)
+
