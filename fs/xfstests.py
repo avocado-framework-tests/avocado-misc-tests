@@ -369,19 +369,20 @@ class Xfstests(Test):
             f.writelines(new_lines)
 
         self.log.info("Final local.config content:\n%s", ''.join(new_lines))
+        mkfs_args = f'-t {self.fs_to_test} {self.mkfs_opt}'.strip()
 
         # Create logdev filesystems
         for dev in self.log_devices:
-            partition.Partition(dev).mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
+            partition.Partition(dev).mkfs(fstype=self.fs_to_test, args=mkfs_args)
 
         # Create mkfs on test and scratch devices
         for i, dev in enumerate(self.devices):
             dev_obj = partition.Partition(dev)
             if self.logdev_opt:
                 dev_obj.mkfs(fstype=self.fs_to_test,
-                             args=f'{self.mkfs_opt} {self.logdev_opt}={self.log_devices[i]}')
+                             args=f'{mkfs_args} {self.logdev_opt}={self.log_devices[i]}')
             else:
-                dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
+                dev_obj.mkfs(fstype=self.fs_to_test, args=mkfs_args)
 
         # Clone & build xfstests
         git.get_repo('https://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
