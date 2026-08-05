@@ -1,0 +1,102 @@
+tcp_mss_gso_test.py
+===================
+
+Description
+-----------
+Validates TCP MSS (Maximum Segment Size) handling and the kernel GSO
+(Generic Segmentation Offload) disable behaviour for virtual network
+devices (ibmvnic / virtio-net).
+
+The test is designed to verify that the kernel patch which prevents
+adapter freezes on small-MSS connections works correctly:
+
+  * For MSS values **below** the GSO threshold (default 224 bytes), the
+    kernel must emit a "MSS too small" warning and disable GSO.
+  * For MSS values **at or above** the threshold the warning must NOT
+    appear and GSO must remain active.
+
+Test flow (per MSS value)
+--------------------------
+1. Deploy a bidirectional TCP echo listener on the remote (peer) host.
+2. Add an iptables TCPMSS clamp rule on the SUT to force the desired MSS
+   on outgoing SYN segments.
+3. Run N socket-level large-send / echo iterations (default 64 KB payload).
+4. Concurrently run:
+     - HTTP background load (curl + wget against the peer web server)
+     - iperf3 TCP stream (same MSS, via -M flag)
+5. Check dmesg for the GSO-disable kernel warning.
+6. Remove the iptables rule and repeat for the next MSS value.
+7. After all MSS values: assert zero socket failures and correct
+   GSO warning presence/absence.
+
+Prerequisites
+-------------
+SUT (System Under Test)
+  - Root / sudo access (required for iptables)
+  - iptables, iperf3, curl, wget installed (test installs them if missing)
+  - Python 3.6+
+
+Remote (peer) host
+  - SSH access with the credentials specified in the YAML
+  - python3, iperf3 installed (test installs them if missing via SSH)
+  - Optional: a web server (nginx/httpd) on port 80 for HTTP load
+    (if enable_http_load is True)
+
+Running the test
+----------------
+Populate tcp_mss_gso_test.yaml with your peer IP / credentials, then:
+
+    avocado run io/net/virt-net/tcp_mss_gso_test.py \
+        --mux-yaml io/net/virt-net/tcp_mss_gso_test.py.data/tcp_mss_gso_test.yaml
+
+Quick single-MSS smoke test (override from command line):
+
+    avocado run io/net/virt-net/tcp_mss_gso_test.py \
+        --mux-yaml io/net/virt-net/tcp_mss_gso_test.py.data/tcp_mss_gso_test.yaml \
+        -p peer_ip=192.168.1.10 -p mss_values=224,223 -p iterations=3
+
+Parameters
+----------
+See tcp_mss_gso_test.yaml for full documentation of every parameter.
+
+Key parameters:
+
+  peer_ip           Remote host IP address  (REQUIRED)
+  peer_user         SSH user                (default: root)
+  peer_password     SSH password            (REQUIRED)
+  mss_values        Comma-separated MSS list to sweep
+                    (default: "1460,536,224,223,128,64,36,1")
+  iterations        Socket-echo iterations per MSS  (default: 5)
+  enable_http_load  Enable curl/wget background load (default: True)
+  enable_iperf      Enable iperf3 background traffic (default: True)
+  iperf_duration    iperf3 test duration in seconds  (default: 30)
+  gso_threshold     MSS value boundary for GSO       (default: 224)
+  data_size         Payload bytes per echo iteration (default: 65536)
+  socket_timeout    Per-connection timeout in seconds (default: 30)
+
+Output
+------
+The tearDown phase prints a summary table such as:
+
+  MSS     GSO       Sock OK   Sock Fail   iperf Mbps  HTTP reqs  Avg KB/s
+  ------------------------------------------------------------------------
+  1460    ON        5         0           9423.10     312        98432.0
+   536    ON        5         0           9118.44     298        94120.3
+   224    ON        5         0           4201.20     255        41280.1
+   223    OFF       5         0           N/A         248        38910.6
+   128    OFF       5         0           N/A         241        22440.2
+    64    OFF       5         0           N/A         230        11200.5
+    36    OFF       5         0           N/A         218         6300.1
+     1    OFF       5         0           N/A         201          196.3
+
+Related files
+-------------
+  tcp_mss_gso_test.py               Main avocado test class
+  tcp_mss_gso_test.py.data/
+    tcp_mss_gso_test.yaml           Parameter file
+    README                          This file
+
+Source scripts (reference implementations, not run directly)
+  laregersend_complete.py           Original SUT-side sender prototype
+  tcp_listener_combined.py          Original peer-side listener prototype
+  analyze_results.sh                Post-run shell analysis script
