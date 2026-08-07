@@ -340,11 +340,11 @@ class NXGZipTests(Test):
         '''
         self.log.info("NX-GZIP: test_zlib_series:\
                       Run compress/decomp zlib test series")
+        self.download_tarball()
         self.build_tests("samples")
-        self.create_ddfile()
 
-        file_size = self.params.get('file_size', default='5')
-        zlib_cmd = './zlib-run-series.sh %s/linux-src.tar' % self.workdir
+        tarball = '%s/linux-src.tar' % self.workdir
+        zlib_cmd = './zlib-run-series.sh %s' % tarball
         if process.system(zlib_cmd, shell=True, ignore_status=True):
             self.fail("NX-GZIP: test_zlib_series: zlib test series failed")
 
