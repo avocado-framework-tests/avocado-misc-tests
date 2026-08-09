@@ -1,0 +1,7 @@
+pci_devices: ""
+count: 10
+#This option is for nvme splitter adapter, Value: nvme_splitter
+adapter_type: ""
+peer_ip:
+lockdown_mode: ""
+lockdown_enable:
