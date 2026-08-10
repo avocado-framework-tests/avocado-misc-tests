@@ -1,0 +1,24 @@
+hmc_username: ""
+hmc_pwd: ""
+manageSystem: ""
+slot_num: ""
+vios_names: ""
+sriov_adapters: ""
+sriov_ports: ""
+priority: ""
+auto_failover: ""
+bandwidth: 
+device_ip: ""
+netmasks: ""
+peer_ip: ""
+peer_user: ""
+peer_password: ""
+mac_id: ""
+sriov_mac_id: ""
+sriov_device_ip: ""
+sriov_peer_ip: ""
+count: 
+num_of_dlpar: 
+ubuntu_url: ""
+debs: []
+
