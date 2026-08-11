@@ -1,0 +1,25 @@
+# Configuration file for wait_stressor_perf test
+#
+# This test validates load balancing by running wait_stressor.c
+# and monitoring scheduler functions with perf.
+#
+# Expected: enqueue_task_fair and newidle_balance should consume
+# less than 2.0% of CPU cycles
+#
+# Note: This test is only applicable for SUSE Linux distributions
+
+duration: !mux
+    default:
+        # Duration to run the test in seconds
+        duration: 30
+    short:
+        duration: 15
+    long:
+        duration: 60
+
+threshold: !mux
+    default:
+        # Maximum acceptable percentage of cycles for scheduler functions
+        threshold: 2.0
+    relaxed:
+        threshold: 4.0

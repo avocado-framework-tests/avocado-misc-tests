@@ -91,6 +91,17 @@ class PCIHotPlugTest(Test):
         if not os.path.isdir('/sys/bus/pci/slots/%s' % slot):
             self.cancel("%s is not present in sysfs path" % slot)
 
+        self.lockdown_mode = self.params.get("lockdown_mode", default="integrity")
+        self.lockdown_path = "/sys/kernel/security/lockdown"
+        self.lockdown_enable = self.params.get("lockdown_enable", default=False)
+        if self.lockdown_enable is True:
+            original_state = self.get_lockdown_state()
+            if original_state == "none":
+                if not self.set_lockdown_mode(self.lockdown_mode):
+                    self.fail(f"Failed to set lockdown to {self.lockdown_mode}")
+        else:
+            self.log.info("Running pci hotplug test case by default without setting lockdown feature")
+
     def test(self):
         """
         Removes and adds back a PCI adapter based on pci_adress.
@@ -203,24 +214,32 @@ class PCIHotPlugTest(Test):
 
         def nvme_recovery_check():
             '''
-            Checks if the nvme adapter functionality like all namespaces are
-            up and running or not after adapter is recovered
+            Checks if the NVMe adapter is recovered after hotplug by validating
+            PCI address presence and, if namespaces existed at test start,
+            that every namespace is present and in live/optimized state.
             '''
-            err_ns = []
-            current_namespaces = nvme.get_current_ns_ids(self.contr_name)
-            if current_namespaces == self.ns_list:
-                for ns_id in current_namespaces:
-                    status = nvme.get_ns_status(self.contr_name, ns_id)
-                    if not status[0] == 'live' and status[1] == 'optimized':
-                        err_ns.append(ns_id)
-            else:
-                diff_ns = self.ns_list - current_namespaces
-                self.log.info(f"ns not listing after hot_plug {diff_ns}")
+            if pci_addr not in pci.get_pci_addresses():
+                self.log.error("NVMe device %s not found after hotplug",
+                               pci_addr)
                 return False
 
+            if not self.ns_list:
+                self.log.info("NVMe device %s recovered (no namespaces to "
+                              "check)", pci_addr)
+                return True
+
+            current_namespaces = set(nvme.get_current_ns_ids(self.contr_name))
+            err_ns = [ns_id for ns_id in self.ns_list
+                      if ns_id not in current_namespaces
+                      or nvme.get_ns_status(self.contr_name, ns_id)[:2]
+                      != ['live', 'optimized']]
             if err_ns:
-                self.log.info(f"following namespaces not recovered ={err_ns}")
+                self.log.info("Namespaces missing or not recovered after "
+                              "hotplug: %s", err_ns)
                 return False
+
+            self.log.info("NVMe device %s and all %d namespaces recovered "
+                          "successfully", pci_addr, len(self.ns_list))
             return True
 
         if wait.wait_for(is_added, timeout=30):
@@ -239,3 +258,61 @@ class PCIHotPlugTest(Test):
                 return False
             return True
         return False
+
+    def check_lockdown_support(self):
+        '''
+        Check if kernel lockdown is supported
+        '''
+        if not os.path.exists(self.lockdown_path):
+            self.log.warn("Kernel lockdown not supported on this system")
+            return False
+        return True
+
+    def get_lockdown_state(self):
+        '''
+        Get current lockdown state
+        '''
+        try:
+            output = process.system_output(f'cat {self.lockdown_path}',
+                                           shell=True, sudo=True).decode("utf-8")
+            # Parse output like: "none [integrity] confidentiality"
+            if '[none]' in output:
+                return 'none'
+            elif '[integrity]' in output:
+                return 'integrity'
+            elif '[confidentiality]' in output:
+                return 'confidentiality'
+        except Exception as e:
+            self.log.error(f"Failed to get lockdown state: {e}")
+        return None
+
+    def set_lockdown_mode(self, mode):
+        '''
+        Set kernel lockdown mode
+        mode: 'none', 'integrity', or 'confidentiality'
+        '''
+        if not self.check_lockdown_support():
+            return False
+
+        current_state = self.get_lockdown_state()
+        self.log.info(f"Current lockdown state: {current_state}")
+
+        if mode == current_state:
+            self.log.info(f"Lockdown already set to {mode}")
+            return True
+
+        try:
+            cmd = f'echo "{mode}" > {self.lockdown_path}'
+            process.run(cmd, shell=True, sudo=True)
+
+            # Verify the change
+            new_state = self.get_lockdown_state()
+            if new_state == mode:
+                self.log.info(f"Successfully set lockdown to {mode}")
+                return True
+            else:
+                self.log.error(f"Failed to set lockdown to {mode}, current: {new_state}")
+                return False
+        except Exception as e:
+            self.log.error(f"Error setting lockdown mode: {e}")
+            return False

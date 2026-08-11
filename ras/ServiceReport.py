@@ -38,6 +38,12 @@ class ServiceReport(Test):
         if self.options == "-p":
             self.plugin = self.params.get('plugin_val', default='kdump')
             self.options = "%s %s" % (self.options, self.plugin)
+            if self.plugin == 'htx':
+                if not process.system_output(
+                        'rpm -qa | grep -i htx', shell=True,
+                        ignore_status=True).decode().strip():
+                    self.cancel(
+                        "HTX RPM is not installed, cancelling HTX plugin test")
         for package in ['make', 'gcc']:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("Fail to install %s required for this"

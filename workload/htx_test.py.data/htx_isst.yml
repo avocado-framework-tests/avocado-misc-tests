@@ -1,5 +1,5 @@
-time_limit: 24
-time_unit: 'h'
+# time_interval is in minutes
+time_interval: 1440
 mdt: !mux
     bu:
         mdt_file: 'mdt.bu'

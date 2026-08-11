@@ -1,4 +1,5 @@
-time_limit: 5 # in minutes
+# time_interval is in minutes
+time_interval: 5
 mdt: !mux
     inter_node:
         mdt_file: 'mdt.mem_inter_node'
@@ -19,5 +20,5 @@ mdt: !mux
     nest_io:
         mdt_file: 'mdt.mem_nest_inter_io'
     mem_all:
-        time_limit: 120
+        time_interval: 120
         mdt_file: 'mdt.mem'

@@ -14,4 +14,4 @@ fs_type: !mux
         fs: 'xfs'
         args: '-R xunit -L 10 -g auto'
         mkfs_opt: '-f -m inobtcount=1,bigtime=1,rmapbt=1 -b size=65536'
-        mount_opt: ''
+        mount_opt: '-o usrquota,grpquota,prjquota'

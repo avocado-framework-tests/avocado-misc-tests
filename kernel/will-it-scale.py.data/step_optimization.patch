@@ -1,0 +1,22 @@
+--- a/runtest.py
++++ b/runtest.py
+@@ -87,7 +87,18 @@ if arch == 'ppc64':
+ print('tasks,processes,processes_idle,threads,threads_idle,linear')
+ print('0,0,100,0,100,0')
+ 
+-step = 1
++# Dynamic step calculation based on number of cores
++# Target: ~1 hour per test for large systems
++if nr_cores <= 16:
++    step = 1       # Small systems: test every core
++elif nr_cores <= 32:
++    step = 2       # 32 cores: detailed testing
++elif nr_cores <= 64:
++    step = 4       # 64 cores: balanced testing
++elif nr_cores <= 128:
++    step = 8       # 128 cores: ~1 hour per test
++else:
++    step = 25      # 256+ cores: ~1 hour per test
+ # if step=5, this is: [5, 10, 15, ... nr_cores]
+ data_points = list(range(step, nr_cores+step, step))
+ # this makes it [ 1, 5, 10, ... ]

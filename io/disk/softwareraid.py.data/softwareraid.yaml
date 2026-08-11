@@ -1,6 +1,10 @@
-disks:
+disks: "/dev/mapper/mpathe /dev/mapper/mpathg /dev/mapper/mpathf /dev/mapper/mpathd"
 raidname:
 spare_disks:
+mount_dir: "/mnt"
+fail_disk: "/dev/mapper/mpathg"
+spare_disk: "/dev/mapper/mpathh"
+metadata: 1.2
 raidlevel: !mux
     raidlinear:
         raid: linear
@@ -18,13 +22,10 @@ raidlevel: !mux
     raid6:
         raid: 6
         required_disks: 4
-metadata: !mux
-    superblock-0.9:
-        metadata: 0.90
-        !filter-out : /run/raidlevel/raid0
-    superblock-1.0:
-        metadata: 1.0
-    superblock-1.1:
-        metadata: 1.1
-    superblock-1.2:
-        metadata: 1.2
+fs: !mux
+    ext4:
+        fs: 'ext4'
+    xfs:
+        fs: 'xfs'
+    btrfs:
+        fs: 'btrfs'

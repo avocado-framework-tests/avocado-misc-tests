@@ -55,13 +55,19 @@ class Uperf(Test):
         device = self.params.get("interface", default=None)
         if device in interfaces:
             self.iface = device
-        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
+        elif (local.validate_mac_addr(device) and
+              device in local.get_all_hwaddr()):
             self.iface = local.get_interface_by_hwaddr(device).name
         else:
             self.cancel("%s interface is not available" % device)
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        self.networkinterface = NetworkInterface(self.iface, local)
+        self.hbond = self.params.get("hbond", default=False)
+        if self.hbond:
+            self.networkinterface = NetworkInterface(self.iface, local,
+                                                     if_type='Bond')
+        else:
+            self.networkinterface = NetworkInterface(self.iface, local)
         try:
             self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
             self.networkinterface.save(self.ipaddr, self.netmask)
@@ -114,10 +120,11 @@ class Uperf(Test):
             self.peer_ip).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
                                                       self.remotehost)
-        self.remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
+        self.remotehost_public = RemoteHost(self.peer_public_ip,
+                                            self.peer_user,
                                             password=self.peer_password)
-        self.peer_public_networkinterface = NetworkInterface(self.peer_interface,
-                                                             self.remotehost_public)
+        self.peer_public_networkinterface = NetworkInterface(
+            self.peer_interface, self.remotehost_public)
         if self.peer_networkinterface.set_mtu(self.mtu) is not None:
             self.cancel("Failed to set mtu in peer")
         if self.networkinterface.set_mtu(self.mtu) is not None:
@@ -218,6 +225,7 @@ class Uperf(Test):
             try:
                 self.networkinterface.restore_from_backup()
             except Exception:
+                self.networkinterface.remove_cfg_file()
                 self.log.info(
                     "backup file not available, could not restore file.")
             self.remotehost.remote_session.quit()

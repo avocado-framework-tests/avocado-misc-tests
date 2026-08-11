@@ -414,13 +414,12 @@ class SpyreEmbeddingTest(Test):
 
                 self.log.info("Stopping container as user '%s': %s",
                               self.user, self.container_id)
-                try:
-                    self.podman.stop(self.container_id, user=self.user)
-                except Exception as stop_ex:
-                    self.log.warning(
-                        "Failed to stop via podman utility: %s", stop_ex)
-                    stop_cmd = f"su - {self.user} -c 'podman stop {self.container_id}'"
-                    process.run(stop_cmd, shell=True)
+                stop_cmd = (
+                    f"su - {self.user} -c 'podman stop -t 10 {self.container_id}'"
+                    if self.user
+                    else f"podman stop -t 10 {self.container_id}"
+                )
+                process.run(stop_cmd, shell=True)
 
                 self.log.info("Removing container as user '%s': %s",
                               self.user, self.container_id)

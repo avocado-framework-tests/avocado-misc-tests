@@ -55,6 +55,8 @@ class kselftest(Test):
         """
         smg = SoftwareManager()
         self.comp = self.params.get('comp', default='')
+        self.kexec_symlink_created = False
+        self.kexec_kernel_version = None
         self.subtest = self.params.get('subtest', default='')
         if self.comp == "mm" and self.subtest == "ksm_tests":
             self.test_type = self.params.get('test_type', default='-H')
@@ -209,6 +211,19 @@ class kselftest(Test):
                 build_str = '-C %s' % self.comp
             if build.make(self.sourcedir, extra_args='%s' % build_str):
                 self.fail("Compilation failed, Please check the build logs !!")
+        # Fix for kexec test: Create vmlinuz symlink if only vmlinux exists
+        # This handles SUSE systems that use vmlinux instead of vmlinuz
+        if self.comp == "kexec":
+            kernel_version = platform.uname()[2]
+            vmlinuz_path = f"/boot/vmlinuz-{kernel_version}"
+            vmlinux_path = f"/boot/vmlinux-{kernel_version}"
+            if not os.path.exists(vmlinuz_path) and os.path.exists(vmlinux_path):
+                self.log.info(f"Creating symlink {vmlinuz_path} -> {vmlinux_path} for kexec test")
+                result = process.system(f"ln -sf {vmlinux_path} {vmlinuz_path}", shell=True, sudo=True, ignore_status=True)
+                if result == 0:
+                    self.kexec_symlink_created = True
+                    self.kexec_kernel_version = kernel_version
+                    self.log.info(f"Successfully created symlink for kernel version {kernel_version}")
 
     def test(self):
         """
@@ -224,6 +239,8 @@ class kselftest(Test):
         else:
             if self.subtest == "ksm_tests":
                 self.ksmtest()
+            elif self.subtest == "mremap_test":
+                self.mremaptest()
             else:
                 if self.subtest:
                     test_comp = self.comp + "/" + self.subtest
@@ -310,6 +327,101 @@ class kselftest(Test):
             self.cancel("Invalid ksm_tests build path:- {}"
                         .format(ksm_test_dir))
 
+    def mremaptest(self):
+        """
+        Run mremap test and validate performance for the PMD-source aligned and 4MB cases.
+        Asserts that the src+dst PMD-aligned case is the fastest.
+        """
+        mremap_test_dir = os.path.join(self.sourcedir, "mm")
+        mremap_test_bin = os.path.join(mremap_test_dir, "mremap_test")
+        if not os.path.exists(mremap_test_bin):
+            self.cancel("mremap_test binary not found at: %s" % mremap_test_bin)
+        self.log.info("Running mremap_test from %s", mremap_test_dir)
+        os.chdir(mremap_test_dir)
+        try:
+            self.result = process.run('./mremap_test',
+                                      ignore_status=True,
+                                      sudo=True)
+        except process.CmdError as details:
+            self.fail("Command ./mremap_test failed: %s" % details)
+        output = self.result.stdout.decode('utf-8')
+        self.log.info("Test output:\n%s", output)
+        times = self.parse_mremap_times(output)
+        if not times:
+            self.log.warning("No 4MB PMD-source timing lines found in output")
+            if self.result.exit_status != 0:
+                self.fail("mremap_test failed with exit code: %d" % self.result.exit_status)
+            return
+        pmd_src_and_dest = {desc: ns for desc, ns in times.items()
+                            if 'Destination PMD-aligned' in desc}
+        pmd_src_only = {desc: ns for desc, ns in times.items()
+                        if 'Destination PMD-aligned' not in desc}
+        self.log.info("=" * 80)
+        self.log.info("4MB mremap cases with Source PMD-aligned:")
+        for desc, ns in sorted(times.items()):
+            self.log.info("  %s: %d ns", desc, ns)
+        self.log.info("=" * 80)
+        if not pmd_src_and_dest:
+            self.log.warning("'Source PMD-aligned, Destination PMD-aligned' 4MB case not found")
+            if self.result.exit_status != 0:
+                self.fail("mremap_test failed with exit code: %d" % self.result.exit_status)
+            return
+        time_pmd_both = min(pmd_src_and_dest.values())
+        failures = []
+        for desc, ns in pmd_src_only.items():
+            if ns < time_pmd_both:
+                msg = ("FAIL: '%s' (%d ns) is faster than "
+                       "'Source PMD-aligned, Destination PMD-aligned' (%d ns)"
+                       % (desc, ns, time_pmd_both))
+                self.log.error(msg)
+                failures.append(msg)
+        if failures:
+            self.log.error("=" * 80)
+            self.log.error("PERFORMANCE VALIDATION FAILED:")
+            self.log.error("For 4MB PMD-source mremap, the PMD+PMD case must be fastest!")
+            for failure in failures:
+                self.log.error("  - %s", failure)
+            self.log.error("=" * 80)
+            self.fail("Source+Dest PMD-aligned 4MB mremap is not the fastest. "
+                      "See failures above.")
+        else:
+            self.log.info("=" * 80)
+            self.log.info("SUCCESS: Source+Dest PMD-aligned 4MB mremap is fastest!")
+            self.log.info("  PMD+PMD time : %d ns", time_pmd_both)
+            if pmd_src_only:
+                min_src_only = min(pmd_src_only.values())
+                self.log.info("  Non-PMD-dest min time : %d ns", min_src_only)
+                if time_pmd_both > 0:
+                    self.log.info("  Performance improvement: %.2fx faster",
+                                  min_src_only / time_pmd_both)
+                else:
+                    self.log.warning("Cannot calculate improvement: PMD+PMD time is zero")
+            self.log.info("=" * 80)
+
+    def parse_mremap_times(self, output):
+        """
+        Parse mremap_test output and return timings for the
+        '4MB mremap - Source PMD-aligned' cases.
+        Returns dict: test description -> time_ns
+        """
+        times = {}
+        lines = output.split('\n')
+        for i, line in enumerate(lines):
+            if '4MB mremap - Source PMD-aligned' not in line:
+                continue
+            tap_match = re.search(r'^ok\s+\d+\s+(.+)', line)
+            if not tap_match:
+                continue
+            test_desc = tap_match.group(1).strip()
+            for next_line in lines[i + 1:i + 4]:
+                time_match = re.search(r'mremap time:\s+(\d+)ns', next_line)
+                if time_match:
+                    time_ns = int(time_match.group(1))
+                    times[test_desc] = time_ns
+                    self.log.info("Found: %s = %d ns", test_desc, time_ns)
+                    break
+        return times
+
     def bpf(self):
         """
         Execute the kernel bpf selftests
@@ -329,5 +441,14 @@ class kselftest(Test):
 
     def tearDown(self):
         self.log.info('Cleaning up')
+        # Only remove the symlink if we created it and we have the exact kernel version
+        if (getattr(self, 'kexec_symlink_created', False) and getattr(self, 'kexec_kernel_version', None) and self.comp == "kexec"):
+            vmlinuz_path = f"/boot/vmlinuz-{self.kexec_kernel_version}"
+            if os.path.islink(vmlinuz_path):
+                self.log.info(f"Removing kexec symlink {vmlinuz_path} for kernel version {self.kexec_kernel_version}")
+                process.system(f"rm -f {vmlinuz_path}",
+                               shell=True, sudo=True, ignore_status=True)
+            else:
+                self.log.warning(f"Symlink {vmlinuz_path} no longer exists or is not a symlink, skipping removal")
         if os.path.exists(self.workdir):
             shutil.rmtree(self.workdir)

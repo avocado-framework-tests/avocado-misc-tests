@@ -19,6 +19,7 @@
 DLPAR operations
 """
 import time
+import os
 
 from avocado import Test
 from avocado.utils import process
@@ -69,6 +70,16 @@ class DlparPci(Test):
         self.lpar_2 = self.params.get("lpar_2", default=None)
         self.pci_device = self.params.get("pci_devices", default=None).split(' ')
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
+        self.lockdown_mode = self.params.get("lockdown_mode", default="integrity")
+        self.lockdown_path = "/sys/kernel/security/lockdown"
+        self.lockdown_enable = self.params.get("lockdown_enable", default=False)
+        if self.lockdown_enable is True:
+            original_state = self.get_lockdown_state()
+            if original_state == "none":
+                if not self.set_lockdown_mode(self.lockdown_mode):
+                    self.fail(f"Failed to set lockdown to {self.lockdown_mode}")
+        else:
+            self.log.info("Running DLPAR test case by default without setting lockdown feature")
 
     def set_adapter_details(self, pci_device):
         '''
@@ -206,6 +217,7 @@ class DlparPci(Test):
             for _ in range(self.num_of_dlpar):
                 self.dlpar_remove()
                 self.dlpar_add()
+                self.set_adapter_details(pci)
                 self.validation_in_os(pci)
                 self.dlpar_move()
 
@@ -220,9 +232,11 @@ class DlparPci(Test):
             for _ in range(self.num_of_dlpar):
                 self.do_drmgr_pci('r')
                 self.do_drmgr_pci('a')
+                self.set_adapter_details(pci)
                 self.validation_in_os(pci)
             for _ in range(self.num_of_dlpar):
                 self.do_drmgr_pci('R')
+                self.set_adapter_details(pci)
                 self.validation_in_os(pci)
 
     def test_drmgr_phb(self):
@@ -234,7 +248,66 @@ class DlparPci(Test):
             for _ in range(self.num_of_dlpar):
                 self.do_drmgr_phb('r')
                 self.do_drmgr_phb('a')
+                self.set_adapter_details(pci)
                 self.validation_in_os(pci)
+
+    def check_lockdown_support(self):
+        '''
+        Check if kernel lockdown is supported
+        '''
+        if not os.path.exists(self.lockdown_path):
+            self.log.warn("Kernel lockdown not supported on this system")
+            return False
+        return True
+
+    def get_lockdown_state(self):
+        '''
+        Get current lockdown state
+        '''
+        try:
+            output = process.system_output(f'cat {self.lockdown_path}',
+                                           shell=True, sudo=True).decode("utf-8")
+            # Parse output like: "none [integrity] confidentiality"
+            if '[none]' in output:
+                return 'none'
+            elif '[integrity]' in output:
+                return 'integrity'
+            elif '[confidentiality]' in output:
+                return 'confidentiality'
+        except Exception as e:
+            self.log.error(f"Failed to get lockdown state: {e}")
+        return None
+
+    def set_lockdown_mode(self, mode):
+        '''
+        Set kernel lockdown mode
+        mode: 'none', 'integrity', or 'confidentiality'
+        '''
+        if not self.check_lockdown_support():
+            return False
+
+        current_state = self.get_lockdown_state()
+        self.log.info(f"Current lockdown state: {current_state}")
+
+        if mode == current_state:
+            self.log.info(f"Lockdown already set to {mode}")
+            return True
+
+        try:
+            cmd = f'echo "{mode}" > {self.lockdown_path}'
+            process.run(cmd, shell=True, sudo=True)
+
+            # Verify the change
+            new_state = self.get_lockdown_state()
+            if new_state == mode:
+                self.log.info(f"Successfully set lockdown to {mode}")
+                return True
+            else:
+                self.log.error(f"Failed to set lockdown to {mode}, current: {new_state}")
+                return False
+        except Exception as e:
+            self.log.error(f"Error setting lockdown mode to {mode}: {e}")
+            return False
 
     def do_drmgr_pci(self, operation):
         '''
@@ -270,7 +343,7 @@ class DlparPci(Test):
             self.changehwres(self.server, 'r', self.lpar_id, self.lpar_1,
                              self.drc_index, 'remove')
             output = self.listhwres(self.server, self.lpar_1, self.drc_index)
-            if output:
+            if output and ",drc_index=" + self.drc_index in output:
                 self.log.debug(output)
                 self.fail("lshwres still lists the drc after dlpar remove")
 
@@ -452,24 +525,32 @@ class DlparPci(Test):
 
         def nvme_recovery_check():
             '''
-            Checks if the nvme adapter functionality like all namespaces are
-            up and running or not after adapter is recovered
+            Checks if the NVMe adapter is recovered after DLPAR by validating
+            PCI address presence and, if namespaces existed at test start,
+            that every namespace is present and in live/optimized state.
             '''
-            err_ns = []
-            current_namespaces = nvme.get_current_ns_ids(self.contr_name)
-            if current_namespaces == self.ns_list:
-                for ns_id in current_namespaces:
-                    status = nvme.get_ns_status(self.contr_name, ns_id)
-                    if not status[0] == 'live' and status[1] == 'optimized':
-                        err_ns.append(ns_id)
-            else:
-                self.log.info("following ns not back listing after hot_plug" %
-                              (self.ns_list - current_namespaces))
+            if pci_device not in pci.get_pci_addresses():
+                self.log.error("NVMe device %s not found after DLPAR",
+                               pci_device)
                 return False
 
+            if not self.ns_list:
+                self.log.info("NVMe device %s recovered (no namespaces to "
+                              "check)", pci_device)
+                return True
+
+            current_namespaces = set(nvme.get_current_ns_ids(self.contr_name))
+            err_ns = [ns_id for ns_id in self.ns_list
+                      if ns_id not in current_namespaces
+                      or nvme.get_ns_status(self.contr_name, ns_id)[:2]
+                      != ['live', 'optimized']]
             if err_ns:
-                self.log.info(f"following namespaces not recovered ={err_ns}")
+                self.log.info("Namespaces missing or not recovered after "
+                              "DLPAR: %s", err_ns)
                 return False
+
+            self.log.info("NVMe device %s and all %d namespaces recovered "
+                          "successfully", pci_device, len(self.ns_list))
             return True
 
         if wait.wait_for(is_added, timeout=30):

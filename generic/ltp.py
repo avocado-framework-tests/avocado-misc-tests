@@ -25,7 +25,7 @@ import shutil
 import platform
 import time
 from avocado import Test
-from avocado.utils import build, distro, genio, dmesg
+from avocado.utils import build, distro, genio, dmesg, memory
 from avocado.utils import process, archive
 from avocado.utils.partition import Partition
 from avocado.utils.ssh import Session
@@ -338,9 +338,39 @@ class LTP(Test):
         for service in services:
             Manageservice.restart(service)
 
+    def _merge_skipfiles(self, skipfile1, skipfile2):
+        """
+        Merge two skipfiles into a single skipfile.
+        :param skipfile1: Path to the first skipfile
+        :param skipfile2: Path to the second skipfile
+        :return: Path to the merged skipfile
+        """
+        all_tests = set()
+        for skipfile in [skipfile1, skipfile2]:
+            if skipfile and os.path.exists(skipfile):
+                try:
+                    with open(skipfile, 'r') as f:
+                        for line in f:
+                            line = line.strip()
+                            if line and not line.startswith('#'):
+                                all_tests.add(line)
+                except IOError as e:
+                    self.log.warning(f"Failed to read skipfile {skipfile}: {e}")
+        merged_skipfile = os.path.join(self.teststmpdir, 'skipfile_merged')
+        try:
+            with open(merged_skipfile, 'w') as f:
+                for test in sorted(all_tests):
+                    f.write(f"{test}\n")
+            return merged_skipfile
+        except IOError as e:
+            self.log.error(f"Failed to create merged skipfile: {e}")
+            return skipfile1
+
     def test(self):
         logfile = os.path.join(self.logdir, 'ltp.log')
         failcmdfile = os.path.join(self.logdir, 'failcmdfile')
+        mem_gib = memory.memtotal() / (1024 * 1024)
+        self.log.info(f"System memory detected: {mem_gib:.2f} GiB")
         skipfileurl = self.params.get(
             'skipfileurl', default=None)
         if skipfileurl:
@@ -348,6 +378,11 @@ class LTP(Test):
                 "skipfile", locations=[skipfileurl], expire='7d')
         else:
             skipfilepath = self.get_data('skipfile')
+        if mem_gib > 4096 and self.args in self.mem_tests:
+            large_mem_skipfile = self.get_data('skipfile_large_mem')
+            if large_mem_skipfile:
+                self.log.info(f"Merging large memory skipfile for {mem_gib:.2f} GiB system")
+                skipfilepath = self._merge_skipfiles(skipfilepath, large_mem_skipfile)
         os.chmod(self.teststmpdir, 0o755)
         failed_tests = []
 

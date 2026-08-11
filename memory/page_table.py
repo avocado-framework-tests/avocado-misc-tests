@@ -49,7 +49,9 @@ class PageTable(Test):
         self.url = self.params.get('url', default=None)
         git.get_repo(self.url, destination_dir=self.teststmpdir)
         os.chdir(self.teststmpdir)
-        build.make(self.teststmpdir)
+        # GCC >= 14 defaults to -std=gnu23, under which this repo's
+        # old-style K&R declarations fail to build.
+        build.make(self.teststmpdir, extra_args='CFLAGS=-std=gnu17')
 
     def test_detect_5lvl(self):
         '''

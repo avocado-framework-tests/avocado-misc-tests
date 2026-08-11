@@ -1,5 +1,4 @@
-run_type: 'rpm'
 htx_rpm_link: "https://ausgsa.ibm.com:7191/gsa/ausgsa/projects/h/htx/public_html/htxonly/"
-time_limit: 30
-time_unit: 'm' 
+# time_interval is in minutes
+time_interval: 30
 mdt_file: 'mdt.cpu'
