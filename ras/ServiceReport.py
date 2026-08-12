@@ -54,6 +54,16 @@ class ServiceReport(Test):
         archive.extract(tarball, self.workdir)
         self.sourcedir = os.path.join(self.workdir, 'ServiceReport-master')
         build.make(self.sourcedir)
+        # Use the installed servicereport if available
+        if process.system(
+                "command -v servicereport",
+                ignore_status=True, sudo=True, shell=True) == 0:
+            self.servicereport_cmd = "servicereport"
+        else:
+            # Fall back to the locally built binary.
+            self.servicereport_cmd = "./servicereport"
+        self.log.info("Using ServiceReport command: %s",
+                      self.servicereport_cmd)
 
     def isAccelerator(self):
         for dev in os.listdir('/sys/bus/pci/devices'):
@@ -66,7 +76,7 @@ class ServiceReport(Test):
 
     def test(self):
         os.chdir(self.sourcedir)
-        cmd = "servicereport %s" % self.options
+        cmd = "%s %s" % (self.servicereport_cmd, self.options)
         if process.system(cmd, ignore_status=True, sudo=True, shell=True):
             self.fail("ServiceReport: Failed command is: %s" % cmd)
 
@@ -74,8 +84,7 @@ class ServiceReport(Test):
     @skipIf(lambda self: not self.isAccelerator(), "Unsupported: PCI adapter is not an accelarator")
     def test_accelerator(self):
         os.chdir(self.sourcedir)
-
-        cmd = "servicereport %s" % self.options
+        cmd = "%s %s" % (self.servicereport_cmd, self.options)
         if process.system(cmd, ignore_status=True, sudo=True, shell=True):
             self.fail("ServiceReport: Failed command is: %s" % cmd)
 
@@ -84,14 +93,14 @@ class ServiceReport(Test):
         else:
             self.log.info("/dev/vfio empty before servicereport")
 
-        verboseCmd = "servicereport -v -p spyre"
+        verboseCmd = "%s -v -p spyre" % self.servicereport_cmd
         result = process.run(
             verboseCmd, ignore_status=True, sudo=True, shell=True)
         output = str(result.stdout + result.stderr, "utf-8")
 
         if 'FAIL' in output:
             self.log.info("FAIL detected in -v -p spyre")
-            spyreRepairCmd = "servicereport -r -p spyre"
+            spyreRepairCmd = "%s -r -p spyre" % self.servicereport_cmd
             process.run(spyreRepairCmd, ignore_status=True,
                         sudo=True, shell=True)
 
@@ -114,7 +123,7 @@ class ServiceReport(Test):
         process.run(f"echo '{user}:{user}' | chpasswd", sudo=True, shell=True)
         process.run(f"usermod -aG {group} {user}", sudo=True, shell=True)
 
-        userCmd = f"su - {user} -c 'servicereport -v -p spyre'"
+        userCmd = ("su - %s -c '%s -v -p spyre'" % (user, self.servicereport_cmd))
         result = process.run(userCmd, ignore_status=True,
                              sudo=True, shell=True)
         output = str(result.stdout + result.stderr, "utf-8")
