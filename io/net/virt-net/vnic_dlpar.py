@@ -22,9 +22,13 @@ Assumptions:
     running any test. This script does NOT add the vNIC itself.
   - Backend traffic (ping) is checked after every add/remove cycle to
     confirm connectivity is restored.
+
+Lockdown helpers use avocado.utils.linux:
+  linux.is_kernel_lockdown_enabled()          -> (mode, is_enabled)
+  linux.enable_kernel_lockdown_integrity()    -> bool
+  linux.enable_kernel_lockdown_confidentiality() -> bool
 """
 
-import os
 import time
 import netifaces
 from avocado import Test
@@ -46,11 +50,16 @@ IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
 
 class VnicDlpar(Test):
     '''
-    vNIC DLPAR test — performs drmgr-based (OS-level) and HMC-based hot
-    remove / add cycles on a pre-provisioned vNIC interface.
+    vNIC DLPAR test — performs drmgr-based (OS-level) hot remove / add
+    cycles on a pre-provisioned vNIC interface.
 
     Optionally enables kernel lockdown (integrity or confidentiality) before
     running the DLPAR cycle and restores the original state in tearDown.
+
+    Lockdown state is queried and set via avocado.utils.linux:
+      linux.is_kernel_lockdown_enabled()
+      linux.enable_kernel_lockdown_integrity()
+      linux.enable_kernel_lockdown_confidentiality()
 
     Update vnic_dlpar.yaml with site-specific values before running.
     '''
@@ -100,13 +109,12 @@ class VnicDlpar(Test):
         self.mac_id = self.params.get(
             "mac_id", default="02:03:03:03:03:01").split(' ')
         self.mac_id = [mac.replace(':', '') for mac in self.mac_id]
-        self.device_ip = self.params.get(
-            'device_ip', default=None).split(' ')
+        self.device_ip = self.params.get('device_ip', default=None).split(' ')
         self.netmask = self.params.get('netmasks', default=None).split(' ')
         self.peer_ip = self.params.get('peer_ip', default=None).split(' ')
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
 
-        # --- Backing device info (needed for HMC DLPAR re-add) ---
+        # --- Backing device info ---
         self.sriov_port = self.params.get(
             "sriov_ports", default=None).split(' ')
         self.backing_adapter = self.params.get(
@@ -125,25 +133,30 @@ class VnicDlpar(Test):
         self.local = LocalHost()
         dmesg.clear_dmesg()
 
-        # --- Lockdown configuration (mirrors io/pci/dlpar.py) ---
-        self.lockdown_path = "/sys/kernel/security/lockdown"
+        # --- Lockdown configuration ---
+        # Uses linux.is_kernel_lockdown_enabled() / enable_kernel_lockdown_*()
+        # from avocado.utils.linux instead of custom sysfs writes.
         self.lockdown_mode = self.params.get(
             "lockdown_mode", default="integrity")
         self.lockdown_enable = self.params.get(
             "lockdown_enable", default=False)
-        self.original_lockdown_state = None
+        # Save original state so tearDown can restore it.
+        self.original_lockdown_state, _ = linux.is_kernel_lockdown_enabled()
+
         if self.lockdown_enable is True:
-            self.original_lockdown_state = self.get_lockdown_state()
+            if self.original_lockdown_state is None:
+                self.cancel("Kernel lockdown not supported on this system")
             if self.original_lockdown_state == "none":
-                if not self.set_lockdown_mode(self.lockdown_mode):
+                if not self._enable_lockdown(self.lockdown_mode):
                     self.fail(
-                        f"Failed to set lockdown to {self.lockdown_mode}")
+                        "Failed to enable kernel lockdown "
+                        "(%s)" % self.lockdown_mode)
         else:
             self.log.info(
                 "Running vNIC DLPAR test without lockdown enabled")
 
     # ------------------------------------------------------------------ #
-    #  Static helpers (copied from NetworkVirtualization)                 #
+    #  Static helpers                                                     #
     # ------------------------------------------------------------------ #
 
     @staticmethod
@@ -174,7 +187,8 @@ class VnicDlpar(Test):
     @staticmethod
     def find_device(mac_addrs):
         '''
-        Find the network interface matching the given MAC (12-char, no colons).
+        Find the network interface name matching the given 12-char MAC
+        (no colons).
         '''
         mac = ':'.join(mac_addrs[i:i+2] for i in range(0, 12, 2))
         for device in netifaces.interfaces():
@@ -214,63 +228,43 @@ class VnicDlpar(Test):
             self.cancel("Failed to start the rsct and rsct_rm services")
 
     # ------------------------------------------------------------------ #
-    #  Kernel lockdown helpers (same logic as io/pci/dlpar.py)            #
+    #  Lockdown helpers — thin wrappers over avocado.utils.linux          #
     # ------------------------------------------------------------------ #
 
-    def check_lockdown_support(self):
+    def _enable_lockdown(self, mode):
         '''
-        Check if kernel lockdown is supported on this system.
-        '''
-        if not os.path.exists(self.lockdown_path):
-            self.log.warn("Kernel lockdown not supported on this system")
-            return False
-        return True
+        Enable kernel lockdown to *mode* using avocado.utils.linux APIs.
 
-    def get_lockdown_state(self):
+        :param mode: 'integrity' or 'confidentiality'
+        :return: True on success, False otherwise.
         '''
-        Get current lockdown state.
-        Parses output like: "none [integrity] confidentiality"
-        Returns 'none', 'integrity', 'confidentiality', or None on error.
-        '''
-        try:
-            output = process.system_output(
-                f'cat {self.lockdown_path}',
-                shell=True, sudo=True).decode("utf-8")
-            if '[none]' in output:
-                return 'none'
-            elif '[integrity]' in output:
-                return 'integrity'
-            elif '[confidentiality]' in output:
-                return 'confidentiality'
-        except Exception as exc:
-            self.log.error(f"Failed to get lockdown state: {exc}")
-        return None
+        if mode == "integrity":
+            result = linux.enable_kernel_lockdown_integrity()
+        elif mode == "confidentiality":
+            result = linux.enable_kernel_lockdown_confidentiality()
+        else:
+            self.log.error("Unknown lockdown mode: %s", mode)
+            return False
+        current, _ = linux.is_kernel_lockdown_enabled()
+        self.log.info("Lockdown state after enable: %s", current)
+        return result
 
-    def set_lockdown_mode(self, mode):
+    def _restore_lockdown(self, original_mode):
         '''
-        Set kernel lockdown mode to 'none', 'integrity', or 'confidentiality'.
-        Returns True on success, False otherwise.
+        Restore lockdown to *original_mode*.
+        Note: the kernel only allows escalation (none->integrity->confidentiality).
+        Downgrade (e.g. integrity->none) is not possible at runtime without
+        a reboot; this method logs a warning in that case.
         '''
-        if not self.check_lockdown_support():
-            return False
-        current_state = self.get_lockdown_state()
-        self.log.info(f"Current lockdown state: {current_state}")
-        if mode == current_state:
-            self.log.info(f"Lockdown already set to {mode}")
-            return True
-        try:
-            process.run(f'echo "{mode}" > {self.lockdown_path}',
-                        shell=True, sudo=True)
-            new_state = self.get_lockdown_state()
-            if new_state == mode:
-                self.log.info(f"Successfully set lockdown to {mode}")
-                return True
-            self.log.error(
-                f"Failed to set lockdown to {mode}, current: {new_state}")
-            return False
-        except Exception as exc:
-            self.log.error(f"Error setting lockdown mode to {mode}: {exc}")
-            return False
+        current_mode, _ = linux.is_kernel_lockdown_enabled()
+        if current_mode == original_mode:
+            return
+        if original_mode == "none":
+            self.log.warn(
+                "Cannot downgrade lockdown from '%s' to 'none' without "
+                "reboot. Manual restore required.", current_mode)
+        else:
+            self._enable_lockdown(original_mode)
 
     # ------------------------------------------------------------------ #
     #  DLPAR primitives                                                   #
@@ -287,7 +281,7 @@ class VnicDlpar(Test):
 
     def find_virtual_slot(self, dev_id):
         '''
-        Return the virtual slot path for the given device-tree ID.
+        Return the virtual slot path for the given device-tree ID via lsslot.
         '''
         output = process.system_output(
             "lsslot", ignore_status=True, shell=True, sudo=True)
@@ -305,24 +299,6 @@ class VnicDlpar(Test):
             self.fail("drmgr operation %s failed for vNIC slot %s"
                       % (operation, slot))
 
-    def device_add_remove(self, slot, mac, sriov_port, adapter_id, operation):
-        '''
-        HMC-based vNIC add or remove using chhwres / rmhwres.
-        '''
-        if operation == 'remove':
-            cmd = ('rmhwres -r virtualio -m %s --rsubtype vnic -s %s --id %s'
-                   % (self.server, slot, self.lpar_id))
-        else:
-            cmd = ('chhwres -r virtualio -m %s --rsubtype vnic -o a --id %s '
-                   '-s %s -a "mac_addr=%s,port_vlan_id=1,'
-                   'backing_devices=sriov/%s/%s//%s//%s//%s/1/100"'
-                   % (self.server, self.lpar_id, slot, mac,
-                      self.vios_id[0], sriov_port, adapter_id,
-                      self.vios_name[0], self.lpar_id))
-        output = self.session_hmc.cmd(cmd)
-        if output.exit_status != 0:
-            self.fail("HMC vNIC %s failed: %s" % (operation, output.stderr))
-
     def wait_intrerface(self, device_name):
         '''
         Poll until the named interface reappears in the OS (up to 120 s).
@@ -338,6 +314,7 @@ class VnicDlpar(Test):
     def check_dmesg_error(self):
         '''
         Fail the test if unexpected kernel errors appear in dmesg.
+        Uses dmesg.collect_errors_by_level() from avocado.utils.dmesg.
         '''
         skip_errors = [
             'uevent: failed to send synthetic uevent',
@@ -356,7 +333,10 @@ class VnicDlpar(Test):
 
     def _verify_traffic(self, networkinterface, device_ip, netmask, peer_ip):
         '''
-        Configure IP on networkinterface and ping peer to verify traffic.
+        Configure IP on networkinterface and ping peer to verify
+        backend traffic is restored after a DLPAR cycle.
+        Uses NetworkInterface from avocado.utils.network.interfaces and
+        wait.wait_for() from avocado.utils.wait.
         '''
         try:
             networkinterface.add_ipaddr(device_ip, netmask)
@@ -365,8 +345,8 @@ class VnicDlpar(Test):
         if not wait.wait_for(networkinterface.is_link_up, timeout=120):
             self.fail("Unable to bring up link on vNIC after DLPAR")
         if networkinterface.ping_check(peer_ip, count=5) is not None:
-            self.fail("Backend traffic check failed after DLPAR — ping to %s"
-                      % peer_ip)
+            self.fail("Backend traffic check failed after DLPAR — "
+                      "ping to %s failed" % peer_ip)
 
     # ------------------------------------------------------------------ #
     #  Test cases                                                         #
@@ -396,30 +376,35 @@ class VnicDlpar(Test):
                 self.fail("drmgr DLPAR operation did not complete")
             networkinterface = NetworkInterface(
                 self.find_device(mac), self.local)
-            self._verify_traffic(networkinterface, device_ip, netmask, peer_ip)
+            self._verify_traffic(
+                networkinterface, device_ip, netmask, peer_ip)
         self.check_dmesg_error()
 
     def test_vnic_dlpar_lockdown(self):
         '''
         vNIC DLPAR under kernel lockdown.
-        Sets lockdown to the configured mode (default: integrity) then
-        performs the same drmgr-based remove / add cycles as test_vnic_dlpar.
-        Verifies backend traffic after each cycle.
-        Lockdown is restored to its original state in tearDown.
+
+        1. Queries lockdown state via linux.is_kernel_lockdown_enabled().
+        2. Enables lockdown using linux.enable_kernel_lockdown_integrity()
+           or linux.enable_kernel_lockdown_confidentiality() as configured.
+        3. Runs the same drmgr remove/add cycles as test_vnic_dlpar.
+        4. Verifies backend traffic (ping) after every cycle.
+        5. tearDown restores the original lockdown state where possible.
         '''
-        if not self.check_lockdown_support():
+        current_mode, _ = linux.is_kernel_lockdown_enabled()
+        if current_mode is None:
             self.cancel("Kernel lockdown not supported — skipping lockdown test")
 
-        current_state = self.get_lockdown_state()
-        self.log.info("Lockdown state at test start: %s", current_state)
+        self.log.info("Lockdown state at test start: %s", current_mode)
 
-        # Ensure lockdown is active for this test regardless of setUp setting
-        if current_state != self.lockdown_mode:
-            if not self.set_lockdown_mode(self.lockdown_mode):
-                self.fail(
-                    f"Could not set lockdown to {self.lockdown_mode}")
+        # Ensure the requested lockdown mode is active for this test.
+        if current_mode != self.lockdown_mode:
+            if not self._enable_lockdown(self.lockdown_mode):
+                self.fail("Could not enable kernel lockdown "
+                          "(%s)" % self.lockdown_mode)
 
-        self.log.info("Running vNIC DLPAR with lockdown=%s", self.lockdown_mode)
+        active_mode, _ = linux.is_kernel_lockdown_enabled()
+        self.log.info("Running vNIC DLPAR with lockdown mode: %s", active_mode)
 
         for slot_no, device_ip, netmask, mac, peer_ip in zip(
                 self.slot_num, self.device_ip,
@@ -439,7 +424,8 @@ class VnicDlpar(Test):
                 self.fail("drmgr DLPAR operation failed under lockdown")
             networkinterface = NetworkInterface(
                 self.find_device(mac), self.local)
-            self._verify_traffic(networkinterface, device_ip, netmask, peer_ip)
+            self._verify_traffic(
+                networkinterface, device_ip, netmask, peer_ip)
 
         self.check_dmesg_error()
 
@@ -448,7 +434,7 @@ class VnicDlpar(Test):
     # ------------------------------------------------------------------ #
 
     def tearDown(self):
-        # Restore lockdown to state before the test
+        # Best-effort restore of lockdown state set during setUp/test.
         if self.original_lockdown_state is not None:
-            self.set_lockdown_mode(self.original_lockdown_state)
+            self._restore_lockdown(self.original_lockdown_state)
         self.session_hmc.quit()
