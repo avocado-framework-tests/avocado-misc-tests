@@ -42,6 +42,8 @@ from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
 from avocado.utils.ssh import Session
 from avocado.utils.software_manager.manager import SoftwareManager
+from avocado.utils.software_manager.distro_packages import (
+    install_distro_packages)
 
 IS_POWER_NV = 'PowerNV' in open('/proc/cpuinfo', 'r').read()
 IS_KVM_GUEST = 'qemu' in open('/proc/cpuinfo', 'r').read()
@@ -206,18 +208,26 @@ class VnicDlpar(Test):
 
     def install_packages(self):
         """
-        Install packages required by the test.
+        Install packages required by the test using
+        install_distro_packages() from
+        avocado.utils.software_manager.distro_packages.
         """
-        smm = SoftwareManager()
-        packages = ['ksh', 'src', 'rsct.basic', 'rsct.core.utils',
-                    'rsct.core', 'DynamicRM', 'powerpc-utils']
         detected_distro = distro.detect()
-        if detected_distro.name == "Ubuntu":
-            packages.extend(['python-paramiko'])
         self.log.info("Test is running on: %s", detected_distro.name)
-        for pkg in packages:
-            if not smm.check_installed(pkg) and not smm.install(pkg):
-                self.cancel('%s is needed for the test to be run' % pkg)
+        base_pkgs = ['ksh', 'src', 'rsct.basic', 'rsct.core.utils',
+                     'rsct.core', 'DynamicRM', 'powerpc-utils']
+        ubuntu_pkgs = base_pkgs + ['python-paramiko']
+        distro_pkg_map = {
+            'rhel': base_pkgs,
+            'SuSE': base_pkgs,
+            'Ubuntu': ubuntu_pkgs,
+        }
+        install_distro_packages(distro_pkg_map)
+        smm = SoftwareManager()
+        for pkg in base_pkgs:
+            if not smm.check_installed(pkg):
+                self.cancel(
+                    '%s is needed for the test to be run' % pkg)
 
     def rsct_service_start(self):
         """
