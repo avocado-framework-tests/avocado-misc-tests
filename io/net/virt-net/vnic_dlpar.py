@@ -11,8 +11,8 @@
 #
 # See LICENSE for more details.
 #
-# Copyright: 2024 IBM
-# Author: Farooq Abdulla <farooq.abdulla@ibm.com>
+# Copyright: 2026 IBM
+# Author: Shaik Abdulla <shaik.abdulla1@ibm.com>
 
 """
 vNIC DLPAR operations — regular DLPAR and lockdown-protected DLPAR.
@@ -29,7 +29,6 @@ Lockdown helpers use avocado.utils.linux:
   linux.enable_kernel_lockdown_confidentiality() -> bool
 """
 
-import time
 import netifaces
 from avocado import Test
 from avocado import skipIf, skipUnless
@@ -314,14 +313,15 @@ class VnicDlpar(Test):
     def wait_intrerface(self, device_name):
         """
         Poll until the named interface reappears in the OS (up to 120 s).
+        Uses NetworkInterface.is_available() from avocado.utils.network.interfaces
+        and wait.wait_for() from avocado.utils.wait.
         """
-        for _ in range(0, 120, 10):
-            for interface in netifaces.interfaces():
-                if device_name == interface:
-                    self.log.info("vNIC device %s is up", device_name)
-                    return True
-            time.sleep(10)
-        return False
+        networkinterface = NetworkInterface(device_name, self.local)
+        result = wait.wait_for(networkinterface.is_available, timeout=120,
+                               text="Waiting for vNIC %s to come up" % device_name)
+        if result:
+            self.log.info("vNIC device %s is up", device_name)
+        return bool(result)
 
     def check_dmesg_error(self):
         """
