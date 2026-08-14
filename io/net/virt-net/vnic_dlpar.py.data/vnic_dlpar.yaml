@@ -1,0 +1,40 @@
+# vNIC DLPAR test configuration
+# The vNIC must already be added to the LPAR manually before running this test.
+
+# HMC credentials
+hmc_username: ""
+hmc_pwd: ""
+
+# Managed system name (output of: lssyscfg -r sys -F name)
+manageSystem: ""
+
+# vNIC slot number(s) — space-separated for multiple vNICs
+slot_num: ""
+
+# MAC address(es) of the vNIC interface(s) — space-separated
+mac_id: ""
+
+# IP address(es) to configure on the vNIC interface(s) — space-separated
+device_ip: ""
+
+# Netmask(s) — space-separated
+netmasks: ""
+
+# Peer IP(s) used for backend traffic verification — space-separated
+peer_ip: ""
+
+# Number of DLPAR remove/add cycles per slot
+num_of_dlpar: 1
+
+# SRIOV backing adapter location code(s) — space-separated
+# (e.g. "U78DA.ND0.WZS0027-P0-C11")
+sriov_adapters: ""
+
+# SRIOV port number(s) — space-separated
+sriov_ports: ""
+
+# Kernel lockdown parameters (optional)
+# Set lockdown_enable to True to run DLPAR under lockdown.
+# lockdown_mode: 'none' | 'integrity' | 'confidentiality'
+lockdown_enable: False
+lockdown_mode: integrity
