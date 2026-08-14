@@ -263,9 +263,10 @@ class VnicDlpar(Test):
     def _restore_lockdown(self, original_mode):
         """
         Restore lockdown to *original_mode*.
-        Note: the kernel only allows escalation (none->integrity->confidentiality).
-        Downgrade (e.g. integrity->none) is not possible at runtime without
-        a reboot; this method logs a warning in that case.
+        Note: the kernel only allows escalation
+        (none->integrity->confidentiality).
+        Downgrade (e.g. integrity->none) is not possible at runtime
+        without a reboot; this method logs a warning in that case.
         """
         current_mode, _ = linux.is_kernel_lockdown_enabled()
         if current_mode == original_mode:
@@ -286,6 +287,8 @@ class VnicDlpar(Test):
         Return the kernel device-tree ID for the interface with given MAC.
         """
         device = self.find_device(mac)
+        if not device:
+            self.fail("No network interface found for MAC %s" % mac)
         return process.system_output(
             "ls -l /sys/class/net/ | grep -w %s | cut -d '/' -f 5" % device,
             shell=True).decode("utf-8").strip()
@@ -294,11 +297,15 @@ class VnicDlpar(Test):
         """
         Return the virtual slot path for the given device-tree ID via lsslot.
         """
+        if not dev_id:
+            return False
         output = process.system_output(
             "lsslot", ignore_status=True, shell=True, sudo=True)
-        for slot in output.decode("utf-8").split('\n'):
+        for slot in output.decode("utf-8").splitlines():
+            if slot.startswith('#'):
+                continue
             if dev_id in slot:
-                return slot.split(' ')[0]
+                return slot.split()[0]
         return False
 
     def drmgr_vnic_dlpar(self, operation, slot):
@@ -313,12 +320,14 @@ class VnicDlpar(Test):
     def wait_intrerface(self, device_name):
         """
         Poll until the named interface reappears in the OS (up to 120 s).
-        Uses NetworkInterface.is_available() from avocado.utils.network.interfaces
-        and wait.wait_for() from avocado.utils.wait.
+        Uses NetworkInterface.is_available() from
+        avocado.utils.network.interfaces and wait.wait_for() from
+        avocado.utils.wait.
         """
         networkinterface = NetworkInterface(device_name, self.local)
-        result = wait.wait_for(networkinterface.is_available, timeout=120,
-                               text="Waiting for vNIC %s to come up" % device_name)
+        result = wait.wait_for(
+            networkinterface.is_available, timeout=120,
+            text="Waiting for vNIC %s to come up" % device_name)
         if result:
             self.log.info("vNIC device %s is up", device_name)
         return bool(result)
@@ -406,7 +415,8 @@ class VnicDlpar(Test):
         """
         current_mode, _ = linux.is_kernel_lockdown_enabled()
         if current_mode is None:
-            self.cancel("Kernel lockdown not supported — skipping lockdown test")
+            self.cancel(
+                "Kernel lockdown not supported — skipping lockdown test")
 
         self.log.info("Lockdown state at test start: %s", current_mode)
 
