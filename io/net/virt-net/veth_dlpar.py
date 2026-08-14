@@ -24,9 +24,10 @@ from avocado.utils import process
 from avocado.utils.ssh import Session
 from avocado.utils.network.hosts import LocalHost
 from avocado.utils.network.interfaces import NetworkInterface
+from generic.lockdown_mixin import LockdownMixin
 
 
-class VethdlparTest(Test):
+class VethdlparTest(Test, LockdownMixin):
     '''
     DLPAR veth script does veth device add,remove.
     Update the details in yaml file.
@@ -83,6 +84,17 @@ class VethdlparTest(Test):
         self.log.info(self.sea)
         if self.networkinterface.ping_check(self.peer_ip, count=5) is not None:
             self.cancel("peer connection is failed")
+        # Lockdown configuration (reuses LockdownMixin methods)
+        self.lockdown_path = "/sys/kernel/security/lockdown"
+        self.lockdown_mode = self.params.get("lockdown_mode", default="integrity")
+        self.lockdown_enable = self.params.get("lockdown_enable", default=False)
+        if self.lockdown_enable is True:
+            original_state = self.get_lockdown_state()
+            if original_state == "none":
+                if not self.set_lockdown_mode(self.lockdown_mode):
+                    self.fail(f"Failed to set lockdown to {self.lockdown_mode}")
+        else:
+            self.log.info("Running veth DLPAR test without lockdown enabled")
 
     def veth_dlpar_remove(self):
         '''
@@ -123,3 +135,6 @@ class VethdlparTest(Test):
             self.networkinterface.remove_ipaddr(self.ipaddr, self.netmask)
             self.networkinterface.restore_from_backup()
             self.session.quit()
+        # Restore lockdown to 'none' if we enabled it in setUp
+        if getattr(self, 'lockdown_enable', False) is True:
+            self.set_lockdown_mode('none')
