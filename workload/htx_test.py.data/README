@@ -3,12 +3,23 @@ HTX Test — YAML Configuration Reference
 Stress-tests IBM Power hardware (ppc64/ppc64le) using HTX.  Run the three
 test methods in sequence with the same YAML file:
 
+Generic MDT-based tests (CPU, memory, pmem, isst, block devices):
+
   test_start  -- install HTX (first run only), select MDT, activate devices
   test_check  -- poll for errors every 60 s for the configured duration
   test_stop   -- suspend devices and shut down the HTX daemon
 
-YAML Parameters
----------------
+NIC device stress tests (host/peer LPAR pair):
+
+  test_htx_nic_start  -- install HTX on host and peer, configure network
+                         topology (build_net multisystem), start NIC run
+  test_htx_nic_check  -- poll HTX error logs on both host and peer every
+                         60 s for the configured duration (time_limit min)
+  test_htx_nic_stop   -- stop MDT and daemon on both sides, restore IP
+                         addresses, and close the SSH session
+
+YAML Parameters — Generic MDT tests
+-------------------------------------
 mdt_file       MDT filename to select and run.  Default: ``mdt.mem``
                Examples: mdt.cpu, mdt.hd, mdt.all, mdt.mem_inter_node
 
@@ -29,6 +40,31 @@ htx_disks      Space-separated block devices to stress-test exclusively
 all            ``True`` — activate every device in the MDT without filtering.
                ``False`` (default) — use the ``htx_disks`` list.
 
+YAML Parameters — NIC tests (htx_nic.yaml)
+--------------------------------------------
+mdt_file            MDT filename for NIC runs.  Default: ``net.mdt``
+
+host_public_ip      Public IP of the host LPAR used to manage the test
+                    session (SSH to peer).
+
+peer_public_ip      Public IP of the peer LPAR.
+
+peer_user           SSH login user on the peer.  Default: ``root``
+
+peer_password       SSH password for the peer user.
+
+htx_host_interfaces Space-separated list of host NIC interfaces to stress
+                    (e.g. ``'eth0 eth1'``).  Leave empty to let HTX select.
+
+peer_interfaces     Space-separated list of peer NIC interfaces to stress.
+                    Leave empty to let HTX select.
+
+time_limit          Duration of the test_htx_nic_check polling loop,
+                    expressed in minutes.  Default: ``2``
+
+htx_rpm_link        Same as the generic parameter; applies to both host
+                    and peer installations.
+
 YAML Variants
 -------------
 htx_test.yaml          2-min smoke run, mdt.all.  No htx_rpm_link needed.
@@ -39,6 +75,8 @@ htx_isst.yml           ISST power-management variants, 1440 min (24 h),
 htx_pmem.yaml          PMEM/NVDIMM variants via !mux (60–120 min).
 htx_block_devices.yaml 60-min targeted run; set htx_disks before use.
 htx_all_devices.yaml   1440-min (24 h) full MDT sweep; all: True, mdt.hd.
+htx_nic.yaml           2-min NIC stress run across a host/peer LPAR pair;
+                       set host/peer IPs and interface names before use.
 
 Example Invocations
 -------------------
@@ -49,10 +87,18 @@ Example Invocations
               htx_test.py:HtxTest.test_stop \
              -m htx_test.py.data/htx_block_devices.yaml
 
+  avocado run htx_test.py:HtxTest.test_htx_nic_start \
+              htx_test.py:HtxTest.test_htx_nic_check \
+              htx_test.py:HtxTest.test_htx_nic_stop \
+             -m htx_test.py.data/htx_nic.yaml
+
 Notes
 -----
 * Error detection reads /tmp/htxerr via htxcmdline -geterrlog; a non-zero
   file size fails test_check immediately.
 * test_stop issues ``umount /htx_pmem*`` unconditionally to clean up any
   PMEM mounts left by HTX regardless of the MDT in use.
+* test_htx_nic_start configures NetworkManager-aware IP swapping when NM
+  is active on the host or peer, and falls back to direct ip-addr assignment
+  otherwise.
 
