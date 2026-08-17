@@ -1,0 +1,7 @@
+interfaces: ""
+device_ip: ""
+netmasks: ""
+peer_ip: ""
+num_of_dlpar: 1
+lockdown_enable: True
+lockdown_mode: integrity
