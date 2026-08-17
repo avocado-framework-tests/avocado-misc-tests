@@ -1,0 +1,130 @@
+vNIC DLPAR TEST
+===============
+
+Overview
+--------
+This test performs Dynamic Logical Partition (DLPAR) hot remove and hot
+add operations on a pre-provisioned vNIC interface using the OS-level
+drmgr command. It also supports running the same DLPAR cycle under
+kernel lockdown (integrity or confidentiality mode).
+
+IMPORTANT: The vNIC must already be added to the LPAR manually before
+running this test. This script does NOT provision the vNIC itself.
+
+Prerequisites
+-------------
+1. RSCT packages must be available in the system repository:
+      ksh, src, rsct.basic, rsct.core.utils, rsct.core,
+      DynamicRM, powerpc-utils
+   On Ubuntu, additionally: python-paramiko
+   The script will attempt to install them automatically.
+
+2. rsct and rsct_rm services must be startable via:
+      startsrc -g rsct
+      startsrc -g rsct_rm
+
+3. HMC must be reachable from the LPAR and SSH access must be available.
+
+4. The vNIC must already exist on the LPAR (visible via lsslot and
+   lshwres on HMC) before running either test case.
+
+5. SRIOV adapter location code and port must be known (used to resolve
+   the backing adapter ID from HMC).
+
+6. For lockdown test: kernel must support
+   /sys/kernel/security/lockdown (Linux 5.4+ with CONFIG_SECURITY_LOCKDOWN_LSM).
+
+Test Cases
+----------
+test_vnic_dlpar
+    Performs drmgr-based hot remove (-r) and hot add (-a) on each
+    vNIC slot for num_of_dlpar iterations. After each cycle, verifies
+    that the interface comes back up and backend traffic (ping to
+    peer_ip) is restored.
+
+test_vnic_dlpar_lockdown
+    Same as test_vnic_dlpar but first enables kernel lockdown to the
+    configured lockdown_mode (default: integrity). DLPAR is then
+    performed under lockdown to verify the operation is not affected.
+    Original lockdown state is restored in tearDown where possible.
+    Note: kernel lockdown is a one-way escalation at runtime
+    (none -> integrity -> confidentiality). Downgrade to 'none'
+    requires a reboot.
+
+Input Parameters
+----------------
+hmc_username
+    HMC login username.
+    Example: hscroot
+
+hmc_pwd
+    HMC login password.
+    Example: abc123
+
+manageSystem
+    Managed system name as shown by: lssyscfg -r sys -F name
+    Example: Server-9080-M9S-SN12345
+
+slot_num
+    Virtual slot number(s) of the vNIC interface(s).
+    Space-separated for multiple vNICs.
+    Valid range: 3 - 2999
+    Example: "4" or "4 5"
+
+mac_id
+    MAC address(es) of the vNIC interface(s).
+    Space-separated, with or without colons.
+    Example: "02:03:03:03:03:01" or "02:03:03:03:03:01 02:03:03:03:03:02"
+
+device_ip
+    IP address(es) to configure on the vNIC interface(s) after DLPAR.
+    Space-separated for multiple vNICs.
+    Example: "192.168.1.10" or "192.168.1.10 192.168.1.11"
+
+netmasks
+    Netmask(s) corresponding to device_ip entries.
+    Space-separated for multiple vNICs.
+    Example: "255.255.255.0"
+
+peer_ip
+    Peer IP address(es) used for backend traffic verification (ping).
+    Space-separated for multiple vNICs.
+    Example: "192.168.1.20"
+
+sriov_adapters
+    Physical location code(s) of the SRIOV backing adapter(s).
+    Space-separated for multiple backing devices.
+    Used to resolve adapter_id from HMC lshwres output.
+    Example: "U78DA.ND0.WZS0027-P0-C11"
+
+sriov_ports
+    SRIOV port number(s) corresponding to sriov_adapters.
+    Space-separated.
+    Example: "0" or "0 1"
+
+num_of_dlpar
+    Number of DLPAR remove/add cycles to perform per slot.
+    Default: 1
+    Example: 3
+
+lockdown_enable
+    Set to True to enable kernel lockdown before running DLPAR.
+    Only applies to test_vnic_dlpar_lockdown.
+    Default: False
+
+lockdown_mode
+    Kernel lockdown mode to activate when lockdown_enable is True.
+    Accepted values: integrity, confidentiality
+    Default: integrity
+
+Example Usage
+-------------
+avocado run vnic_dlpar.py -m vnic_dlpar.py.data/vnic_dlpar.yaml
+
+    Run only regular DLPAR test:
+avocado run vnic_dlpar.py:VnicDlpar.test_vnic_dlpar \
+    -m vnic_dlpar.py.data/vnic_dlpar.yaml
+
+    Run only lockdown DLPAR test:
+avocado run vnic_dlpar.py:VnicDlpar.test_vnic_dlpar_lockdown \
+    -m vnic_dlpar.py.data/vnic_dlpar.yaml

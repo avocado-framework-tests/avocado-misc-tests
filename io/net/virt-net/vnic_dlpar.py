@@ -22,11 +22,6 @@ Assumptions:
     running any test. This script does NOT add the vNIC itself.
   - Backend traffic (ping) is checked after every add/remove cycle to
     confirm connectivity is restored.
-
-Lockdown helpers use avocado.utils.linux:
-  linux.is_kernel_lockdown_enabled()          -> (mode, is_enabled)
-  linux.enable_kernel_lockdown_integrity()    -> bool
-  linux.enable_kernel_lockdown_confidentiality() -> bool
 """
 
 import netifaces
@@ -56,15 +51,6 @@ class VnicDlpar(Test):
 
     Optionally enables kernel lockdown (integrity or confidentiality) before
     running the DLPAR cycle and restores the original state in tearDown.
-
-    Lockdown state is queried and set via avocado.utils.linux:
-      linux.is_kernel_lockdown_enabled()
-      linux.enable_kernel_lockdown_integrity()
-      linux.enable_kernel_lockdown_confidentiality()
-
-    Update vnic_dlpar.yaml with site-specific values before running.
-
-    :avocado: tags=net,io,privileged,pSeries,ppc64le
     """
 
     @skipUnless("ppc" in distro.detect().arch,
@@ -96,16 +82,12 @@ class VnicDlpar(Test):
         self.session_hmc.cleanup_master()
         if not self.session_hmc.connect():
             self.cancel("failed connecting to HMC")
-
-        # --- Managed system and LPAR id ---
         self.server = self.params.get("manageSystem", default=None)
         if not self.server:
             self.cancel("Managed System not got")
         cmd = ('lssyscfg -m %s -r lpar --filter lpar_names=%s -F lpar_id'
                % (self.server, self.lpar))
         self.lpar_id = self.session_hmc.cmd(cmd).stdout_text.split()[0]
-
-        # --- vNIC slot / interface details ---
         self.slot_num = str(self.params.get(
             "slot_num", default=None)).split(' ')
         for slot in self.slot_num:
@@ -118,8 +100,6 @@ class VnicDlpar(Test):
         self.netmask = self.params.get('netmasks', default=None).split(' ')
         self.peer_ip = self.params.get('peer_ip', default=None).split(' ')
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
-
-        # --- Backing device info ---
         self.sriov_port = self.params.get(
             "sriov_ports", default=None).split(' ')
         self.backing_adapter = self.params.get(
@@ -137,17 +117,11 @@ class VnicDlpar(Test):
 
         self.local = LocalHost()
         dmesg.clear_dmesg()
-
-        # --- Lockdown configuration ---
-        # Uses linux.is_kernel_lockdown_enabled() / enable_kernel_lockdown_*()
-        # from avocado.utils.linux instead of custom sysfs writes.
         self.lockdown_mode = self.params.get(
             "lockdown_mode", default="integrity")
         self.lockdown_enable = self.params.get(
             "lockdown_enable", default=False)
-        # Save original state so tearDown can restore it.
         self.original_lockdown_state, _ = linux.is_kernel_lockdown_enabled()
-
         if self.lockdown_enable is True:
             if self.original_lockdown_state is None:
                 self.cancel("Kernel lockdown not supported on this system")
@@ -159,10 +133,6 @@ class VnicDlpar(Test):
         else:
             self.log.info(
                 "Running vNIC DLPAR test without lockdown enabled")
-
-    # ------------------------------------------------------------------ #
-    #  Static helpers                                                     #
-    # ------------------------------------------------------------------ #
 
     @staticmethod
     def get_mcp_component(component):
@@ -202,10 +172,6 @@ class VnicDlpar(Test):
                 return device
         return ''
 
-    # ------------------------------------------------------------------ #
-    #  Package / service helpers                                          #
-    # ------------------------------------------------------------------ #
-
     def install_packages(self):
         """
         Install packages required by the test using
@@ -216,11 +182,9 @@ class VnicDlpar(Test):
         self.log.info("Test is running on: %s", detected_distro.name)
         base_pkgs = ['ksh', 'src', 'rsct.basic', 'rsct.core.utils',
                      'rsct.core', 'DynamicRM', 'powerpc-utils']
-        ubuntu_pkgs = base_pkgs + ['python-paramiko']
         distro_pkg_map = {
             'rhel': base_pkgs,
             'SuSE': base_pkgs,
-            'Ubuntu': ubuntu_pkgs,
         }
         install_distro_packages(distro_pkg_map)
         smm = SoftwareManager()
@@ -247,10 +211,6 @@ class VnicDlpar(Test):
             "lssrc -a", ignore_status=True, shell=True, sudo=True)
         if "inoperative" in output.decode("utf-8"):
             self.cancel("Failed to start the rsct and rsct_rm services")
-
-    # ------------------------------------------------------------------ #
-    #  Lockdown helpers — thin wrappers over avocado.utils.linux          #
-    # ------------------------------------------------------------------ #
 
     def _enable_lockdown(self, mode):
         """
@@ -287,10 +247,6 @@ class VnicDlpar(Test):
                 "reboot. Manual restore required.", current_mode)
         else:
             self._enable_lockdown(original_mode)
-
-    # ------------------------------------------------------------------ #
-    #  DLPAR primitives                                                   #
-    # ------------------------------------------------------------------ #
 
     def find_device_id(self, mac):
         """
@@ -380,10 +336,6 @@ class VnicDlpar(Test):
             self.fail("Backend traffic check failed after DLPAR — "
                       "ping to %s failed" % peer_ip)
 
-    # ------------------------------------------------------------------ #
-    #  Test cases                                                         #
-    # ------------------------------------------------------------------ #
-
     def test_vnic_dlpar(self):
         """
         Regular vNIC DLPAR: drmgr-based hot remove and hot add.
@@ -461,10 +413,6 @@ class VnicDlpar(Test):
                 networkinterface, device_ip, netmask, peer_ip)
 
         self.check_dmesg_error()
-
-    # ------------------------------------------------------------------ #
-    #  Cleanup                                                            #
-    # ------------------------------------------------------------------ #
 
     def tearDown(self):
         """
