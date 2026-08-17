@@ -35,7 +35,6 @@ from avocado.utils import linux
 from avocado.utils.process import CmdError
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
-from avocado.utils.ssh import Session
 from avocado.utils.software_manager.manager import SoftwareManager
 from avocado.utils.software_manager.distro_packages import (
     install_distro_packages)
@@ -62,60 +61,40 @@ class VnicDlpar(Test):
         Gather necessary test inputs and validate the environment.
         The vNIC must already exist on the LPAR before running this test.
         """
-        self.session_hmc = None
         self.original_lockdown_state = None
         self.install_packages()
         self.rsct_service_start()
 
-        # --- HMC connectivity ---
-        self.hmc_ip = wait.wait_for(
-            lambda: self.get_mcp_component("HMCIPAddr"), timeout=30)
-        if not self.hmc_ip:
-            self.cancel("HMC IP not got")
-        self.hmc_username = self.params.get("hmc_username", default=None)
-        self.hmc_pwd = self.params.get("hmc_pwd", default=None)
-        self.lpar = self.get_partition_name("Partition Name")
-        if not self.lpar:
-            self.cancel("LPAR Name not got from lparstat command")
-        self.session_hmc = Session(self.hmc_ip, user=self.hmc_username,
-                                   password=self.hmc_pwd)
-        self.session_hmc.cleanup_master()
-        if not self.session_hmc.connect():
-            self.cancel("failed connecting to HMC")
-        self.server = self.params.get("manageSystem", default=None)
-        if not self.server:
-            self.cancel("Managed System not got")
-        cmd = ('lssyscfg -m %s -r lpar --filter lpar_names=%s -F lpar_id'
-               % (self.server, self.lpar))
-        self.lpar_id = self.session_hmc.cmd(cmd).stdout_text.split()[0]
-        self.slot_num = str(self.params.get(
-            "slot_num", default=None)).split(' ')
-        for slot in self.slot_num:
-            if int(slot) < 3 or int(slot) > 2999:
-                self.cancel("Slot invalid. Valid range: 3 - 2999")
-        self.mac_id = self.params.get(
-            "mac_id", default="02:03:03:03:03:01").split(' ')
-        self.mac_id = [mac.replace(':', '') for mac in self.mac_id]
-        self.device_ip = self.params.get('device_ip', default=None).split(' ')
-        self.netmask = self.params.get('netmasks', default=None).split(' ')
-        self.peer_ip = self.params.get('peer_ip', default=None).split(' ')
-        self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
-        self.sriov_port = self.params.get(
-            "sriov_ports", default=None).split(' ')
-        self.backing_adapter = self.params.get(
-            "sriov_adapters", default=None).split(' ')
-        cmd = ('lshwres -m %s -r sriov --rsubtype adapter -F '
-               'phys_loc:adapter_id' % self.server)
-        adapter_id_output = self.session_hmc.cmd(cmd).stdout_text
-        self.backing_adapter_id = []
-        for backing_adapter in self.backing_adapter:
-            for line in adapter_id_output.splitlines():
-                if str(backing_adapter) in line:
-                    self.backing_adapter_id.append(line.split(':')[1])
-        if not self.backing_adapter_id:
-            self.cancel("SRIOV adapter provided was not found.")
-
         self.local = LocalHost()
+        self.interface = self.params.get('interface', default=None)
+        self.mac_id = self.params.get("mac_id", default=None)
+
+        if self.interface:
+            ni = NetworkInterface(self.interface, self.local)
+            hwaddr = ni.get_hwaddr()
+            if not hwaddr:
+                self.cancel("Unable to get MAC address for interface %s"
+                            % self.interface)
+            self.mac = hwaddr.replace(':', '')
+        elif self.mac_id:
+            self.mac = self.mac_id.replace(':', '')
+        else:
+            self.cancel("Please provide 'interface' or 'mac_id' in YAML")
+
+        self.device_ip = self.params.get('device_ip', default=None)
+        if not self.device_ip:
+            self.cancel("device_ip is required for the test")
+
+        self.netmask = self.params.get('netmask', default=None)
+        if not self.netmask:
+            self.cancel("netmask is required for the test")
+
+        self.peer_ip = self.params.get('peer_ip', default=None)
+        if not self.peer_ip:
+            self.cancel("peer_ip is required for the test")
+
+        self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
+
         dmesg.clear_dmesg()
         self.lockdown_mode = self.params.get(
             "lockdown_mode", default="integrity")
@@ -130,34 +109,11 @@ class VnicDlpar(Test):
                     self.fail(
                         "Failed to enable kernel lockdown "
                         "(%s)" % self.lockdown_mode)
+                else:
+                    self.log.info("lockdown enabled successfully")
         else:
             self.log.info(
                 "Running vNIC DLPAR test without lockdown enabled")
-
-    @staticmethod
-    def get_mcp_component(component):
-        """
-        Probes IBM.MCP class for mentioned component and returns it.
-        """
-        for line in process.system_output(
-                'lsrsrc IBM.MCP %s' % component,
-                ignore_status=True, shell=True,
-                sudo=True).decode("utf-8").splitlines():
-            if component in line:
-                return line.split()[-1].strip('{}\"')
-        return ''
-
-    @staticmethod
-    def get_partition_name(component):
-        """
-        Get partition name from lparstat -i.
-        """
-        for line in process.system_output(
-                'lparstat -i', ignore_status=True, shell=True,
-                sudo=True).decode("utf-8").splitlines():
-            if component in line:
-                return line.split(':')[-1].strip()
-        return ''
 
     @staticmethod
     def find_device(mac_addrs):
@@ -180,15 +136,19 @@ class VnicDlpar(Test):
         """
         detected_distro = distro.detect()
         self.log.info("Test is running on: %s", detected_distro.name)
-        base_pkgs = ['ksh', 'src', 'rsct.basic', 'rsct.core.utils',
+        smm = SoftwareManager()
+        shell_pkg = 'ksh' if smm.check_installed('ksh') else 'mksh'
+        base_pkgs = [shell_pkg, 'src', 'rsct.basic', 'rsct.core.utils',
                      'rsct.core', 'DynamicRM', 'powerpc-utils']
         distro_pkg_map = {
             'rhel': base_pkgs,
             'SuSE': base_pkgs,
         }
         install_distro_packages(distro_pkg_map)
-        smm = SoftwareManager()
-        for pkg in base_pkgs:
+        if not smm.check_installed('ksh') and not smm.check_installed('mksh'):
+            self.cancel('ksh or mksh is needed for the test to be run')
+        for pkg in ['src', 'rsct.basic', 'rsct.core.utils',
+                    'rsct.core', 'DynamicRM', 'powerpc-utils']:
             if not smm.check_installed(pkg):
                 self.cancel(
                     '%s is needed for the test to be run' % pkg)
@@ -239,14 +199,10 @@ class VnicDlpar(Test):
         without a reboot; this method logs a warning in that case.
         """
         current_mode, _ = linux.is_kernel_lockdown_enabled()
-        if current_mode == original_mode:
-            return
-        if original_mode == "none":
-            self.log.warn(
-                "Cannot downgrade lockdown from '%s' to 'none' without "
-                "reboot. Manual restore required.", current_mode)
-        else:
-            self._enable_lockdown(original_mode)
+        if current_mode != original_mode:
+            self.log.info(
+                "Kernel lockdown cannot be downgraded at runtime "
+                "(current: %s, original: %s).", current_mode, original_mode)
 
     def find_device_id(self, mac):
         """
@@ -283,7 +239,7 @@ class VnicDlpar(Test):
             self.fail("drmgr operation %s failed for vNIC slot %s"
                       % (operation, slot))
 
-    def wait_intrerface(self, device_name):
+    def wait_interface(self, device_name):
         """
         Poll until the named interface reappears in the OS (up to 120 s).
         Uses NetworkInterface.is_available() from
@@ -338,88 +294,34 @@ class VnicDlpar(Test):
 
     def test_vnic_dlpar(self):
         """
-        Regular vNIC DLPAR: drmgr-based hot remove and hot add.
+        vNIC DLPAR: drmgr-based hot remove and hot add.
         Verifies backend traffic with ping after each cycle.
+        Executes under standard or kernel lockdown mode based on configuration.
         vNIC must already exist on the LPAR before running this test.
         """
-        for _, device_ip, netmask, mac, peer_ip in zip(
-                self.slot_num, self.device_ip,
-                self.netmask, self.mac_id, self.peer_ip):
-            dev_id = self.find_device_id(mac)
-            device_name = self.find_device(mac)
-            slot = self.find_virtual_slot(dev_id)
-            if not slot:
-                self.fail("Virtual slot not found for MAC %s" % mac)
-            try:
-                for _ in range(self.num_of_dlpar):
-                    self.drmgr_vnic_dlpar('-r', slot)
-                    self.drmgr_vnic_dlpar('-a', slot)
-                    self.wait_intrerface(device_name)
-            except CmdError as details:
-                self.log.debug(str(details))
-                self.fail("drmgr DLPAR operation did not complete")
-            networkinterface = NetworkInterface(
-                self.find_device(mac), self.local)
-            self._verify_traffic(
-                networkinterface, device_ip, netmask, peer_ip)
-        self.check_dmesg_error()
-
-    def test_vnic_dlpar_lockdown(self):
-        """
-        vNIC DLPAR under kernel lockdown.
-
-        1. Queries lockdown state via linux.is_kernel_lockdown_enabled().
-        2. Enables lockdown using linux.enable_kernel_lockdown_integrity()
-           or linux.enable_kernel_lockdown_confidentiality() as configured.
-        3. Runs the same drmgr remove/add cycles as test_vnic_dlpar.
-        4. Verifies backend traffic (ping) after every cycle.
-        5. tearDown restores the original lockdown state where possible.
-        """
-        current_mode, _ = linux.is_kernel_lockdown_enabled()
-        if current_mode is None:
-            self.cancel(
-                "Kernel lockdown not supported — skipping lockdown test")
-
-        self.log.info("Lockdown state at test start: %s", current_mode)
-
-        # Ensure the requested lockdown mode is active for this test.
-        if current_mode != self.lockdown_mode:
-            if not self._enable_lockdown(self.lockdown_mode):
-                self.fail("Could not enable kernel lockdown "
-                          "(%s)" % self.lockdown_mode)
-
-        active_mode, _ = linux.is_kernel_lockdown_enabled()
-        self.log.info("Running vNIC DLPAR with lockdown mode: %s", active_mode)
-
-        for _, device_ip, netmask, mac, peer_ip in zip(
-                self.slot_num, self.device_ip,
-                self.netmask, self.mac_id, self.peer_ip):
-            dev_id = self.find_device_id(mac)
-            device_name = self.find_device(mac)
-            slot = self.find_virtual_slot(dev_id)
-            if not slot:
-                self.fail("Virtual slot not found for MAC %s" % mac)
-            try:
-                for _ in range(self.num_of_dlpar):
-                    self.drmgr_vnic_dlpar('-r', slot)
-                    self.drmgr_vnic_dlpar('-a', slot)
-                    self.wait_intrerface(device_name)
-            except CmdError as details:
-                self.log.debug(str(details))
-                self.fail("drmgr DLPAR operation failed under lockdown")
-            networkinterface = NetworkInterface(
-                self.find_device(mac), self.local)
-            self._verify_traffic(
-                networkinterface, device_ip, netmask, peer_ip)
-
+        dev_id = self.find_device_id(self.mac)
+        device_name = self.find_device(self.mac)
+        slot = self.find_virtual_slot(dev_id)
+        if not slot:
+            self.fail("Virtual slot not found for MAC %s" % self.mac)
+        try:
+            for _ in range(self.num_of_dlpar):
+                self.drmgr_vnic_dlpar('-r', slot)
+                self.drmgr_vnic_dlpar('-a', slot)
+                self.wait_interface(device_name)
+        except CmdError as details:
+            self.log.debug(str(details))
+            self.fail("drmgr DLPAR operation did not complete")
+        networkinterface = NetworkInterface(
+            self.find_device(self.mac), self.local)
+        self._verify_traffic(
+            networkinterface, self.device_ip, self.netmask, self.peer_ip)
         self.check_dmesg_error()
 
     def tearDown(self):
         """
-        Restore lockdown state and close HMC session.
+        Restore lockdown state.
         Guards against AttributeError if setUp cancelled early.
         """
-        if self.original_lockdown_state is not None:
+        if hasattr(self, 'original_lockdown_state') and self.original_lockdown_state is not None:
             self._restore_lockdown(self.original_lockdown_state)
-        if self.session_hmc:
-            self.session_hmc.quit()
