@@ -1,42 +1,25 @@
-Install Paramiko module:
-Ubuntu :
--> apt-get install python-paramiko
-SLES/RHEL :
--> SLES: Install python-devel, python-setuptools
--> RHEL: Install python-devel.ppc64le and python-setuptools.noarch
--> Download pycrypto-2.6.1.tar.gz & paramiko-1.16.0.tar.gz
--> For pycrypto : python setup.py build & python setup.py install
--> For paramiko : easy_install ./
--> Then import paramiko.
-
-RHEL :
--> yum install python-paramiko.noarch
-
-Please setup repo for rsct and DynamicRM packages that are required
-for dlpar, script will take care of installation part.
-
-NOTE: The vNIC must already be added to the LPAR manually before
+PREREQUISITES: 
+The vNIC must already be added to the LPAR manually before
 running this test. This script does NOT provision the vNIC itself.
 
-Explanation of the input parameters:
+input parameters:
 hmc_pwd ---> HMC password
 hmc_username ---> HMC user name
 manageSystem ---> Provide the HMC managed system name of the CEC
 slot_num ---> Virtual slot number on which the vNIC interface exists.
-              Should be 3 - 2999. Space separated for multiple vNICs.
-mac_id ---> MAC address of the vNIC interface. Space separated if
-            multiple. Example: "02:03:03:03:03:01"
+mac_id ---> MAC address of the vNIC interface.
+                Example: "02:03:03:03:03:01"
 device_ip ---> IP address to be configured on the vNIC interface after
-               DLPAR. Space separated if multiple.
-netmasks ---> Netmask value for the vNIC interface. Space separated
-              if multiple. Example: "255.255.255.0"
+               DLPAR.
+netmasks ---> Netmask value for the vNIC interface.
+               Example: "255.255.255.0"
 peer_ip ---> Peer IP to ping after DLPAR to verify backend traffic.
-             Space separated if multiple.
-sriov_adapters ---> Space separated physical location code (DRC) of
+           
+sriov_adapters ---> physical location code (DRC) of
                     the SRIOV backing adapter(s) assigned to the
                     hypervisor. Used to resolve adapter_id from HMC.
                     Example: "U78DA.ND0.WZS0027-P0-C11"
-sriov_ports ---> Space separated port number(s) of the SRIOV backing
+sriov_ports ---> port number(s) of the SRIOV backing
                  adapter(s). Example: "0" or "0 1"
 num_of_dlpar ---> Number of DLPAR remove/add cycles to perform per
                   slot. Default: 1
@@ -47,9 +30,6 @@ lockdown_mode ---> Kernel lockdown mode to activate when
                    lockdown_enable is True.
                    Accepted values: integrity, confidentiality
                    Default: integrity
-                   Note: lockdown is a one-way escalation at runtime
-                   (none->integrity->confidentiality). Downgrade to
-                   'none' requires a reboot.
 
 Example Usage:
 avocado run vnic_dlpar.py -m vnic_dlpar.py.data/vnic_dlpar.yaml
