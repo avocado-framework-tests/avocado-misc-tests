@@ -1,0 +1,16 @@
+interface: ""
+host_ip: ""
+netmask: ""
+peer_ip: ""
+peer_user: "root"
+peer_password: ""
+iperf3_port: 5201
+udp_msg_size: 65507
+stream_duration: 60
+rr_msg_size: 20971
+rr_iterations: 3
+rr_duration: 10
+scale_streams: 150
+scale_duration: 10
+burst_duration: 30
+burst_parallel: 8
