@@ -149,6 +149,37 @@ class SoftwareRaid(Test):
         # sweep any leftover state from a previous run
         self._pre_cleanup()
 
+    # ------------------------------------------------- helper: disk health ---
+
+    def _check_disks_healthy(self, disks, context=''):
+        """
+        Verify each disk in *disks* is accessible and present in lsblk output.
+
+        Steps per disk:
+          1. Confirm the device path exists on the filesystem.
+          2. Run ``lsblk <dev>`` and check the command succeeds.
+          3. Confirm the device's basename appears in the lsblk stdout so that
+             a kernel-visible-but-inaccessible device is also caught.
+
+        :param disks: list of disk device paths to check
+        :param context: label shown in log messages (e.g. 'before RAID create')
+        """
+        self.log.info("Checking disk health [%s] ...", context)
+        for dev in disks:
+            if not dev or not os.path.exists(dev):
+                self.fail("Disk %s does not exist [%s]" % (dev, context))
+            ret = process.run('lsblk %s' % dev,
+                              shell=True, ignore_status=True)
+            if ret.exit_status != 0:
+                self.fail("Disk %s is not healthy [%s]: %s"
+                          % (dev, context, ret.stderr_text))
+            dev_name = os.path.basename(dev)
+            if dev_name not in ret.stdout_text:
+                self.fail("Disk %s not found in lsblk output [%s]:\n%s"
+                          % (dev, context, ret.stdout_text))
+            self.log.info("  %s — OK", dev)
+        self.log.info("All disks healthy [%s]", context)
+
     # ------------------------------------------------------- pre-cleanup -----
 
     def _pre_cleanup(self):
@@ -368,20 +399,21 @@ class SoftwareRaid(Test):
         """
         Full cycle for one (raid_level x metadata x fs) mux combination:
 
-          1.  Create RAID array
-          2.  Create PV on the RAID device
-          3.  Create VG on the PV
-          4.  Create LV in the VG
-          5.  Format LV with filesystem from yaml mux (ext4 / xfs / btrfs)
-          6.  Mount on mount_dir from yaml (default /mnt)
-          7.  Run dd I/O (write + read)
-          8.  Stop I/O, unmount filesystem, wipe FS signatures
-          9.  Remove LV
-          10. Remove VG
-          11. Remove PV
-          12. Stop RAID array
-          13. Zero superblocks + wipefs all member disks (disks are clean
-              for the next mux iteration)
+          1.  Validate disks are healthy (before)
+          2.  Create RAID array
+          3.  Create PV on the RAID device
+          4.  Create VG on the PV
+          5.  Create LV in the VG
+          6.  Format LV with filesystem from yaml mux (ext4 / xfs / btrfs)
+          7.  Mount on mount_dir from yaml (default /mnt)
+          8.  Run dd I/O (write + read)
+          9.  Stop I/O, unmount filesystem, wipe FS signatures
+          10. Remove LV
+          11. Remove VG
+          12. Remove PV
+          13. Stop RAID array
+          14. Zero superblocks + wipefs all member disks
+          15. Validate disks are healthy (after)
 
         Avocado mux drives every combination of raidlevel x metadata x fs
         automatically — no manual loop needed.
@@ -391,28 +423,31 @@ class SoftwareRaid(Test):
                       self.params.get('metadata', default='1.2'),
                       self.fstype)
 
-        # 1. Create RAID
+        # 1. Validate disks are healthy before starting
+        self._check_disks_healthy(self.disks, context='before RAID create')
+
+        # 2. Create RAID
         if not self.sraid.create():
             self.fail("Failed to create RAID%s" % self.raidlevel)
         self.log.info("RAID%s created successfully", self.raidlevel)
 
-        # 2-4. PV -> VG -> LV on top of the RAID device
+        # 3-5. PV -> VG -> LV on top of the RAID device
         lv_path = self.create_lvm(self.lv_backing_disk)
 
-        # 5-6. Format (fstype from mux) + mount (mount_dir from yaml)
+        # 6-7. Format (fstype from mux) + mount (mount_dir from yaml)
         self.create_fs(lv_path)
 
-        # 7. dd I/O
+        # 8. dd I/O
         self.run_io()
 
-        # 8. Stop I/O (dd already returned) then unmount
+        # 9. Stop I/O (dd already returned) then unmount
         self.log.info("Stopping I/O and unmounting filesystem ...")
         self.delete_fs()
 
-        # 9-11. Remove LV -> VG -> PV
+        # 10-12. Remove LV -> VG -> PV
         self.delete_lvm()
 
-        # 12-13. Stop RAID, zero superblocks, wipefs all member disks
+        # 13-14. Stop RAID, zero superblocks, wipefs all member disks
         self.log.info("Stopping RAID%s and clearing superblocks ...",
                       self.raidlevel)
         if not self.sraid.stop():
@@ -421,6 +456,9 @@ class SoftwareRaid(Test):
         for d in self.disks:
             process.system('wipefs -af %s' % d,
                            shell=True, ignore_status=True)
+
+        # 15. Validate disks are healthy after cleanup
+        self._check_disks_healthy(self.disks, context='after RAID stop')
 
         self.log.info("=== test: raid%s / fs=%s PASSED ===",
                       self.raidlevel, self.fstype)
@@ -431,13 +469,15 @@ class SoftwareRaid(Test):
         """
         RAID rebuild / disk replacement validation:
 
-          1.  Create RAID array using 'disks' from yaml
-          2.  Simulate disk failure: mark 'fail_disk' (from yaml) as faulty
-          3.  Remove the failed disk from the array
-          4.  Add 'spare_disk' (from yaml) into the array
-          5.  Wait for full resync (poll /proc/mdstat, timeout 600 s)
-          6.  Verify array is healthy (mdadm --detail shows clean / active)
-          7.  Stop RAID, zero superblocks, wipefs all disks
+          1.  Validate all disks healthy (before)
+          2.  Create RAID array using 'disks' from yaml
+          3.  Simulate disk failure: mark 'fail_disk' (from yaml) as faulty
+          4.  Remove the failed disk from the array
+          5.  Add 'spare_disk' (from yaml) into the array
+          6.  Wait for full resync (poll /proc/mdstat, timeout 600 s)
+          7.  Verify array is healthy (mdadm --detail shows clean / active)
+          8.  Stop RAID, zero superblocks, wipefs all disks
+          9.  Validate all disks healthy (after)
 
         yaml keys required for this test:
           fail_disk  : one of the disks in 'disks' that will be failed
@@ -463,13 +503,19 @@ class SoftwareRaid(Test):
 
         self.log.info("=== test_raid_rebuild: raid%s ===", self.raidlevel)
 
-        # 1. Create RAID (members only — no pre-built-in spare)
+        all_disks = self.disks + [self.spare_disk]
+
+        # 1. Validate all disks (members + spare) are healthy before starting
+        self._check_disks_healthy(all_disks,
+                                  context='before RAID rebuild test')
+
+        # 2. Create RAID (members only — no pre-built-in spare)
         if not self.sraid.create():
             self.fail("Failed to create RAID%s for rebuild test"
                       % self.raidlevel)
         self.log.info("RAID%s created for rebuild test", self.raidlevel)
 
-        # 2. Mark fail_disk as faulty
+        # 3. Mark fail_disk as faulty
         self.log.info("Marking %s as faulty in %s",
                       self.fail_disk, self.lv_backing_disk)
         ret = process.run(
@@ -479,7 +525,7 @@ class SoftwareRaid(Test):
             self.fail("Failed to mark %s faulty: %s"
                       % (self.fail_disk, ret.stderr_text))
 
-        # 3. Remove the failed disk from the array
+        # 4. Remove the failed disk from the array
         self.log.info("Removing failed disk %s from %s",
                       self.fail_disk, self.lv_backing_disk)
         ret = process.run(
@@ -489,7 +535,7 @@ class SoftwareRaid(Test):
             self.fail("Failed to remove %s from array: %s"
                       % (self.fail_disk, ret.stderr_text))
 
-        # 4. Add spare_disk to the array — triggers rebuild automatically
+        # 5. Add spare_disk to the array — triggers rebuild automatically
         self.log.info("Adding spare disk %s to %s",
                       self.spare_disk, self.lv_backing_disk)
         ret = process.run(
@@ -499,7 +545,7 @@ class SoftwareRaid(Test):
             self.fail("Failed to add spare %s to array: %s"
                       % (self.spare_disk, ret.stderr_text))
 
-        # 5. Wait for resync / recovery to complete
+        # 6. Wait for resync / recovery to complete
         self.log.info("Waiting for RAID rebuild to complete ...")
 
         def _resync_done():
@@ -511,7 +557,7 @@ class SoftwareRaid(Test):
         if not wait.wait_for(_resync_done, timeout=600, step=15):
             self.fail("RAID rebuild did not complete within 600 s")
 
-        # 6. Verify array is healthy
+        # 7. Verify array is healthy
         detail_out = process.system_output(
             'mdadm --detail %s' % self.lv_backing_disk,
             shell=True, ignore_status=True).decode('utf-8')
@@ -522,8 +568,7 @@ class SoftwareRaid(Test):
                       % detail_out)
         self.log.info("RAID rebuild verified — array is healthy")
 
-        # 7. Stop RAID, zero superblocks, wipe all disks
-        all_disks = self.disks + ([self.spare_disk] if self.spare_disk else [])
+        # 8. Stop RAID, zero superblocks, wipe all disks
         if not self.sraid.stop():
             self.fail("Failed to stop RAID%s after rebuild test"
                       % self.raidlevel)
@@ -531,6 +576,10 @@ class SoftwareRaid(Test):
         for d in all_disks:
             process.system('wipefs -af %s' % d,
                            shell=True, ignore_status=True)
+
+        # 9. Validate all disks are healthy after cleanup
+        self._check_disks_healthy(all_disks,
+                                  context='after RAID rebuild test')
 
         self.log.info("=== test_raid_rebuild: raid%s PASSED ===",
                       self.raidlevel)
