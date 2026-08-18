@@ -12,3 +12,5 @@ opt: !mux
     plugin_htx:
         option: '-p'
         plugin_val: 'htx'
+
+SERVICEREPORT_URL: ''

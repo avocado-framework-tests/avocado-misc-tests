@@ -44,16 +44,47 @@ class ServiceReport(Test):
                         ignore_status=True).decode().strip():
                     self.cancel(
                         "HTX RPM is not installed, cancelling HTX plugin test")
+
         for package in ['make', 'gcc']:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("Fail to install %s required for this"
                             " test." % package)
-        tarball = self.fetch_asset('ServiceReport.zip', locations=[
-                                   'https://github.com/linux-ras/ServiceReport'
-                                   '/archive/master.zip'], expire='7d')
-        archive.extract(tarball, self.workdir)
-        self.sourcedir = os.path.join(self.workdir, 'ServiceReport-master')
-        build.make(self.sourcedir)
+
+        self.sourcedir = None
+
+        sr_url = self.params.get('SERVICEREPORT_URL', default=None)
+        if sr_url:
+            rpm_name = sr_url.split('/')[-1]
+            rpm_path = os.path.join(self.workdir, rpm_name)
+            self.log.info("Downloading ServiceReport RPM from %s", sr_url)
+            if process.system(
+                    "wget --no-check-certificate -O %s %s" % (rpm_path, sr_url),
+                    shell=True, ignore_status=True):
+                self.cancel("Failed to download ServiceReport RPM from %s" % sr_url)
+            if process.system("rpm -ivh --force %s" % rpm_path,
+                              shell=True, sudo=True, ignore_status=True):
+                self.cancel("Failed to install ServiceReport RPM: %s" % rpm_path)
+            if not process.system_output(
+                    'rpm -qa | grep -i ServiceReport', shell=True,
+                    ignore_status=True).decode().strip():
+                self.cancel("ServiceReport not found in rpm -qa after install")
+            self.log.info("ServiceReport installed via user-supplied RPM URL")
+        else:
+            if not smm.install('ServiceReport') or not process.system_output(
+                    'rpm -qa | grep -i ServiceReport', shell=True,
+                    ignore_status=True).decode().strip():
+                self.log.info("Installing ServiceReport from upstream source tarball")
+                tarball = self.fetch_asset('ServiceReport.zip', locations=[
+                    'https://github.com/linux-ras/ServiceReport'
+                    '/archive/master.zip'], expire='7d')
+                archive.extract(tarball, self.workdir)
+                self.sourcedir = os.path.join(self.workdir, 'ServiceReport-master')
+                build.make(self.sourcedir)
+                if process.system("make -C %s install" % self.sourcedir,
+                                  shell=True, sudo=True, ignore_status=True):
+                    self.log.warning("'make install' failed; will run from source dir")
+            else:
+                self.log.info("ServiceReport installed via distro package manager")
 
     def isAccelerator(self):
         for dev in os.listdir('/sys/bus/pci/devices'):
@@ -65,7 +96,6 @@ class ServiceReport(Test):
         return False
 
     def test(self):
-        os.chdir(self.sourcedir)
         cmd = "servicereport %s" % self.options
         if process.system(cmd, ignore_status=True, sudo=True, shell=True):
             self.fail("ServiceReport: Failed command is: %s" % cmd)
@@ -73,8 +103,6 @@ class ServiceReport(Test):
     @skipIf("ppc" not in os.uname()[4], "Skip, Powerpc specific tests")
     @skipIf(lambda self: not self.isAccelerator(), "Unsupported: PCI adapter is not an accelarator")
     def test_accelerator(self):
-        os.chdir(self.sourcedir)
-
         cmd = "servicereport %s" % self.options
         if process.system(cmd, ignore_status=True, sudo=True, shell=True):
             self.fail("ServiceReport: Failed command is: %s" % cmd)
@@ -89,8 +117,9 @@ class ServiceReport(Test):
             verboseCmd, ignore_status=True, sudo=True, shell=True)
         output = str(result.stdout + result.stderr, "utf-8")
 
-        if 'FAIL' in output:
-            self.log.info("FAIL detected in -v -p spyre")
+        if 'FAIL' in output or 'Warning' in output:
+            self.log.info(
+                "FAIL or Warning detected in -v -p spyre, attempting repair")
             spyreRepairCmd = "servicereport -r -p spyre"
             process.run(spyreRepairCmd, ignore_status=True,
                         sudo=True, shell=True)
@@ -100,8 +129,8 @@ class ServiceReport(Test):
                 verboseCmd, ignore_status=True, sudo=True, shell=True)
             output = str(result.stdout + result.stderr, "utf-8")
 
-            if 'FAIL' in output:
-                self.fail("FAIL still present after Spyre repair")
+            if 'FAIL' in output or 'Warning' in output:
+                self.fail("FAIL or Warning still present after Spyre repair")
 
         if not (os.path.isdir('/dev/vfio') and any(e.isdigit() for e in os.listdir('/dev/vfio'))):
             self.fail("/dev/vfio not populated after servicereport")
