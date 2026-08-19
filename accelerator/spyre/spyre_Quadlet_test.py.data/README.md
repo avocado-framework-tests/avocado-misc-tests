@@ -62,6 +62,7 @@ This test suite validates:
 - `DEVICE`: Device to mount in container(default: "/dev/vfio")
 - `USERNS`: User namespace mode(default: "keep-id")
 - `GROUP_ADD`: Add user groups to container(default: "keep-groups")
+- `SECURITY_OPT`: Security option for the container(default: "label=disable")
 - `PIDS_LIMIT`: PIDs limit(0=unlimited, default: "0")
 - `MEMORY`: Container memory limit(e.g., "100G", "50G", "400G")
 - `SHM_SIZE`: Shared memory size(optional, e.g., "2G" for RAG)
@@ -71,10 +72,10 @@ This test suite validates:
 
 Run a specific use case test:
 ```bash
-avocado run spyre_Quadlet_test.py - m spyre_Quadlet_test.py.data/spyre_Quadlet_EE_test.yaml
-avocado run spyre_Quadlet_test.py - m spyre_Quadlet_test.py.data/spyre_Quadlet_RAG_test.yaml
-avocado run spyre_Quadlet_test.py - m spyre_Quadlet_test.py.data/spyre_Quadlet_Embedding_test.yaml
-avocado run spyre_Quadlet_test.py - m spyre_Quadlet_test.py.data/spyre_Quadlet_Reranker_test.yaml
+avocado run --max-parallel-tasks=1 spyre_Quadlet_test.py -m spyre_Quadlet_test.py.data/spyre_Quadlet_EE_test.yaml
+avocado run --max-parallel-tasks=1 spyre_Quadlet_test.py -m spyre_Quadlet_test.py.data/spyre_Quadlet_RAG_test.yaml
+avocado run --max-parallel-tasks=1 spyre_Quadlet_test.py -m spyre_Quadlet_test.py.data/spyre_Quadlet_Embedding_test.yaml
+avocado run --max-parallel-tasks=1 spyre_Quadlet_test.py -m spyre_Quadlet_test.py.data/spyre_Quadlet_Reranker_test.yaml
 ```
 
 # Test Flow
@@ -116,9 +117,10 @@ Each test follows this detailed flow:
 - If container not running, capture service logs and fail test
 
 # 7. Monitor for VLLM Startup
-- Check container status every 20 seconds
+- Check container status every 10 seconds for up to 600 seconds
 - First verify container is still running with `podman ps`
 - Then check `podman logs < container-name >` for "Application startup complete"
+- Bail early if a `BACKTRACE` crash log line is detected
 - Continue until timeout or success
 - If container exits, logs won't be available (that's why we check podman ps first)
 
@@ -142,32 +144,33 @@ Each test creates a Podman Quadlet `.container` file with this structure:
 
 ```ini
 [Unit]
-Description = Spyre Entity Extraction
-After = network-online.target
+Description=Spyre Entity Extraction
+After=network-online.target
 
 [Container]
-ContainerName = spyre-entity-extract
-PublishPort = 127.0.0.1: : 8000
-Image = container-image
+ContainerName=spyre-entity-extract
+PublishPort=127.0.0.1::8000
+Image=container-image
 
-Environment = AIU_PCIE_IDS = "0301:50:00.0"
+Environment=AIU_PCIE_IDS="0301:50:00.0"
 
-PodmanArgs = --device = /dev/vfio
-PodmanArgs = --userns = keep-id
-PodmanArgs = --group-add = keep-groups
-PodmanArgs = --pids-limit = 0
-PodmanArgs = --memory = 200G
+PodmanArgs=--device=/dev/vfio
+PodmanArgs=--userns=keep-id
+PodmanArgs=--group-add=keep-groups
+PodmanArgs=--security-opt=label=disable
+PodmanArgs=--pids-limit=0
+PodmanArgs=--memory=200G
 
-Volume = /opt/ibm/spyre/models/src: / models
+Volume=/opt/ibm/spyre/models/src:/models
 
-Exec = --model / models/granite-3.3-8b-instruct - tp 1 - -max-model-len 3072 - -max-num-seqs 16
+Exec=--model /models/granite-3.3-8b-instruct -tp 1 --max-model-len 3072 --max-num-seqs 16
 
 [Service]
-Slice = spyre-entity-extract.slice
-Restart = no
+Slice=spyre-entity-extract.slice
+Restart=no
 
 [Install]
-WantedBy = default.target
+WantedBy=default.target
 ```
 
 # Pass/Fail Criteria

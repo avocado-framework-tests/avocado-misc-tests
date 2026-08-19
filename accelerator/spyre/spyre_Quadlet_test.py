@@ -120,6 +120,7 @@ Environment=AIU_PCIE_IDS="{aiu_ids}"
 PodmanArgs=--device={self.device}
 PodmanArgs=--userns={self.userns}
 PodmanArgs=--group-add={self.group_add}
+PodmanArgs=--security-opt={self.security_opt}
 PodmanArgs=--pids-limit={self.pids_limit}
 PodmanArgs=--memory={memory}
 """
@@ -226,14 +227,29 @@ WantedBy=default.target
             sudo=True
         )
 
-    def _load_use_case_params(self):
+    def _load_use_case_params(self, use_case):
         """
         Load parameters for a specific use case from YAML.
 
+        RAG uses all AIU PCIe IDs (multi-device); all other use cases
+        (entity-extract, embedding, reranker) use only the first ID.
+
+        :param use_case: Name of the use case
         :return: Dictionary of parameters
         """
+        all_ids = self.params.get("AIU_PCIE_IDS", default="")
+        model_path = self.params.get("VLLM_MODEL_PATH", default="")
+        ids = all_ids.split()
+        if use_case == "rag":
+            aiu_ids = all_ids
+        elif use_case == "entity-extract" and \
+                "Mistral-Small-3.2-24B-Instruct-2506" in model_path:
+            aiu_ids = " ".join(ids[:2])
+        else:
+            aiu_ids = ids[0]
+
         params = {
-            'aiu_ids': self.params.get("AIU_PCIE_IDS", default=""),
+            'aiu_ids': aiu_ids,
             'model_path': self.params.get("VLLM_MODEL_PATH", default=""),
             'tp_size': self.params.get("AIU_WORLD_SIZE", default=""),
             'max_model_len': self.params.get("MAX_MODEL_LEN", default=""),
@@ -300,10 +316,10 @@ WantedBy=default.target
         startup_success = wait_for_vllm_startup(
             container_id=container_name,
             success_pattern="Application startup complete.",
-            failure_pattern=None,
+            failure_pattern="BACKTRACE",
             additional_failure_checks=[("VFIO", False), ("fail", False)],
-            timeout=300,
-            check_interval=20,
+            timeout=600,
+            check_interval=10,
             user=self.test_user,
             log=self.log,
             show_live_logs=True,
@@ -349,6 +365,8 @@ WantedBy=default.target
         self.pids_limit = self.params.get("PIDS_LIMIT", default="0")
         self.userns = self.params.get("USERNS", default="keep-id")
         self.group_add = self.params.get("GROUP_ADD", default="keep-groups")
+        self.security_opt = self.params.get(
+            "SECURITY_OPT", default="label=disable")
         self.port_mapping = self.params.get(
             "PORT_MAPPING", default="127.0.0.1:8000:8000")
 
@@ -428,7 +446,7 @@ WantedBy=default.target
         if use_case not in valid_use_cases:
             self.cancel(f"Unknown use case: {use_case}")
 
-        params = self._load_use_case_params()
+        params = self._load_use_case_params(use_case)
         self.run_quadlet_test(use_case, **params)
 
     def tearDown(self):
