@@ -740,7 +740,11 @@ class RASToolsLsvpd(Test):
     @skipIf("ppc" not in os.uname()[4], "Skip, Powerpc specific tests")
     @skipIf(lambda self: not self.isAccelerator(), "Unsupported: PCI adapter is not an accelerator")
     def test_spyre_lsvpd_validation(self):
-        self.run_cmd("vpdupdate")
+        result = process.run("vpdupdate", ignore_status=True, sudo=True,
+                             shell=True)
+        if result.exit_status:
+            self.cancel(
+                "vpdupdate failed; cannot proceed with lsvpd validation")
 
         lsvpd_out = self.run_cmd_out("lsvpd")
         location_codes = []
