@@ -18,6 +18,7 @@
 Tests for Virtual FC
 '''
 
+import os
 import re
 import time
 from avocado import Test
@@ -45,6 +46,17 @@ class VirtualFC(Test):
         '''
         set up required packages and gather necessary test inputs
         '''
+        self.session = None
+        self.lockdown_mode = self.params.get("lockdown_mode", default="integrity")
+        self.lockdown_path = "/sys/kernel/security/lockdown"
+        self.lockdown_enable = self.params.get("lockdown_enable", default=False)
+        if self.lockdown_enable is True:
+            original_state = self.get_lockdown_state()
+            if original_state == "none":
+                if not self.set_lockdown_mode(self.lockdown_mode):
+                    self.fail(f"Failed to set lockdown to {self.lockdown_mode}")
+        else:
+            self.log.info("Running DLPAR test case without lockdown feature enabled")
         self.install_packages()
         self.rsct_service_start()
         self.hmc_ip = self.get_mcp_component("HMCIPAddr")
@@ -166,6 +178,58 @@ class VirtualFC(Test):
                     'rsct.core', 'DynamicRM']:
             if not smm.check_installed(pkg) and not smm.install(pkg):
                 self.cancel('%s is needed for the test to be run' % pkg)
+
+    def check_lockdown_support(self):
+        '''
+        Check if lockdown is supported
+        '''
+        if not os.path.exists(self.lockdown_path):
+            self.log.warn("Lockdown not supported on this system")
+            return False
+        return True
+
+    def get_lockdown_state(self):
+        '''
+        Get current lockdown state
+        '''
+        try:
+            output = process.system_output(f'cat {self.lockdown_path}',
+                                           shell=True, sudo=True).decode("utf-8")
+            if '[none]' in output:
+                return 'none'
+            elif '[integrity]' in output:
+                return 'integrity'
+            elif '[confidentiality]' in output:
+                return 'confidentiality'
+        except Exception as e:
+            self.log.error(f"Failed to get lockdown state: {e}")
+        return None
+
+    def set_lockdown_mode(self, mode):
+        '''
+        Set lockdown mode
+        mode: 'none', 'integrity', or 'confidentiality'
+        '''
+        if not self.check_lockdown_support():
+            return False
+        current_state = self.get_lockdown_state()
+        self.log.info(f"Current lockdown state: {current_state}")
+        if mode == current_state:
+            self.log.info(f"Lockdown already set to {mode}")
+            return True
+        try:
+            cmd = f'echo "{mode}" > {self.lockdown_path}'
+            process.run(cmd, shell=True, sudo=True)
+            new_state = self.get_lockdown_state()
+            if new_state == mode:
+                self.log.info(f"Successfully set lockdown to {mode}")
+                return True
+            else:
+                self.log.error(f"Failed to set lockdown to {mode}, current: {new_state}")
+                return False
+        except Exception as e:
+            self.log.error(f"Error setting lockdown mode to {mode}: {e}")
+            return False
 
     def test(self):
         '''
