@@ -17,6 +17,7 @@ import os
 import time
 import subprocess
 from threading import Thread, Event
+from urllib.parse import urlparse, urlunparse
 from avocado import Test
 from avocado.utils import cpu, process
 from avocado.utils.podman import (
@@ -224,8 +225,12 @@ class SenlibTests(Test):
         # Get parameters from YAML
         self.rhaiis_version = self.params.get("RHAIIS_VERSION", default="")
         self.senlib_rpm_path = self.params.get("SENLIB_RPM_PATH", default="")
+        self.jfrog_user = self.params.get("JFROG_USER", default="")
+        self.jfrog_token = self.params.get("JFROG_TOKEN", default="")
         self.spyre_group = self.params.get("SPYRE_GROUP", default="")
-        self.aiu_pcie_ids = self.params.get("AIU_PCIE_IDS", default="")
+        all_ids = self.params.get("AIU_PCIE_IDS", default="")
+        ids = all_ids.split()
+        self.aiu_pcie_ids = ids[0]
         self.host_models_dir = self.params.get("HOST_MODELS_DIR", default="")
         self.vllm_model_path = self.params.get("VLLM_MODEL_PATH", default="")
         self.aiu_world_size = self.params.get("AIU_WORLD_SIZE", default="")
@@ -255,6 +260,59 @@ class SenlibTests(Test):
         missing = [p for p, v in required_params.items() if not v]
         if missing:
             self.cancel(f"Missing required parameters: {', '.join(missing)}")
+
+        # Download RPM from JFrog Artifactory
+        if not self.jfrog_user or not self.jfrog_token:
+            self.cancel(
+                "JFROG_USER and JFROG_TOKEN are required to pull the RPM from Artifactory"
+            )
+
+        # Parse Artifactory URL and relative path
+        parsed_url = urlparse(self.senlib_rpm_path)
+        if "/artifactory/" in parsed_url.path:
+            # Safely split path to extract relative path
+            _, relative_path = parsed_url.path.split("/artifactory/", 1)
+
+            # Canonical reconstruction of base URL (scheme + netloc)
+            url = urlunparse(
+                (parsed_url.scheme, parsed_url.netloc, "", "", "", ""))
+            artifactory_url = f"{url}/artifactory"
+        else:
+            self.cancel(
+                f"Could not parse Artifactory URL and relative path from SENLIB_RPM_PATH: {self.senlib_rpm_path}"
+            )
+
+        # Check and install JFrog CLI on host if not installed
+        if process.system("command -v jf", shell=True) != 0:
+            self.log.info("JFrog CLI (jf) not found. Installing...")
+            self.run_cmd("curl -fL https://install-cli.jfrog.io | sh")
+
+        # Configure JFrog CLI
+        self.log.info("Configuring JFrog CLI")
+        jf_config_cmd = (
+            f"jf config add myserver "
+            f"--url {url} "
+            f"--artifactory-url {artifactory_url} "
+            f"--user '{self.jfrog_user}' "
+            f"--access-token '{self.jfrog_token}' "
+            f"--interactive=false "
+            f"--overwrite"
+        )
+        self.run_cmd(jf_config_cmd)
+
+        # Download the RPM
+        self.log.info("Downloading RPM from Artifactory to /tmp/")
+        jf_dl_cmd = (
+            f"jf rt dl "
+            f'"{relative_path}" '
+            f"/tmp/ "
+            f"--server-id myserver --flat"
+        )
+        self.run_cmd(jf_dl_cmd)
+
+        # Update senlib_rpm_path to the downloaded path
+        filename = os.path.basename(relative_path)
+        self.senlib_rpm_path = os.path.join("/tmp", filename)
 
         # Check if RPM file exists
         if not os.path.exists(self.senlib_rpm_path):
@@ -504,3 +562,13 @@ class SenlibTests(Test):
                 except Exception as cmd_ex:
                     self.log.warning(
                         "Failed to cleanup via command line: %s", cmd_ex)
+
+        if hasattr(self, 'senlib_rpm_path') and self.senlib_rpm_path:
+            if self.senlib_rpm_path.startswith('/tmp/') and os.path.exists(self.senlib_rpm_path):
+                self.log.info("Removing downloaded RPM: %s",
+                              self.senlib_rpm_path)
+                try:
+                    os.remove(self.senlib_rpm_path)
+                except Exception as ex:
+                    self.log.warning(
+                        "Failed to remove downloaded RPM %s: %s", self.senlib_rpm_path, ex)
