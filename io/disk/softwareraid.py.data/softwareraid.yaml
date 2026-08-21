@@ -1,9 +1,8 @@
-disks: ""
-raidname: ""
-spare_disks:
+disks:  " "
+raidname: " "
 mount_dir: "/mnt"
-fail_disk: ""
-spare_disk: ""
+fail_disk: " "
+spare_disk: " "
 
 raidlevel: !mux
     raidlinear:
@@ -23,13 +22,14 @@ raidlevel: !mux
         raid: 6
         required_disks: 4
 
-metadata: !mux
-    superblock-0.9:
-        metadata: 0.90
-        !filter-out : /run/raidlevel/raid0
-    superblock-1.0:
-        metadata: 1.0
-    superblock-1.1:
-        metadata: 1.1
+metadata:
     superblock-1.2:
         metadata: 1.2
+
+fs: !mux
+    ext4:
+        fs: 'ext4'
+    xfs:
+        fs: 'xfs'
+    btrfs:
+        fs: 'btrfs'
