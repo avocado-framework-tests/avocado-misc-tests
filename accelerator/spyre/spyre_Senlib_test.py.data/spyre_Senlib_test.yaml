@@ -1,7 +1,11 @@
 # IBM Senlib Tests Configuration for Spyre AIU
 
-# Required: Path to the IBM senlib RPM file to be installed in the container
+# Required: JFrog Artifactory URL to the IBM senlib RPM file
 SENLIB_RPM_PATH: ""
+
+# JFrog Credentials (required to pull the RPM from Artifactory)
+JFROG_USER: ""
+JFROG_TOKEN: ""
 
 # Required: RHAIIS version (3.4 or 3.5)
 RHAIIS_VERSION: ""
