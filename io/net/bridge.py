@@ -92,14 +92,18 @@ class Bridging(Test):
                                % (host_interface, self.bridge_interface))
             if detected_distro.name == "SuSE":
                 if detected_distro.version >= 16:
-                    self.check_failure('nmcli connection down %s'
-                                       % host_interface)
+                    # Interface may not have an active NM connection (e.g. a
+                    # freshly added vNIC); exit code 10 is benign in that case.
+                    process.system('nmcli connection down %s' % host_interface,
+                                   sudo=True, shell=True, ignore_status=True)
                 elif detected_distro.version < 16:
                     self.check_failure('ip addr flush dev %s' % host_interface)
             if detected_distro.name == 'rhel':
                 if int(detected_distro.version) >= 9:
-                    self.check_failure('nmcli connection down %s'
-                                       % host_interface)
+                    # Interface may not have an active NM connection (e.g. a
+                    # freshly added vNIC); exit code 10 is benign in that case.
+                    process.system('nmcli connection down %s' % host_interface,
+                                   sudo=True, shell=True, ignore_status=True)
                 elif int(detected_distro.version) < 9:
                     self.check_failure('ip addr flush dev %s' % host_interface)
 
@@ -218,14 +222,23 @@ class Bridging(Test):
         for host_interface in self.host_interfaces:
             if detected_distro.name == "SuSE":
                 if detected_distro.version >= 16:
-                    self.check_failure('nmcli connection up %s'
-                                       % host_interface)
+                    # If the interface has no NM profile (e.g. freshly added
+                    # vNIC), nmcli exits 10 — fall back to ip link set up.
+                    ret = process.system(
+                        'nmcli connection up %s' % host_interface,
+                        sudo=True, shell=True, ignore_status=True)
+                    if ret != 0:
+                        self.check_failure('ip link set %s up' % host_interface)
                 elif detected_distro.version < 16:
                     self.check_failure('ip link set %s up' % host_interface)
             if detected_distro.name == 'rhel':
-                print(detected_distro.version)
                 if int(detected_distro.version) >= 9:
-                    self.check_failure('nmcli connection up %s'
-                                       % host_interface)
+                    # If the interface has no NM profile (e.g. freshly added
+                    # vNIC), nmcli exits 10 — fall back to ip link set up.
+                    ret = process.system(
+                        'nmcli connection up %s' % host_interface,
+                        sudo=True, shell=True, ignore_status=True)
+                    if ret != 0:
+                        self.check_failure('ip link set %s up' % host_interface)
                 elif int(detected_distro.version) < 9:
                     self.check_failure('ip link set %s up' % host_interface)
