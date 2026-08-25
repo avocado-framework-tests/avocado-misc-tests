@@ -102,15 +102,18 @@ class kernelLockdown(Test):
         output = process.system_output('mount', ignore_status=True).decode()
         if 'debugfs' not in output:
             self.cancel("Skip this test as 'debugfs' not mounted.")
+        # Linux 5.16+: xive was restructured into a directory with store-eoi
+        # inside (commits baed14de, d7bc1e37). RHEL 9 (5.14-based) never
+        # received that backport, so xive remains a flat file there.
         dbg_file = "/sys/kernel/debug/powerpc/xive/store-eoi"
-        if os.path.exists(dbg_file):
-            try:
-                genio.read_file(dbg_file)
-            except PermissionError as err:
-                if 'Operation not permitted' not in str(err):
-                    self.fail("Access to %s permitted." % dbg_file)
-        else:
-            self.cancel("%s file not exist." % dbg_file)
+        dbg_file = dbg_file if os.path.isfile(dbg_file) else "/sys/kernel/debug/powerpc/xive"
+        if not os.path.isfile(dbg_file):
+            self.cancel(f"{dbg_file} file does not exist.")
+        try:
+            genio.read_file(dbg_file)
+        except PermissionError as err:
+            if 'Operation not permitted' not in str(err):
+                self.fail(f"Access to {dbg_file} permitted.")
 
     def test_lockdown_ioctl(self):
         # Clear dmesg log
