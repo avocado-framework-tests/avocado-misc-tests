@@ -54,8 +54,8 @@ The suite includes 4 tests that run sequentially:
 - `PORT_MAPPING`: Port mapping(default: "127.0.0.1:8000:8000")
 
 # User Configuration
-- `USER`: Non-root username for non-root container tests(e.g., "senuser")
-- `SPYRE_GROUP`: Group name for Spyre device access(e.g., "sentient")
+- `USER`: Non-root username for non-root container tests(e.g., "")
+- `SPYRE_GROUP`: Group name for Spyre device access(e.g., "")
 
 # Observability-Specific Parameters
 - `METRICS_DURATION`: Duration to capture metrics in seconds(default: "30")
