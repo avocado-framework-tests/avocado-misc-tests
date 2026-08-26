@@ -225,7 +225,7 @@ class SenlibTests(Test):
         # Get parameters from YAML
         self.rhaiis_version = self.params.get("RHAIIS_VERSION", default="")
         self.senlib_rpm_path = self.params.get("SENLIB_RPM_PATH", default="")
-        self.jfrog_user = self.params.get("JFROG_USER", default="")
+        self.jfrog_user = self.params.get("JFROG_USERID", default="")
         self.jfrog_token = self.params.get("JFROG_TOKEN", default="")
         self.spyre_group = self.params.get("SPYRE_GROUP", default="")
         all_ids = self.params.get("AIU_PCIE_IDS", default="")

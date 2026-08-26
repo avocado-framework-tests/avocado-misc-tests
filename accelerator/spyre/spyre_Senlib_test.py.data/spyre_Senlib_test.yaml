@@ -4,7 +4,7 @@
 SENLIB_RPM_PATH: ""
 
 # JFrog Credentials (required to pull the RPM from Artifactory)
-JFROG_USER: ""
+JFROG_USERID: ""
 JFROG_TOKEN: ""
 
 # Required: RHAIIS version (3.4 or 3.5)

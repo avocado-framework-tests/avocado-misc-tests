@@ -39,7 +39,7 @@ The following test suites are available:
 
 # Core Parameters
 - `SENLIB_RPM_PATH`: JFrog Artifactory URL to the ibm-senlib-tests-dd2 RPM file
-- `JFROG_USER`: IBM Username for JFrog Artifactory
+- `JFROG_USERID`: IBM Username for JFrog Artifactory
 - `JFROG_TOKEN`: Access Token for JFrog Artifactory
 - `SPYRE_GROUP`: Group name for Spyre device access
 - `AIU_PCIE_IDS`: PCIe IDs of AIU devices (e.g., "0301:50:00.0")
