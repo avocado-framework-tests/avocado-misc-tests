@@ -1,0 +1,5 @@
+run_type: 'rpm'
+htx_rpm_link: "None"
+time_limit: 48
+time_unit: 'h' # m-minutes h-hours
+mdt_file: 'mdt.all'
