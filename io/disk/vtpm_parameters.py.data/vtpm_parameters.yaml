@@ -1,0 +1,4 @@
+# Valid values for block_driver are:
+# nvme, nvmf, lpfc, qla2xxx, ibmvfc, ibmvscsi
+
+block_driver: ''
