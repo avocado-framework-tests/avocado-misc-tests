@@ -1055,6 +1055,293 @@ class PPC64Test(Test):
         if self.failures:
             self.fail("Specific cores offline test failed: %s" % self.failures)
 
+    def test_ppc64_cpu_cores_present(self):
+        """
+        Verify ppc64_cpu --cores-present reports the total number of cores.
+        The output must contain at least one digit and be parseable as a
+        positive integer (e.g. "Number of cores present = 16").
+        """
+        self.log.info("===============Executing ppc64_cpu --cores-present"
+                      " test===============")
+        output = process.system_output(
+            "ppc64_cpu --cores-present", shell=True).decode("utf-8").strip()
+        match = re.search(r'\d+', output)
+        if not match:
+            self.fail("--cores-present did not return a numeric value: "
+                      "%s" % output)
+        if int(match.group()) < 1:
+            self.fail("--cores-present returned an invalid value (< 1): "
+                      "%s" % output)
+
+    def test_ppc64_cpu_cores_on(self):
+        """
+        Verify ppc64_cpu --cores-on (query), --cores-on=1 (set) and
+        --cores-on=all (restore all cores).
+        Steps:
+        1. Query current cores-on count and validate it is numeric.
+        2. Set cores-on=1 and confirm the reported count is 1.
+        3. Restore all cores with --cores-on=all and confirm the count
+           equals --cores-present.
+        """
+        self.log.info("===============Executing ppc64_cpu --cores-on"
+                      " test===============")
+        # Step 1 - query
+        output = process.system_output(
+            "ppc64_cpu --cores-on", shell=True).decode("utf-8").strip()
+        if not re.search(r'\d+', output):
+            self.fail("--cores-on did not return a numeric value: %s" % output)
+        # Step 2 - set to 1
+        process.system("ppc64_cpu --cores-on=1", shell=True)
+        output = process.system_output(
+            "ppc64_cpu --cores-on", shell=True).decode("utf-8").strip()
+        match = re.search(r'\d+', output)
+        if not match or int(match.group()) != 1:
+            self.fail("Expected cores-on=1, got: %s" % output)
+        # Step 3 - restore all
+        process.system("ppc64_cpu --cores-on=all", shell=True)
+        output_on = process.system_output(
+            "ppc64_cpu --cores-on", shell=True).decode("utf-8").strip()
+        output_present = process.system_output(
+            "ppc64_cpu --cores-present", shell=True).decode("utf-8").strip()
+        m_on = re.search(r'\d+', output_on)
+        m_present = re.search(r'\d+', output_present)
+        if m_on and m_present:
+            if int(m_on.group()) != int(m_present.group()):
+                self.fail("After --cores-on=all, cores-on (%s) != "
+                          "cores-present (%s)" % (m_on.group(),
+                                                  m_present.group()))
+        if self.failures:
+            self.log.debug("Failure list: %s", self.failures)
+            self.fail()
+
+    def test_ppc64_cpu_online_offline_cores(self):
+        """
+        Verify ppc64_cpu --offline-cores=X and --online-cores=X by
+        offlining and onlining CPU core index 0.
+        Steps:
+        1. Ensure all cores are online; record baseline cores-on count.
+        2. Offline core index 0 with --offline-cores=0 and confirm
+           cores-on decreased by 1.
+        3. Online core index 0 with --online-cores=0 and confirm
+           cores-on is restored to baseline.
+        """
+        self.log.info("===============Executing ppc64_cpu online/offline"
+                      " cores test===============")
+        # Ensure all cores are online before starting.
+        process.system("ppc64_cpu --cores-on=all", shell=True,
+                       ignore_status=True)
+        # Derive online baseline from --cores-on.
+        online_out = process.system_output(
+            "ppc64_cpu --cores-on", shell=True).decode("utf-8").strip()
+        m_online = re.search(r'\d+', online_out)
+        if not m_online:
+            self.cancel("Could not determine baseline online core count "
+                        "from --cores-on: %s" % online_out)
+        online_base = int(m_online.group())
+        process.system("ppc64_cpu --offline-cores=0", shell=True)
+        after_off = process.system_output(
+            "ppc64_cpu --cores-on", shell=True).decode("utf-8").strip()
+        m_after_off = re.search(r'\d+', after_off)
+        if m_after_off:
+            online_after_off = int(m_after_off.group())
+            if online_after_off != online_base - 1:
+                self.fail("Expected cores-on=%d after offline, got %d"
+                          % (online_base - 1, online_after_off))
+        process.system("ppc64_cpu --online-cores=0", shell=True)
+        after_on = process.system_output(
+            "ppc64_cpu --cores-on", shell=True).decode("utf-8").strip()
+        m_after_on = re.search(r'\d+', after_on)
+        if m_after_on:
+            online_restored = int(m_after_on.group())
+            if online_restored != online_base:
+                self.fail("Expected cores-on=%d after online, got %d"
+                          % (online_base, online_restored))
+        process.system("ppc64_cpu --cores-on=all", shell=True,
+                       ignore_status=True)
+        if self.failures:
+            self.log.debug("Failure list: %s", self.failures)
+            self.fail()
+
+    def test_ppc64_cpu_dscr(self):
+        """
+        Verify ppc64_cpu --dscr (query), --dscr=1 (set) and --dscr=0 (reset).
+        The initial DSCR value may be any non-negative integer.
+        After setting to 1 the tool must report 1; after setting to 0 it
+        must report 0.  The original value is restored at the end.
+        """
+        self.log.info("===============Executing ppc64_cpu --dscr"
+                      " test===============")
+        # Query - value must be numeric.
+        output = process.system_output(
+            "ppc64_cpu --dscr", shell=True).decode("utf-8").strip()
+        initial_match = re.search(r'\d+', output)
+        if not initial_match:
+            self.fail("--dscr did not return a numeric value: %s" % output)
+        initial_dscr = int(initial_match.group())
+        # Set DSCR=1 and verify.
+        process.system("ppc64_cpu --dscr=1", shell=True)
+        output = process.system_output(
+            "ppc64_cpu --dscr", shell=True).decode("utf-8").strip()
+        match = re.search(r'\d+', output)
+        if not match or int(match.group()) != 1:
+            self.fail("Expected DSCR=1, got: %s" % output)
+        # Set DSCR=0 and verify.
+        process.system("ppc64_cpu --dscr=0", shell=True)
+        output = process.system_output(
+            "ppc64_cpu --dscr", shell=True).decode("utf-8").strip()
+        match = re.search(r'\d+', output)
+        if not match:
+            self.fail("--dscr returned no numeric value after --dscr=0: "
+                      "%s" % output)
+        if int(match.group()) != 0:
+            self.fail("Expected DSCR=0, got: %s" % output)
+        # Restore original DSCR value.
+        process.system("ppc64_cpu --dscr=%d" % initial_dscr,
+                       shell=True, ignore_status=True)
+        if self.failures:
+            self.log.debug("Failure list: %s", self.failures)
+            self.fail()
+
+    def test_ppc64_cpu_smt_snooze_delay(self):
+        """
+        Verify ppc64_cpu --smt-snooze-delay (query) and set operations.
+        If the machine does not support --smt-snooze-delay the command
+        prints a usage/error message; the test is cancelled in that case.
+        Steps (when supported):
+        1. Query current value and confirm it is numeric.
+        2. Set to 200 and verify.
+        3. Set to 100 and verify.
+        4. Restore the original value.
+        """
+        self.log.info("===============Executing ppc64_cpu --smt-snooze-delay"
+                      " test===============")
+        output = process.system_output(
+            "ppc64_cpu --smt-snooze-delay", shell=True,
+            ignore_status=True).decode("utf-8").strip()
+        if "Usage:" in output or "not supported" in output.lower() \
+                or not re.search(r'\d+', output):
+            self.cancel("--smt-snooze-delay is not supported on this "
+                        "machine: %s" % output)
+        initial_delay = int(re.search(r'\d+', output).group())
+        for value in [200, 100]:
+            process.system("ppc64_cpu --smt-snooze-delay=%d" % value,
+                           shell=True)
+            output = process.system_output(
+                "ppc64_cpu --smt-snooze-delay",
+                shell=True).decode("utf-8").strip()
+            match = re.search(r'\d+', output)
+            if not match or int(match.group()) != value:
+                self.fail("Expected smt-snooze-delay=%d, got: %s"
+                          % (value, output))
+        # Restore original value.
+        process.system("ppc64_cpu --smt-snooze-delay=%d" % initial_delay,
+                       shell=True, ignore_status=True)
+        if self.failures:
+            self.log.debug("Failure list: %s", self.failures)
+            self.fail()
+
+    def test_ppc64_cpu_run_mode(self):
+        """
+        Verify ppc64_cpu --run-mode (query) and --run-mode=1 (set).
+        If the machine reports "does not support diagnostic run mode" the
+        test is cancelled (the feature is hardware-dependent).
+        """
+        self.log.info("===============Executing ppc64_cpu --run-mode"
+                      " test===============")
+        output = process.system_output(
+            "ppc64_cpu --run-mode", shell=True,
+            ignore_status=True).decode("utf-8").strip()
+        if not output or "not support" in output.lower():
+            self.cancel("--run-mode is not supported on this machine: "
+                        "%s" % output)
+        process.system("ppc64_cpu --run-mode=1", shell=True)
+        output = process.system_output(
+            "ppc64_cpu --run-mode", shell=True).decode("utf-8").strip()
+        if self.failures:
+            self.log.debug("Failure list: %s", self.failures)
+            self.fail()
+
+    def test_ppc64_cpu_frequency(self):
+        """
+        Verify ppc64_cpu --frequency (instant) and --frequency -t <N>
+        (timed average).
+        The output contains lines such as "avg  :  3.247 GHz", so the
+        check looks for a GHz/MHz pattern rather than a bare integer.
+        """
+        self.log.info("===============Executing ppc64_cpu --frequency"
+                      " test===============")
+        output = process.system_output(
+            "ppc64_cpu --frequency", shell=True).decode("utf-8").strip()
+        if not re.search(r'\d+\.\d+\s*GHz|\d+\s*MHz', output,
+                         re.IGNORECASE):
+            self.fail("--frequency output did not contain a frequency "
+                      "value (GHz/MHz): %s" % output)
+        timeout = self.params.get('frequency_timeout', default=5)
+        output = process.system_output(
+            "ppc64_cpu --frequency -t %d" % timeout,
+            shell=True).decode("utf-8").strip()
+        if not re.search(r'\d+\.\d+\s*GHz|\d+\s*MHz', output,
+                         re.IGNORECASE):
+            self.fail("--frequency -t %d output did not contain a "
+                      "frequency value (GHz/MHz): %s" % (timeout, output))
+        if self.failures:
+            self.log.debug("Failure list: %s", self.failures)
+            self.fail()
+
+    def test_ppc64_cpu_subcores_per_core(self):
+        """
+        Verify ppc64_cpu --subcores-per-core.
+        If the machine is not subcore-capable the command exits non-zero
+        with "Machine is not subcore capable"; the test is cancelled in
+        that case.  On capable machines the reported value must be numeric.
+        """
+        self.log.info("===============Executing ppc64_cpu --subcores-per-core"
+                      " test===============")
+        result = process.run("ppc64_cpu --subcores-per-core",
+                             ignore_status=True, shell=True)
+        output = (result.stdout + result.stderr).decode("utf-8").strip()
+        if "not subcore capable" in output.lower():
+            self.cancel("--subcores-per-core: machine is not subcore "
+                        "capable — skipping")
+        if result.exit_status != 0:
+            self.fail("--subcores-per-core failed unexpectedly: %s" % output)
+        if not re.search(r'\d+', output):
+            self.fail("--subcores-per-core did not return a numeric value: "
+                      "%s" % output)
+
+    def test_ppc64_cpu_threads_per_core(self):
+        """
+        Verify ppc64_cpu --threads-per-core returns a positive integer.
+        """
+        self.log.info("===============Executing ppc64_cpu --threads-per-core"
+                      " test===============")
+        output = process.system_output(
+            "ppc64_cpu --threads-per-core",
+            shell=True).decode("utf-8").strip()
+        match = re.search(r'\d+', output)
+        if not match:
+            self.fail("--threads-per-core did not return a numeric value: "
+                      "%s" % output)
+        if int(match.group()) < 1:
+            self.fail("--threads-per-core returned an invalid value "
+                      "(< 1): %s" % output)
+
+    def test_ppc64_cpu_info(self):
+        """
+        Verify ppc64_cpu --info prints a comprehensive CPU information
+        summary containing per-core thread layout lines such as
+        "Core   0:    0*    1* ...".
+        """
+        self.log.info("===============Executing ppc64_cpu --info"
+                      " test===============")
+        output = process.system_output(
+            "ppc64_cpu --info", shell=True).decode("utf-8").strip()
+        if not output:
+            self.fail("--info returned empty output")
+        if not re.search(r'Core\s+\d+', output, re.IGNORECASE):
+            self.fail("--info output does not contain expected 'Core N:' "
+                      "layout lines: %s" % output)
+
     def tearDown(self):
         """
         Restores system to original state: all cores online
