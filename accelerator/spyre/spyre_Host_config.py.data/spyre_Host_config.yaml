@@ -9,37 +9,13 @@
 # SERVICEREPORT_URL) can be set here directly.
 
 # ── Secrets file path ────────────────────────────────────────────────────────
-SECRETS_FILE: "/root/spyre_Host_config.secrets"
+SECRETS_FILE: "/tmp/avocado-fvt-wrapper-input.txt"
 
 # ── Test user ────────────────────────────────────────────────────────────────
-USER: ""               # set in .secrets
-PASSWORD: ""           # set in .secrets
 SPYRE_GROUP: ""        # e.g. "spyre" — safe to set here
 
 # ── Directory configuration ──────────────────────────────────────────────────
 HOST_MODELS_DIR: "/opt/ibm/spyre/models/src"
-
-# ── Registry configuration ───────────────────────────────────────────────────
-REGISTRY: ""           # e.g. "us.icr.io/ibm-spyre" — safe to set here
-API_KEY: ""            # set in .secrets
-
-# ── IBM repository (ServiceReport RPM) ──────────────────────────────────────
-GSA_USER: ""           # set in .secrets
-GSA_PASSWORD: ""       # set in .secrets
-
-# ── Red Hat subscription-manager ─────────────────────────────────────────────
-REDHAT_USER: ""        # set in .secrets
-REDHAT_PASSWORD: ""    # set in .secrets
-
-FTP3_USER: "" 		# set in .secrets
-FTP3_PASSWORD: ""	# set in .secrets
-
-JFROG_USERID: ""	# set in .secrets
-JFROG_TOKEN: ""
-JFROG_URL: ""
-
-# ── HuggingFace ──────────────────────────────────────────────────────────────
-HF_TOKEN: ""           # set in .secrets
 
 SENLIB_RPM_PATH: ""
 

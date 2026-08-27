@@ -19,7 +19,6 @@ as the configured user for user-specific setup.
 import os
 import re
 import pwd
-import grp
 import stat
 import tempfile
 import urllib.parse
@@ -449,8 +448,6 @@ class SpyreHostConfig(Test):
     def test_configure_spyre(self):
         """Configure Spyre with ServiceReport (runs as root)."""
         self.log.info("Configuring Spyre")
-
-        # Run servicereport validation
         self.log.info("Running servicereport validation")
         output = self.run_cmd_out("servicereport -v -p spyre")
         self.log.info(f"Validation output: {output}")
@@ -460,39 +457,37 @@ class SpyreHostConfig(Test):
                 "servicereport reports Spyre plugin is invalid or not applicable "
                 "to this system — no Spyre hardware/firmware detected, skipping test."
             )
+
         if "FAIL" in output:
-            self.fail(
-                f"{MUST_FIX} Servicereport validation failed - Spyre configuration is not correct. "
-                "Review the servicereport output above, ensure ServiceReport is properly installed "
-                "and the Spyre hardware/firmware is recognised, then retry."
-            )
-
-        # Run servicereport reset
-        self.log.info("Running servicereport reset")
-        output = self.run_cmd_out("servicereport -r -p spyre")
-        self.log.info(f"Reset output: {output}")
-
-        self.log.info("Spyre configured successfully")
+            self.log.info("Running servicereport reset")
+            output = self.run_cmd_out("servicereport -r -p spyre")
+            self.log.info(f"Reset output: {output}")
+            output = self.run_cmd_out("servicereport -v -p spyre")
+            self.log.info(f"Validation output after reset: {output}")
+            if "FAIL" in output:
+                self.fail(
+                    f"{MUST_FIX} Servicereport validation failed - Spyre configuration is not correct. "
+                    "Review the servicereport output above, ensure ServiceReport is properly installed "
+                    "and the Spyre hardware/firmware is recognised, then retry."
+                )
 
     def test_add_user_to_group(self):
         """Add senuser to the Spyre group and verify membership via a fresh login."""
         self.log.info("Adding user '%s' to group: %s",
                       self.username, self.spyre_group)
-
         # ── 1. Ensure the group exists ──────────────────────────────────────────
-        try:
-            grp.getgrnam(self.spyre_group)
-            self.log.info("Group '%s' already exists", self.spyre_group)
-        except KeyError:
+        if 'sentient' not in self.run_cmd_out(f"getent group {self.spyre_group}"):
             self.log.info("Group '%s' not found — creating it",
                           self.spyre_group)
-            # ← inside except
-            if self.run_cmd(f"groupadd {self.spyre_group}"):
+
+            if self.run_cmd(f"groupadd -f {self.spyre_group}"):
                 self.fail(
                     f"{MUST_FIX} Failed to create group '{self.spyre_group}'. "
                     "This group is required for Spyre device access. "
                     "Check for naming conflicts and retry."
                 )
+        else:
+            self.log.info("Group '%s' already exists", self.spyre_group)
 
         # ── 2. Add the user to the group ────────────────────────────────────────
         self.log.info("Running: usermod -aG %s %s",
