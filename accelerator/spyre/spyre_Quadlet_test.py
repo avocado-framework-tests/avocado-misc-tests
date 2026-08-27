@@ -112,8 +112,8 @@ Image={self.container_image}
 Environment=AIU_PCIE_IDS="{aiu_ids}"
 """
 
-        # Add RHAIIS 3.4 specific environment variable
-        if hasattr(self, 'rhaiis_version') and self.rhaiis_version == "3.4":
+        # Add RHAIIS version specific environment variable
+        if hasattr(self, 'rhaiis_version') and self.rhaiis_version in ("3.3", "3.4"):
             quadlet_content += 'Environment=VLLM_SPYRE_USE_CB=1\n'
 
         quadlet_content += f"""
@@ -134,8 +134,8 @@ Volume={self.host_models_dir}:/models
 
 Exec=--model {model_path} -tp {tp_size} --max-model-len {max_model_len} --max-num-seqs {max_batch_size}"""
 
-        # Add version-specific VLLM argument for 3.4
-        if hasattr(self, 'rhaiis_version') and self.rhaiis_version == "3.4":
+        # Add version-specific VLLM argument for 3.3/3.4
+        if hasattr(self, 'rhaiis_version') and self.rhaiis_version in ("3.3", "3.4"):
             quadlet_content += " --enable-prefix-caching"
 
         quadlet_content += f"""
@@ -248,12 +248,23 @@ WantedBy=default.target
         else:
             aiu_ids = ids[0]
 
+        # Determine MAX_MODEL_LEN and MAX_BATCH_SIZE based on RHAIIS version
+        if self.rhaiis_version in ("3.3", "3.4", "3.5"):
+            max_model_len = "3072"
+            max_batch_size = "16"
+        elif self.rhaiis_version == "3.6":
+            max_model_len = "4096"
+            max_batch_size = "32"
+        else:
+            max_model_len = "3072"
+            max_batch_size = "16"
+
         params = {
             'aiu_ids': aiu_ids,
             'model_path': self.params.get("VLLM_MODEL_PATH", default=""),
             'tp_size': self.params.get("AIU_WORLD_SIZE", default=""),
-            'max_model_len': self.params.get("MAX_MODEL_LEN", default=""),
-            'max_batch_size': self.params.get("MAX_BATCH_SIZE", default=""),
+            'max_model_len': max_model_len,
+            'max_batch_size': max_batch_size,
             'memory': self.params.get("MEMORY", default=""),
             'shm_size': self.params.get("SHM_SIZE", default=""),
         }
