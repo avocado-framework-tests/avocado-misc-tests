@@ -60,8 +60,15 @@ class HtxTest(Test):
             self.cancel("Supported only on Power Architecture")
 
         self.mdt_file = self.params.get('mdt_file', default='mdt.mem')
-        self.time_limit = int(self.params.get('time_interval', default=2)) * 60
         self.htx_disks = self.params.get('htx_disks', default=None)
+
+        _time_limit = self.params.get('time_limit', default=None)
+        if _time_limit is not None:
+            _unit = self.params.get('time_unit', default='m')
+            _multiplier = 3600 if str(_unit).strip().lower() == 'h' else 60
+            self.time_limit = int(_time_limit) * _multiplier
+        else:
+            self.time_limit = int(self.params.get('time_interval', default=2)) * 60
         self.run_all = self.params.get('all', default=False)
         self.rpm_link = self.params.get('htx_rpm_link', default=None)
         self.dist_name = None
