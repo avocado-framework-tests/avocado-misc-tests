@@ -364,6 +364,7 @@ class ObservabilityTests(Test):
         self.group_add = self.params.get("GROUP_ADD", default="keep-groups")
         self.security_opt = self.params.get(
             "SECURITY_OPT", default="label=disable")
+        self.log_driver = self.params.get("LOG_DRIVER", default="k8s-file")
         self.pids_limit = self.params.get("PIDS_LIMIT", default="0")
         self.port_mapping = self.params.get(
             "PORT_MAPPING", default="127.0.0.1:8000:8000")
@@ -495,6 +496,7 @@ class ObservabilityTests(Test):
             f"--userns={self.userns}",
             f"--group-add={self.group_add}",
             f"--security-opt={self.security_opt}",
+            f"--log-driver={self.log_driver}",
             f"--pids-limit={self.pids_limit}",
             f"--memory={self.memory}",
             "-p", self.port_mapping,
