@@ -293,9 +293,10 @@ class ObservabilityTests(Test):
         """
         # Check for required headers
         required_headers = ["#ID", "Date", "Time", "hostcpu", "hostmem",
-                            "pwr", "gtemp", "busy", "rdmem", "wrmem"]
+                            "pwr", "busy", "rdmem", "wrmem"]
+        temp_header_present = "gtemp" in metrics_output or "tempr" in metrics_output
 
-        has_headers = all(
+        has_headers = temp_header_present and all(
             header in metrics_output for header in required_headers)
         if not has_headers:
             self.log.error("Metrics missing required headers")
@@ -572,9 +573,6 @@ class ObservabilityTests(Test):
         elif self.rhaiis_version == "3.6":
             max_model_len = "4096"
             max_batch_size = "32"
-        else:
-            max_model_len = "3072"
-            max_batch_size = "16"
 
         podman_args.extend([
             f"--userns={self.userns}",
@@ -858,8 +856,6 @@ class ObservabilityTests(Test):
             self.log.info("Installing acelyzer in container")
 
             install_cmd = (
-                f"git config --global --add safe.directory "
-                f"{self.TRACE_ANALYZER_PATH} && "
                 f"cd {self.TRACE_ANALYZER_PATH} && "
                 f"export AIUPROF_PATH=$PWD && "
                 f"export SETUPTOOLS_SCM_PRETEND_VERSION=1.0.0 && "

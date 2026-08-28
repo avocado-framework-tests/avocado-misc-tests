@@ -8,8 +8,6 @@ AIU_PCIE_IDS: "0381:50:00.0 0382:40:00.0"
 HOST_MODELS_DIR: "/opt/ibm/spyre/models/src"
 VLLM_MODEL_PATH: "/models/Mistral-Small-3.2-24B-Instruct-2506"
 AIU_WORLD_SIZE: "2"
-MAX_MODEL_LEN: "8192"
-MAX_BATCH_SIZE: "32"
 
 # Container Configuration
 CONTAINER_URL: ""

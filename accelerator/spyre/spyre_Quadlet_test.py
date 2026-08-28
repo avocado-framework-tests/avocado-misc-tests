@@ -253,17 +253,16 @@ WantedBy=default.target
         else:
             aiu_ids = ids[0]
 
-        # For entity-extract, derive max_model_len/max_batch_size from RHAIIS version
-        if use_case == "entity-extract":
-            if self.rhaiis_version in ("3.3", "3.4", "3.5"):
-                max_model_len = "3072"
-                max_batch_size = "16"
-            elif self.rhaiis_version == "3.6":
-                max_model_len = "4096"
-                max_batch_size = "32"
+        # Determine MAX_MODEL_LEN and MAX_BATCH_SIZE based on RHAIIS version
+        if self.rhaiis_version in ("3.3", "3.4", "3.5"):
+            max_model_len = "3072"
+            max_batch_size = "16"
+        elif self.rhaiis_version == "3.6":
+            max_model_len = "4096"
+            max_batch_size = "32"
         else:
-            max_model_len = self.params.get("MAX_MODEL_LEN", default="")
-            max_batch_size = self.params.get("MAX_BATCH_SIZE", default="")
+            max_model_len = "3072"
+            max_batch_size = "16"
 
         params = {
             'aiu_ids': aiu_ids,
