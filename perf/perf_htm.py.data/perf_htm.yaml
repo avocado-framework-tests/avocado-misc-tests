@@ -1,0 +1,20 @@
+phyp_host: '****'
+phyp_port: ****
+# phyp_user: Username and password for phyp access (leave empty if not needed)
+phyp_user: ''
+phyp_password: ''
+trace_mode: 'inst'
+trace_duration: 10
+nowrap: true
+verify_htm_buffers: true
+# Repository Configuration
+# IBM Internal SSH URLs - Requires SSH keys on github.ibm.com
+htmdump_repo: 'git@github.ibm.com:Jordan-Niethe/htmdump.git'
+qtrace_repo: 'git@github.com:antonblanchard/qtrace-tools.git'
+# Manual Topology Override (Optional)
+# Auto-detection will find these from phyp htm -info based on partition number
+# From log example: node=0, chip=3, core=4 (for partition 14, LP Index 14)
+# Uncomment to manually specify:
+# node: 0
+# chip: 3
+# core: 4
