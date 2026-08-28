@@ -24,6 +24,9 @@ from avocado.utils import git
 from avocado.utils.podman import (
     Podman,
     PodmanException,
+    install_huggingface_cli,
+    download_model_from_hf,
+    validate_model_with_sha,
     wait_for_vllm_startup
 )
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -369,6 +372,7 @@ class ObservabilityTests(Test):
             "PORT_MAPPING", default="127.0.0.1:8000:8000")
         self.user = self.params.get("USER", default="")
         self.spyre_group = self.params.get("SPYRE_GROUP", default="")
+        self.hf_model_name = self.params.get("HF_MODEL_NAME", default="")
 
         # Observability-specific parameters
         self.metrics_duration = int(self.params.get(
@@ -385,6 +389,76 @@ class ObservabilityTests(Test):
         missing = [p for p, v in required_params.items() if not v]
         if missing:
             self.cancel(f"Missing required parameters: {', '.join(missing)}")
+
+        if self.host_models_dir:
+            if not os.path.exists(self.host_models_dir):
+                self.log.info("Creating HOST_MODELS_DIR: %s",
+                              self.host_models_dir)
+                try:
+                    os.makedirs(self.host_models_dir, exist_ok=True)
+                    self.log.info("Successfully created HOST_MODELS_DIR")
+                except Exception as ex:
+                    self.cancel(f"Failed to create HOST_MODELS_DIR: {ex}")
+
+        self.log.info("Checking Hugging Face CLI installation...")
+        if not install_huggingface_cli():
+            self.cancel(
+                "Failed to install Hugging Face CLI. Model download will fail.")
+
+        if self.hf_model_name:
+            model_name = os.path.basename(self.vllm_model_path)
+            model_dir = os.path.join(self.host_models_dir, model_name)
+            self.log.info("Checking if model exists: %s", model_dir)
+            self.log.info("  Host path: %s", model_dir)
+            self.log.info("  Container path: %s", self.vllm_model_path)
+            model_exists = False
+            if os.path.exists(model_dir) and os.path.isdir(model_dir):
+                files = os.listdir(model_dir)
+                required_files = ['config.json']
+                has_required = all(
+                    any(f.startswith(req.split('.')[0]) for f in files) for req in required_files)
+                if files and has_required:
+                    model_exists = True
+                    self.log.info(
+                        "Model directory exists with %d files", len(files))
+                    self.log.info("Sample files: %s", ', '.join(files[:5]))
+
+            if not model_exists:
+                self.log.info(
+                    "Downloading model from HuggingFace: %s", self.hf_model_name)
+                self.log.info(
+                    "This may take several minutes depending on model size...")
+                download_success = download_model_from_hf(
+                    hf_model_id=self.hf_model_name,
+                    local_dir=self.host_models_dir,
+                    model_name=model_name
+                )
+                if download_success:
+                    self.log.info("Model download completed successfully")
+                    self.log.info("Validating downloaded model...")
+                    is_valid, messages = validate_model_with_sha(model_dir)
+                    for msg in messages:
+                        self.log.info("  %s", msg)
+                    if is_valid:
+                        self.log.info("Model validation PASSED")
+                    else:
+                        self.log.warning(
+                            "Model validation FAILED - continuing anyway")
+                    if os.path.exists(model_dir):
+                        files = os.listdir(model_dir)
+                        self.log.info(
+                            "Model directory contains %d files", len(files))
+                        self.log.info("Files: %s", ', '.join(files[:10]))
+                    else:
+                        self.cancel(
+                            f"Model directory not found after download: {model_dir}")
+                else:
+                    self.cancel(
+                        f"Failed to download model {self.hf_model_name}. Cannot proceed without model.")
+            else:
+                self.log.info("Model already exists: %s", model_dir)
+                files = os.listdir(model_dir)
+                self.log.info("Model directory contains %d files", len(files))
 
         # Initialize Podman
         self.log.info("Initializing Podman utility")

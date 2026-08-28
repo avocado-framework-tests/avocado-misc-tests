@@ -25,6 +25,7 @@ PORT_MAPPING: "127.0.0.1:8000:8000"
 # User Configuration
 USER: ""
 SPYRE_GROUP: ""
+HF_MODEL_NAME: "ibm-granite/granite-3.3-8b-instruct"
 
 # Observability-Specific Parameters
 METRICS_DURATION: "30"
