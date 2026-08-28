@@ -73,18 +73,24 @@ class DlparPci(Test):
         if not self.server:
             self.cancel("Managed System not got")
         self.lpar_2 = self.params.get("lpar_2", default=None)
-        self.pci_device = self.params.get("pci_devices", default=None).split(' ')
+        self.pci_device = self.params.get(
+            "pci_devices", default=None).split(' ')
         self.num_of_dlpar = int(self.params.get("num_of_dlpar", default='1'))
-        self.lockdown_mode = self.params.get("lockdown_mode", default="integrity")
+        self.sriov_roce = self.params.get('sriov_roce', default=False)
+        self.lockdown_mode = self.params.get(
+            "lockdown_mode", default="integrity")
         self.lockdown_path = "/sys/kernel/security/lockdown"
-        self.lockdown_enable = self.params.get("lockdown_enable", default=False)
+        self.lockdown_enable = self.params.get(
+            "lockdown_enable", default=False)
         if self.lockdown_enable is True:
             original_state = self.get_lockdown_state()
             if original_state == "none":
                 if not self.set_lockdown_mode(self.lockdown_mode):
-                    self.fail(f"Failed to set lockdown to {self.lockdown_mode}")
+                    self.fail(
+                        f"Failed to set lockdown to {self.lockdown_mode}")
         else:
-            self.log.info("Running DLPAR test case by default without setting lockdown feature")
+            self.log.info("Running DLPAR test case by default without "
+                          "setting lockdown feature")
 
     def set_adapter_details(self, pci_device):
         '''
@@ -111,10 +117,16 @@ class DlparPci(Test):
             self.ns_list = nvme.get_current_ns_ids(self.contr_name)
         self.session.cmd("uname -a")
         if self.sriov == "yes":
-            cmd = "lshwres -r sriov --rsubtype logport -m %s \
-            --level eth --filter lpar_names=%s -F \
-            'adapter_id,logical_port_id,phys_port_id,lpar_id,location_code,drc_name'" \
-                   % (self.server, self.lpar_1)
+            if not self.sriov_roce:
+                cmd = "lshwres -r sriov --rsubtype logport -m %s \
+                --level eth --filter lpar_names=%s -F \
+                'adapter_id,logical_port_id,phys_port_id,lpar_id,location_code,drc_name'" \
+                     % (self.server, self.lpar_1)
+            else:
+                cmd = "lshwres -r sriov --rsubtype logport -m %s \
+                --level roce --filter lpar_names=%s -F \
+                'adapter_id,logical_port_id,phys_port_id,lpar_id,location_code,drc_name'" \
+                     % (self.server, self.lpar_1)
             output = self.session.cmd(cmd)
             if no_result in output.stdout_text:
                 self.log.warn("Incomplete hardware discovery!!. Refresh it")
@@ -288,8 +300,9 @@ class DlparPci(Test):
         Get current lockdown state
         '''
         try:
-            output = process.system_output(f'cat {self.lockdown_path}',
-                                           shell=True, sudo=True).decode("utf-8")
+            output = process.system_output(
+                f'cat {self.lockdown_path}',
+                shell=True, sudo=True).decode("utf-8")
             # Parse output like: "none [integrity] confidentiality"
             if '[none]' in output:
                 return 'none'
@@ -326,7 +339,9 @@ class DlparPci(Test):
                 self.log.info(f"Successfully set lockdown to {mode}")
                 return True
             else:
-                self.log.error(f"Failed to set lockdown to {mode}, current: {new_state}")
+                self.log.error(
+                    f"Failed to set lockdown to {mode},  "
+                    f"current: {new_state}")
                 return False
         except Exception as e:
             self.log.error(f"Error setting lockdown mode to {mode}: {e}")
@@ -444,9 +459,14 @@ class DlparPci(Test):
         return cmd
 
     def listhwres_sriov(self, server, lpar, logical_port_id):
-        cmd = 'lshwres -r sriov -m %s \
-              --rsubtype logport --filter lpar_names= %s --level eth \
-              | grep -i %s' % (server, lpar, logical_port_id)
+        if not self.sriov_roce:
+            cmd = 'lshwres -r sriov -m %s \
+                  --rsubtype logport --filter lpar_names= %s --level eth \
+                  | grep -i %s' % (server, lpar, logical_port_id)
+        else:
+            cmd = 'lshwres -r sriov -m %s \
+                  --rsubtype logport --filter lpar_names= %s --level roce \
+                  | grep -i %s' % (server, lpar, logical_port_id)
         try:
             cmd = self.session.cmd(cmd).stdout_text
         except CmdError as details:
@@ -477,14 +497,22 @@ class DlparPci(Test):
         operation add / remove for sriov ports
         '''
         if operation == 'r':
-            cmd = 'chhwres -r sriov -m %s --rsubtype logport -o r --id %s -a \
-                  adapter_id=%s,logical_port_id=%s' \
-                  % (server, lpar_id, adapter_id, logical_port_id)
+            cmd = ('chhwres -r sriov -m %s --rsubtype logport -o r --id %s -a'
+                   'adapter_id=%s,logical_port_id=%s'
+                   % (server, lpar_id, adapter_id, logical_port_id))
         elif operation == 'a':
-            cmd = 'chhwres -r sriov -m %s --rsubtype logport -o a --id %s -a \
-                  phys_port_id=%s,adapter_id=%s,logical_port_id=%s, \
-                  logical_port_type=eth' % (server, lpar_id, phys_port_id,
-                                            adapter_id, logical_port_id)
+            if not self.sriov_roce:
+                cmd = ('chhwres -r sriov -m %s --rsubtype logport -o a --id %s'
+                       ' -a phys_port_id=%s,adapter_id=%s,logical_port_id=%s,'
+                       'logical_port_type=eth'
+                       % (server, lpar_id, phys_port_id,
+                          adapter_id, logical_port_id))
+            else:
+                cmd = ('chhwres -r sriov -m %s --rsubtype logport -o a --id %s'
+                       ' -a phys_port_id=%s,adapter_id=%s,logical_port_id=%s,'
+                       'logical_port_type=roce'
+                       % (server, lpar_id, phys_port_id,
+                          adapter_id, logical_port_id))
         cmd = self.session.cmd(cmd)
         if cmd.exit_status != 0:
             self.log.debug(cmd.stderr)
