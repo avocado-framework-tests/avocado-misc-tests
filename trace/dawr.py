@@ -19,8 +19,8 @@ import os
 import shutil
 import pexpect
 from avocado import Test
-from avocado.utils import build, distro, genio, process
 
+from avocado.utils import build, distro, cpu, process
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -36,10 +36,8 @@ class Dawr(Test):
         '''
         Install the basic packages to support gdb and perf
         '''
-        val = genio.read_file("/proc/cpuinfo")
-        power_ver = ['POWER10', 'Power11']
-        if not any(x in val for x in power_ver):
-            self.cancel("LPAR on Power10 and above is required for this test.")
+        if "power10" not in cpu.get_family():
+            self.cancel("Test is supported only on IBM POWER10 platform")
         # Check for basic utilities
         smm = SoftwareManager()
         self.detected_distro = distro.detect()
@@ -99,7 +97,6 @@ class Dawr(Test):
         executing the program
         """
         child, return_value = self.run_cmd('dawr_v1')
-        i = 0
         child.sendline('awatch a')
         return_value.append(child.expect_exact(['watchpoint 1: a',
                                                 pexpect.TIMEOUT]))
