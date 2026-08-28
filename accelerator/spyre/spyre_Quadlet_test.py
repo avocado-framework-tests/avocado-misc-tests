@@ -19,7 +19,12 @@ import pwd
 import time
 from avocado import Test
 from avocado.utils import cpu, process
-from avocado.utils.podman import wait_for_vllm_startup
+from avocado.utils.podman import (
+    install_huggingface_cli,
+    download_model_from_hf,
+    validate_model_with_sha,
+    wait_for_vllm_startup
+)
 
 
 class SpyreQuadletTests(Test):
@@ -108,6 +113,7 @@ After=network-online.target
 ContainerName=spyre-{use_case}
 PublishPort={self.port_mapping}
 Image={self.container_image}
+LogDriver=k8s-file
 
 Environment=AIU_PCIE_IDS="{aiu_ids}"
 """
@@ -248,16 +254,17 @@ WantedBy=default.target
         else:
             aiu_ids = ids[0]
 
-        # Determine MAX_MODEL_LEN and MAX_BATCH_SIZE based on RHAIIS version
-        if self.rhaiis_version in ("3.3", "3.4", "3.5"):
-            max_model_len = "3072"
-            max_batch_size = "16"
-        elif self.rhaiis_version == "3.6":
-            max_model_len = "4096"
-            max_batch_size = "32"
+        # For entity-extract, derive max_model_len/max_batch_size from RHAIIS version
+        if use_case == "entity-extract":
+            if self.rhaiis_version in ("3.3", "3.4", "3.5"):
+                max_model_len = "3072"
+                max_batch_size = "16"
+            elif self.rhaiis_version == "3.6":
+                max_model_len = "4096"
+                max_batch_size = "32"
         else:
-            max_model_len = "3072"
-            max_batch_size = "16"
+            max_model_len = self.params.get("MAX_MODEL_LEN", default="")
+            max_batch_size = self.params.get("MAX_BATCH_SIZE", default="")
 
         params = {
             'aiu_ids': aiu_ids,
@@ -362,6 +369,8 @@ WantedBy=default.target
         self.test_user = self.params.get("USER", default="")
         self.host_models_dir = self.params.get(
             "HOST_MODELS_DIR", default="/opt/ibm/spyre/models/src")
+        self.vllm_model_path = self.params.get("VLLM_MODEL_PATH", default="")
+        self.hf_model_name = self.params.get("HF_MODEL_NAME", default="")
 
         # Container configuration
         container_url = self.params.get("CONTAINER_URL", default="")
@@ -442,10 +451,80 @@ WantedBy=default.target
                 "or registry doesn't require authentication."
             )
 
-        # Verify models directory exists
-        if not os.path.exists(self.host_models_dir):
+        if self.host_models_dir:
+            if not os.path.exists(self.host_models_dir):
+                self.log.info("Creating HOST_MODELS_DIR: %s",
+                              self.host_models_dir)
+                try:
+                    os.makedirs(self.host_models_dir, exist_ok=True)
+                    self.log.info("Successfully created HOST_MODELS_DIR")
+                except Exception as ex:
+                    self.cancel(f"Failed to create HOST_MODELS_DIR: {ex}")
+
+        self.log.info("Checking Hugging Face CLI installation...")
+        if not install_huggingface_cli():
             self.cancel(
-                f"Models directory {self.host_models_dir} does not exist")
+                "Failed to install Hugging Face CLI. Model download will fail.")
+
+        if self.hf_model_name:
+            model_name = os.path.basename(self.vllm_model_path)
+            model_dir = os.path.join(self.host_models_dir, model_name)
+            self.log.info("Checking if model exists: %s", model_dir)
+            self.log.info("  Host path: %s", model_dir)
+            self.log.info("  Container path: %s", self.vllm_model_path)
+            model_exists = False
+            if os.path.exists(model_dir) and os.path.isdir(model_dir):
+                files = os.listdir(model_dir)
+                required_files = ['config.json']
+                has_required = all(
+                    any(f.startswith(req.split('.')[0]) for f in files) for req in required_files)
+                if files and has_required:
+                    model_exists = True
+                    self.log.info(
+                        "Model directory exists with %d files", len(files))
+                    self.log.info("Sample files: %s", ', '.join(files[:5]))
+
+            if not model_exists:
+                self.log.info(
+                    "Downloading model from HuggingFace: %s", self.hf_model_name)
+                self.log.info(
+                    "This may take several minutes depending on model size...")
+                download_success = download_model_from_hf(
+                    hf_model_id=self.hf_model_name,
+                    local_dir=self.host_models_dir,
+                    model_name=model_name
+                )
+                if download_success:
+                    self.log.info("Model download completed successfully")
+                    self.log.info("Validating downloaded model...")
+                    is_valid, messages = validate_model_with_sha(model_dir)
+                    for msg in messages:
+                        self.log.info("  %s", msg)
+                    if is_valid:
+                        self.log.info("Model validation PASSED")
+                    else:
+                        self.log.warning(
+                            "Model validation FAILED - continuing anyway")
+                    if os.path.exists(model_dir):
+                        files = os.listdir(model_dir)
+                        self.log.info(
+                            "Model directory contains %d files", len(files))
+                        self.log.info("Files: %s", ', '.join(files[:10]))
+                    else:
+                        self.cancel(
+                            f"Model directory not found after download: {model_dir}")
+                else:
+                    self.cancel(
+                        f"Failed to download model {self.hf_model_name}. Cannot proceed without model.")
+            else:
+                self.log.info("Model already exists: %s", model_dir)
+                files = os.listdir(model_dir)
+                self.log.info("Model directory contains %d files", len(files))
+        else:
+            # Verify models directory exists if no HF download
+            if not os.path.exists(self.host_models_dir):
+                self.cancel(
+                    f"Models directory {self.host_models_dir} does not exist")
 
     def test_quadlet(self):
         """Generic test method that loads use case from YAML."""
