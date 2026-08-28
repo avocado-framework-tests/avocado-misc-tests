@@ -234,8 +234,6 @@ class SenlibTests(Test):
         self.host_models_dir = self.params.get("HOST_MODELS_DIR", default="")
         self.vllm_model_path = self.params.get("VLLM_MODEL_PATH", default="")
         self.aiu_world_size = self.params.get("AIU_WORLD_SIZE", default="")
-        self.max_model_len = self.params.get("MAX_MODEL_LEN", default="")
-        self.max_batch_size = self.params.get("MAX_BATCH_SIZE", default="")
         self.memory = self.params.get("MEMORY", default="")
         self.container_url = self.params.get("CONTAINER_URL", default="")
         self.container_tag = self.params.get("CONTAINER_TAG", default="")
@@ -284,7 +282,7 @@ class SenlibTests(Test):
             )
 
         # Check and install JFrog CLI on host if not installed
-        if process.system("command -v jf", shell=True) != 0:
+        if process.system("command -v jf", shell=True, ignore_status=True) != 0:
             self.log.info("JFrog CLI (jf) not found. Installing...")
             self.run_cmd("curl -fL https://install-cli.jfrog.io | sh")
 
@@ -378,9 +376,17 @@ class SenlibTests(Test):
             "-e", f"AIU_PCIE_IDS={self.aiu_pcie_ids}",
         ]
 
-        # Add RHAIIS 3.4 specific environment variable
-        if self.rhaiis_version == "3.4":
+        # Add RHAIIS version specific parameters
+        if self.rhaiis_version in ("3.3", "3.4"):
             podman_options.extend(["-e", "VLLM_SPYRE_USE_CB=1"])
+            max_model_len = "3072"
+            max_batch_size = "16"
+        elif self.rhaiis_version == "3.5":
+            max_model_len = "3072"
+            max_batch_size = "16"
+        elif self.rhaiis_version == "3.6":
+            max_model_len = "4096"
+            max_batch_size = "32"
 
         # Continue with podman options
         podman_options.extend([
@@ -397,12 +403,12 @@ class SenlibTests(Test):
         podman_options.extend([
             "--model", self.vllm_model_path,
             "-tp", str(self.aiu_world_size),
-            f"--max-model-len={self.max_model_len}",
-            f"--max-num-seqs={self.max_batch_size}",
+            f"--max-model-len={max_model_len}",
+            f"--max-num-seqs={max_batch_size}",
         ])
 
-        # Add version-specific VLLM argument for 3.4
-        if self.rhaiis_version == "3.4":
+        # Add version-specific VLLM argument for 3.3/3.4
+        if self.rhaiis_version in ("3.3", "3.4"):
             podman_options.append("--enable-prefix-caching")
 
         self.log.info("Full podman command: podman run %s",

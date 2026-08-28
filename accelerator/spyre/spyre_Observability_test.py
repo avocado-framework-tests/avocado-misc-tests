@@ -354,8 +354,6 @@ class ObservabilityTests(Test):
         self.host_models_dir = self.params.get("HOST_MODELS_DIR", default="")
         self.vllm_model_path = self.params.get("VLLM_MODEL_PATH", default="")
         self.aiu_world_size = self.params.get("AIU_WORLD_SIZE", default="")
-        self.max_model_len = self.params.get("MAX_MODEL_LEN", default="")
-        self.max_batch_size = self.params.get("MAX_BATCH_SIZE", default="")
         self.memory = self.params.get("MEMORY", default="")
         self.container_url = self.params.get("CONTAINER_URL", default=None)
         self.container_tag = self.params.get("CONTAINER_TAG", default=None)
@@ -481,7 +479,7 @@ class ObservabilityTests(Test):
             "--name", container_name,
             f"--device={self.device}",
             "-v", f"{self.host_models_dir}:/models",
-            "-e", f"AIU_PCIE_IDS={' '.join(self.aiu_pcie_ids)}",
+            "-e", f"AIU_PCIE_IDS={self.aiu_pcie_ids}",
             "-e", "DTCOMPILER_KEEP_EXPORT=true",
             "-e", "ENABLE_FLEX_TIMING=1",
             "-e", "FLEX_PRINT_END_TO_END_BREAKDOWN=1",
@@ -490,8 +488,17 @@ class ObservabilityTests(Test):
             "-e", "FLEX_GLOBAL_PROFILE_PREFIX=granite-8b-flex",
         ]
 
-        if self.rhaiis_version == "3.4":
+        # Add RHAIIS version specific parameters
+        if self.rhaiis_version in ("3.3", "3.4"):
             podman_args.extend(["-e", "VLLM_SPYRE_USE_CB=1"])
+            max_model_len = "3072"
+            max_batch_size = "16"
+        elif self.rhaiis_version == "3.5":
+            max_model_len = "3072"
+            max_batch_size = "16"
+        elif self.rhaiis_version == "3.6":
+            max_model_len = "4096"
+            max_batch_size = "32"
 
         podman_args.extend([
             f"--userns={self.userns}",
@@ -507,11 +514,12 @@ class ObservabilityTests(Test):
         podman_args.extend([
             "--model", self.vllm_model_path,
             "-tp", str(self.aiu_world_size),
-            f"--max-model-len={self.max_model_len}",
-            f"--max-num-seqs={self.max_batch_size}",
+            f"--max-model-len={max_model_len}",
+            f"--max-num-seqs={max_batch_size}",
         ])
 
-        if self.rhaiis_version == "3.4":
+        # Add version-specific VLLM argument for 3.3/3.4
+        if self.rhaiis_version in ("3.3", "3.4"):
             podman_args.append("--enable-prefix-caching")
 
         # ---- Launch the container ----

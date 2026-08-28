@@ -100,8 +100,6 @@ class EntityExtractionTest(Test):
         self.host_models_dir = self.params.get("HOST_MODELS_DIR", default="")
         self.vllm_model_path = self.params.get("VLLM_MODEL_PATH", default="")
         self.aiu_world_size = self.params.get("AIU_WORLD_SIZE", default="")
-        self.max_model_len = self.params.get("MAX_MODEL_LEN", default="")
-        self.max_batch_size = self.params.get("MAX_BATCH_SIZE", default="")
         self.memory = self.params.get("MEMORY", default="")
         self.shm_size = self.params.get("SHM_SIZE", default="")
         self.container_url = self.params.get("CONTAINER_URL", default=None)
@@ -292,9 +290,24 @@ class EntityExtractionTest(Test):
             "-v", f"{self.host_models_dir}:/models",
             "-e", f"AIU_PCIE_IDS={self.aiu_ids}",
         ]
-        # Add RHAIIS 3.4 specific environment variable
-        if self.rhaiis_version == "3.4":
+        # Add RHAIIS version specific parameters
+        if self.rhaiis_version in ("3.3", "3.4"):
             podman_options.extend(["-e", "VLLM_SPYRE_USE_CB=1"])
+            max_model_len = "3072"
+            max_batch_size = "16"
+        elif self.rhaiis_version == "3.5":
+            if "Mistral-Small-3.2-24B-Instruct-2506" in self.vllm_model_path:
+                max_model_len = "8192"
+                max_batch_size = "32"
+            else:
+                max_model_len = "3072"
+                max_batch_size = "16"
+        elif self.rhaiis_version == "3.6":
+            if "Mistral-Small-3.2-24B-Instruct-2506" in self.vllm_model_path:
+                max_model_len = "8192"
+            else:
+                max_model_len = "4096"
+            max_batch_size = "32"
         # Continue with podman options in exact order
         podman_options.extend([
             f"--userns={self.userns}",
@@ -310,11 +323,11 @@ class EntityExtractionTest(Test):
         podman_options.extend([
             "--model", self.vllm_model_path,
             "-tp", str(self.aiu_world_size),
-            f"--max-model-len={self.max_model_len}",
-            f"--max-num-seqs={self.max_batch_size}",
+            f"--max-model-len={max_model_len}",
+            f"--max-num-seqs={max_batch_size}",
         ])
-        # Add version-specific VLLM argument for 3.4
-        if self.rhaiis_version == "3.4":
+        # Add version-specific VLLM argument for 3.3/3.4
+        if self.rhaiis_version in ("3.3", "3.4"):
             podman_options.append("--enable-prefix-caching")
 
         self.log.info("=== Entity Extraction Container Test Configuration ===")
@@ -366,8 +379,8 @@ class EntityExtractionTest(Test):
         ):
             self.log.error("VLLM failed to start within timeout")
             log_file = self.podman.save_container_logs(
-                 container_id, self.workdir, test_name=container_name,
-                 user=self.user)
+                container_id, self.workdir, test_name=container_name,
+                user=self.user)
             if log_file:
                 self.log.info("Container logs saved to: %s", log_file)
             self.fail("VLLM startup failed")

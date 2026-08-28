@@ -8,8 +8,6 @@ AIU_PCIE_IDS: ""
 HOST_MODELS_DIR: "/opt/ibm/spyre/models/src"
 VLLM_MODEL_PATH: "/models/granite-3.3-8b-instruct"
 AIU_WORLD_SIZE: "1"
-MAX_MODEL_LEN: "3072"
-MAX_BATCH_SIZE: "16"
 
 # Container Configuration
 CONTAINER_URL: ""
