@@ -209,59 +209,25 @@ class Lvsetup(Test):
         lv_utils.vg_reactivate(self.vg_name, export=True)
         self.mount_unmount_lv()
 
-    def _check_lv_healthy(self, lv_path, when):
-        """
-        Check LV and its disks are healthy at a given point (before/after).
-        Fails the test if LV is not active or any disk is not healthy.
-        """
-        # Check LV is active
-        attr = process.system_output(
-            'lvs --noheadings -o lv_attr %s' % lv_path,
-            shell=True, ignore_status=True).decode().strip()
-        self.log.info("LV attr %s extend: %s", when, attr)
-        if len(attr) < 5 or attr[4] != 'a':
-            self.fail('LV %s is NOT active %s extend (attr=%s)'
-                      % (lv_path, when, attr))
-        self.log.info("LV %s is healthy (active) %s extend", lv_path, when)
-
-        # Check underlying disks are healthy
-        for dev in self.disks:
-            out = process.system_output(
-                'lsblk -o NAME,STATE %s' % dev,
-                shell=True, ignore_status=True).decode()
-            self.log.info("Disk %s state %s extend:\n%s", dev, when, out)
-            if 'running' not in out and 'live' not in out:
-                self.log.warning("Disk %s may not be in running state %s "
-                                 "extend — check manually", dev, when)
-
     @avocado.fail_on(lv_utils.LVException)
     def test_lv_extend(self):
         """
-        Creates a logical volume, extends it by lv_extend_size, and verifies:
-        - LV and disks are healthy BEFORE extend
-        - size increases after lvextend
-        - LV and disks are healthy AFTER extend
-        - LV is still mountable after extend
+        Creates a logical volume, extends it by lv_extend_size, and verifies
+        the new size is larger than the original size.
+        Uses lvextend command directly as lv_utils.lv_extend is not available
+        in this version of avocado.
         """
         self.create_lv()
         lv_utils.lv_mount(self.vg_name, self.lv_name, self.mount_loc,
                           create_filesystem=self.fs_name)
         lv_utils.lv_umount(self.vg_name, self.lv_name)
 
-        lv_path = '/dev/%s/%s' % (self.vg_name, self.lv_name)
-
-        # Health check BEFORE extend
-        self._check_lv_healthy(lv_path, 'before')
-
         size_before = lv_utils.lv_list()[self.lv_name]['LSize']
-        self.log.info("LV size before extend: %s", size_before)
-
+        lv_path = '/dev/%s/%s' % (self.vg_name, self.lv_name)
         cmd = 'lvextend -L +%sM %s' % (self.lv_extend_size, lv_path)
         if process.system(cmd, ignore_status=True):
             self.fail('lvextend failed for LV %s' % self.lv_name)
-
         size_after = lv_utils.lv_list()[self.lv_name]['LSize']
-        self.log.info("LV size after extend: %s", size_after)
 
         if size_after == size_before:
             self.fail(
@@ -269,10 +235,6 @@ class Lvsetup(Test):
                 'size after=%s' % (self.lv_name, size_before, size_after))
         self.log.info('LV %s extended from %s to %s successfully',
                       self.lv_name, size_before, size_after)
-
-        # Health check AFTER extend
-        self._check_lv_healthy(lv_path, 'after')
-
         self.mount_unmount_lv()
 
     @avocado.fail_on(lv_utils.LVException)

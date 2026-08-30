@@ -1,8 +1,0 @@
-interface: "xxx"
-host_ip: "xx.xx.xx.xx"
-netmask: "xx.xx.xx.xx"
-peer_ip: "xx.xx.xx.xx"
-peer_user: "xxx"
-peer_password: "xxx"
-ping_count: 100000
-pool_size: 65536

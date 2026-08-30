@@ -8,4 +8,3 @@ peer_ips: ""
 mac_id: ""
 migratable: True
 backup_veth_vnetwork: ""
-num_of_dlpar: 

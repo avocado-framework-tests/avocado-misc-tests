@@ -39,8 +39,6 @@ class Numactl(Test):
         Source:
         https://github.com/numactl/numactl
         '''
-        self.interface = None
-        self.networkinterface = None
         # Check for basic utilities
         smm = SoftwareManager()
 
@@ -71,19 +69,15 @@ class Numactl(Test):
 
         build.make(self.sourcedir)
         self.localhost = LocalHost()
+        self.interface = None
         interfaces = os.listdir('/sys/class/net')
         iface = self.params.get("interface", default="")
-        self.hbond = self.params.get("hbond", default=False)
         self.disk = self.params.get("disk", default="")
         if iface:
-            if self.hbond:
+            if iface in interfaces:
                 self.interface = iface
-            elif iface in interfaces:
-                self.interface = iface
-            elif (self.localhost.validate_mac_addr(iface) and
-                  iface in self.localhost.get_all_hwaddr()):
-                self.interface = self.localhost.get_interface_by_hwaddr(
-                    iface).name
+            elif self.localhost.validate_mac_addr(iface) and iface in self.localhost.get_all_hwaddr():
+                self.interface = self.localhost.get_interface_by_hwaddr(iface).name
             else:
                 self.cancel("Please check the network device")
             self.ping_count = self.params.get("ping_count", default=100)
@@ -91,13 +85,8 @@ class Numactl(Test):
             if not self.peer:
                 self.cancel("peer ip need to specify in YAML")
             self.ipaddr = self.params.get("host_ip", default="")
-            if self.hbond:
-                self.networkinterface = NetworkInterface(self.interface,
-                                                         self.localhost,
-                                                         if_type='Bond')
-            else:
-                self.networkinterface = NetworkInterface(self.interface,
-                                                         self.localhost)
+            self.networkinterface = NetworkInterface(self.interface,
+                                                     self.localhost)
             if not self.networkinterface.validate_ipv4_format(self.ipaddr):
                 self.cancel("Host IP formatt in YAML is incorrect,"
                             "Please specify it correctly")
@@ -132,14 +121,11 @@ class Numactl(Test):
                                               default="/dev/zero")
         self.device = self.params.get('pci_device', default="")
 
-        for subtest in ["preferred_node", "cpunode_with_membind",
-                        "physical_cpu_bind", "numa_pci_bind"]:
+        for subtest in ["preferred_node", "cpunode_with_membind", "physical_cpu_bind", "numa_pci_bind"]:
             if subtest in str(self.name):
                 if self.device:
-                    if not os.path.isdir(
-                            '/sys/bus/pci/devices/%s' % self.device):
-                        self.cancel("%s not present in device path"
-                                    % self.device)
+                    if not os.path.isdir('/sys/bus/pci/devices/%s' % self.device):
+                        self.cancel("%s not present in device path" % self.device)
                     self.cpu_path = "/sys/devices/system/node/has_cpu"
                     if not os.path.exists(self.cpu_path):
                         self.cancel("No NUMA nodes have CPU")
@@ -308,9 +294,8 @@ class Numactl(Test):
                                in self.numa_dict.values()][0][1]
             if self.interface:
 
-                cmd = "numactl --physcpubind=%s ping -I %s %s -c %s -f" \
-                    % (self.cpu_number, self.interface,
-                       self.peer, self.ping_count)
+                cmd = "numactl --physcpubind=%s ping -I %s %s -c %s -f"\
+                    % (self.cpu_number, self.interface, self.peer, self.ping_count)
                 self.numa_ping(cmd)
 
             if self.disk:

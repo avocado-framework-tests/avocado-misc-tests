@@ -4,4 +4,3 @@ netmask:
 peer_ip:
 pci_device:
 ping_count: 5000000
-hbond: False
