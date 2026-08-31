@@ -121,6 +121,13 @@ class EntityExtractionTest(Test):
             self.aiu_ids = self.aiu_ids.split()
             if "Mistral-Small-3.2-24B-Instruct-2506" in self.vllm_model_path:
                 self.aiu_ids = " ".join(self.aiu_ids[:2])
+            elif "Ministral-3-14b-Instruct-2512-BF16" in self.vllm_model_path or \
+                 "granite-vision-3.3-2b" in self.vllm_model_path:
+                if len(self.aiu_ids) > 1:
+                    self.aiu_ids = " ".join(self.aiu_ids[:2])
+                    self.aiu_world_size = 2
+                else:
+                    self.aiu_ids = self.aiu_ids[0]
             else:
                 self.aiu_ids = self.aiu_ids[0]
         else:
@@ -305,9 +312,22 @@ class EntityExtractionTest(Test):
         elif self.rhaiis_version == "3.6":
             if "Mistral-Small-3.2-24B-Instruct-2506" in self.vllm_model_path:
                 max_model_len = "8192"
+                max_batch_size = "32"
+            elif "Ministral-3-14b-Instruct-2512-BF16" in self.vllm_model_path:
+                max_batch_size = "32"
+                if len(self.aiu_ids.split()) == 1:
+                    max_model_len = "4096"
+                else:
+                    max_model_len = "8192"
+            elif "granite-vision-3.3-2b" in self.vllm_model_path:
+                max_batch_size = "16"
+                if len(self.aiu_ids.split()) == 1:
+                    max_model_len = "8192"
+                else:
+                    max_model_len = "16384"
             else:
                 max_model_len = "4096"
-            max_batch_size = "32"
+                max_batch_size = "32"
         # Continue with podman options in exact order
         podman_options.extend([
             f"--userns={self.userns}",
