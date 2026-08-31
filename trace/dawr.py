@@ -27,7 +27,8 @@ from avocado.utils.software_manager.manager import SoftwareManager
 class Dawr(Test):
     """
     Reading single Dawr register and multiple Dawr registers
-    with gdb interface
+    with gdb interface. Includes watchpoint tests for different
+    data types: local variable, pointer, struct member, array element.
 
     :avocado: tags=trace,ppc64le
     """
@@ -46,13 +47,15 @@ class Dawr(Test):
         self.distro_name = self.detected_distro.name
         deps = ['gcc', 'make', 'gdb', 'perf']
         for package in deps:
-            if not smm.check_installed(package) and not smm.install(package):
-                self.cancel('%s is needed for the test to be run' % package)
+            if not smm.check_installed(package):
+                if not smm.install(package):
+                    self.cancel('%s is needed for the test to be run' % package)
         for value in range(1, 4):
             shutil.copyfile(self.get_data('dawr_v%d.c' % value),
                             os.path.join(self.teststmpdir,
                                          'dawr_v%d.c' % value))
-        for fname in ['boundary_check.c', 'Makefile']:
+        for fname in ['boundary_check.c', 'dawr_local.c', 'dawr_pointer.c',
+                      'dawr_struct.c', 'dawr_array.c', 'Makefile']:
             shutil.copyfile(self.get_data(fname),
                             os.path.join(self.teststmpdir, fname))
         build.make(self.teststmpdir)
@@ -81,17 +84,18 @@ class Dawr(Test):
         if not os.stat(self.output_file).st_size:
             self.fail("%s sample not captured" % self.output_file)
 
+    def get_address(self, binary):
+        output = self.run_test('./%s' % binary)
+        data = [addr.strip() for addr in output.stdout.decode("utf-8").split(',')]
+        return data
+
     def address_v1(self):
         # Get memory address of single variable
-        output = self.run_test('./dawr_v1')
-        data = output.stdout.decode("utf-8")
-        return data
+        return self.get_address('dawr_v1')[0]
 
     def address_v2(self):
         # Get memory address of two variables
-        output = self.run_test('./dawr_v2')
-        data = output.stdout.decode("utf-8").split(',')
-        return data
+        return self.get_address('dawr_v2')
 
     def test_read_dawr_v1_gdb(self):
         """
@@ -161,17 +165,137 @@ class Dawr(Test):
 
     def test_read_dawr_v1_perf(self):
         # Read single dawr register with perf interface
-        data = self.address_v1()
+        data = self.get_address('dawr_v1')
         perf_record = 'perf record -o %s -e mem:%s ./dawr_v1' % (
-            self.output_file, data)
+            self.output_file, data[0])
         self.perf_cmd(perf_record)
 
     def test_read_dawr_v2_perf(self):
         # Read two dawr registers with perf interface
-        data = self.address_v2()
+        data = self.get_address('dawr_v2')
         perf_record = 'perf record -o %s -e mem:%s -e mem:%s ./dawr_v2' % (
-            self.output_file, data[0], data[1][1:11])
+            self.output_file, data[0], data[1])
         self.perf_cmd(perf_record)
+
+    def test_read_dawr_local_perf(self):
+        # Read dawr register with perf interface for local variable
+        data = self.get_address('dawr_local')
+        perf_record = 'perf record -o %s -e mem:%s ./dawr_local' % (
+            self.output_file, data[0])
+        self.perf_cmd(perf_record)
+
+    def test_read_dawr_pointer_perf(self):
+        # Read dawr register with perf interface for pointer variable
+        data = self.get_address('dawr_pointer')
+        perf_record = 'perf record -o %s -e mem:%s ./dawr_pointer' % (
+            self.output_file, data[0])
+        self.perf_cmd(perf_record)
+
+    def test_read_dawr_struct_perf(self):
+        # Read dawr register with perf interface for struct member
+        data = self.get_address('dawr_struct')
+        perf_record = 'perf record -o %s -e mem:%s ./dawr_struct' % (
+            self.output_file, data[0])
+        self.perf_cmd(perf_record)
+
+    def test_read_dawr_array_perf(self):
+        # Read dawr register with perf interface for array element
+        data = self.get_address('dawr_array')
+        perf_record = 'perf record -o %s -e mem:%s ./dawr_array' % (
+            self.output_file, data[0])
+        self.perf_cmd(perf_record)
+
+    def test_dawr_local_gdb(self):
+        """
+        Setting Read/Write watchpoint on a local (stack) variable using
+        awatch and verifying the watchpoint triggers on write.
+        """
+        child, return_value = self.run_cmd('dawr_local')
+        child.sendline('break main')
+        child.expect('(gdb)')
+        child.sendline('r')
+        child.expect('(gdb)')
+        child.sendline('awatch local')
+        return_value.append(child.expect_exact(['watchpoint', pexpect.TIMEOUT]))
+        child.sendline('c')
+        return_value.append(child.expect_exact(
+            ['New value', pexpect.TIMEOUT]))
+        for i in return_value:
+            if i != 0:
+                self.fail('DAWR watchpoint test failed for local variable')
+
+    def test_dawr_pointer_gdb(self):
+        """
+        Setting Read/Write watchpoint on a pointer-dereferenced variable
+        using awatch and verifying the watchpoint triggers on write.
+        """
+        child, return_value = self.run_cmd('dawr_pointer')
+        child.sendline('break main')
+        child.expect('(gdb)')
+        child.sendline('r')
+        child.expect('(gdb)')
+        child.sendline('awatch val')
+        return_value.append(child.expect_exact(['watchpoint', pexpect.TIMEOUT]))
+        child.sendline('c')
+        return_value.append(child.expect_exact(
+            ['New value', pexpect.TIMEOUT]))
+        for i in return_value:
+            if i != 0:
+                self.fail('DAWR watchpoint test failed for pointer variable')
+
+    def test_dawr_struct_gdb(self):
+        """
+        Setting Read/Write watchpoint on a struct member (d.y) using
+        awatch and verifying the watchpoint triggers on write.
+        awatch triggers twice for d.y += 5: first on READ (Value=20),
+        then on WRITE (New value=25). Send 'c' twice to reach the write hit.
+        """
+        child, return_value = self.run_cmd('dawr_struct')
+        child.sendline('break main')
+        child.expect('(gdb)')
+        child.sendline('r')
+        child.expect('(gdb)')
+        # Step past struct initialization so d.y is in scope
+        child.sendline('next')
+        child.expect('(gdb)')
+        child.sendline('awatch d.y')
+        return_value.append(child.expect_exact(['watchpoint', pexpect.TIMEOUT]))
+        # First continue: hits READ of d.y (Value = 20)
+        child.sendline('c')
+        child.expect_exact(['Value = 20', pexpect.TIMEOUT])
+        # Second continue: hits WRITE of d.y (New value = 25)
+        child.sendline('c')
+        return_value.append(child.expect_exact(
+            ['New value', pexpect.TIMEOUT]))
+        for i in return_value:
+            if i != 0:
+                self.fail('DAWR watchpoint test failed for struct member')
+
+    def test_dawr_array_gdb(self):
+        """
+        Setting Read/Write watchpoint on an array element (arr[2]) using
+        awatch and verifying the watchpoint triggers on write.
+        awatch triggers twice for arr[2] += 10: first on READ (Value=3),
+        then on WRITE (New value=13). Send 'c' twice to reach the write hit.
+        """
+        child, return_value = self.run_cmd('dawr_array')
+        child.sendline('break main')
+        child.expect('(gdb)')
+        child.sendline('r')
+        child.expect('(gdb)')
+        # arr is global so awatch resolves immediately after run
+        child.sendline('awatch arr[2]')
+        return_value.append(child.expect_exact(['watchpoint', pexpect.TIMEOUT]))
+        # First continue: hits READ of arr[2] (Value = 3)
+        child.sendline('c')
+        child.expect_exact(['Value = 3', pexpect.TIMEOUT])
+        # Second continue: hits WRITE of arr[2] (New value = 13)
+        child.sendline('c')
+        return_value.append(child.expect_exact(
+            ['New value', pexpect.TIMEOUT]))
+        for i in return_value:
+            if i != 0:
+                self.fail('DAWR watchpoint test failed for array element')
 
     def test_dawr_boundary_check(self):
         """
