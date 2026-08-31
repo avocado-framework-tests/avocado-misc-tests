@@ -14,6 +14,7 @@
 # Copyright: 2024 IBM
 # Author: Tejas Manhas <Tejas.Manhas1@ibm.com>
 import os
+import re
 from avocado import Test
 from avocado.utils import distro, process, genio, cpu, dmesg
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -47,6 +48,10 @@ class perf_hv_gpci_interface(Test):
                 self.cancel('%s is needed for the test to be run' % package)
         self.expected_files = self.params.get("access_files", default=None)
         self.hmc_ip = self.get_mcp_component("HMCIPAddr")
+        if not self.hmc_ip:
+            self.log.info("HMCIPAddr not found via lsrsrc IBM.MCP, "
+                          "falling back to lssrc -ls mcproxy for hostname")
+            self.hmc_ip = self.get_hmc_from_mcproxy()
         if not self.hmc_ip:
             self.cancel("HMC IP not got")
         self.hmc_username = self.params.get("hmc_username", '*', default=None)
@@ -89,6 +94,24 @@ class perf_hv_gpci_interface(Test):
                                                     .splitlines():
             if component in line:
                 return line.split()[-1].strip('{}\"')
+        return ''
+
+    @staticmethod
+    def get_hmc_from_mcproxy():
+        '''
+        Fallback: parse 'lssrc -ls mcproxy' for the HMC hostname when
+        'lsrsrc IBM.MCP HMCIPAddr' returns no IP address.
+        Looks for a line of the form:
+            Hostname: ://example.com
+        and returns the hostname string, or '' if not found.
+        '''
+        for line in process.system_output('lssrc -ls mcproxy',
+                                          ignore_status=True, shell=True,
+                                          sudo=True).decode("utf-8") \
+                                                    .splitlines():
+            match = re.match(r'\s*Hostname:\s*(\S+)', line)
+            if match:
+                return match.group(1)
         return ''
 
     @staticmethod
