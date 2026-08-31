@@ -45,7 +45,7 @@ class ServiceReport(Test):
                     self.cancel(
                         "HTX RPM is not installed, cancelling HTX plugin test")
 
-        for package in ['make', 'gcc']:
+        for package in ['make', 'gcc', 'python3-pyudev']:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("Fail to install %s required for this"
                             " test." % package)
