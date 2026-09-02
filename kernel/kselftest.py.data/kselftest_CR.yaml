@@ -20,6 +20,20 @@ component: !mux
     comp: "zram"
   kexec:
     comp: "kexec"
+  filesystem:
+    comp: 'filesystems'
+  filesystem_binderfs:
+    comp: 'filesystems/binderfs'
+  filesystem_epoll:
+    comp: 'filesystems/epoll'
+  filesystem_eventfd:
+    comp: 'filesystems/eventfd'
+  filesystem_fat:
+    comp: 'filesystems/fat'
+  filesystem_overlayfs:
+    comp: 'filesystems/overlayfs'
+  filesystem_statmount:
+    comp: 'filesystems/statmount'
 run_type: !mux
   distro:
     type: "distro"
