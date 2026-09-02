@@ -1,0 +1,13 @@
+# vTPM parameter validation for NIC drivers on IBM Power LPARs.
+#
+# For VIO NIC drivers:
+#   driver_type: vio
+#   driver:      ibmvnic | ibmveth
+#
+# For direct-attach / SR-IOV PCIe NIC drivers:
+#   driver_type: pci
+#   driver:      <actual kernel driver name, e.g. tg3 or mlx5_core>
+#                validated at runtime against /sys/bus/pci/drivers/<driver>/
+
+driver_type: ''
+driver: ''
