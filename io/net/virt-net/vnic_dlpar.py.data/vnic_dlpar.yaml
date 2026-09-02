@@ -1,0 +1,12 @@
+hmc_username: ""
+hmc_pwd: ""
+manageSystem: ""
+slot_num: ""
+mac_id: ""
+device_ip: ""
+netmasks: ""
+peer_ip: ""
+sriov_adapters: ""
+sriov_ports: ""
+lockdown_enable: False
+lockdown_mode: integrity

@@ -1,0 +1,37 @@
+PREREQUISITES: 
+The vNIC must already be added to the LPAR manually before
+running this test. This script does NOT provision the vNIC itself.
+
+input parameters:
+hmc_pwd ---> HMC password
+hmc_username ---> HMC user name
+manageSystem ---> Provide the HMC managed system name of the CEC
+slot_num ---> Virtual slot number on which the vNIC interface exists.
+mac_id ---> MAC address of the vNIC interface.
+                Example: "02:03:03:03:03:01"
+device_ip ---> IP address to be configured on the vNIC interface after
+               DLPAR.
+netmasks ---> Netmask value for the vNIC interface.
+               Example: "255.255.255.0"
+peer_ip ---> Peer IP to ping after DLPAR to verify backend traffic.
+           
+sriov_adapters ---> physical location code (DRC) of
+                    the SRIOV backing adapter(s) assigned to the
+                    hypervisor. Used to resolve adapter_id from HMC.
+                    Example: "U78DA.ND0.WZS0027-P0-C11"
+sriov_ports ---> port number(s) of the SRIOV backing
+                 adapter(s). Example: "0" or "0 1"
+num_of_dlpar ---> Number of DLPAR remove/add cycles to perform per
+                  slot. Default: 1
+lockdown_enable ---> Set to True to enable kernel lockdown before
+                     running DLPAR in test_vnic_dlpar_lockdown.
+                     Default: False
+lockdown_mode ---> Kernel lockdown mode to activate when
+                   lockdown_enable is True.
+                   Accepted values: integrity, confidentiality
+                   Default: integrity
+
+Example Usage:
+avocado run vnic_dlpar.py -m vnic_dlpar.py.data/vnic_dlpar.yaml
+avocado run vnic_dlpar.py:VnicDlpar.test_vnic_dlpar -m vnic_dlpar.py.data/vnic_dlpar.yaml
+avocado run vnic_dlpar.py:VnicDlpar.test_vnic_dlpar_lockdown -m vnic_dlpar.py.data/vnic_dlpar.yaml
