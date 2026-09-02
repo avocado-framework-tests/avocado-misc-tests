@@ -22,6 +22,44 @@ component: !mux
     comp: "zram"
   kexec:
     comp: "kexec"
+  filesystem:
+    comp: 'filesystems'
+  filesystem_binderfs:
+    comp: 'filesystems/binderfs'
+  filesystem_empty_mntns:
+    comp: 'filesystems/empty_mntns'
+  filesystem_epoll:
+    comp: 'filesystems/epoll'
+  filesystem_eventfd:
+    comp: 'filesystems/eventfd'
+  filesystem_failfs:
+    comp: 'filesystems/failfs'
+  filesystem_fat:
+    comp: 'filesystems/fat'
+  filesystem_fscontext_ns:
+    comp: 'filesystems/fscontext_ns'
+  filesystem_fsmount_ns:
+    comp: 'filesystems/fsmount_ns'
+  filesystem_fuse:
+    comp: 'filesystems/fuse'
+  filesystem_mntns_cleanup:
+    comp: 'filesystems/mntns_cleanup'
+  filesystem_mount-notify:
+    comp: 'filesystems/mount-notify'
+  filesystem_move_mount:
+    comp: 'filesystems/move_mount'
+  filesystem_nsfs:
+    comp: 'filesystems/nsfs'
+  filesystem_open_tree_ns:
+    comp: 'filesystems/open_tree_ns'
+  filesystem_openat2:
+    comp: 'filesystems/openat2'
+  filesystem_overlayfs:
+    comp: 'filesystems/overlayfs'
+  filesystem_statmount:
+    comp: 'filesystems/statmount'
+  filesystem_xattr:
+    comp: 'filesystems/xattr'
 run_type: !mux
   upstream:
     type: "upstream"

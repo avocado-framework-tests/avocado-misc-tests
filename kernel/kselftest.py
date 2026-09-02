@@ -22,7 +22,7 @@ import shutil
 from avocado import Test
 from avocado.utils import build, process
 from avocado.utils import distro
-from avocado.utils import archive, git
+from avocado.utils import archive, git, linux_modules
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -58,6 +58,7 @@ class kselftest(Test):
         self.kexec_symlink_created = False
         self.kexec_kernel_version = None
         self.subtest = self.params.get('subtest', default='')
+        self._overlay_loaded = False
         if self.comp == "mm" and self.subtest == "ksm_tests":
             self.test_type = self.params.get('test_type', default='-H')
             self.Size_flag = self.params.get('Size', default='-s')
@@ -108,7 +109,7 @@ class kselftest(Test):
             if self.detected_distro.name == 'rhel' and self.distro_ver >= 9:
                 packages_remove = ['libhugetlbfs-devel']
                 deps = list(set(deps)-set(packages_remove))
-                deps.extend(['fuse3-devel'])
+                deps.extend(['fuse3-devel', 'libasan'])
             else:
                 deps.extend(['fuse-devel'])
 
@@ -156,8 +157,12 @@ class kselftest(Test):
                     break
             self.sourcedir = os.path.join(self.buldir, self.testdir)
             if (self.comp != "cpufreq" and self.comp != "bpf"):
-                process.system("make headers -C %s" % self.buldir, shell=True,
-                               sudo=True)
+                if self.comp.startswith('filesystems'):
+                    process.system("make headers_install -C %s" % self.buldir,
+                                   shell=True, sudo=True, ignore_status=True)
+                else:
+                    process.system("make headers -C %s" % self.buldir,
+                                   shell=True, sudo=True)
                 # Only run 'make install' if no specific component is selected
                 # Component-specific builds will be done later in the build phase
                 if not self.comp:
@@ -204,13 +209,35 @@ class kselftest(Test):
             process.system("sed -i 's/^.*cmsg_time.sh/#&/g' %s" % make_path,
                            shell=True, sudo=True)
         if (self.comp != "cpufreq" and self.comp != "bpf"):
-            # Run make headers before building
-            process.system("make headers -C %s" % self.buldir, shell=True,
-                           sudo=True)
-            if self.comp:
-                build_str = '-C %s' % self.comp
-            if build.make(self.sourcedir, extra_args='%s' % build_str):
-                self.fail("Compilation failed, Please check the build logs !!")
+            if self.comp.startswith('filesystems'):
+                if self.comp == 'filesystems/mount-notify':
+                    if (linux_modules.check_kernel_config('CONFIG_FANOTIFY')
+                            == linux_modules.ModuleConfig.NOT_SET):
+                        self.cancel("mount-notify requires CONFIG_FANOTIFY=y "
+                                    "in the running kernel")
+                if self.comp == 'filesystems/binderfs':
+                    for mod, cfg in [('binder_linux', 'CONFIG_ANDROID_BINDER_IPC'),
+                                     ('binderfs', 'CONFIG_ANDROID_BINDERFS')]:
+                        status = linux_modules.check_kernel_config(cfg)
+                        if status == linux_modules.ModuleConfig.NOT_SET:
+                            self.cancel("binderfs requires %s in the running kernel" % cfg)
+                        if status == linux_modules.ModuleConfig.MODULE:
+                            if not linux_modules.module_is_loaded(mod):
+                                if not linux_modules.load_module(mod):
+                                    self.cancel("Failed to load module %s %s" % (mod, cfg))
+                if self.comp == 'filesystems/overlayfs':
+                    result = process.run("lsmod | grep -w overlay",
+                                         shell=True, ignore_status=True)
+                    if result.exit_status != 0:
+                        process.system("modprobe overlay", shell=True, sudo=True)
+                        self._overlay_loaded = True
+            else:
+                # Run make headers before building
+                process.system("make headers -C %s" % self.buldir, shell=True,
+                               sudo=True)
+                build_str = '-C %s' % self.comp if self.comp else ''
+                if build.make(self.sourcedir, extra_args='%s' % build_str):
+                    self.fail("Compilation failed, Please check the build logs !!")
         # Fix for kexec test: Create vmlinuz symlink if only vmlinux exists
         # This handles SUSE systems that use vmlinux instead of vmlinuz
         if self.comp == "kexec":
@@ -250,7 +277,7 @@ class kselftest(Test):
                     self.sourcedir, kself_args, test_comp)
                 self.result = process.run(
                     make_cmd, shell=True, ignore_status=True)
-        log_output = self.result.stdout.decode('utf-8')
+        log_output = (self.result.stdout + self.result.stderr).decode('utf-8')
         results_path = os.path.join(self.outputdir, 'raw_output')
         with open(results_path, 'w') as r_file:
             r_file.write(log_output)
@@ -267,6 +294,10 @@ class kselftest(Test):
                     # Match both overall test failures and individual test failures
                     self.find_match(r'not ok (.*) selftests:(.*)', line)
                     self.find_match(r'# not ok \d+ .* # exit=\d+', line)
+        if self.result.exit_status != 0 and not self.error:
+            self.fail("make run_tests exited with status %d (build or runtime "
+                      "error — check raw_output for details)"
+                      % self.result.exit_status)
 
         if self.error:
             # Build the summary message
@@ -450,5 +481,8 @@ class kselftest(Test):
                                shell=True, sudo=True, ignore_status=True)
             else:
                 self.log.warning(f"Symlink {vmlinuz_path} no longer exists or is not a symlink, skipping removal")
+        if getattr(self, '_overlay_loaded', False):
+            process.system("rmmod overlay", shell=True, sudo=True,
+                           ignore_status=True)
         if os.path.exists(self.workdir):
             shutil.rmtree(self.workdir)
