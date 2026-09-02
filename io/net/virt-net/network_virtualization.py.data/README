@@ -1,69 +1,113 @@
-Install Paramiko module:
-Ubuntu :
--> apt-get install python-paramiko
--SLES/RHEL :
-SLES :
+Common Parameters (all tests)
+==============================
+  hmc_username      HMC user name
+  hmc_pwd           HMC password
+  manageSystem      HMC managed system (CEC) name
+  slot_num          Space-separated vNIC slot numbers (range 3-2999, unused)
+  vios_names        Space-separated VIOS names (one per backing device)
+  sriov_adapters    Space-separated SR-IOV adapter location codes (DRC)
+  sriov_ports       Space-separated port numbers (0 = first port on the adapter)
+  bandwidth         Bandwidth entitlement % per vNIC port
+  priority          Space-separated failover priorities (1=highest, 100=lowest, 50=default)
+  auto_failover     1 to enable, 0 to disable (default: 1)
+  device_ip         Space-separated IPs to assign to each vNIC
+  netmasks          Space-separated netmasks (one per vNIC)
+  peer_ip           Space-separated peer IPs used for ping validation
+  peer_user         Peer LPAR login user
+  peer_password     Peer LPAR login password
+  mac_id            Space-separated MAC addresses for each vNIC
+  count             Number of failover/disable-enable iterations (default: 1)
+  num_of_dlpar      Number of DLPAR remove+add iterations (default: 1)
+  host_public_ip    Public IP of the test host (used to copy eeh_tool to VIOS)
+  host_password     Test host login password
+  user_name         Test host login user
 
--> SLES: Install python-devel,python-setuptools
---> RHEL: Install python-devel.ppc64le and python-setuptools.noarch
--> Download pycrypto-2.6.1.tar.gz & paramiko-1.16.0.tar.gz
--> For pycrypto : python setup.py build & python setup.py install
--> For parmaiko : easy_install ./
--> Then import paramiko.
+  Note: counts of slot_num, vios_names, sriov_adapters, sriov_ports, priority,
+        mac_id, device_ip, netmasks, and peer_ip must all match.
+        Failover tests and backing-device tests are skipped when len(slot_num) > 1.
 
-RHEL :
--> yum install python-paramiko.noarch
-Links :
--> https://pypi.python.org/packages/source/p/pycrypto/pycrypto-2.6.1.tar.gz#md5=55a61a054aa66812daf5161a0d5d7eda
 
-Install pexpect module 
--> pip install pexpect 
+Tests and YAML Files
+====================
 
-Explanation of the input parameters for single vnic:
-hmc_pwd ---> HMC password
-hmc_username ---> HMC user name
-manageSystem --> Provide the HMC manage system name of the CEC
-vios_ip ---> ip of vios for vios failover
-vios_username ---> vios user name
-vios_pwd---> vios password
-slot_num ---> slot number on which the Network virtualized interface will be added. Should be 3 - 2999 and unused currently. space separated for more
-vios_names ---> space separated name of the vios used to add/remove Network virtualized interface
-sriov_adapters ---> space separated location code (DRC) of the the adapters that is assigned to the hypervisor
-sriov_ports ---> space separated ports using which the Network virtualized interface will be added/removed
-Ex: if the adapter has 2 ports and the Network virtualized interface should be added using Port 1, mention value as 0
-else mention 2 if Network virtualized interface should be added using Port 1
-bandwidth ---> The percentage of the ports bandwidth this Network virtualized interface is entitled to, space separated for more
-priority ---> space separated prirotiy value for backing devices should be range of 1-100 (1,100,50,.. 1 for active and 100, 50 for consecutive backing device). 1 represents highest priority, 100 represents lowest, 50 is default if param not specified
-auto_failover --> enable auto_failover flag, 1 to enable or 0 to disable, defaults to 1
-device_ip ---> Ip to be configured for the added Network virtualized interface, space separated if multiple
-netmask ---> netmask value for the added Network virtualized interface, space separated if multiple
-peer_ip ---> Peer ip to which the added Network virtualized interface will ping to check for ping test
-count ---> The number of times the failover test has to be executed
-num_of_dlpar --> number of times ddlpar remove and add operation to be executed
-mac_id ---> MAC ID to be set for the vnic interface. This is needed for us to have control over interface name via interface file or udev rules, space separated if multiple
-host_public_ip ---> Public IP of the host
-host_password ---> Login password for the host machine 
-user_name ---> Host user name 
+test_add / test_remove
+  Add or remove one or more vNIC interfaces via HMC.
+  YAML: any of the existing YAML files (single or multiple vNIC).
+  Key params: all common parameters above.
 
-Explanation of the input parameters for multiple vnic:
-hmc_pwd ---> HMC password
-hmc_username ---> HMC user name
-slot_num ---> multiple slot number separated with space, on which the Network virtualized interface will be added. Should be 3 - 2999 and unused currently. space separated for more
-vios_names ---> space separated name of the vios used to add/remove Network virtualized interface
-sriov_adapters ---> space separated location code (DRC) of the the adapters that is assigned to the hypervisor.
-if want multiple Network virtualized interface from same adapter, ex : "U78D5.ND1.CSS130E-P1-C4-C1 U78D5.ND1.CSS130E-P1-C4-C1"
-if want multiple Network virtualized interface from different adapter, ex : "U78D5.ND1.CSS130E-P1-C4-C1 U78D5.ND2.CSS140C-P1-C5-C1"
-sriov_ports ---> space separated ports using which the Network virtualized interface will be added/removed
-priority: space separated prirotiy value for backing devices should be range of 1-100 (1,100,50,.. 1 for active and 100, 50 for consecutive backing device). 1 represents highest priority, 100 represents lowest, 50 is default if param not specified
-auto_failover ---> enable auto_failover flag, 1 to enable or 0 to disable, defaults to 1
-bandwidth ---> The percentage of the ports bandwidth this Network virtualized interface is entitled to, space separated for more
-device_ip ---> space separated ip address
-netmasks ---> space separated netmask
-peer_ip ---> space separated peer ip
-mac_id ---> MAC ID to be set for the vnic interface. This is needed for us to have control over interface name via interface file or udev rules, space separated mac id
-user_name ---> host user name 
-host_public_ip ---> public IP of the host, required to copy the eeh_tool to vios 
-host_password ---> Login password of the host, required to copy the eeh_tool to vios 
+test_backingdevadd / test_backingdevremove
+  Add or remove secondary backing devices on an existing vNIC.
+  Requires the vNIC to already be present (run test_add first).
 
-NOTE: all failover test will not execute when it will create multiple Network virtualized interface.
-and for now multiple Network virtualized interface with multiple backing device will not work.
+test_disable_enable_dev
+  Disable and re-enable a vNIC via HMC, verify link and ping survive.
+  Uses: count for number of cycles.
+
+test_hmcfailover
+  Trigger HMC-initiated failover between backing devices, verify
+  active device changes and connectivity is maintained.
+  Uses: count, vios_ip, vios_username, vios_pwd (for pre-check).
+
+test_clientfailover
+  Trigger guest-initiated failover by writing to
+  /sys/devices/vio/<id>/failover, verify connectivity after each flip.
+  Uses: count.
+
+test_vnic_auto_failover
+  Swap priorities of active and backing devices, verify the backing
+  device with priority=1 becomes active automatically.
+  Requires >= 2 backing devices.
+
+test_rmdev_viosfailover
+  Remove the VIOS vNIC server and backing device via rmdev/mkdev on
+  the VIOS, verify failover to the peer VIOS and connectivity recovery.
+  Extra params: vios_ip, vios_username, vios_pwd.
+
+test_vnic_dlpar
+  Hot-remove and hot-add the vNIC via drmgr, verify IP and ping
+  are restored after each cycle.
+  Uses: num_of_dlpar.
+
+test_vnic_hmc_dlpar
+  Hot-remove and hot-add the vNIC via HMC chhwres, re-adding all
+  backing devices after each add, verify connectivity each cycle.
+  Uses: num_of_dlpar.
+
+test_vnic_eeh
+  Inject an EEH error on the backing device from the VIOS using
+  eeh_tool_64, verify failover and connectivity recovery.
+  Extra params: vios_ip, vios_username, vios_pwd, eeh_tool (path),
+                host_public_ip, user_name, host_password,
+                is_mlx_driver (true for Mellanox, false for lnc2).
+
+test_sriov_vnic_same_port                    [NEW — vnic_sriov_same_port.yaml]
+  Add one direct SR-IOV logical port AND one vNIC backed by the same
+  physical adapter and port.  Verifies both interfaces come up and
+  can ping their respective peers simultaneously, then removes both.
+  Extra params (beyond common):
+    sriov_mac_id      MAC for the SR-IOV direct logical port
+    sriov_device_ip   IP to assign to the SR-IOV direct interface
+    sriov_peer_ip     Peer IP for the SR-IOV ping check
+  Run:
+    avocado run network_virtualization.py:NetworkVirtualization.test_sriov_vnic_same_port \
+              -m vnic_sriov_same_port.yaml
+
+test_vnic_6x_single_card                     [NEW — vnic_6x_single_card.yaml]
+  DLPAR-add 6 vNIC interfaces all backed by the same physical SR-IOV
+  card.  Ports are distributed round-robin (0,1,0,1,0,1 for dual-port).
+  All 6 interfaces are verified simultaneously with ping, then removed.
+  Requires exactly 6 entries in slot_num; all sriov_adapters must be
+  the same location code (repeated 6x).
+  Run:
+    avocado run network_virtualization.py:NetworkVirtualization.test_vnic_6x_single_card \
+              -m vnic_6x_single_card.yaml
+
+test_vnic_6x_multi_card                      [NEW — vnic_6x_multi_card.yaml]
+  DLPAR-add 6 vNIC interfaces spread across at least 2 distinct SR-IOV
+  cards.  All 6 interfaces are verified simultaneously with ping, then
+  removed.  Requires exactly 6 entries in slot_num and at least 2
+  distinct location codes in sriov_adapters.
+  Run:
+    avocado run network_virtualization.py:NetworkVirtualization.test_vnic_6x_multi_card \
+              -m vnic_6x_multi_card.yaml
+
