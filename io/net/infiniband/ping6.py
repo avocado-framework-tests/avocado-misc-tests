@@ -69,8 +69,10 @@ class Ping6(Test):
         device = self.params.get("interface", default=None)
         if device in interfaces:
             self.iface = device
-        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
-            self.iface = local.get_interface_by_hwaddr(device).name
+        elif local.validate_mac_addr(device):
+            if device in local.get_all_hwaddr():
+                self.iface = local.get_interface_by_hwaddr(
+                    device).name
         else:
             self.iface = None
             self.cancel("%s interface is not available" % device)
@@ -99,7 +101,9 @@ class Ping6(Test):
             except Exception:
                 self.networkinterface.save(self.ipaddr, self.netmask)
         self.networkinterface.bring_up()
-        process.system("ifup %s" % self.iface)
+        if not self.networkinterface.is_link_up():
+            self.fail("failed to bring up the interface after ip address \
+                      is added to the interfaces")
         self.session = Session(self.peer_ip, user=self.peer_user,
                                password=self.peer_password)
         if self.iface not in interfaces:
