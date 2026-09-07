@@ -1,6 +1,7 @@
 htx_disks: ''
-all: True
+all: False
+htx_raid_level: 5
 # time_interval is in minutes
-time_interval: 1440
+time_interval: 60
 mdt_file: 'mdt.hd'
 htx_rpm_link: ''
