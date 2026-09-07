@@ -58,17 +58,34 @@ class NetworkTest(Test):
         interfaces = os.listdir('/sys/class/net')
         local = LocalHost()
         device = self.params.get("interface")
+        self.hbond = self.params.get("hbond", default=False)
         if device in interfaces:
+            # interface name given directly (bond name or regular interface)
             self.interface = device
-        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
-            self.interface = local.get_interface_by_hwaddr(device).name
+        elif (local.validate_mac_addr(device) and
+              device in local.get_all_hwaddr()):
+            if self.hbond:
+                # is_bond() tells if MAC hit the bond master directly.
+                iface = local.get_interface_by_hwaddr(device)
+                if iface.is_bond():
+                    self.interface = iface.name
+                else:
+                    # got the slave; resolve its bond master
+                    bond_master = iface.get_bond_master()
+                    if not bond_master:
+                        self.cancel(
+                            "Could not resolve bond master for slave %s"
+                            % iface.name)
+                    self.interface = bond_master
+            else:
+                # regular interface identified by MAC address
+                self.interface = local.get_interface_by_hwaddr(device).name
         else:
             self.interface = None
             self.cancel("Please check the network device")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
         self.ip_config = self.params.get("ip_config", default=True)
-        self.hbond = self.params.get("hbond", default=False)
         if self.hbond:
             self.networkinterface = NetworkInterface(
                 self.interface, local, if_type='Bond')
@@ -103,10 +120,11 @@ class NetworkTest(Test):
             self.peer).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
                                                       self.remotehost)
-        self.remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
+        self.remotehost_public = RemoteHost(self.peer_public_ip,
+                                            self.peer_user,
                                             password=self.peer_password)
-        self.peer_public_networkinterface = NetworkInterface(self.peer_interface,
-                                                             self.remotehost_public)
+        self.peer_public_networkinterface = NetworkInterface(
+            self.peer_interface, self.remotehost_public)
         self.mtu = self.params.get("mtu", default=1500)
         self.count = self.params.get("ping_count", default=500000)
         self.mtu_set()
@@ -207,7 +225,8 @@ class NetworkTest(Test):
         except Exception:
             self.cancel(
                 "Test failing while getting IPV6 address for peer interface")
-        if self.networkinterface.ping_check(peer_ipv6[0], count=10) is not None:
+        if self.networkinterface.ping_check(peer_ipv6[0],
+                                            count=10) is not None:
             self.fail("IPV6 ping test failed")
 
     def test_ssh(self):
@@ -244,9 +263,9 @@ class NetworkTest(Test):
         '''
         Test jumbo frames
         '''
-        if self.networkinterface.ping_check(self.peer, count=30,
-                                            options='-i 0.1 -s %d'
-                                            % (int(self.mtu) - 28)) is not None:
+        if self.networkinterface.ping_check(
+                self.peer, count=30,
+                options='-i 0.1 -s %d' % (int(self.mtu) - 28)) is not None:
             self.fail("jumbo frame test failed")
 
     def test_statistics(self):

@@ -43,10 +43,28 @@ class TcpdumpTest(Test):
         self.networkinterface = None
         interfaces = os.listdir('/sys/class/net')
         device = self.params.get("interface", default=None)
+        self.hbond = self.params.get("hbond", default=False)
         if device in interfaces:
+            # interface name given directly (bond name or regular interface)
             self.iface = device
-        elif localhost.validate_mac_addr(device) and device in localhost.get_all_hwaddr():
-            self.iface = localhost.get_interface_by_hwaddr(device).name
+        elif (localhost.validate_mac_addr(device) and
+              device in localhost.get_all_hwaddr()):
+            if self.hbond:
+                # is_bond() tells if MAC hit the bond master directly.
+                iface = localhost.get_interface_by_hwaddr(device)
+                if iface.is_bond():
+                    self.iface = iface.name
+                else:
+                    # got the slave; resolve its bond master
+                    bond_master = iface.get_bond_master()
+                    if not bond_master:
+                        self.cancel(
+                            "Could not resolve bond master for slave %s"
+                            % iface.name)
+                    self.iface = bond_master
+            else:
+                # regular interface identified by MAC address
+                self.iface = localhost.get_interface_by_hwaddr(device).name
         else:
             self.cancel("%s interface is not available" % device)
         self.count = self.params.get("count", default=500)
@@ -55,7 +73,6 @@ class TcpdumpTest(Test):
         self.drop = self.params.get("drop_accepted", default=10)
         self.host_ip = self.params.get("host_ip", default="")
         self.option = self.params.get("option", default='')
-        self.hbond = self.params.get("hbond", default=False)
         # Check if interface exists in the system
         if not self.peer_ip:
             self.cancel("peer ip should specify in input")
@@ -87,13 +104,16 @@ class TcpdumpTest(Test):
             self.peer_ip).name
         self.peer_networkinterface = NetworkInterface(self.peer_interface,
                                                       self.remotehost)
-        self.remotehost_public = RemoteHost(self.peer_public_ip, self.peer_user,
+        self.remotehost_public = RemoteHost(self.peer_public_ip,
+                                            self.peer_user,
                                             password=self.peer_password)
-        self.peer_public_networkinterface = NetworkInterface(self.peer_interface,
-                                                             self.remotehost_public)
-        if self.peer_networkinterface.set_mtu(self.mtu, timeout=self.mtu_timeout) is not None:
+        self.peer_public_networkinterface = NetworkInterface(
+            self.peer_interface, self.remotehost_public)
+        if self.peer_networkinterface.set_mtu(
+                self.mtu, timeout=self.mtu_timeout) is not None:
             self.cancel("Failed to set mtu in peer")
-        if self.networkinterface.set_mtu(self.mtu, timeout=self.mtu_timeout) is not None:
+        if self.networkinterface.set_mtu(
+                self.mtu, timeout=self.mtu_timeout) is not None:
             self.cancel("Failed to set mtu in host")
 
         # Install needed packages
@@ -108,13 +128,13 @@ class TcpdumpTest(Test):
         if detected_distro.name == "SuSE":
             self.nmap = os.path.join(self.teststmpdir, 'nmap')
             if detected_distro.version == 16:
-                nmap_download = self.params.get("nmap_download", default="https:"
-                                                "//nmap.org/dist/"
-                                                "nmap-7.95.tar.bz2")
+                nmap_download = self.params.get(
+                    "nmap_download",
+                    default="https://nmap.org/dist/nmap-7.95.tar.bz2")
             else:
-                nmap_download = self.params.get("nmap_download", default="https:"
-                                                "//nmap.org/dist/"
-                                                "nmap-7.80.tar.bz2")
+                nmap_download = self.params.get(
+                    "nmap_download",
+                    default="https://nmap.org/dist/nmap-7.80.tar.bz2")
             tarball = self.fetch_asset(nmap_download)
             self.version = os.path.basename(tarball.split('.tar')[0])
             self.n_map = os.path.join(self.nmap, self.version)
@@ -176,7 +196,8 @@ class TcpdumpTest(Test):
         unset ip for host interface
         '''
         if self.networkinterface:
-            if self.networkinterface.set_mtu('1500', timeout=self.mtu_timeout) is not None:
+            if self.networkinterface.set_mtu(
+                    '1500', timeout=self.mtu_timeout) is not None:
                 self.cancel("Failed to set mtu in host")
             try:
                 self.peer_networkinterface.set_mtu(

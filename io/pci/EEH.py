@@ -21,6 +21,7 @@ This scripts basic EEH tests on all PCI device
 
 import time
 import psutil
+import os
 from avocado import Test
 from avocado.utils import process, wait
 from avocado.utils import pci
@@ -91,14 +92,31 @@ class EEH(Test):
             self.interface = pci.get_nics_in_pci_address(self.pci_device)[0]
             self.localhost = LocalHost()
             device = self.interface
-            # Check if device is a MAC address or interface name
-            if self.localhost.validate_mac_addr(device):
-                if device in self.localhost.get_all_hwaddr():
-                    self.interface = self.localhost.get_interface_by_hwaddr(
-                        device).name
+            self.hbond = self.params.get("hbond", default=False)
+            interfaces = os.listdir('/sys/class/net')
+            if device in interfaces:
+                # interface name given directly (bond name or regular interface)
+                self.interface = device
+            elif (self.localhost.validate_mac_addr(device) and
+                  device in self.localhost.get_all_hwaddr()):
+                if self.hbond:
+                    # is_bond() tells if MAC hit the bond master directly.
+                    iface = self.localhost.get_interface_by_hwaddr(device)
+                    if iface.is_bond():
+                        self.interface = iface.name
+                    else:
+                        # got the slave; resolve its bond master
+                        bond_master = iface.get_bond_master()
+                        if not bond_master:
+                            self.cancel(
+                                "Could not resolve bond master for slave %s"
+                                % iface.name)
+                        self.interface = bond_master
                 else:
-                    self.cancel("Please check the network device")
-            # If it's already an interface name, use it directly
+                    # regular interface identified by MAC address
+                    self.interface = self.localhost.get_interface_by_hwaddr(device).name
+            else:
+                self.cancel("Please check the network device")
             self.networkinterface = NetworkInterface(self.interface,
                                                      self.localhost)
             if not self.networkinterface.validate_ipv4_format(self.ipaddr):
