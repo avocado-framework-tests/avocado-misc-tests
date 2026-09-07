@@ -1,0 +1,136 @@
+tcp_mss_gso_test.py
+===================
+
+Description
+-----------
+Validates TCP MSS (Maximum Segment Size) handling and the kernel GSO
+(Generic Segmentation Offload) disable behaviour for ibmveth
+
+The test is designed to verify that the kernel patch which prevents
+adapter freezes on small-MSS connections works correctly:
+
+  * For MSS values **below** the GSO threshold (default 224 bytes), the
+    kernel must emit a "MSS too small" warning and disable GSO.
+  * For MSS values **at or above** the threshold the warning must NOT
+    appear and GSO must remain active.
+
+Test flow (per MSS value)
+--------------------------
+1. Deploy a bidirectional TCP echo listener on the remote (peer) host.
+2. Add an iptables TCPMSS clamp rule on the SUT to force the desired MSS
+   on outgoing SYN segments.
+3. Run N socket-level large-send / echo iterations (default 64 KB payload).
+4. Concurrently run:
+     - HTTP background load (curl + wget against the peer web server)
+     - iperf3 TCP stream (same MSS, via -M flag)
+5. Check dmesg for the GSO-disable kernel warning.
+6. Remove the iptables rule and repeat for the next MSS value.
+7. After all MSS values: assert zero socket failures and correct
+   GSO warning presence/absence.
+8. Check "errpt software" errors on Remote VIOS (for reverse TX paths) and
+   warn about failure if observed.  
+
+Prerequisites
+-------------
+SUT (System Under Test)
+  - Root / sudo access (required for iptables)
+  - iptables, iperf3, curl, wget installed (test installs them if missing)
+  - Python 3.6+
+
+Remote (peer) host
+  - SSH access with the credentials specified in the YAML
+  - python3, iperf3 installed (test installs them if missing via SSH)
+  - Optional: a web server (nginx/httpd) on port 80 for HTTP load
+    (if enable_http_load is True)
+
+Parameters
+----------
+See tcp_mss_gso_test.yaml for the configuration template.
+
+Parameter         Description                                    Notes
+---------         -------------------------------------------    ------------------
+peer_ip           Remote host IP address                         REQUIRED
+                    e.g.  xx.xx.xx.xx
+
+host_interface    Local interface to configure before the test   optional
+                    e.g.  eth0  (leave "" to skip IP assignment)
+
+host_ip           IP address to assign to host_interface         required if
+                    e.g.  xx.xx.xx.xx                           host_interface set
+
+host_netmask      Netmask for host_ip                            required if
+                    e.g.  xx.xx.xx.xx                         host_interface set
+
+peer_user         SSH username on the peer                       default: root
+                    e.g.  root
+
+peer_password     SSH password on the peer                       REQUIRED
+                    e.g.  mysecretpassword
+
+tcp_port          Port for the socket echo test                  default: 9999
+                    e.g.  9999
+
+mss               MSS value for this run (set by !mux variant)  set in YAML mss_sweep
+                    e.g.  224
+
+iterations        Socket-echo iterations per MSS value           default: 5
+                    e.g.  5
+
+enable_http_load  Enable curl/wget background HTTP load          default: True
+                    e.g.  True or False
+
+enable_iperf      Enable iperf3 background traffic               default: True
+                    e.g.  True or False
+
+iperf_duration    iperf3 test duration in seconds                default: 30
+                    e.g.  30
+
+gso_threshold     MSS boundary — below this GSO must be off      default: 224
+                    e.g.  224
+
+data_size         Payload bytes per socket-echo iteration        default: 65536
+                    e.g.  65536
+
+socket_timeout    Per-connection socket timeout in seconds       default: 30
+                    e.g.  30
+
+vios_ip           IP of the Remote/Peer VIOS to monitor for errpt errors     optional, default: ""
+                    e.g.  10.0.0.5  (leave "" to disable)
+
+vios_user         SSH username on the Remote/Peer VIOS                       default: xxx
+                    e.g.  xxxx
+
+vios_password     SSH password for the Remote/Peer VIOS                      REQUIRED if vios_ip set
+                    e.g.  mysecretviospassword
+
+
+How to find parameter values
+-----------------------------
+peer_ip:
+  The IP address of the remote peer machine. Ensure SSH and iperf3
+  access is available from the SUT to this address.
+
+gso_threshold:
+  The kernel default is 224. Only change this if testing a custom
+  kernel patch with a different threshold value.
+
+vios_ip:
+  Required only on PowerVM LPARs where VIOS errpt monitoring is
+  desired. Leave empty ("") to disable VIOS monitoring entirely.
+
+Output
+------
+The tearDown phase prints a summary table such as:
+
+  MSS     GSO       Sock OK   Sock Fail   iperf Mbps  HTTP reqs  Avg KB/s
+  ------------------------------------------------------------------------
+  1460    ON        5         0           9423.10     312        98432.0
+   536    ON        5         0           9118.44     298        94120.3
+   224    ON        5         0           4201.20     255        41280.1
+   223    OFF       5         0           N/A         248        38910.6
+   128    OFF       5         0           N/A         241        22440.2
+    64    OFF       5         0           N/A         230        11200.5
+    36    OFF       5         0           N/A         218         6300.1
+     1    OFF       5         0           N/A         201          196.3
+
+
