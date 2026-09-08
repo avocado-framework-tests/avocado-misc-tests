@@ -1,0 +1,24 @@
+# HTX vPMEM (Virtual Persistent Memory) stress test
+#
+# Validates IBM Power vPMEM devices (exposed via papr_scm / libnvdimm) under
+# HTX workload using the mem_all MDT.
+#
+# Parameters
+# ----------
+# vpmem         Enable vPMEM-specific validation and ndctl dependency install.
+#               Default: True
+#
+# mdt_file      HTX MDT that covers all memory including vPMEM regions.
+#               Default: mdt.mem_all
+#
+# time_interval Duration of the test_check polling loop, in minutes.
+#               Default: 30
+#
+# htx_rpm_link  URL to the HTX RPM directory or a direct .rpm URL.
+#               Leave empty if HTX is already installed on the system.
+
+vpmem: True
+# time_interval is in minutes
+time_interval: 30
+mdt_file: 'mdt.mem_all'
+htx_rpm_link: 'https://rchgsa.ibm.com/gsa/rchgsa/projects/h/htx/public_html/htxonly/'
