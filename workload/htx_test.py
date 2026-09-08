@@ -342,10 +342,15 @@ class HtxTest(Test):
             process.system(f'htxcmdline -activate -mdt {self.mdt_file}',
                            ignore_status=True)
 
-        self.log.info("Configuring HTX_DR_TEST environment variable")
-        process.system('hcl -get_htx_env HTX_DR_TEST', ignore_status=True)
-        process.system('hcl -set_htx_env HTX_DR_TEST 1', ignore_status=True)
-        process.system('hcl -get_htx_env HTX_DR_TEST', ignore_status=True)
+        if 'dlpar' in self.mdt_file.lower():
+            self.log.info("DLPAR MDT detected: setting HTX_DR_TEST=1")
+            process.system('hcl -set_htx_env HTX_DR_TEST 1', ignore_status=True)
+            after = process.system_output(
+                'hcl -get_htx_env HTX_DR_TEST',
+                ignore_status=True).decode('utf-8').strip()
+            if '1' not in after:
+                self.fail(
+                    f"HTX_DR_TEST was not set to 1; got: {after!r}")
 
         self.log.info("Starting HTX run on MDT: %s", self.mdt_file)
         process.system(f'htxcmdline -run -mdt {self.mdt_file}',
