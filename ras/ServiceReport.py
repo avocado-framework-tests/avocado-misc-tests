@@ -45,7 +45,7 @@ class ServiceReport(Test):
                     self.cancel(
                         "HTX RPM is not installed, cancelling HTX plugin test")
 
-        for package in ['make', 'gcc', 'python3-pyudev']:
+        for package in ['make', 'gcc', 'python3-pyudev', 'pciutils']:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel("Fail to install %s required for this"
                             " test." % package)
@@ -58,12 +58,15 @@ class ServiceReport(Test):
             rpm_path = os.path.join(self.workdir, rpm_name)
             self.log.info("Downloading ServiceReport RPM from %s", sr_url)
             if process.system(
-                    "wget --no-check-certificate -O %s %s" % (rpm_path, sr_url),
+                    "wget --no-check-certificate -O %s %s" % (
+                        rpm_path, sr_url),
                     shell=True, ignore_status=True):
-                self.cancel("Failed to download ServiceReport RPM from %s" % sr_url)
+                self.cancel(
+                    "Failed to download ServiceReport RPM from %s" % sr_url)
             if process.system("rpm -ivh --force %s" % rpm_path,
                               shell=True, sudo=True, ignore_status=True):
-                self.cancel("Failed to install ServiceReport RPM: %s" % rpm_path)
+                self.cancel(
+                    "Failed to install ServiceReport RPM: %s" % rpm_path)
             if not process.system_output(
                     'rpm -qa | grep -i ServiceReport', shell=True,
                     ignore_status=True).decode().strip():
@@ -73,18 +76,22 @@ class ServiceReport(Test):
             if not smm.install('ServiceReport') or not process.system_output(
                     'rpm -qa | grep -i ServiceReport', shell=True,
                     ignore_status=True).decode().strip():
-                self.log.info("Installing ServiceReport from upstream source tarball")
+                self.log.info(
+                    "Installing ServiceReport from upstream source tarball")
                 tarball = self.fetch_asset('ServiceReport.zip', locations=[
                     'https://github.com/linux-ras/ServiceReport'
                     '/archive/master.zip'], expire='7d')
                 archive.extract(tarball, self.workdir)
-                self.sourcedir = os.path.join(self.workdir, 'ServiceReport-master')
+                self.sourcedir = os.path.join(
+                    self.workdir, 'ServiceReport-master')
                 build.make(self.sourcedir)
                 if process.system("make -C %s install" % self.sourcedir,
                                   shell=True, sudo=True, ignore_status=True):
-                    self.log.warning("'make install' failed; will run from source dir")
+                    self.log.warning(
+                        "'make install' failed; will run from source dir")
             else:
-                self.log.info("ServiceReport installed via distro package manager")
+                self.log.info(
+                    "ServiceReport installed via distro package manager")
 
     def isAccelerator(self):
         for dev in os.listdir('/sys/bus/pci/devices'):
@@ -98,7 +105,20 @@ class ServiceReport(Test):
     def test(self):
         cmd = "servicereport %s" % self.options
         if process.system(cmd, ignore_status=True, sudo=True, shell=True):
-            self.fail("ServiceReport: Failed command is: %s" % cmd)
+            if hasattr(self, 'isAccelerator') and self.isAccelerator():
+                self.log.info(
+                    "servicereport failed on accelerator system, attempting repair with 'servicereport -r -p spyre'")
+                repair_cmd = "servicereport -r -p spyre"
+                if process.system(repair_cmd, ignore_status=True, sudo=True, shell=True):
+                    self.fail(
+                        "ServiceReport: Repair command failed: %s" % repair_cmd)
+                self.log.info(
+                    "Re-running servicereport command after repair: %s" % cmd)
+                if process.system(cmd, ignore_status=True, sudo=True, shell=True):
+                    self.fail(
+                        "ServiceReport: Failed command after repair: %s" % cmd)
+            else:
+                self.fail("ServiceReport: Failed command is: %s" % cmd)
 
     @skipIf("ppc" not in os.uname()[4], "Skip, Powerpc specific tests")
     @skipIf(lambda self: not self.isAccelerator(), "Unsupported: PCI adapter is not an accelarator")
