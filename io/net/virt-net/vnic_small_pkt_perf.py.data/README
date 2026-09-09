@@ -1,0 +1,43 @@
+Description:
+This test validates the ibmvnic small-packet performance improvements
+introduced by the patch series (Nick Child, Aug 2024).
+It uses iperf3 as the traffic tool and covers all 7 patches:
+
+  P1  ibmvnic: Only replenish rx pool when resources are getting low
+  P2  ibmvnic: Use header len helper functions on tx
+  P3  ibmvnic: Reduce memcpys in tx descriptor generation
+  P4  ibmvnic: Remove duplicate memory barriers in tx
+  P5  ibmvnic: Introduce send sub-crq direct (H_SEND_SUB_CRQ)
+  P6  ibmvnic: Only record tx completed bytes once per handler (BQL fix)
+  P7  ibmvnic: Perform tx CSO during send scrq direct
+
+Test cases:
+test_udp_stream_throughput - UDP stream, 65507-byte datagrams, three runs (6s/60s/6s).
+                             Validates throughput and zero dmesg errors. Covers P1, P2, P3.
+test_udp_rr                - Bidirectional UDP, 20971-byte payload, 3 x 10s.
+                             Covers P2, P3, P5, P6, P7.
+test_tcp_rr                - Bidirectional TCP, 20971-byte block, 3 x 10s.
+                             Primary target workload of the patch series. Covers P1, P2, P5, P6, P7.
+test_scale_150_sessions    - 150 parallel TCP streams for 10s. Covers P1, P5, P6, P7.
+test_packet_integrity_dma_barrier - End-to-end sha256 payload verification and zero
+                             ethtool error-counter increase after dma_wmb() removal.
+                             Covers P4.
+test_bql_limit_monitoring  - 150-stream TCP load; polls sysfs BQL limit values and
+                             verifies at least one TX queue limit rises above its initial
+                             value. Covers P6.
+test_rx_pool_burst_no_drops - High-pps UDP burst (8 parallel streams x 30s); checks
+                             ethtool RX drop/error counters do not increase. Covers P1.
+
+Inputs Needed To Run Tests:
+interface     - ibmvnic interface name or MAC address
+host_ip       - IP address to assign to the interface
+netmask       - Netmask for host_ip
+peer_ip       - Peer LPAR IP address where iperf3 server will run
+peer_user     - SSH username on the peer (default: root)
+peer_password - SSH password on the peer
+
+Requirements:
+1. iperf3 must be available on both local and peer LPAR.
+2. ethtool must be installed on the local LPAR.
+3. SSH password or key-based access from local to peer LPAR must be configured.
+4. TCP/UDP port 5201 (or the configured iperf3_port) must be open on the peer.
