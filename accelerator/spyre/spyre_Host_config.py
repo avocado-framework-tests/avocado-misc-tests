@@ -117,22 +117,28 @@ class SpyreHostConfig(Test):
         return netrc_path, entry
 
     def run_cmd(self, cmd, user=None):
-        """Execute a command and track failures."""
+        """Execute a command and return True on success, False on failure."""
         if user and user != "root":
             escaped_cmd = cmd.replace("'", "'\"'\"'")
             cmd = f"su - {user} -c '{escaped_cmd}'"
-        if process.system(cmd, sudo=True, shell=True):
+        result = process.run(cmd, sudo=True, shell=True, ignore_status=True)
+        if result.exit_status != 0:
+            self.log.warning(
+                "Command failed (exit %d): %s\nstdout: %s\nstderr: %s",
+                result.exit_status, cmd,
+                result.stdout_text.strip(), result.stderr_text.strip(),
+            )
             return False
         return True
 
     @staticmethod
     def run_cmd_out(cmd, user=None):
-        """Execute a command and return output."""
+        """Execute a command and return its stdout (empty string on failure)."""
         if user and user != "root":
             escaped_cmd = cmd.replace("'", "'\"'\"'")
             cmd = f"su - {user} -c '{escaped_cmd}'"
-        return process.system_output(
-            cmd, shell=True, sudo=True).decode("utf-8").strip()
+        result = process.run(cmd, shell=True, sudo=True, ignore_status=True)
+        return result.stdout_text.strip()
 
     def setUp(self):
         """Setup test parameters from YAML and install base packages."""
@@ -476,11 +482,11 @@ class SpyreHostConfig(Test):
         self.log.info("Adding user '%s' to group: %s",
                       self.username, self.spyre_group)
         # ── 1. Ensure the group exists ──────────────────────────────────────────
-        if 'sentient' not in self.run_cmd_out(f"getent group {self.spyre_group}"):
+        if self.spyre_group not in self.run_cmd_out(f"getent group {self.spyre_group}"):
             self.log.info("Group '%s' not found — creating it",
                           self.spyre_group)
 
-            if self.run_cmd(f"groupadd -f {self.spyre_group}"):
+            if not self.run_cmd(f"groupadd -f {self.spyre_group}"):
                 self.fail(
                     f"{MUST_FIX} Failed to create group '{self.spyre_group}'. "
                     "This group is required for Spyre device access. "
@@ -496,32 +502,33 @@ class SpyreHostConfig(Test):
         self.log.info("Running: usermod -aG %s root", self.spyre_group)
         self.run_cmd(f"usermod -aG {self.spyre_group} root")
 
-        # ── 3. Verify membership via a new login session ────────────────────────
+        # ── 3. Verify membership by simulating a full re-login ──────────────────
+        # `groups` reads cached kernel credentials set at login time — usermod
+        # updates /etc/group on disk but the running session never picks it up.
+        # `su -l <user>` simulates a full login (clears env, sources /etc/profile,
+        # re-reads /etc/group), and `id -Gn` does a live lookup from the group
+        # database rather than from the cached session token — so the newly added
+        # membership is visible without a physical logout/login cycle.
         self.log.info(
-            "Verifying group membership with a fresh login session for '%s'",
-            self.username,
+            "Verifying group membership via full re-login simulation ('su -l') "
+            "for each user"
         )
-        output = self.run_cmd_out(f"su -l root -c 'groups'")
-        self.log.info("groups output for 'root': %s", output)
-        if self.spyre_group not in output.split():
-            self.fail("{MUST_FIX} User 'root' is NOT a member of group ")
-
-        output = self.run_cmd_out(f"su -l {self.username} -c 'groups'")
-        self.log.info("groups output for '%s': %s", self.username, output)
-
-        if self.spyre_group not in output.split():
-            self.fail(
-                f"{MUST_FIX} User '{self.username}' is NOT a member of group "
-                f"'{self.spyre_group}' after a fresh login session. "
-                f"'groups' reported: {output!r}. "
-                "Confirm usermod executed without error and that the user's "
-                "passwd/shadow entry is correct."
+        for user in ("root", self.username):
+            output = self.run_cmd_out(f"su -l {user} -c 'id -Gn'")
+            self.log.info(
+                "id -Gn output for '%s' (via su -l re-login): %s", user, output
             )
-
-        self.log.info(
-            "Confirmed: user '%s' is a member of group '%s'",
-            self.username, self.spyre_group,
-        )
+            if self.spyre_group not in output.split():
+                self.fail(
+                    f"{MUST_FIX} User '{user}' is NOT a member of group "
+                    f"'{self.spyre_group}' after full re-login simulation. "
+                    f"'id -Gn' reported: {output!r}. "
+                    "Confirm usermod executed without error and retry."
+                )
+            self.log.info(
+                "Confirmed: user '%s' is a member of group '%s'",
+                user, self.spyre_group,
+            )
 
     def test_create_model_directories(self):
         """Create model directories (runs as root)."""
