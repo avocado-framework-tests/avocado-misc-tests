@@ -74,7 +74,7 @@ class RASToolsPpcutils(Test):
             r'\b(sd[a-z]\d+|vd[a-z]\d+|nvme\d+n\d+p\d+)\b', line)]
         if filtered_lines:
             disk_entry = filtered_lines[-1].split()[0]
-            # Strip partition number: for sdX or vdX it’s trailing digits, for nvme it’s after 'p'
+            # Strip partition number: for sdX or vdX it's trailing digits, for nvme it's after 'p'
             self.disk_name = re.sub(r'(\d+$|p\d+$)', '', disk_entry)
         if not self.disk_name:
             self.cancel("Couldn't get Disk name.")
@@ -475,7 +475,8 @@ class RASToolsPpcutils(Test):
             self.run_cmd(cmd)
         output = self.run_cmd_out("lsvio -e").strip()
         if not output:
-            self.cancel("No virtual I/O devices found (lsvio -e returned no output)")
+            self.cancel(
+                "No virtual I/O devices found (lsvio -e returned no output)")
         interface = None
         for line in output.splitlines():
             fields = line.split()
@@ -554,50 +555,83 @@ class RASToolsPpcutils(Test):
         parsed = False
         for line in output.splitlines():
             line = line.strip()
+            # Skip empty lines
+            if not line:
+                continue
+            # Only parse the statistics line which starts with a number
+            if not re.match(r'^\d+\.\d+', line):
+                self.log.debug("Skipping non-data line: %s", line)
+                continue
             try:
                 parts = line.split()
+
                 if len(parts) < 5:
-                    self.log.warning(f"skipping malformed line: {line}")
+                    self.log.warning("Skipping malformed data line: %s", line)
                     continue
+                # Actual busy/idle
                 actual_busy = float(parts[0])
                 actual_idle = float(parts[1])
-                freq_field = [p for p in parts if "GHz" in p]
-                if not freq_field:
-                    self.log.warning(f"no frequency filed found: {line}")
+                # Extract frequency percentage from the entire line
+                # Matches:
+                #   3.24GHz[89%]
+                #   3.24GHz[ 89%]
+                match = re.search(r'\[\s*(\d+)%\]', line)
+                if not match:
+                    self.log.warning(
+                        "Failed to parse frequency percentage: %s", line)
                     continue
-                freq_percentile = float(
-                    freq_field[0].split('[')[1].strip(']%'))
+                freq_percentile = float(match.group(1))
+                # Extract all numeric values except the GHz field
                 float_vals = []
-                for p in parts:
+                for token in parts:
                     try:
-                        float_vals.append(float(p))
+                        float_vals.append(float(token))
                     except ValueError:
                         continue
+                # Expected floats:
+                # actual_busy actual_idle normalized_busy normalized_idle
                 if len(float_vals) < 4:
-                    self.log.warning(f"not enough numeric values: {line}")
+                    self.log.warning(
+                        "Not enough numeric values found: %s", line)
                     continue
                 normal_busy = float_vals[-2]
                 normal_idle = float_vals[-1]
-                normal = normal_busy + normal_idle
                 actual_sum = actual_busy + actual_idle
+                normal_sum = normal_busy + normal_idle
                 parsed = True
                 self.log.info(
-                    f"Parsed → actual: {actual_busy} + {actual_idle} = {actual_sum}, "
-                    f"normalized: {normal_busy} + {normal_idle} = {normal}, "
-                    f"freq={freq_percentile}")
+                    "Parsed -> actual: %.2f + %.2f = %.2f, "
+                    "normalized: %.2f + %.2f = %.2f, "
+                    "freq=%.2f%%",
+                    actual_busy,
+                    actual_idle,
+                    actual_sum,
+                    normal_busy,
+                    normal_idle,
+                    normal_sum,
+                    freq_percentile,
+                )
+
+                # Actual busy + idle should be ~100%
                 if abs(actual_sum - 100.0) <= 1.0:
-                    self.log.info("Actual busy + idle ≈ 100% ✔")
+                    self.log.info("Actual busy + idle ≈ 100%% ✔")
                 else:
                     error_messages.append(
-                        f"Actual values invalid: sum={actual_sum}")
-                if abs(normal - freq_percentile) <= 2.0:
-                    self.log.info("Normalized values match frequency")
+                        "Actual values invalid: sum=%.2f" % actual_sum)
+                # Normalized values should approximately equal frequency %
+                if abs(normal_sum - freq_percentile) <= 2.0:
+                    self.log.info(
+                        "Normalized values match frequency percentage ✔")
                 else:
                     error_messages.append(
-                        f"Mismatch: normalized={normal}, freq={freq_percentile}")
+                        "Mismatch: normalized=%.2f, freq=%.2f"
+                        % (normal_sum, freq_percentile))
+
             except Exception as e:
-                self.log.warning(f"Parsing error in line: {line} → {str(e)}")
+                self.log.warning(
+                    "Parsing error in line: %s -> %s", line, str(e))
                 continue
+
         if not parsed:
             error_messages.append("Failed to parse valid lparstat -E output")
 
