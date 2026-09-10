@@ -1,0 +1,24 @@
+# ---------------------------------------------------------------------------
+# Install URL
+# -- SLES --
+# -- RHEL --
+# Ex:
+# SLESxy kit:  DayTrader7_SLESxy.tar.gz  INSTALL_SuSExy.sh  dt7_uninstall.sh  README4
+# RHEL9ab  kit:  DayTrader7_RHELab.tar.gz   INSTALL_RHELab.sh   dt7_uninstall.sh
+# ---------------------------------------------------------------------------
+# install_url: Must provide the qulified URL to DayTrader setup.
+install_url:
+
+# ---------------------------------------------------------------------------
+# DayTrader7_Run.sh workload parameters
+#   ./DayTrader7_Run.sh -u <users> -l <duration> -i <instances>
+# ---------------------------------------------------------------------------
+# Number of concurrent users per Liberty server instance
+users: 40
+
+# Workload run duration in seconds (1800 = 30 minutes)
+duration: 1800
+
+# Number of Liberty server instances to drive simultaneously
+instances: 2 
+
