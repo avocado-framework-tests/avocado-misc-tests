@@ -278,7 +278,7 @@ class SpyreHostConfig(Test):
     def test_install_huggingface_hub(self):
         """Install huggingface_hub (runs as root)."""
         self.log.info("Installing huggingface_hub[cli]")
-        if not self.run_cmd("pip3 install huggingface_hub[cli]"):
+        if not self.run_cmd("pip3 install huggingface_hub[cli] hf_xet"):
             self.fail(
                 f"{MUST_FIX} Failed to install huggingface_hub[cli]. "
                 "Ensure pip3 is working and the system has internet access, then retry."
