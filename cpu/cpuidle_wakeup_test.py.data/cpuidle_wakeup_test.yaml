@@ -1,0 +1,17 @@
+# YAML configuration for cpuidle_wakeup_test.py
+#
+# wakee_cpu        - CPU that goes idle and gets woken up
+# waker_cpu        - CPU that drives the wakeup signal via pipe
+# test_duration_sec- How long each individual run lasts (seconds)
+# sleep_intervals_us - Comma-separated list of sleep interval values (µs)
+#                      Each value produces one binary invocation:
+#                        ./cpuidle-state-test -w <wakee> -e <waker> \
+#                          -d <duration> -s <interval> -p
+#
+# Defaults match the originally requested command sweep:
+#   -s 3 5 10 20 30 40 50 60 70 80 90  (all pipe-mode, -d 10)
+
+wakee_cpu: 10
+waker_cpu: 40
+test_duration_sec: 10
+sleep_intervals_us: "3,5,10,20,30,40,50,60,70,80,90"
