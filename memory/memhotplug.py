@@ -36,6 +36,10 @@ ERRORLOG = ['WARNING: CPU:', 'Oops',
 
 
 def online(block):
+    '''
+    Bring a memory block online via hotplug.
+    Returns empty string on success or error message if the block is busy.
+    '''
     try:
         memory.hotplug(block)
         return ""
@@ -44,14 +48,31 @@ def online(block):
 
 
 def offline(block):
+    '''
+    Take a memory block offline with a 5-minute timeout.
+    Writes 'offline' to the sysfs state file using timeout(1) to avoid
+    blocking indefinitely.
+    '''
+    state_path = '%s/memory%s/state' % (MEM_PATH, block)
     try:
-        memory.hotunplug(block)
+        result = process.run(
+            "timeout 5m sh -c 'echo offline > %s'" % state_path,
+            shell=True, ignore_status=True, sudo=True)
+        if result.exit_status == 124:
+            return "memory%s : offline timed out after 5 minutes" % block
+        if result.exit_status != 0:
+            return "memory%s : Resource is busy" % block
         return ""
     except IOError:
         return "memory%s : Resource is busy" % block
 
 
 def get_hotpluggable_blocks(path, ratio):
+    '''
+    Return a ratio-limited list of hot-pluggable memory block numbers.
+    Globs path, filters to hotpluggable blocks and returns the first
+    (len * ratio // 100) entries.
+    '''
     mem_blocks = []
     for mem_blk in glob.glob(path):
         block = re.findall(r"\d+", os.path.basename(mem_blk))[0]
@@ -71,6 +92,9 @@ def get_hotpluggable_blocks(path, ratio):
 
 
 def collect_dmesg(object):
+    '''
+    Capture full dmesg output into the test whiteboard for diagnostics.
+    '''
     object.whiteboard = process.system_output("dmesg")
 
 
@@ -100,7 +124,8 @@ class MemStress(Test):
         for package in ['automake', 'make', 'autoconf']:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
-        default_url = 'https://github.com/resurrecting-open-source-projects/stress/releases/download/1.0.7/stress-1.0.7.tar.gz'
+        default_url = ('https://github.com/resurrecting-open-source-projects'
+                       '/stress/releases/download/1.0.7/stress-1.0.7.tar.gz')
         stress_tar_url = self.params.get('stress_tar_url', default=default_url)
         if not smm.check_installed('stress') and not smm.install('stress'):
             tarball = self.fetch_asset(stress_tar_url)
@@ -110,7 +135,8 @@ class MemStress(Test):
 
             os.chdir(self.sourcedir)
             for package in ['automake', 'make', 'autoconf']:
-                if not smm.check_installed(package) and not smm.install(package):
+                if not smm.check_installed(package) and \
+                        not smm.install(package):
                     self.cancel(
                         '%s is needed for the test to be run' % package)
             process.run('./autogen.sh', shell=True)
@@ -122,6 +148,12 @@ class MemStress(Test):
         self.vmcount = self.params.get('vmcount', default=4)
         self.iocount = self.params.get('iocount', default=4)
         self.memratio = self.params.get('memratio', default=5)
+        # DLPAR bulk operation parameters
+        self.bulk_dlpar_threshold_gb = self.params.get(
+            'bulk_dlpar_threshold_gb', default=4096)
+        self.initial_lmb_count = self.params.get(
+            'initial_lmb_count', default=50)
+        self.max_lmb_count = self.params.get('max_lmb_count', default=4096)
         self.blocks_hotpluggable = get_hotpluggable_blocks(
             (os.path.join('%s', 'memory*') % MEM_PATH), self.memratio)
         if os.path.exists("%s/auto_online_blocks" % MEM_PATH):
@@ -130,6 +162,10 @@ class MemStress(Test):
         dmesg.clear_dmesg()
 
     def hotunplug_all(self, blocks):
+        '''
+        Take all currently-online blocks in the given list offline.
+        Skips blocks already offline and logs errors without raising.
+        '''
         for block in blocks:
             if memory._check_memory_state(block):
                 err = offline(block)
@@ -137,6 +173,10 @@ class MemStress(Test):
                     self.log.error(err)
 
     def hotplug_all(self, blocks):
+        '''
+        Bring all currently-offline blocks in the given list online.
+        Skips blocks already online and logs errors without raising.
+        '''
         for block in blocks:
             if not memory._check_memory_state(block):
                 err = online(block)
@@ -145,12 +185,19 @@ class MemStress(Test):
 
     @staticmethod
     def __is_auto_online():
+        '''
+        Return True if the kernel auto_online_blocks sysfs entry is 'online'.
+        '''
         with open('%s/auto_online_blocks' % MEM_PATH, 'r') as auto_file:
             if auto_file.read() == 'online\n':
                 return True
             return False
 
     def __error_check(self):
+        '''
+        Scan dmesg levels 1-4 for known kernel error patterns.
+        Saves full dmesg to whiteboard and calls self.fail() on any match.
+        '''
         err_list = []
         logs = process.system_output("dmesg -Txl 1,2,3,4").splitlines()
         for error in ERRORLOG:
@@ -162,14 +209,50 @@ class MemStress(Test):
             self.fail('ERROR: Test failed, please check the dmesg logs')
 
     def run_stress(self):
+        '''
+        Run the stress tool to generate CPU, I/O and memory pressure.
+        '''
         mem_free = memory.meminfo.MemFree.m // 4
         cpu_count = int(multiprocessing.cpu_count()) // 2
-        process.run("stress --cpu %s --io %s --vm %s --vm-bytes %sM --timeout %ss" %
+        process.run("stress --cpu %s --io %s --vm %s "
+                    "--vm-bytes %sM --timeout %ss" %
                     (cpu_count, self.iocount, self.vmcount,
                      mem_free, self.stresstime), ignore_status=True,
                     sudo=True, shell=True)
 
+    def _run_progressive_dlpar(self, blocks_to_process, operation, action):
+        '''
+        Run a DLPAR memory operation in progressively doubling batch sizes.
+        Starts at initial_lmb_count LMBs and doubles each iteration up to
+        max_lmb_count until all blocks_to_process LMBs are handled.
+        '''
+        self.log.info("\nDLPAR progressive bulk %s memory operation\n", action)
+        lmb_count = self.initial_lmb_count
+        blocks_processed = 0
+        iteration = 0
+        while blocks_processed < blocks_to_process:
+            current_bulk = min(lmb_count, self.max_lmb_count,
+                               blocks_to_process - blocks_processed)
+            iteration += 1
+            self.log.info("Iteration %d: %s %d LMBs (total processed: %d/%d)",
+                          iteration, action, current_bulk,
+                          blocks_processed + current_bulk, blocks_to_process)
+            result = process.run(
+                "drmgr -c mem -d 5 -w 30 -q %d %s" % (current_bulk, operation),
+                shell=True, ignore_status=True, sudo=True)
+            if result.exit_status != 0:
+                self.log.warning("drmgr %s failed (exit %d) for %d LMBs: %s",
+                                 action.lower(), result.exit_status,
+                                 current_bulk, result.stderr.strip())
+            blocks_processed += current_bulk
+            lmb_count = min(lmb_count * 2, self.max_lmb_count)
+        self.__error_check()
+
     def test_hotplug_loop(self):
+        '''
+        Test hotunplug and hotplug of all selected memory blocks in a loop.
+        Offlines all blocks, runs stress, then restores them each iteration.
+        '''
         self.log.info("\nTEST: hotunplug and hotplug in a loop\n")
         for _ in range(self.iteration):
             self.log.info("\nhotunplug all memory\n")
@@ -180,6 +263,10 @@ class MemStress(Test):
         self.__error_check()
 
     def test_hotplug_toggle(self):
+        '''
+        Test toggling each memory block offline then online individually.
+        Runs stress between each offline/online pair for self.iteration cycles.
+        '''
         self.log.info("\nTEST: Memory toggle\n")
         for _ in range(self.iteration):
             for block in self.blocks_hotpluggable:
@@ -195,19 +282,59 @@ class MemStress(Test):
         self.__error_check()
 
     def test_dlpar_mem_hotplug(self):
-        if 'power' in cpu.get_arch() and 'PowerNV' not in open('/proc/cpuinfo', 'r').read():
-            if b"mem_dlpar=yes" in process.system_output("drmgr -C",
-                                                         ignore_status=True, shell=True):
-                self.log.info("\nDLPAR remove memory operation\n")
-                for _ in range(len(self.blocks_hotpluggable) // 2):
-                    process.run(
-                        "drmgr -c mem -d 5 -w 30 -r", shell=True,
-                        ignore_status=True, sudo=True)
-                self.run_stress()
-                self.log.info("\nDLPAR add memory operation\n")
-                for _ in range(len(self.blocks_hotpluggable) // 2):
-                    process.run(
-                        "drmgr -c mem -d 5 -w 30 -a", shell=True, ignore_status=True, sudo=True)
+        '''
+        Test DLPAR memory hot-remove and hot-add on LPAR systems.
+        Uses progressive bulk drmgr batches above bulk_dlpar_threshold_gb,
+        else performs individual drmgr operations. Skipped on PowerNV.
+        '''
+        with open('/proc/cpuinfo', 'r') as cpuinfo:
+            is_powernv = 'PowerNV' in cpuinfo.read()
+        if 'power' in cpu.get_arch() and not is_powernv:
+            if b"mem_dlpar=yes" in process.system_output(
+                    "drmgr -C", ignore_status=True, shell=True):
+                total_mem_gb = memory.meminfo.MemTotal.g
+                blocks_to_process = len(self.blocks_hotpluggable) // 2
+                if blocks_to_process < 1:
+                    self.log.info("Insufficient hotpluggable blocks "
+                                  "(%d total, %d to process). "
+                                  "Skipping DLPAR test.",
+                                  len(self.blocks_hotpluggable),
+                                  blocks_to_process)
+                    return
+                if total_mem_gb > self.bulk_dlpar_threshold_gb:
+                    self.log.info("\nSystem memory > %d GB, using "
+                                  "progressive bulk DLPAR operations\n",
+                                  self.bulk_dlpar_threshold_gb)
+                    self._run_progressive_dlpar(
+                        blocks_to_process, '-r', 'Removing')
+                    self.run_stress()
+                    self._run_progressive_dlpar(
+                        blocks_to_process, '-a', 'Adding')
+                else:
+                    self.log.info("\nSystem memory <= %d GB, using "
+                                  "standard DLPAR operations\n",
+                                  self.bulk_dlpar_threshold_gb)
+                    self.log.info("\nDLPAR remove memory operation\n")
+                    for _ in range(blocks_to_process):
+                        result = process.run(
+                            "drmgr -c mem -d 5 -w 30 -r", shell=True,
+                            ignore_status=True, sudo=True)
+                        if result.exit_status != 0:
+                            self.log.warning(
+                                "drmgr remove failed (exit %d): %s",
+                                result.exit_status,
+                                result.stderr.strip())
+                    self.run_stress()
+                    self.log.info("\nDLPAR add memory operation\n")
+                    for _ in range(blocks_to_process):
+                        result = process.run(
+                            "drmgr -c mem -d 5 -w 30 -a",
+                            shell=True, ignore_status=True, sudo=True)
+                        if result.exit_status != 0:
+                            self.log.warning(
+                                "drmgr add failed (exit %d): %s",
+                                result.exit_status,
+                                result.stderr.strip())
                 self.__error_check()
             else:
                 self.log.info('UNSUPPORTED: dlpar not configured..')
@@ -215,14 +342,21 @@ class MemStress(Test):
             self.log.info("UNSUPPORTED: Test not supported on this platform")
 
     def test_hotplug_per_numa_node(self):
+        '''
+        Test offlining hotpluggable memory blocks per NUMA node.
+        Iterates each node, offlines a ratio-limited block subset,
+        runs stress, then checks dmesg for kernel errors.
+        '''
         self.log.info("\nTEST: Numa Node memory off on\n")
-        with open('/sys/devices/system/node/has_normal_memory', 'r') as node_file:
+        with open('/sys/devices/system/node/has_normal_memory',
+                  'r') as node_file:
             nodes = node_file.read()
         for node in re.split("[,-]", nodes):
             node = node.strip('\n')
             self.log.info("Hotplug all memory in Numa Node %s", node)
-            mem_blocks = get_hotpluggable_blocks((
-                '/sys/devices/system/node/node%s/memory[0-9]*' % node), self.memratio)
+            mem_blocks = get_hotpluggable_blocks(
+                '/sys/devices/system/node/node%s/memory[0-9]*' % node,
+                self.memratio)
             for block in mem_blocks:
                 self.log.info(
                     "offline memory%s in numa node%s", block, node)
@@ -233,6 +367,10 @@ class MemStress(Test):
         self.__error_check()
 
     def tearDown(self):
+        '''
+        Restore all hotpluggable memory blocks to online state.
+        Only runs if blocks_hotpluggable was populated in setUp.
+        '''
         # Only attempt to hotplug if blocks were successfully initialized
         if hasattr(self, 'blocks_hotpluggable') and self.blocks_hotpluggable:
             self.hotplug_all(self.blocks_hotpluggable)
