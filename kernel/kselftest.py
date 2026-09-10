@@ -429,7 +429,9 @@ class kselftest(Test):
         self.sourcedir = os.path.join(self.buldir, self.testdir)
         os.chdir(self.sourcedir)
         build.make(self.sourcedir)
-        build.make(self.sourcedir, extra_args='run_tests')
+        self.result = process.run('make run_tests', shell=True,
+                                  ignore_status=True,
+                                  cwd=self.sourcedir)
 
     def cpufreq(self):
         """
