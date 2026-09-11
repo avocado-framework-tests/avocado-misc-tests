@@ -1,0 +1,5 @@
+interface: ""
+device_ip: ""
+netmask: ""
+peer_ip: ""
+num_of_dlpar: 1
