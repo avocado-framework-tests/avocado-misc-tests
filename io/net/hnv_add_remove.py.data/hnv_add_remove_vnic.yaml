@@ -1,0 +1,30 @@
+# HNV DLPAR add/remove using vNIC backup device
+
+hmc_username:
+hmc_pwd:
+manageSystem:
+
+# Space-separated lists (one entry per logical port)
+sriov_adapter:
+sriov_port: ''
+mac_id: 
+ipaddr:
+netmasks:
+peer_ips:
+
+migratable: true
+
+# SR-IOV adapter on the VIOS backing the vNIC
+vnic_sriov_adapter:
+vnic_port_id:
+vios_name:
+failover_priority: '50'
+capacity: '2'
+max_capacity: '10'
+
+num_of_dlpar: 1
+
+# lockdown_mode: integrity | confidentiality
+lockdown_mode: integrity
+lockdown_enable: false
+

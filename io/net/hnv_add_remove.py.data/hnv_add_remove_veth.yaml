@@ -1,0 +1,25 @@
+# HNV DLPAR add/remove using veth backup device
+
+hmc_username:
+hmc_pwd:
+manageSystem:
+
+# Space-separated lists (one entry per logical port)
+sriov_adapter:
+sriov_port: ''
+mac_id: 
+ipaddr:
+netmasks:
+peer_ips:
+
+migratable: true
+
+# Virtual network name on the VIOS
+backup_veth_vnetwork:
+
+num_of_dlpar: 1
+
+# lockdown_mode: integrity | confidentiality
+lockdown_mode: integrity
+lockdown_enable: false
+
