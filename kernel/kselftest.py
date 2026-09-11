@@ -153,7 +153,7 @@ class kselftest(Test):
                         path = glob.glob(self.workdir)
             for l_dir in path:
                 if os.path.isdir(l_dir) and 'Makefile' in os.listdir(l_dir):
-                    self.buldir = os.path.join(self.workdir, l_dir)
+                    self.buldir = l_dir
                     break
             self.sourcedir = os.path.join(self.buldir, self.testdir)
             if (self.comp != "cpufreq" and self.comp != "bpf"):
@@ -168,7 +168,7 @@ class kselftest(Test):
                 if not self.comp:
                     process.system("make install -C %s" % self.sourcedir,
                                    shell=True, sudo=True)
-            else:
+            elif self.run_type == 'upstream':
                 self.buldir = self.params.get('location', default='')
         else:
             # Make sure kernel source repo is configured
