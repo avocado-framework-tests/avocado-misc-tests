@@ -1,0 +1,10 @@
+mdt_file: 'net.mdt'
+host_public_ip: ""
+peer_public_ip: ""
+peer_password: ""
+peer_user: ""
+htx_host_interfaces: ""
+peer_interfaces: ""
+# time_limit is in minutes
+time_limit: 2
+htx_rpm_link: "https://rchgsa.ibm.com:7191/gsa/rchgsa/projects/h/htx/public_html/htxonly/"
