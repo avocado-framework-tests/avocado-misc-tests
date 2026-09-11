@@ -5,12 +5,13 @@ test methods in sequence with the same YAML file:
 
   test_start  -- install HTX (first run only), select MDT, activate devices
   test_check  -- poll for errors every 60 s for the configured duration
-  test_stop   -- suspend devices and shut down the HTX daemon
+  test_stop   -- suspend devices, shut down HTX daemon; vPMEM check if enabled
 
 YAML Parameters
 ---------------
 mdt_file       MDT filename to select and run.  Default: ``mdt.mem``
-               Examples: mdt.cpu, mdt.hd, mdt.all, mdt.mem_inter_node
+               Examples: mdt.cpu, mdt.hd, mdt.all, mdt.mem_inter_node,
+               mdt.mem_all
 
 time_interval  Duration of the test_check polling loop, expressed in
                minutes.  Default: ``2``
@@ -29,16 +30,34 @@ htx_disks      Space-separated block devices to stress-test exclusively
 all            ``True`` — activate every device in the MDT without filtering.
                ``False`` (default) — use the ``htx_disks`` list.
 
+vpmem          ``True`` — enable IBM Power vPMEM (Virtual Persistent Memory)
+               validation mode.  When set:
+               * Installs ``ndctl`` if not already present.
+               * In setUp(), runs a pre-run check:
+                 - ``ndctl list -RNu``: verifies >=1 region and >=1 namespace
+                   exist (papr_scm / libnvdimm driver path).
+                 - ``dmesg``: scans papr_scm/libnvdimm/nd_pmem/pmem lines
+                   and cancels/fails if any contain error indicators.
+               * In test_stop(), after HTX shutdown, runs a post-run check:
+                 - ``ndctl list -RNu``: verifies every region still has >=1
+                   active namespace (memory distributed into multiple chunks).
+                 - Fails if any namespace is 'disabled' or total namespace
+                   count is < 2 (no distribution detected).
+               ``False`` (default) — vPMEM checks are skipped entirely.
+
 YAML Variants
 -------------
 htx_test.yaml          2-min smoke run, mdt.all.  No htx_rpm_link needed.
 htx_cpu.yaml           30-min CPU stress, mdt.cpu.  IBM GSA RPM URL set.
-htx_mem.yaml           Memory variants via !mux (5–120 min, mdt.mem_*).
+htx_mem.yaml           Memory variants via !mux (5-120 min, mdt.mem_*).
 htx_isst.yml           ISST power-management variants, 1440 min (24 h),
                        mdt.bu/less/all.
-htx_pmem.yaml          PMEM/NVDIMM variants via !mux (60–120 min).
+htx_pmem.yaml          PMEM/NVDIMM variants via !mux (60-120 min).
 htx_block_devices.yaml 60-min targeted run; set htx_disks before use.
 htx_all_devices.yaml   1440-min (24 h) full MDT sweep; all: True, mdt.hd.
+htx_vpmem.yaml         30-min IBM Power vPMEM stress run on mdt.mem_all.
+                       Requires papr_scm driver and ndctl.  Performs pre-run
+                       and post-run ndctl + dmesg validation.
 
 Example Invocations
 -------------------
@@ -49,10 +68,21 @@ Example Invocations
               htx_test.py:HtxTest.test_stop \
              -m htx_test.py.data/htx_block_devices.yaml
 
+  avocado run htx_test.py:HtxTest.test_start \
+              htx_test.py:HtxTest.test_check \
+              htx_test.py:HtxTest.test_stop \
+             -m htx_test.py.data/htx_vpmem.yaml
+
 Notes
 -----
 * Error detection reads /tmp/htxerr via htxcmdline -geterrlog; a non-zero
   file size fails test_check immediately.
 * test_stop issues ``umount /htx_pmem*`` unconditionally to clean up any
   PMEM mounts left by HTX regardless of the MDT in use.
-
+* vPMEM on IBM Power uses the papr_scm kernel driver (CONFIG_PAPR_SCM).
+  The libnvdimm subsystem exposes vPMEM as NVDIMM regions.  Each region is
+  split into one or more namespaces by the PowerVM hypervisor.
+  ``ndctl list -RNu`` output is JSON: -R includes region objects, -N nests
+  namespace objects inside each region, -u formats sizes as human-readable.
+  The post-run check verifies this chunked namespace layout survives a full
+  HTX mem_all stress run intact.
