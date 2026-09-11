@@ -40,8 +40,8 @@ class OpenSSL(Test):
             deps.extend(['perl-IPC-Cmd', 'perl-Test-Harness',
                          'perl-Test-Simple'])
             if detected_distro.name == 'rhel' and\
-                    detected_distro.version.startswith('9'):
-                deps.extend(['perl-FindBin'])
+                    int(detected_distro.version) > 9:
+                deps.extend(['perl-FindBin', 'perl-Time-Piece'])
         for package in deps:
             if not smm.check_installed(package) and not smm.install(package):
                 self.cancel('%s is needed for the test to be run' % package)
