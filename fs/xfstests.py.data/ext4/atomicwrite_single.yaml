@@ -1,0 +1,28 @@
+scratch_mnt: '/mnt/scratch'
+test_mnt: '/mnt/test'
+
+disk_type:
+    type: 'nvme'
+    # NVMe namespace device to partition for testing (e.g. /dev/nvme0n1)
+    disk: "null"
+
+# aw_blksize is compared against atomic_write_unit_max_bytes at runtime
+fs_type: !mux
+    fs_ext4_aw_single_4k:
+        fs: 'ext4'
+        args: '-R xunit -L 10 -g auto'
+        mkfs_opt: '-b 4096'
+        mount_opt: '-o block_validity'
+        aw_blksize: 4096
+    fs_ext4_aw_single_16k:
+        fs: 'ext4'
+        args: '-R xunit -L 10 -g auto'
+        mkfs_opt: '-b 16384'
+        mount_opt: '-o block_validity'
+        aw_blksize: 16384
+    fs_ext4_aw_single_64k:
+        fs: 'ext4'
+        args: '-R xunit -L 10 -g auto'
+        mkfs_opt: '-b 65536'
+        mount_opt: '-o block_validity'
+        aw_blksize: 65536
