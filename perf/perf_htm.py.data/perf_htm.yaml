@@ -1,0 +1,14 @@
+phyp_host: ''
+phyp_port: 30002
+phyp_user: ''
+phyp_password: ''
+trace_mode: 'inst'
+trace_duration: 10
+nowrap: true
+htmdump_repo: 'https://github.com/antonblanchard/htmdump.git'
+qtrace_repo: 'https://github.com/antonblanchard/qtrace-tools.git'
+
+# Manual Topology Override (Optional - by default auto-detected from phyp based on partition number)
+# node:
+# chip:
+# core:
