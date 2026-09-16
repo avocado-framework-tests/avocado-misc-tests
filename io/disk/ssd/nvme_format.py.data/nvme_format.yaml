@@ -1,0 +1,24 @@
+# NVMe Format Namespace Test Configuration
+#
+# Requires the device to advertise "Format NVM Supported" in id-ctrl.
+#
+# device: NVMe controller to target. Accepted formats:
+#   controller : nvme0
+#   Subsystem  : nvme-subsysX
+#   NQN        : nqn.1994-11.com.vendor:nvme:modela:2.5-inch:SERIALNUM
+#
+# The first namespace reported by the controller is selected automatically;
+# no namespace parameter is needed.
+#
+# shared_namespaces : Set True if the namespace is a shared (multi-path) namespace.
+# package           : 'distro' uses the OS-packaged nvme-cli (default).
+#                     'upstream' builds nvme-cli from the GitHub master branch.
+
+device: nvme0
+# Set shared_namespaces as True if want to work with nvme multipath
+shared_namespaces: False
+package: !mux
+    upstream-nvme-cli:
+        package: upstream
+    distro-nvme-cli:
+        package: distro
