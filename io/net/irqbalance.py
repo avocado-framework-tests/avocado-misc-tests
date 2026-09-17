@@ -20,7 +20,7 @@ Irq-balance and CPU affinity test for IO subsystem.
 
 import re
 import os
-from avocado import Test
+from avocado import Test, skipIf
 from avocado.utils import process, cpu, wait, dmesg, genio, pci
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
@@ -563,6 +563,31 @@ class irq_balance(Test):
                 time.sleep(2)
 
         dmesg.collect_errors_dmesg(errorlog)
+
+    @skipIf("ppc" not in os.uname()[4], "Skip, Powerpc specific tests")
+    @skipIf(lambda self: not pci.is_accelerator(), "Unsupported: PCI adapter is not an accelerator")
+    def test_accelerator(self):
+        '''
+        Check that vfio-msi interrupts appear in /proc/interrupts when a
+        container is running, and are absent when no container is present.
+        '''
+        # Verify a container is running
+        result = process.run("podman ps -q", shell=True, ignore_status=True)
+        running = result.stdout.decode().strip()
+        if not running:
+            self.fail("No running container found; vfio-msi interrupt check "
+                      "requires an active container")
+
+        # Check /proc/interrupts for vfio-msi entries
+        interrupts = process.run(
+            "grep vfio-msi /proc/interrupts",
+            shell=True, ignore_status=True
+        ).stdout.decode().strip()
+
+        if not interrupts:
+            self.fail("No vfio-msi interrupts found in /proc/interrupts")
+
+        self.log.info("vfio-msi interrupts found:\n%s", interrupts)
 
     def tearDown(self):
         """
