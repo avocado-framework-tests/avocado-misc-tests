@@ -1,0 +1,46 @@
+scratch_mnt: '/mnt/scratch'
+test_mnt: '/mnt/test'
+
+disk_type:
+    type: 'nvme'
+    # NVMe namespace device to partition for testing (e.g. /dev/nvme0n1)
+    disk: "null"
+
+# aw_blksize is the cluster size — compared against atomic_write_unit_max_bytes
+fs_type: !mux
+    fs_ext4_aw_multi_4k-C_8k:
+        fs: 'ext4'
+        args: '-R xunit -L 10 -g auto'
+        mkfs_opt: '-O bigalloc,quota -b 4096 -C 8192'
+        mount_opt: '-o block_validity'
+        aw_blksize: 8192
+    fs_ext4_aw_multi_4k-C_16k:
+        fs: 'ext4'
+        args: '-R xunit -L 10 -g auto'
+        mkfs_opt: '-O bigalloc,quota -b 4096 -C 16384'
+        mount_opt: '-o block_validity'
+        aw_blksize: 16384
+    fs_ext4_aw_multi_4k-C_32k:
+        fs: 'ext4'
+        args: '-R xunit -L 10 -g auto'
+        mkfs_opt: '-O bigalloc,quota -b 4096 -C 32768'
+        mount_opt: '-o block_validity'
+        aw_blksize: 32768
+    fs_ext4_aw_multi_4k-C_64k:
+        fs: 'ext4'
+        args: '-R xunit -L 10 -g auto'
+        mkfs_opt: '-O bigalloc,quota -b 4096 -C 65536'
+        mount_opt: '-o block_validity'
+        aw_blksize: 65536
+    fs_ext4_aw_multi_64k-C_128k:
+        fs: 'ext4'
+        args: '-R xunit -L 10 -g auto'
+        mkfs_opt: '-O bigalloc,quota -b 65536 -C 131072'
+        mount_opt: '-o block_validity'
+        aw_blksize: 131072
+    fs_ext4_aw_multi_64k-C_256k:
+        fs: 'ext4'
+        args: '-R xunit -L 10 -g auto'
+        mkfs_opt: '-O bigalloc,quota -b 65536 -C 262144'
+        mount_opt: '-o block_validity'
+        aw_blksize: 262144

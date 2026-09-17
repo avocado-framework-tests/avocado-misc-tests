@@ -26,7 +26,7 @@ import shutil
 import subprocess
 from avocado import Test
 from avocado.utils import process, build, git, distro, partition
-from avocado.utils import disk, pmem, genio
+from avocado.utils import disk, pmem, genio, nvme
 from avocado.utils.software_manager.manager import SoftwareManager
 
 
@@ -149,7 +149,8 @@ class Xfstests(Test):
 
         packages = ['e2fsprogs', 'automake', 'gcc', 'quota', 'attr', 'make',
                     'xfsprogs', 'gawk', 'git', 'sed', 'acl', 'bc',
-                    'dump', 'fio', 'xfsdump', 'indent', 'lvm2', 'psmisc']
+                    'dump', 'fio', 'xfsdump', 'indent', 'lvm2', 'psmisc',
+                    'parted']
         if self.detected_distro.name in ['Ubuntu', 'debian']:
             packages.extend(
                 ['xfslibs-dev', 'uuid-dev', 'libuuid1', 'libattr1-dev',
@@ -165,7 +166,7 @@ class Xfstests(Test):
 
         elif self.detected_distro.name in ['centos', 'fedora', 'rhel', 'SuSE']:
             if self.dev_type == 'nvdimm':
-                packages.extend(['ndctl', 'parted'])
+                packages.append('ndctl')
                 if self.detected_distro.name == 'rhel':
                     packages.append('daxctl')
             packages.extend([
@@ -236,6 +237,7 @@ class Xfstests(Test):
         self.mkfs_opt = self.params.get('mkfs_opt', default='')
         self.mount_opt = self.params.get('mount_opt', default='')
         self.logdev_opt = self.params.get('logdev_opt', default='')
+        self.aw_blksize = self.params.get('aw_blksize', default=None)
 
         self.devices = []
         self.log_devices = []
@@ -328,60 +330,70 @@ class Xfstests(Test):
             self._create_loop_device(loop_size, mount)
         elif self.dev_type == 'nvdimm':
             self.setup_nvdimm()
+        elif self.dev_type == 'nvme':
+            self.setup_nvme()
         else:
             self.devices.extend([self.test_dev, self.scratch_dev])
 
         # Update local.config with device info
         cfg_file = os.path.join(self.teststmpdir, 'local.config')
-        with open(cfg_file, "r") as f:
-            lines = f.readlines()
 
-        new_lines = []
-        for line in lines:
-            if line.startswith('export TEST_DEV='):
-                new_lines.append(f'export TEST_DEV={self.devices[0]}\n')
-            elif line.startswith('export TEST_DIR='):
-                new_lines.append(f'export TEST_DIR={self.test_mnt}\n')
-            elif line.startswith('export SCRATCH_DEV='):
-                if self.fs_to_test == 'btrfs':
-                    pool = ' '.join(self.devices[1:self.num_loop_dev])
-                    new_lines.append(f'export SCRATCH_DEV_POOL="{pool}"\n')
+        if self.dev_type == 'nvme':
+            self._write_atomic_local_config(cfg_file)
+            if self.fs_to_test == 'ext4' and 'bigalloc' in self.mkfs_opt:
+                self._set_ext4_allow_unsupported(True)
+            for dev in self.devices:
+                partition.Partition(dev).mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
+        else:
+            with open(cfg_file, "r") as f:
+                lines = f.readlines()
+
+            new_lines = []
+            for line in lines:
+                if line.startswith('export TEST_DEV='):
+                    new_lines.append(f'export TEST_DEV={self.devices[0]}\n')
+                elif line.startswith('export TEST_DIR='):
+                    new_lines.append(f'export TEST_DIR={self.test_mnt}\n')
+                elif line.startswith('export SCRATCH_DEV='):
+                    if self.fs_to_test == 'btrfs':
+                        pool = ' '.join(self.devices[1:self.num_loop_dev])
+                        new_lines.append(f'export SCRATCH_DEV_POOL="{pool}"\n')
+                    else:
+                        new_lines.append(f'export SCRATCH_DEV={self.devices[1]}\n')
+                elif line.startswith('export SCRATCH_MNT='):
+                    new_lines.append(f'export SCRATCH_MNT={self.scratch_mnt}\n')
                 else:
-                    new_lines.append(f'export SCRATCH_DEV={self.devices[1]}\n')
-            elif line.startswith('export SCRATCH_MNT='):
-                new_lines.append(f'export SCRATCH_MNT={self.scratch_mnt}\n')
-            else:
-                new_lines.append(line)
+                    new_lines.append(line)
 
-        if self.log_test:
-            new_lines.append('export USE_EXTERNAL=yes\n')
-            new_lines.append(f'export TEST_LOGDEV="{self.log_test}"\n')
-            self.log_devices.append(self.log_test)
-        if self.log_scratch:
-            new_lines.append(f'export SCRATCH_LOGDEV="{self.log_scratch}"\n')
-            self.log_devices.append(self.log_scratch)
-        if self.mkfs_opt:
-            new_lines.append(f'export MKFS_OPTIONS="{self.mkfs_opt}"\n')
-        if self.mount_opt:
-            new_lines.append(f'export MOUNT_OPTIONS="{self.mount_opt}"\n')
+            if self.log_test:
+                new_lines.append('export USE_EXTERNAL=yes\n')
+                new_lines.append(f'export TEST_LOGDEV="{self.log_test}"\n')
+                self.log_devices.append(self.log_test)
+            if self.log_scratch:
+                new_lines.append(f'export SCRATCH_LOGDEV="{self.log_scratch}"\n')
+                self.log_devices.append(self.log_scratch)
+            if self.mkfs_opt:
+                new_lines.append(f'export MKFS_OPTIONS="{self.mkfs_opt}"\n')
+            if self.mount_opt:
+                new_lines.append(f'export MOUNT_OPTIONS="{self.mount_opt}"\n')
 
-        with open(cfg_file, 'w') as f:
-            f.writelines(new_lines)
+            with open(cfg_file, 'w') as f:
+                f.writelines(new_lines)
 
-        self.log.info("Final local.config content:\n%s", ''.join(new_lines))
+            self.log.info("Final local.config content:\n%s", ''.join(new_lines))
 
-        # Create logdev filesystems
-        for dev in self.log_devices:
-            partition.Partition(dev).mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
+            # Create logdev filesystems
+            for dev in self.log_devices:
+                partition.Partition(dev).mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
 
-        # Create mkfs on test and scratch devices
-        for i, dev in enumerate(self.devices):
-            dev_obj = partition.Partition(dev)
-            if self.logdev_opt:
-                dev_obj.mkfs(fstype=self.fs_to_test,
-                             args=f'{self.mkfs_opt} {self.logdev_opt}={self.log_devices[i]}')
-            else:
-                dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
+            # Create mkfs on test and scratch devices
+            for i, dev in enumerate(self.devices):
+                dev_obj = partition.Partition(dev)
+                if self.logdev_opt:
+                    dev_obj.mkfs(fstype=self.fs_to_test,
+                                 args=f'{self.mkfs_opt} {self.logdev_opt}={self.log_devices[i]}')
+                else:
+                    dev_obj.mkfs(fstype=self.fs_to_test, args=self.mkfs_opt)
 
         # Clone & build xfstests
         git.get_repo('https://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git',
@@ -398,6 +410,68 @@ class Xfstests(Test):
             if process.system(f'id {user}', ignore_status=True):
                 cmd = f'useradd -m {"-U " if user == "fsgqa" else ""}{user}'
                 process.system(cmd, sudo=True, ignore_status=True)
+
+    def setup_nvme(self):
+        devices = [self.base_disk] if self.base_disk and self.base_disk != 'null' else None
+        self.base_disk, self.aw_min, self.aw_max = nvme.find_device_with_atomic_write(devices)
+        if not self.base_disk:
+            self.cancel("No NVMe device with atomic write support found")
+        self.log.info("atomic_write_unit_min=%d atomic_write_unit_max=%d",
+                      self.aw_min, self.aw_max)
+
+        self._nvme_state_file = '/tmp/avocado_nvme_%s_partitions' % os.path.basename(self.base_disk)
+        if os.path.exists(self._nvme_state_file):
+            stale = genio.read_file(self._nvme_state_file).split()
+            nvme.remove_partitions(self.base_disk, stale)
+            os.remove(self._nvme_state_file)
+
+        blocks = nvme.get_free_space_blocks(self.base_disk)
+        best = max(blocks, key=lambda x: x[2]) if blocks else None
+        if not best or best[2] < 20 * 1024:  # 20GiB in MiB
+            self.cancel("Not enough free space on %s to create test partitions" % self.base_disk)
+
+        parts = nvme.create_partitions_in_free_space(self.base_disk)
+        self.test_dev, self.scratch_dev = parts[0], parts[1]
+        self.devices.extend([self.test_dev, self.scratch_dev])
+        genio.write_file(self._nvme_state_file, ' '.join(self.devices))
+
+    def _set_ext4_allow_unsupported(self, enable):
+        """
+        Reload the ext4 module with allow_unsupported=1 or 0
+        """
+        au_path = '/sys/module/ext4/parameters/allow_unsupported'
+        if not os.path.exists(au_path):
+            return
+        current = genio.read_file(au_path).strip()
+        wanted = 'Y' if enable else 'N'
+        if current != wanted:
+            process.run('rmmod ext4', sudo=True, ignore_status=True)
+            process.run('modprobe ext4 allow_unsupported=%d' % int(enable),
+                        sudo=True, ignore_status=True)
+
+    def _write_atomic_local_config(self, cfg_file):
+        """
+        Write local.config for the current YAML mux variant.
+        Skips if aw_blksize exceeds the hardware aw_max.
+        """
+        if self.aw_blksize and self.aw_blksize > self.aw_max:
+            self.cancel("Block/cluster size %d exceeds aw_unit_max=%d" % (self.aw_blksize, self.aw_max))
+
+        lines = [
+            'export RECREATE_TEST_DEV=true\n',
+            'export TEST_DEV=%s\n' % self.test_dev,
+            'export TEST_DIR=%s\n' % self.test_mnt,
+            'export SCRATCH_DEV=%s\n' % self.scratch_dev,
+            'export SCRATCH_MNT=%s\n' % self.scratch_mnt,
+            'export FSTYP=%s\n' % self.fs_to_test,
+            'export MKFS_OPTIONS="%s"\n' % self.mkfs_opt,
+        ]
+        if self.mount_opt:
+            lines.append('export MOUNT_OPTIONS="%s"\n' % self.mount_opt)
+
+        with open(cfg_file, 'w') as f:
+            f.writelines(lines)
+        self.log.info("Atomic write local.config:\n%s", ''.join(lines))
 
     def _git_build(self, fs_type, repo_url, dirname, prefix, bin_prefix):
         # Generic helper to clone, configure and build a repo
@@ -466,13 +540,19 @@ class Xfstests(Test):
         if os.path.exists(libini_dir):
             shutil.rmtree(libini_dir)
 
-        # Destroy loop/nvdimm devices
+        # Destroy loop/nvdimm/nvme devices
         if self.dev_type == 'loop':
             for dev in self.devices:
                 process.system('losetup -d %s' % dev, shell=True,
                                sudo=True, ignore_status=True)
             if self.part:
                 self.part.unmount()
+        elif self.dev_type == 'nvme':
+            if hasattr(self, 'base_disk') and self.base_disk and self.devices:
+                nvme.remove_partitions(self.base_disk, self.devices)
+            if hasattr(self, '_nvme_state_file') and os.path.exists(self._nvme_state_file):
+                os.remove(self._nvme_state_file)
+            self._set_ext4_allow_unsupported(False)
         elif self.dev_type == 'nvdimm':
             if hasattr(self, 'region'):
                 self.plib.destroy_namespace(region=self.region, force=True)
