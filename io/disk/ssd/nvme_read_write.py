@@ -37,6 +37,7 @@ I/O path and checks the return code after every command.
 """
 
 import os
+import re
 import tempfile
 from avocado import Test
 from avocado.utils import disk
@@ -69,8 +70,8 @@ class NVMeReadWrite(Test):
         elif nvme_node.startswith("nqn."):
             nvme_node = nvme.get_controllers_with_nqn(nvme_node)[0]
         self.device = disk.get_absolute_disk_path(nvme_node)
-        if process.system(f'ls {self.device}', ignore_status=True):
-            self.cancel(f"{self.device} does not exist")
+        if not os.path.exists(self.device):
+            self.cancel("%s does not exist" % self.device)
 
         self.ctrl_name = self.device.split("/")[-1]
         self.shared = self.params.get('shared_namespaces', default=False)
@@ -83,7 +84,8 @@ class NVMeReadWrite(Test):
         self.id_ns = ns_list[0]
         # Derive the integer namespace ID from the device path
         # (e.g. /dev/nvme0n1 -> 1).
-        self.namespace = int(self.id_ns.split("n")[-1])
+        ns_match = re.search(r'nvme\d+n(\d+)$', self.id_ns)
+        self.namespace = int(ns_match.group(1)) if ns_match else 1
         self.log.info("Selected namespace: %s (id=%d)",
                       self.id_ns, self.namespace)
 
@@ -97,11 +99,14 @@ class NVMeReadWrite(Test):
             tarball = self.fetch_asset("nvme-cli.zip", locations=locations,
                                        expire='15d')
             archive.extract(tarball, self.teststmpdir)
-            os.chdir(f"{self.teststmpdir}/nvme-cli-master")
-            process.system("meson setup --force-fallback-for=libnvme .build",
+            build_dir = os.path.join(self.teststmpdir, "nvme-cli-master")
+            process.system(
+                "meson setup --force-fallback-for=libnvme %s/.build %s"
+                % (build_dir, build_dir),
+                ignore_status=True)
+            process.system("meson compile -C %s/.build" % build_dir,
                            ignore_status=True)
-            process.system("meson compile -C .build", ignore_status=True)
-            self.binary = './.build/nvme'
+            self.binary = os.path.join(build_dir, ".build", "nvme")
         else:
             if not smm.check_installed("nvme-cli") and \
                     not smm.install("nvme-cli"):
@@ -117,10 +122,16 @@ class NVMeReadWrite(Test):
         self.id_ctrl = process.system_output(cmd, shell=True).decode("utf-8")
 
         # Validate that the target namespace device path exists
-        if process.system(f'ls {self.id_ns}', ignore_status=True):
-            self.cancel(f"Namespace device {self.id_ns} does not exist. "
+        if not os.path.exists(self.id_ns):
+            self.cancel("Namespace device %s does not exist. "
                         "Ensure the namespace is created before "
-                        "running this test.")
+                        "running this test." % self.id_ns)
+
+        # Common pre-test checks: namespace accessible and healthy
+        self._validate_ns_accessible()
+        if not self._ns_is_healthy():
+            self.cancel("Namespace %s is not healthy; "
+                        "cancelling all tests" % self.id_ns)
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -170,11 +181,10 @@ class NVMeReadWrite(Test):
 
     def _validate_ns_accessible(self):
         """Fail the test if the namespace block device is not accessible."""
-        if process.system(f'ls -la {self.id_ns}', shell=True,
-                          ignore_status=True):
-            self.fail(f"Namespace {self.id_ns} is not accessible before I/O")
+        if not os.path.exists(self.id_ns):
+            self.fail("Namespace %s is not accessible before I/O" % self.id_ns)
         else:
-            self.log.info(f"Namespace {self.id_ns} is accessible before I/O")
+            self.log.info("Namespace %s is accessible before I/O", self.id_ns)
 
     # ------------------------------------------------------------------
     # Tests
@@ -185,21 +195,14 @@ class NVMeReadWrite(Test):
         Issue a read command on the namespace and verify it succeeds.
 
         Steps:
-          1. Validate namespace block device is accessible.
-          2. Verify namespace is in 'live' state.
-          3. Issue: nvme read <ns> -z <block_size> -t
-          4. Validate return code is 0 (success).
+          1. Issue: nvme read <ns> -z <block_size> -t
+          2. Validate return code is 0 (success).
         """
-        self._validate_ns_accessible()
-        if not self._ns_is_healthy():
-            self.cancel(f"Namespace {self.id_ns} is not healthy; "
-                        "skipping I/O test")
-
-        cmd = f"{self.binary} read {self.id_ns} -z {self.block_size} -t"
+        cmd = "%s read %s -z %d -t" % (self.binary, self.id_ns, self.block_size)
         self.log.info("Read command: %s", cmd)
         ret = process.system(cmd, timeout=300, ignore_status=True, shell=True)
         if ret:
-            self.fail(f"NVMe read failed on {self.id_ns} (exit code {ret})")
+            self.fail("NVMe read failed on %s (exit code %d)" % (self.id_ns, ret))
         self.log.info("Read test passed on %s", self.id_ns)
 
     def test_read_start_block(self):
@@ -211,23 +214,16 @@ class NVMeReadWrite(Test):
         exercising the LBA-offset code path in the controller.
 
         Steps:
-          1. Validate namespace block device is accessible.
-          2. Verify namespace is in 'live' state.
-          3. Issue: nvme read <ns> -s 1 -z <block_size> -t
-          4. Validate return code is 0 (success).
+          1. Issue: nvme read <ns> -s 1 -z <block_size> -t
+          2. Validate return code is 0 (success).
         """
-        self._validate_ns_accessible()
-        if not self._ns_is_healthy():
-            self.cancel(f"Namespace {self.id_ns} is not healthy; "
-                        "skipping I/O test")
-
-        cmd = (f"{self.binary} read {self.id_ns}"
-               f" -s 1 -z {self.block_size} -t")
+        cmd = ("%s read %s -s 1 -z %d -t"
+               % (self.binary, self.id_ns, self.block_size))
         self.log.info("Read start-block command: %s", cmd)
         ret = process.system(cmd, timeout=300, ignore_status=True, shell=True)
         if ret:
-            self.fail(f"NVMe read (start-block=1) failed on {self.id_ns} "
-                      f"(exit code {ret})")
+            self.fail("NVMe read (start-block=1) failed on %s "
+                      "(exit code %d)" % (self.id_ns, ret))
         self.log.info("Read start-block test passed on %s", self.id_ns)
 
     def test_read_block_count(self):
@@ -239,25 +235,18 @@ class NVMeReadWrite(Test):
         4 blocks (block_size * 4), exercising multi-block read addressing.
 
         Steps:
-          1. Validate namespace block device is accessible.
-          2. Verify namespace is in 'live' state.
-          3. Issue: nvme read <ns> -c 3 -z <block_size*4> -t
-          4. Validate return code is 0 (success).
+          1. Issue: nvme read <ns> -c 3 -z <block_size*4> -t
+          2. Validate return code is 0 (success).
         """
-        self._validate_ns_accessible()
-        if not self._ns_is_healthy():
-            self.cancel(f"Namespace {self.id_ns} is not healthy; "
-                        "skipping I/O test")
-
         block_count = 3          # 0-based: requests 4 blocks (0..3)
         data_size = self.block_size * (block_count + 1)
-        cmd = (f"{self.binary} read {self.id_ns}"
-               f" -c {block_count} -z {data_size} -t")
+        cmd = ("%s read %s -c %d -z %d -t"
+               % (self.binary, self.id_ns, block_count, data_size))
         self.log.info("Read block-count command: %s", cmd)
         ret = process.system(cmd, timeout=300, ignore_status=True, shell=True)
         if ret:
-            self.fail(f"NVMe read (block-count={block_count}) failed on "
-                      f"{self.id_ns} (exit code {ret})")
+            self.fail("NVMe read (block-count=%d) failed on "
+                      "%s (exit code %d)" % (block_count, self.id_ns, ret))
         self.log.info("Read block-count test passed on %s", self.id_ns)
 
     def test_read_force_unit_access(self):
@@ -270,23 +259,16 @@ class NVMeReadWrite(Test):
         exercises the FUA code path through the submission queue.
 
         Steps:
-          1. Validate namespace block device is accessible.
-          2. Verify namespace is in 'live' state.
-          3. Issue: nvme read <ns> -z <block_size> -f -t
-          4. Validate return code is 0 (success).
+          1. Issue: nvme read <ns> -z <block_size> -f -t
+          2. Validate return code is 0 (success).
         """
-        self._validate_ns_accessible()
-        if not self._ns_is_healthy():
-            self.cancel(f"Namespace {self.id_ns} is not healthy; "
-                        "skipping I/O test")
-
-        cmd = (f"{self.binary} read {self.id_ns}"
-               f" -z {self.block_size} -f -t")
+        cmd = "%s read %s -z %d -f -t" % (self.binary, self.id_ns,
+                                          self.block_size)
         self.log.info("Read FUA command: %s", cmd)
         ret = process.system(cmd, timeout=300, ignore_status=True, shell=True)
         if ret:
-            self.fail(f"NVMe read (force-unit-access) failed on {self.id_ns} "
-                      f"(exit code {ret})")
+            self.fail("NVMe read (force-unit-access) failed on %s "
+                      "(exit code %d)" % (self.id_ns, ret))
         self.log.info("Read force-unit-access test passed on %s", self.id_ns)
 
     def test_read_to_file(self):
@@ -298,33 +280,26 @@ class NVMeReadWrite(Test):
         allowing data-pattern verification by external tools.
 
         Steps:
-          1. Validate namespace block device is accessible.
-          2. Verify namespace is in 'live' state.
-          3. Issue: nvme read <ns> -z <block_size> -d <tmpfile> -t
-          4. Validate return code is 0 (success).
-          5. Validate the output file exists and is non-empty.
-          6. Remove the temporary file.
+          1. Issue: nvme read <ns> -z <block_size> -d <tmpfile> -t
+          2. Validate return code is 0 (success).
+          3. Validate the output file exists and is non-empty.
+          4. Remove the temporary file.
         """
-        self._validate_ns_accessible()
-        if not self._ns_is_healthy():
-            self.cancel(f"Namespace {self.id_ns} is not healthy; "
-                        "skipping I/O test")
-
         with tempfile.NamedTemporaryFile(prefix="nvme_read_", suffix=".bin",
                                          delete=False) as tmp:
             out_file = tmp.name
 
         try:
-            cmd = (f"{self.binary} read {self.id_ns}"
-                   f" -z {self.block_size} -d {out_file} -t")
+            cmd = ("%s read %s -z %d -d %s -t"
+                   % (self.binary, self.id_ns, self.block_size, out_file))
             self.log.info("Read to-file command: %s", cmd)
             ret = process.system(cmd, timeout=300, ignore_status=True,
                                  shell=True)
             if ret:
-                self.fail(f"NVMe read (to-file) failed on {self.id_ns} "
-                          f"(exit code {ret})")
+                self.fail("NVMe read (to-file) failed on %s "
+                          "(exit code %d)" % (self.id_ns, ret))
             if not os.path.isfile(out_file) or os.path.getsize(out_file) == 0:
-                self.fail(f"Read output file {out_file} is missing or empty")
+                self.fail("Read output file %s is missing or empty" % out_file)
             self.log.info("Read to-file test passed on %s (file: %s)",
                           self.id_ns, out_file)
         finally:
@@ -336,22 +311,16 @@ class NVMeReadWrite(Test):
         Issue a write command on the namespace and verify it succeeds.
 
         Steps:
-          1. Validate namespace block device is accessible.
-          2. Verify namespace is in 'live' state.
-          3. Issue: echo 1 | nvme write <ns> -z <block_size> -t
-          4. Validate return code is 0 (success).
+          1. Issue: dd if=/dev/zero | nvme write <ns> -z <block_size> -t
+          2. Validate return code is 0 (success).
         """
-        self._validate_ns_accessible()
-        if not self._ns_is_healthy():
-            self.cancel(f"Namespace {self.id_ns} is not healthy; "
-                        "skipping I/O test")
-
-        cmd = (f"echo 1|{self.binary} write {self.id_ns}"
-               f" -z {self.block_size} -t")
+        cmd = ("dd if=/dev/zero bs=%d count=1 | %s write %s"
+               " -z %d -t" % (self.block_size, self.binary,
+                              self.id_ns, self.block_size))
         self.log.info("Write command: %s", cmd)
         ret = process.system(cmd, timeout=300, ignore_status=True, shell=True)
         if ret:
-            self.fail(f"NVMe write failed on {self.id_ns} (exit code {ret})")
+            self.fail("NVMe write failed on %s (exit code %d)" % (self.id_ns, ret))
         self.log.info("Write test passed on %s", self.id_ns)
 
     def test_write_start_block(self):
@@ -363,23 +332,17 @@ class NVMeReadWrite(Test):
         LBA-offset code path for writes inside the controller.
 
         Steps:
-          1. Validate namespace block device is accessible.
-          2. Verify namespace is in 'live' state.
-          3. Issue: echo 1 | nvme write <ns> -s 1 -z <block_size> -t
-          4. Validate return code is 0 (success).
+          1. Issue: dd if=/dev/zero | nvme write <ns> -s 1 -z <block_size> -t
+          2. Validate return code is 0 (success).
         """
-        self._validate_ns_accessible()
-        if not self._ns_is_healthy():
-            self.cancel(f"Namespace {self.id_ns} is not healthy; "
-                        "skipping I/O test")
-
-        cmd = (f"echo 1|{self.binary} write {self.id_ns}"
-               f" -s 1 -z {self.block_size} -t")
+        cmd = ("dd if=/dev/zero bs=%d count=1 | %s write %s"
+               " -s 1 -z %d -t" % (self.block_size, self.binary,
+                                   self.id_ns, self.block_size))
         self.log.info("Write start-block command: %s", cmd)
         ret = process.system(cmd, timeout=300, ignore_status=True, shell=True)
         if ret:
-            self.fail(f"NVMe write (start-block=1) failed on {self.id_ns} "
-                      f"(exit code {ret})")
+            self.fail("NVMe write (start-block=1) failed on %s "
+                      "(exit code %d)" % (self.id_ns, ret))
         self.log.info("Write start-block test passed on %s", self.id_ns)
 
     def test_write_block_count(self):
@@ -391,25 +354,20 @@ class NVMeReadWrite(Test):
         4 blocks (block_size * 4), exercising multi-block write addressing.
 
         Steps:
-          1. Validate namespace block device is accessible.
-          2. Verify namespace is in 'live' state.
-          3. Issue: echo 1 | nvme write <ns> -c 3 -z <block_size*4> -t
-          4. Validate return code is 0 (success).
+          1. Issue: dd if=/dev/zero | nvme write <ns> -c 3 -z <block_size*4> -t
+          2. Validate return code is 0 (success).
         """
-        self._validate_ns_accessible()
-        if not self._ns_is_healthy():
-            self.cancel(f"Namespace {self.id_ns} is not healthy; "
-                        "skipping I/O test")
-
         block_count = 3          # 0-based: writes 4 blocks (0..3)
         data_size = self.block_size * (block_count + 1)
-        cmd = (f"echo 1|{self.binary} write {self.id_ns}"
-               f" -c {block_count} -z {data_size} -t")
+        cmd = ("dd if=/dev/zero bs=%d count=%d | %s write %s"
+               " -c %d -z %d -t" % (self.block_size, block_count + 1,
+                                    self.binary, self.id_ns,
+                                    block_count, data_size))
         self.log.info("Write block-count command: %s", cmd)
         ret = process.system(cmd, timeout=300, ignore_status=True, shell=True)
         if ret:
-            self.fail(f"NVMe write (block-count={block_count}) failed on "
-                      f"{self.id_ns} (exit code {ret})")
+            self.fail("NVMe write (block-count=%d) failed on "
+                      "%s (exit code %d)" % (block_count, self.id_ns, ret))
         self.log.info("Write block-count test passed on %s", self.id_ns)
 
     def test_write_force_unit_access(self):
@@ -422,23 +380,17 @@ class NVMeReadWrite(Test):
         strong write-durability guarantee.
 
         Steps:
-          1. Validate namespace block device is accessible.
-          2. Verify namespace is in 'live' state.
-          3. Issue: echo 1 | nvme write <ns> -z <block_size> -f -t
-          4. Validate return code is 0 (success).
+          1. Issue: dd if=/dev/zero | nvme write <ns> -z <block_size> -f -t
+          2. Validate return code is 0 (success).
         """
-        self._validate_ns_accessible()
-        if not self._ns_is_healthy():
-            self.cancel(f"Namespace {self.id_ns} is not healthy; "
-                        "skipping I/O test")
-
-        cmd = (f"echo 1|{self.binary} write {self.id_ns}"
-               f" -z {self.block_size} -f -t")
+        cmd = ("dd if=/dev/zero bs=%d count=1 | %s write %s"
+               " -z %d -f -t" % (self.block_size, self.binary,
+                                 self.id_ns, self.block_size))
         self.log.info("Write FUA command: %s", cmd)
         ret = process.system(cmd, timeout=300, ignore_status=True, shell=True)
         if ret:
-            self.fail(f"NVMe write (force-unit-access) failed on {self.id_ns} "
-                      f"(exit code {ret})")
+            self.fail("NVMe write (force-unit-access) failed on %s "
+                      "(exit code %d)" % (self.id_ns, ret))
         self.log.info("Write force-unit-access test passed on %s", self.id_ns)
 
     def test_write_from_file(self):
@@ -451,32 +403,25 @@ class NVMeReadWrite(Test):
         data-pattern writes.
 
         Steps:
-          1. Validate namespace block device is accessible.
-          2. Verify namespace is in 'live' state.
-          3. Create a temporary file filled with one block of 0xAB bytes.
-          4. Issue: nvme write <ns> -z <block_size> -d <tmpfile> -t
-          5. Validate return code is 0 (success).
-          6. Remove the temporary file.
+          1. Create a temporary file filled with one block of 0xAB bytes.
+          2. Issue: nvme write <ns> -z <block_size> -d <tmpfile> -t
+          3. Validate return code is 0 (success).
+          4. Remove the temporary file.
         """
-        self._validate_ns_accessible()
-        if not self._ns_is_healthy():
-            self.cancel(f"Namespace {self.id_ns} is not healthy; "
-                        "skipping I/O test")
-
         with tempfile.NamedTemporaryFile(prefix="nvme_write_", suffix=".bin",
                                          delete=False) as tmp:
             tmp.write(b'\xab' * self.block_size)
             in_file = tmp.name
 
         try:
-            cmd = (f"{self.binary} write {self.id_ns}"
-                   f" -z {self.block_size} -d {in_file} -t")
+            cmd = ("%s write %s -z %d -d %s -t"
+                   % (self.binary, self.id_ns, self.block_size, in_file))
             self.log.info("Write from-file command: %s", cmd)
             ret = process.system(cmd, timeout=300, ignore_status=True,
                                  shell=True)
             if ret:
-                self.fail(f"NVMe write (from-file) failed on {self.id_ns} "
-                          f"(exit code {ret})")
+                self.fail("NVMe write (from-file) failed on %s "
+                          "(exit code %d)" % (self.id_ns, ret))
             self.log.info("Write from-file test passed on %s (file: %s)",
                           self.id_ns, in_file)
         finally:
@@ -488,17 +433,14 @@ class NVMeReadWrite(Test):
         Issue a flush command on the namespace/controller and verify success.
 
         Steps:
-          1. Validate namespace block device is accessible.
-          2. Issue: nvme flush <ns>
-          3. Validate return code is 0 (success).
+          1. Issue: nvme flush <ns>
+          2. Validate return code is 0 (success).
         """
-        self._validate_ns_accessible()
-
-        cmd = f"{self.binary} flush {self.id_ns}"
+        cmd = "%s flush %s" % (self.binary, self.id_ns)
         self.log.info("Flush command: %s", cmd)
         ret = process.system(cmd, ignore_status=True, shell=True)
         if ret:
-            self.fail(f"NVMe flush failed on {self.id_ns} (exit code {ret})")
+            self.fail("NVMe flush failed on %s (exit code %d)" % (self.id_ns, ret))
         self.log.info("Flush test passed on %s", self.id_ns)
 
     def test_write_zeroes(self):
@@ -509,35 +451,32 @@ class NVMeReadWrite(Test):
 
         Steps:
           1. Validate capability.
-          2. Validate namespace block device is accessible.
-          3. Verify namespace is in 'live' state.
-          4. Issue: nvme write-zeroes <ns>
-          5. Validate return code is 0 (success).
-          6. Optionally verify data is zeroed by reading back one block.
+          2. Issue: nvme write-zeroes <ns>
+          3. Validate return code is 0 (success).
+          4. Read back one block to confirm I/O path is still functional
+             (return-code check only; content verification is left to
+             upper-layer tools).
         """
         if "Write Zeroes Supported" not in self.id_ctrl:
             self.cancel("Write Zeroes is not supported on this device")
 
-        self._validate_ns_accessible()
-        if not self._ns_is_healthy():
-            self.cancel(f"Namespace {self.id_ns} is not healthy; "
-                        "skipping I/O test")
-
-        cmd = f"{self.binary} write-zeroes {self.id_ns}"
+        cmd = "%s write-zeroes %s" % (self.binary, self.id_ns)
         self.log.info("Write-zeroes command: %s", cmd)
         ret = process.system(cmd, ignore_status=True, shell=True)
         if ret:
-            self.fail(f"NVMe write-zeroes failed on {self.id_ns} "
-                      f"(exit code {ret})")
+            self.fail("NVMe write-zeroes failed on %s "
+                      "(exit code %d)" % (self.id_ns, ret))
 
-        # Validation: read back one block — it must succeed (data integrity
-        # check beyond return code is best handled by upper-layer tools).
-        verify_cmd = f"{self.binary} read {self.id_ns} -z {self.block_size}"
+        # Read back one block — checks that the I/O path is still functional.
+        # Only the return code is verified; content (zero-fill) verification
+        # is best handled by upper-layer tools (e.g. od/xxd comparison).
+        verify_cmd = "%s read %s -z %d" % (self.binary, self.id_ns,
+                                           self.block_size)
         ret = process.system(verify_cmd, timeout=60, ignore_status=True,
                              shell=True)
         if ret:
-            self.fail(f"Read-back after write-zeroes failed on {self.id_ns} "
-                      f"(exit code {ret})")
+            self.fail("Read-back after write-zeroes failed on %s "
+                      "(exit code %d)" % (self.id_ns, ret))
         self.log.info("Write-zeroes test passed on %s", self.id_ns)
 
     def test_write_uncorrectable(self):
@@ -550,23 +489,16 @@ class NVMeReadWrite(Test):
 
         Steps:
           1. Validate capability.
-          2. Validate namespace block device is accessible.
-          3. Verify namespace is in 'live' state.
-          4. Issue: nvme write-uncor <ns>
-          5. Validate return code is 0 (success).
+          2. Issue: nvme write-uncor <ns>
+          3. Validate return code is 0 (success).
         """
         if "Write Uncorrectable Supported" not in self.id_ctrl:
             self.cancel("Write Uncorrectable is not supported on this device")
 
-        self._validate_ns_accessible()
-        if not self._ns_is_healthy():
-            self.cancel(f"Namespace {self.id_ns} is not healthy; "
-                        "skipping I/O test")
-
-        cmd = f"{self.binary} write-uncor {self.id_ns}"
+        cmd = "%s write-uncor %s" % (self.binary, self.id_ns)
         self.log.info("Write-uncorrectable command: %s", cmd)
         ret = process.system(cmd, ignore_status=True, shell=True)
         if ret:
-            self.fail(f"NVMe write-uncorrectable failed on {self.id_ns} "
-                      f"(exit code {ret})")
+            self.fail("NVMe write-uncorrectable failed on %s "
+                      "(exit code %d)" % (self.id_ns, ret))
         self.log.info("Write-uncorrectable test passed on %s", self.id_ns)
