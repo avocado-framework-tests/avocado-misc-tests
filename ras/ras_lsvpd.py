@@ -20,6 +20,9 @@ import os
 import re
 import shutil
 import fnmatch
+import signal
+import subprocess
+
 from avocado.utils import pci
 from avocado import Test
 from avocado.utils import process, distro, build, archive
@@ -285,15 +288,36 @@ class RASToolsLsvpd(Test):
         Locking mechanism prevents corruption of database file
         when running vpdupdate multiple instances
         """
+        proc1 = subprocess.Popen(
+            "for i in $(seq 500) ; do vpdupdate & done",
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            preexec_fn=os.setsid
+        )
+        proc2 = subprocess.Popen(
+            "for i in $(seq 200) ; do lsvpd & done",
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            preexec_fn=os.setsid
+        )
+        try:
+            stdout1, stderr1 = proc1.communicate(timeout=100)
+            stdout2, stderr2 = proc2.communicate(timeout=200)
+        except subprocess.TimeoutExpired:
+            self.log.info("Locking test timed out; killing process groups")
+            stdout1, stderr1 = b"", b""
+            stdout2, stderr2 = b"", b""
+        finally:
+            for proc in (proc1, proc2):
+                try:
+                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                except (ProcessLookupError, OSError):
+                    pass
 
-        cmd = "for i in $(seq 500) ; do vpdupdate & done ;"
-        ret = process.run(cmd, ignore_bg_processes=True, ignore_status=True,
-                          shell=True)
-        cmd1 = "for in in $(seq 200) ; do lsvpd & done ;"
-        ret1 = process.run(cmd1, ignore_bg_processes=True, ignore_status=True,
-                           shell=True)
-        if 'SQLITE Error' in ret.stderr.decode("utf-8").strip()\
-                or 'corrupt' in ret1.stdout.decode("utf-8").strip():
+        if 'SQLITE Error' in stderr1.decode("utf-8", errors="replace") \
+                or 'corrupt' in stdout2.decode("utf-8", errors="replace"):
             self.fail("Database corruption detected")
         else:
             self.log.info("Locking mechanism prevented database corruption")
