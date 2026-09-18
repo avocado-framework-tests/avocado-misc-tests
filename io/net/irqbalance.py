@@ -68,11 +68,26 @@ class irq_balance(Test):
             interfaces = os.listdir('/sys/class/net')
             self.localhost = LocalHost()
             if device in interfaces:
+                # interface name given directly (bond name or regular interface)
                 self.interface = device
             elif (self.localhost.validate_mac_addr(device) and
                   device in self.localhost.get_all_hwaddr()):
-                self.interface = (self.localhost.
-                                  get_interface_by_hwaddr(device).name)
+                if self.is_hbond:
+                    # is_bond() tells if MAC hit the bond master directly.
+                    iface = self.localhost.get_interface_by_hwaddr(device)
+                    if iface.is_bond():
+                        self.interface = iface.name
+                    else:
+                        # got the slave; resolve its bond master
+                        bond_master = iface.get_bond_master()
+                        if not bond_master:
+                            self.cancel(
+                                "Could not resolve bond master for slave %s"
+                                % iface.name)
+                        self.interface = bond_master
+                else:
+                    # regular interface identified by MAC address
+                    self.interface = self.localhost.get_interface_by_hwaddr(device).name
             else:
                 self.cancel("Please check the network device")
             if not self.peer_ip:

@@ -6,3 +6,4 @@ host_ip:
 peer_ip:
 netmask:
 sriov:
+hbond: 
