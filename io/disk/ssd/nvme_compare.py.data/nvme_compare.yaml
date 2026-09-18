@@ -1,0 +1,12 @@
+# device: NVMe controller to target. Accepted formats:
+#   controller : nvme0
+
+device: nvme0
+namespace: 1
+# Set shared_namespaces as True if want to work with nvme multipath
+shared_namespaces: False
+package: !mux
+    upstream-nvme-cli:
+        package: upstream
+    distro-nvme-cli:
+        package: distro
