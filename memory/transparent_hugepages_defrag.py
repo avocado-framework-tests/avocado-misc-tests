@@ -79,13 +79,20 @@ class ThpDefrag(Test):
         # Turns off Defrag
         memory.set_thp_value("khugepaged/defrag", "0")
 
-        # Fragments The memory
-        self.log.info("Fragmenting the memory Using dd command \n")
-        for iterator in range(self.count):
-            defrag_cmd = 'dd if=/dev/urandom of=%s/%d bs=%dK count=1'\
-                         % (self.mem_path, iterator, self.block_size)
-            if(process.system(defrag_cmd, timeout=900,
-                              verbose=False, ignore_status=True, shell=True)):
+        # Fragments The memory using a small number of large dd writes instead
+        # of one write per page, which would take hours on large-memory systems.
+        chunk_kb = 256 * 1024  # 256 MB per file
+        total_kb = self.count * self.block_size
+        num_files = max(1, total_kb // chunk_kb)
+        count_per_file = chunk_kb // self.block_size
+        self.log.info("Fragmenting the memory Using dd command (%d files x 256 MB)",
+                      num_files)
+        for iterator in range(num_files):
+            defrag_cmd = ('dd if=/dev/urandom of=%s/%d bs=%dK count=%d'
+                          % (self.mem_path, iterator, self.block_size,
+                             count_per_file))
+            if process.system(defrag_cmd, timeout=900,
+                              verbose=False, ignore_status=True, shell=True):
                 self.fail('Defrag command Failed %s' % defrag_cmd)
 
         hugepagesize = memory.get_huge_page_size()
