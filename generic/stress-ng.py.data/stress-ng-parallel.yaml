@@ -1,0 +1,66 @@
+# While specifying a branch with tag omit `V` from the name.
+# e.g say V0.18.11 is the tag to be used specify
+# branch: '0.18.11'
+#
+workers:
+ttimeout: '5m'
+verify: True
+syslog: True
+metrics: True
+maximize: True
+times: True
+aggressive: True
+parallel: True
+subsystem: !mux
+    memory:
+        class: 'memory'
+        stressors: 'atomic bad-altstack bitonicsort bsearch bubblesort context fibsearch full heapsort hsearch insertionsort judy list lockbus lsearch malloc matrix matrix-3d mcontend membarrier memcpy memfd memrate memthrash mergesort mincore misaligned null numa numacopy oom-pipe pipe pipeherd prefetch ptr-chase qsort radixsort randlist remap resources rmap shellsort skiplist sparsematrix spinmem stack stackmmap str stream tlb-numa tlb-shootdown tmpfs tree tsearch vm vm-addr vm-rw vm-segv wcs zero zlib'
+        v_stressors: "null"
+        exclude: "null"
+    cpu:
+        class: 'cpu'
+        stressors: 'af-alg affinity atomic besselmath bitonicsort bitops branch bsearch bubblesort chyperbolic context cpu cpu-online crc crypt ctrig dfp easy-opcode eigen expmath factor fibsearch fma fp fp-error fp-misc fractal funccall funcret gamma getrandom goto gpu hash heapsort hsearch hyperbolic insertionsort intmath ioport ipsec-mb jpeg judy list logmath longjmp lsearch matrix matrix-3d mergesort monte-carlo mpfr nop numa numacopy opcode plugin powmath prefetch prime priv-instr ptr-chase qsort radixsort rdrand regex regs rotate rseq secretmem shellsort skiplist smi sparsematrix spinmem str stream strnum syncload tree trig tsc tsearch uprobe veccmp vecfp vecmath vecshuf vecwide vnni waitcpu wcs x86cpuid zlib'
+        exclude: "null"
+    cpu-cache:
+        class: 'cpu-cache'
+        stressors: 'bitonicsort bsearch bubblesort cache cachehammer cacheline dekker far-branch fibsearch flushcache heapsort hsearch icache insertionsort judy l1cache list llc-affinity lockbus lsearch malloc matrix matrix-3d membarrier memcpy mergesort misaligned peterson prefetch ptr-chase qsort radixsort shellsort skiplist sparsematrix spinmem str stream tree tsearch wcs zlib'
+        exclude: "null"
+    io:
+        class: 'io'
+        stressors: 'aio aiol hdd io-uring pseek rawdev readahead revio seek sync-file'
+        exclude: "null"
+    device:
+        class: 'device'
+        stressors: 'bad-ioctl dev full kvm loop null urandom zero'
+        exclude: "null"
+    interrupt:
+        class: 'interrupt'
+        stressors: 'aio aiol alarm clock fault itimer kill min-nanosleep nanosleep pidfd schedmix schedpolicy sleep timer timerfd timermix'
+        exclude: "null"
+    filesystem:
+        class: 'filesystem'
+        stressors: 'access chattr chdir chmod chown copy-file dentry dir dirdeep dirmany dnotify dup eventfd fallocate fanotify fcntl fd-fork fiemap file-ioctl filehole filename filerace flock fpunch fsize fstat getdent handle hdd inode-flags inotify io iomix ioprio lease link locka lockf lockmix lockofd metamix mknod open procfs pseek rename rofs statmount symlink sync-file touch umask unlink utime verity xattr'
+        exclude: "null"
+    network:
+        class: 'network'
+        stressors: 'epoll eth-sniff icmp-flood netdev ping-sock rawpkt rawsock rawudp sctp sigurg sock sockabuse sockdiag sockfd sockmany sockpair tun udp udp-flood'
+        exclude: "null"
+    os:
+        class: 'os'
+        stressors: 'access acct acl af-alg aio aiol alarm apparmor bad-altstack bad-ioctl bigheap bind-mount binderfs brk cap cgroup chattr chdir chmod chown chroot clock clone close copy-file cpu-online cpu-sched cyclic daemon dccp dentry dev dev-shm dir dirdeep dirmany dnotify dup dynlib efivar enosys env epoll eth-sniff eventfd exec exit-group fallocate fanotify fault fcntl fd-abuse fd-fork fd-race fiemap fifo file-ioctl filehole filename filerace flipflop flock fork forkheavy fpunch fsize fstat full futex get getdent getrandom handle hdd icmp-flood idle-page inode-flags inotify io io-uring iomix ioprio itimer kcmp key kill klog kvm landlock lease led link loadavg locka lockf lockmix lockofd loop lsm madvise malloc memfd memhotplug metamix min-nanosleep mincore mknod mlock mlockmany mmap mmapaddr mmapcow mmapfiles mmapfixed mmapfork mmaphuge mmapmany mmaprandom mmaptorture module mprotect mq mremap mseal msg msync msyncmany mtx munmap mutex nanosleep netlink-proc netlink-task nice null numa numacopy oom-pipe opcode open ovpn pagemove pagescatter pageswap pci personality pidfd ping-sock pipe pipeherd pkey plugin poll prctl prio-inv procfs pseek pthread ptrace pty quota race-sched ramfs rawpkt rawsock rawudp readahead reboot remap rename resched resources revio ring-pipe rlimit rmap rofs rtc schedmix schedpolicy seal seccomp seek sem sem-sysv sendfile session set shm shm-sysv sigabrt sigbus sigchld sigfd sigfpe sighup sigill sigio signal signest sigpending sigpipe sigq sigrt sigsegv sigstop sigsuspend sigtrap sigurg sigvtalrm sigxcpu sigxfsz sleep sock sockabuse sockdiag sockfd sockmany sockpair spawn splice statmount swap switch sync-file sysbadaddr syscall sysfs sysinfo sysinval tee time-warp timer timerfd timermix tmpfs touch tun udp udp-flood umask umount unlink unshare urandom userfaultfd usersyscall utime varyload vdso verity vforkmany vm vm-addr vm-rw vm-segv vm-splice wait watchdog workload x86syscall xattr yield zero zombie'
+        exclude: "null"
+    pipe:
+        class: 'pipe'
+        stressors: 'fifo pipe pipeherd ring-pipe sendfile splice tee vm-splice'
+        exclude: "null"
+    scheduler:
+        class: 'scheduler'
+        stressors: 'clone cpu-sched cyclic daemon exit-group fifo flipflop fork forkheavy futex hrtimers kill loadavg min-nanosleep mmapfork mq msg mtx mutex nanosleep nice poll prio-inv pthread race-sched resched schedmix schedpolicy sem sem-sysv session sleep softlockup switch tee varyload vfork vforkmany wait workload yield zombie'
+        exclude: "null"
+    vm:
+        class: 'vm'
+        stressors: 'bad-altstack bigheap brk dev-shm env madvise malloc mlock mlockmany mmap mmapaddr mmapcow mmapfiles mmapfixed mmapfork mmaphuge mmapmany mmaprandom mmaptorture mprotect mremap mseal msync msyncmany munmap pagemove pagescatter pageswap physmmap physpage shm shm-sysv stack stackmmap swap tmpfs userfaultfd vm vm-addr vm-rw vm-segv vm-splice vma'
+        exclude: "null"
+    numa:
+        stressors: 'numa'
+        exclude: "null"
