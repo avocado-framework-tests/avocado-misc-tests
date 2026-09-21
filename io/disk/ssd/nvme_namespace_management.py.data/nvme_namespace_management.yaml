@@ -1,0 +1,23 @@
+# NVMe Namespace Management Tests Configuration
+#
+# device: NVMe controller to target. Accepted formats:
+#   controller : nvme0
+#   Subsystem  : nvme-subsysX
+#   NQN        : nqn.1994-11.com.vendor:nvme:modela:2.5-inch:SERIALNUM
+#
+# namespace_count   : Number of equal-sized namespaces to create in
+#                     test_create_equal_ns (default: 4).
+# shared_namespaces : Set True to create shared (multi-path) namespaces.
+#                     Requires a multi-path NVMe fabric setup.
+# package: 'distro' uses the OS-packaged nvme-cli (default).
+#          'upstream' builds nvme-cli from the GitHub master branch.
+
+device: nvme0
+namespace_count: 4
+# Set shared_namespaces as True if want to work with nvme multipath
+shared_namespaces: False
+package: !mux
+    upstream-nvme-cli:
+        package: upstream
+    distro-nvme-cli:
+        package: distro
