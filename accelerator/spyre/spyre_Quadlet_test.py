@@ -148,7 +148,8 @@ Exec=--model {model_path} -tp {tp_size} --max-model-len {max_model_len} --max-nu
 
 [Service]
 Slice=spyre-{use_case}.slice
-Restart=no
+Restart=always
+RestartSec=15
 
 [Install]
 WantedBy=default.target
@@ -166,6 +167,8 @@ WantedBy=default.target
             process.run(
                 f"chown {self.test_user}:{self.test_user} {quadlet_file}",
                 sudo=True, shell=True)
+
+            self.log.info("Quadlet file content (%s):\n%s", quadlet_file, quadlet_content)
         finally:
             # Ensure temp file is always cleaned up
             if os.path.exists(temp_file):
@@ -278,85 +281,14 @@ WantedBy=default.target
 
         return params
 
-    def run_quadlet_test(self, use_case, **params):
-        """
-        Run a complete quadlet test for a specific use case.
-
-        :param use_case: Name of the use case
-        :param params: Dictionary of parameters (aiu_ids, model_path, etc.)
-        """
-        self.log.info("=== Testing %s use case ===", use_case.upper())
-
-        container_name = f"spyre-{use_case}"
-        service_name = f"spyre-{use_case}.service"
-
-        # Store for cleanup
-        self.container_name = container_name
-        self.service_name = service_name
-
-        if not self.spyre_exists():
-            self.fail(
-                "VFIO Spyre devices not found or not properly configured")
-
-        self.log.info("Creating quadlet file for user %s", self.test_user)
-        quadlet_file = self.create_quadlet_file(
-            use_case,
-            params['aiu_ids'],
-            params['model_path'],
-            params['tp_size'],
-            params['max_model_len'],
-            params['max_batch_size'],
-            params['memory'],
-            params.get('shm_size')
-        )
-        self.log.info("Quadlet file created: %s", quadlet_file)
-
-        self.log.info("Reloading systemd daemon")
-        self.reload_systemd_daemon()
-
-        self.log.info("Starting service %s", service_name)
-        if not self.start_service(service_name):
-            service_logs = self.get_service_logs(service_name)
-            self.fail(
-                f"Failed to start service {service_name}\nService logs:\n{service_logs}")
-
-        self.log.info("Checking if container is created")
-        time.sleep(5)  # Give container time to start
-
-        if not self.check_container_running(container_name):
-            service_logs = self.get_service_logs(service_name)
-            self.fail(
-                f"Container {container_name} was not created\nService logs:\n{service_logs}")
-
-        self.log.info("Container %s is running", container_name)
-
-        self.log.info("Monitoring container for VLLM startup")
-        startup_success = wait_for_vllm_startup(
-            container_id=container_name,
-            success_pattern="Application startup complete.",
-            failure_pattern="BACKTRACE",
-            additional_failure_checks=[("VFIO", False), ("fail", False)],
-            timeout=600,
-            check_interval=10,
-            user=self.test_user,
-            log=self.log,
-            show_live_logs=True,
-            live_log_lines=20
-        )
-
-        self.log.info("Collecting logs")
-        service_logs = self.get_service_logs(service_name)
-        self.log.info("Service logs:\n%s", service_logs)
-
-        if not startup_success:
-            self.fail(
-                f"FAIL: {use_case.upper()} use case test failed - VLLM did not start")
-
-        self.log.info(
-            "PASS: %s use case test completed successfully", use_case.upper())
-
     def setUp(self):
         """Set up test environment."""
+        self.test_user = self.params.get("USER", default="")
+
+        # Skip full environment setup for remove_container
+        if getattr(self, '_testMethodName', '') == 'test_remove_container':
+            return
+
         if 'powerpc' not in cpu.get_arch():
             self.cancel("Supported only on IBM Power platform")
         with open('/proc/cpuinfo', 'r') as cpuinfo:
@@ -366,7 +298,6 @@ WantedBy=default.target
         # Load parameters from YAML
         self.rhaiis_version = self.params.get("RHAIIS_VERSION", default="")
         self.spyre_group = self.params.get("SPYRE_GROUP", default="")
-        self.test_user = self.params.get("USER", default="")
         self.host_models_dir = self.params.get(
             "HOST_MODELS_DIR", default="/opt/ibm/spyre/models/src")
         self.vllm_model_path = self.params.get("VLLM_MODEL_PATH", default="")
@@ -526,8 +457,10 @@ WantedBy=default.target
                 self.cancel(
                     f"Models directory {self.host_models_dir} does not exist")
 
-    def test_quadlet(self):
-        """Generic test method that loads use case from YAML."""
+    def test_create_container(self):
+        """
+        Test case to create quadlet container and wait until VLLM is up.
+        """
         use_case = self.params.get("USE_CASE", default="")
         if not use_case:
             self.cancel("USE_CASE parameter not specified in YAML")
@@ -537,66 +470,149 @@ WantedBy=default.target
             self.cancel(f"Unknown use case: {use_case}")
 
         params = self._load_use_case_params(use_case)
-        self.run_quadlet_test(use_case, **params)
 
-    def tearDown(self):
-        """Clean up: stop service, remove container, and clean up quadlet file."""
-        if self.service_name:
-            try:
-                self.log.info("=== Cleanup ===")
+        self.log.info("=== Testing create_container for %s ===",
+                      use_case.upper())
 
-                # Get final service logs
-                try:
-                    service_logs = self.get_service_logs(self.service_name)
-                    self.log.info("Final service logs:\n%s", service_logs)
-                except Exception as ex:
-                    self.log.warning(
-                        "Failed to get final service logs: %s", ex)
+        self.container_name = f"spyre-{use_case}"
+        self.service_name = f"spyre-{use_case}.service"
 
-                # Stop the service
-                self.log.info("Stopping service: %s", self.service_name)
-                self.stop_service(self.service_name)
+        if not self.spyre_exists():
+            self.fail(
+                "VFIO Spyre devices not found or not properly configured")
 
-                # Force remove container if it exists
-                if self.container_name:
-                    self.log.info("Force removing container: %s",
-                                  self.container_name)
-                    process.run(
-                        f"su - {self.test_user} -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) podman rm -f {self.container_name} 2>/dev/null || true'",
-                        shell=True, sudo=True, ignore_status=True
-                    )
+        self.log.info("Creating quadlet file for user %s", self.test_user)
+        quadlet_file = self.create_quadlet_file(
+            use_case,
+            params['aiu_ids'],
+            params['model_path'],
+            params['tp_size'],
+            params['max_model_len'],
+            params['max_batch_size'],
+            params['memory'],
+            params.get('shm_size')
+        )
+        self.log.info("Quadlet file created: %s", quadlet_file)
 
-                    # Verify container is removed
-                    check_result = process.run(
-                        f"su - {self.test_user} -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) podman ps -a --filter name={self.container_name} --format \"{{{{.Names}}}}\"'",
-                        shell=True, sudo=True, ignore_status=True
-                    )
-                    if self.container_name in check_result.stdout_text:
-                        self.log.warning(
-                            "Container %s still exists after removal attempt", self.container_name)
-                    else:
-                        self.log.info(
-                            "Container %s successfully removed", self.container_name)
+        self.log.info("Reloading systemd daemon")
+        self.reload_systemd_daemon()
 
-                # Remove quadlet file
-                user_home = pwd.getpwnam(self.test_user).pw_dir
-                quadlet_file = os.path.join(
-                    user_home, ".config", "containers", "systemd",
-                    f"spyre-{self.container_name.replace('spyre-', '')}.container"
-                )
-                if os.path.exists(quadlet_file):
-                    self.log.info("Removing quadlet file: %s", quadlet_file)
-                    process.run(f"rm -f {quadlet_file}",
-                                shell=True, sudo=True, ignore_status=True)
+        self.log.info("Starting service %s", self.service_name)
+        if not self.start_service(self.service_name):
+            service_logs = self.get_service_logs(self.service_name)
+            self.fail(
+                f"Failed to start service {self.service_name}\nService logs:\n{service_logs}")
 
-                # Reload systemd daemon to unload the service
-                self.log.info("Reloading systemd daemon")
-                process.run(
-                    f"su - {self.test_user} -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user daemon-reload'",
-                    shell=True, sudo=True, ignore_status=True
-                )
+        self.log.info("Checking if container is created")
+        time.sleep(5)  # Give container time to start
 
-                self.log.info("Cleanup completed successfully")
+        if not self.check_container_running(self.container_name):
+            service_logs = self.get_service_logs(self.service_name)
+            self.fail(
+                f"Container {self.container_name} was not created\nService logs:\n{service_logs}")
 
-            except Exception as ex:
-                self.log.warning("Failed to cleanup: %s", ex)
+        self.log.info("Container %s is running", self.container_name)
+
+        self.log.info("Monitoring container for VLLM startup")
+        startup_success = wait_for_vllm_startup(
+            container_id=self.container_name,
+            success_pattern="Application startup complete.",
+            failure_pattern="BACKTRACE",
+            additional_failure_checks=[("VFIO", False), ("fail", False)],
+            timeout=600,
+            check_interval=10,
+            user=self.test_user,
+            log=self.log,
+            show_live_logs=True,
+            live_log_lines=20
+        )
+
+        self.log.info("Collecting logs")
+        service_logs = self.get_service_logs(self.service_name)
+        self.log.info("Service logs:\n%s", service_logs)
+
+        if not startup_success:
+            self.fail(
+                f"FAIL: {use_case.upper()} use case - VLLM did not start")
+
+        self.log.info(
+            "PASS: %s container created and VLLM startup completed successfully",
+            use_case.upper())
+
+    def test_remove_container(self):
+        """
+        Test case to stop service, remove container, and clean up quadlet and temporary files.
+        """
+        use_case = self.params.get("USE_CASE", default="")
+        if not use_case:
+            self.cancel("USE_CASE parameter not specified in YAML")
+
+        self.container_name = f"spyre-{use_case}"
+        self.service_name = f"spyre-{use_case}.service"
+
+        self.log.info("=== Testing remove_container for %s ===",
+                      use_case.upper())
+
+        # Get final service logs if available
+        try:
+            service_logs = self.get_service_logs(self.service_name)
+            if service_logs:
+                self.log.info("Service logs:\n%s", service_logs)
+        except Exception as ex:
+            self.log.warning("Failed to get service logs: %s", ex)
+
+        # Stop the service
+        self.log.info("Stopping service: %s", self.service_name)
+        self.stop_service(self.service_name)
+
+        # Stop container explicitly as user
+        self.log.info("Stopping container for user %s: %s", self.test_user, self.container_name)
+        process.run(
+            f"su - {self.test_user} -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) podman stop -t 10 {self.container_name}'",
+            shell=True, sudo=True, ignore_status=True
+        )
+
+        # Force remove container as user
+        self.log.info("Force removing container for user %s: %s", self.test_user, self.container_name)
+        process.run(
+            f"su - {self.test_user} -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) podman rm -f {self.container_name}'",
+            shell=True, sudo=True, ignore_status=True
+        )
+
+        # Verify container is removed
+        user_check = self.run_cmd_out(
+            f"su - {self.test_user} -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) podman ps -a --filter name=^{self.container_name}$ --format \"{{{{.Names}}}}\"'"
+        )
+        if self.container_name in user_check.splitlines():
+            self.fail(
+                f"Container {self.container_name} still exists after removal attempt")
+        else:
+            self.log.info("Container %s successfully removed", self.container_name)
+
+        # Remove quadlet file
+        user_home = pwd.getpwnam(self.test_user).pw_dir
+        quadlet_file = os.path.join(
+            user_home, ".config", "containers", "systemd",
+            f"spyre-{use_case}.container"
+        )
+        if os.path.exists(quadlet_file):
+            self.log.info("Removing quadlet file: %s", quadlet_file)
+            process.run(f"rm -f {quadlet_file}",
+                        shell=True, sudo=True, ignore_status=True)
+
+        # Remove any leftover temporary files
+        temp_file = f"/tmp/spyre-{use_case}.container"
+        if os.path.exists(temp_file):
+            self.log.info("Removing temporary file: %s", temp_file)
+            process.run(f"rm -f {temp_file}",
+                        shell=True, sudo=True, ignore_status=True)
+
+        # Reload systemd daemon to unload the service
+        self.log.info("Reloading systemd daemon")
+        process.run(
+            f"su - {self.test_user} -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user daemon-reload'",
+            shell=True, sudo=True, ignore_status=True
+        )
+
+        self.log.info("PASS: %s container and associated files removed successfully",
+                      use_case.upper())

@@ -70,12 +70,16 @@ This test suite validates:
 
 # Usage
 
-Run a specific use case test:
+Run all tests or a specific test case for a use case:
 ```bash
+# Run all test cases for Entity Extraction
 avocado run --max-parallel-tasks=1 spyre_Quadlet_test.py -m spyre_Quadlet_test.py.data/spyre_Quadlet_EE_test.yaml
-avocado run --max-parallel-tasks=1 spyre_Quadlet_test.py -m spyre_Quadlet_test.py.data/spyre_Quadlet_RAG_test.yaml
-avocado run --max-parallel-tasks=1 spyre_Quadlet_test.py -m spyre_Quadlet_test.py.data/spyre_Quadlet_Embedding_test.yaml
-avocado run --max-parallel-tasks=1 spyre_Quadlet_test.py -m spyre_Quadlet_test.py.data/spyre_Quadlet_Reranker_test.yaml
+
+# Run only test_create_container test
+avocado run --max-parallel-tasks=1 spyre_Quadlet_test.py:SpyreQuadletTests.test_create_container -m spyre_Quadlet_test.py.data/spyre_Quadlet_EE_test.yaml
+
+# Run only test_remove_container test
+avocado run --max-parallel-tasks=1 spyre_Quadlet_test.py:SpyreQuadletTests.test_remove_container -m spyre_Quadlet_test.py.data/spyre_Quadlet_EE_test.yaml
 ```
 
 # Test Flow
