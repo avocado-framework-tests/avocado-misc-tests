@@ -59,6 +59,7 @@ class kselftest(Test):
         self.kexec_kernel_version = None
         self.subtest = self.params.get('subtest', default='')
         self._overlay_loaded = False
+        self._debugfs_mounted = False
         if self.comp == "mm" and self.subtest == "ksm_tests":
             self.test_type = self.params.get('test_type', default='-H')
             self.Size_flag = self.params.get('Size', default='-s')
@@ -238,6 +239,23 @@ class kselftest(Test):
                 build_str = '-C %s' % self.comp if self.comp else ''
                 if build.make(self.sourcedir, extra_args='%s' % build_str):
                     self.fail("Compilation failed, Please check the build logs !!")
+        # Ensure debugfs is mounted for powerpc/security tests
+        # mitigation-patching.sh requires /sys/kernel/debug/powerpc to exist;
+        # on SLES 16+ the sys-kernel-debug.mount unit is disabled by default.
+        if self.comp == 'powerpc' and self.subtest == 'security':
+            debugfs_path = '/sys/kernel/debug'
+            if not os.path.ismount(debugfs_path):
+                result = process.system(
+                    'mount -t debugfs debugfs %s' % debugfs_path,
+                    shell=True, sudo=True, ignore_status=True)
+                if result == 0:
+                    self._debugfs_mounted = True
+                    self.log.info('Mounted debugfs at %s for powerpc/security tests'
+                                  % debugfs_path)
+                else:
+                    self.log.warning('Failed to mount debugfs; '
+                                     'mitigation-patching.sh may fail')
+
         # Fix for kexec test: Create vmlinuz symlink if only vmlinux exists
         # This handles SUSE systems that use vmlinux instead of vmlinuz
         if self.comp == "kexec":
@@ -483,6 +501,9 @@ class kselftest(Test):
                                shell=True, sudo=True, ignore_status=True)
             else:
                 self.log.warning(f"Symlink {vmlinuz_path} no longer exists or is not a symlink, skipping removal")
+        if getattr(self, '_debugfs_mounted', False):
+            process.system('umount /sys/kernel/debug', shell=True, sudo=True,
+                           ignore_status=True)
         if getattr(self, '_overlay_loaded', False):
             process.system("rmmod overlay", shell=True, sudo=True,
                            ignore_status=True)
