@@ -17,6 +17,8 @@
 #
 
 import os
+import re
+import time
 import multiprocessing
 from avocado import Test
 from avocado.utils import process, build, archive, distro, memory, dmesg
@@ -89,6 +91,20 @@ class Stressng(Test):
         build.make(sourcedir, extra_args='install')
         dmesg.clear_dmesg()
 
+    def _check_stressng_result(self, result, label=''):
+        stdout = result.stdout_text if hasattr(result, 'stdout_text') else ''
+        if 'unsuccessful run' not in stdout:
+            return
+        failed_stressors = re.findall(
+            r'failed:\s+\d+:\s+([\w-]+(?:\s+\(\d+\))?)', stdout)
+        if failed_stressors:
+            self.fail("%sstress-ng unsuccessful run — failed stressors: %s"
+                      % (('[%s] ' % label) if label else '',
+                         ', '.join(failed_stressors)))
+        else:
+            self.fail("%sstress-ng reported an unsuccessful run"
+                      % (('[%s] ' % label) if label else ''))
+
     def test(self):
         args = []
         cmdline = ''
@@ -160,7 +176,8 @@ class Stressng(Test):
             if self.ttimeout:
                 cmd += ' --timeout %s ' % self.ttimeout
             for _ in range(self.iteration):
-                process.run(cmd, ignore_status=True, sudo=True)
+                result = process.run(cmd, ignore_status=True, sudo=True)
+                self._check_stressng_result(result)
         else:
             if self.ttimeout:
                 timeout = ' --timeout %s ' % self.ttimeout
@@ -170,8 +187,9 @@ class Stressng(Test):
                     stress_cmd = ' --%s %s %s %s ' % (stressor, self.workers, timeout,
                                                       stressor_params)
                     for _ in range(self.iteration):
-                        process.run("%s %s" % (cmd, stress_cmd),
-                                    ignore_status=True, sudo=True)
+                        result = process.run("%s %s" % (cmd, stress_cmd),
+                                             ignore_status=True, sudo=True)
+                        self._check_stressng_result(result, label=stressor)
             if self.ttimeout and self.v_stressors:
                 timeout = ' --timeout %s ' % str(
                     int(self.ttimeout) + int(memory.meminfo.MemTotal.g))
@@ -181,8 +199,15 @@ class Stressng(Test):
                     stress_cmd = ' --%s %s %s %s ' % (stressor, self.workers, timeout,
                                                       stressor_params)
                     for _ in range(self.iteration):
-                        process.run("%s %s" % (cmd, stress_cmd),
-                                    ignore_status=True, sudo=True)
+                        result = process.run("%s %s" % (cmd, stress_cmd),
+                                             ignore_status=True, sudo=True)
+                        self._check_stressng_result(result, label=stressor)
+        load1 = os.getloadavg()[0]
+        if load1 > multiprocessing.cpu_count():
+            wait_secs = min(60, int(load1 / multiprocessing.cpu_count()) * 5)
+            self.log.info("Load average %.1f is high, waiting %ds for system "
+                          "to settle before dmesg check", load1, wait_secs)
+            time.sleep(wait_secs)
         error = dmesg.collect_errors_dmesg(['WARNING: CPU:', 'Oops',
                                             'Segfault', 'soft lockup',
                                             'Unable to handle', 'ard LOCKUP'])
