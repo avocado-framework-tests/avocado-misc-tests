@@ -5,3 +5,6 @@ run_type: !mux
     upstream:
         type: 'upstream'
         location: ''
+    distro:
+        type: 'distro'
+        location: "/usr/src/linux"
