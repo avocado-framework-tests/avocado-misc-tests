@@ -1,0 +1,8 @@
+# device is a controller name, e.g. nvme0, nvme1
+# fw_version: expected firmware version string after flashing
+#             e.g. REV.CAS6, please provide complete version and not just CAS6
+#             if not set, it just check if any changes in the current fw version
+#             and make it PASS
+fw_version: ""
+device: 
+firmware_url: ""
