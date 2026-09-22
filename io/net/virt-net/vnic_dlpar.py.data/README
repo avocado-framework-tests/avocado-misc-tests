@@ -1,0 +1,38 @@
+PREREQUISITES: 
+The vNIC must already be added to the LPAR manually before
+running this test. This script does NOT provision the vNIC itself.
+
+input parameters:
+interfaces ---> Interface name(s) of the existing vNIC on the system.
+                Example: "eth1" or "eth1 eth2"
+                (Alternatively, mac_id can also be provided).
+mac_id ---> MAC address(es) of the vNIC interface (Optional if interfaces
+            is provided). Example: "02:03:03:03:03:01"
+device_ip ---> IP address to be configured on the vNIC interface after
+               DLPAR.
+netmasks ---> Netmask value for the vNIC interface.
+               Example: "255.255.255.0"
+peer_ip ---> Peer IP to ping after DLPAR to verify backend traffic.
+num_of_dlpar ---> Number of DLPAR remove/add cycles to perform per
+                  slot. Default: 1
+lockdown_enable ---> Set to True to enable kernel lockdown before
+                     running DLPAR (used in vnic_dlpar_secureboot.yaml).
+                     Default: False
+lockdown_mode ---> Kernel lockdown mode to activate when
+                   lockdown_enable is True.
+                   Accepted values: integrity, confidentiality
+                   Default: integrity
+
+YAML Files:
+- vnic_dlpar.py.data/vnic_dlpar.yaml:
+    Configuration for standard vNIC DLPAR test execution.
+- vnic_dlpar.py.data/vnic_dlpar_secureboot.yaml:
+    Configuration for vNIC DLPAR test execution under kernel lockdown
+    (Secure Boot mode).
+
+Example Usage:
+- Regular vNIC DLPAR:
+  avocado run vnic_dlpar.py -m vnic_dlpar.py.data/vnic_dlpar.yaml
+
+- vNIC DLPAR under Kernel Lockdown / Secure Boot:
+  avocado run vnic_dlpar.py -m vnic_dlpar.py.data/vnic_dlpar_secureboot.yaml
