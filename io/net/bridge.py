@@ -17,6 +17,7 @@
 
 
 import os
+import time
 from avocado import Test
 from avocado.utils import distro
 from avocado.utils import process
@@ -32,6 +33,49 @@ class Bridging(Test):
     def check_failure(self, cmd):
         if process.system(cmd, sudo=True, shell=True, ignore_status=True):
             self.fail("Command %s failed" % cmd)
+
+    def _check_nmcli_down(self, host_interface):
+        '''
+        Validate interface state after 'nmcli connection down'.
+
+        Enslaved interfaces (bridge members) remain UP operationally —
+        only fail if operstate is not 'down'/'unknown' AND the interface
+        is not enslaved.
+        '''
+        operstate = '/sys/class/net/%s/operstate' % host_interface
+        state = process.system_output(
+            'cat %s' % operstate, sudo=True,
+            shell=True, ignore_status=True).decode().strip()
+        master_path = '/sys/class/net/%s/master' % host_interface
+        is_enslaved = process.system(
+            'test -L %s' % master_path, sudo=True,
+            shell=True, ignore_status=True) == 0
+        if not is_enslaved and state not in ('down', 'unknown'):
+            self.fail(
+                "Interface %s failed to go down after "
+                "'nmcli connection down' (operstate: %s)"
+                % (host_interface, state))
+        self.log.info("Interface %s enslaved=%s, operstate=%s",
+                      host_interface, is_enslaved, state)
+
+    def _ping_check_teardown(self, host_interface):
+        '''
+        Verify ping reachability to peer via host_interface after tearDown.
+
+        Uses NetworkInterface.ping_check() utility instead of a raw ping
+        command so that the standard avocado network ping helper is reused.
+        '''
+        if not self.peer_ip:
+            return
+        # Allow time for local interface to settle after IP re-assignment
+        time.sleep(5)
+        local = LocalHost()
+        iface = NetworkInterface(host_interface, local)
+        if iface.ping_check(self.peer_ip, count=3) is not None:
+            self.fail("Ping to %s via %s failed during tearDown"
+                      % (self.peer_ip, host_interface))
+        self.log.info("Ping to %s via %s succeeded during tearDown",
+                      self.peer_ip, host_interface)
 
     def setUp(self):
         self.host_interfaces = []
@@ -75,7 +119,11 @@ class Bridging(Test):
         if os.path.exists('/etc/sysconfig/%s/ifcfg-%s' %
                           (net_path, self.bridge_interface)):
             self.networkinterface.remove_cfg_file()
-            self.check_failure('ip link del %s' % self.bridge_interface)
+        # Always attempt to delete the bridge interface before creating it.
+        # This handles stale interfaces from previous crashed runs.
+        process.system('ip link del %s 2>/dev/null || true' %
+                       self.bridge_interface, sudo=True, shell=True,
+                       ignore_status=True)
         self.check_failure('ip link add dev %s type bridge'
                            % self.bridge_interface)
         check_flag = False
@@ -92,14 +140,20 @@ class Bridging(Test):
                                % (host_interface, self.bridge_interface))
             if detected_distro.name == "SuSE":
                 if detected_distro.version >= 16:
-                    self.check_failure('nmcli connection down %s'
-                                       % host_interface)
+                    # Interface may not have an active NM connection (e.g. a
+                    # freshly added vNIC); exit code 10 is benign in that case.
+                    process.system('nmcli connection down %s' % host_interface,
+                                   sudo=True, shell=True, ignore_status=True)
+                    self._check_nmcli_down(host_interface)
                 elif detected_distro.version < 16:
                     self.check_failure('ip addr flush dev %s' % host_interface)
             if detected_distro.name == 'rhel':
                 if int(detected_distro.version) >= 9:
-                    self.check_failure('nmcli connection down %s'
-                                       % host_interface)
+                    # Interface may not have an active NM connection (e.g. a
+                    # freshly added vNIC); exit code 10 is benign in that case.
+                    process.system('nmcli connection down %s' % host_interface,
+                                   sudo=True, shell=True, ignore_status=True)
+                    self._check_nmcli_down(host_interface)
                 elif int(detected_distro.version) < 9:
                     self.check_failure('ip addr flush dev %s' % host_interface)
 
@@ -166,6 +220,8 @@ class Bridging(Test):
         except Exception:
             self.networkinterface.save(self.ipaddr, self.netmask)
         self.networkinterface.bring_up()
+        # Allow time for local bridge interface to become reachable after IP assignment
+        time.sleep(5)
         self.remotehost = RemoteHost(self.peer_public_ip, self.user,
                                      password=self.password)
         peer_networkinterface = NetworkInterface(self.peer_interface,
@@ -176,6 +232,8 @@ class Bridging(Test):
         except Exception:
             peer_networkinterface.save(self.peer_ip, self.netmask)
         peer_networkinterface.bring_up()
+        # Allow time for peer interface to become reachable after IP assignment
+        time.sleep(5)
         if self.networkinterface.ping_check(self.peer_ip, count=5) is not None:
             self.fail('Ping using bridge failed')
 
@@ -215,17 +273,31 @@ class Bridging(Test):
         except Exception:
             self.networkinterface.remove_cfg_file()
         detected_distro = distro.detect()
+        first_interface = self.host_interfaces[0]
         for host_interface in self.host_interfaces:
             if detected_distro.name == "SuSE":
                 if detected_distro.version >= 16:
-                    self.check_failure('nmcli connection up %s'
-                                       % host_interface)
+                    # If the interface has no NM profile (e.g. freshly added
+                    # vNIC), nmcli exits 10 — fall back to ip link set up.
+                    ret = process.system(
+                        'nmcli connection up %s' % host_interface,
+                        sudo=True, shell=True, ignore_status=True)
+                    if ret != 0:
+                        self.check_failure('ip link set %s up' % host_interface)
+                    if host_interface == first_interface:
+                        self._ping_check_teardown(host_interface)
                 elif detected_distro.version < 16:
                     self.check_failure('ip link set %s up' % host_interface)
             if detected_distro.name == 'rhel':
-                print(detected_distro.version)
                 if int(detected_distro.version) >= 9:
-                    self.check_failure('nmcli connection up %s'
-                                       % host_interface)
+                    # If the interface has no NM profile (e.g. freshly added
+                    # vNIC), nmcli exits 10 — fall back to ip link set up.
+                    ret = process.system(
+                        'nmcli connection up %s' % host_interface,
+                        sudo=True, shell=True, ignore_status=True)
+                    if ret != 0:
+                        self.check_failure('ip link set %s up' % host_interface)
+                    if host_interface == first_interface:
+                        self._ping_check_teardown(host_interface)
                 elif int(detected_distro.version) < 9:
                     self.check_failure('ip link set %s up' % host_interface)
