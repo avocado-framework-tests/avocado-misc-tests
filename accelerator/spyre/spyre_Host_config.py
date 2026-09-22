@@ -603,6 +603,33 @@ class SpyreHostConfig(Test):
             )
         self.log.info("Persistent logging enabled")
 
+        # Install rsyslog and enable/start the service
+        self.log.info("Installing rsyslog")
+        if not sm.check_installed('rsyslog'):
+            if not sm.install('rsyslog'):
+                self.log.warning(
+                    f"Failed to install rsyslog. "
+                    "Ensure the system has a working package repository and retry."
+                )
+            self.log.info("rsyslog installed")
+        else:
+            self.log.info("rsyslog already installed")
+
+        self.log.info("Enabling rsyslog service")
+        if not self.run_cmd("systemctl enable rsyslog"):
+            self.log.warning(
+                f"Failed to enable rsyslog service. "
+                "Check systemctl and rsyslog installation, then retry."
+            )
+
+        self.log.info("Starting rsyslog service")
+        if not self.run_cmd("systemctl start rsyslog"):
+            self.log.warning(
+                f"Failed to start rsyslog service. "
+                "Check 'systemctl status rsyslog' for details and retry."
+            )
+        self.log.info("rsyslog enabled and started successfully")
+
     def test_enable_resource_delegation(self):
         """Enable resource delegation (runs as root)."""
         self.log.info("Enabling resource delegation")
