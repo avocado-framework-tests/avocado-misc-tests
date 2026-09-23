@@ -1,0 +1,14 @@
+# Valid values for driver:
+# VIO NIC  : ibmvnic, ibmveth
+# PCIe NIC : tg3, mlx5_core, bnx2x, i40e, be2net, cxgb4 (set driver_type=pci)
+
+driver_type: ''
+driver: ''
+interface: ''
+host_ip: ''
+netmask: ''
+peer_ip: ''
+peer_user: 'root'
+peer_password: '********'
+ip_config: False
+
