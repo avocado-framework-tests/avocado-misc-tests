@@ -1,0 +1,32 @@
+# vSCSI VIOS-Level EEH Error Injection and Recovery Test Parameters
+#
+# Target: IBM PowerVM LPAR (client) and respective Virtual I/O Server (VIOS)
+#
+# This test maps the client's virtual SCSI disk (e.g., /dev/sda) to its
+# physical backing device (hdiskX) on the VIOS, triggers physical EEH error
+# injection on the VIOS, monitors recovery dmesg traces on the LPAR client,
+# and verifies post-recovery disk health and I/O status.
+
+# Client-side configuration
+# Target virtual SCSI disk on LPAR client to test (e.g., /dev/sda, /dev/sdb).
+# Required: must be set to the actual disk device path on the test LPAR.
+disk:
+
+# VIOS Connection Credentials
+# Required: IP address or hostname of the VIOS managing this LPAR client.
+vios_ip:
+# vios_username defaults to 'padmin' if not set
+vios_username: "padmin"
+# Required: VIOS padmin password. Must be provided at run time.
+vios_pwd:
+
+# Error injection settings on VIOS
+# Required (one of): Name/path of the eeh_tool binary on the VIOS, OR
+# errinjct_cmd with the full AIX errinjct argument string to use instead.
+# At least one of eeh_tool or errinjct_cmd must be provided.
+eeh_tool:
+
+# errinjct_cmd: Full AIX errinjct command arguments (e.g. "eeh -p fscsi0 -s 1").
+# Used only when bypassing eeh_tool with a custom errinjct invocation.
+# Leave unset (or omit) when using eeh_tool above.
+errinjct_cmd:
