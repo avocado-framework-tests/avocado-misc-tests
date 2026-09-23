@@ -1,0 +1,10 @@
+# vTPM parameter validation for NIC drivers on IBM Power LPARs.
+interface: ''
+hbond: False
+host_ip: ''
+netmask: ''
+peer_ip: ''
+peer_user: 'root'
+peer_password: '********'
+ip_config: False
+
