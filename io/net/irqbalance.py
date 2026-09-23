@@ -20,7 +20,8 @@ Irq-balance and CPU affinity test for IO subsystem.
 
 import re
 import os
-from avocado import Test
+import pwd
+from avocado import Test, skipIf
 from avocado.utils import process, cpu, wait, dmesg, genio, pci
 from avocado.utils.network.interfaces import NetworkInterface
 from avocado.utils.network.hosts import LocalHost
@@ -563,6 +564,120 @@ class irq_balance(Test):
                 time.sleep(2)
 
         dmesg.collect_errors_dmesg(errorlog)
+
+    @skipIf("ppc" not in os.uname()[4], "Skip, Powerpc specific tests")
+    @skipIf(lambda self: not pci.is_accelerator(), "Unsupported: PCI adapter is not an accelerator")
+    def test_accelerator(self):
+        '''
+        Check accelerator PCI devices for vfio-pci driver binding and MSI capability,
+        ensure a container exists for the configured user, and verify
+        that vfio-msi interrupts appear in /proc/interrupts.
+        '''
+        # Find all accelerator PCI devices
+        pci_ids = []
+        for dev in os.listdir("/sys/bus/pci/devices"):
+            try:
+                if pci.get_pci_class_name(dev) == "accelerator":
+                    pci_ids.append(dev)
+            except Exception:
+                continue
+
+        if not pci_ids:
+            self.fail("No accelerator PCI devices found in the system")
+
+        self.log.info(f"Found accelerator PCI devices: {pci_ids}")
+
+        # Check driver binding and MSI capability for each accelerator device
+        for pci_id in pci_ids:
+            self.log.info(
+                f"Checking if bus is bind to vfio-pci driver: {pci_id}")
+            lspci_driver_cmd = f"lspci -k -s {pci_id}"
+            lspci_driver_res = process.run(
+                lspci_driver_cmd, shell=True, ignore_status=True)
+            lspci_driver_out = lspci_driver_res.stdout.decode().strip()
+            self.log.info(f"lspci -k output for {pci_id}:\n{lspci_driver_out}")
+
+            if "Kernel driver in use: vfio-pci" not in lspci_driver_out and "vfio-pci" not in lspci_driver_out:
+                self.fail(
+                    f"PCI device {pci_id} is not bound to vfio-pci driver")
+
+            self.log.info(f"Verifying MSI capability on {pci_id}")
+            msi_cmd = f"lspci -vvv -s {pci_id} | grep -A20 MSI"
+            msi_res = process.run(msi_cmd, shell=True, ignore_status=True)
+            msi_out = msi_res.stdout.decode().strip()
+            self.log.info(f"MSI capability output for {pci_id}:\n{msi_out}")
+            if not msi_out or "MSI" not in msi_out:
+                self.fail(f"MSI capability not found on device {pci_id}")
+
+        # Auto-detect running container under root or any non-root user
+        running = None
+        running_user = None
+
+        self.log.info("Checking for running container under root user")
+        root_res = process.run("podman ps -q", shell=True, ignore_status=True)
+        if root_res.stdout.decode().strip():
+            running = root_res.stdout.decode().strip()
+            running_user = "root"
+
+        if not running and os.path.exists("/run/user"):
+            self.log.info(
+                "Checking for running container under active users in /run/user")
+            for uid_str in os.listdir("/run/user"):
+                if uid_str.isdigit() and uid_str != "0":
+                    try:
+                        username = pwd.getpwuid(int(uid_str)).pw_name
+                        user_cmd = f"su - {username} -c 'XDG_RUNTIME_DIR=/run/user/{uid_str} podman ps -q'"
+                        user_res = process.run(
+                            user_cmd, shell=True, ignore_status=True)
+                        user_running = user_res.stdout.decode().strip()
+                        if user_running:
+                            running = user_running
+                            running_user = username
+                            break
+                    except Exception as ex:
+                        self.log.debug(
+                            f"Failed checking podman for uid {uid_str}: {ex}")
+                        continue
+
+        if not running:
+            ps_check = process.run("ps -eo user,comm | grep -E 'conmon|podman'",
+                                   shell=True, ignore_status=True).stdout.decode().strip()
+            if ps_check:
+                checked_users = set()
+                for line in ps_check.splitlines():
+                    u = line.split()[0]
+                    if u not in checked_users and u != "root":
+                        checked_users.add(u)
+                        try:
+                            user_cmd = f"su - {u} -c 'XDG_RUNTIME_DIR=/run/user/$(id -u {u}) podman ps -q'"
+                            user_res = process.run(
+                                user_cmd, shell=True, ignore_status=True)
+                            user_running = user_res.stdout.decode().strip()
+                            if user_running:
+                                running = user_running
+                                running_user = u
+                                break
+                        except Exception:
+                            continue
+
+        if not running:
+            self.fail(
+                "No running container found on the system under root or any non-root user; test requires an active container")
+
+        self.log.info(
+            f"Active container(s) found under user '{running_user}': {running}")
+
+        # Check if vfio-msi interrupts are present in /proc/interrupts
+        self.log.info("Checking /proc/interrupts for vfio-msi entries")
+        interrupts = process.run(
+            "grep vfio-msi /proc/interrupts",
+            shell=True, ignore_status=True
+        ).stdout.decode().strip()
+
+        if not interrupts:
+            self.fail("No vfio-msi interrupts found in /proc/interrupts")
+
+        self.log.info(f"vfio-msi interrupts found:\n{interrupts}")
 
     def tearDown(self):
         """
