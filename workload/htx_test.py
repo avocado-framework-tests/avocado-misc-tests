@@ -28,6 +28,7 @@ test_htx_nic_start / test_htx_nic_check / test_htx_nic_stop test methods.
 
 """
 
+import json
 import os
 import re
 import shutil
@@ -68,6 +69,7 @@ class HtxTest(Test):
 
         self.mdt_file = self.params.get('mdt_file', default='mdt.mem')
         self.htx_disks = self.params.get('htx_disks', default=None)
+        self.vpmem = self.params.get('vpmem', default=False)
 
         _time_limit = self.params.get('time_limit', default=None)
         if _time_limit is not None:
@@ -90,6 +92,10 @@ class HtxTest(Test):
             # Skip the generic MDT check and setup_htx() entirely.
             self._nic_setup()
             return
+
+        if self.vpmem:
+            self._ensure_ndctl_installed()
+            self._validate_vpmem_devices()
 
         if str(self.name.name).endswith('test_start'):
             self.setup_htx()
@@ -154,6 +160,222 @@ class HtxTest(Test):
 
         self.log.info("HTX RPM %s installed successfully", latest_htx_rpm)
         process.run(f'rm -rf {tmp_rpm}', ignore_status=True)
+
+    def _ensure_ndctl_installed(self):
+        """
+        Ensure ``ndctl`` is available; required for vPMEM validation.
+        Cancels the test if ndctl cannot be installed.
+        """
+        smm = SoftwareManager()
+        if not smm.check_installed('ndctl') and not smm.install('ndctl'):
+            self.cancel(
+                "Cannot install ndctl — required for vPMEM validation")
+        self.log.info("ndctl is available")
+
+    def _validate_vpmem_devices(self):
+        """
+        Pre-run vPMEM sanity checks: verify ndctl reports >=1 region,
+        provision namespaces where missing, and check the MDT file contains
+        a vpmem entry. Cancels if no region; fails on namespace errors.
+        See htx_test.py.data/README for details.
+        """
+        self.log.info("vPMEM pre-run validation")
+
+        # Region existence: at least one NVDIMM region must be present.
+        region_out = process.system_output(
+            'ndctl list -Ru', shell=True,
+            ignore_status=True).decode('utf-8', errors='replace').strip()
+        self.log.info("ndctl list -Ru output:\n%s", region_out)
+
+        if not region_out:
+            self.cancel("No vPMEM regions found — ensure papr_scm is "
+                        "loaded and vPMEM is configured in the LPAR profile")
+
+        try:
+            region_data = json.loads(region_out)
+        except json.JSONDecodeError as exc:
+            self.error(f"Failed to parse ndctl region JSON output: {exc}")
+
+        regions = (region_data
+                   if isinstance(region_data, list) else [region_data])
+        region_count = len(regions)
+        self.log.info("vPMEM regions found: %d", region_count)
+
+        if region_count == 0:
+            self.cancel("No vPMEM regions detected — ensure papr_scm is "
+                        "loaded and vPMEM is configured in the LPAR profile")
+
+        for region in regions:
+            self.log.info("  region=%s  size=%s  state=%s",
+                          region.get('dev', 'unknown'),
+                          region.get('size', 0),
+                          region.get('state', 'unknown'))
+
+        # Namespace provisioning: query per-region namespaces and create
+        # any that are missing. ndctl list -RNu output is normalised to a
+        # flat list regardless of JSON shape (see README for details).
+        ndctl_out = process.system_output(
+            'ndctl list -RNu', shell=True,
+            ignore_status=True).decode('utf-8', errors='replace').strip()
+        self.log.info("ndctl list -RNu output:\n%s", ndctl_out)
+
+        try:
+            ndctl_data = json.loads(ndctl_out) if ndctl_out else []
+        except json.JSONDecodeError as exc:
+            self.error(f"Failed to parse ndctl JSON output: {exc}")
+
+        if isinstance(ndctl_data, list):
+            rlist = ndctl_data
+        elif isinstance(ndctl_data, dict):
+            rlist = ndctl_data.get('regions', [ndctl_data])
+        else:
+            rlist = []
+
+        ns_map = {r.get('dev'): r.get('namespaces', []) for r in rlist}
+
+        for region in regions:
+            region_name = region.get('dev', 'unknown')
+            existing_ns = ns_map.get(region_name, [])
+            avail = region.get('available_size', 0)
+            region_full = (avail == 0 or avail == '0' or avail == '0 B')
+
+            if not existing_ns and not region_full:
+                self.log.info("No namespaces on %s; creating one", region_name)
+                ret = process.system(
+                    f'ndctl create-namespace -r {region_name}',
+                    shell=True, ignore_status=True)
+                if ret != 0:
+                    self.fail(
+                        f"ndctl create-namespace failed for region "
+                        f"{region_name} (exit code {ret})")
+                self.log.info("Namespace created on %s", region_name)
+            elif not existing_ns and region_full:
+                self.fail(
+                    f"Region {region_name} has no namespaces and "
+                    f"available_size is 0 — region may be misconfigured")
+            else:
+                for ns in existing_ns:
+                    self.log.info(
+                        "  region=%s  ns=%s  mode=%s  size=%s  state=%s",
+                        region_name, ns.get('dev', 'unknown'),
+                        ns.get('mode', 'unknown'), ns.get('size', 0),
+                        ns.get('state', 'enabled'))
+                    if ns.get('state', 'enabled') == 'disabled':
+                        self.fail(
+                            f"vPMEM namespace {ns.get('dev')} in region "
+                            f"{region_name} is disabled before HTX run")
+
+        # MDT vpmem check: verify the MDT file contains a vpmem device entry.
+        # If missing, attempt ndctl create-namespace to enable it; else fail.
+        self._check_vpmem_in_mdt()
+
+        self.log.info("vPMEM pre-run validation PASSED — "
+                      "%d region(s), namespaces provisioned, MDT verified",
+                      region_count)
+
+    def _check_vpmem_in_mdt(self):
+        """
+        Verify that the MDT file contains a vpmem device entry.
+        If no vpmem entry is found, attempt to enable it via ndctl;
+        if that also fails, the test is failed.
+        """
+        mdt_path = f'{HTX_INSTALL_PATH}/mdt/{self.mdt_file}'
+        if not os.path.exists(mdt_path):
+            self.log.info("MDT file %s not found; skipping vpmem MDT check",
+                          self.mdt_file)
+            return
+
+        mdt_content = process.system_output(
+            f'htxcmdline -query -mdt {self.mdt_file}',
+            ignore_status=True).decode('utf-8', errors='replace')
+
+        if 'pmem' in mdt_content.lower():
+            self.log.info("vpmem device found in MDT %s", self.mdt_file)
+            return
+
+        self.log.info("No vpmem entry in MDT %s; attempting ndctl to enable",
+                      self.mdt_file)
+        ret = process.system('ndctl list -N', shell=True, ignore_status=True)
+        if ret == 0:
+            process.run('htxcmdline -createmdt', ignore_status=True)
+            mdt_content = process.system_output(
+                f'htxcmdline -query -mdt {self.mdt_file}',
+                ignore_status=True).decode('utf-8', errors='replace')
+            if 'pmem' in mdt_content.lower():
+                self.log.info("vpmem entry present after MDT refresh")
+                return
+        self.fail(
+            f"No vpmem device found in MDT {self.mdt_file} — "
+            "ensure vPMEM is configured and papr_scm is loaded")
+
+    def _check_vpmem_namespace_distribution(self):
+        """
+        Post-HTX vPMEM namespace distribution check.
+        Verifies every region still has at least one active namespace after
+        the HTX run. See htx_test.py.data/README for details.
+        """
+        self.log.info("vPMEM post-HTX namespace distribution check")
+
+        ndctl_out = process.system_output(
+            'ndctl list -RNu', shell=True,
+            ignore_status=True).decode('utf-8', errors='replace').strip()
+        self.log.info("Post-HTX ndctl list -RNu:\n%s", ndctl_out)
+
+        if not ndctl_out:
+            self.fail("ndctl list -RNu returned no output after HTX run")
+
+        try:
+            ndctl_data = json.loads(ndctl_out)
+        except json.JSONDecodeError as exc:
+            self.fail(f"Failed to parse post-HTX ndctl JSON output: {exc}")
+
+        if isinstance(ndctl_data, list):
+            regions = ndctl_data
+        elif isinstance(ndctl_data, dict):
+            regions = ndctl_data.get('regions', [ndctl_data])
+        else:
+            regions = [ndctl_data]
+        total_namespaces = 0
+        distribution_errors = []
+
+        for region in regions:
+            region_name = region.get('dev', 'unknown')
+            region_size = region.get('size', 0)
+            ns_list = region.get('namespaces', [])
+
+            self.log.info("Region: %s  size=%s  namespaces=%d",
+                          region_name, region_size, len(ns_list))
+
+            if not ns_list:
+                distribution_errors.append(
+                    f"Region {region_name} has no namespaces after HTX run")
+                continue
+
+            for ns in ns_list:
+                ns_name = ns.get('dev', 'unknown')
+                ns_state = ns.get('state', 'enabled')
+                total_namespaces += 1
+                self.log.info("  ns=%s  mode=%s  size=%s  state=%s",
+                              ns_name, ns.get('mode', 'unknown'),
+                              ns.get('size', 0), ns_state)
+                if ns_state == 'disabled':
+                    distribution_errors.append(
+                        f"Namespace {ns_name} in region {region_name} "
+                        f"is disabled after HTX run")
+
+        self.log.info("Post-HTX: %d region(s), %d namespace(s)",
+                      len(regions), total_namespaces)
+
+        if distribution_errors:
+            for err in distribution_errors:
+                self.log.error("vPMEM distribution error: %s", err)
+            self.fail(
+                f"vPMEM post-HTX check found {len(distribution_errors)} "
+                f"error(s) — check log for details")
+
+        self.log.info("vPMEM post-HTX check PASSED — "
+                      "%d namespace(s) across %d region(s), all active",
+                      total_namespaces, len(regions))
 
     def _get_distro_packages(self):
         """
@@ -391,8 +613,14 @@ class HtxTest(Test):
     def test_stop(self):
         """
         Shutdown the MDT and the HTX daemon.
+
+        When ``vpmem: True``, also runs a post-HTX namespace distribution
+        check to verify that vPMEM memory remained chunked and healthy
+        across the entire HTX run.
         """
         self.stop_htx()
+        if self.vpmem:
+            self._check_vpmem_namespace_distribution()
 
     def stop_htx(self):
         """
