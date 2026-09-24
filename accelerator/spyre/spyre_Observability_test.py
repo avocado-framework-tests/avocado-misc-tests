@@ -317,15 +317,23 @@ class ObservabilityTests(Test):
         try:
             first_data = data_lines[0].split()
             device_id = int(first_data[0])
-            hostcpu = float(first_data[3])
-            hostmem = float(first_data[4])
-            power = float(first_data[5])
-            temp = float(first_data[6])
+
+            def _parse_val(val):
+                return None if val == '-' else float(val)
+
+            hostcpu = _parse_val(first_data[3])
+            hostmem = _parse_val(first_data[4])
+            power = _parse_val(first_data[5])
+            temp = _parse_val(first_data[6])
 
             self.log.info(
-                "Sample metrics - Device: %d, CPU: %.1f%%, Mem: %.1f%%, "
-                "Power: %.1fW, Temp: %.1fC",
-                device_id, hostcpu, hostmem, power, temp)
+                "Sample metrics - Device: %d, CPU: %s, Mem: %s, "
+                "Power: %s, Temp: %s",
+                device_id,
+                f"{hostcpu:.1f}%" if hostcpu is not None else "-",
+                f"{hostmem:.1f}%" if hostmem is not None else "-",
+                f"{power:.1f}W" if power is not None else "-",
+                f"{temp:.1f}C" if temp is not None else "-")
             return True
 
         except (ValueError, IndexError) as ex:
@@ -860,7 +868,7 @@ class ObservabilityTests(Test):
                 f"cd {self.TRACE_ANALYZER_PATH} && "
                 f"export AIUPROF_PATH=$PWD && "
                 f"export SETUPTOOLS_SCM_PRETEND_VERSION=1.0.0 && "
-                f"pip install ."
+                f"pip install --no-build-isolation ."
             )
 
             is_nonroot = (container_id ==
