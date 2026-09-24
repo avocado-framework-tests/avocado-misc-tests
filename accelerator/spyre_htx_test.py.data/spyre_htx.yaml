@@ -1,0 +1,45 @@
+# Spyre HTX Container Test Configuration
+#/
+# This YAML file configures the HTX test parameters for Spyre AIU container-based testing.
+#
+# Usage:
+#   avocado run spyre_htx_test.py --mux-yaml spyre_htx_test.py.data/spyre_htx.yaml
+
+# Test Type Configuration
+# Determines which Spyre MDT file to use:
+# - test: Basic Spyre exerciser test (mdt.container_spyre_test)
+# - stress: High stress & power consumption mode with EEH testing (mdt.container_spyre_stress_test)
+# - eeh: Dedicated EEH testing (mdt.container_spyre_eeh_test)
+# - bu: Spyre with other exercisers - Memory, CPU/FPU (mdt.container_spyre_bu_test)
+# - granite: Granite model test (requires GSA credentials and large disk space)
+
+test_type: test
+
+# How long to run the HTX stress test
+time_limit: 2
+
+# 'm' for minutes, 'h' for hours
+time_unit: h
+
+# HTX Installation Type
+# - rpm: Install from RPM package (recommended)
+# - git: Build from GitHub source
+run_type: rpm
+
+# URL to the HTX RPM repository
+htx_rpm_link: ""
+
+# EEH Testing Configuration
+# Set to '1' to enable, '0' to disable (default: '0')
+enable_eeh: '1'
+
+# Number of EEH error injections to perform (default: 5)
+eeh_retries: '5'
+
+# Granite Model Configuration (only for test_type: granite)
+gsa_user: ""
+gsa_password: ""
+
+# Granite Model URL
+model_url: ""
+
