@@ -491,7 +491,8 @@ class SenlibTests(Test):
         # Create container
         try:
             returncode, stdout, stderr = self.podman.run(
-                podman_options=podman_options)
+                podman_options=podman_options,
+                user="root")
             if returncode != 0:
                 self.log.error("stderr: %s", stderr.decode() if stderr else "")
                 self.cancel("Container creation failed")
