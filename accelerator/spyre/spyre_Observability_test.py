@@ -625,7 +625,8 @@ class ObservabilityTests(Test):
                           " ".join(podman_args))
             try:
                 returncode, stdout, stderr = ObservabilityTests._podman.run(
-                    podman_options=podman_args)
+                    podman_options=podman_args,
+                    user="root")
                 if returncode != 0:
                     self.log.error("Failed to create container")
                     self.log.error("stderr: %s", stderr.decode()
