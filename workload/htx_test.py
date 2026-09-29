@@ -15,6 +15,7 @@
 #         Naresh Bannoth <nbannoth@in.ibm.com>
 #         Maram Srimannarayana Murthy <msmurthy@linux.vnet.ibm.com>
 #         Vaishnavi Bhat <vaishnavi@linux.vnet.ibm.com>
+#         Priyanka Behera <Priyanka.Behera2@ibm.com>
 #
 
 """
@@ -25,6 +26,8 @@ framework.  Supports generic MDT-based runs (CPU, memory, pmem, isst) as
 well as targeted IO device stress via the respective YAML parameters.
 Also supports NIC device stress across a host/peer LPAR pair via the
 test_htx_nic_start / test_htx_nic_check / test_htx_nic_stop test methods.
+Also supports block device stress on software RAID and LVM stacks via the
+test_htx_software_raid / test_htx_lvm / test_htx_sraid_lvm test methods.
 
 """
 
@@ -38,8 +41,10 @@ import urllib.request
 from avocado import Test
 from avocado.utils import disk
 from avocado.utils import distro
+from avocado.utils import lv_utils
 from avocado.utils import multipath
 from avocado.utils import process
+from avocado.utils import softwareraid
 from avocado.utils.network.hosts import LocalHost, RemoteHost
 from avocado.utils.software_manager.backends.rpm import RpmBackend
 from avocado.utils.software_manager.manager import SoftwareManager
@@ -79,6 +84,9 @@ class HtxTest(Test):
         self.run_all = self.params.get('all', default=False)
         self.rpm_link = self.params.get('htx_rpm_link', default=None)
         self.dist_name = None
+        self.sraids = []
+        self.block_disks = []
+        self.lv_devices = []
 
         self.block_device = ''
         if self.htx_disks and not self.run_all:
@@ -94,8 +102,11 @@ class HtxTest(Test):
         if str(self.name.name).endswith('test_start'):
             self.setup_htx()
 
-        if not os.path.exists(f'{HTX_INSTALL_PATH}/mdt/{self.mdt_file}'):
-            self.cancel(f"MDT file {self.mdt_file} not found")
+        disk_tests = ('test_htx_lvm', 'test_htx_sraid_lvm',
+                      'test_htx_software_raid')
+        if not any(str(self.name.name).endswith(t) for t in disk_tests):
+            if not os.path.exists(f'{HTX_INSTALL_PATH}/mdt/{self.mdt_file}'):
+                self.cancel(f"MDT file {self.mdt_file} not found")
 
     @staticmethod
     def _resolve_block_devices(raw_devices):
@@ -991,17 +1002,380 @@ class HtxTest(Test):
         """
         self._htx_nic_cleanup()
 
+    # ------------------------------------------------------------------
+    # Block device setup helpers (not tests)
+    # ------------------------------------------------------------------
+
+    def _create_software_raid(self, disk_list, level):
+        """
+        Create a software RAID array using all disks in disk_list for the
+        given level, via avocado.utils.softwareraid.SoftwareRaid.
+        Each array gets a unique md name (htx_sraid_<level>).
+        Appends the instance to self.sraids and returns it.
+        """
+        md_name = '/dev/md/htx_sraid_%s' % level
+        self.log.info('Creating software RAID%s on: %s', level, disk_list)
+        sraid = softwareraid.SoftwareRaid(md_name, level, disk_list, '1.2')
+        if not sraid.create():
+            self.fail('Failed to create software RAID%s' % level)
+        self.sraids.append(sraid)
+        return sraid
+
+    def _cleanup_software_raid(self, sraid, disk_list):
+        """
+        Stop the RAID array, clear superblocks and wipefs member disks.
+        For multipath devices, stop the array and re-scan multipath to
+        restore the devices for subsequent tests.
+        """
+        self.log.info('Stopping software RAID: %s', sraid.name)
+        if not sraid.stop():
+            self.log.warning('Failed to stop RAID %s', sraid.name)
+        is_mpath = any('mapper' in dev for dev in disk_list)
+        if is_mpath:
+            process.run('mdadm --zero-superblock %s' % ' '.join(disk_list),
+                        shell=True, ignore_status=True)
+            process.run('multipath -r', shell=True, ignore_status=True)
+        else:
+            sraid.clear_superblock()
+            for dev in disk_list:
+                process.run('wipefs -af %s' % dev,
+                            shell=True, ignore_status=True)
+
+    def _create_lvm(self, disk_list, vg_name='htx_vg'):
+        """
+        Create PV -> VG -> LV (htx_lv) on disk_list.
+        vg_name defaults to htx_vg but can be overridden per RAID level.
+        Stores (vg_name, device) in self.lv_devices for tearDown cleanup.
+        Returns '/dev/<vg_name>/htx_lv'.
+        """
+        device = ' '.join(disk_list)
+        self.log.info('Creating PV on %s', device)
+        ret = process.run('pvcreate -f %s' % device,
+                          shell=True, ignore_status=True)
+        if ret.exit_status != 0:
+            self.fail('pvcreate failed on %s: %s'
+                      % (device, ret.stderr_text))
+        if len(disk_list) == 1:
+            total_mb = lv_utils.get_device_total_space(
+                disk_list[0]) / (1024 * 1024)
+        else:
+            total_mb = lv_utils.get_devices_total_space(
+                disk_list) / (1024 * 1024)
+        lv_size = int(total_mb * 45 / 100) or 512
+        if lv_size > int(total_mb):
+            self.cancel(
+                'Device %s is too small (%dM) to create a %dM LV'
+                % (device, int(total_mb), lv_size))
+        self.log.info("Creating VG '%s' on %s", vg_name, device)
+        lv_utils.vg_create(vg_name, device, force=True)
+        if not lv_utils.vg_check(vg_name):
+            self.fail('VG %s was not created' % vg_name)
+        self.log.info("Creating LV 'htx_lv' size=%dM", lv_size)
+        lv_utils.lv_create(vg_name, 'htx_lv', lv_size)
+        if not lv_utils.lv_check(vg_name, 'htx_lv'):
+            self.fail('LV htx_lv was not created in %s' % vg_name)
+        self.lv_devices.append((vg_name, device))
+        return '/dev/%s/htx_lv' % vg_name
+
+    def _cleanup_lvm(self, vg_name, backing_device):
+        """
+        Remove LV htx_lv -> VG -> PV and wipe LVM metadata.
+        """
+        self.log.info('Removing LV/VG/PV for %s on %s',
+                      vg_name, backing_device)
+        process.run('lvchange -an /dev/%s/htx_lv' % vg_name,
+                    shell=True, ignore_status=True)
+        if lv_utils.lv_check(vg_name, 'htx_lv'):
+            lv_utils.lv_remove(vg_name, 'htx_lv')
+        if lv_utils.vg_check(vg_name):
+            process.run('vgremove -f %s' % vg_name,
+                        shell=True, ignore_status=True)
+        process.run('pvremove -ff %s' % backing_device,
+                    shell=True, ignore_status=True)
+        for dev in backing_device.split():
+            if 'mapper' not in dev:
+                process.run('wipefs -af %s' % dev,
+                            shell=True, ignore_status=True)
+
+    def _setup_software_raid(self, disk_list, level):
+        """
+        Create software RAID via _create_software_raid() and set
+        self.block_device to the RAID device basename.
+        """
+        sraid = self._create_software_raid(disk_list, level)
+        self.block_device = os.path.basename(sraid.name)
+
+    def _setup_lvm(self, disk_list):
+        """
+        Create LVM via _create_lvm() on all disks in disk_list and
+        set self.block_device to the LV basename.
+        """
+        lv_path = self._create_lvm(disk_list)
+        self.block_device = os.path.basename(lv_path)
+
+    def _setup_sraid_lvm(self, disk_list, level):
+        """
+        Create software RAID via _create_software_raid(), then stack LVM
+        on top via _create_lvm(), and set self.block_device to the LV basename.
+        VG name is unique per RAID level to allow multiple iterations.
+        """
+        sraid = self._create_software_raid(disk_list, level)
+        lv_path = self._create_lvm([sraid.name], vg_name='htx_vg_%s' % level)
+        self.block_device = os.path.basename(lv_path)
+
+    def _resolve_lv_name(self, lv_path):
+        """
+        Compute candidate HTX device names for an LVM logical volume path
+        and store them for later resolution against the live MDT.
+
+        Resolution is deferred to _start_htx() which runs AFTER createmdt
+        and select — only at that point is the MDT queryable.
+
+        HTX names LVM LVs differently across LPAR/disk setups:
+          - VFC/VSCSI/mpath : '<vg_name>-<lv_name>'  e.g. htx_vg-htx_lv
+          - NVMe/direct-disk: kernel dm-N name        e.g. dm-11
+          - Future setups   : resolved by generic MDT scan in _start_htx()
+
+        Returns a placeholder token '<vg>-<lv>' that _start_htx()
+        replaces with the real MDT name before activating.
+        """
+        parts = lv_path.strip('/').split('/')
+        vg_name = parts[-2]   # e.g. htx_vg_5
+        lv_name = parts[-1]   # e.g. htx_lv
+
+        # candidate 1: vg-lv form  (VFC/VSCSI/mpath LPARs)
+        vg_lv_name = '%s-%s' % (vg_name, lv_name)
+
+        # candidate 2: kernel dm-N name  (NVMe/direct-disk LPARs)
+        dm_name = os.path.basename(os.path.realpath(lv_path))
+
+        if not hasattr(self, '_lv_candidates'):
+            self._lv_candidates = {}
+        self._lv_candidates[vg_lv_name] = (
+            vg_name, lv_name, vg_lv_name, dm_name)
+
+        self.log.info("Deferred LV resolution: %s -> candidates [%s, %s]",
+                      lv_path, vg_lv_name, dm_name)
+        return vg_lv_name
+
+    def _resolve_lv_candidates(self, mdt_out):
+        """
+        Resolve all deferred LV name candidates against the live MDT output.
+        Called from _start_htx() after createmdt + select so the MDT is live.
+        """
+        if not hasattr(self, '_lv_candidates') or not self._lv_candidates:
+            return
+
+        for placeholder, (vg_name, lv_name, vg_lv, dm_n) in \
+                self._lv_candidates.items():
+            resolved = None
+
+            if vg_lv in mdt_out:
+                resolved = vg_lv
+                self.log.info("Resolved LV %s -> %s (vg-lv form)",
+                              placeholder, resolved)
+            elif dm_n in mdt_out:
+                resolved = dm_n
+                self.log.info("Resolved LV %s -> %s (dm-N form)",
+                              placeholder, resolved)
+            else:
+                for line in mdt_out.splitlines():
+                    cols = line.split()
+                    if not cols:
+                        continue
+                    dev = cols[0]
+                    if vg_name in dev or lv_name in dev:
+                        resolved = dev
+                        self.log.info("Resolved LV %s -> %s (generic scan)",
+                                      placeholder, resolved)
+                        break
+
+            if resolved is None:
+                self.log.info("Could not resolve %s in MDT, keeping %s",
+                              placeholder, vg_lv)
+                resolved = vg_lv
+
+            if resolved != placeholder:
+                self.block_device = self.block_device.replace(
+                    placeholder, resolved)
+                self.block_disks = [
+                    resolved if d == placeholder else d
+                    for d in self.block_disks
+                ]
+
+    def _resolve_md_name(self, named_path):
+        """
+        Resolve a named md device path (e.g. /dev/md/htx_sraid_5) to its
+        kernel numeric basename (e.g. md128) as it appears in /proc/mdstat
+        and in the HTX MDT.  Falls back to the basename of named_path if
+        no matching entry is found.
+        """
+        array_name = os.path.basename(named_path)  # e.g. htx_sraid_5
+        mdstat = process.system_output(
+            'cat /proc/mdstat', ignore_status=True).decode('utf-8')
+        for line in mdstat.splitlines():
+            parts = line.split()
+            if len(parts) >= 2 and parts[1] == ':':
+                md_num = parts[0]          # e.g. md128
+                detail = process.system_output(
+                    'mdadm --detail /dev/%s' % md_num,
+                    ignore_status=True).decode('utf-8')
+                for dline in detail.splitlines():
+                    if dline.strip().startswith('Name') and \
+                            array_name in dline:
+                        self.log.info("Resolved %s -> %s", named_path, md_num)
+                        return md_num
+        self.log.info("Could not resolve %s, using basename", named_path)
+        return array_name
+
+    def _start_htx(self, htx_disks, mdt_file):
+        """
+        Re-create MDT so HTX picks up newly created block devices, then
+        select, suspend, activate and run HTX against the given target.
+        Called by test_htx_software_raid, test_htx_lvm, test_htx_sraid_lvm.
+
+        :param htx_disks: Space-separated HTX device target(s) to activate.
+        :param mdt_file:  MDT file name to use (e.g. 'mdt.hd').
+        """
+        self.log.info("Re-creating MDT so HTX picks up new block devices")
+        process.run('htxcmdline -createmdt', ignore_status=True)
+
+        self.log.info("Selecting MDT file: %s", mdt_file)
+        process.system(f'htxcmdline -select -mdt {mdt_file}',
+                       ignore_status=True)
+
+        # MDT is now selected and queryable — resolve any deferred LV names
+        mdt_out = process.system_output(
+            f'htxcmdline -query -mdt {mdt_file}',
+            ignore_status=True).decode('utf-8')
+        self._resolve_lv_candidates(mdt_out)
+        htx_disks = self.block_device
+
+        self.log.info("Suspending all block devices in MDT %s", mdt_file)
+        process.system(f'htxcmdline -suspend all -mdt {mdt_file}',
+                       ignore_status=True)
+
+        self.log.info("Activating block device(s): %s", htx_disks)
+        process.system(
+            f'htxcmdline -activate {htx_disks} -mdt {mdt_file}',
+            ignore_status=True)
+
+        self.log.info("Checking ACTIVE state for: %s", htx_disks)
+        active_out = process.system_output(
+            f'htxcmdline -query {htx_disks} -mdt {mdt_file}',
+            ignore_status=True).decode('utf-8').split('\n')
+        device_list = htx_disks.split()
+        active_devices = [
+            dev for line in active_out for dev in device_list
+            if dev in line and 'ACTIVE' in line
+        ]
+        non_active = list(set(device_list) - set(active_devices))
+        if non_active:
+            self.fail("Block devices failed to reach ACTIVE state: %s"
+                      % non_active)
+
+        self.log.info("Configuring HTX_DR_TEST environment variable")
+        process.system('hcl -get_htx_env HTX_DR_TEST', ignore_status=True)
+        process.system('hcl -set_htx_env HTX_DR_TEST 1', ignore_status=True)
+        process.system('hcl -get_htx_env HTX_DR_TEST', ignore_status=True)
+
+        self.log.info("Starting HTX run on MDT: %s", mdt_file)
+        process.system(f'htxcmdline -run -mdt {mdt_file}',
+                       ignore_status=True)
+
+        self.log.info("Running HTX for %d seconds", self.time_limit)
+        for _ in range(0, self.time_limit, 60):
+            process.system('htxcmdline -geterrlog', ignore_status=True)
+            if os.path.exists('/tmp/htx/htxerr') and \
+                    os.stat('/tmp/htx/htxerr').st_size != 0:
+                self.fail("HTX errors detected; check /tmp/htx/htxerr")
+            process.system(
+                f'htxcmdline -query {htx_disks} -mdt {mdt_file}',
+                ignore_status=True)
+            time.sleep(60)
+
+    # ------------------------------------------------------------------
+    # Block device tests — setup the stack then run HTX on it
+    # ------------------------------------------------------------------
+
+    def test_htx_software_raid(self):
+        """
+        HTX stress test on software RAID (levels 0, 1, 5).
+        Requires htx_disks to be set in the YAML parameters.
+        """
+        if not self.htx_disks:
+            self.cancel("htx_disks is required for disk stress test")
+        self.setup_htx()
+        disk_list = [disk.get_absolute_disk_path(d)
+                     for d in self.htx_disks.split()]
+        level_list = sorted([0, 1, 5], reverse=True)
+        min_disks = {5: 3, 1: 2, 0: 1}
+        s_raid_level = {}
+        for level in level_list:
+            level_disk = disk_list[:min_disks[level]]
+            disk_list = disk_list[min_disks[level]:]
+            if level_disk:
+                s_raid_level[level] = level_disk
+        for level in s_raid_level:
+            sraid = self._create_software_raid(s_raid_level[level], str(level))
+            self.block_disks.append(self._resolve_md_name(sraid.name))
+        self.block_device = ' '.join(self.block_disks)
+        self._start_htx(self.block_device, self.mdt_file)
+
+    def test_htx_lvm(self):
+        """
+        HTX stress test on LVM.
+        Requires htx_disks to be set in the YAML parameters.
+        """
+        if not self.htx_disks:
+            self.cancel("htx_disks is required for disk stress test")
+        self.setup_htx()
+        disk_list = [disk.get_absolute_disk_path(d)
+                     for d in self.htx_disks.split()]
+        self._setup_lvm(disk_list)
+        lv_path = '/dev/htx_vg/htx_lv'
+        self.block_device = self._resolve_lv_name(lv_path)
+        self._start_htx(self.block_device, self.mdt_file)
+
+    def test_htx_sraid_lvm(self):
+        """
+        HTX stress test on software RAID with LVM stacked on top.
+        Requires htx_disks to be set in the YAML parameters.
+        """
+        if not self.htx_disks:
+            self.cancel("htx_disks is required for disk stress test")
+        self.setup_htx()
+        disk_list = [disk.get_absolute_disk_path(d)
+                     for d in self.htx_disks.split()]
+        level_list = sorted([0, 1, 5], reverse=True)
+        min_disks = {5: 3, 1: 2, 0: 1}
+        s_raid_level = {}
+        for level in level_list:
+            level_disk = disk_list[:min_disks[level]]
+            disk_list = disk_list[min_disks[level]:]
+            if level_disk:
+                s_raid_level[level] = level_disk
+        for level in s_raid_level:
+            self._setup_sraid_lvm(s_raid_level[level], str(level))
+            self.block_disks.append(self._resolve_lv_name(
+                '/dev/htx_vg_%s/htx_lv' % level))
+        self.block_device = ' '.join(self.block_disks)
+        self._start_htx(self.block_device, self.mdt_file)
+
     def tearDown(self):
         """
         Guaranteed cleanup after every test method (PASS, FAIL, ERROR,
         CANCEL).
 
-        Only closes the SSH session/RemoteHost that _nic_setup() opens for
-        NIC tests.  IP restore and HTX shutdown are intentionally NOT done
-        here — those are stateful operations that belong exclusively in
-        test_htx_nic_stop → _htx_nic_cleanup(), so the HTX-assigned NIC
-        addresses remain live through test_htx_nic_check and are only
-        torn down when test_htx_nic_stop is explicitly run.
+        For NIC tests: only closes the SSH session/RemoteHost that
+        _nic_setup() opens. IP restore and HTX shutdown are intentionally
+        NOT done here — those belong exclusively in test_htx_nic_stop →
+        _htx_nic_cleanup(), so HTX-assigned NIC addresses remain live
+        through test_htx_nic_check and are only torn down when
+        test_htx_nic_stop is explicitly run.
+
+        For block device tests (LVM/RAID): stops HTX then tears down all
+        LVM and software RAID stacks created during the test.
         """
         if hasattr(self, 'remotehost') and self.remotehost:
             try:
@@ -1014,3 +1388,24 @@ class HtxTest(Test):
                 self.session.quit()
             except Exception:
                 pass
+
+        # Block device cleanup — only runs when LVM/RAID was created
+        if self.lv_devices or self.sraids:
+            try:
+                self.stop_htx()
+            except Exception as ex:
+                self.log.warning('stop_htx() failed in tearDown: %s', ex)
+            time.sleep(3)
+            for vg_name, backing_device in self.lv_devices:
+                try:
+                    self._cleanup_lvm(vg_name, backing_device)
+                except Exception as ex:
+                    self.log.warning('LVM cleanup failed for %s: %s',
+                                     vg_name, ex)
+            for sraid in self.sraids:
+                try:
+                    if sraid.exists():
+                        self._cleanup_software_raid(sraid, sraid.disks)
+                except Exception as ex:
+                    self.log.warning('RAID cleanup failed for %s: %s',
+                                     sraid.name, ex)
