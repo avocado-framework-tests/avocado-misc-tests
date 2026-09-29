@@ -1,0 +1,7 @@
+interface: ''          # interface name (env3, bond0, eth0) or MAC address
+host_ip: ''
+netmask: ''
+peer_ip: ''
+peer_user: 'root'
+peer_password: '********'
+ip_config: False
