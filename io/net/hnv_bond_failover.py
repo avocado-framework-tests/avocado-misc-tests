@@ -25,6 +25,7 @@ import time
 from avocado import Test
 from avocado.utils import process
 from avocado.utils import wait
+from avocado.utils.network.hosts import LocalHost
 
 
 class HNVBondFailoverTest(Test):
@@ -39,12 +40,39 @@ class HNVBondFailoverTest(Test):
         """
         Set up test parameters and verify bond configuration
         """
-        self.interface = self.params.get("interface", default=None)
+        device = self.params.get("interface", default=None)
         self.host_ip = self.params.get("host_ip", default=None)
         self.peer_ip = self.params.get("peer_ip", default=None)
+        self.hbond = self.params.get("hbond", default=True)
+
+        local = LocalHost()
+        interfaces = os.listdir('/sys/class/net')
+        if device in interfaces:
+            # interface name given directly (bond name or regular interface)
+            self.interface = device
+        elif (device and local.validate_mac_addr(device) and
+              device in local.get_all_hwaddr()):
+            if self.hbond:
+                # is_bond() tells if MAC hit the bond master directly.
+                iface = local.get_interface_by_hwaddr(device)
+                if iface.is_bond():
+                    self.interface = iface.name
+                else:
+                    # got the slave; resolve its bond master
+                    bond_master = iface.get_bond_master()
+                    if not bond_master:
+                        self.cancel(
+                            "Could not resolve bond master for slave %s"
+                            % iface.name)
+                    self.interface = bond_master
+            else:
+                # regular interface identified by MAC address
+                self.interface = local.get_interface_by_hwaddr(device).name
+        else:
+            self.interface = None
 
         if not self.interface:
-            self.cancel("Bond interface not specified in YAML configuration")
+            self.cancel("Bond interface not specified or not available")
         if not self.host_ip:
             self.cancel("Host IP address not specified in YAML configuration")
         if not self.peer_ip:
@@ -361,4 +389,3 @@ class HNVBondFailoverTest(Test):
         else:
             self.log.info("Bond slave configuration intact: %s" %
                           ', '.join(final_slaves))
-# Assisted by AI tool

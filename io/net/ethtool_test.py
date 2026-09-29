@@ -56,16 +56,33 @@ class Ethtool(Test):
         interfaces = os.listdir('/sys/class/net')
         local = LocalHost()
         device = self.params.get("interface")
+        self.hbond = self.params.get("hbond", default=False)
         if device in interfaces:
+            # interface name given directly (bond name or regular interface)
             self.interface = device
-        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
-            self.interface = local.get_interface_by_hwaddr(device).name
+        elif (local.validate_mac_addr(device) and
+              device in local.get_all_hwaddr()):
+            if self.hbond:
+                # is_bond() tells if MAC hit the bond master directly.
+                iface = local.get_interface_by_hwaddr(device)
+                if iface.is_bond():
+                    self.interface = iface.name
+                else:
+                    # got the slave; resolve its bond master
+                    bond_master = iface.get_bond_master()
+                    if not bond_master:
+                        self.cancel(
+                            "Could not resolve bond master for slave %s"
+                            % iface.name)
+                    self.interface = bond_master
+            else:
+                # regular interface identified by MAC address
+                self.interface = local.get_interface_by_hwaddr(device).name
         else:
             self.interface = None
             self.cancel("Please check the network device")
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        self.hbond = self.params.get("hbond", default=False)
         self.peer = self.params.get("peer_ip")
         self.tx = self.params.get("tx_channel", default='')
         self.rx = self.params.get("rx_channel", default='')

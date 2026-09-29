@@ -50,17 +50,33 @@ class Iperf(Test):
                                              default=None)
         interfaces = os.listdir('/sys/class/net')
         device = self.params.get("interface", default="")
+        self.hbond = self.params.get("hbond", default=False)
         if device in interfaces:
+            # interface name given directly (bond name or regular interface)
             self.iface = device
         elif (localhost.validate_mac_addr(device) and
               device in localhost.get_all_hwaddr()):
-            self.iface = localhost.get_interface_by_hwaddr(device).name
+            if self.hbond:
+                # is_bond() tells if MAC hit the bond master directly.
+                iface = localhost.get_interface_by_hwaddr(device)
+                if iface.is_bond():
+                    self.iface = iface.name
+                else:
+                    # got the slave; resolve its bond master
+                    bond_master = iface.get_bond_master()
+                    if not bond_master:
+                        self.cancel(
+                            "Could not resolve bond master for slave %s"
+                            % iface.name)
+                    self.iface = bond_master
+            else:
+                # regular interface identified by MAC address
+                self.iface = localhost.get_interface_by_hwaddr(device).name
         else:
             self.iface = None
             self.cancel("%s interface is not available" % device)
         self.ipaddr = self.params.get("host_ip", default="")
         self.netmask = self.params.get("netmask", default="")
-        self.hbond = self.params.get("hbond", default=False)
         if self.hbond:
             self.networkinterface = NetworkInterface(self.iface, localhost,
                                                      if_type='Bond')
