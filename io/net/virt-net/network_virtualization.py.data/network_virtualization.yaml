@@ -30,4 +30,8 @@ rx_channel:
 # skip_vnic_add: If True, skip adding VNIC if it already exists (based on slot/MAC)
 # If False or not set, remove and re-add existing VNIC
 skip_vnic_add: True
-
+device_ips: ""
+peer_ips: ""
+sriov_mac_id: ""
+sriov_device_ip: ""
+sriov_peer_ip: ""
