@@ -83,7 +83,7 @@ class Sosreport(Test):
                 self.sos_cmd = "sosreport"
         else:
             self.cancel("sosreport is not supported on %s" % dist.name)
-        for package in (sos_pkg, 'java'):
+        for package in (sos_pkg, 'java', 'podman'):
             if not sm.check_installed(package) and not sm.install(package):
                 self.cancel(
                     "Package %s is missing and could not be installed" % (package))
