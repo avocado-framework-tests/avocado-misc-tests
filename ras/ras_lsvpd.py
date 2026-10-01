@@ -78,8 +78,9 @@ class RASToolsLsvpd(Test):
         """
         if self.run_type == 'upstream':
             self.detected_distro = distro.detect()
-            deps = ['gcc', 'make', 'automake', 'autoconf', 'bison', 'flex',
-                    'libtool', 'zlib-devel', 'ncurses-devel', 'librtas-devel']
+            deps = ['gcc', 'gcc-c++', 'make', 'automake', 'autoconf', 'bison',
+                    'flex', 'libtool', 'zlib-devel', 'ncurses-devel',
+                    'librtas-devel']
             if 'SuSE' in self.detected_distro.name:
                 deps.extend(['libsgutils-devel', 'sqlite3-devel',
                              'libvpd2-devel'])
@@ -93,9 +94,9 @@ class RASToolsLsvpd(Test):
                         self.sm.install(package):
                     self.cancel("Fail to install %s required for this test." %
                                 package)
-            url = self.params.get(
-                'lsvpd_url', default='https://github.com/power-ras/'
-                'lsvpd/archive/refs/heads/master.zip')
+            default_url = ('https://github.com/power-ras/'
+                           'lsvpd/archive/refs/heads/master.zip')
+            url = self.params.get('lsvpd_url', default=default_url) or default_url
             tarball = self.fetch_asset('lsvpd.zip', locations=[url],
                                        expire='7d')
             archive.extract(tarball, self.workdir)
