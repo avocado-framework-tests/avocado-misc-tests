@@ -1,0 +1,26 @@
+hmc_username: ""
+hmc_pwd: ""
+manageSystem: ""
+vios_name: ""
+# Physical card location code
+sriov_adapter: ""
+sriov_port: "0"
+bandwidth: 2
+auto_failover: "1"
+# ── LPAR1 (local — the machine running this test) ──────────────────────────────
+lpar1_slot_num: ""
+lpar1_mac_id: ""
+lpar1_device_ip: ""
+lpar1_netmask: ""
+# ── LPAR2 (remote) ─────────────────────────────────────────────────────────────
+lpar2_name: ""
+lpar2_ip: ""
+lpar2_user: ""
+lpar2_pwd: ""
+lpar2_slot_num: ""
+lpar2_mac_id: ""
+lpar2_device_ip: ""
+lpar2_netmask: ""
+# ── Peer IP address that both LPAR1 and LPAR2 ping to verify connectivity────
+peer_ip: ""
+
