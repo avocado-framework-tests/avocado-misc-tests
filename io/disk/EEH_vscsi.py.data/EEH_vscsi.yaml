@@ -1,0 +1,34 @@
+# vSCSI VIOS-Level EEH Error Injection and Recovery Test Parameters
+#
+# Target: IBM PowerVM LPAR (client) and respective Virtual I/O Server (VIOS)
+#
+# This test maps the client's virtual SCSI disk (e.g., /dev/sda) to its
+# physical backing device (hdiskX) on the VIOS, verifies EEH is enabled on
+# the backing adapter via eeh_tool Op 1, injects an EEH error via eeh_tool
+# Op 3, monitors recovery dmesg traces on the LPAR client, and verifies
+# post-recovery disk health and I/O status.
+#
+# NOTE: errinjct is NOT supported on VIOS. This test uses eeh_tool.
+# NOTE: eeh_tool is always placed at /home/padmin/eeh_tool on the VIOS.
+#       That path is hardcoded in the test and is not user-configurable.
+
+# Client-side configuration
+# Target virtual SCSI disk on LPAR client to test (e.g., /dev/sda, /dev/sdb).
+# Required: must be set to the actual disk device path on the test LPAR.
+disk:
+
+# VIOS Connection Credentials
+# Required: IP address or hostname of the VIOS managing this LPAR client.
+vios_ip:
+# vios_username defaults to 'padmin' if not set
+vios_username:
+# Required: VIOS padmin password. Must be provided at run time.
+vios_pwd:
+
+# Optional: URL to download eeh_tool onto the VIOS before the test runs.
+# If set, the test downloads the binary to /home/padmin/eeh_tool on the VIOS
+# using curl (with wget as fallback), then applies chmod 755.
+# If the binary already exists at that path, the download is skipped.
+# If not set, eeh_tool must already be present on the VIOS.
+# Example: http://10.48.36.172:81/crtl/repo/io/firmware/tools/vios/eeh_tool
+eeh_tool_url:
