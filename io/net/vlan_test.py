@@ -48,13 +48,17 @@ class VlanTestWithoutSwitch(Test):
 
     :param interface: Host test network interface name or MAC address
     :param peer_interface: Peer test network interface name
-    :param host_ip: IP address of the host test interface
-    :param peer_ip: IP address of the peer test interface (same subnet)
+    :param host_ip: IP address of the host test interface (physical)
+    :param peer_ip: IP address of the peer test interface (physical, same subnet)
+    :param host_vlan_ip: IP for the host VLAN sub-interface (different subnet from host_ip)
+    :param peer_vlan_ip: IP for the peer VLAN sub-interface (same subnet as host_vlan_ip)
     :param peer_public_ip: Peer SSH management IP (used to establish SSH)
     :param peer_user: SSH user on the peer (default: root)
     :param peer_password: SSH password for the peer
     :param netmask: Prefix length / netmask (default: 24)
-    :param vlan_id: VLAN id used for same-VLAN and isolation tests
+    :param vlan_id: VLAN id used for same-VLAN and isolation tests.
+                    Must be in the allowed VLAN list on both LPARs' vNICs
+                    (HMC/VIOS vswitch config) for intra-VIOS ping to work.
     """
 
     def setUp(self):
@@ -77,6 +81,11 @@ class VlanTestWithoutSwitch(Test):
         self.peer_intf = self.params.get("peer_interface", default=None)
         self.host_ip = self.params.get("host_ip", default=None)
         self.peer_ip = self.params.get("peer_ip", default=None)
+        # Dedicated IPs for VLAN sub-interfaces — must be on a different subnet
+        # than host_ip/peer_ip to avoid duplicate-address conflicts.
+        # Example: if host_ip=192.168.10.1 use host_vlan_ip=192.168.20.1
+        self.host_vlan_ip = self.params.get("host_vlan_ip", default=None)
+        self.peer_vlan_ip = self.params.get("peer_vlan_ip", default=None)
         self.peer_public_ip = self.params.get("peer_public_ip", default=None)
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
@@ -88,6 +97,12 @@ class VlanTestWithoutSwitch(Test):
             self.cancel("peer_ip is required")
         if not self.peer_public_ip:
             self.cancel("peer_public_ip is required")
+        if not self.host_vlan_ip:
+            self.cancel("host_vlan_ip is required (dedicated IP for VLAN "
+                        "sub-interface, different subnet from host_ip)")
+        if not self.peer_vlan_ip:
+            self.cancel("peer_vlan_ip is required (dedicated IP for VLAN "
+                        "sub-interface, same subnet as host_vlan_ip)")
 
         # Track VLAN sub-interfaces created during the test for cleanup
         self._host_vlans_created = []
@@ -238,9 +253,9 @@ class VlanTestWithoutSwitch(Test):
         self.log.info("Test 2: Same VLAN id (%s) ping", self.vlan_id)
         self.log.info("=" * 60)
 
-        self._create_vlan_intf_host(self.vlan_id, self.host_ip,
+        self._create_vlan_intf_host(self.vlan_id, self.host_vlan_ip,
                                     self.netmask)
-        self._create_vlan_intf_peer(self.vlan_id, self.peer_ip,
+        self._create_vlan_intf_peer(self.vlan_id, self.peer_vlan_ip,
                                     self.netmask)
         time.sleep(2)
 
@@ -249,13 +264,13 @@ class VlanTestWithoutSwitch(Test):
 
         vlan_networkinterface = NetworkInterface(host_vintf,
                                                  LocalHost())
-        if vlan_networkinterface.ping_check(self.peer_ip,
+        if vlan_networkinterface.ping_check(self.peer_vlan_ip,
                                             count=5) is not None:
             self.fail("Same-VLAN ping host→peer (%s → %s) FAILED"
-                      % (host_vintf, self.peer_ip))
+                      % (host_vintf, self.peer_vlan_ip))
         self.log.info("Same-VLAN ping host→peer PASSED")
 
-        cmd = "ping -I %s %s -c 5" % (peer_vintf, self.host_ip)
+        cmd = "ping -I %s %s -c 5" % (peer_vintf, self.host_vlan_ip)
         result = self.remotehost.remote_session.cmd(cmd)
         if result.exit_status != 0:
             self.fail("Same-VLAN ping peer→host (%s → %s) FAILED"
@@ -278,9 +293,9 @@ class VlanTestWithoutSwitch(Test):
 
         alt_vlan = "2230"
 
-        self._create_vlan_intf_host(self.vlan_id, self.host_ip,
+        self._create_vlan_intf_host(self.vlan_id, self.host_vlan_ip,
                                     self.netmask)
-        self._create_vlan_intf_peer(alt_vlan, self.peer_ip, self.netmask)
+        self._create_vlan_intf_peer(alt_vlan, self.peer_vlan_ip, self.netmask)
         time.sleep(2)
 
         host_vintf = "%s.%s" % (self.host_intf, self.vlan_id)
@@ -288,14 +303,14 @@ class VlanTestWithoutSwitch(Test):
 
         vlan_networkinterface = NetworkInterface(host_vintf, LocalHost())
         try:
-            vlan_networkinterface.ping_check(self.peer_ip, count=5)
-            self.fail("Cross-VLAN ping host(%s)→peer(%s) should FAIL \
-                      but PASSED" % (host_vintf, self.peer_ip))
+            vlan_networkinterface.ping_check(self.peer_vlan_ip, count=5)
+            self.fail("Cross-VLAN ping host(%s)→peer(%s) should FAIL "
+                      "but PASSED" % (host_vintf, self.peer_vlan_ip))
         except NWException:
             self.log.info("Cross-VLAN ping host→peer correctly FAILED "
                           "(isolation OK)")
 
-        cmd = "ping -I %s %s -c 5" % (peer_vintf, self.host_ip)
+        cmd = "ping -I %s %s -c 5" % (peer_vintf, self.host_vlan_ip)
         result = self.remotehost.remote_session.cmd(cmd)
         if result.exit_status == 0:
             self.fail("Cross-VLAN ping peer(%s)→host(%s) should FAIL \

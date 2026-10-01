@@ -33,3 +33,5 @@ peer_ip: "x.xx.xx.xxx"
 peer_user: "root"
 peer_password: "********"
 cidr_value: "24"
+host_vlan_ip: "x.xx.xx.xxx"  # Ip addr that needed for vLAN interface host 
+peer_vlan_ip: "xx.xx.xx.xxx" # Ip addr that needed for vLAN interface for peer
