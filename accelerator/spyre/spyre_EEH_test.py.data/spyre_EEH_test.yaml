@@ -1,0 +1,9 @@
+# Spyre EEH (Enhanced Error Handling) Test Configuration
+
+PCI_ADDRESSES: ""
+MAX_FREEZES: 5
+ERRINJCT_FUNCTIONS: "0 1 6 7"
+FSP_IP: ""
+FSP_USER: ""
+FSP_PASSWORD: ""
+USER: ""
