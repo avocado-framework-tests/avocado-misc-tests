@@ -1,0 +1,6 @@
+disk:
+vios_ip:
+vios_username:
+vios_pwd:
+# Example: http://10.48.36.172:81/crtl/repo/io/firmware/tools/vios/eeh_tool
+eeh_tool_url:
