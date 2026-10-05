@@ -1,1 +1,3 @@
 skip_softoffline: "null"
+parallel_tests: true
+max_workers: 8
