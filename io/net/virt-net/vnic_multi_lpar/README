@@ -1,0 +1,37 @@
+Tests vNIC DLPAR add/remove operations spanning two LPARs (LPAR1 = local
+machine running the test, LPAR2 = a remote LPAR accessed over SSH) that
+share the same physical SR-IOV adapter.
+
+Two test methods are provided:
+
+  test_multi_lpar_same_adapter
+      Add a vNIC backed by adapter A (same physical port) to both LPAR1 and
+      LPAR2.  Ping from each LPAR to the peer to verify simultaneous network
+      connectivity.  Remove both vNICs at the end.
+      YAML: vnic_multi_lpar_same_adapter.yaml
+
+  test_multi_lpar_different_ports
+      Add a vNIC backed by adapter A port 0 to LPAR1 and adapter A port 1
+      to LPAR2.  Both share the same physical card but use different physical
+      ports.  Ping from each LPAR to the peer.  Remove both vNICs at the end.
+      YAML: vnic_multi_lpar_different_ports.yaml
+How to run
+----------
+# Test 1 - same adapter, same port
+avocado run vnic_multi_lpar.py:VnicMultiLpar.test_multi_lpar_same_adapter \
+          -m vnic_multi_lpar.py.data/vnic_multi_lpar_same_adapter.yaml \
+          --max-parallel-tasks=1
+
+# Test 2 - same adapter, different ports
+avocado run vnic_multi_lpar.py:VnicMultiLpar.test_multi_lpar_different_ports \
+          -m vnic_multi_lpar.py.data/vnic_multi_lpar_different_ports.yaml \
+          --max-parallel-tasks=1
+Notes:
+--------
+- The cleanup phase (vNIC remove from both LPARs) runs unconditionally in a
+  try/finally block, so no interfaces are left stranded even when an
+  earlier phase fails.
+
+- If the test fails mid-run and is re-executed, any leftover IP address on
+  LPAR1's interface is silently flushed before re-adding, preventing the
+  "Address already assigned" error on re-runs.
