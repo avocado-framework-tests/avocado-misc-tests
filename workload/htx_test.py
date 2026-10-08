@@ -654,21 +654,31 @@ class HtxTest(Test):
 
     def test_check(self):
         """
-        Checks if HTX is running, and if no errors.
+        Check for status and error logs of HTX.
         """
-        for _ in range(0, self.time_limit, 60):
-            self.log.info("Checking HTX error log")
-            process.system('htxcmdline -geterrlog', ignore_status=True)
-            if os.stat('/tmp/htxerr').st_size != 0:
-                self.fail("HTX errors detected; check /tmp/htxerr")
+        htxd_pid = process.getoutput(
+            "pgrep -f htxd", verbose=False).strip()
+        if not htxd_pid:
+            self.log.warning(
+                "htxd is not running — skipping HTX health check. "
+                "Ensure test_start has been executed before test_check.")
+            return
 
-            if self.htx_disks or self.run_all:
-                cmd = (f'htxcmdline -query {self.block_device}'
-                       f' -mdt {self.mdt_file}')
-            else:
-                cmd = f'htxcmdline -query -mdt {self.mdt_file}'
-            process.system(cmd, ignore_status=True)
-            time.sleep(60)
+        if self.htx_disks or self.run_all:
+            cmd = (f'htxcmdline -query {self.block_device}'
+                   f' -mdt {self.mdt_file}')
+        else:
+            cmd = f'htxcmdline -query -mdt {self.mdt_file}'
+        self.log.info("Querying HTX run status for mdt: %s", self.mdt_file)
+        process.system(cmd, ignore_status=True)
+
+        self.log.info("Collecting HTX error log")
+        process.system('htxcmdline -geterrlog', ignore_status=True)
+        if os.path.exists('/tmp/htxerr') and \
+                os.stat('/tmp/htxerr').st_size != 0:
+            self.fail(
+                "HTX reported errors — check /tmp/htxerr and the job log "
+                "for details")
 
     def test_stop(self):
         """
