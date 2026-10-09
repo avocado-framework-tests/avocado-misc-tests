@@ -71,7 +71,14 @@ class EEH(Test):
             self.cancel("Processor is not ppc64")
         if linux.is_os_secureboot_enabled():
             self.cancel("EEH is not supported when Secure boot is enabled.")
+        debugfs_path = "/sys/kernel/debug"
+        if not os.path.ismount(debugfs_path):
+            process.system(f"mount -t debugfs none {debugfs_path}",
+                           ignore_status=True, shell=True)
         eeh_enable_file = "/sys/kernel/debug/powerpc/eeh_enable"
+        if not os.path.exists(eeh_enable_file):
+            self.cancel(f"EEH enable file '{eeh_enable_file}' does not exist. "
+                        "Ensure debugfs is mounted and EEH is enabled via FSP")
         if '0x1' not in genio.read_file(eeh_enable_file).strip():
             self.cancel("EEH is not enabled, please enable via FSP")
         self.max_freeze = self.params.get('max_freeze', default=1)
@@ -85,40 +92,39 @@ class EEH(Test):
             self.cancel("pciutils package is need to test")
         self.mem_addr = pci.get_memory_address(self.pci_device)
         self.mask = pci.get_mask(self.pci_device)
-        self.sriov = self.params.get("sriov", default="no")
+        sriov_val = self.params.get("sriov", default=False)
+        self.sriov = (sriov_val if isinstance(sriov_val, bool)
+                      else str(sriov_val).lower() in ("yes", "true", "1"))
+        hbond_val = self.params.get("hbond", default=False)
+        self.hbond = (hbond_val if isinstance(hbond_val, bool)
+                      else str(hbond_val).lower() in ("yes", "true", "1"))
         self.ipaddr = self.params.get("host_ip", default=None)
+        self.localhost = LocalHost()
+        self.slave_interface = None
         if self.ipaddr:
             self.peer_ip = self.params.get("peer_ip", default=None)
-            self.interface = pci.get_nics_in_pci_address(self.pci_device)[0]
-            self.localhost = LocalHost()
-            device = self.interface
-            self.hbond = self.params.get("hbond", default=False)
-            interfaces = os.listdir('/sys/class/net')
-            if device in interfaces:
-                # interface name given directly (bond name or regular interface)
-                self.interface = device
-            elif (self.localhost.validate_mac_addr(device) and
-                  device in self.localhost.get_all_hwaddr()):
-                if self.hbond:
-                    # is_bond() tells if MAC hit the bond master directly.
-                    iface = self.localhost.get_interface_by_hwaddr(device)
-                    if iface.is_bond():
-                        self.interface = iface.name
-                    else:
-                        # got the slave; resolve its bond master
-                        bond_master = iface.get_bond_master()
-                        if not bond_master:
-                            self.cancel(
-                                "Could not resolve bond master for slave %s"
-                                % iface.name)
-                        self.interface = bond_master
-                else:
-                    # regular interface identified by MAC address
-                    self.interface = self.localhost.get_interface_by_hwaddr(device).name
+            nics = pci.get_nics_in_pci_address(self.pci_device)
+            if not nics:
+                self.cancel(
+                    f"No network interface found for PCI device "
+                    f"{self.pci_device}")
+            self.slave_interface = nics[0]
+            if self.hbond:
+                slave_netif = NetworkInterface(self.slave_interface,
+                                               self.localhost)
+                bond_master = slave_netif.get_bond_master()
+                if not bond_master:
+                    self.cancel(
+                        f"Could not resolve bond master for slave "
+                        f"{self.slave_interface}")
+                self.interface = bond_master
+                self.networkinterface = NetworkInterface(self.interface,
+                                                         self.localhost,
+                                                         if_type='Bond')
             else:
-                self.cancel("Please check the network device")
-            self.networkinterface = NetworkInterface(self.interface,
-                                                     self.localhost)
+                self.interface = self.slave_interface
+                self.networkinterface = NetworkInterface(self.interface,
+                                                         self.localhost)
             if not self.networkinterface.validate_ipv4_format(self.ipaddr):
                 self.cancel("Please mention the correct host IP address")
             if not self.networkinterface.validate_ipv4_format(self.peer_ip):
@@ -145,8 +151,8 @@ class EEH(Test):
             self.err = 0
             for line in process.system_output(f"lspci -vs {self.pci_device}",
                                               ignore_status=True,
-                                              shell=True).decode("utf-8\
-                                              ").splitlines():
+                                              shell=True).decode(
+                                                  "utf-8").splitlines():
                 if 'Memory' in line and '64-bit, prefetchable' in line:
                     self.err = 1
                     break
@@ -162,11 +168,14 @@ class EEH(Test):
         """
         Test to execute basic error injection on PE
         """
+        if self.hbond:
+            self.cancel("EEH basic error injection on PE "
+                        "is not supported for HNV bonding setups")
         enter_loop = True
         num_of_miss = 0
         num_of_hit = 0
-        if self.sriov == "yes":
-            self.cancel("EEH basic error injection on PE"
+        if self.sriov:
+            self.cancel("EEH basic error injection on PE "
                         "is not supported for SRIOV VF adapter ports")
         while num_of_hit < self.max_freeze:
             for func in self.function:
@@ -244,7 +253,7 @@ class EEH(Test):
         """
         Test to execute EEH error injection on SR-IOV devices
         """
-        if self.sriov == "yes":
+        if self.sriov:
             # Get the bus address from the PCI device
             bus_id = self.pci_device.split(':')[0]
             # Get interface name from PCI address
@@ -253,9 +262,25 @@ class EEH(Test):
                 self.fail(
                     f"No network interface found for PCI device "
                     f"{self.pci_device}")
-            interface_name = interface_list[0]
+            slave_interface = interface_list[0]
             self.log.info(
-                f"Interface name for {self.pci_device}: {interface_name}")
+                f"Slave interface name for {self.pci_device}: "
+                f"{slave_interface}")
+
+            # Determine traffic interface (HNV bond master or regular iface)
+            if self.hbond:
+                slave_netif = NetworkInterface(slave_interface, self.localhost)
+                bond_master = slave_netif.get_bond_master()
+                if not bond_master:
+                    self.fail(
+                        f"Could not resolve bond master for slave "
+                        f"{slave_interface}")
+                traffic_interface = bond_master
+                self.log.info(
+                    f"HNV bond master interface: {traffic_interface}")
+            else:
+                traffic_interface = slave_interface
+
             # Get bus address from journalctl
             bus_address = self.get_bus_address_from_journalctl(bus_id)
             if not bus_address:
@@ -273,19 +298,20 @@ class EEH(Test):
                         "Running SR-IOV EEH inject on %s function %s",
                         self.pci_device, func)
                     if num_of_miss < 5:
-                        # Start network traffic on the SR-IOV interface
-                        self.log.info(f"Starting traffic on SR-IOV interface:"
-                                      "{interface_name}")
+                        # Start network traffic on the traffic interface
+                        self.log.info(
+                            f"Starting traffic on interface: "
+                            f"{traffic_interface}")
                         # Start ping flood on the interface
                         if self.peer_ip:
-                            networkinterface = NetworkInterface(interface_name,
-                                                                self.localhost)
-                            networkinterface.ping_flood(interface_name,
+                            networkinterface = NetworkInterface(
+                                traffic_interface, self.localhost)
+                            networkinterface.ping_flood(traffic_interface,
                                                         self.peer_ip, 1000000)
                         # Clear dmesg before error injection
                         dmesg.clear_dmesg()
                         cmd = (f"errinjct ioa-bus-error-64 -v -f {func}"
-                               f" -s net/{interface_name} ")
+                               f" -s net/{slave_interface} ")
                         cmd += f"-a {bus_address} -m {mask}"
                         self.log.info(f"Triggering EEH with command: {cmd}")
                         try:
@@ -323,19 +349,19 @@ class EEH(Test):
                                         f"recovered successfully")
                                     time.sleep(10)
                                     net_interface = NetworkInterface(
-                                        interface_name, self.localhost)
+                                        traffic_interface, self.localhost)
                                     if not wait.wait_for(
                                         net_interface.is_link_up,
                                             timeout=60):
                                         self.fail(
-                                            f"Interface {interface_name} "
+                                            f"Interface {traffic_interface} "
                                             f"failed to come up after EEH")
                                     self.log.info(
-                                        f"Interface {interface_name} "
+                                        f"Interface {traffic_interface} "
                                         f"is up after EEH recovery")
                                     net_ok = (not self.peer_ip or
                                               self.net_recovery_check(
-                                                  interface_name))
+                                                  traffic_interface))
                                     if not net_ok:
                                         self.fail(
                                             "Network adapter failed to "
