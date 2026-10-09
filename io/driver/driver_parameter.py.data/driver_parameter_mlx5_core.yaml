@@ -4,7 +4,7 @@ host_ip:
 netmask:
 peer_ip:
 sysfs_check_required: 1
-#hbond: True
+hbond: True
 value: !mux
     debug_mask:
        module_param_name: "debug_mask"
