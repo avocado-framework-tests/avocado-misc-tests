@@ -21,14 +21,24 @@ VLAN tests using Linux kernel 802.1q sub-interfaces (no managed switch needed).
 Scenario 1 (test_baseline_ping):
     Verify host and peer can ping each other on the physical test interface.
     No VLAN sub-interfaces involved. Ping should PASS.
+    After passing, the connected route and ARP cache are flushed from the
+    parent interface on both host and peer so that the VLAN sub-interfaces
+    in Tests 2 and 3 can own those addresses exclusively. This is required
+    for ibmvnic where the kernel otherwise continues routing via the
+    parent's connected route instead of the tagged VLAN path.
 
 Scenario 2 (test_vlan_same_id_ping):
-    Create net1.<vlan_id> on both host and peer using dedicated VLAN IPs.
+    Create net1.<vlan_id> on both host and peer using the same host_ip/peer_ip.
     Ping between the VLAN sub-interfaces should PASS (same broadcast domain).
+    After passing, VLAN sub-interfaces are torn down and their routes/ARP
+    flushed so Test 3 starts clean.
 
 Scenario 3 (test_vlan_isolation):
     Create net1.<vlan_id> on host and net1.2230 on peer (different VLAN IDs).
     Ping should FAIL confirming VLAN isolation.
+    After the test, VLAN sub-interfaces are removed, the original IP is
+    restored on the parent interfaces and a final ping verifies
+    end-to-end connectivity.
 """
 
 import os
@@ -93,6 +103,10 @@ class VlanTestWithoutSwitch(Test):
         self._host_vlans_created = []
         self._peer_vlans_created = []
 
+        # Set to True once the parent IP has been removed so tearDown
+        # knows to restore it if the test fails before Test 3 does so.
+        self._parent_ip_removed = False
+
         # LocalHost NetworkInterface for ping_check on host
         self.networkinterface = NetworkInterface(self.host_intf, local)
 
@@ -106,6 +120,80 @@ class VlanTestWithoutSwitch(Test):
                       self.host_intf, self.host_ip,
                       self.peer_public_ip, self.peer_intf, self.peer_ip,
                       self.vlan_id)
+
+    def _flush_routes_and_arp_host(self, intf):
+        """Flush routes for *intf* and flush the entire ARP table on the host.
+        'ip neigh flush all' is used instead of 'dev <intf>' because ibmvnic
+        can cache neighbour entries against the parent interface even after the
+        IP is moved to a VLAN sub-interface; a full flush ensures no stale
+        entry remains regardless of which interface it was learned on.
+        """
+        self.log.info("HOST: flushing routes for %s and ARP table (all)", intf)
+        process.system("ip route flush dev %s" % intf,
+                       shell=True, sudo=True, ignore_status=True)
+        process.system("ip neigh flush all",
+                       shell=True, sudo=True, ignore_status=True)
+
+    def _flush_routes_and_arp_peer(self, intf):
+        """Flush routes for *intf* and flush the entire ARP table on the peer.
+        Same reasoning as _flush_routes_and_arp_host — full flush required for
+        ibmvnic to clear entries cached against the parent interface.
+        """
+        self.log.info("PEER: flushing routes for %s and ARP table (all)", intf)
+        self.remotehost.remote_session.cmd(
+            "ip route flush dev %s 2>/dev/null; true" % intf)
+        self.remotehost.remote_session.cmd(
+            "ip neigh flush all 2>/dev/null; true")
+
+    def _remove_parent_ip(self):
+        """
+        Remove host_ip/peer_ip from the parent interfaces and flush their
+        routes/ARP on both host and peer.  Marks _parent_ip_removed = True.
+        Safe to call multiple times (no-op if already removed).
+        """
+        if self._parent_ip_removed:
+            return
+        self.log.info("Removing parent IPs and flushing routes/ARP "
+                      "before VLAN sub-interface assignment")
+        process.system(
+            "ip addr del %s/%s dev %s 2>/dev/null" % (
+                self.host_ip, self.netmask, self.host_intf),
+            shell=True, sudo=True, ignore_status=True)
+        self._flush_routes_and_arp_host(self.host_intf)
+        self.remotehost.remote_session.cmd(
+            "ip addr del %s/%s dev %s 2>/dev/null; true" % (
+                self.peer_ip, self.netmask, self.peer_intf))
+        self._flush_routes_and_arp_peer(self.peer_intf)
+        self._parent_ip_removed = True
+
+    def _restore_parent_ip(self):
+        """
+        Re-add host_ip/peer_ip to the parent interfaces and bring them up.
+        Clears _parent_ip_removed.  Safe to call multiple times.
+        """
+        if not self._parent_ip_removed:
+            return
+        self.log.info("Restoring original IPs on parent interfaces")
+        # Idempotent: delete first in case a partial state left the address.
+        process.system(
+            "ip addr del %s/%s dev %s 2>/dev/null" % (
+                self.host_ip, self.netmask, self.host_intf),
+            shell=True, sudo=True, ignore_status=True)
+        process.system(
+            "ip addr add %s/%s dev %s" % (
+                self.host_ip, self.netmask, self.host_intf),
+            shell=True, sudo=True, ignore_status=True)
+        process.system("ip link set %s up" % self.host_intf,
+                       shell=True, sudo=True, ignore_status=True)
+        self.remotehost.remote_session.cmd(
+            "ip addr del %s/%s dev %s 2>/dev/null; true" % (
+                self.peer_ip, self.netmask, self.peer_intf))
+        self.remotehost.remote_session.cmd(
+            "ip addr add %s/%s dev %s" % (
+                self.peer_ip, self.netmask, self.peer_intf))
+        self.remotehost.remote_session.cmd(
+            "ip link set %s up" % self.peer_intf)
+        self._parent_ip_removed = False
 
     # -------------------------------------------------------------------------
     # Helpers — host commands
@@ -201,6 +289,38 @@ class VlanTestWithoutSwitch(Test):
         self._peer_vlans_created.append(vlan_id)
         self.log.info("PEER: created %s  ip=%s/%s", vintf, ip, prefix)
 
+    def _check_vlan_arp_reachability(self, src_vintf, dst_ip):
+        """
+        Send a single ARP request from *src_vintf* to *dst_ip* using arping.
+        If no ARP reply is received, cancel the test with a clear message
+        pointing at the VIOS VLAN trunk configuration.
+
+        On ibmvnic the hypervisor silently drops VLAN-tagged frames for any
+        VLAN ID that is not listed as an allowed trunk VLAN on the virtual
+        adapter in the VIOS/HMC configuration.  When this happens ping
+        reports "Destination Host Unreachable" (local ICMP, not from peer)
+        because the ARP request never crosses the virtual fabric.
+
+        Calling this after both VLAN sub-interfaces are UP but before running
+        the actual ping test surfaces the real cause immediately.
+        """
+        self.log.info("HOST: ARP reachability probe %s → %s via %s",
+                      src_vintf, dst_ip, src_vintf)
+        result = process.run(
+            "arping -c 2 -w 4 -I %s %s" % (src_vintf, dst_ip),
+            shell=True, sudo=True, ignore_status=True)
+        if result.exit_status != 0:
+            self.cancel(
+                "ARP probe from %s to %s got no reply — VLAN-tagged frames "
+                "are not reaching the peer. "
+                "For ibmvnic/VIOS: ensure VLAN ID %s is added as an allowed "
+                "trunk VLAN on the virtual Ethernet adapter in the VIOS/HMC "
+                "configuration (chdev -dev <SEA> -attr taggedvlan=<id_list> "
+                "or via HMC vNIC settings) before running this test."
+                % (src_vintf, dst_ip, self.vlan_id))
+        self.log.info("HOST: ARP probe PASSED — peer MAC resolved via %s",
+                      src_vintf)
+
     # -------------------------------------------------------------------------
     # Test 1 — Baseline: ping on physical NIC (no VLAN sub-interface)
     # -------------------------------------------------------------------------
@@ -208,6 +328,11 @@ class VlanTestWithoutSwitch(Test):
         """
         Scenario 1: Verify host and peer can reach each other on the physical
         test interface (no VLAN sub-interfaces). Ping should PASS.
+
+        Post-test cleanup: the parent IP is removed and routes/ARP flushed
+        on both host and peer so that Tests 2 and 3 can assign the same IP
+        to the VLAN sub-interface without the kernel routing via the
+        parent's connected route (critical fix for ibmvnic).
         """
         self.log.info("=" * 60)
         self.log.info("Test 1: Baseline ping on physical interface")
@@ -225,18 +350,31 @@ class VlanTestWithoutSwitch(Test):
                       % (self.peer_intf, self.host_ip))
         self.log.info("Baseline ping peer→host PASSED")
 
+        # Remove the parent IP and flush routes/ARP so the VLAN sub-interfaces
+        # in Tests 2 and 3 own the address cleanly (required for ibmvnic).
+        self._remove_parent_ip()
+        self.log.info("Test 1 post-cleanup: parent IPs removed, "
+                      "routes/ARP flushed")
+
     # -------------------------------------------------------------------------
     # Test 2 — Same VLAN ID: ping must PASS
     # -------------------------------------------------------------------------
     def test_vlan_same_id_ping(self):
         """
-        Scenario 2: Create net1.<vlan_id> on both host and peer using dedicated
-        VLAN IPs. Ping between the sub-interfaces should PASS because both
-        endpoints are in the same VLAN broadcast domain.
+        Scenario 2: Create net1.<vlan_id> on both host and peer using the same
+        host_ip/peer_ip. Ping between the sub-interfaces should PASS because
+        both endpoints are in the same VLAN broadcast domain.
+
+        Pre-test: ensure parent IP is removed (safety net when this test runs
+        without test_baseline_ping having run first).
+        Post-test: remove VLAN interfaces and flush their routes/ARP.
         """
         self.log.info("=" * 60)
         self.log.info("Test 2: Same VLAN id (%s) ping", self.vlan_id)
         self.log.info("=" * 60)
+
+        # Safety net: remove parent IP if test_baseline_ping did not run first.
+        self._remove_parent_ip()
 
         self._create_vlan_intf_host(self.vlan_id, self.host_ip,
                                     self.netmask)
@@ -246,6 +384,10 @@ class VlanTestWithoutSwitch(Test):
 
         host_vintf = "%s.%s" % (self.host_intf, self.vlan_id)
         peer_vintf = "%s.%s" % (self.peer_intf, self.vlan_id)
+
+        # ARP probe: cancel early with a clear VIOS message if tagged frames
+        # are being dropped by the hypervisor before trying ping.
+        self._check_vlan_arp_reachability(host_vintf, self.peer_ip)
 
         vlan_networkinterface = NetworkInterface(host_vintf,
                                                  LocalHost())
@@ -262,6 +404,22 @@ class VlanTestWithoutSwitch(Test):
                       % (peer_vintf, self.host_ip))
         self.log.info("Same-VLAN ping peer→host PASSED")
 
+        # Remove VLAN interfaces and flush their routes/ARP so Test 3 starts
+        # from a clean state with no stale routes or ARP entries.
+        self.log.info("Test 2 post-cleanup: removing VLAN interfaces "
+                      "and flushing routes/ARP")
+        host_vintf = "%s.%s" % (self.host_intf, self.vlan_id)
+        peer_vintf = "%s.%s" % (self.peer_intf, self.vlan_id)
+        self._flush_routes_and_arp_host(host_vintf)
+        self._delete_vlan_host_safe(self.vlan_id)
+        self._flush_routes_and_arp_peer(peer_vintf)
+        self._delete_vlan_peer_safe(self.vlan_id)
+        self._host_vlans_created = [
+            v for v in self._host_vlans_created if v != self.vlan_id]
+        self._peer_vlans_created = [
+            v for v in self._peer_vlans_created if v != self.vlan_id]
+        self.log.info("Test 2 post-cleanup complete")
+
     # -------------------------------------------------------------------------
     # Test 3 — Different VLAN IDs: ping must FAIL (isolation test)
     # -------------------------------------------------------------------------
@@ -270,6 +428,10 @@ class VlanTestWithoutSwitch(Test):
         Scenario 3: Create net1.<vlan_id> on host and net1.2230 on peer
         (different VLAN IDs). Ping should FAIL confirming that packets tagged
         with different VLAN IDs remain isolated broadcast domains.
+
+        Pre-test: ensure parent IP is removed (safety net).
+        Post-test: remove VLAN interfaces, flush routes/ARP, restore original
+        IP on the parent interface and verify end-to-end ping to the peer.
         """
         self.log.info("=" * 60)
         self.log.info("Test 3: VLAN isolation (host vlan=%s, peer vlan=2230)",
@@ -277,6 +439,9 @@ class VlanTestWithoutSwitch(Test):
         self.log.info("=" * 60)
 
         alt_vlan = "2230"
+
+        # Safety net: remove parent IP if previous tests did not do so.
+        self._remove_parent_ip()
 
         self._create_vlan_intf_host(self.vlan_id, self.host_ip,
                                     self.netmask)
@@ -304,6 +469,28 @@ class VlanTestWithoutSwitch(Test):
         self.log.info("Cross-VLAN ping peer→host correctly FAILED "
                       "(isolation OK)")
 
+        # --- Post-test cleanup: remove VLAN interfaces and flush routes/ARP --
+        self.log.info("Test 3 post-cleanup: removing VLAN interfaces "
+                      "and flushing routes/ARP")
+        self._flush_routes_and_arp_host(host_vintf)
+        self._delete_vlan_host_safe(self.vlan_id)
+        self._flush_routes_and_arp_peer(peer_vintf)
+        self._delete_vlan_peer_safe(alt_vlan)
+        self._host_vlans_created = [
+            v for v in self._host_vlans_created if v != self.vlan_id]
+        self._peer_vlans_created = [
+            v for v in self._peer_vlans_created if v != alt_vlan]
+
+        # --- Restore original parent IPs and verify connectivity -------------
+        self._restore_parent_ip()
+        time.sleep(2)
+        self.log.info("Test 3: verifying parent interface ping after restore")
+        if self.networkinterface.ping_check(self.peer_ip, count=5) is not None:
+            self.fail(
+                "Post-restore ping host→peer (%s → %s) FAILED"
+                % (self.host_intf, self.peer_ip))
+        self.log.info("Post-restore ping PASSED — parent interface OK")
+
     # -------------------------------------------------------------------------
     # tearDown — remove all VLAN sub-interfaces created during this test
     # -------------------------------------------------------------------------
@@ -311,6 +498,8 @@ class VlanTestWithoutSwitch(Test):
         """
         Remove VLAN sub-interfaces created on host and peer.
         Forcibly clean up all known VLAN IDs even if tracking missed any.
+        If the parent IP was removed during testing but not yet restored
+        (e.g. test failed mid-way), restore it here.
         Ensure the physical interface remains up after cleanup.
         """
         self.log.info("tearDown: cleaning up VLAN sub-interfaces")
@@ -319,9 +508,11 @@ class VlanTestWithoutSwitch(Test):
             self._delete_vlan_host_safe(vid)
         for vid in [self.vlan_id, "2230"]:
             self._delete_vlan_host_safe(vid)
-        # Validate every host VLAN sub-interface that was attempted for deletion
-        # is actually gone; warn (do not fail) so tearDown always completes.
-        all_host_vids = set(list(self._host_vlans_created) + [self.vlan_id, "2230"])
+        # Validate every host VLAN sub-interface that was attempted for
+        # deletion is actually gone; warn (do not fail) so tearDown
+        # always completes.
+        all_host_vids = set(
+            list(self._host_vlans_created) + [self.vlan_id, "2230"])
         for vid in all_host_vids:
             vintf = "%s.%s" % (self.host_intf, vid)
             try:
@@ -330,9 +521,8 @@ class VlanTestWithoutSwitch(Test):
                     shell=True, sudo=True, ignore_status=True)
                 if result.exit_status == 0 and vintf in result.stdout_text:
                     self.log.warning(
-                        "HOST: interface %s still exists after tearDown \
-                        deletion",
-                        vintf)
+                        "HOST: interface %s still exists after tearDown "
+                        "deletion", vintf)
             except CmdError as details:
                 self.log.warning(
                     "HOST: could not verify deletion of %s in tearDown: %s",
@@ -343,6 +533,15 @@ class VlanTestWithoutSwitch(Test):
                 self._delete_vlan_peer_safe(vid)
             for vid in [self.vlan_id, "2230"]:
                 self._delete_vlan_peer_safe(vid)
+
+        # If a test failed before Test 3 could restore the parent IP,
+        # restore it now so the interface is left in a usable state.
+        if hasattr(self, '_parent_ip_removed') and self._parent_ip_removed:
+            self.log.info("tearDown: parent IP was not restored — "
+                          "restoring now")
+            self._restore_parent_ip()
+
+        if hasattr(self, 'remotehost') and self.remotehost:
             try:
                 self.remotehost.remote_session.quit()
             except Exception:
