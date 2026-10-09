@@ -67,10 +67,10 @@ class TcpdumpTest(Test):
                 self.iface = localhost.get_interface_by_hwaddr(device).name
         else:
             self.cancel("%s interface is not available" % device)
-        self.count = self.params.get("count", default=500)
+        self.count = int(self.params.get("count", default=500))
         self.peer_ip = self.params.get("peer_ip", default="")
         self.peer_public_ip = self.params.get("peer_public_ip", default="")
-        self.drop = self.params.get("drop_accepted", default=10)
+        self.drop = int(self.params.get("drop_accepted", default=10))
         self.host_ip = self.params.get("host_ip", default="")
         self.option = self.params.get("option", default='')
         # Check if interface exists in the system
@@ -95,9 +95,9 @@ class TcpdumpTest(Test):
         self.peer_user = self.params.get("peer_user", default="root")
         self.peer_password = self.params.get("peer_password", '*',
                                              default="None")
-        self.timeout = self.params.get("TIMEOUT", default=600)
-        self.mtu = self.params.get("mtu", default=1500)
-        self.mtu_timeout = self.params.get("mtu_timeout", default=30)
+        self.timeout = int(self.params.get("TIMEOUT", default=600))
+        self.mtu = int(self.params.get("mtu", default=1500))
+        self.mtu_timeout = int(self.params.get("mtu_timeout", default=30))
         self.remotehost = RemoteHost(self.peer_ip, self.peer_user,
                                      password=self.peer_password)
         self.peer_interface = self.remotehost.get_interface_by_ipaddr(
