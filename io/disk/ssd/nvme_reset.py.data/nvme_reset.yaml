@@ -1,0 +1,26 @@
+# NVMe Reset Tests Configuration
+#
+# Covers: controller reset (nvme reset), sysfs reset, and NVM subsystem reset.
+# Subsystem reset additionally requires:
+#   - "NVM Subsystem Reset Supported" advertised in id-ctrl
+#   - kernel lockdown must be disabled (/sys/kernel/security/lockdown = [none])
+#
+# device: NVMe controller to target. Accepted formats:
+#   controller : nvme0
+#   Subsystem  : nvme-subsysX
+#   NQN        : nqn.1994-11.com.vendor:nvme:modela:2.5-inch:SERIALNUM
+#
+# namespace        : Auto-discovered from the controller at test time.
+#                    The first namespace reported by 'nvme list-ns' is used.
+# shared_namespaces: Set True if the namespace is a shared (multi-path) namespace.
+# package: 'distro' uses the OS-packaged nvme-cli (default).
+#          'upstream' builds nvme-cli from the GitHub master branch.
+
+device: nvme0
+# Set shared_namespaces as True if want to work with nvme multipath
+shared_namespaces: False
+package: !mux
+    upstream-nvme-cli:
+        package: upstream
+    distro-nvme-cli:
+        package: distro
