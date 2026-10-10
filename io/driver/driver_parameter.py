@@ -25,6 +25,7 @@ from avocado import Test
 from avocado.utils import wait
 from avocado.utils.network.hosts import LocalHost
 from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.network.exceptions import NWException
 
 
 class Moduleparameter(Test):
@@ -37,13 +38,15 @@ class Moduleparameter(Test):
         """
         get parameters
         """
-        local = LocalHost()
+        self.local = LocalHost()
         interfaces = os.listdir('/sys/class/net')
         device = self.params.get("interface", default=None)
+        self.hbond = self.params.get("hbond", default=False)
         if device in interfaces:
             self.ifaces = device
-        elif local.validate_mac_addr(device) and device in local.get_all_hwaddr():
-            self.ifaces = local.get_interface_by_hwaddr(device).name
+        elif (self.local.validate_mac_addr(device) and
+              device in self.local.get_all_hwaddr()):
+            self.ifaces = self.local.get_interface_by_hwaddr(device).name
         else:
             self.module = None
             self.cancel("%s interface is not available" % device)
@@ -61,21 +64,19 @@ class Moduleparameter(Test):
         self.param_name = self.params.get('module_param_name', default=None)
         self.param_value = self.params.get('module_param_value', default=None)
         self.sysfs_chk = self.params.get('sysfs_check_required', default=None)
-        if self.ifaces[0:2] == 'ib':
-            self.networkinterface = NetworkInterface(self.ifaces, local,
+        if self.hbond:
+            self.networkinterface = NetworkInterface(self.ifaces, self.local,
+                                                     if_type='Bond')
+        elif self.ifaces[0:2] == 'ib':
+            self.networkinterface = NetworkInterface(self.ifaces, self.local,
                                                      if_type='Infiniband')
-            try:
-                self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
-                self.networkinterface.save(self.ipaddr, self.netmask)
-            except Exception:
-                self.networkinterface.save(self.ipaddr, self.netmask)
         else:
-            self.networkinterface = NetworkInterface(self.ifaces, local)
-            try:
-                self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
-                self.networkinterface.save(self.ipaddr, self.netmask)
-            except Exception:
-                self.networkinterface.save(self.ipaddr, self.netmask)
+            self.networkinterface = NetworkInterface(self.ifaces, self.local)
+        try:
+            self.networkinterface.add_ipaddr(self.ipaddr, self.netmask)
+            self.networkinterface.save(self.ipaddr, self.netmask)
+        except Exception:
+            self.networkinterface.save(self.ipaddr, self.netmask)
         self.networkinterface.bring_up()
         self.load_unload_sleep_time = 10
         self.error_modules = []
@@ -88,49 +89,80 @@ class Moduleparameter(Test):
             self.cancel("Param %s is not Valid for Module %s" %
                         (self.param_name, self.module))
 
-    def get_interface_driver(self):
+    def get_interface_driver(self, iface):
         """
         Get the driver module name for the specified interface using ethtool.
         Returns the driver name or None if unable to determine.
-        Assisted with AI tool
         """
         try:
-            cmd = "ethtool -i %s" % self.ifaces
-            output = process.system_output(cmd, ignore_status=False).decode('utf-8')
+            cmd = "ethtool -i %s" % iface
+            output = process.system_output(
+                cmd, ignore_status=False).decode('utf-8')
             for line in output.split('\n'):
                 if line.startswith('driver:'):
                     driver = line.split(':', 1)[1].strip()
                     self.log.info("Interface %s is using driver: %s" %
-                                  (self.ifaces, driver))
+                                  (iface, driver))
                     return driver
         except Exception as e:
             self.log.warning("Failed to get driver info for %s: %s" %
-                             (self.ifaces, str(e)))
+                             (iface, str(e)))
             return None
         return None
 
+    def _check_bond_members(self):
+        """
+        Check whether any member of the HNV bond interface self.ifaces uses
+        self.module as its driver.  Cancels the test if bond members cannot
+        be retrieved or if none of them match the expected module.
+        """
+        iface_obj = NetworkInterface(self.ifaces, self.local)
+        try:
+            members = iface_obj._get_bondinterface_details()['slaves']
+        except NWException:
+            self.cancel("hbond=True but could not retrieve bond members "
+                        "for interface %s" % self.ifaces)
+        for member in members:
+            if self.get_interface_driver(member) == self.module:
+                self.log.info("Driver validation passed: Bond interface %s "
+                              "has member %s using module %s"
+                              % (self.ifaces, member, self.module))
+                return
+        self.cancel("Driver mismatch detected: Bond interface %s has "
+                    "members %s but none use module '%s' specified "
+                    "in YAML." % (self.ifaces, members, self.module))
+
     def validate_interface_driver(self):
         """
-        Validate that the interface belongs to the driver module specified in YAML.
-        Raises an error if there's a mismatch between the YAML-specified module
-        and the interface's actual driver.
-        Assisted with AI tool
+        Validate that the interface belongs to the driver module specified in
+        YAML.  When hbond=True the bond's member interfaces are checked via
+        NetworkInterface._get_bondinterface_details().  Otherwise a direct
+        driver match against self.module is performed.
         """
-        actual_driver = self.get_interface_driver()
+        actual_driver = self.get_interface_driver(self.ifaces)
 
         if actual_driver is None:
             self.cancel("Unable to determine driver for interface %s. "
-                        "Please verify the interface exists and ethtool is available."
-                        % self.ifaces)
+                        "Please verify the interface exists and "
+                        "ethtool is available." % self.ifaces)
 
-        if actual_driver != self.module:
-            self.cancel("Driver mismatch detected: Interface %s is using driver '%s' "
-                        "but YAML configuration specifies module '%s'. "
-                        "Please ensure the interface belongs to the correct driver."
-                        % (self.ifaces, actual_driver, self.module))
+        # HNV bond path: hbond=True — validate via bond member drivers.
+        if self.hbond:
+            self._check_bond_members()
+            return
 
-        self.log.info("Driver validation passed: Interface %s belongs to module %s"
-                      % (self.ifaces, self.module))
+        # Non-bond path: direct driver match.
+        if actual_driver == self.module:
+            self.log.info("Driver validation passed: Interface %s "
+                          "belongs to module %s"
+                          % (self.ifaces, self.module))
+            return
+
+        self.cancel("Driver mismatch detected: Interface %s is using "
+                    "driver '%s' but YAML configuration specifies "
+                    "module '%s'. Please ensure the interface belongs "
+                    "to the correct driver."
+                    % (self.ifaces, actual_driver, self.module))
 
     def built_in_module(self, module):
         """
