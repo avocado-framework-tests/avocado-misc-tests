@@ -527,7 +527,7 @@ class Xfstests(Test):
             if not process.system(f'id {user}', ignore_status=True):
                 process.system(f'userdel -r -f {user}', sudo=True, ignore_status=True)
         if not process.system('getent group sys', ignore_status=True):
-            process.system('groupdel sys', sudo=True)
+            process.system('groupdel sys', sudo=True, ignore_status=True)
 
         # In case if any test has been interrupted
         process.system(f'umount {self.scratch_mnt} {self.test_mnt} {self.disk_mnt}',
