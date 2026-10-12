@@ -51,6 +51,9 @@ class Cpu_VpaData(Test):
         if not sm.check_installed(package) and not sm.install(package):
             self.cancel("Failed to install %s" % package)
 
+        if 'debugfs' not in genio.read_file('/proc/mounts'):
+            process.run('mount -t debugfs none /sys/kernel/debug', sudo=True)
+
     def test(self):
 
         self.log.info("===Checking for cpu VPA data and MaxMem==")
