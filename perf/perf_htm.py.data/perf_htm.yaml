@@ -1,0 +1,7 @@
+phyp_host: ''
+phyp_port: 30002
+trace_mode: 'inst'
+trace_duration: 10
+nowrap: true
+htmdump_repo: 'https://github.com/antonblanchard/htmdump.git'
+qtrace_repo: 'https://github.com/antonblanchard/qtrace-tools.git'
