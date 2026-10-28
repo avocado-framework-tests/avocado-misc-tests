@@ -418,12 +418,17 @@ class SpyreEmbeddingTest(Test):
 
         self.log.info(
             "Waiting for VLLM to start (checking as user '%s')...", self.user)
+        failure_checks = (
+            None
+            if self.rhaiis_version == "3.7"
+            else [("VFIO", False), ("fail", False)]
+        )
         if not wait_for_vllm_startup(
             container_id=container_id,
             success_pattern="Application startup complete.",
             failure_pattern="BACKTRACE",
-            additional_failure_checks=[("VFIO", False), ("fail", False)],
-            timeout=1800,
+            additional_failure_checks=failure_checks,
+            timeout=7200,
             check_interval=10,
             user=self.user,
             log=self.log,

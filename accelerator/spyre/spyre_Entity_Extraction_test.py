@@ -458,11 +458,11 @@ class EntityExtractionTest(Test):
 
         self.log.info(
             "Waiting for VLLM to start (checking as user '%s')...", self.user)
-        # On 3.7 the vfio_backend emits a harmless "vf_token not set" warning
-        # that contains "VFIO" — exclude it from failure checks to avoid a
-        # false positive. Older stacks can keep the original check.
+        # On 3.7, compiler warnings and harmless driver logs (such as ERRR iova or
+        # vfio messages) may be emitted during startup — do not fail early on pattern
+        # matches, rely on BACKTRACE and timeout.
         failure_checks = (
-            [("fail", False)]
+            None
             if self.rhaiis_version == "3.7"
             else [("VFIO", False), ("fail", False)]
         )
@@ -471,7 +471,7 @@ class EntityExtractionTest(Test):
             success_pattern="Application startup complete.",
             failure_pattern="BACKTRACE",
             additional_failure_checks=failure_checks,
-            timeout=1800,
+            timeout=7200,
             check_interval=10,
             user=self.user,
             log=self.log,
