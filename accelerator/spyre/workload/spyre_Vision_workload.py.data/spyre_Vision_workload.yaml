@@ -1,0 +1,31 @@
+# Avocado Test Parameters for Spyre Vision Workload Test (granite-vision-3.3-2b)
+
+USE_CASE: "vision"
+CONTAINER_NAME: "spyre-vision"
+
+# Model served by the container (informational; the served model id is
+# discovered from /v1/models at run time)
+VLLM_MODEL_PATH: "/models/granite-vision-3.3-2b"
+HF_MODEL_NAME: "ibm-granite/granite-vision-3.3-2b"
+
+# Workload configuration
+WORKLOAD_MINS: 5
+WORKERS: 2
+CHECK_INTERVAL: 30
+# Max tokens generated per answer
+MAX_TOKENS: 64
+# Per-request timeout in seconds
+REQUEST_TIMEOUT: 120
+# Vision dataset manifest (images are loaded from the images/ folder next to it)
+PROMPTS_FILE: "vision_prompts.json"
+# Minimum percentage of answers that must contain the expected keywords
+MIN_VALID_PCT: 50
+
+# Metrics collection configuration
+STATS_COMMAND: "aiu-smi --csv"
+# Leave METRICS_FILE empty to use the default Avocado results directory (self.logdir)
+METRICS_FILE: ""
+
+# User and port configuration
+USER: ""
+PORT_MAPPING: "127.0.0.1:8000:8000"
