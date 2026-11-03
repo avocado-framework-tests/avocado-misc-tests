@@ -1092,6 +1092,54 @@ class NdctlTest(Test):
         process.system('ndctl destroy-namespace all -f')
 
     @avocado.fail_on(pmem.PMemException)
+    def test_devdax_namespaces_2m_1g_alignment(self):
+        """
+        Re-initialise labels and create devdax namespaces with 2M and 1G align
+        """
+        region = self.get_default_region()
+        if self.plib.is_region_legacy(region):
+            self.cancel("Legacy config skipping the test")
+        mb = 1024 * 1024
+        configs = [(2 * mb, 256 * mb), (1024 * mb, 2048 * mb)]
+        region_size = self.plib.run_ndctl_list_val(self.plib.run_ndctl_list(
+            '-r %s' % region)[0], 'size')
+        if region_size < sum(size for _, size in configs):
+            self.cancel("Region %s too small for the namespaces" % region)
+
+        self.plib.destroy_namespace(region=region, force=True)
+        self.plib.disable_region(name=region)
+        if process.system('%s init-labels all -f' % self.ndctl,
+                          shell=True, sudo=True, ignore_status=True):
+            self.fail("ndctl init-labels failed")
+        self.plib.enable_region(name=region)
+        if not self.plib.run_ndctl_list('-R -r %s' % region):
+            self.fail("Region %s not found after init-labels" % region)
+
+        created = []
+        for align, size in configs:
+            self.plib.create_namespace(region=region, n_type='pmem',
+                                       mode='devdax', memmap='mem',
+                                       align=str(align), size=str(size))
+            new_ns = [ns for ns in self.plib.run_ndctl_list('-N -r %s' % region)
+                      if self.plib.run_ndctl_list_val(ns, 'dev')
+                      not in created]
+            if len(new_ns) != 1:
+                self.fail("Expected 1 new namespace, found %d" % len(new_ns))
+            dev = self.plib.run_ndctl_list_val(new_ns[0], 'dev')
+            created.append(dev)
+            for key, expected in [('mode', 'devdax'), ('map', 'mem'),
+                                  ('align', align)]:
+                value = self.plib.run_ndctl_list_val(new_ns[0], key)
+                if value != expected:
+                    self.fail("%s: expected %s=%s, Got %s"
+                              % (dev, key, expected, value))
+            ns_size = self.plib.run_ndctl_list_val(new_ns[0], 'size')
+            if not size - align <= ns_size <= size or ns_size % align:
+                self.fail("%s: unexpected size %s for requested %s, align %s"
+                          % (dev, ns_size, size, align))
+            self.log.info("Created %s align=%s size=%s", dev, align, ns_size)
+
+    @avocado.fail_on(pmem.PMemException)
     def test_daxctl_1gb_alignment_memhotplug_unplug(self):
         """
         Test devdax memory hotplug/unplug with 1GB alignment
