@@ -3,11 +3,12 @@ The vNIC must already be added to the LPAR manually before
 running this test. This script does NOT provision the vNIC itself.
 
 input parameters:
-interfaces ---> Interface name(s) of the existing vNIC on the system.
-                Example: "eth1" or "eth1 eth2"
-                (Alternatively, mac_id can also be provided).
-mac_id ---> MAC address(es) of the vNIC interface (Optional if interfaces
-            is provided). Example: "02:03:03:03:03:01"
+host_interfaces ---> Interface name of the existing vNIC on the system.
+                     Example: "eth1". If multiple are given
+                     ("eth1 eth2"), only the first one is used.
+                     (Alternatively, mac_id can also be provided).
+mac_id ---> MAC address(es) of the vNIC interface (Optional if
+            host_interfaces is provided). Example: "02:03:03:03:03:01"
 device_ip ---> IP address to be configured on the vNIC interface after
                DLPAR.
 netmasks ---> Netmask value for the vNIC interface.

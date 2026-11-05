@@ -63,20 +63,23 @@ class VnicDlpar(Test):
         self.rsct_service_start()
 
         self.local = LocalHost()
-        self.interface = self.params.get('interface', default=None)
+        host_interfaces = self.params.get('host_interfaces', default=None)
+        # Only the first interface is used if multiple are provided
+        self.host_interface = (host_interfaces.split()[0]
+                               if host_interfaces else None)
         self.mac_id = self.params.get("mac_id", default=None)
 
-        if self.interface:
-            ni = NetworkInterface(self.interface, self.local)
+        if self.host_interface:
+            ni = NetworkInterface(self.host_interface, self.local)
             hwaddr = ni.get_hwaddr()
             if not hwaddr:
                 self.cancel("Unable to get MAC address for interface %s"
-                            % self.interface)
+                            % self.host_interface)
             self.mac = hwaddr.replace(':', '')
         elif self.mac_id:
             self.mac = self.mac_id.replace(':', '')
         else:
-            self.cancel("Please provide 'interface' or 'mac_id' in YAML")
+            self.cancel("Please provide 'host_interfaces' or 'mac_id' in YAML")
 
         self.device_ip = self.params.get('device_ip', default=None)
         if not self.device_ip:
