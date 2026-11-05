@@ -25,30 +25,17 @@ mac_id          MAC address for the vNIC (e.g. 02:03:03:03:03:01)
 
 BACKING DEVICE PARAMETERS
 --------------------------
-sriov_adapter, sriov_port, bandwidth, and priority each accept a
-space-separated list of values — one token per backing device.
+sriov_adapters  Physical location code of the SR-IOV backing adapter.
+                If multiple space-separated values are given, only the
+                first value is used.
 
-  Index 0  =  primary backing device   (required)
-  Index 1  =  secondary backing device (optional)
-  Index N  =  additional backing devices (optional)
+                  "U78DA.ND0.WZS0027-P0-C11"
 
-The secondary (and any further) backing devices are added via chhwres -o s
-after the primary vNIC slot is created, and are removed in reverse order
-before the primary slot is deleted.
+sriov_ports     Port number on the SR-IOV adapter, 0-based (default 0).
+                If multiple space-separated values are given, only the
+                first value is used.
 
-sriov_adapter   Physical location code(s) of the SR-IOV backing adapter(s).
-                One value means a single (primary) backing device.
-                Space-separated values configure multiple backing devices.
-
-                  Single:  "U78DA.ND0.WZS0027-P0-C11"
-                  Dual:    "U78DA.ND0.WZS0027-P0-C11 U78DA.ND0.WZS0027-P0-C12"
-
-sriov_port      Port number(s) on the SR-IOV adapter(s), 0-based (default 0).
-                One value per adapter token. If fewer values are given than
-                adapters, the last value is reused for remaining adapters.
-
-                  Single:  "0"
-                  Dual:    "0 1"
+                  "0"
 
 bandwidth       Bandwidth allocation percentage(s) entitled to each backing
                 device (default 2). Same fill-last rule applies.
@@ -82,20 +69,11 @@ omitted only link-state is verified. All other parameters are mandatory.
 
 EXAMPLES
 --------
-# Single backing device (primary only)
-sriov_adapter: "U78DA.ND0.WZS0027-P0-C11"
-sriov_port: "0"
+sriov_adapters: "U78DA.ND0.WZS0027-P0-C11"
+sriov_ports: "0"
 bandwidth: "2"
 priority: "50"
 
-# Two backing devices (primary + secondary for failover)
-sriov_adapter: "U78DA.ND0.WZS0027-P0-C11 U78DA.ND0.WZS0027-P0-C12"
-sriov_port: "0 0"
-bandwidth: "2 2"
-priority: "50 51"
-
-# Two backing devices, shared port/bandwidth (fill-last behaviour)
-sriov_adapter: "U78DA.ND0.WZS0027-P0-C11 U78DA.ND0.WZS0027-P0-C12"
-sriov_port: "0"     # port 0 reused for both adapters
-bandwidth: "2"      # 2% reused for both adapters
-priority: "50 51"
+# Multiple values: only the first ("...-C11" and "0") is used
+sriov_adapters: "U78DA.ND0.WZS0027-P0-C11 U78DA.ND0.WZS0027-P0-C12"
+sriov_ports: "0 1"
