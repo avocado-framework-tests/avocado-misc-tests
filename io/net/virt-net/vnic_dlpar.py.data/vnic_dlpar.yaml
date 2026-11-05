@@ -1,4 +1,4 @@
-interface: ""
+host_interfaces: ""
 device_ip: ""
 netmask: ""
 peer_ip: ""
