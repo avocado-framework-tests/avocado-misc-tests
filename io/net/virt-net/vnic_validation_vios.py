@@ -125,13 +125,15 @@ class VnicLifecycle(Test):
         self.vios_name = self.params.get("vios_name", default=None)
         if not self.vios_name:
             self.cancel("vios_name is required in YAML")
-        adapters_raw = self.params.get("sriov_adapter", default=None)
+        adapters_raw = self.params.get("sriov_adapters", default=None)
         if not adapters_raw:
             self.cancel(
-                "sriov_adapter (physical location code) is required in YAML")
-        adapters = str(adapters_raw).split()
+                "sriov_adapters (physical location code) is required in YAML")
+        # If multiple space-separated values are given, use only the first
+        adapters = str(adapters_raw).split()[:1]
 
-        ports_raw = str(self.params.get("sriov_port", default="0")).split()
+        ports_raw = str(
+            self.params.get("sriov_ports", default="0")).split()[:1] or ["0"]
         bws_raw = ["2"]
         prios_raw = ["50"]
         self.auto_failover = "1"
@@ -659,9 +661,8 @@ class VnicLifecycle(Test):
 
         Set ``num_iterations`` in the YAML file to repeat the full cycle
         more than once (default: 1).
-        Set space-separated values in ``sriov_adapter`` (and optionally
-        ``sriov_port``, ``bandwidth``, ``priority``) to configure multiple
-        backing devices.
+        If multiple space-separated values are given in ``sriov_adapters``
+        or ``sriov_ports``, only the first value of each is used.
         """
         all_failures = []
 
