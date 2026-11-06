@@ -22,6 +22,7 @@ SECURITY_OPT: "label=disable"
 LOG_DRIVER: "k8s-file"
 PIDS_LIMIT: "0"
 MEMORY: "50G"
+SHM_SIZE: "2G"
 PORT_MAPPING: "127.0.0.1:8000:8000"
 
 # User Configuration, keep empty if you want to run as root

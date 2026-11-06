@@ -51,6 +51,24 @@ class SpyreRerankerTest(Test):
         return process.system_output(
             cmd, shell=True, sudo=True).decode("utf-8").strip()
 
+    @staticmethod
+    def pcie_to_vfio_num(pcie_id):
+        """
+        Map a PCIe ID to its vfio device number.
+
+        Reads /sys/bus/pci/devices/<pcie_id>/vfio-dev/ which contains
+        an entry like 'vfio1'; strips the 'vfio' prefix and returns '1'.
+        Returns None if the mapping cannot be determined.
+        """
+        vfio_dev_path = f"/sys/bus/pci/devices/{pcie_id}/vfio-dev/"
+        try:
+            entries = os.listdir(vfio_dev_path)
+            if not entries:
+                return None
+            return entries[0].replace("vfio", "")
+        except OSError:
+            return None
+
     def collect_system_info(self, container_id):
         """Collect and log system and container information."""
         self.log.info("1. Container pip list:")
@@ -103,6 +121,7 @@ class SpyreRerankerTest(Test):
         self.prompt_lens = self.params.get("PROMPT_LENS", default="")
         self.batch_sizes = self.params.get("BATCH_SIZES", default="")
         self.memory = self.params.get("MEMORY", default="")
+        self.shm_size = self.params.get("SHM_SIZE", default="")
         self.container_url = self.params.get("CONTAINER_URL", default=None)
         self.container_tag = self.params.get("CONTAINER_TAG", default=None)
         self.api_key = self.params.get("API_KEY", default=None)
@@ -281,72 +300,122 @@ class SpyreRerankerTest(Test):
         self.log.info("Cleaning up any existing container: %s", container_name)
         self.run_cmd(f"podman rm -f {container_name} 2>/dev/null || true")
 
-        podman_options = [
-            "-d",
-            "--name", container_name,
-            f"--device={self.device}",
-            "-v", f"{self.host_models_dir}:/models",
-            "-e", f"AIU_PCIE_IDS={self.aiu_ids}",
-        ]
-        # Add RHAIIS 3.4 specific environment variable
-        if self.rhaiis_version == "3.4":
-            podman_options.extend(
-                ["-e", f"VLLM_SPYRE_WARMUP_BATCH_SIZES={self.batch_sizes}"])
-            podman_options.extend(
-                ["-e", f"VLLM_SPYRE_WARMUP_PROMPT_LENS={self.prompt_lens}"])
-            podman_options.extend(["-e", "VLLM_SPYRE_USE_CHUNKED_PREFILL=0"])
-        else:
-            podman_options.extend(
-                ["-e", f"SENDNN_INFERENCE_WARMUP_BATCH_SIZES={self.batch_sizes}"])
-            podman_options.extend(
-                ["-e", f"SENDNN_INFERENCE_WARMUP_PROMPT_LENS={self.prompt_lens}"])
-
-        # Continue with podman options in exact order
-        podman_options.extend([
-            f"--userns={self.userns}",
-            f"--group-add={self.group_add}",
-            f"--security-opt={self.security_opt}",
-            f"--log-driver={self.log_driver}",
-            f"--pids-limit={self.pids_limit}",
-            f"--memory={self.memory}",
-            "-p", self.port_mapping,
-        ])
-        podman_options.append(f"{self.container_url}:{self.container_tag}")
-        podman_options.extend([
-            "--model", self.vllm_model_path,
-            "-tp", str(self.aiu_world_size),
-        ])
-        self.log.info("=== Reranker Container Test Configuration ===")
-        self.log.info("RHAIIS Version: %s", self.rhaiis_version)
-        self.log.info("Model Path: %s", self.vllm_model_path)
-        self.log.info("HuggingFace Model: %s", self.hf_model_name)
-        self.log.info("AIU IDs: %s", self.aiu_ids)
-        self.log.info("AIU World Size: %s", self.aiu_world_size)
-        self.log.info("Starting VLLM container as user '%s'...", self.user)
-        self.log.info("Image: %s:%s", self.container_url, self.container_tag)
-        self.log.info("Container name: %s", container_name)
-        self.log.info("Full podman command: podman run %s",
-                      " ".join(podman_options))
-        # Create container using simplified Podman utility
-        try:
-            returncode, stdout, stderr = self.podman.run(
-                podman_options=podman_options,
-                user=self.user
+        if self.rhaiis_version == "3.7":
+            self.shm_size = "2G"
+            image = f"{self.container_url}:{self.container_tag}"
+            pcie_id = self.aiu_ids.split()[0] if self.aiu_ids else ""
+            spyre_device = self.pcie_to_vfio_num(pcie_id)
+            if spyre_device is None:
+                self.cancel(f"Could not map PCIe ID '{pcie_id}' to a vfio device number")
+            vllm_cmd = (
+                f"vllm serve {self.vllm_model_path}"
+                f" --max-model-len 512"
+                f" --max-num-seqs 64"
+                f" -tp 1"
+                f" -cc.mode STOCK_TORCH_COMPILE"
             )
-            if returncode != 0:
-                self.log.error(
-                    "Failed to create container as user '%s'", self.user)
-                self.log.error("stderr: %s", stderr.decode() if stderr else "")
-                self.fail("Container creation failed")
-            container_id = stdout.decode().strip() if stdout else None
+            podman_cmd = (
+                f"podman run"
+                f" --security-opt label=disable"
+                f" --group-add=keep-groups"
+                f" -d"
+                f" --name {container_name}"
+                f" --device={self.device}"
+                f" -v {self.host_models_dir}:/models:ro"
+                f" -e DTLOG_LEVEL=warning"
+                f" -e SPYRE_DEVICES='{spyre_device}'"
+                f" -p 127.0.0.1::8000"
+                f" --pids-limit 0"
+                f" --privileged"
+                f" --memory {self.memory}"
+                f" --shm-size {self.shm_size}"
+                f" {image}"
+                f" bash -l -c '{vllm_cmd}'"
+            )
+            self.log.info("=== Reranker Container Test Configuration ===")
+            self.log.info("RHAIIS Version: %s", self.rhaiis_version)
+            self.log.info("Model Path: %s", self.vllm_model_path)
+            self.log.info("HuggingFace Model: %s", self.hf_model_name)
+            self.log.info("AIU IDs: %s", self.aiu_ids)
+            self.log.info("Image: %s", image)
+            self.log.info("Container name: %s", container_name)
+            self.log.info("Full podman command: %s", podman_cmd)
+            result = process.run(podman_cmd, shell=True)
+            if result.exit_status != 0:
+                self.fail(f"Container creation failed: {result.stderr_text}")
+            container_id = result.stdout_text.strip()
             if not container_id or len(container_id) < 12:
                 self.fail(
-                    f"Failed to extract container ID from output: {stdout}")
+                    f"Failed to extract container ID from output: {result.stdout_text}")
             self.container_id = container_id
-            self.log.info(
-                "Container created successfully as user '%s': %s", self.user, container_id)
-        except PodmanException as ex:
-            self.fail(f"Failed to create container: {ex}")
+            self.log.info("Container created successfully: %s", container_id)
+        else:
+            podman_options = [
+                "-d",
+                "--name", container_name,
+                f"--device={self.device}",
+                "-v", f"{self.host_models_dir}:/models",
+                "-e", f"AIU_PCIE_IDS={self.aiu_ids}",
+            ]
+            # Add RHAIIS 3.4 specific environment variable
+            if self.rhaiis_version == "3.4":
+                podman_options.extend(
+                    ["-e", f"VLLM_SPYRE_WARMUP_BATCH_SIZES={self.batch_sizes}"])
+                podman_options.extend(
+                    ["-e", f"VLLM_SPYRE_WARMUP_PROMPT_LENS={self.prompt_lens}"])
+                podman_options.extend(["-e", "VLLM_SPYRE_USE_CHUNKED_PREFILL=0"])
+            else:
+                podman_options.extend(
+                    ["-e", f"SENDNN_INFERENCE_WARMUP_BATCH_SIZES={self.batch_sizes}"])
+                podman_options.extend(
+                    ["-e", f"SENDNN_INFERENCE_WARMUP_PROMPT_LENS={self.prompt_lens}"])
+
+            # Continue with podman options in exact order
+            podman_options.extend([
+                f"--userns={self.userns}",
+                f"--group-add={self.group_add}",
+                f"--security-opt={self.security_opt}",
+                f"--log-driver={self.log_driver}",
+                f"--pids-limit={self.pids_limit}",
+                f"--memory={self.memory}",
+                "-p", self.port_mapping,
+            ])
+            podman_options.append(f"{self.container_url}:{self.container_tag}")
+            podman_options.extend([
+                "--model", self.vllm_model_path,
+                "-tp", str(self.aiu_world_size),
+            ])
+            self.log.info("=== Reranker Container Test Configuration ===")
+            self.log.info("RHAIIS Version: %s", self.rhaiis_version)
+            self.log.info("Model Path: %s", self.vllm_model_path)
+            self.log.info("HuggingFace Model: %s", self.hf_model_name)
+            self.log.info("AIU IDs: %s", self.aiu_ids)
+            self.log.info("AIU World Size: %s", self.aiu_world_size)
+            self.log.info("Starting VLLM container as user '%s'...", self.user)
+            self.log.info("Image: %s:%s", self.container_url, self.container_tag)
+            self.log.info("Container name: %s", container_name)
+            self.log.info("Full podman command: podman run %s",
+                          " ".join(podman_options))
+            # Create container using simplified Podman utility
+            try:
+                returncode, stdout, stderr = self.podman.run(
+                    podman_options=podman_options,
+                    user=self.user
+                )
+                if returncode != 0:
+                    self.log.error(
+                        "Failed to create container as user '%s'", self.user)
+                    self.log.error("stderr: %s", stderr.decode() if stderr else "")
+                    self.fail("Container creation failed")
+                container_id = stdout.decode().strip() if stdout else None
+                if not container_id or len(container_id) < 12:
+                    self.fail(
+                        f"Failed to extract container ID from output: {stdout}")
+                self.container_id = container_id
+                self.log.info(
+                    "Container created successfully as user '%s': %s", self.user, container_id)
+            except PodmanException as ex:
+                self.fail(f"Failed to create container: {ex}")
 
         self.log.info(
             "Waiting for VLLM to start (checking as user '%s')...", self.user)
@@ -355,7 +424,7 @@ class SpyreRerankerTest(Test):
             success_pattern="Application startup complete.",
             failure_pattern="BACKTRACE",
             additional_failure_checks=[("VFIO", False), ("fail", False)],
-            timeout=600,
+            timeout=1800,
             check_interval=10,
             user=self.user,
             log=self.log,
