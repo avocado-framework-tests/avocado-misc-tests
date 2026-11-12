@@ -13,7 +13,7 @@ subsystem: !mux
             all_fields:
                 option: -t -F acquired,contended,avg_wait,wait_total
             locks_with_entries:
-                option: -c -D -E 5
+                option: -c -E 5
             vmlinux_full:
                 option: -E 3 --kallsyms
 

@@ -96,7 +96,7 @@ class perf_lock(Test):
         else:
             # Record command
             record_cmd = "perf lock record -o %s -- " \
-                         "perf bench sched messaging" % self.output_file
+                         "perf bench sched messaging -g 1 -l 1" % self.output_file
             self.run_cmd(record_cmd)
             # Report command
             if "-i" in self.option:
