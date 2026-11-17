@@ -350,14 +350,15 @@ class RASToolsLsvpd(Test):
                 vpd_slot = vpd_output['slot'].strip()
                 self.log.info("Slot from sysfs : %s", sys_slot)
                 self.log.info("Slot from lsvpd : %s", vpd_slot)
-                # Some systems append suffixes
-                vpd_slot_base = vpd_slot
-                if '-' in vpd_slot:
-                    vpd_slot_base = \
-                        vpd_slot[:vpd_slot.rfind('-')]
-
-                if sys_slot in [vpd_slot,
-                                vpd_slot_base]:
+                # Match if sysfs slot equals VPD slot exactly, or if
+                # sysfs slot is a prefix of VPD slot (handles adapters
+                # that append port/VF qualifiers like -T0, -T0-S4, etc.)
+                slot_match = (
+                    sys_slot == vpd_slot or
+                    (sys_slot and
+                     vpd_slot.startswith(sys_slot + '-'))
+                )
+                if slot_match:
                     self.log.info("Slot match successful")
 
                 else:
