@@ -1,5 +1,5 @@
-tarball_base: 'linux-2.6.18.tar.bz2'
-kernel_repo: 'http://www.kernel.org/pub/linux/kernel/v2.6'
-tarball_md5: '296a6d150d260144639c3664d127d174'
+tarball_base: 'linux-7.3.1.tar.xz'
+kernel_repo: 'https://cdn.kernel.org/pub/linux/kernel/v7.x'
+tarball_sha256: 'fa595aad93734f829c963c2a90ef7c3673224fd7fdae7b49406e397cde2de231'
 parallel: True
 dir_to_extract: '/tmp/'

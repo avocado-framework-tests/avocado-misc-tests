@@ -57,19 +57,20 @@ class DmaMemtest(Test):
         self.tmpdir = self.params.get('dir_to_extract', default=self.tmpdir)
         self.base_dir = os.path.join(self.tmpdir, 'linux.orig')
         tarball_base = self.params.get('tarball_base',
-                                       default='linux-2.6.18.tar.bz2')
+                                       default='linux-7.3.1.tar.xz')
         kernel_repo = self.params.get('kernel_repo',
-                                      default='http://www.kernel.org/pub/'
-                                      'linux/kernel/v2.6')
+                                      default='https://cdn.kernel.org/pub/'
+                                      'linux/kernel/v7.x')
         tarball_url = os.path.join(kernel_repo, tarball_base)
-        tarball_md5 = self.params.get('tarball_md5',
-                                      default='296a6d150d260144639c3664d127d1'
-                                      '74')
+        tarball_sha256 = self.params.get('tarball_sha256',
+                                         default='fa595aad93734f829c963c2a90ef'
+                                         '7c3673224fd7fdae7b49406e397cde2de231')
         parallel = self.params.get('parallel', default=True)
         self.parallel = parallel
         self.log.info('Downloading linux kernel tarball')
-        self.tarball = self.fetch_asset(tarball_url, asset_hash=tarball_md5,
-                                        algorithm='md5')
+        self.tarball = self.fetch_asset(tarball_url,
+                                        asset_hash=tarball_sha256,
+                                        algorithm='sha256')
         size_tarball = os.path.getsize(self.tarball) // 1024 // 1024
 
         # Estimation of the tarball size after uncompression
@@ -123,7 +124,7 @@ class DmaMemtest(Test):
                 if not os.path.exists(tmp_dir):
                     os.makedirs(tmp_dir)
                 # Start parallel process
-                tar_cmd = 'tar jxf ' + self.tarball + ' -C ' + tmp_dir
+                tar_cmd = 'tar xf ' + self.tarball + ' -C ' + tmp_dir
                 self.log.info("Unpacking tarball to %s", tmp_dir)
                 obj = process.SubProcess(cmd=tar_cmd, verbose=False,
                                          shell=True)
@@ -140,7 +141,11 @@ class DmaMemtest(Test):
         parallel_procs = []
         self.log.info('Comparing test copies with base copy')
         for j in range(self.sim_cps):
-            kernel_ver = os.path.basename(self.tarball).strip('.tar.bz2')
+            kernel_ver = os.path.basename(self.tarball)
+            for ext in ('.tar.bz2', '.tar.xz', '.tar.gz'):
+                if kernel_ver.endswith(ext):
+                    kernel_ver = kernel_ver[:-len(ext)]
+                    break
             tmp_dir = 'linux.%s/%s' % (j, kernel_ver)
             if self.parallel:
                 diff_cmd = 'diff -U3 -rN linux.orig/' + kernel_ver
