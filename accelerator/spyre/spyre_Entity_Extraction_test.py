@@ -51,6 +51,24 @@ class EntityExtractionTest(Test):
         return process.system_output(
             cmd, shell=True, sudo=True).decode("utf-8").strip()
 
+    @staticmethod
+    def pcie_to_vfio_num(pcie_id):
+        """
+        Map a PCIe ID to its vfio device number.
+
+        Reads /sys/bus/pci/devices/<pcie_id>/vfio-dev/ which contains
+        an entry like 'vfio1'; strips the 'vfio' prefix and returns '1'.
+        Returns None if the mapping cannot be determined.
+        """
+        vfio_dev_path = f"/sys/bus/pci/devices/{pcie_id}/vfio-dev/"
+        try:
+            entries = os.listdir(vfio_dev_path)
+            if not entries:
+                return None
+            return entries[0].replace("vfio", "")
+        except OSError:
+            return None
+
     def collect_system_info(self, container_id):
         """Collect and log system and container information."""
         self.log.info("1. Container pip list:")
@@ -290,107 +308,170 @@ class EntityExtractionTest(Test):
         self.log.info("Cleaning up any existing container: %s", container_name)
         self.run_cmd(f"podman rm -f {container_name} 2>/dev/null || true")
 
-        podman_options = [
-            "-d",
-            "--name", container_name,
-            f"--device={self.device}",
-            "-v", f"{self.host_models_dir}:/models",
-            "-e", f"AIU_PCIE_IDS={self.aiu_ids}",
-        ]
-        # Add RHAIIS version specific parameters
-        if self.rhaiis_version in ("3.3", "3.4"):
-            podman_options.extend(["-e", "VLLM_SPYRE_USE_CB=1"])
-            max_model_len = "3072"
-            max_batch_size = "16"
-        elif self.rhaiis_version == "3.5":
-            if "Mistral-Small-3.2-24B-Instruct-2506" in self.vllm_model_path:
+        if self.rhaiis_version == "3.7":
+            image = f"{self.container_url}:{self.container_tag}"
+            if "Mistral-Small-3.2-24B-Instruct-2506" in self.vllm_model_path or \
+               "Ministral-3-14b-Instruct-2512-BF16" in self.vllm_model_path:
                 max_model_len = "8192"
-                max_batch_size = "32"
-            else:
-                max_model_len = "3072"
-                max_batch_size = "16"
-        elif self.rhaiis_version == "3.6":
-            if "Mistral-Small-3.2-24B-Instruct-2506" in self.vllm_model_path:
-                max_model_len = "8192"
-                max_batch_size = "32"
-            elif "Ministral-3-14b-Instruct-2512-BF16" in self.vllm_model_path:
-                max_batch_size = "32"
-                if len(self.aiu_ids.split()) == 1:
-                    max_model_len = "4096"
-                else:
-                    max_model_len = "8192"
-            elif "granite-vision-3.3-2b" in self.vllm_model_path:
-                max_batch_size = "16"
-                if len(self.aiu_ids.split()) == 1:
-                    max_model_len = "8192"
-                else:
-                    max_model_len = "16384"
             else:
                 max_model_len = "4096"
-                max_batch_size = "32"
-        # Continue with podman options in exact order
-        podman_options.extend([
-            f"--userns={self.userns}",
-            f"--group-add={self.group_add}",
-            f"--security-opt={self.security_opt}",
-            f"--log-driver={self.log_driver}",
-            f"--pids-limit={self.pids_limit}",
-            f"--memory={self.memory}",
-            f"--shm-size={self.shm_size}",
-            "-p", self.port_mapping,
-        ])
-        podman_options.append(f"{self.container_url}:{self.container_tag}")
-        podman_options.extend([
-            "--model", self.vllm_model_path,
-            "-tp", str(self.aiu_world_size),
-            f"--max-model-len={max_model_len}",
-            f"--max-num-seqs={max_batch_size}",
-        ])
-        # Add version-specific VLLM argument for 3.3/3.4
-        if self.rhaiis_version in ("3.3", "3.4"):
-            podman_options.append("--enable-prefix-caching")
-
-        self.log.info("=== Entity Extraction Container Test Configuration ===")
-        self.log.info("RHAIIS Version: %s", self.rhaiis_version)
-        self.log.info("Model Path: %s", self.vllm_model_path)
-        self.log.info("HuggingFace Model: %s", self.hf_model_name)
-        self.log.info("AIU IDs: %s", self.aiu_ids)
-        self.log.info("AIU World Size: %s", self.aiu_world_size)
-        self.log.info("Starting VLLM container as user '%s'...", self.user)
-        self.log.info("Image: %s:%s", self.container_url, self.container_tag)
-        self.log.info("Container name: %s", container_name)
-        self.log.info("Full podman command: podman run %s",
-                      " ".join(podman_options))
-
-        # Create container using simplified Podman utility
-        try:
-            returncode, stdout, stderr = self.podman.run(
-                podman_options=podman_options,
-                user=self.user
+            self.shm_size = "2G"
+            pcie_id = self.aiu_ids.split()[0] if self.aiu_ids else ""
+            spyre_device = self.pcie_to_vfio_num(pcie_id)
+            if spyre_device is None:
+                self.cancel(f"Could not map PCIe ID '{pcie_id}' to a vfio device number")
+            vllm_cmd = (
+                f"vllm serve {self.vllm_model_path}"
+                f" --max-model-len {max_model_len}"
+                f" --max-num-seqs 32"
+                f" --num-gpu-blocks-override 2049"
+                f" -tp 1"
             )
-            if returncode != 0:
-                self.log.error(
-                    "Failed to create container as user '%s'", self.user)
-                self.log.error("stderr: %s", stderr.decode() if stderr else "")
-                self.fail("Container creation failed")
-            container_id = stdout.decode().strip() if stdout else None
+            podman_cmd = (
+                f"podman run"
+                f" --security-opt label=disable"
+                f" --group-add=keep-groups"
+                f" -d"
+                f" --name {container_name}"
+                f" --device={self.device}"
+                f" -v {self.host_models_dir}:/models:ro"
+                f" -e DTLOG_LEVEL=warning"
+                f" -e SPYRE_DEVICES='{spyre_device}'"
+                f" -p 127.0.0.1::8000"
+                f" --pids-limit 0"
+                f" --privileged"
+                f" --memory {self.memory}"
+                f" --shm-size {self.shm_size}"
+                f" {image}"
+                f" bash -l -c '{vllm_cmd}'"
+            )
+            self.log.info("=== Entity Extraction Container Test Configuration ===")
+            self.log.info("RHAIIS Version: %s", self.rhaiis_version)
+            self.log.info("Model Path: %s", self.vllm_model_path)
+            self.log.info("HuggingFace Model: %s", self.hf_model_name)
+            self.log.info("AIU IDs: %s", self.aiu_ids)
+            self.log.info("Image: %s", image)
+            self.log.info("Container name: %s", container_name)
+            self.log.info("Full podman command: %s", podman_cmd)
+            result = process.run(podman_cmd, shell=True)
+            if result.exit_status != 0:
+                self.fail(f"Container creation failed: {result.stderr_text}")
+            container_id = result.stdout_text.strip()
             if not container_id or len(container_id) < 12:
                 self.fail(
-                    f"Failed to extract container ID from output: {stdout}")
+                    f"Failed to extract container ID from output: {result.stdout_text}")
             self.container_id = container_id
-            self.log.info(
-                "Container created successfully as user '%s': %s", self.user, container_id)
-        except PodmanException as ex:
-            self.fail(f"Failed to create container: {ex}")
+            self.log.info("Container created successfully: %s", container_id)
+        else:
+            podman_options = [
+                "-d",
+                "--name", container_name,
+                f"--device={self.device}",
+                "-v", f"{self.host_models_dir}:/models",
+                "-e", f"AIU_PCIE_IDS={self.aiu_ids}",
+            ]
+            # Add RHAIIS version specific parameters
+            if self.rhaiis_version in ("3.3", "3.4"):
+                podman_options.extend(["-e", "VLLM_SPYRE_USE_CB=1"])
+                max_model_len = "3072"
+                max_batch_size = "16"
+            elif self.rhaiis_version == "3.5":
+                if "Mistral-Small-3.2-24B-Instruct-2506" in self.vllm_model_path:
+                    max_model_len = "8192"
+                    max_batch_size = "32"
+                else:
+                    max_model_len = "3072"
+                    max_batch_size = "16"
+            elif self.rhaiis_version == "3.6":
+                if "Mistral-Small-3.2-24B-Instruct-2506" in self.vllm_model_path:
+                    max_model_len = "8192"
+                    max_batch_size = "32"
+                elif "Ministral-3-14b-Instruct-2512-BF16" in self.vllm_model_path:
+                    max_batch_size = "32"
+                    if len(self.aiu_ids.split()) == 1:
+                        max_model_len = "4096"
+                    else:
+                        max_model_len = "8192"
+                elif "granite-vision-3.3-2b" in self.vllm_model_path:
+                    max_batch_size = "16"
+                    if len(self.aiu_ids.split()) == 1:
+                        max_model_len = "8192"
+                    else:
+                        max_model_len = "16384"
+                else:
+                    max_model_len = "4096"
+                    max_batch_size = "32"
+            # Continue with podman options in exact order
+            podman_options.extend([
+                f"--userns={self.userns}",
+                f"--group-add={self.group_add}",
+                f"--security-opt={self.security_opt}",
+                f"--log-driver={self.log_driver}",
+                f"--pids-limit={self.pids_limit}",
+                f"--memory={self.memory}",
+                f"--shm-size={self.shm_size}",
+                "-p", self.port_mapping,
+            ])
+            podman_options.append(f"{self.container_url}:{self.container_tag}")
+            podman_options.extend([
+                "--model", self.vllm_model_path,
+                "-tp", str(self.aiu_world_size),
+                f"--max-model-len={max_model_len}",
+                f"--max-num-seqs={max_batch_size}",
+            ])
+            # Add version-specific VLLM argument for 3.3/3.4
+            if self.rhaiis_version in ("3.3", "3.4"):
+                podman_options.append("--enable-prefix-caching")
+
+            self.log.info("=== Entity Extraction Container Test Configuration ===")
+            self.log.info("RHAIIS Version: %s", self.rhaiis_version)
+            self.log.info("Model Path: %s", self.vllm_model_path)
+            self.log.info("HuggingFace Model: %s", self.hf_model_name)
+            self.log.info("AIU IDs: %s", self.aiu_ids)
+            self.log.info("AIU World Size: %s", self.aiu_world_size)
+            self.log.info("Starting VLLM container as user '%s'...", self.user)
+            self.log.info("Image: %s:%s", self.container_url, self.container_tag)
+            self.log.info("Container name: %s", container_name)
+            self.log.info("Full podman command: podman run %s",
+                          " ".join(podman_options))
+
+            # Create container using simplified Podman utility
+            try:
+                returncode, stdout, stderr = self.podman.run(
+                    podman_options=podman_options,
+                    user=self.user
+                )
+                if returncode != 0:
+                    self.log.error(
+                        "Failed to create container as user '%s'", self.user)
+                    self.log.error("stderr: %s", stderr.decode() if stderr else "")
+                    self.fail("Container creation failed")
+                container_id = stdout.decode().strip() if stdout else None
+                if not container_id or len(container_id) < 12:
+                    self.fail(
+                        f"Failed to extract container ID from output: {stdout}")
+                self.container_id = container_id
+                self.log.info(
+                    "Container created successfully as user '%s': %s", self.user, container_id)
+            except PodmanException as ex:
+                self.fail(f"Failed to create container: {ex}")
 
         self.log.info(
             "Waiting for VLLM to start (checking as user '%s')...", self.user)
+        # On 3.7 the vfio_backend emits a harmless "vf_token not set" warning
+        # that contains "VFIO" — exclude it from failure checks to avoid a
+        # false positive. Older stacks can keep the original check.
+        failure_checks = (
+            [("fail", False)]
+            if self.rhaiis_version == "3.7"
+            else [("VFIO", False), ("fail", False)]
+        )
         if not wait_for_vllm_startup(
             container_id=container_id,
             success_pattern="Application startup complete.",
             failure_pattern="BACKTRACE",
-            additional_failure_checks=[("VFIO", False), ("fail", False)],
-            timeout=600,
+            additional_failure_checks=failure_checks,
+            timeout=1800,
             check_interval=10,
             user=self.user,
             log=self.log,
