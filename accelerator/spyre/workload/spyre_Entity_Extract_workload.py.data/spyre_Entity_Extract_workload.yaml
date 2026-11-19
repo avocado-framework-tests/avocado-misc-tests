@@ -1,0 +1,22 @@
+# Avocado Test Parameters for Spyre Entity Extraction Workload Test
+
+USE_CASE: "entity_extract"
+CONTAINER_NAME: "spyre-entity-extract"
+
+# Workload configuration
+WORKLOAD_MINS: 5
+WORKERS: 2
+CHECK_INTERVAL: 30
+PROMPTS_FILE: "entity_extraction_prompts.json"
+# Minimum percentage of expected entities that must appear in a response
+# for the response to be counted as a valid extraction
+MIN_ENTITY_MATCH_PCT: 50
+
+# Metrics collection configuration
+STATS_COMMAND: "aiu-smi --csv"
+# Leave METRICS_FILE empty to use the default Avocado results directory (self.logdir)
+METRICS_FILE: ""
+
+# User and port configuration
+USER: ""
+PORT_MAPPING: "127.0.0.1:8000:8000"

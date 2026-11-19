@@ -1,0 +1,52 @@
+[
+  {
+    "name": "Business Text - Company and People",
+    "text": "Apple Inc. CEO Tim Cook announced the new iPhone at the Steve Jobs Theater in Cupertino, California on September 12, 2023.",
+    "expected_entities": ["Apple Inc.", "Tim Cook", "iPhone", "Steve Jobs Theater", "Cupertino", "California"]
+  },
+  {
+    "name": "News Article - Political",
+    "text": "President Joe Biden met with Prime Minister Narendra Modi at the White House in Washington D.C. to discuss trade relations between the United States and India.",
+    "expected_entities": ["Joe Biden", "Narendra Modi", "White House", "Washington D.C.", "United States", "India"]
+  },
+  {
+    "name": "Financial Text",
+    "text": "Microsoft Corporation reported quarterly revenue of $56.5 billion, exceeding Wall Street expectations. CEO Satya Nadella credited strong Azure cloud growth.",
+    "expected_entities": ["Microsoft Corporation", "Wall Street", "Satya Nadella", "Azure"]
+  },
+  {
+    "name": "Medical Text",
+    "text": "Dr. Sarah Johnson from Johns Hopkins University published research on COVID-19 vaccines in The Lancet medical journal.",
+    "expected_entities": ["Sarah Johnson", "Johns Hopkins University", "COVID-19", "The Lancet"]
+  },
+  {
+    "name": "Historical Text",
+    "text": "On July 20, 1969, Neil Armstrong became the first person to walk on the Moon during NASA's Apollo 11 mission.",
+    "expected_entities": ["July 20, 1969", "Neil Armstrong", "Moon", "NASA", "Apollo 11"]
+  },
+  {
+    "name": "Sports Text",
+    "text": "Lionel Messi scored two goals for Inter Miami CF in their match against New York Red Bulls at DRV PNK Stadium in Fort Lauderdale.",
+    "expected_entities": ["Lionel Messi", "Inter Miami CF", "New York Red Bulls", "DRV PNK Stadium", "Fort Lauderdale"]
+  },
+  {
+    "name": "Technology Text",
+    "text": "OpenAI released GPT-4 in March 2023, marking a significant advancement in artificial intelligence. The model was developed by a team led by Sam Altman.",
+    "expected_entities": ["OpenAI", "GPT-4", "March 2023", "Sam Altman"]
+  },
+  {
+    "name": "Legal Text",
+    "text": "The Supreme Court of the United States ruled in favor of Google LLC in the copyright case brought by Oracle Corporation regarding Java API usage.",
+    "expected_entities": ["Supreme Court", "United States", "Google LLC", "Oracle Corporation", "Java"]
+  },
+  {
+    "name": "Short Text",
+    "text": "Elon Musk founded SpaceX in 2002.",
+    "expected_entities": ["Elon Musk", "SpaceX", "2002"]
+  },
+  {
+    "name": "Complex Multi-Entity Text",
+    "text": "The European Union headquarters in Brussels hosted a summit on December 10, 2023, where leaders including Emmanuel Macron of France and Olaf Scholz of Germany discussed climate policy.",
+    "expected_entities": ["European Union", "Brussels", "December 10, 2023", "Emmanuel Macron", "France", "Olaf Scholz", "Germany"]
+  }
+]
