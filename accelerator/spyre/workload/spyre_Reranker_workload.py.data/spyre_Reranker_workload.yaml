@@ -1,0 +1,27 @@
+# Avocado Test Parameters for Spyre Reranker Workload Test
+
+USE_CASE: "reranker"
+CONTAINER_NAME: "spyre-reranker"
+
+# Workload configuration
+WORKLOAD_MINS: 5
+WORKERS: 8
+CHECK_INTERVAL: 30
+# Minimum number of query/document pairs sent in each /score request
+BATCH_SIZE: 20
+# Per-request timeout in seconds
+REQUEST_TIMEOUT: 600
+# Sample scoring dataset (CSV columns: document, query, score)
+DATASET_FILE: "demo_scoring_dataset.csv"
+# Minimum percentage of queries for which the most relevant document
+# (highest expected score) must also get the highest returned score
+MIN_RANK_ACCURACY_PCT: 80
+
+# Metrics collection configuration
+STATS_COMMAND: "aiu-smi --csv"
+# Leave METRICS_FILE empty to use the default Avocado results directory (self.logdir)
+METRICS_FILE: ""
+
+# User and port configuration
+USER: ""
+PORT_MAPPING: "127.0.0.1:8000:8000"

@@ -1,0 +1,52 @@
+document,query,score
+"Machine learning is a method of data analysis that automates analytical model building.","What is machine learning?",0.95
+"The weather forecast predicts rain tomorrow afternoon.","What is machine learning?",0.12
+"Python is a high-level programming language used for various applications.","What is machine learning?",0.45
+"Artificial intelligence enables machines to mimic human intelligence.","What is artificial intelligence?",0.92
+"The stock market closed higher today with gains across all sectors.","What is artificial intelligence?",0.08
+"Deep learning uses neural networks with multiple layers to process data.","What is deep learning?",0.94
+"A recipe for chocolate chip cookies requires flour, sugar, and butter.","What is deep learning?",0.05
+"Neural networks are computing systems inspired by biological neural networks.","What are neural networks?",0.96
+"The new restaurant downtown serves Italian cuisine.","What are neural networks?",0.03
+"Natural language processing helps computers understand human language.","What is NLP?",0.93
+"The concert tickets sold out within minutes of going on sale.","What is NLP?",0.06
+"Supervised learning algorithms learn from labeled training data.","What is supervised learning?",0.91
+"The museum exhibits ancient artifacts from various civilizations.","What is supervised learning?",0.07
+"Reinforcement learning involves agents learning through trial and error.","What is reinforcement learning?",0.89
+"The garden needs watering twice a week during summer months.","What is reinforcement learning?",0.04
+"Computer vision enables machines to interpret visual information.","What is computer vision?",0.94
+"The movie won several awards at the film festival.","What is computer vision?",0.09
+"Data preprocessing is essential for building accurate machine learning models.","How to prepare data for ML?",0.88
+"The traffic was heavy during rush hour this morning.","How to prepare data for ML?",0.11
+"Feature engineering involves creating new features from existing data.","What is feature engineering?",0.90
+"The library closes at 8 PM on weekdays.","What is feature engineering?",0.05
+"Model evaluation metrics help assess the performance of ML algorithms.","How to evaluate ML models?",0.87
+"The beach was crowded with tourists over the weekend.","How to evaluate ML models?",0.08
+"Overfitting occurs when a model learns noise in the training data.","What is overfitting?",0.92
+"The coffee shop offers a variety of specialty drinks.","What is overfitting?",0.06
+"Cross-validation is a technique for assessing model generalization.","What is cross-validation?",0.89
+"The park has several walking trails and picnic areas.","What is cross-validation?",0.07
+"Gradient descent is an optimization algorithm for training models.","What is gradient descent?",0.91
+"The bookstore is having a sale on fiction novels.","What is gradient descent?",0.04
+"Convolutional neural networks are effective for image recognition tasks.","What are CNNs?",0.93
+"The hotel offers complimentary breakfast for all guests.","What are CNNs?",0.05
+"Recurrent neural networks process sequential data like text and time series.","What are RNNs?",0.94
+"The gym membership includes access to all fitness classes.","What are RNNs?",0.06
+"Transfer learning leverages pre-trained models for new tasks.","What is transfer learning?",0.88
+"The airport shuttle runs every 30 minutes.","What is transfer learning?",0.09
+"Ensemble methods combine multiple models to improve predictions.","What are ensemble methods?",0.90
+"The pharmacy is open 24 hours for emergencies.","What are ensemble methods?",0.07
+"Hyperparameter tuning optimizes model configuration settings.","What is hyperparameter tuning?",0.86
+"The theater performance starts at 7:30 PM sharp.","What is hyperparameter tuning?",0.08
+"Batch normalization helps stabilize neural network training.","What is batch normalization?",0.89
+"The grocery store has fresh produce delivered daily.","What is batch normalization?",0.05
+"Dropout is a regularization technique to prevent overfitting.","What is dropout?",0.91
+"The bus schedule changes on weekends and holidays.","What is dropout?",0.06
+"Attention mechanisms allow models to focus on relevant input parts.","What are attention mechanisms?",0.92
+"The dentist office accepts walk-in appointments.","What are attention mechanisms?",0.04
+"Transformers revolutionized natural language processing tasks.","What are transformers?",0.95
+"The car dealership offers financing options.","What are transformers?",0.07
+"BERT is a pre-trained language model for various NLP tasks.","What is BERT?",0.93
+"The pizza delivery takes approximately 30 minutes.","What is BERT?",0.08
+"GPT models generate human-like text using transformer architecture.","What is GPT?",0.94
+"The hardware store sells tools and building materials.","What is GPT?",0.06
