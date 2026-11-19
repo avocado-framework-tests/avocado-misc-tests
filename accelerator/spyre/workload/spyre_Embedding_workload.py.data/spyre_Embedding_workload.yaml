@@ -1,0 +1,24 @@
+# Avocado Test Parameters for Spyre Embedding Workload Test
+
+USE_CASE: "embedding"
+CONTAINER_NAME: "spyre-embedding"
+
+# Workload configuration
+WORKLOAD_MINS: 5
+WORKERS: 8
+CHECK_INTERVAL: 30
+# Number of texts sent in each /v1/embeddings request
+BATCH_SIZE: 50
+# Per-request timeout in seconds
+REQUEST_TIMEOUT: 600
+# Sample texts cycled to build the embedding batches
+PROMPTS_FILE: "embedding_texts.json"
+
+# Metrics collection configuration
+STATS_COMMAND: "aiu-smi --csv"
+# Leave METRICS_FILE empty to use the default Avocado results directory (self.logdir)
+METRICS_FILE: ""
+
+# User and port configuration
+USER: ""
+PORT_MAPPING: "127.0.0.1:8000:8000"
