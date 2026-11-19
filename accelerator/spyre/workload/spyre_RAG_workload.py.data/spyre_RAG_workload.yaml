@@ -1,0 +1,19 @@
+# Avocado Test Parameters for Spyre RAG Workload Test
+
+USE_CASE: "rag"
+CONTAINER_NAME: "spyre-rag"
+
+# Workload configuration
+WORKLOAD_MINS: 5
+WORKERS: 2
+CHECK_INTERVAL: 30
+PROMPTS_FILE: "rag_prompts.json"
+
+# Metrics collection configuration
+STATS_COMMAND: "aiu-smi --csv"
+# Leave METRICS_FILE empty to use the default Avocado results directory (self.logdir)
+METRICS_FILE: ""
+
+# User and port configuration
+USER: ""
+PORT_MAPPING: "127.0.0.1:8000:8000"
