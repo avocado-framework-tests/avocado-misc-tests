@@ -553,6 +553,16 @@ class RASToolsPpcutils(Test):
                                       executed successfully." % cmd)
         output = process.system_output("lparstat -E 1 1").decode("utf-8")
         parsed = False
+        # lparstat computes normalized %idle differently by partition mode:
+        # - Dedicated + Capped: normalized busy + idle ~= frequency %
+        # - Dedicated + Donating, or Shared: normalized busy + idle ~= 100
+        lparcfg = process.system_output(
+            "cat /proc/powerpc/lparcfg", shell=True).decode("utf-8")
+        shared_mode = re.search(r'shared_processor_mode=(\d+)', lparcfg)
+        donate_mode = re.search(r'DedDonMode=(\d+)', lparcfg)
+        dedicated_capped = bool(
+            shared_mode and shared_mode.group(1) == "0" and
+            donate_mode and donate_mode.group(1) == "0")
         for line in output.splitlines():
             line = line.strip()
             # Skip empty lines
@@ -618,14 +628,17 @@ class RASToolsPpcutils(Test):
                 else:
                     error_messages.append(
                         "Actual values invalid: sum=%.2f" % actual_sum)
-                # Normalized values should approximately equal frequency %
-                if abs(normal_sum - freq_percentile) <= 2.0:
+                expected_sum = freq_percentile if dedicated_capped else 100.0
+                if abs(normal_sum - expected_sum) <= 2.0:
                     self.log.info(
-                        "Normalized values match frequency percentage ✔")
+                        "Normalized busy + idle matches expected %.2f ✔",
+                        expected_sum)
                 else:
                     error_messages.append(
-                        "Mismatch: normalized=%.2f, freq=%.2f"
-                        % (normal_sum, freq_percentile))
+                        f"Mismatch: normalized={normal_sum:.2f}, "
+                        f"expected={expected_sum:.2f} "
+                        f"(freq={freq_percentile:.2f}, "
+                        f"dedicated_capped={dedicated_capped})")
 
             except Exception as e:
                 self.log.warning(
@@ -650,7 +663,9 @@ class RASToolsPpcutils(Test):
                     physc_val = float(matches[4])
                     list_physc.append(physc_val)
 
-        if len(set(list_physc)) == 1:
+        # physc is printed with 2 decimals and can jitter by 0.01 on an
+        # idle LPAR, so compare with a small tolerance instead of equality
+        if list_physc and max(list_physc) - min(list_physc) <= 0.05:
             self.log.info("Correctly displaying the number of physical \
                           processors consumed")
         else:
