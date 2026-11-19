@@ -83,7 +83,7 @@ class BCCTest(Test):
                 iperf_pkg = 'iperf3'
                 clang_pkg, llvm_pkg = self._resolve_and_install_sles_llvm_pkgs()
             deps.extend(['clang', 'pkg-config', 'libelf-devel', iperf_pkg, 'wget',
-                         'libbpf-devel', 'zip', 'sudo', 'kernel-source',
+                         'libbpf-devel', 'libbpf-devel-static', 'zip', 'sudo', 'kernel-source',
                          'kernel-default-devel', 'kernel-devel'])
             deps.extend([clang_pkg, llvm_pkg])
 
@@ -105,6 +105,8 @@ class BCCTest(Test):
         if critical_failed:
             self.cancel("Failed to install critical packages: %s"
                         % ', '.join(critical_failed))
+
+        self._ensure_debugfs_mounted()
 
         # Ensure kernel headers / autoconf.h are available for BPF runtime compilation
         self._ensure_kernel_headers()
@@ -244,6 +246,26 @@ class BCCTest(Test):
                 "zypper --non-interactive --gpg-auto-import-keys refresh packagehub",
                 shell=True, ignore_status=True, sudo=True
             )
+
+    def _ensure_debugfs_mounted(self):
+        """
+        BCC kprobe/tracepoint tests read /sys/kernel/debug/kprobes/blacklist
+        and fail with FileNotFoundError when debugfs is not mounted
+        (common on a freshly installed SLES LPAR).
+        """
+        for fstype, path in (("debugfs", "/sys/kernel/debug"),
+                             ("tracefs", "/sys/kernel/tracing")):
+            mounted = process.run(
+                "grep -qs ' %s ' /proc/mounts" % path, shell=True,
+                ignore_status=True).exit_status == 0
+            if mounted:
+                continue
+            self.log.info("Mounting %s on %s" % (fstype, path))
+            res = process.run("mount -t %s none %s" % (fstype, path),
+                              shell=True, ignore_status=True, sudo=True)
+            if res.exit_status != 0:
+                self.log.warning("Could not mount %s on %s: %s"
+                                 % (fstype, path, res.stderr.decode()))
 
     def _ensure_kernel_headers(self):
         """
