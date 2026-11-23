@@ -63,7 +63,7 @@ class VnicDlpar(Test):
         self.rsct_service_start()
 
         self.local = LocalHost()
-        self.interface = self.params.get('interface', default=None)
+        self.interface = self.params.get('host_interfaces', default=None)
         self.mac_id = self.params.get("mac_id", default=None)
 
         if self.interface:
@@ -76,7 +76,7 @@ class VnicDlpar(Test):
         elif self.mac_id:
             self.mac = self.mac_id.replace(':', '')
         else:
-            self.cancel("Please provide 'interface' or 'mac_id' in YAML")
+            self.cancel("Please provide 'host_interfaces' or 'mac_id' in YAML")
 
         self.device_ip = self.params.get('device_ip', default=None)
         if not self.device_ip:
