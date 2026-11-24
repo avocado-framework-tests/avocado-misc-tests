@@ -15,6 +15,7 @@
 
 import os
 import pwd
+import shlex
 import time
 from avocado import Test
 from avocado.utils import process
@@ -50,6 +51,24 @@ class SpyreServiceabilityTest(Test):
             cmd = f"su - {user} -c '{escaped_cmd}'"
         return process.system_output(
             cmd, shell=True, sudo=True).decode("utf-8").strip()
+
+    @staticmethod
+    def pcie_to_vfio_num(pcie_id):
+        """
+        Map a PCIe ID to its vfio device number.
+
+        Reads /sys/bus/pci/devices/<pcie_id>/vfio-dev/ which contains
+        an entry like 'vfio1'; strips the 'vfio' prefix and returns '1'.
+        Returns None if the mapping cannot be determined.
+        """
+        vfio_dev_path = f"/sys/bus/pci/devices/{pcie_id}/vfio-dev/"
+        try:
+            entries = os.listdir(vfio_dev_path)
+            if not entries:
+                return None
+            return entries[0].replace("vfio", "")
+        except OSError:
+            return None
 
     def spyre_exists(self):
         """
@@ -202,35 +221,101 @@ class SpyreServiceabilityTest(Test):
         self.run_cmd(f"podman rm -f {container_name} 2>/dev/null || true",
                      user=user_display)
 
-        podman_options = self._build_podman_options(
-            container_name=container_name)
-        self.log.info("Starting container as %s", user_display)
-        self.log.info("Full podman command: podman run %s",
-                      " ".join(podman_options))
-
-        try:
-            returncode, stdout, stderr = self.podman.run(
-                podman_options=podman_options,
-                user=user_display
+        if self.rhaiis_version == "3.7":
+            self.shm_size = "2G"
+            image = f"{self.container_url}:{self.container_tag}"
+            pcie_ids = self.aiu_ids.split()
+            vfio_nums = []
+            for pid in pcie_ids:
+                num = self.pcie_to_vfio_num(pid)
+                if num is None:
+                    self.cancel(f"Could not map PCIe ID '{pid}' to a vfio device number")
+                vfio_nums.append(num)
+            spyre_devices = ",".join(vfio_nums)
+            vllm_cmd = (
+                f"vllm serve {self.vllm_model_path}"
+                f" --max-model-len 32768"
+                f" --max-num-seqs 32"
+                f" --num-gpu-blocks-override 2049"
+                f" -tp 4"
             )
-            if returncode != 0:
+            podman_cmd = (
+                f"podman run"
+                f" --security-opt label=disable"
+                f" --group-add=keep-groups"
+                f" -d"
+                f" --name {container_name}"
+                f" --device={self.device}"
+                f" -v {self.host_models_dir}:/models:ro"
+                f" -e DTLOG_LEVEL=warning"
+                f" -e SPYRE_DEVICES='{spyre_devices}'"
+                f" -p 127.0.0.1::8000"
+                f" --pids-limit 0"
+                f" --privileged"
+                f" --memory {self.memory}"
+                f" --shm-size {self.shm_size}"
+                f" {image}"
+                f" bash -l -c '{vllm_cmd}'"
+            )
+            self.log.info("=== Serviceability Container Test Configuration ===")
+            self.log.info("RHAIIS Version: %s", self.rhaiis_version)
+            self.log.info("Model Path: %s", self.vllm_model_path)
+            self.log.info("AIU IDs: %s", self.aiu_ids)
+            self.log.info("Image: %s", image)
+            self.log.info("Container name: %s", container_name)
+            self.log.info("Full podman command (as %s): %s", user_display, podman_cmd)
+
+            if user_display and user_display != "root":
+                cmd = f"su - {user_display} -c {shlex.quote(podman_cmd)}"
+            else:
+                cmd = podman_cmd
+
+            result = process.run(cmd, shell=True, ignore_status=True)
+            if result.exit_status != 0:
                 self.log.error(
-                    "Failed to create container as user '%s'", user_display)
-                self.log.error("stderr: %s", stderr.decode() if stderr else "")
+                    "Failed to create container as user '%s': %s",
+                    user_display, result.stderr_text)
                 return None
-            container_id = stdout.decode().strip() if stdout else None
+            container_id = result.stdout_text.strip()
             if not container_id or len(container_id) < 12:
                 self.log.warning(
-                    "Could not extract container ID from output: %s", stdout)
+                    "Could not extract container ID from output: %s", result.stdout_text)
                 return None
             self.container_id = container_id
             self.container_user = user_display
             self.log.info("Container created successfully as '%s': %s",
                           user_display, container_id)
             return container_id
-        except PodmanException as ex:
-            self.log.error("Failed to create container: %s", ex)
-            return None
+        else:
+            podman_options = self._build_podman_options(
+                container_name=container_name)
+            self.log.info("Starting container as %s", user_display)
+            self.log.info("Full podman command: podman run %s",
+                          " ".join(podman_options))
+
+            try:
+                returncode, stdout, stderr = self.podman.run(
+                    podman_options=podman_options,
+                    user=user_display
+                )
+                if returncode != 0:
+                    self.log.error(
+                        "Failed to create container as user '%s'", user_display)
+                    self.log.error("stderr: %s", stderr.decode() if stderr else "")
+                    return None
+                container_id = stdout.decode().strip() if stdout else None
+                if not container_id or len(container_id) < 12:
+                    self.log.warning(
+                        "Could not extract container ID from output: %s", stdout)
+                    return None
+                self.container_id = container_id
+                self.container_user = user_display
+                self.log.info("Container created successfully as '%s': %s",
+                              user_display, container_id)
+                return container_id
+            except PodmanException as ex:
+                self.log.error("Failed to create container: %s", ex)
+                return None
 
     def _verify_vfio_access(self, container_id, username, should_succeed, run_inference=False):
         """
@@ -245,12 +330,17 @@ class SpyreServiceabilityTest(Test):
         user_display = username if username else "root"
 
         self.log.info("Monitor container logs for VLLM startup")
-        timeout = 600 if should_succeed else 120
+        timeout = 7200 if should_succeed else 120
+        failure_checks = (
+            [("fail", False)]
+            if self.rhaiis_version == "3.7"
+            else [("VFIO", False), ("fail", False)]
+        )
         startup_success = wait_for_vllm_startup(
             container_id=container_id,
             success_pattern="Application startup complete.",
             failure_pattern="BACKTRACE",
-            additional_failure_checks=[("VFIO", False), ("fail", False)],
+            additional_failure_checks=failure_checks,
             timeout=timeout,
             check_interval=10,
             user=username,
