@@ -44,6 +44,24 @@ class SpyreQuadletTests(Test):
             cmd, shell=True, ignore_status=True,
             sudo=sudo).decode("utf-8").strip()
 
+    @staticmethod
+    def pcie_to_vfio_num(pcie_id):
+        """
+        Map a PCIe ID to its vfio device number.
+
+        Reads /sys/bus/pci/devices/<pcie_id>/vfio-dev/ which contains
+        an entry like 'vfio1'; strips the 'vfio' prefix and returns '1'.
+        Returns None if the mapping cannot be determined.
+        """
+        vfio_dev_path = f"/sys/bus/pci/devices/{pcie_id}/vfio-dev/"
+        try:
+            entries = os.listdir(vfio_dev_path)
+            if not entries:
+                return None
+            return entries[0].replace("vfio", "")
+        except OSError:
+            return None
+
     def spyre_exists(self):
         """
         Check if VFIO Spyre devices exist and verify group ownership.
@@ -104,6 +122,8 @@ class SpyreQuadletTests(Test):
         quadlet_file = os.path.join(systemd_dir, f"spyre-{use_case}.container")
         self.log.info("Creating quadlet file: %s", quadlet_file)
 
+        is_37 = self.rhaiis_version == "3.7"
+
         # Build quadlet content
         quadlet_content = f"""[Unit]
 Description=Spyre {use_case.replace('-', ' ').title()}
@@ -111,18 +131,52 @@ After=network-online.target
 
 [Container]
 ContainerName=spyre-{use_case}
-PublishPort={self.port_mapping}
+PublishPort={"127.0.0.1::8000" if is_37 else self.port_mapping}
 Image={self.container_image}
 LogDriver=k8s-file
 
-Environment=AIU_PCIE_IDS="{aiu_ids}"
 """
 
-        # Add RHAIIS version specific environment variable
-        if hasattr(self, 'rhaiis_version') and self.rhaiis_version in ("3.3", "3.4"):
-            quadlet_content += 'Environment=VLLM_SPYRE_USE_CB=1\n'
+        if is_37:
+            # RHAIIS 3.7: devices are selected by vfio number via SPYRE_DEVICES
+            vfio_nums = []
+            for pcie_id in aiu_ids.split():
+                num = self.pcie_to_vfio_num(pcie_id)
+                if num is None:
+                    self.cancel(
+                        f"Could not map PCIe ID '{pcie_id}' to a vfio device number")
+                vfio_nums.append(num)
+            spyre_devices = ",".join(vfio_nums)
+            vllm_cmd = (
+                f"vllm serve {model_path}"
+                f" --max-model-len {max_model_len}"
+                f" --max-num-seqs {max_batch_size}"
+                f" --num-gpu-blocks-override 2049"
+                f" -tp {tp_size}"
+            )
+            quadlet_content += f"""Environment=DTLOG_LEVEL=warning
+Environment=SPYRE_DEVICES={spyre_devices}
 
-        quadlet_content += f"""
+PodmanArgs=--device={self.device}
+PodmanArgs=--group-add=keep-groups
+PodmanArgs=--security-opt=label=disable
+PodmanArgs=--privileged
+PodmanArgs=--pids-limit=0
+PodmanArgs=--memory={memory}
+PodmanArgs=--shm-size=2G
+
+Volume={self.host_models_dir}:/models:ro
+
+Exec=bash -l -c "{vllm_cmd}"
+"""
+        else:
+            quadlet_content += f'Environment=AIU_PCIE_IDS="{aiu_ids}"\n'
+
+            # Add RHAIIS version specific environment variable
+            if self.rhaiis_version in ("3.3", "3.4"):
+                quadlet_content += 'Environment=VLLM_SPYRE_USE_CB=1\n'
+
+            quadlet_content += f"""
 PodmanArgs=--device={self.device}
 PodmanArgs=--userns={self.userns}
 PodmanArgs=--group-add={self.group_add}
@@ -131,18 +185,20 @@ PodmanArgs=--pids-limit={self.pids_limit}
 PodmanArgs=--memory={memory}
 """
 
-        # Add shm-size if specified
-        if shm_size:
-            quadlet_content += f"PodmanArgs=--shm-size={shm_size}\n"
+            # Add shm-size if specified
+            if shm_size:
+                quadlet_content += f"PodmanArgs=--shm-size={shm_size}\n"
 
-        quadlet_content += f"""
+            quadlet_content += f"""
 Volume={self.host_models_dir}:/models
 
 Exec=--model {model_path} -tp {tp_size} --max-model-len {max_model_len} --max-num-seqs {max_batch_size}"""
 
-        # Add version-specific VLLM argument for 3.3/3.4
-        if hasattr(self, 'rhaiis_version') and self.rhaiis_version in ("3.3", "3.4"):
-            quadlet_content += " --enable-prefix-caching"
+            # Add version-specific VLLM argument for 3.3/3.4
+            if self.rhaiis_version in ("3.3", "3.4"):
+                quadlet_content += " --enable-prefix-caching"
+
+            quadlet_content += "\n"
 
         quadlet_content += f"""
 
@@ -259,7 +315,14 @@ WantedBy=default.target
 
         # For entity-extract, derive max_model_len/max_batch_size from RHAIIS version
         if use_case == "entity-extract":
-            if self.rhaiis_version in ("3.3", "3.4", "3.5"):
+            if self.rhaiis_version == "3.7":
+                if "Mistral-Small-3.2-24B-Instruct-2506" in model_path or \
+                   "Ministral-3-14b-Instruct-2512-BF16" in model_path:
+                    max_model_len = "8192"
+                else:
+                    max_model_len = "4096"
+                max_batch_size = "32"
+            elif self.rhaiis_version in ("3.3", "3.4", "3.5"):
                 max_model_len = "3072"
                 max_batch_size = "16"
             elif self.rhaiis_version == "3.6":
@@ -514,12 +577,17 @@ WantedBy=default.target
         self.log.info("Container %s is running", self.container_name)
 
         self.log.info("Monitoring container for VLLM startup")
+        failure_checks = (
+            [("fail", False)]
+            if self.rhaiis_version == "3.7"
+            else [("VFIO", False), ("fail", False)]
+        )
         startup_success = wait_for_vllm_startup(
             container_id=self.container_name,
             success_pattern="Application startup complete.",
             failure_pattern="BACKTRACE",
-            additional_failure_checks=[("VFIO", False), ("fail", False)],
-            timeout=600,
+            additional_failure_checks=failure_checks,
+            timeout=7200,
             check_interval=10,
             user=self.test_user,
             log=self.log,
