@@ -37,10 +37,75 @@ class SenlibTests(Test):
     Runs senlib test suites inside a containerized VLLM environment.
     """
 
+    CONTAINER_ID_FILE = "/tmp/spyre_senlib_container_id.txt"
+    _container_id = None
+    _rpm_path = None
+    _podman = None
+
     container_id = None
     podman = None
+    setup_complete = False
     inference_thread = None
     stop_inference_event = None
+
+    @staticmethod
+    def pcie_to_vfio_num(pcie_id):
+        """
+        Map a PCIe ID to its vfio device number.
+
+        Reads /sys/bus/pci/devices/<pcie_id>/vfio-dev/ which contains
+        an entry like 'vfio1'; strips the 'vfio' prefix and returns '1'.
+        Returns None if the mapping cannot be determined.
+        """
+        vfio_dev_path = f"/sys/bus/pci/devices/{pcie_id}/vfio-dev/"
+        try:
+            entries = os.listdir(vfio_dev_path)
+            if not entries:
+                return None
+            return entries[0].replace("vfio", "")
+        except OSError:
+            return None
+
+    @staticmethod
+    def _save_container_id():
+        """Save container ID and downloaded RPM path for sharing between test processes."""
+        try:
+            with open(SenlibTests.CONTAINER_ID_FILE, 'w') as f:
+                f.write(f"container_id={SenlibTests._container_id or ''}\n")
+                f.write(f"rpm_path={SenlibTests._rpm_path or ''}\n")
+        except Exception:
+            pass
+
+    @staticmethod
+    def _load_container_id():
+        """Load container ID and RPM path from file (shared between test processes)."""
+        try:
+            if os.path.exists(SenlibTests.CONTAINER_ID_FILE):
+                with open(SenlibTests.CONTAINER_ID_FILE, 'r') as f:
+                    for line in f:
+                        if line.startswith('container_id='):
+                            cid = line.split('=', 1)[1].strip()
+                            if cid:
+                                SenlibTests._container_id = cid
+                        elif line.startswith('rpm_path='):
+                            rpm = line.split('=', 1)[1].strip()
+                            if rpm:
+                                SenlibTests._rpm_path = rpm
+        except Exception:
+            pass
+
+    def _is_container_running(self, cid):
+        """Check if container with given ID is currently running."""
+        if not cid:
+            return False
+        try:
+            res = process.system_output(
+                f"podman inspect -f '{{{{.State.Running}}}}' {cid}",
+                shell=True, sudo=True, ignore_status=True
+            ).decode("utf-8").strip()
+            return res.lower() == "true"
+        except Exception:
+            return False
 
     def run_cmd(self, cmd):
         """Execute a command and fail test if it fails."""
@@ -225,6 +290,24 @@ class SenlibTests(Test):
                 self.cancel(
                     f"Failed to install {package} required for this test.")
 
+        # Load container ID from previous tests (if any)
+        SenlibTests._load_container_id()
+
+        self.vllm_model_path = self.params.get("VLLM_MODEL_PATH", default="")
+        try:
+            self.podman = Podman()
+            SenlibTests._podman = self.podman
+        except PodmanException as ex:
+            self.cancel(f"Failed to initialize Podman: {ex}")
+
+        # Check if container is already running and can be reused
+        if SenlibTests._container_id and self._is_container_running(SenlibTests._container_id):
+            self.container_id = SenlibTests._container_id
+            self.log.info("Reusing existing VLLM container: %s", self.container_id)
+            self.start_inference()
+            self.setup_complete = True
+            return
+
         # Get parameters from YAML
         self.rhaiis_version = self.params.get("RHAIIS_VERSION", default="")
         self.senlib_rpm_path = self.params.get("SENLIB_RPM_PATH", default="")
@@ -233,11 +316,11 @@ class SenlibTests(Test):
         self.spyre_group = self.params.get("SPYRE_GROUP", default="")
         all_ids = self.params.get("AIU_PCIE_IDS", default="")
         ids = all_ids.split()
-        self.aiu_pcie_ids = ids[0]
+        self.aiu_pcie_ids = ids[0] if ids else ""
         self.host_models_dir = self.params.get("HOST_MODELS_DIR", default="")
-        self.vllm_model_path = self.params.get("VLLM_MODEL_PATH", default="")
         self.aiu_world_size = self.params.get("AIU_WORLD_SIZE", default="")
         self.memory = self.params.get("MEMORY", default="")
+        self.shm_size = self.params.get("SHM_SIZE", default="")
         self.container_url = self.params.get("CONTAINER_URL", default="")
         self.container_tag = self.params.get("CONTAINER_TAG", default="")
         self.api_key = self.params.get("API_KEY", default="")
@@ -255,11 +338,13 @@ class SenlibTests(Test):
         # Validate required parameters
         required_params = {
             "RHAIIS_VERSION": self.rhaiis_version,
-            "SENLIB_RPM_PATH": self.senlib_rpm_path,
             "AIU_PCIE_IDS": self.aiu_pcie_ids,
             "CONTAINER_URL": self.container_url,
             "CONTAINER_TAG": self.container_tag,
         }
+        # RHAIIS 3.7 image ships with senlib pre-installed, so no RPM is needed
+        if self.rhaiis_version != "3.7":
+            required_params["SENLIB_RPM_PATH"] = self.senlib_rpm_path
         missing = [p for p, v in required_params.items() if not v]
         if missing:
             self.cancel(f"Missing required parameters: {', '.join(missing)}")
@@ -334,71 +419,73 @@ class SenlibTests(Test):
                 files = os.listdir(model_dir)
                 self.log.info("Model directory contains %d files", len(files))
 
-        # Download RPM from JFrog Artifactory
-        if not self.jfrog_user or not self.jfrog_token:
-            self.cancel(
-                "JFROG_USER and JFROG_TOKEN are required to pull the RPM from Artifactory"
-            )
-
-        # Parse Artifactory URL and relative path
-        parsed_url = urlparse(self.senlib_rpm_path)
-        if "/artifactory/" in parsed_url.path:
-            # Safely split path to extract relative path
-            _, relative_path = parsed_url.path.split("/artifactory/", 1)
-
-            # Canonical reconstruction of base URL (scheme + netloc)
-            url = urlunparse(
-                (parsed_url.scheme, parsed_url.netloc, "", "", "", ""))
-            artifactory_url = f"{url}/artifactory"
+        if self.rhaiis_version == "3.7":
+            self.log.info(
+                "RHAIIS 3.7: senlib is pre-installed in the image, "
+                "skipping RPM download")
+            self.senlib_rpm_path = ""
         else:
-            self.cancel(
-                f"Could not parse Artifactory URL and relative path from SENLIB_RPM_PATH: {self.senlib_rpm_path}"
+            # Download RPM from JFrog Artifactory
+            if not self.jfrog_user or not self.jfrog_token:
+                self.cancel(
+                    "JFROG_USER and JFROG_TOKEN are required to pull the RPM from Artifactory"
+                )
+
+            # Parse Artifactory URL and relative path
+            parsed_url = urlparse(self.senlib_rpm_path)
+            if "/artifactory/" in parsed_url.path:
+                # Safely split path to extract relative path
+                _, relative_path = parsed_url.path.split("/artifactory/", 1)
+
+                # Canonical reconstruction of base URL (scheme + netloc)
+                url = urlunparse(
+                    (parsed_url.scheme, parsed_url.netloc, "", "", "", ""))
+                artifactory_url = f"{url}/artifactory"
+            else:
+                self.cancel(
+                    f"Could not parse Artifactory URL and relative path from SENLIB_RPM_PATH: {self.senlib_rpm_path}"
+                )
+
+            # Check and install JFrog CLI on host if not installed
+            if process.system("command -v jf", shell=True, ignore_status=True) != 0:
+                self.log.info("JFrog CLI (jf) not found. Installing...")
+                self.run_cmd("curl -fL https://install-cli.jfrog.io | sh")
+
+            # Configure JFrog CLI
+            self.log.info("Configuring JFrog CLI")
+            jf_config_cmd = (
+                f"jf config add myserver "
+                f"--url {url} "
+                f"--artifactory-url {artifactory_url} "
+                f"--user '{self.jfrog_user}' "
+                f"--access-token '{self.jfrog_token}' "
+                f"--interactive=false "
+                f"--overwrite"
             )
+            self.run_cmd(jf_config_cmd)
 
-        # Check and install JFrog CLI on host if not installed
-        if process.system("command -v jf", shell=True, ignore_status=True) != 0:
-            self.log.info("JFrog CLI (jf) not found. Installing...")
-            self.run_cmd("curl -fL https://install-cli.jfrog.io | sh")
+            # Download the RPM
+            self.log.info("Downloading RPM from Artifactory to /tmp/")
+            jf_dl_cmd = (
+                f"jf rt dl "
+                f'"{relative_path}" '
+                f"/tmp/ "
+                f"--server-id myserver --flat"
+            )
+            self.run_cmd(jf_dl_cmd)
 
-        # Configure JFrog CLI
-        self.log.info("Configuring JFrog CLI")
-        jf_config_cmd = (
-            f"jf config add myserver "
-            f"--url {url} "
-            f"--artifactory-url {artifactory_url} "
-            f"--user '{self.jfrog_user}' "
-            f"--access-token '{self.jfrog_token}' "
-            f"--interactive=false "
-            f"--overwrite"
-        )
-        self.run_cmd(jf_config_cmd)
+            # Update senlib_rpm_path to the downloaded path
+            filename = os.path.basename(relative_path)
+            self.senlib_rpm_path = os.path.join("/tmp", filename)
 
-        # Download the RPM
-        self.log.info("Downloading RPM from Artifactory to /tmp/")
-        jf_dl_cmd = (
-            f"jf rt dl "
-            f'"{relative_path}" '
-            f"/tmp/ "
-            f"--server-id myserver --flat"
-        )
-        self.run_cmd(jf_dl_cmd)
+            # Check if RPM file exists
+            if not os.path.exists(self.senlib_rpm_path):
+                self.cancel(
+                    f"SENLIB_RPM_PATH does not exist: {self.senlib_rpm_path}")
+            SenlibTests._rpm_path = self.senlib_rpm_path
 
-        # Update senlib_rpm_path to the downloaded path
-        filename = os.path.basename(relative_path)
-        self.senlib_rpm_path = os.path.join("/tmp", filename)
-
-        # Check if RPM file exists
-        if not os.path.exists(self.senlib_rpm_path):
-            self.cancel(
-                f"SENLIB_RPM_PATH does not exist: {self.senlib_rpm_path}")
-
-        # Initialize Podman
-        self.log.info("Initializing Podman utility")
-        try:
-            self.podman = Podman()
-            self.log.info("Podman utility initialized successfully")
-        except PodmanException as ex:
-            self.cancel(f"Failed to initialize Podman: {ex}")
+        # Podman utility is initialized
+        self.log.info("Podman utility ready")
 
         # Login to registry if API key provided
         if self.api_key and self.container_url:
@@ -440,81 +527,142 @@ class SenlibTests(Test):
         # Clean up any existing container
         self.run_cmd(f"podman rm -f {container_name} 2>/dev/null || true")
 
-        # Build podman run command
-        podman_options = [
-            "-d",
-            "-it",
-            "--name", container_name,
-            f"--device={self.device}",
-            "-v", f"{self.host_models_dir}:/models",
-            "-e", f"AIU_PCIE_IDS={self.aiu_pcie_ids}",
-        ]
-
-        # Add RHAIIS version specific parameters
-        if self.rhaiis_version in ("3.3", "3.4"):
-            podman_options.extend(["-e", "VLLM_SPYRE_USE_CB=1"])
-            max_model_len = "3072"
-            max_batch_size = "16"
-        elif self.rhaiis_version == "3.5":
-            max_model_len = "3072"
-            max_batch_size = "16"
-        elif self.rhaiis_version == "3.6":
-            max_model_len = "4096"
-            max_batch_size = "32"
-
-        # Continue with podman options
-        podman_options.extend([
-            f"--userns={self.userns}",
-            f"--group-add={self.group_add}",
-            f"--security-opt={self.security_opt}",
-            f"--log-driver={self.log_driver}",
-            f"--pids-limit={self.pids_limit}",
-            f"--memory={self.memory}",
-            "-p", self.port_mapping,
-        ])
-
-        podman_options.append(f"{self.container_url}:{self.container_tag}")
-        podman_options.extend([
-            "--model", self.vllm_model_path,
-            "-tp", str(self.aiu_world_size),
-            f"--max-model-len={max_model_len}",
-            f"--max-num-seqs={max_batch_size}",
-        ])
-
-        # Add version-specific VLLM argument for 3.3/3.4
-        if self.rhaiis_version in ("3.3", "3.4"):
-            podman_options.append("--enable-prefix-caching")
-
-        self.log.info("Full podman command: podman run %s",
-                      " ".join(podman_options))
-
-        # Create container
-        try:
-            returncode, stdout, stderr = self.podman.run(
-                podman_options=podman_options,
-                user="root")
-            if returncode != 0:
-                self.log.error("stderr: %s", stderr.decode() if stderr else "")
-                self.cancel("Container creation failed")
-
-            container_id = stdout.decode().strip() if stdout else None
+        if self.rhaiis_version == "3.7":
+            self.shm_size = "2G"
+            image = f"{self.container_url}:{self.container_tag}"
+            if "Mistral-Small-3.2-24B-Instruct-2506" in self.vllm_model_path or \
+               "Ministral-3-14b-Instruct-2512-BF16" in self.vllm_model_path:
+                max_model_len = "8192"
+            else:
+                max_model_len = "4096"
+            pcie_id = self.aiu_pcie_ids.split()[0] if self.aiu_pcie_ids else ""
+            spyre_device = self.pcie_to_vfio_num(pcie_id)
+            if spyre_device is None:
+                self.cancel(f"Could not map PCIe ID '{pcie_id}' to a vfio device number")
+            vllm_cmd = (
+                f"vllm serve {self.vllm_model_path}"
+                f" --max-model-len {max_model_len}"
+                f" --max-num-seqs 32"
+                f" --num-gpu-blocks-override 2049"
+                f" -tp 1"
+            )
+            podman_cmd = (
+                f"podman run"
+                f" --security-opt label=disable"
+                f" --group-add=keep-groups"
+                f" -d"
+                f" --name {container_name}"
+                f" --device={self.device}"
+                f" -v {self.host_models_dir}:/models:ro"
+                f" -e DTLOG_LEVEL=warning"
+                f" -e SPYRE_DEVICES='{spyre_device}'"
+                f" -p 127.0.0.1::8000"
+                f" --pids-limit 0"
+                f" --privileged"
+                f" --memory {self.memory}"
+                f" --shm-size {self.shm_size}"
+                f" {image}"
+                f" bash -l -c '{vllm_cmd}'"
+            )
+            self.log.info("=== Senlib Container Test Configuration ===")
+            self.log.info("RHAIIS Version: %s", self.rhaiis_version)
+            self.log.info("Model Path: %s", self.vllm_model_path)
+            self.log.info("HuggingFace Model: %s", self.hf_model_name)
+            self.log.info("AIU IDs: %s", self.aiu_pcie_ids)
+            self.log.info("Image: %s", image)
+            self.log.info("Container name: %s", container_name)
+            self.log.info("Full podman command: %s", podman_cmd)
+            result = process.run(podman_cmd, shell=True)
+            if result.exit_status != 0:
+                self.cancel(f"Container creation failed: {result.stderr_text}")
+            container_id = result.stdout_text.strip()
             if not container_id or len(container_id) < 12:
                 self.cancel(
-                    f"Failed to extract container ID from output: {stdout}")
-
+                    f"Failed to extract container ID from output: {result.stdout_text}")
             self.container_id = container_id
             self.log.info("Container created successfully: %s", container_id)
-        except PodmanException as ex:
-            self.cancel(f"Failed to create container: {ex}")
+        else:
+            # Build podman run command
+            podman_options = [
+                "-d",
+                "-it",
+                "--name", container_name,
+                f"--device={self.device}",
+                "-v", f"{self.host_models_dir}:/models",
+                "-e", f"AIU_PCIE_IDS={self.aiu_pcie_ids}",
+            ]
+
+            # Add RHAIIS version specific parameters
+            if self.rhaiis_version in ("3.3", "3.4"):
+                podman_options.extend(["-e", "VLLM_SPYRE_USE_CB=1"])
+                max_model_len = "3072"
+                max_batch_size = "16"
+            elif self.rhaiis_version == "3.5":
+                max_model_len = "3072"
+                max_batch_size = "16"
+            elif self.rhaiis_version == "3.6":
+                max_model_len = "4096"
+                max_batch_size = "32"
+
+            # Continue with podman options
+            podman_options.extend([
+                f"--userns={self.userns}",
+                f"--group-add={self.group_add}",
+                f"--security-opt={self.security_opt}",
+                f"--log-driver={self.log_driver}",
+                f"--pids-limit={self.pids_limit}",
+                f"--memory={self.memory}",
+                f"--shm-size={self.shm_size}",
+                "-p", self.port_mapping,
+            ])
+
+            podman_options.append(f"{self.container_url}:{self.container_tag}")
+            podman_options.extend([
+                "--model", self.vllm_model_path,
+                "-tp", str(self.aiu_world_size),
+                f"--max-model-len={max_model_len}",
+                f"--max-num-seqs={max_batch_size}",
+            ])
+
+            # Add version-specific VLLM argument for 3.3/3.4
+            if self.rhaiis_version in ("3.3", "3.4"):
+                podman_options.append("--enable-prefix-caching")
+
+            self.log.info("Full podman command: podman run %s",
+                          " ".join(podman_options))
+
+            # Create container
+            try:
+                returncode, stdout, stderr = self.podman.run(
+                    podman_options=podman_options,
+                    user="root")
+                if returncode != 0:
+                    self.log.error("stderr: %s", stderr.decode() if stderr else "")
+                    self.cancel("Container creation failed")
+
+                container_id = stdout.decode().strip() if stdout else None
+                if not container_id or len(container_id) < 12:
+                    self.cancel(
+                        f"Failed to extract container ID from output: {stdout}")
+
+                self.container_id = container_id
+                self.log.info("Container created successfully: %s", container_id)
+            except PodmanException as ex:
+                self.cancel(f"Failed to create container: {ex}")
 
         # Wait for VLLM to start
         self.log.info("Waiting for VLLM to start...")
+        failure_checks = (
+            [("fail", False)]
+            if self.rhaiis_version == "3.7"
+            else [("VFIO", False), ("fail", False)]
+        )
         if not wait_for_vllm_startup(
             container_id=container_id,
             success_pattern="Application startup complete.",
             failure_pattern="BACKTRACE",
-            additional_failure_checks=[("VFIO", False), ("fail", False)],
-            timeout=600,
+            additional_failure_checks=failure_checks,
+            timeout=7200,
             check_interval=10,
             user=None,
             log=self.log,
@@ -524,42 +672,52 @@ class SenlibTests(Test):
             self.log.error("VLLM failed to start within timeout")
             self.cancel("VLLM startup failed")
 
-        # Copy RPM to container
-        rpm_filename = os.path.basename(self.senlib_rpm_path)
-        self.log.info("Copying RPM to container: %s", rpm_filename)
-        try:
-            self.podman.copy_to_container(
-                container_id=self.container_id,
-                src=self.senlib_rpm_path,
-                dst=f"/tmp/{rpm_filename}"
-            )
-            self.log.info("RPM copied successfully")
-        except PodmanException as ex:
-            self.cancel(f"Failed to copy RPM to container: {ex}")
+        if self.rhaiis_version == "3.7":
+            self.log.info(
+                "RHAIIS 3.7: senlib is pre-installed in the container, "
+                "skipping RPM copy and install")
+        else:
+            # Copy RPM to container
+            rpm_filename = os.path.basename(self.senlib_rpm_path)
+            self.log.info("Copying RPM to container: %s", rpm_filename)
+            try:
+                self.podman.copy_to_container(
+                    container_id=self.container_id,
+                    src=self.senlib_rpm_path,
+                    dst=f"/tmp/{rpm_filename}"
+                )
+                self.log.info("RPM copied successfully")
+            except PodmanException as ex:
+                self.cancel(f"Failed to copy RPM to container: {ex}")
 
-        # Install RPM in container
-        self.log.info("Installing RPM in container as root")
-        try:
-            returncode, stdout, stderr = self.podman.exec_command(
-                container_id=self.container_id,
-                command=["rpm", "-ivh", f"/tmp/{rpm_filename}"],
-                user="root"  # Run as root inside container
-            )
+            # Install RPM in container
+            self.log.info("Installing RPM in container as root")
+            try:
+                returncode, stdout, stderr = self.podman.exec_command(
+                    container_id=self.container_id,
+                    command=["rpm", "-ivh", f"/tmp/{rpm_filename}"],
+                    user="root"  # Run as root inside container
+                )
 
-            if returncode != 0:
-                self.log.error("RPM installation failed")
-                self.log.error("stdout: %s", stdout.decode())
-                self.log.error("stderr: %s", stderr.decode())
-                self.cancel("Failed to install RPM in container")
+                if returncode != 0:
+                    self.log.error("RPM installation failed")
+                    self.log.error("stdout: %s", stdout.decode())
+                    self.log.error("stderr: %s", stderr.decode())
+                    self.cancel("Failed to install RPM in container")
 
-            self.log.info("RPM installed successfully")
-            self.log.info("Installation output: %s", stdout.decode())
-        except PodmanException as ex:
-            self.cancel(f"Failed to install RPM: {ex}")
+                self.log.info("RPM installed successfully")
+                self.log.info("Installation output: %s", stdout.decode())
+            except PodmanException as ex:
+                self.cancel(f"Failed to install RPM: {ex}")
+
+        # Save container ID for reuse across test cases
+        SenlibTests._container_id = self.container_id
+        SenlibTests._save_container_id()
 
         # Start inference
         self.log.info("Starting inference in background")
         self.start_inference()
+        self.setup_complete = True
 
     def test_doom_fixture(self):
         """Test DoomFixture test suite from senlib."""
@@ -609,50 +767,53 @@ class SenlibTests(Test):
         self.log.info("PASS: MedPF1VF0 test suite completed successfully")
 
     def tearDown(self):
-        """Clean up: stop inference and remove container."""
+        """
+        Clean up: stop inference; remove the shared container only after the
+        last test, or if setUp failed after the container was created.
+        A failing test suite does not remove the container, so the remaining
+        tests keep reusing it.
+        """
         # Stop inference thread
         self.stop_inference()
 
-        # Clean up container
-        if self.container_id and self.podman:
-            try:
-                self.log.info(
-                    "=== Cleanup: Retrieving Final Container Logs ===")
-                try:
-                    log_file = self.podman.save_container_logs(
-                        self.container_id, self.workdir, test_name="senlib_tests")
-                    if log_file:
-                        self.log.info("Container logs saved to: %s", log_file)
-                except Exception as log_ex:
-                    self.log.warning("Failed to save final logs: %s", log_ex)
+        test_name = self._testMethodName
+        last_test = (test_name == "test_med_pf1_vf0")
+        setup_failed = not self.setup_complete
 
-                self.log.info("Stopping container: %s", self.container_id)
-                process.run(f"podman stop -t 10 {self.container_id}",
-                            shell=True)
-
-                self.log.info("Removing container: %s", self.container_id)
-                self.podman.remove(self.container_id, force=True)
-                self.log.info("Container cleanup completed")
-            except Exception as ex:
-                self.log.warning("Failed to cleanup container: %s", ex)
+        if last_test or setup_failed:
+            cid = SenlibTests._container_id or self.container_id
+            if cid:
+                self.log.info("Cleaning up container: %s", cid)
                 try:
-                    result = process.system(
-                        f"podman rm -f {self.container_id}", sudo=True, shell=True, ignore_status=True)
-                    if result == 0:
-                        self.log.info(
-                            "Container cleanup completed via command line")
-                    else:
-                        self.log.warning("Failed to cleanup via command line")
-                except Exception as cmd_ex:
-                    self.log.warning(
-                        "Failed to cleanup via command line: %s", cmd_ex)
+                    self.log.info(
+                        "=== Cleanup: Retrieving Final Container Logs ===")
+                    try:
+                        if self.podman:
+                            log_file = self.podman.save_container_logs(
+                                cid, self.workdir, test_name="senlib_tests")
+                            if log_file:
+                                self.log.info("Container logs saved to: %s", log_file)
+                    except Exception as log_ex:
+                        self.log.warning("Failed to save final logs: %s", log_ex)
 
-        if hasattr(self, 'senlib_rpm_path') and self.senlib_rpm_path:
-            if self.senlib_rpm_path.startswith('/tmp/') and os.path.exists(self.senlib_rpm_path):
-                self.log.info("Removing downloaded RPM: %s",
-                              self.senlib_rpm_path)
+                    process.system(f"podman rm -f {cid} 2>/dev/null || true", sudo=True, shell=True, ignore_status=True)
+                    SenlibTests._container_id = None
+                    if os.path.exists(SenlibTests.CONTAINER_ID_FILE):
+                        try:
+                            os.remove(SenlibTests.CONTAINER_ID_FILE)
+                        except Exception:
+                            pass
+                    self.log.info("Container cleanup completed")
+                except Exception as ex:
+                    self.log.warning("Failed to cleanup container: %s", ex)
+
+            rpm_path = SenlibTests._rpm_path or getattr(
+                self, 'senlib_rpm_path', "")
+            if rpm_path and rpm_path.startswith('/tmp/') and os.path.exists(rpm_path):
+                self.log.info("Removing downloaded RPM: %s", rpm_path)
                 try:
-                    os.remove(self.senlib_rpm_path)
+                    os.remove(rpm_path)
                 except Exception as ex:
                     self.log.warning(
-                        "Failed to remove downloaded RPM %s: %s", self.senlib_rpm_path, ex)
+                        "Failed to remove downloaded RPM %s: %s", rpm_path, ex)
+            SenlibTests._rpm_path = None
