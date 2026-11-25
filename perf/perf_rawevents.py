@@ -73,12 +73,13 @@ class PerfRawevents(Test):
         if not output:
             self.cancel("No PMU events found. Skipping the test")
 
-        revisions_to_test = ['004b', '004e', '0080', '0082']
+        revisions_to_test = ['004b', '004e', '0080', '0082', '4100']
         for rev in revisions_to_test:
             for filename in [f'name_events_{rev}', f'raw_codes_{rev}']:
                 if rev == '0082':
-                    # Use Power10 files for Power11
+                    # Power11 shares Power10 event tables
                     filename = filename.replace('0082', '0080')
+                # Power12 (4100) has its own dedicated files
                 self.copy_files(filename)
 
         os.chdir(self.teststmpdir)
@@ -100,14 +101,23 @@ class PerfRawevents(Test):
                 self.log.info("Failed command: %s", self.fail_cmd[cmd])
             self.fail("perf_raw_events: refer log file for failed events")
 
+    def _data_file_rev(self):
+        """Map the runtime CPU revision to the data-file suffix.
+        Power11 (0082) reuses Power10 (0080) tables.
+        All other revisions (including Power12 4100) have their own files.
+        """
+        if self.rev == '0082':
+            return '0080'
+        return self.rev
+
     def test_raw_code(self):
-        file_name = 'raw_codes_' + (self.rev if self.rev != '0082' else '0080')
+        file_name = 'raw_codes_' + self._data_file_rev()
         perf_flags = "perf stat -e r"
         self.run_event(file_name, perf_flags)
         self.error_check()
 
     def test_name_event(self):
-        file_name = 'name_events_' + (self.rev if self.rev != '0082' else '0080')
+        file_name = 'name_events_' + self._data_file_rev()
         perf_flags = "perf stat -e "
         self.run_event(file_name, perf_flags)
         self.error_check()
