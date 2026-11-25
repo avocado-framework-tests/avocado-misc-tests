@@ -52,7 +52,7 @@ class test_generic_events(Test):
         pmu_event_mapping = {'generic_compat': 'GENERIC_COMPAT_PMU',
                              'isav3': 'GENERIC_COMPAT_PMU', 'power8': 'POWER8',
                              'power9': 'POWER9', 'power10': 'POWER10',
-                             'power11': 'POWER10'}
+                             'power11': 'POWER10', 'power12': 'POWER12'}
         pmu_name = ""
         pmu_name_path = pmu_base / self.cpu_pmu / "caps" / "pmu_name"
         if pmu_name_path.is_file():

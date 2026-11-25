@@ -122,7 +122,7 @@ class perf_metric(Test):
         """
         # Check if CPI_STALL_RATIO metricgroup is present in perf list or not
         output = process.system_output('perf list metricgroup')
-        if self.rev in ['0080', '0082'] and 'CPI_STALL_RATIO' in output.decode().split():
+        if self.rev in ['0080', '0082', '4100'] and 'CPI_STALL_RATIO' in output.decode().split():
             cmd = "perf stat --metric-no-group -M CPI_STALL_RATIO perf bench sched messaging"
             res = process.run(cmd, shell=True, verbose=True)
             result = (res.stdout + res.stderr).decode()
